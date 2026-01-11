@@ -1,12 +1,12 @@
 /**
  * StorageManager - LocalStorage 관리 모듈
- * 설정, 히스토리, 커스텀 스타일 등의 저장/로드 담당
+ * 히스토리, 커스텀 스타일 등의 저장/로드 담당
+ * API 키는 서버 환경변수에서 관리됩니다.
  */
 export class StorageManager {
     constructor() {
         this.keys = {
             settings: 'cad_settings_v1',
-            supadata: 'cad_supadata_key_v1',
             history: 'cad_history_v1',
             customStyles: 'cad_custom_styles_v1'
         };
@@ -15,13 +15,15 @@ export class StorageManager {
     }
 
     // ==================== Settings ====================
+    // 참고: API 키는 더 이상 클라이언트에서 관리하지 않습니다.
+    // 서버 환경변수에서 관리됩니다.
 
     getSettings() {
         try {
             const raw = localStorage.getItem(this.keys.settings);
-            return raw ? JSON.parse(raw) : { providers: {}, selectedProvider: '' };
+            return raw ? JSON.parse(raw) : { selectedProvider: '', selectedModel: '' };
         } catch {
-            return { providers: {}, selectedProvider: '' };
+            return { selectedProvider: '', selectedModel: '' };
         }
     }
 
@@ -33,43 +35,26 @@ export class StorageManager {
         }
     }
 
-    getApiKey(providerId) {
+    getSelectedProvider() {
         const settings = this.getSettings();
-        return settings.providers[providerId]?.apiKey || '';
+        return settings.selectedProvider || '';
     }
 
-    hasAnyApiKey() {
+    saveSelectedProvider(providerId) {
         const settings = this.getSettings();
-        return Object.values(settings.providers).some(p => p.apiKey && p.apiKey.trim());
+        settings.selectedProvider = providerId;
+        this.saveSettings(settings);
     }
 
-    getConfiguredProviders() {
+    getSelectedModel() {
         const settings = this.getSettings();
-        return Object.entries(settings.providers)
-            .filter(([_, config]) => config.apiKey && config.apiKey.trim())
-            .map(([id]) => id);
+        return settings.selectedModel || '';
     }
 
-    // ==================== Supadata API Key ====================
-
-    getSupadataApiKey() {
-        try {
-            return localStorage.getItem(this.keys.supadata) || '';
-        } catch {
-            return '';
-        }
-    }
-
-    saveSupadataApiKey(key) {
-        try {
-            if (key) {
-                localStorage.setItem(this.keys.supadata, key);
-            } else {
-                localStorage.removeItem(this.keys.supadata);
-            }
-        } catch {
-            // ignore
-        }
+    saveSelectedModel(modelId) {
+        const settings = this.getSettings();
+        settings.selectedModel = modelId;
+        this.saveSettings(settings);
     }
 
     // ==================== History ====================

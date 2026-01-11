@@ -1,6 +1,7 @@
 /**
  * ContentGenerator - 콘텐츠 생성 모듈
  * API 호출, 단일/배치 URL 처리 담당
+ * API 키는 서버 환경변수에서 관리됩니다.
  */
 export class ContentGenerator {
     constructor(storage, providerManager, styleManager, urlManager, reportManager, uiManager) {
@@ -35,21 +36,13 @@ export class ContentGenerator {
         }
 
         if (!provider || !model) {
-            this.ui.showAlert('AI 서비스와 모델을 선택해주세요. 설정에서 API 키를 먼저 입력해주세요.', 'error');
+            this.ui.showAlert('사용 가능한 AI 서비스가 없습니다. 서버 설정을 확인해주세요.', 'error');
             return;
         }
-
-        const apiKey = this.storage.getApiKey(provider);
-        if (!apiKey) {
-            this.ui.showAlert('선택한 서비스의 API 키가 설정되지 않았습니다.', 'error');
-            return;
-        }
-
-        const supadataApiKey = this.storage.getSupadataApiKey();
 
         // 백그라운드 처리 - 각 URL을 독립적으로 처리
         for (const url of urls) {
-            this.processUrlInBackground(url, provider, model, style, apiKey, supadataApiKey);
+            this.processUrlInBackground(url, provider, model, style);
         }
 
         // URL 목록 클리어
@@ -57,7 +50,7 @@ export class ContentGenerator {
     }
 
     // 백그라운드에서 단일 URL 처리
-    async processUrlInBackground(url, provider, model, style, apiKey, supadataApiKey) {
+    async processUrlInBackground(url, provider, model, style) {
         // 1. 처리 중 카드 먼저 표시
         const pendingId = this.reportManager.createPendingCard(url, style);
         this.ui.incrementPending();
@@ -69,7 +62,7 @@ export class ContentGenerator {
             const response = await fetch('/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, model, style, apiKey, supadataApiKey, modifiers, customPrompt })
+                body: JSON.stringify({ url, model, style, modifiers, customPrompt })
             });
 
             const data = await response.json();
@@ -87,7 +80,8 @@ export class ContentGenerator {
                     content: data.content,
                     prompt: data.prompt,
                     usage: data.usage,
-                    elapsed_time: data.elapsed_time
+                    elapsed_time: data.elapsed_time,
+                    transcript: data.transcript
                 });
             } else {
                 // 에러 - 처리 중 카드를 에러 카드로 변환
@@ -109,7 +103,7 @@ export class ContentGenerator {
 
     // ==================== Single URL Processing ====================
 
-    async processSingleUrl(url, provider, model, style, apiKey, supadataApiKey) {
+    async processSingleUrl(url, provider, model, style) {
         const modifiers = this.styleManager.getModifiers();
         const customPrompt = this.styleManager.getCustomPrompt();
 
@@ -118,7 +112,7 @@ export class ContentGenerator {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url, model, style, apiKey, supadataApiKey, modifiers, customPrompt })
+            body: JSON.stringify({ url, model, style, modifiers, customPrompt })
         });
 
         const data = await response.json();
@@ -144,7 +138,7 @@ export class ContentGenerator {
 
     // ==================== Batch URL Processing ====================
 
-    async processBatchUrls(urls, provider, model, style, apiKey, supadataApiKey) {
+    async processBatchUrls(urls, provider, model, style) {
         const modifiers = this.styleManager.getModifiers();
         const customPrompt = this.styleManager.getCustomPrompt();
 
@@ -153,7 +147,7 @@ export class ContentGenerator {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ urls, model, style, apiKey, supadataApiKey, modifiers, customPrompt })
+            body: JSON.stringify({ urls, model, style, modifiers, customPrompt })
         });
 
         const data = await response.json();

@@ -45,7 +45,9 @@ def _extract_client_id(req) -> str:
 
 
 def _get_request_data(req):
-    """JSON 또는 form 데이터에서 공통 파라미터를 추출합니다."""
+    """JSON 또는 form 데이터에서 공통 파라미터를 추출합니다.
+    API 키는 서버 환경변수에서 관리되므로 요청에서 추출하지 않습니다.
+    """
     data = req.get_json(silent=True)
     if isinstance(data, dict) and data:
         return {
@@ -54,8 +56,6 @@ def _get_request_data(req):
             'content': data.get('content'),
             'model': data.get('model', DEFAULT_MODEL),
             'style': data.get('style', DEFAULT_STYLE),
-            'api_key': data.get('apiKey'),
-            'supadata_api_key': data.get('supadataApiKey'),
             'modifiers': data.get('modifiers'),
             'custom_prompt': data.get('customPrompt'),
         }
@@ -66,8 +66,6 @@ def _get_request_data(req):
         'content': req.form.get('content'),
         'model': req.form.get('model', DEFAULT_MODEL),
         'style': req.form.get('style', DEFAULT_STYLE),
-        'api_key': req.form.get('apiKey'),
-        'supadata_api_key': req.form.get('supadataApiKey'),
         'modifiers': None,
         'custom_prompt': None,
     }
@@ -88,13 +86,14 @@ def _handle_error_response(error_msg):
     return jsonify({'error': error_msg}), 500
 
 
-def _fetch_youtube_content(video_id, supadata_api_key=None):
+def _fetch_youtube_content(video_id):
     """YouTube 영상의 자막과 댓글을 가져옵니다.
+    Supadata API 키는 환경변수에서 자동으로 로드됩니다.
 
     Returns:
         tuple: (combined_content, error, raw_transcript)
     """
-    transcript = content_service.get_transcript(video_id, supadata_api_key=supadata_api_key)
+    transcript = content_service.get_transcript(video_id)
     if isinstance(transcript, dict) and transcript.get('error'):
         return None, transcript['error'], None
 
@@ -133,12 +132,18 @@ def api_close():
 
 @blog_bp.route('/api/providers', methods=['GET'])
 def api_providers():
-    """지원하는 AI 서비스 및 모델 목록을 반환합니다."""
-    providers = current_app.config.get('SUPPORTED_PROVIDERS', {})
+    """API 키가 설정된 AI 서비스 및 모델 목록을 반환합니다.
+    환경변수에 API 키가 설정된 프로바이더만 반환됩니다.
+    """
+    from config import get_available_providers, SUPADATA_API_KEY
+
+    providers = get_available_providers()
     styles = current_app.config.get('STYLE_OPTIONS', [])
+
     return jsonify({
         'providers': providers,
-        'styles': [{'id': s[0], 'name': s[1]} for s in styles]
+        'styles': [{'id': s[0], 'name': s[1]} for s in styles],
+        'supadataConfigured': bool(SUPADATA_API_KEY)
     })
 
 
@@ -170,17 +175,16 @@ def api_clear_cache():
 
 @blog_bp.route('/api/recommend-style', methods=['POST'])
 def recommend_style():
-    """YouTube 제목을 분석하여 최적의 스타일과 모디파이어를 AI로 추천합니다."""
+    """YouTube 제목을 분석하여 최적의 스타일과 모디파이어를 AI로 추천합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         data = request.get_json(silent=True) or {}
         url = data.get('url')
-        api_key = data.get('apiKey')
         model = data.get('model', DEFAULT_MODEL)
 
         if not url:
             return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
-        if not api_key:
-            return jsonify({'error': 'API 키가 필요합니다.'}), 400
         if not content_service.is_youtube_url(url):
             return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
 
@@ -213,7 +217,6 @@ def recommend_style():
         response = ai_service.create_content(
             prompt,
             model,
-            api_key,
             style_prompt=""
         )
 
@@ -246,18 +249,16 @@ def recommend_style():
 
 @blog_bp.route('/api/generate-style', methods=['POST'])
 def generate_style():
-    """YouTube 제목과 자막을 분석하여 맞춤형 프롬프트를 AI로 생성합니다."""
+    """YouTube 제목과 자막을 분석하여 맞춤형 프롬프트를 AI로 생성합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         data = request.get_json(silent=True) or {}
         url = data.get('url')
-        api_key = data.get('apiKey')
         model = data.get('model', DEFAULT_MODEL)
-        supadata_api_key = data.get('supadataApiKey')
 
         if not url:
             return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
-        if not api_key:
-            return jsonify({'error': 'API 키가 필요합니다.'}), 400
         if not content_service.is_youtube_url(url):
             return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
 
@@ -267,7 +268,7 @@ def generate_style():
 
         title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        transcript = content_service.get_transcript(video_id, supadata_api_key=supadata_api_key)
+        transcript = content_service.get_transcript(video_id)
         if isinstance(transcript, dict) and transcript.get('error'):
             transcript_preview = "(자막 없음)"
         else:
@@ -288,7 +289,6 @@ def generate_style():
         response = ai_service.create_content(
             prompt,
             model,
-            api_key,
             style_prompt=""
         )
 
@@ -317,7 +317,9 @@ def generate_style():
 
 @blog_bp.route('/generate', methods=['POST'])
 def generate():
-    """단일 YouTube URL에서 콘텐츠를 생성합니다."""
+    """단일 YouTube URL에서 콘텐츠를 생성합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         start_time = time.time()
         params = _get_request_data(request)
@@ -325,8 +327,6 @@ def generate():
 
         if not url:
             return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
-        if not params['api_key']:
-            return jsonify({'error': 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.'}), 400
         if not content_service.is_youtube_url(url):
             return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
 
@@ -337,7 +337,7 @@ def generate():
         # YouTube 원본 제목 가져오기
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        content, error, raw_transcript = _fetch_youtube_content(video_id, params['supadata_api_key'])
+        content, error, raw_transcript = _fetch_youtube_content(video_id)
         if error:
             return jsonify({'error': error}), 400
 
@@ -348,7 +348,6 @@ def generate():
         result, used_prompt = ai_service.create_content(
             truncated_content,
             params['model'],
-            params['api_key'],
             style_prompt,
             return_prompt=True,
             modifiers=params['modifiers']
@@ -373,21 +372,20 @@ def generate():
 
 @blog_bp.route('/regenerate', methods=['POST'])
 def regenerate():
-    """기존 콘텐츠를 새로운 스타일로 재생성합니다."""
+    """기존 콘텐츠를 새로운 스타일로 재생성합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         params = _get_request_data(request)
         content = params['content']
 
         if not content:
             return jsonify({'error': '재생성할 콘텐츠가 없습니다'}), 400
-        if not params['api_key']:
-            return jsonify({'error': 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.'}), 400
 
         style_prompt = _get_style_prompt(params['style'])
         result, used_prompt = ai_service.create_content(
             content,
             params['model'],
-            params['api_key'],
             style_prompt,
             return_prompt=True
         )
@@ -401,8 +399,10 @@ def regenerate():
         return _handle_error_response(str(e))
 
 
-def _process_single_url(app, url, model, api_key, style, supadata_api_key, modifiers, custom_prompt):
-    """배치 처리에서 단일 URL을 처리하는 헬퍼 함수입니다."""
+def _process_single_url(app, url, model, style, modifiers, custom_prompt):
+    """배치 처리에서 단일 URL을 처리하는 헬퍼 함수입니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     with app.app_context():
         try:
             current_app.logger.info(f"Processing URL: {url}")
@@ -427,7 +427,7 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
             title = content_service.get_content_title(url) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            content, error, raw_transcript = _fetch_youtube_content(video_id, supadata_api_key)
+            content, error, raw_transcript = _fetch_youtube_content(video_id)
             if error:
                 return {
                     'success': False,
@@ -441,7 +441,7 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
             style_prompt = _get_style_prompt(style, custom_prompt)
 
             result, used_prompt = ai_service.create_content(
-                content, model, api_key, style_prompt,
+                content, model, style_prompt,
                 return_prompt=True, modifiers=modifiers
             )
 
@@ -466,7 +466,9 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
 
 @blog_bp.route('/generate-batch', methods=['POST'])
 def generate_batch():
-    """여러 URL을 배치로 처리합니다."""
+    """여러 URL을 배치로 처리합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         current_app.logger.info("Batch generate request received")
 
@@ -480,8 +482,6 @@ def generate_batch():
         urls = data.get('urls', [])
         model = data.get('model', DEFAULT_MODEL)
         style = data.get('style', DEFAULT_STYLE)
-        api_key = data.get('apiKey')
-        supadata_api_key = data.get('supadataApiKey')
         modifiers = data.get('modifiers')
         custom_prompt = data.get('customPrompt')
 
@@ -489,8 +489,6 @@ def generate_batch():
 
         if not urls or not isinstance(urls, list):
             return jsonify({'error': 'URL 목록이 제공되지 않았습니다'}), 400
-        if not api_key:
-            return jsonify({'error': 'API 키가 필요합니다. 설정에서 API 키를 입력해주세요.'}), 400
         if len(urls) > MAX_BATCH_URLS:
             return jsonify({'error': f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다'}), 400
 
@@ -503,8 +501,8 @@ def generate_batch():
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
             future_to_index = {
                 executor.submit(
-                    _process_single_url, app, url, model, api_key, style,
-                    supadata_api_key, modifiers, custom_prompt
+                    _process_single_url, app, url, model, style,
+                    modifiers, custom_prompt
                 ): i for i, url in enumerate(urls)
             }
 
@@ -557,18 +555,17 @@ def generate_batch():
 
 @blog_bp.route('/api/mindmap', methods=['POST'])
 def generate_mindmap():
-    """기존 콘텐츠를 마인드맵 형식의 마크다운으로 변환합니다."""
+    """기존 콘텐츠를 마인드맵 형식의 마크다운으로 변환합니다.
+    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """
     try:
         start_time = time.time()
         data = request.get_json(silent=True) or {}
         content = data.get('content')
-        api_key = data.get('apiKey')
         model = data.get('model', DEFAULT_MODEL)
 
         if not content:
             return jsonify({'error': '마인드맵으로 변환할 콘텐츠가 필요합니다.'}), 400
-        if not api_key:
-            return jsonify({'error': 'API 키가 필요합니다.'}), 400
 
         # MINDMAP_PROMPT 가져오기
         style_prompts = current_app.config.get('STYLE_PROMPTS', {})
@@ -584,7 +581,6 @@ def generate_mindmap():
         result = ai_service.create_content(
             truncated_content,
             model,
-            api_key,
             mindmap_prompt
         )
 

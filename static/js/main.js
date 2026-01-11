@@ -145,13 +145,7 @@ class ContentAnalysis {
 
         const provider = this.providerManager.getSelectedProvider();
         if (!provider) {
-            this.ui.showAlert('AI 서비스를 먼저 선택해주세요.', 'warning');
-            return;
-        }
-
-        const apiKey = this.storage.getApiKey(provider);
-        if (!apiKey) {
-            this.ui.showAlert('설정에서 API 키를 먼저 입력해주세요.', 'warning');
+            this.ui.showAlert('사용 가능한 AI 서비스가 없습니다. 서버 설정을 확인해주세요.', 'warning');
             return;
         }
 
@@ -165,7 +159,7 @@ class ContentAnalysis {
             const response = await fetch('/api/recommend-style', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, apiKey, model })
+                body: JSON.stringify({ url, model })
             });
 
             const data = await response.json();
@@ -233,13 +227,7 @@ class ContentAnalysis {
 
         const provider = this.providerManager.getSelectedProvider();
         if (!provider) {
-            this.ui.showAlert('AI 서비스를 먼저 선택해주세요.', 'warning');
-            return;
-        }
-
-        const apiKey = this.storage.getApiKey(provider);
-        if (!apiKey) {
-            this.ui.showAlert('설정에서 API 키를 먼저 입력해주세요.', 'warning');
+            this.ui.showAlert('사용 가능한 AI 서비스가 없습니다. 서버 설정을 확인해주세요.', 'warning');
             return;
         }
 
@@ -250,12 +238,11 @@ class ContentAnalysis {
 
         try {
             const model = this.providerManager.getSelectedModel() || 'gpt-4o';
-            const supadataApiKey = this.storage.getSupadataApiKey() || '';
 
             const response = await fetch('/api/generate-style', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, apiKey, model, supadataApiKey })
+                body: JSON.stringify({ url, model })
             });
 
             const data = await response.json();

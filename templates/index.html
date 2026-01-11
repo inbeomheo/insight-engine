@@ -4,6 +4,7 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Insight Engine — AI Content Analysis</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <!-- 영문 폰트 -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -131,75 +132,16 @@
                         0 0 1px rgba(212, 165, 116, 0.3);
         }
 
-        /* Provider Card */
+        /* Provider Card (for settings modal display) */
         .provider-card {
             border: 1px solid #2A2A2A;
             background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
             padding: 1rem;
             border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .provider-card:hover {
-            border-color: rgba(212, 165, 116, 0.3);
         }
         .provider-card.configured {
             border-color: #D4A574;
             background: linear-gradient(135deg, rgba(212, 165, 116, 0.08) 0%, #151515 100%);
-        }
-        .provider-card .provider-body {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .provider-card .provider-body.expanded {
-            max-height: 200px;
-            margin-top: 1rem;
-        }
-        .provider-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-        }
-        .provider-checkbox input {
-            width: 1.125rem;
-            height: 1.125rem;
-            accent-color: #D4A574;
-        }
-
-        /* API Key Input */
-        .api-key-input-wrapper {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .api-key-input-wrapper input {
-            flex: 1;
-            background: #0C0C0C;
-            border: 1px solid #2A2A2A;
-            padding: 0.625rem 0.75rem;
-            color: #F5F5F0;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8125rem;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .api-key-input-wrapper input:focus {
-            border-color: #D4A574;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
-        }
-        .api-key-input-wrapper button {
-            background: #1a1a1a;
-            border: 1px solid #2A2A2A;
-            padding: 0.625rem;
-            color: #8B8B8B;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .api-key-input-wrapper button:hover {
-            color: #D4A574;
-            border-color: rgba(212, 165, 116, 0.3);
         }
 
         /* Loading Spinner */
@@ -684,42 +626,27 @@
         <div class="modal-content p-6">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary-accent">key</span>
-                    API 설정
+                    <span class="material-symbols-outlined text-primary-accent">settings</span>
+                    설정
                 </h2>
-                <button id="modal-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors">
+                <button id="modal-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded-lg">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="mb-6">
-                <p class="text-sm text-gray-text font-body">
-                    사용할 AI 서비스를 선택하고 API 키를 입력하세요.<br>
-                    API 키는 브라우저에만 저장됩니다.
-                </p>
-            </div>
-            <div id="provider-list" class="space-y-3 max-h-[40vh] overflow-y-auto">
-                <!-- Provider cards will be dynamically generated -->
-            </div>
 
-            <!-- Supadata API Section -->
-            <div class="mt-6 pt-4 border-t border-border-dark/50">
+            <!-- AI Services Section -->
+            <div class="mb-6">
                 <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
-                    <span class="material-symbols-outlined text-emerald-400">subtitles</span>
-                    자막 서비스 (선택)
+                    <span class="material-symbols-outlined text-primary-accent">smart_toy</span>
+                    AI 서비스
                 </h3>
-                <p class="text-xs text-gray-text mb-3 font-body">
-                    YouTube 자막 수집이 차단될 경우 백업 서비스입니다.
-                </p>
-                <div class="api-key-input-wrapper">
-                    <input type="password" id="supadata-api-key" placeholder="Supadata API 키 (선택사항)">
-                    <button type="button" id="toggle-supadata-key">
-                        <span class="material-symbols-outlined text-sm">visibility</span>
-                    </button>
+                <div id="provider-list" class="space-y-3 max-h-[40vh] overflow-y-auto">
+                    <!-- Provider list will be dynamically generated -->
                 </div>
             </div>
 
             <!-- Cache Management Section -->
-            <div class="mt-6 pt-4 border-t border-border-dark/50">
+            <div class="pt-4 border-t border-border-dark/50">
                 <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
                     <span class="material-symbols-outlined text-orange-400">cached</span>
                     캐시 관리
@@ -734,8 +661,7 @@
             </div>
 
             <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-border-dark/50">
-                <button id="modal-cancel" class="px-4 py-2 text-sm font-bold text-gray-text hover:text-white transition-colors">취소</button>
-                <button id="modal-save" class="px-6 py-2 text-sm font-bold bg-primary-accent text-black hover:bg-white transition-colors">저장</button>
+                <button id="modal-cancel" class="px-6 py-2 text-sm font-bold bg-primary-accent text-black hover:bg-white transition-colors rounded-lg">닫기</button>
             </div>
         </div>
     </div>
@@ -992,33 +918,25 @@
     <div class="modal-overlay" id="onboarding-modal">
         <div class="modal-content p-6">
             <div class="text-center mb-8">
-                <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary-accent to-purple-600 flex items-center justify-center">
+                <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary-accent to-purple-600 flex items-center justify-center rounded-2xl">
                     <span class="material-symbols-outlined text-white text-4xl">smart_display</span>
                 </div>
                 <h2 class="text-2xl font-bold mb-2">환영합니다!</h2>
                 <p class="text-gray-text font-body">YouTube 영상을 AI로 분석하여<br>요약, 인사이트, 아이디어를 도출합니다.</p>
             </div>
             <div class="mb-6">
-                <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
-                    <span class="material-symbols-outlined text-primary-accent">key</span>
-                    AI 서비스 설정
-                </h3>
-                <p class="text-xs text-gray-text font-body mb-4">사용하실 AI 서비스를 선택하고 API 키를 입력해주세요.</p>
                 <div id="onboarding-providers" class="space-y-3 max-h-[40vh] overflow-y-auto">
-                    <!-- Provider selection will be dynamically generated -->
+                    <!-- Available services will be dynamically generated -->
                 </div>
             </div>
-            <button id="onboarding-save" class="w-full bg-primary-accent text-black font-bold py-4 text-lg uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2">
+            <button id="onboarding-save" class="w-full bg-primary-accent text-black font-bold py-4 text-lg uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 rounded-xl">
                 <span class="material-symbols-outlined">check</span>
-                설정 완료
+                시작하기
             </button>
-            <button id="onboarding-skip" class="w-full mt-3 bg-transparent border border-border-dark text-gray-text font-medium py-3 text-sm hover:border-primary-accent/50 hover:text-white transition-colors flex items-center justify-center gap-2">
+            <button id="onboarding-skip" class="w-full mt-3 bg-transparent border border-border-dark text-gray-text font-medium py-3 text-sm hover:border-primary-accent/50 hover:text-white transition-colors flex items-center justify-center gap-2 rounded-xl hidden">
                 <span class="material-symbols-outlined text-sm">visibility</span>
                 먼저 둘러보기
             </button>
-            <p class="text-xs text-gray-text/50 text-center mt-3">
-                나중에 설정에서 API 키를 추가할 수 있습니다
-            </p>
         </div>
     </div>
 

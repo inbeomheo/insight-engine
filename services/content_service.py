@@ -471,13 +471,13 @@ def _log_warning(message: str) -> None:
         pass
 
 
-def get_transcript(video_id: str, supadata_api_key: Optional[str] = None) -> TranscriptResult:
+def get_transcript(video_id: str) -> TranscriptResult:
     """
     YouTube 자막을 가져옵니다.
+    Supadata API 키는 환경변수(SUPADATA_API_KEY)에서 로드됩니다.
 
     Args:
         video_id: YouTube 비디오 ID
-        supadata_api_key: Supadata API 키 (선택)
 
     Returns:
         자막 텍스트 문자열 또는 에러 딕셔너리
@@ -494,7 +494,8 @@ def get_transcript(video_id: str, supadata_api_key: Optional[str] = None) -> Tra
         _log_info(f"Transcript loaded from cache for video_id={video_id}")
         return cached
 
-    # 1순위: Supadata API
+    # 1순위: Supadata API (환경변수에서 키 로드)
+    supadata_api_key = os.getenv('SUPADATA_API_KEY', '')
     if supadata_api_key:
         result = get_transcript_via_supadata(video_id, supadata_api_key)
         if isinstance(result, str) and result.strip():

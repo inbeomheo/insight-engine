@@ -1,6 +1,7 @@
 /**
  * ProviderManager - AI 프로바이더 관리 모듈
  * 프로바이더 로딩, 모델 선택, 옵션 업데이트 담당
+ * API 키는 서버 환경변수에서 관리되므로 클라이언트에서 검증하지 않습니다.
  */
 export class ProviderManager {
     constructor(storage, uiManager) {
@@ -8,6 +9,7 @@ export class ProviderManager {
         this.ui = uiManager;
         this.providers = {};
         this.styles = [];
+        this.supadataConfigured = false;
     }
 
     // ==================== Provider Loading ====================
@@ -16,8 +18,10 @@ export class ProviderManager {
         try {
             const response = await fetch('/api/providers');
             const data = await response.json();
+            // 서버에서 이미 API 키가 설정된 프로바이더만 반환합니다
             this.providers = data.providers || {};
             this.styles = data.styles || [];
+            this.supadataConfigured = data.supadataConfigured || false;
             this.updateProviderOptions();
         } catch (error) {
             console.error('Failed to load providers:', error);
@@ -33,22 +37,27 @@ export class ProviderManager {
         return this.styles;
     }
 
+    isSupadataConfigured() {
+        return this.supadataConfigured;
+    }
+
     // ==================== Provider Options ====================
 
     updateProviderOptions() {
         const providerSelect = document.getElementById('provider');
         if (!providerSelect) return;
 
-        const configuredProviders = this.storage.getConfiguredProviders();
-
         providerSelect.innerHTML = '';
 
-        if (configuredProviders.length === 0) {
-            providerSelect.innerHTML = '<option value="">설정에서 API 키를 입력하세요</option>';
+        const providerIds = Object.keys(this.providers);
+
+        if (providerIds.length === 0) {
+            providerSelect.innerHTML = '<option value="">사용 가능한 AI 서비스가 없습니다</option>';
+            this.updateProviderLabel();
             return;
         }
 
-        configuredProviders.forEach(providerId => {
+        providerIds.forEach(providerId => {
             const provider = this.providers[providerId];
             if (provider) {
                 const option = document.createElement('option');
@@ -58,11 +67,12 @@ export class ProviderManager {
             }
         });
 
-        const settings = this.storage.getSettings();
-        if (settings.selectedProvider && configuredProviders.includes(settings.selectedProvider)) {
-            providerSelect.value = settings.selectedProvider;
-        } else if (configuredProviders.length > 0) {
-            providerSelect.value = configuredProviders[0];
+        // 저장된 프로바이더 선택 복원
+        const savedProvider = this.storage.getSelectedProvider();
+        if (savedProvider && providerIds.includes(savedProvider)) {
+            providerSelect.value = savedProvider;
+        } else if (providerIds.length > 0) {
+            providerSelect.value = providerIds[0];
         }
 
         this.updateModelOptions();
@@ -91,7 +101,12 @@ export class ProviderManager {
             modelSelect.appendChild(option);
         });
 
-        if (provider.models.length > 0) {
+        // 저장된 모델 선택 복원
+        const savedModel = this.storage.getSelectedModel();
+        const modelIds = provider.models.map(m => m.id);
+        if (savedModel && modelIds.includes(savedModel)) {
+            modelSelect.value = savedModel;
+        } else if (provider.models.length > 0) {
             modelSelect.value = provider.models[0].id;
         }
     }
@@ -115,13 +130,19 @@ export class ProviderManager {
 
     setupProviderSelectEvents() {
         const providerSelect = document.getElementById('provider');
+        const modelSelect = document.getElementById('model');
+
         if (providerSelect) {
             providerSelect.addEventListener('change', () => {
                 this.updateModelOptions();
                 this.updateProviderLabel();
-                const settings = this.storage.getSettings();
-                settings.selectedProvider = providerSelect.value;
-                this.storage.saveSettings(settings);
+                this.storage.saveSelectedProvider(providerSelect.value);
+            });
+        }
+
+        if (modelSelect) {
+            modelSelect.addEventListener('change', () => {
+                this.storage.saveSelectedModel(modelSelect.value);
             });
         }
     }

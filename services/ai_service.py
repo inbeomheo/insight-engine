@@ -74,14 +74,14 @@ def _convert_error_message(error_msg):
     return f"콘텐츠 생성 중 오류 발생: {error_msg}"
 
 
-def create_content(content, model, api_key, style_prompt=None, return_prompt=False, modifiers=None):
+def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None):
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
+    API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
 
     Args:
         content: 분석할 콘텐츠 (자막 + 댓글)
         model: 모델 ID (예: 'gpt-4o', 'claude-sonnet-4-20250514')
-        api_key: 사용자 API 키
         style_prompt: 스타일 프롬프트
         return_prompt: 사용된 프롬프트 반환 여부
         modifiers: 세부 옵션 딕셔너리 (length, tone, language, emoji)
@@ -92,10 +92,10 @@ def create_content(content, model, api_key, style_prompt=None, return_prompt=Fal
     try:
         prompt = _build_prompt(content, style_prompt, modifiers)
 
+        # LiteLLM이 환경변수에서 자동으로 API 키 로드
         response = completion(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
-            api_key=api_key
+            messages=[{"role": "user", "content": prompt}]
         )
 
         markdown_content = response.choices[0].message.content
@@ -127,10 +127,9 @@ def create_content(content, model, api_key, style_prompt=None, return_prompt=Fal
         raise Exception(_convert_error_message(str(e))) from e
 
 
-def create_full_blog_post(content, model_name='gpt-4o', style_prompt=None, return_prompt=False, api_key=None):
+def create_full_blog_post(content, model_name='gpt-4o', style_prompt=None, return_prompt=False):
     """
     하위 호환성을 위한 래퍼 함수입니다.
+    API 키는 환경변수에서 자동으로 로드됩니다.
     """
-    if api_key is None:
-        raise Exception("API 키가 필요합니다. 설정에서 API 키를 입력해주세요.")
-    return create_content(content, model_name, api_key, style_prompt, return_prompt)
+    return create_content(content, model_name, style_prompt, return_prompt)

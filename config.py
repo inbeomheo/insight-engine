@@ -12,6 +12,18 @@ from prompts import STYLE_PROMPTS
 # YouTube API Key
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
+# AI Provider API Keys (환경변수에서 로드)
+PROVIDER_API_KEYS: Dict[str, str] = {
+    'openai': os.getenv('OPENAI_API_KEY', ''),
+    'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
+    'gemini': os.getenv('GEMINI_API_KEY', ''),
+    'zhipu': os.getenv('ZHIPU_API_KEY', ''),
+    'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
+}
+
+# Supadata API Key (YouTube 자막 백업 서비스)
+SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
+
 # Token Limits (기본값, 모델별 설정이 없을 때 사용)
 MAX_TRANSCRIPT_TOKENS: int = 100000
 MAX_COMMENTS_TOKENS: int = 5000
@@ -26,9 +38,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'gpt-4o-mini', 'name': 'GPT-4o Mini', 'max_input_tokens': 96000},    # 128K context
             {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'max_input_tokens': 96000},    # 128K context
             {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'max_input_tokens': 12000} # 16K context
-        ],
-        'key_placeholder': 'sk-...',
-        'key_prefix': 'sk-'
+        ]
     },
     'anthropic': {
         'name': 'Claude (Anthropic)',
@@ -36,9 +46,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'claude-sonnet-4-20250514', 'name': 'Claude Sonnet 4', 'max_input_tokens': 150000},   # 200K context
             {'id': 'claude-3-5-sonnet-20241022', 'name': 'Claude 3.5 Sonnet', 'max_input_tokens': 150000},
             {'id': 'claude-3-haiku-20240307', 'name': 'Claude 3 Haiku', 'max_input_tokens': 150000}
-        ],
-        'key_placeholder': 'sk-ant-...',
-        'key_prefix': 'sk-ant-'
+        ]
     },
     'gemini': {
         'name': 'Google Gemini',
@@ -49,9 +57,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000},
             {'id': 'gemini/gemini-2.0-flash', 'name': 'Gemini 2.0 Flash', 'max_input_tokens': 750000},
             {'id': 'gemini/gemini-1.5-pro-latest', 'name': 'Gemini 1.5 Pro', 'max_input_tokens': 1500000}  # 2M context
-        ],
-        'key_placeholder': 'AIza...',
-        'key_prefix': 'AIza'
+        ]
     },
     'zhipu': {
         'name': 'GLM-4 (Zhipu AI)',
@@ -59,20 +65,40 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'glm-4', 'name': 'GLM-4', 'max_input_tokens': 96000},           # 128K context
             {'id': 'glm-4-flash', 'name': 'GLM-4 Flash', 'max_input_tokens': 96000},
             {'id': 'glm-4-air', 'name': 'GLM-4 Air', 'max_input_tokens': 96000}
-        ],
-        'key_placeholder': 'API Key',
-        'key_prefix': ''
+        ]
     },
     'deepseek': {
         'name': 'DeepSeek',
         'models': [
             {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000},    # 128K context
             {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000}
-        ],
-        'key_placeholder': 'sk-...',
-        'key_prefix': 'sk-'
+        ]
     }
 }
+
+
+def get_available_providers() -> Dict[str, Dict[str, Any]]:
+    """API 키가 설정된 프로바이더만 반환합니다."""
+    available = {}
+    for provider_id, api_key in PROVIDER_API_KEYS.items():
+        if api_key and provider_id in SUPPORTED_PROVIDERS:
+            available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+    return available
+
+
+def get_provider_from_model(model_id: str) -> str:
+    """모델 ID에서 프로바이더를 추출합니다."""
+    if model_id.startswith('gpt-'):
+        return 'openai'
+    elif model_id.startswith('claude-'):
+        return 'anthropic'
+    elif model_id.startswith('gemini/'):
+        return 'gemini'
+    elif model_id.startswith('glm-'):
+        return 'zhipu'
+    elif model_id.startswith('deepseek/'):
+        return 'deepseek'
+    return 'openai'  # 기본값
 
 # 스타일/톤 옵션
 STYLE_OPTIONS: List[tuple] = [
@@ -125,6 +151,8 @@ def get_model_max_tokens(model_id: str) -> int:
 
 __all__ = [
     'YOUTUBE_API_KEY',
+    'PROVIDER_API_KEYS',
+    'SUPADATA_API_KEY',
     'MAX_TRANSCRIPT_TOKENS',
     'MAX_COMMENTS_TOKENS',
     'MAX_CONTENT_TOKENS',
@@ -132,5 +160,7 @@ __all__ = [
     'STYLE_OPTIONS',
     'STYLE_MODIFIERS',
     'STYLE_PROMPTS',
-    'get_model_max_tokens'
+    'get_model_max_tokens',
+    'get_available_providers',
+    'get_provider_from_model'
 ]
