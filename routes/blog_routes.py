@@ -89,16 +89,20 @@ def _handle_error_response(error_msg):
 
 
 def _fetch_youtube_content(video_id, supadata_api_key=None):
-    """YouTube 영상의 자막과 댓글을 가져옵니다."""
+    """YouTube 영상의 자막과 댓글을 가져옵니다.
+
+    Returns:
+        tuple: (combined_content, error, raw_transcript)
+    """
     transcript = content_service.get_transcript(video_id, supadata_api_key=supadata_api_key)
     if isinstance(transcript, dict) and transcript.get('error'):
-        return None, transcript['error']
+        return None, transcript['error'], None
 
     comments = content_service.get_top_comments(video_id)
     comments_text = '\n'.join(comments[:20]) if comments else '(댓글 없음)'
 
     final_content = f"[영상 자막]\n{transcript}\n\n[시청자 댓글]\n{comments_text}"
-    return final_content, None
+    return final_content, None, transcript
 
 
 @blog_bp.route('/')
@@ -333,7 +337,7 @@ def generate():
         # YouTube 원본 제목 가져오기
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        content, error = _fetch_youtube_content(video_id, params['supadata_api_key'])
+        content, error, raw_transcript = _fetch_youtube_content(video_id, params['supadata_api_key'])
         if error:
             return jsonify({'error': error}), 400
 
@@ -356,7 +360,8 @@ def generate():
             **result,
             "prompt": used_prompt,
             "elapsed_time": elapsed_time,
-            "youtube_title": youtube_title
+            "youtube_title": youtube_title,
+            "transcript": raw_transcript
         })
 
     except ValueError as e:
@@ -422,7 +427,7 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
             title = content_service.get_content_title(url) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            content, error = _fetch_youtube_content(video_id, supadata_api_key)
+            content, error, raw_transcript = _fetch_youtube_content(video_id, supadata_api_key)
             if error:
                 return {
                     'success': False,
@@ -442,7 +447,8 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
                 'url': url,
                 'title': result.get('title', title),
                 'content': result.get('content', ''),
-                'html': result.get('html', '')
+                'html': result.get('html', ''),
+                'transcript': raw_transcript
             }
 
         except Exception as e:

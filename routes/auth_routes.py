@@ -215,6 +215,7 @@ def _format_history(h):
         'style': h['style'],
         'content': h['content'],
         'html': h['html'],
+        'transcript': h.get('transcript'),
         'mindmapMarkdown': h.get('mindmap_markdown'),
         'usage': h.get('usage'),
         'elapsed_time': h.get('elapsed_time'),

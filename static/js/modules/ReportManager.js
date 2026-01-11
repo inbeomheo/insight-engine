@@ -178,6 +178,7 @@ export class ReportManager {
             style: data.style,
             html: data.html,
             content: data.content,
+            transcript: data.transcript || null,
             time: this._getCurrentTimeStr(),
             timestamp: Date.now(),
             usage: data.usage || null,
@@ -253,6 +254,7 @@ export class ReportManager {
             <div class="card-footer bg-background-dark/60 border-t border-border-dark/30 px-4 py-3 flex items-center justify-between">
                 <span class="text-[10px] text-gray-text/40 font-mono">Insight Engine</span>
                 <div class="flex items-center gap-1">
+                    ${this._buildFooterButton('transcript-btn', 'subtitles', '자막 원문', 'primary-accent')}
                     ${this._buildFooterButton('mindmap-btn', 'account_tree', '마인드맵', 'purple')}
                     ${this._buildFooterButton('copy-btn', 'content_copy', '복사')}
                     ${this._buildFooterButton('download-btn', 'download', '저장')}
@@ -366,10 +368,23 @@ export class ReportManager {
     // ==================== Card Events ====================
 
     setupCardEvents(card, data) {
+        const transcriptBtn = card.querySelector('.transcript-btn');
         const mindmapBtn = card.querySelector('.mindmap-btn');
         const copyBtn = card.querySelector('.copy-btn');
         const downloadBtn = card.querySelector('.download-btn');
         const deleteBtn = card.querySelector('.delete-btn');
+
+        // 자막 원문 버튼 이벤트
+        if (transcriptBtn) {
+            if (data.transcript) {
+                transcriptBtn.addEventListener('click', () => this._handleTranscriptClick(data));
+            } else {
+                // 자막이 없으면 버튼 비활성화
+                transcriptBtn.classList.add('opacity-30', 'cursor-not-allowed');
+                transcriptBtn.disabled = true;
+                transcriptBtn.title = '자막 데이터 없음';
+            }
+        }
 
         // 마인드맵 버튼 이벤트
         if (mindmapBtn && this.mindmapManager) {
@@ -379,6 +394,53 @@ export class ReportManager {
         copyBtn?.addEventListener('click', () => this._handleCopyClick(copyBtn, data.content));
         downloadBtn?.addEventListener('click', () => this._handleDownloadClick(data));
         deleteBtn?.addEventListener('click', () => this._handleDeleteClick(card, data.id));
+    }
+
+    _handleTranscriptClick(data) {
+        const modal = document.getElementById('transcript-modal');
+        const content = document.getElementById('transcript-content');
+        const stats = document.getElementById('transcript-stats');
+        const copyBtn = document.getElementById('transcript-copy-btn');
+        const closeBtn = document.getElementById('transcript-close');
+
+        if (!modal || !content) return;
+
+        // 자막 내용 표시
+        content.textContent = data.transcript;
+
+        // 통계 표시
+        const charCount = data.transcript.length;
+        const wordCount = data.transcript.split(/\s+/).filter(w => w).length;
+        stats.textContent = `${charCount.toLocaleString()}자 • 약 ${wordCount.toLocaleString()}단어`;
+
+        // 모달 열기
+        modal.classList.add('active');
+
+        // 복사 버튼 이벤트 (한 번만 등록)
+        const newCopyBtn = copyBtn.cloneNode(true);
+        copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
+        newCopyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(data.transcript);
+                const icon = newCopyBtn.querySelector('.material-symbols-outlined');
+                const label = newCopyBtn.querySelector('span:last-child');
+                icon.textContent = 'check';
+                label.textContent = '완료!';
+                newCopyBtn.classList.add('text-green-400');
+                setTimeout(() => {
+                    icon.textContent = 'content_copy';
+                    label.textContent = '복사';
+                    newCopyBtn.classList.remove('text-green-400');
+                }, 2000);
+            } catch {
+                this.ui.showAlert('복사 실패', 'error');
+            }
+        });
+
+        // 닫기 이벤트
+        const closeHandler = () => modal.classList.remove('active');
+        closeBtn.onclick = closeHandler;
+        modal.onclick = (e) => { if (e.target === modal) closeHandler(); };
     }
 
     async _handleMindmapClick(btn, data) {
