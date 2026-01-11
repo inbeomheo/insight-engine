@@ -131,6 +131,7 @@ export class ContentGenerator {
                 style,
                 html: data.html,
                 content: data.content,
+                transcript: data.transcript,
                 usage: data.usage,
                 elapsed_time: data.elapsed_time
             });
@@ -167,7 +168,8 @@ export class ContentGenerator {
                         title: result.title || 'YouTube 영상 분석',
                         style,
                         html: result.html,
-                        content: result.content
+                        content: result.content,
+                        transcript: result.transcript
                     });
                 } else {
                     this.reportManager.displayErrorCard({
