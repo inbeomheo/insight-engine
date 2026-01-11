@@ -440,7 +440,10 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
             content = content_service.truncate_text(content, max_tokens)
             style_prompt = _get_style_prompt(style, custom_prompt)
 
-            result = ai_service.create_content(content, model, api_key, style_prompt, modifiers=modifiers)
+            result, used_prompt = ai_service.create_content(
+                content, model, api_key, style_prompt,
+                return_prompt=True, modifiers=modifiers
+            )
 
             return {
                 'success': True,
@@ -448,7 +451,7 @@ def _process_single_url(app, url, model, api_key, style, supadata_api_key, modif
                 'title': result.get('title', title),
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
-                'transcript': raw_transcript
+                'prompt': used_prompt
             }
 
         except Exception as e:

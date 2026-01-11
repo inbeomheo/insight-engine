@@ -85,6 +85,7 @@ export class ContentGenerator {
                     style,
                     html: data.html,
                     content: data.content,
+                    prompt: data.prompt,
                     usage: data.usage,
                     elapsed_time: data.elapsed_time
                 });
@@ -131,7 +132,7 @@ export class ContentGenerator {
                 style,
                 html: data.html,
                 content: data.content,
-                transcript: data.transcript,
+                prompt: data.prompt,
                 usage: data.usage,
                 elapsed_time: data.elapsed_time
             });
@@ -169,7 +170,7 @@ export class ContentGenerator {
                         style,
                         html: result.html,
                         content: result.content,
-                        transcript: result.transcript
+                        prompt: result.prompt
                     });
                 } else {
                     this.reportManager.displayErrorCard({

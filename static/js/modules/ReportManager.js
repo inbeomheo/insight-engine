@@ -178,7 +178,7 @@ export class ReportManager {
             style: data.style,
             html: data.html,
             content: data.content,
-            transcript: data.transcript || null,
+            prompt: data.prompt || null,
             time: this._getCurrentTimeStr(),
             timestamp: Date.now(),
             usage: data.usage || null,
@@ -254,7 +254,7 @@ export class ReportManager {
             <div class="card-footer bg-background-dark/60 border-t border-border-dark/30 px-4 py-3 flex items-center justify-between">
                 <span class="text-[10px] text-gray-text/40 font-mono">Insight Engine</span>
                 <div class="flex items-center gap-1">
-                    ${this._buildFooterButton('transcript-btn', 'subtitles', '자막 원문', 'primary-accent')}
+                    ${this._buildFooterButton('prompt-btn', 'code', '프롬프트', 'primary-accent')}
                     ${this._buildFooterButton('mindmap-btn', 'account_tree', '마인드맵', 'purple')}
                     ${this._buildFooterButton('copy-btn', 'content_copy', '복사')}
                     ${this._buildFooterButton('download-btn', 'download', '저장')}
@@ -368,21 +368,21 @@ export class ReportManager {
     // ==================== Card Events ====================
 
     setupCardEvents(card, data) {
-        const transcriptBtn = card.querySelector('.transcript-btn');
+        const promptBtn = card.querySelector('.prompt-btn');
         const mindmapBtn = card.querySelector('.mindmap-btn');
         const copyBtn = card.querySelector('.copy-btn');
         const downloadBtn = card.querySelector('.download-btn');
         const deleteBtn = card.querySelector('.delete-btn');
 
-        // 자막 원문 버튼 이벤트
-        if (transcriptBtn) {
-            if (data.transcript) {
-                transcriptBtn.addEventListener('click', () => this._handleTranscriptClick(data));
+        // 프롬프트 보기 버튼 이벤트
+        if (promptBtn) {
+            if (data.prompt) {
+                promptBtn.addEventListener('click', () => this._handlePromptClick(data));
             } else {
-                // 자막이 없으면 버튼 비활성화
-                transcriptBtn.classList.add('opacity-30', 'cursor-not-allowed');
-                transcriptBtn.disabled = true;
-                transcriptBtn.title = '자막 데이터 없음';
+                // 프롬프트가 없으면 버튼 비활성화
+                promptBtn.classList.add('opacity-30', 'cursor-not-allowed');
+                promptBtn.disabled = true;
+                promptBtn.title = '프롬프트 데이터 없음';
             }
         }
 
@@ -396,21 +396,21 @@ export class ReportManager {
         deleteBtn?.addEventListener('click', () => this._handleDeleteClick(card, data.id));
     }
 
-    _handleTranscriptClick(data) {
-        const modal = document.getElementById('transcript-modal');
-        const content = document.getElementById('transcript-content');
-        const stats = document.getElementById('transcript-stats');
-        const copyBtn = document.getElementById('transcript-copy-btn');
-        const closeBtn = document.getElementById('transcript-close');
+    _handlePromptClick(data) {
+        const modal = document.getElementById('prompt-modal');
+        const content = document.getElementById('prompt-content');
+        const stats = document.getElementById('prompt-stats');
+        const copyBtn = document.getElementById('prompt-copy-btn');
+        const closeBtn = document.getElementById('prompt-close');
 
         if (!modal || !content) return;
 
-        // 자막 내용 표시
-        content.textContent = data.transcript;
+        // 프롬프트 내용 표시
+        content.textContent = data.prompt;
 
         // 통계 표시
-        const charCount = data.transcript.length;
-        const wordCount = data.transcript.split(/\s+/).filter(w => w).length;
+        const charCount = data.prompt.length;
+        const wordCount = data.prompt.split(/\s+/).filter(w => w).length;
         stats.textContent = `${charCount.toLocaleString()}자 • 약 ${wordCount.toLocaleString()}단어`;
 
         // 모달 열기
@@ -421,7 +421,7 @@ export class ReportManager {
         copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
         newCopyBtn.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(data.transcript);
+                await navigator.clipboard.writeText(data.prompt);
                 const icon = newCopyBtn.querySelector('.material-symbols-outlined');
                 const label = newCopyBtn.querySelector('span:last-child');
                 icon.textContent = 'check';

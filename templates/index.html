@@ -922,30 +922,30 @@
         </div>
     </div>
 
-    <!-- Transcript Modal (자막 원문 보기) -->
-    <div class="modal-overlay" id="transcript-modal">
-        <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+    <!-- Prompt Modal (AI 입력 프롬프트 보기) -->
+    <div class="modal-overlay" id="prompt-modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
             <div class="flex items-center justify-between p-4 border-b border-border-dark/50">
                 <h2 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary-accent">subtitles</span>
-                    <span>자막 원문</span>
+                    <span class="material-symbols-outlined text-primary-accent">code</span>
+                    <span>AI 입력 프롬프트</span>
                 </h2>
                 <div class="flex items-center gap-2">
-                    <button id="transcript-copy-btn" class="inline-flex items-center gap-1.5 text-xs text-gray-text hover:text-primary-accent px-3 py-1.5 hover:bg-primary-accent/10 transition-colors rounded-lg" title="복사">
+                    <button id="prompt-copy-btn" class="inline-flex items-center gap-1.5 text-xs text-gray-text hover:text-primary-accent px-3 py-1.5 hover:bg-primary-accent/10 transition-colors rounded-lg" title="복사">
                         <span class="material-symbols-outlined text-sm">content_copy</span>
                         <span>복사</span>
                     </button>
-                    <button id="transcript-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded">
+                    <button id="prompt-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
             </div>
-            <div id="transcript-content" class="p-6 overflow-y-auto font-body text-gray-300 leading-relaxed whitespace-pre-wrap" style="max-height: calc(90vh - 120px);">
-                <!-- 자막 내용이 여기에 표시됩니다 -->
+            <div id="prompt-content" class="p-6 overflow-y-auto font-mono text-sm text-gray-300 leading-relaxed whitespace-pre-wrap bg-black/30" style="max-height: calc(90vh - 120px);">
+                <!-- 프롬프트 내용이 여기에 표시됩니다 -->
             </div>
             <div class="p-3 border-t border-border-dark/50 flex items-center justify-between text-xs text-gray-text">
-                <span id="transcript-stats"></span>
-                <span class="text-gray-text/50">YouTube 자막 원문</span>
+                <span id="prompt-stats"></span>
+                <span class="text-gray-text/50">스타일 프롬프트 + 자막 + 댓글</span>
             </div>
         </div>
     </div>
