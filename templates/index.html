@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html class="dark" lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Insight Engine — AI Content Analysis</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- 영문 폰트 -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <!-- 한글 폰트: 헤드라인용 세리프 + 본문용 산세리프 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-accent": "#D4A574",
+                        "primary-glow": "#E8C49A",
+                        "background-dark": "#0C0C0C",
+                        "text-light": "#F5F5F0",
+                        "surface-dark": "#151515",
+                        "border-dark": "#2A2A2A",
+                        "gray-text": "#8B8B8B",
+                        "warm-white": "#FAF9F6"
+                    },
+                    fontFamily: {
+                        "display": ["Playfair Display", "Gowun Batang", "Noto Serif KR", "serif"],
+                        "body": ["DM Sans", "Pretendard", "sans-serif"],
+                        "serif-kr": ["Gowun Batang", "Noto Serif KR", "serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "2px",
+                        "lg": "4px",
+                        "xl": "8px",
+                        "2xl": "12px",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* ==================== Base Styles ==================== */
+        .glass-panel {
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 165, 116, 0.15);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0C0C0C;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #D4A574, #B88B5A);
+        }
+
+        /* Glow Effects */
+        .warm-glow {
+            box-shadow: 0 0 30px rgba(212, 165, 116, 0.15),
+                        0 0 60px rgba(212, 165, 116, 0.05);
+        }
+        .warm-glow:hover {
+            box-shadow: 0 0 40px rgba(212, 165, 116, 0.25),
+                        0 0 80px rgba(212, 165, 116, 0.1);
+        }
+
+        /* Animations */
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .animate-shimmer {
+            background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.1), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: linear-gradient(180deg, #151515 0%, #0C0C0C 100%);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            border-radius: 12px;
+            max-width: 520px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6),
+                        0 0 1px rgba(212, 165, 116, 0.3);
+        }
+
+        /* Provider Card */
+        .provider-card {
+            border: 1px solid #2A2A2A;
+            background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+            padding: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .provider-card:hover {
+            border-color: rgba(212, 165, 116, 0.3);
+        }
+        .provider-card.configured {
+            border-color: #D4A574;
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.08) 0%, #151515 100%);
+        }
+        .provider-card .provider-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .provider-card .provider-body.expanded {
+            max-height: 200px;
+            margin-top: 1rem;
+        }
+        .provider-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .provider-checkbox input {
+            width: 1.125rem;
+            height: 1.125rem;
+            accent-color: #D4A574;
+        }
+
+        /* API Key Input */
+        .api-key-input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .api-key-input-wrapper input {
+            flex: 1;
+            background: #0C0C0C;
+            border: 1px solid #2A2A2A;
+            padding: 0.625rem 0.75rem;
+            color: #F5F5F0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .api-key-input-wrapper input:focus {
+            border-color: #D4A574;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+        .api-key-input-wrapper button {
+            background: #1a1a1a;
+            border: 1px solid #2A2A2A;
+            padding: 0.625rem;
+            color: #8B8B8B;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .api-key-input-wrapper button:hover {
+            color: #D4A574;
+            border-color: rgba(212, 165, 116, 0.3);
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Report Card */
+        .report-card {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        .report-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(212, 165, 116, 0.12), 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .report-card .card-header {
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.04) 0%, transparent 50%);
+        }
+        .report-card .card-footer {
+            backdrop-filter: blur(8px);
+        }
+        .report-card .card-footer button {
+            transition: all 0.2s ease;
+        }
+        .report-card .card-footer button:hover {
+            transform: translateY(-1px);
+        }
+        .report-card .stats-badge {
+            background: rgba(212, 165, 116, 0.1);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.6875rem;
+        }
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        /* Alerts */
+        .alert {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1.25rem;
+            border: 1px solid;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(8px);
+        }
+        .alert-success {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.25);
+            color: #34D399;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.25);
+            color: #F87171;
+        }
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.25);
+            color: #FBBF24;
+        }
+        .alert-info {
+            background: rgba(212, 165, 116, 0.08);
+            border-color: rgba(212, 165, 116, 0.25);
+            color: #D4A574;
+        }
+
+        /* ==================== Report Content Styles ==================== */
+        .report-content {
+            font-family: 'DM Sans', 'Pretendard', sans-serif;
+            line-height: 1.9;
+            color: #CACACA;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        /* Headings */
+        .report-content h1 {
+            font-family: 'Playfair Display', 'Gowun Batang', 'Noto Serif KR', serif;
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: #F5F5F0;
+            margin: 2.5rem 0 1.25rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+            letter-spacing: -0.01em;
+        }
+
+        .report-content h2 {
+            font-family: 'Playfair Display', 'Gowun Batang', 'Noto Serif KR', serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #D4A574;
+            margin: 2rem 0 0.875rem 0;
+            letter-spacing: 0;
+        }
+
+        .report-content h2::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #D4A574;
+            margin-right: 12px;
+            transform: rotate(45deg);
+        }
+
+        .report-content h3 {
+            font-family: 'DM Sans', 'Pretendard', sans-serif;
+            font-size: 1.1875rem;
+            font-weight: 600;
+            color: #E8E8E8;
+            margin: 1.75rem 0 0.625rem 0;
+        }
+
+        .report-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #B8B8B8;
+            margin: 1.5rem 0 0.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.8125rem;
+        }
+
+        /* Paragraphs */
+        .report-content p {
+            margin: 1.125rem 0;
+            color: #C8C8C8;
+        }
+
+        /* Lists */
+        .report-content ul,
+        .report-content ol {
+            margin: 1.25rem 0;
+            padding-left: 0;
+        }
+
+        .report-content ul {
+            list-style: none;
+        }
+
+        .report-content ul li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin: 0.625rem 0;
+            color: #C8C8C8;
+        }
+
+        .report-content ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.625rem;
+            width: 6px;
+            height: 6px;
+            background: linear-gradient(135deg, #D4A574, #B88B5A);
+            border-radius: 1px;
+            transform: rotate(45deg);
+        }
+
+        .report-content ol {
+            list-style: none;
+            counter-reset: item;
+        }
+
+        .report-content ol li {
+            counter-increment: item;
+            position: relative;
+            padding-left: 2.25rem;
+            margin: 0.875rem 0;
+            color: #C8C8C8;
+        }
+
+        .report-content ol li::before {
+            content: counter(item);
+            position: absolute;
+            left: 0;
+            width: 1.625rem;
+            height: 1.625rem;
+            background: linear-gradient(135deg, #D4A574 0%, #B88B5A 100%);
+            color: #0C0C0C;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        /* Nested lists */
+        .report-content ul ul,
+        .report-content ol ol,
+        .report-content ul ol,
+        .report-content ol ul {
+            margin: 0.5rem 0;
+        }
+
+        .report-content ul ul li::before {
+            background: #5A5A5A;
+            width: 4px;
+            height: 4px;
+        }
+
+        /* Blockquotes */
+        .report-content blockquote {
+            margin: 1.75rem 0;
+            padding: 1.25rem 1.75rem;
+            background: linear-gradient(90deg, rgba(212, 165, 116, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #D4A574;
+            color: #D8D8D8;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .report-content blockquote p {
+            margin: 0;
+            font-family: 'Playfair Display', 'Gowun Batang', 'Noto Serif KR', serif;
+        }
+
+        /* Code blocks */
+        .report-content pre {
+            margin: 1.75rem 0;
+            padding: 1.5rem;
+            background: #0C0C0C;
+            border: 1px solid #2A2A2A;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.7;
+        }
+
+        .report-content code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(212, 165, 116, 0.12);
+            color: #E8C49A;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.85em;
+            border-radius: 4px;
+        }
+
+        .report-content pre code {
+            background: transparent;
+            color: #D8D8D8;
+            padding: 0;
+        }
+
+        /* Tables */
+        .report-content table {
+            width: 100%;
+            margin: 1.75rem 0;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .report-content thead {
+            background: linear-gradient(90deg, rgba(212, 165, 116, 0.15) 0%, rgba(212, 165, 116, 0.05) 100%);
+        }
+
+        .report-content th {
+            padding: 0.875rem 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            color: #D4A574;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+            text-transform: uppercase;
+            font-size: 0.6875rem;
+            letter-spacing: 0.08em;
+        }
+
+        .report-content td {
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid #2A2A2A;
+            color: #C8C8C8;
+        }
+
+        .report-content tr:hover td {
+            background: rgba(212, 165, 116, 0.04);
+        }
+
+        /* Strong and emphasis */
+        .report-content strong {
+            color: #F5F5F0;
+            font-weight: 600;
+        }
+
+        .report-content em {
+            color: #E8C49A;
+            font-style: italic;
+        }
+
+        /* Links */
+        .report-content a {
+            color: #D4A574;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(212, 165, 116, 0.3);
+            transition: all 0.2s;
+        }
+
+        .report-content a:hover {
+            border-bottom-color: #D4A574;
+            color: #E8C49A;
+        }
+
+        /* Horizontal rule */
+        .report-content hr {
+            margin: 2.5rem 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 165, 116, 0.3), transparent);
+        }
+
+        /* Key insights / highlights box */
+        .report-content .highlight-box,
+        .report-content .key-point {
+            margin: 1.75rem 0;
+            padding: 1.5rem;
+            background: rgba(212, 165, 116, 0.06);
+            border: 1px solid rgba(212, 165, 116, 0.15);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .report-content .highlight-box::before {
+            content: '✦';
+            position: absolute;
+            top: -0.625rem;
+            left: 1rem;
+            background: #0C0C0C;
+            padding: 0 0.5rem;
+            color: #D4A574;
+        }
+
+        /* Summary section styling */
+        .report-content .summary,
+        .report-content .executive-summary {
+            padding: 1.75rem;
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.08) 0%, rgba(184, 139, 90, 0.04) 100%);
+            border-left: 3px solid #D4A574;
+            border-radius: 0 8px 8px 0;
+            margin: 1.75rem 0;
+        }
+
+        /* Tags / Keywords */
+        .report-content .tag,
+        .report-content .keyword {
+            display: inline-block;
+            padding: 0.3rem 0.875rem;
+            background: rgba(212, 165, 116, 0.12);
+            color: #D4A574;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0.25rem;
+            border-radius: 4px;
+        }
+
+        /* Metric / Score displays */
+        .report-content .metric {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.625rem 1.25rem;
+            background: #151515;
+            border: 1px solid #2A2A2A;
+            border-radius: 6px;
+        }
+
+        .report-content .metric-value {
+            font-size: 1.625rem;
+            font-weight: 700;
+            color: #D4A574;
+            font-family: 'Playfair Display', 'Gowun Batang', serif;
+        }
+
+        .report-content .metric-label {
+            font-size: 0.6875rem;
+            color: #8B8B8B;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Style Card Enhancement */
+        .style-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .style-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Mindmap Styles */
+        #mindmap-svg {
+            background: #0C0C0C;
+        }
+        #mindmap-svg text {
+            fill: #F5F5F0;
+            font-family: 'DM Sans', 'Pretendard', sans-serif;
+            font-size: 14px;
+        }
+        #mindmap-svg .markmap-node-circle {
+            fill: #D4A574;
+        }
+        #mindmap-svg .markmap-link {
+            stroke: rgba(212, 165, 116, 0.4);
+        }
+        #mindmap-svg .markmap-foreign {
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-text-light font-body overflow-y-auto min-h-screen flex flex-col selection:bg-primary-accent/30 selection:text-warm-white">
+    <!-- Ambient Background - Editorial Style -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <!-- Warm gradient glow -->
+        <div class="absolute top-0 left-1/3 w-[60vw] h-[600px] bg-gradient-to-b from-primary-accent/8 via-primary-accent/3 to-transparent blur-[150px]"></div>
+        <!-- Subtle corner accent -->
+        <div class="absolute bottom-0 right-0 w-[40vw] h-[400px] bg-gradient-to-tl from-primary-accent/5 to-transparent blur-[120px]"></div>
+        <!-- Noise texture overlay -->
+        <div class="absolute inset-0 opacity-[0.015]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-background-dark/95 backdrop-blur-xl border-b border-border-dark/50 py-5">
+        <div class="max-w-5xl mx-auto px-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-primary-accent/20 blur-lg"></div>
+                    <span class="material-symbols-outlined text-primary-accent text-2xl relative">auto_awesome</span>
+                </div>
+                <div>
+                    <h1 class="text-base font-display font-semibold tracking-wide text-warm-white">Insight Engine</h1>
+                    <p class="text-[10px] text-gray-text uppercase tracking-[0.2em] font-body">AI Content Analysis</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-5 text-sm font-medium">
+                <!-- Auth Container -->
+                <div id="auth-container" class="flex items-center"></div>
+                <div class="h-5 w-px bg-gradient-to-b from-transparent via-border-dark to-transparent"></div>
+                <button id="settings-btn" class="flex items-center gap-2 cursor-pointer text-gray-text hover:text-primary-accent transition-all duration-300 group">
+                    <span class="material-symbols-outlined text-lg group-hover:rotate-45 transition-transform duration-300">settings</span>
+                    <span class="font-body">설정</span>
+                </button>
+                <div class="h-5 w-px bg-gradient-to-b from-transparent via-border-dark to-transparent"></div>
+                <div class="flex items-center gap-2.5 cursor-pointer group">
+                    <div class="size-7 rounded-lg bg-gradient-to-br from-primary-accent/30 to-primary-accent/10 border border-primary-accent/40 flex items-center justify-center text-primary-accent text-[10px] font-bold tracking-wider shadow-lg shadow-primary-accent/10">AI</div>
+                    <span class="group-hover:text-primary-accent transition-colors font-body text-gray-text" id="current-provider-label">미설정</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-accent">key</span>
+                    API 설정
+                </h2>
+                <button id="modal-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="mb-6">
+                <p class="text-sm text-gray-text font-body">
+                    사용할 AI 서비스를 선택하고 API 키를 입력하세요.<br>
+                    API 키는 브라우저에만 저장됩니다.
+                </p>
+            </div>
+            <div id="provider-list" class="space-y-3 max-h-[40vh] overflow-y-auto">
+                <!-- Provider cards will be dynamically generated -->
+            </div>
+
+            <!-- Supadata API Section -->
+            <div class="mt-6 pt-4 border-t border-border-dark/50">
+                <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
+                    <span class="material-symbols-outlined text-emerald-400">subtitles</span>
+                    자막 서비스 (선택)
+                </h3>
+                <p class="text-xs text-gray-text mb-3 font-body">
+                    YouTube 자막 수집이 차단될 경우 백업 서비스입니다.
+                </p>
+                <div class="api-key-input-wrapper">
+                    <input type="password" id="supadata-api-key" placeholder="Supadata API 키 (선택사항)">
+                    <button type="button" id="toggle-supadata-key">
+                        <span class="material-symbols-outlined text-sm">visibility</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cache Management Section -->
+            <div class="mt-6 pt-4 border-t border-border-dark/50">
+                <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
+                    <span class="material-symbols-outlined text-orange-400">cached</span>
+                    캐시 관리
+                </h3>
+                <p class="text-xs text-gray-text mb-3 font-body">
+                    저장된 자막/댓글 캐시를 삭제합니다. 같은 영상을 새로 분석하려면 캐시를 삭제하세요.
+                </p>
+                <button type="button" id="clear-cache-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all rounded-lg text-sm font-medium">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                    <span>전체 캐시 삭제</span>
+                </button>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-border-dark/50">
+                <button id="modal-cancel" class="px-4 py-2 text-sm font-bold text-gray-text hover:text-white transition-colors">취소</button>
+                <button id="modal-save" class="px-6 py-2 text-sm font-bold bg-primary-accent text-black hover:bg-white transition-colors">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Style Modal -->
+    <div class="modal-overlay" id="custom-style-modal">
+        <div class="modal-content p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-accent">edit_note</span>
+                    <span id="custom-style-modal-title">새 스타일 만들기</span>
+                </h2>
+                <button id="custom-style-modal-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Style Name -->
+                <div>
+                    <label class="block text-xs font-mono text-gray-text mb-2 uppercase">스타일 이름</label>
+                    <input type="text" id="custom-style-name" maxlength="20" placeholder="예: 내 분석 스타일" class="w-full bg-black border border-border-dark text-white p-3 focus:border-primary-accent focus:outline-none"/>
+                </div>
+
+                <!-- Icon Selection -->
+                <div>
+                    <label class="block text-xs font-mono text-gray-text mb-2 uppercase">아이콘 선택</label>
+                    <div class="grid grid-cols-5 gap-2" id="icon-selection">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="custom-icon" value="edit_note" checked class="peer sr-only"/>
+                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                <span class="material-symbols-outlined text-gray-text peer-checked:text-primary-accent">edit_note</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="custom-icon" value="star" class="peer sr-only"/>
+                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                <span class="material-symbols-outlined text-gray-text peer-checked:text-primary-accent">star</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="custom-icon" value="bookmark" class="peer sr-only"/>
+                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                <span class="material-symbols-outlined text-gray-text peer-checked:text-primary-accent">bookmark</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="custom-icon" value="psychology" class="peer sr-only"/>
+                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                <span class="material-symbols-outlined text-gray-text peer-checked:text-primary-accent">psychology</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="custom-icon" value="rocket_launch" class="peer sr-only"/>
+                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                <span class="material-symbols-outlined text-gray-text peer-checked:text-primary-accent">rocket_launch</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Prompt -->
+                <div>
+                    <label class="block text-xs font-mono text-gray-text mb-2 uppercase">프롬프트</label>
+                    <textarea id="custom-style-prompt" maxlength="2000" rows="8" placeholder="AI에게 전달할 지시사항을 작성하세요.&#10;&#10;예:&#10;당신은 마케팅 전문가입니다.&#10;아래 영상의 내용을 분석하여 마케팅 인사이트를 도출해주세요.&#10;- 타겟 고객층&#10;- 핵심 메시지&#10;- 활용 가능한 채널" class="w-full bg-black border border-border-dark text-white p-3 focus:border-primary-accent focus:outline-none resize-none font-mono text-sm"></textarea>
+                    <div class="text-right text-xs text-gray-text mt-1">
+                        <span id="prompt-char-count">0</span>/2000자
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between gap-3 mt-6 pt-4 border-t border-border-dark/50">
+                <button id="custom-style-delete" class="px-4 py-2 text-sm font-bold text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors hidden">삭제</button>
+                <div class="flex gap-3 ml-auto">
+                    <button id="custom-style-cancel" class="px-4 py-2 text-sm font-bold text-gray-text hover:text-white transition-colors">취소</button>
+                    <button id="custom-style-save" class="px-6 py-2 text-sm font-bold bg-primary-accent text-black hover:bg-white transition-colors">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-content p-6" style="max-width: 400px;">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-accent">person</span>
+                    로그인 / 회원가입
+                </h2>
+                <button id="auth-modal-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded-lg">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-border-dark mb-6">
+                <button id="auth-login-tab" class="flex-1 py-3 text-sm font-medium border-b-2 border-primary-accent text-primary-accent transition-colors">
+                    로그인
+                </button>
+                <button id="auth-signup-tab" class="flex-1 py-3 text-sm font-medium border-b-2 border-transparent text-gray-text hover:text-white transition-colors">
+                    회원가입
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="auth-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-text mb-2">이메일</label>
+                    <input type="email" id="login-email" class="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-sm text-warm-white focus:border-primary-accent focus:outline-none transition-colors" placeholder="your@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-text mb-2">비밀번호</label>
+                    <input type="password" id="login-password" class="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-sm text-warm-white focus:border-primary-accent focus:outline-none transition-colors" placeholder="••••••••">
+                </div>
+                <button id="auth-login-submit" class="w-full bg-gradient-to-r from-primary-accent to-primary-glow text-background-dark font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">
+                    로그인
+                </button>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="auth-signup-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs text-gray-text mb-2">이메일</label>
+                    <input type="email" id="signup-email" class="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-sm text-warm-white focus:border-primary-accent focus:outline-none transition-colors" placeholder="your@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-text mb-2">비밀번호</label>
+                    <input type="password" id="signup-password" class="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-sm text-warm-white focus:border-primary-accent focus:outline-none transition-colors" placeholder="6자 이상">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-text mb-2">비밀번호 확인</label>
+                    <input type="password" id="signup-confirm-password" class="w-full bg-background-dark border border-border-dark rounded-lg px-4 py-3 text-sm text-warm-white focus:border-primary-accent focus:outline-none transition-colors" placeholder="비밀번호 재입력">
+                </div>
+                <button id="auth-signup-submit" class="w-full bg-gradient-to-r from-primary-accent to-primary-glow text-background-dark font-semibold py-3 rounded-lg hover:opacity-90 transition-opacity">
+                    회원가입
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-text/60 text-center mt-4">
+                Supabase 인증 사용
+            </p>
+        </div>
+    </div>
+
+    <!-- Mindmap Modal -->
+    <div class="modal-overlay" id="mindmap-modal">
+        <div class="modal-content" style="max-width: 95vw; max-height: 95vh; width: 1200px;">
+            <div class="flex items-center justify-between p-4 border-b border-border-dark/50">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-accent">account_tree</span>
+                    <span id="mindmap-title">마인드맵</span>
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button id="mindmap-zoom-in" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded" title="확대">
+                        <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
+                    <button id="mindmap-zoom-out" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded" title="축소">
+                        <span class="material-symbols-outlined text-sm">zoom_out</span>
+                    </button>
+                    <button id="mindmap-fit" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded" title="화면에 맞추기">
+                        <span class="material-symbols-outlined text-sm">fit_screen</span>
+                    </button>
+                    <div class="h-5 w-px bg-border-dark mx-1"></div>
+                    <button id="mindmap-close" class="p-2 hover:bg-white/10 text-gray-text hover:text-white transition-colors rounded">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            <div id="mindmap-container" class="relative bg-black" style="height: calc(95vh - 120px);">
+                <!-- Loading state -->
+                <div id="mindmap-loading" class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                        <span class="material-symbols-outlined text-4xl text-primary-accent loading-spinner">progress_activity</span>
+                        <p class="text-gray-text mt-3 text-sm">마인드맵 생성 중...</p>
+                    </div>
+                </div>
+                <!-- SVG will be rendered here -->
+                <svg id="mindmap-svg" class="w-full h-full"></svg>
+            </div>
+            <div class="p-3 border-t border-border-dark/50 flex items-center justify-between text-xs text-gray-text">
+                <span id="mindmap-stats"></span>
+                <span class="text-gray-text/50">드래그: 이동 | 스크롤: 확대/축소</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div class="modal-overlay" id="onboarding-modal">
+        <div class="modal-content p-6">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary-accent to-purple-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-4xl">smart_display</span>
+                </div>
+                <h2 class="text-2xl font-bold mb-2">환영합니다!</h2>
+                <p class="text-gray-text font-body">YouTube 영상을 AI로 분석하여<br>요약, 인사이트, 아이디어를 도출합니다.</p>
+            </div>
+            <div class="mb-6">
+                <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
+                    <span class="material-symbols-outlined text-primary-accent">key</span>
+                    AI 서비스 설정
+                </h3>
+                <p class="text-xs text-gray-text font-body mb-4">사용하실 AI 서비스를 선택하고 API 키를 입력해주세요.</p>
+                <div id="onboarding-providers" class="space-y-3 max-h-[40vh] overflow-y-auto">
+                    <!-- Provider selection will be dynamically generated -->
+                </div>
+            </div>
+            <button id="onboarding-save" class="w-full bg-primary-accent text-black font-bold py-4 text-lg uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">check</span>
+                설정 완료
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 flex flex-col max-w-5xl mx-auto w-full px-6 pb-24">
+        <!-- Alert Container -->
+        <div id="alert-container" class="mt-4"></div>
+
+        <!-- Hero Section -->
+        <section class="mt-20 mb-16 border-b border-border-dark/30 pb-16">
+            <div class="mb-3">
+                <span class="text-[10px] text-primary-accent uppercase tracking-[0.3em] font-medium">AI-Powered Analysis</span>
+            </div>
+            <h2 class="text-4xl md:text-6xl font-display font-semibold mb-4 text-warm-white leading-[1.1] tracking-tight">
+                Transform Content<br/>Into <span class="text-primary-accent italic">Insight</span>
+            </h2>
+            <p class="text-gray-text font-body text-lg max-w-xl mb-10">
+                YouTube 영상을 분석하여 핵심 인사이트, 요약, 아이디어를 추출합니다.
+            </p>
+
+            <!-- URL Input List -->
+            <div class="relative group">
+                <div class="absolute -inset-2 bg-gradient-to-r from-primary-accent/10 via-primary-accent/5 to-transparent blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <div id="url-list-container" class="relative space-y-2">
+                    <!-- URL 카드들이 여기에 동적으로 추가됨 -->
+                </div>
+                <!-- 새 URL 입력란 -->
+                <div class="relative flex items-center bg-surface-dark border border-border-dark/60 focus-within:border-primary-accent/60 transition-all duration-300 p-3 mt-3 rounded-xl group-hover:border-border-dark">
+                    <div class="pl-2 pr-1 text-gray-text/60">
+                        <span class="material-symbols-outlined text-lg">add</span>
+                    </div>
+                    <div class="pl-2 pr-4 text-primary-accent/60">
+                        <span class="material-symbols-outlined text-xl">link</span>
+                    </div>
+                    <input id="url-input" class="bg-transparent border-none text-lg text-text-light placeholder-gray-text/40 focus:ring-0 w-full h-14 font-body focus:outline-none" placeholder="YouTube URL을 붙여넣으세요..." type="text"/>
+                    <div class="flex items-center gap-2">
+                        <button id="ai-analyze-btn" class="flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-xs tracking-wide px-5 h-11 rounded-lg hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap" title="AI가 제목을 분석하여 최적 세팅 후 바로 분석합니다">
+                            <span class="material-symbols-outlined text-base">auto_awesome</span>
+                            <span class="hidden sm:inline">AI 분석</span>
+                        </button>
+                        <button id="start-btn" class="bg-gradient-to-r from-primary-accent to-primary-glow text-background-dark font-semibold text-sm tracking-wide px-6 h-11 rounded-lg hover:shadow-lg hover:shadow-primary-accent/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                            분석 시작
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 flex items-center justify-between text-[11px] font-mono text-gray-text/70 tracking-wide">
+                <div class="flex gap-5">
+                    <span id="url-count-display" class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-xs text-primary-accent/60">playlist_add</span>
+                        <span id="url-count">1</span>/10 URLs
+                    </span>
+                </div>
+                <span class="text-gray-text/40">v2.5 • Insight Engine</span>
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section class="mb-16 grid grid-cols-1 md:grid-cols-12 gap-10">
+            <div class="md:col-span-4 space-y-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-1 h-5 bg-gradient-to-b from-primary-accent to-primary-accent/30 rounded-full"></div>
+                    <h3 class="text-xs font-semibold text-primary-accent uppercase tracking-[0.15em]">Model Config</h3>
+                </div>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-[11px] font-body text-gray-text/80 mb-2.5 uppercase tracking-wider">AI 서비스</label>
+                        <div class="relative">
+                            <select id="provider" class="w-full bg-surface-dark border border-border-dark/60 text-warm-white text-sm focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent/60 block p-3.5 appearance-none font-body rounded-lg transition-all">
+                                <option value="">설정에서 선택</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3.5 top-3.5 pointer-events-none text-gray-text/60 text-lg">expand_more</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-body text-gray-text/80 mb-2.5 uppercase tracking-wider">모델</label>
+                        <div class="relative">
+                            <select id="model" class="w-full bg-surface-dark border border-border-dark/60 text-warm-white text-sm focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent/60 block p-3.5 appearance-none font-body rounded-lg transition-all">
+                                <option value="">서비스 선택 후</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3.5 top-3.5 pointer-events-none text-gray-text/60 text-lg">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-8 space-y-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-1 h-5 bg-gradient-to-b from-primary-accent to-primary-accent/30 rounded-full"></div>
+                    <h3 class="text-xs font-semibold text-primary-accent uppercase tracking-[0.15em]">Output Format</h3>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5" id="style-options">
+                    <label class="cursor-pointer group relative" title="핵심 내용만 간결하게 요약합니다">
+                        <input checked name="style" type="radio" value="summary" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">description</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Summary</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="누구나 이해하기 쉬운 말로 풀어서 설명합니다">
+                        <input name="style" type="radio" value="easy" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">forum</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Easy</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="상세하고 풍부한 블로그 포스트 형태로 작성합니다">
+                        <input name="style" type="radio" value="detailed" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">article</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Blog</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="영상에서 언급된 니즈와 추천 아이템을 분석합니다">
+                        <input name="style" type="radio" value="needs" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">lightbulb</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Ideas</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="뉴스 기사 형태로 객관적으로 작성합니다">
+                        <input name="style" type="radio" value="news" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">newspaper</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">News</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="영상 대본/스크립트 형태로 재구성합니다">
+                        <input name="style" type="radio" value="script" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">movie</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Script</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="질문과 답변 형식으로 정리합니다">
+                        <input name="style" type="radio" value="qna" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">quiz</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Q&A</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="인포그래픽 제작에 적합한 핵심 데이터를 추출합니다">
+                        <input name="style" type="radio" value="infographic" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">insert_chart</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Info</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="여러 요소를 비교 분석하여 정리합니다">
+                        <input name="style" type="radio" value="compare" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">compare</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Compare</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다">
+                        <input name="style" type="radio" value="sns" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">share</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">SNS</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Custom Styles Section -->
+                <div id="custom-styles-section" class="hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs font-bold text-gray-text uppercase tracking-wider">My Styles</span>
+                    </div>
+                    <div id="custom-styles-grid" class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <!-- Custom styles will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Style Buttons -->
+                <div class="flex gap-2">
+                    <button id="add-custom-style-btn" class="flex-1 border border-dashed border-border-dark hover:border-primary-accent bg-transparent text-gray-text hover:text-primary-accent py-2 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 rounded-lg">
+                        <span class="material-symbols-outlined text-sm">add</span>
+                        <span>커스텀 스타일 추가</span>
+                    </button>
+                    <button id="generate-style-btn" class="flex-1 border border-dashed border-purple-400/50 hover:border-purple-400 bg-transparent text-purple-400/80 hover:text-purple-400 py-2 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 rounded-lg" title="AI가 영상에 맞는 맞춤 프롬프트를 생성합니다">
+                        <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                        <span>AI 스타일 생성</span>
+                    </button>
+                </div>
+
+                <!-- Advanced Options -->
+                <div class="border border-border-dark bg-black/50">
+                    <button id="advanced-options-toggle" class="w-full flex items-center justify-between p-3 text-left hover:bg-white/5 transition-colors">
+                        <span class="text-xs font-bold text-gray-text uppercase tracking-wider flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">tune</span>
+                            Advanced Options
+                        </span>
+                        <span class="material-symbols-outlined text-gray-text text-sm transition-transform" id="advanced-options-arrow">expand_more</span>
+                    </button>
+                    <div id="advanced-options-panel" class="hidden p-4 pt-0 space-y-4">
+                        <!-- Length -->
+                        <div>
+                            <label class="block text-[10px] font-mono text-gray-text mb-2 uppercase">길이</label>
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="length" value="short" class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">짧게</span>
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="length" value="medium" checked class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">보통</span>
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="length" value="long" class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">상세</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Tone -->
+                        <div>
+                            <label class="block text-[10px] font-mono text-gray-text mb-2 uppercase">톤</label>
+                            <div class="flex gap-2">
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="tone" value="professional" checked class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">전문적</span>
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="tone" value="friendly" class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">친근</span>
+                                    </div>
+                                </label>
+                                <label class="flex-1 cursor-pointer">
+                                    <input type="radio" name="tone" value="humorous" class="peer sr-only"/>
+                                    <div class="border border-border-dark bg-black p-2 text-center peer-checked:border-primary-accent peer-checked:bg-primary-accent/10 hover:border-gray-500 transition-all">
+                                        <span class="text-[10px] font-bold text-gray-text peer-checked:text-white uppercase">유머</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Language & Emoji -->
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-mono text-gray-text mb-2 uppercase">언어</label>
+                                <select id="language-select" class="w-full bg-black border border-border-dark text-white text-xs p-2 focus:border-primary-accent focus:outline-none">
+                                    <option value="ko">한국어</option>
+                                    <option value="en">English</option>
+                                    <option value="ja">日本語</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-[10px] font-mono text-gray-text mb-2 uppercase">이모지</label>
+                                <label class="flex items-center gap-2 cursor-pointer p-2 border border-border-dark bg-black hover:border-gray-500 transition-all">
+                                    <input type="checkbox" id="emoji-checkbox" class="w-4 h-4 accent-primary-accent"/>
+                                    <span class="text-xs text-gray-text">사용</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="run-analysis-btn" class="relative w-full bg-gradient-to-r from-primary-accent to-primary-glow text-background-dark hover:shadow-xl hover:shadow-primary-accent/20 font-semibold py-4 px-6 tracking-wide transition-all duration-300 warm-glow flex items-center justify-center gap-2.5 rounded-xl group">
+                    <span class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform duration-300" id="run-icon">auto_awesome</span>
+                    <span id="run-text" class="text-sm">분석 실행</span>
+                    <span id="pending-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-lg animate-pulse">0</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Report Stream Section -->
+        <section class="border-t border-border-dark/30 pt-14" id="report-section">
+            <div class="flex items-center justify-between mb-10">
+                <div>
+                    <h2 class="text-2xl font-display font-semibold text-warm-white tracking-tight">Report Stream</h2>
+                    <p class="text-xs text-gray-text/60 mt-1 font-body">분석 결과가 실시간으로 표시됩니다</p>
+                </div>
+                <div class="flex items-center gap-2.5 text-[11px] font-mono text-primary-accent/80" id="live-indicator" style="display: none;">
+                    <span class="size-2 bg-primary-accent rounded-full animate-pulse shadow-lg shadow-primary-accent/40"></span>
+                    LIVE
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="flex flex-col items-center justify-center py-24 text-center">
+                <div class="relative w-24 h-24 mb-8">
+                    <div class="absolute inset-0 bg-gradient-to-br from-primary-accent/30 to-primary-accent/5 blur-2xl rounded-full"></div>
+                    <div class="relative w-full h-full bg-gradient-to-br from-primary-accent/20 to-primary-accent/5 border border-primary-accent/20 flex items-center justify-center animate-float rounded-2xl">
+                        <span class="material-symbols-outlined text-primary-accent text-4xl">auto_awesome</span>
+                    </div>
+                </div>
+                <h3 class="text-xl font-display font-medium text-warm-white mb-3">분석 결과가 여기에 표시됩니다</h3>
+                <p class="text-gray-text/70 font-body max-w-md leading-relaxed">
+                    YouTube URL을 입력하고 분석 버튼을 눌러보세요.<br>
+                    AI가 영상의 내용을 분석하여 인사이트를 제공합니다.
+                </p>
+            </div>
+
+            <!-- Report Cards Container -->
+            <div id="report-stream" class="space-y-10">
+                <!-- Dynamic report cards will be inserted here -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-[11px] font-body text-gray-text/40 text-center py-14 border-t border-border-dark/20 mt-16">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <span class="material-symbols-outlined text-primary-accent/40 text-sm">auto_awesome</span>
+                <span class="tracking-wide">Insight Engine</span>
+            </div>
+            <span class="tracking-wider">© 2025 — AI-Powered Content Analysis</span>
+        </footer>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Markmap for mindmap visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.15.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4"></script>
+    <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>
