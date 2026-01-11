@@ -83,6 +83,56 @@ def signup():
         return _error_response(f'회원가입 오류: {error_msg}')
 
 
+@auth_bp.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """비밀번호 재설정 이메일 발송"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    email = _get_json_data().get('email')
+    if not email:
+        return _error_response('이메일을 입력해주세요.')
+
+    try:
+        get_supabase().auth.reset_password_email(email)
+        return _success_response({
+            'message': '비밀번호 재설정 이메일을 발송했습니다. 이메일을 확인해주세요.'
+        })
+    except Exception as e:
+        error_msg = str(e)
+        if 'not found' in error_msg.lower():
+            return _error_response('등록되지 않은 이메일입니다.')
+        return _error_response(f'이메일 발송 오류: {error_msg}')
+
+
+@auth_bp.route('/api/auth/oauth/<provider>', methods=['GET'])
+def oauth_login(provider):
+    """OAuth 로그인 URL 생성"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    supported_providers = ['google', 'github', 'kakao']
+    if provider not in supported_providers:
+        return _error_response(f'지원하지 않는 OAuth 제공자: {provider}')
+
+    try:
+        # 현재 요청의 호스트에서 redirect URL 생성
+        redirect_url = request.args.get('redirect_url', request.host_url.rstrip('/'))
+
+        result = get_supabase().auth.sign_in_with_oauth({
+            'provider': provider,
+            'options': {
+                'redirect_to': redirect_url
+            }
+        })
+
+        return jsonify({'url': result.url})
+    except Exception as e:
+        return _error_response(f'OAuth 오류: {str(e)}')
+
+
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
     """로그인"""

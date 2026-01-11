@@ -193,6 +193,32 @@ export class AuthManager {
         this.ui.showAlert('로그아웃되었습니다.', 'info');
     }
 
+    async resetPassword(email) {
+        return this._authRequest(
+            '/api/auth/reset-password',
+            { email },
+            null,
+            '비밀번호 재설정 이메일을 발송했습니다.',
+            '이메일 발송 실패'
+        );
+    }
+
+    async oauthLogin(provider) {
+        try {
+            const redirectUrl = window.location.origin;
+            const response = await fetch(`/api/auth/oauth/${provider}?redirect_url=${encodeURIComponent(redirectUrl)}`);
+            const data = await response.json();
+
+            if (response.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                this.ui.showAlert(data.error || 'OAuth 로그인 실패', 'error');
+            }
+        } catch (error) {
+            this.ui.showAlert('OAuth 요청 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
     // ==================== UI ====================
 
     setupAuthUI() {
@@ -356,6 +382,56 @@ export class AuthManager {
         });
         document.getElementById('signup-confirm-password')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') signupSubmit?.click();
+        });
+
+        // 비밀번호 재설정 폼
+        const resetForm = document.getElementById('auth-reset-form');
+        const resetSubmit = document.getElementById('auth-reset-submit');
+        const showResetBtn = document.getElementById('show-reset-password');
+        const backToLoginBtn = document.getElementById('back-to-login');
+
+        // 비밀번호 찾기 클릭 → 재설정 폼 표시
+        showResetBtn?.addEventListener('click', () => {
+            loginForm?.classList.add('hidden');
+            signupForm?.classList.add('hidden');
+            resetForm?.classList.remove('hidden');
+            loginTab?.classList.remove('border-primary-accent', 'text-primary-accent');
+            loginTab?.classList.add('border-transparent', 'text-gray-text');
+        });
+
+        // 로그인으로 돌아가기
+        backToLoginBtn?.addEventListener('click', () => {
+            resetForm?.classList.add('hidden');
+            loginForm?.classList.remove('hidden');
+            this._setTabActive(loginTab, signupTab, loginForm, signupForm);
+        });
+
+        // 비밀번호 재설정 제출
+        resetSubmit?.addEventListener('click', async () => {
+            const email = document.getElementById('reset-email')?.value;
+            if (!email) {
+                this.ui.showAlert('이메일을 입력해주세요.', 'warning');
+                return;
+            }
+
+            const result = await this._handleSubmit(
+                resetSubmit, '재설정 이메일 발송', '발송 중...',
+                () => this.resetPassword(email)
+            );
+
+            if (result.success) {
+                backToLoginBtn?.click();
+            }
+        });
+
+        // Enter 키 처리 (재설정 폼)
+        document.getElementById('reset-email')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') resetSubmit?.click();
+        });
+
+        // 소셜 로그인 버튼
+        document.getElementById('google-login-btn')?.addEventListener('click', () => {
+            this.oauthLogin('google');
         });
     }
 }

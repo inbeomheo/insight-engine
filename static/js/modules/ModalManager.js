@@ -257,6 +257,11 @@ export class ModalManager {
             saveBtn.addEventListener('click', () => this.saveOnboardingSettings());
         }
 
+        const skipBtn = document.getElementById('onboarding-skip');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => this.skipOnboarding());
+        }
+
         modal.classList.add('active');
     }
 
@@ -327,8 +332,21 @@ export class ModalManager {
         this.ui.showAlert('설정이 완료되었습니다! YouTube URL을 입력해보세요.', 'success');
     }
 
+    skipOnboarding() {
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+
+        // 스킵 여부 저장 (다시 안 보이게)
+        localStorage.setItem('onboarding_skipped', 'true');
+
+        this.ui.showAlert('API 키를 설정하지 않으면 콘텐츠 생성 기능을 사용할 수 없습니다. 설정에서 API 키를 추가해주세요.', 'warning', 6000);
+    }
+
     checkFirstTimeUser() {
-        if (!this.storage.hasAnyApiKey()) {
+        const skipped = localStorage.getItem('onboarding_skipped');
+        if (!this.storage.hasAnyApiKey() && !skipped) {
             this.showOnboardingModal();
         }
     }
