@@ -1065,12 +1065,26 @@
                     <div class="w-1 h-5 bg-gradient-to-b from-primary-accent to-primary-accent/30 rounded-full"></div>
                     <h3 class="text-xs font-semibold text-primary-accent uppercase tracking-[0.15em]">Output Format</h3>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5" id="style-options">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2.5" id="style-options">
+                    <label class="cursor-pointer group relative" title="블로그 포스트 형태로 작성합니다">
+                        <input checked name="style" type="radio" value="blog" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">edit_note</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Blog</span>
+                        </div>
+                    </label>
                     <label class="cursor-pointer group relative" title="핵심 내용만 간결하게 요약합니다">
-                        <input checked name="style" type="radio" value="summary" class="peer sr-only"/>
+                        <input name="style" type="radio" value="summary" class="peer sr-only"/>
                         <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
                             <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">description</span>
                             <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Summary</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="상세하고 풍부하게 작성합니다">
+                        <input name="style" type="radio" value="detailed" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">article</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Detail</span>
                         </div>
                     </label>
                     <label class="cursor-pointer group relative" title="누구나 이해하기 쉬운 말로 풀어서 설명합니다">
@@ -1078,13 +1092,6 @@
                         <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
                             <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">forum</span>
                             <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Easy</span>
-                        </div>
-                    </label>
-                    <label class="cursor-pointer group relative" title="상세하고 풍부한 블로그 포스트 형태로 작성합니다">
-                        <input name="style" type="radio" value="detailed" class="peer sr-only"/>
-                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
-                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">article</span>
-                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">Blog</span>
                         </div>
                     </label>
                     <label class="cursor-pointer group relative" title="영상에서 언급된 니즈와 추천 아이템을 분석합니다">
@@ -1134,6 +1141,13 @@
                         <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
                             <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">share</span>
                             <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">SNS</span>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group relative" title="SEO에 최적화된 형태로 작성합니다">
+                        <input name="style" type="radio" value="seo" class="peer sr-only"/>
+                        <div class="style-card border border-border-dark/50 bg-surface-dark p-3.5 h-full peer-checked:border-primary-accent/70 peer-checked:bg-primary-accent/8 rounded-lg flex flex-col items-start gap-1.5 hover:border-border-dark">
+                            <span class="material-symbols-outlined text-gray-text/70 peer-checked:text-primary-accent group-hover:text-gray-text transition-colors text-xl">search</span>
+                            <span class="text-[10px] font-semibold text-gray-text/70 peer-checked:text-warm-white group-hover:text-gray-text uppercase tracking-wider">SEO</span>
                         </div>
                     </label>
                 </div>
