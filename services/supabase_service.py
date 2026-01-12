@@ -244,13 +244,13 @@ def get_api_keys(user_id: str) -> dict:
         result = supabase.table('ie_api_keys') \
             .select('*') \
             .eq('user_id', user_id) \
-            .single() \
+            .limit(1) \
             .execute()
 
-        if not result.data:
+        if not result.data or len(result.data) == 0:
             return {}
 
-        data = result.data
+        data = result.data[0]
         decrypted = {'selectedProvider': data.get('selected_provider')}
         for field in _API_KEY_FIELDS:
             decrypted[field] = decrypt_api_key(data.get(f'{field}_key'))
@@ -337,15 +337,15 @@ def get_usage(user_id: str) -> dict:
     def operation():
         from datetime import date
 
-        # 사용량 조회
+        # 사용량 조회 (.single() 대신 .limit(1) 사용하여 에러 방지)
         result = supabase.table('ie_usage') \
             .select('*') \
             .eq('user_id', user_id) \
-            .single() \
+            .limit(1) \
             .execute()
 
-        if result.data:
-            data = result.data
+        if result.data and len(result.data) > 0:
+            data = result.data[0]
             # 날짜가 바뀌면 사용량 리셋
             last_reset = data.get('last_reset_date')
             today = date.today().isoformat()
@@ -400,14 +400,14 @@ def decrement_usage(user_id: str) -> bool:
         result = supabase.table('ie_usage') \
             .select('usage_count') \
             .eq('user_id', user_id) \
-            .single() \
+            .limit(1) \
             .execute()
 
-        if not result.data or result.data.get('usage_count', 0) <= 0:
+        if not result.data or len(result.data) == 0 or result.data[0].get('usage_count', 0) <= 0:
             return False
 
         # 차감
-        new_count = result.data['usage_count'] - 1
+        new_count = result.data[0]['usage_count'] - 1
         supabase.table('ie_usage') \
             .update({
                 'usage_count': new_count,
@@ -434,9 +434,9 @@ def is_admin(user_id: str) -> bool:
         result = supabase.table('ie_admins') \
             .select('user_id') \
             .eq('user_id', user_id) \
-            .single() \
+            .limit(1) \
             .execute()
-        return bool(result.data)
+        return bool(result.data and len(result.data) > 0)
 
     return _db_operation('Admin check', False, operation)
 
@@ -451,9 +451,9 @@ def get_admin_permissions(user_id: str) -> dict:
         result = supabase.table('ie_admins') \
             .select('permissions') \
             .eq('user_id', user_id) \
-            .single() \
+            .limit(1) \
             .execute()
-        return result.data.get('permissions', {}) if result.data else {}
+        return result.data[0].get('permissions', {}) if result.data and len(result.data) > 0 else {}
 
     return _db_operation('Admin permissions', {}, operation)
 
