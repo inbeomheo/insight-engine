@@ -31,46 +31,16 @@ MAX_CONTENT_TOKENS: int = 100000  # 기본 fallback 값
 
 # 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'openai': {
-        'name': 'OpenAI',
-        'models': [
-            {'id': 'gpt-4o', 'name': 'GPT-4o', 'max_input_tokens': 96000},              # 128K context
-            {'id': 'gpt-4o-mini', 'name': 'GPT-4o Mini', 'max_input_tokens': 96000},    # 128K context
-            {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'max_input_tokens': 96000},    # 128K context
-            {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'max_input_tokens': 12000} # 16K context
-        ]
-    },
-    'anthropic': {
-        'name': 'Claude (Anthropic)',
-        'models': [
-            {'id': 'claude-sonnet-4-20250514', 'name': 'Claude Sonnet 4', 'max_input_tokens': 150000},   # 200K context
-            {'id': 'claude-3-5-sonnet-20241022', 'name': 'Claude 3.5 Sonnet', 'max_input_tokens': 150000},
-            {'id': 'claude-3-haiku-20240307', 'name': 'Claude 3 Haiku', 'max_input_tokens': 150000}
-        ]
-    },
     'gemini': {
         'name': 'Google Gemini',
         'models': [
-            {'id': 'gemini/gemini-3-flash-preview', 'name': 'Gemini 3 Flash (최신)', 'max_input_tokens': 750000},    # 1M context
-            {'id': 'gemini/gemini-3-pro-preview', 'name': 'Gemini 3 Pro (최신)', 'max_input_tokens': 750000},
-            {'id': 'gemini/gemini-2.5-flash-preview-09-2025', 'name': 'Gemini 2.5 Flash', 'max_input_tokens': 750000},
-            {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000},
-            {'id': 'gemini/gemini-2.0-flash', 'name': 'Gemini 2.0 Flash', 'max_input_tokens': 750000},
-            {'id': 'gemini/gemini-1.5-pro-latest', 'name': 'Gemini 1.5 Pro', 'max_input_tokens': 1500000}  # 2M context
-        ]
-    },
-    'zhipu': {
-        'name': 'GLM-4 (Zhipu AI)',
-        'models': [
-            {'id': 'glm-4', 'name': 'GLM-4', 'max_input_tokens': 96000},           # 128K context
-            {'id': 'glm-4-flash', 'name': 'GLM-4 Flash', 'max_input_tokens': 96000},
-            {'id': 'glm-4-air', 'name': 'GLM-4 Air', 'max_input_tokens': 96000}
+            {'id': 'gemini/gemini-2.5-flash-lite-preview-06-17', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000},
         ]
     },
     'deepseek': {
         'name': 'DeepSeek',
         'models': [
-            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000},    # 128K context
+            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000},
             {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000}
         ]
     }
