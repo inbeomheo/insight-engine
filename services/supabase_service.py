@@ -320,3 +320,102 @@ def delete_custom_style(user_id: str, style_id: str) -> bool:
         return True
 
     return _db_operation('Custom style delete', False, operation)
+
+# =============================================
+# 사용량 관리
+# =============================================
+
+MAX_USAGE_COUNT = 5  # 기본 최대 사용 횟수
+
+
+def get_usage(user_id: str) -> dict:
+    """사용자 사용량 조회. 없으면 새로 생성."""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return {'usage_count': 0, 'max_usage': MAX_USAGE_COUNT, 'can_use': False}
+
+    def operation():
+        from datetime import date
+
+        # 사용량 조회
+        result = supabase.table('ie_usage') \
+            .select('*') \
+            .eq('user_id', user_id) \
+            .single() \
+            .execute()
+
+        if result.data:
+            data = result.data
+            # 날짜가 바뀌면 사용량 리셋
+            last_reset = data.get('last_reset_date')
+            today = date.today().isoformat()
+
+            if last_reset != today:
+                # 사용량 리셋
+                supabase.table('ie_usage') \
+                    .update({
+                        'usage_count': MAX_USAGE_COUNT,
+                        'last_reset_date': today,
+                        'updated_at': 'now()'
+                    }) \
+                    .eq('user_id', user_id) \
+                    .execute()
+                return {
+                    'usage_count': MAX_USAGE_COUNT,
+                    'max_usage': data.get('max_usage', MAX_USAGE_COUNT),
+                    'can_use': True
+                }
+
+            return {
+                'usage_count': data.get('usage_count', 0),
+                'max_usage': data.get('max_usage', MAX_USAGE_COUNT),
+                'can_use': data.get('usage_count', 0) > 0
+            }
+
+        # 새 사용자: 레코드 생성
+        supabase.table('ie_usage').insert({
+            'user_id': user_id,
+            'usage_count': MAX_USAGE_COUNT,
+            'max_usage': MAX_USAGE_COUNT,
+            'last_reset_date': date.today().isoformat()
+        }).execute()
+
+        return {
+            'usage_count': MAX_USAGE_COUNT,
+            'max_usage': MAX_USAGE_COUNT,
+            'can_use': True
+        }
+
+    return _db_operation('Usage fetch', {'usage_count': 0, 'max_usage': MAX_USAGE_COUNT, 'can_use': False}, operation)
+
+
+def decrement_usage(user_id: str) -> bool:
+    """사용량 1 차감. 성공 시 True 반환."""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return False
+
+    def operation():
+        # 현재 사용량 확인
+        result = supabase.table('ie_usage') \
+            .select('usage_count') \
+            .eq('user_id', user_id) \
+            .single() \
+            .execute()
+
+        if not result.data or result.data.get('usage_count', 0) <= 0:
+            return False
+
+        # 차감
+        new_count = result.data['usage_count'] - 1
+        supabase.table('ie_usage') \
+            .update({
+                'usage_count': new_count,
+                'updated_at': 'now()'
+            }) \
+            .eq('user_id', user_id) \
+            .execute()
+
+        return True
+
+    return _db_operation('Usage decrement', False, operation)

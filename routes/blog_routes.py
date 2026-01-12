@@ -6,11 +6,14 @@ import json
 import time
 from typing import Dict
 
-from flask import Blueprint, request, jsonify, current_app, render_template
+from flask import Blueprint, request, jsonify, current_app, render_template, g
 
 from config import get_model_max_tokens
 from services import ai_service, content_service
 from services.content_service import clear_cache
+from services.supabase_service import (
+    require_auth, is_supabase_enabled, get_usage, decrement_usage
+)
 
 blog_bp = Blueprint('blog', __name__)
 _CLIENT_TRACKER: Dict[str, float] = {}
@@ -316,11 +319,21 @@ def generate_style():
 
 
 @blog_bp.route('/generate', methods=['POST'])
+@require_auth
 def generate():
     """단일 YouTube URL에서 콘텐츠를 생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    로그인 필수, 하루 5회 제한 적용.
     """
     try:
+        # 사용량 체크
+        usage = get_usage(g.user_id)
+        if not usage['can_use']:
+            return jsonify({
+                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                'usage': usage
+            }), 429
+
         start_time = time.time()
         params = _get_request_data(request)
         url = params['url']
@@ -353,6 +366,10 @@ def generate():
             modifiers=params['modifiers']
         )
 
+        # 성공 시에만 사용량 차감
+        decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id)
+
         elapsed_time = round(time.time() - start_time, 2)
 
         return jsonify({
@@ -360,7 +377,8 @@ def generate():
             "prompt": used_prompt,
             "elapsed_time": elapsed_time,
             "youtube_title": youtube_title,
-            "transcript": raw_transcript
+            "transcript": raw_transcript,
+            "usage": updated_usage
         })
 
     except ValueError as e:
@@ -371,11 +389,21 @@ def generate():
 
 
 @blog_bp.route('/regenerate', methods=['POST'])
+@require_auth
 def regenerate():
     """기존 콘텐츠를 새로운 스타일로 재생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    로그인 필수, 하루 5회 제한 적용.
     """
     try:
+        # 사용량 체크
+        usage = get_usage(g.user_id)
+        if not usage['can_use']:
+            return jsonify({
+                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                'usage': usage
+            }), 429
+
         params = _get_request_data(request)
         content = params['content']
 
@@ -390,7 +418,11 @@ def regenerate():
             return_prompt=True
         )
 
-        return jsonify({**result, "prompt": used_prompt})
+        # 성공 시에만 사용량 차감
+        decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id)
+
+        return jsonify({**result, "prompt": used_prompt, "usage": updated_usage})
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
@@ -465,11 +497,21 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
 
 
 @blog_bp.route('/generate-batch', methods=['POST'])
+@require_auth
 def generate_batch():
     """여러 URL을 배치로 처리합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    로그인 필수, 하루 5회 제한 적용 (배치 전체가 1회로 계산).
     """
     try:
+        # 사용량 체크
+        usage = get_usage(g.user_id)
+        if not usage['can_use']:
+            return jsonify({
+                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                'usage': usage
+            }), 429
+
         current_app.logger.info("Batch generate request received")
 
         data = request.get_json()
@@ -536,13 +578,20 @@ def generate_batch():
 
         current_app.logger.info(f"Batch processing completed. Success: {success_count}, Failed: {fail_count}")
 
+        # 성공한 결과가 1개 이상이면 사용량 차감 (배치 전체가 1회로 계산)
+        if success_count > 0:
+            decrement_usage(g.user_id)
+
+        updated_usage = get_usage(g.user_id)
+
         return jsonify({
             'success': True,
             'results': ordered_results,
             'content': final_combined_content,
             'total_processed': len(urls),
             'successful': success_count,
-            'failed': fail_count
+            'failed': fail_count,
+            'usage': updated_usage
         })
 
     except ValueError as e:
@@ -554,11 +603,21 @@ def generate_batch():
 
 
 @blog_bp.route('/api/mindmap', methods=['POST'])
+@require_auth
 def generate_mindmap():
     """기존 콘텐츠를 마인드맵 형식의 마크다운으로 변환합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    로그인 필수, 하루 5회 제한 적용.
     """
     try:
+        # 사용량 체크
+        usage = get_usage(g.user_id)
+        if not usage['can_use']:
+            return jsonify({
+                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                'usage': usage
+            }), 429
+
         start_time = time.time()
         data = request.get_json(silent=True) or {}
         content = data.get('content')
@@ -584,6 +643,10 @@ def generate_mindmap():
             mindmap_prompt
         )
 
+        # 성공 시에만 사용량 차감
+        decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id)
+
         elapsed_time = round(time.time() - start_time, 2)
 
         # 마인드맵용 마크다운 콘텐츠 반환
@@ -591,7 +654,7 @@ def generate_mindmap():
             'success': True,
             'markdown': result.get('content', ''),
             'elapsed_time': elapsed_time,
-            'usage': result.get('usage')
+            'usage': updated_usage
         })
 
     except ValueError as e:

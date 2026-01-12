@@ -2,17 +2,30 @@
  * ContentGenerator - 콘텐츠 생성 모듈
  * API 호출, 단일/배치 URL 처리 담당
  * API 키는 서버 환경변수에서 관리됩니다.
+ * 로그인 필수, 하루 5회 제한 적용.
  */
 export class ContentGenerator {
-    constructor(storage, providerManager, styleManager, urlManager, reportManager, uiManager) {
+    constructor(storage, providerManager, styleManager, urlManager, reportManager, uiManager, authManager) {
         this.storage = storage;
         this.providerManager = providerManager;
         this.styleManager = styleManager;
         this.urlManager = urlManager;
         this.reportManager = reportManager;
         this.ui = uiManager;
+        this.authManager = authManager;
         this.originalContent = '';
         this.lastPrompt = '';
+        this.onUsageUpdate = null; // 사용량 업데이트 콜백
+    }
+
+    // 인증 헤더 가져오기
+    _getAuthHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = this.authManager?.getAccessToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
     }
 
     // ==================== Main Generation ====================
@@ -61,7 +74,7 @@ export class ContentGenerator {
 
             const response = await fetch('/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this._getAuthHeaders(),
                 body: JSON.stringify({ url, model, style, modifiers, customPrompt })
             });
 
@@ -83,12 +96,23 @@ export class ContentGenerator {
                     elapsed_time: data.elapsed_time,
                     transcript: data.transcript
                 });
+
+                // 사용량 업데이트 콜백 호출
+                this.onUsageUpdate?.();
             } else {
-                // 에러 - 처리 중 카드를 에러 카드로 변환
+                // 에러 - 처리 중 카드를 에러 카드로 변환 (401은 로그인 필요)
+                const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
+                                 response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
+                                 data.error || '분석 중 오류가 발생했습니다.';
                 this.reportManager.updatePendingCard(pendingId, {
                     url,
-                    error: data.error || '분석 중 오류가 발생했습니다.'
+                    error: errorMsg
                 }, true);
+
+                // 401/429 에러 시 사용량 상태 업데이트
+                if (response.status === 401 || response.status === 429) {
+                    this.onUsageUpdate?.();
+                }
             }
         } catch (error) {
             // 네트워크 에러 등
@@ -109,9 +133,7 @@ export class ContentGenerator {
 
         const response = await fetch('/generate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: this._getAuthHeaders(),
             body: JSON.stringify({ url, model, style, modifiers, customPrompt })
         });
 
@@ -131,8 +153,12 @@ export class ContentGenerator {
                 elapsed_time: data.elapsed_time
             });
             this.ui.showAlert('분석이 완료되었습니다!', 'success');
+            this.onUsageUpdate?.();
         } else {
-            throw new Error(data.error || '분석 중 오류가 발생했습니다.');
+            const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
+                             response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
+                             data.error || '분석 중 오류가 발생했습니다.';
+            throw new Error(errorMsg);
         }
     }
 
@@ -144,9 +170,7 @@ export class ContentGenerator {
 
         const response = await fetch('/generate-batch', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: this._getAuthHeaders(),
             body: JSON.stringify({ urls, model, style, modifiers, customPrompt })
         });
 
@@ -175,8 +199,12 @@ export class ContentGenerator {
             });
 
             this.ui.showAlert(`${urls.length}개의 URL 분석이 완료되었습니다!`, 'success');
+            this.onUsageUpdate?.();
         } else {
-            throw new Error(data.error || '배치 처리 중 오류가 발생했습니다.');
+            const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
+                             response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
+                             data.error || '배치 처리 중 오류가 발생했습니다.';
+            throw new Error(errorMsg);
         }
     }
 }

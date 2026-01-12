@@ -132,6 +132,24 @@ export class AuthManager {
         return Boolean(this.user && this.session);
     }
 
+    // ==================== 사용량 관리 ====================
+
+    async getUsage() {
+        if (!this.isLoggedIn()) {
+            return { usage_count: 0, max_usage: 5, can_use: false };
+        }
+
+        const { ok, data } = await this._fetchJson('/api/user/usage', {
+            headers: this._getAuthHeaders()
+        });
+
+        if (ok) {
+            return data;
+        }
+
+        return { usage_count: 0, max_usage: 5, can_use: false };
+    }
+
     // ==================== 인증 액션 ====================
 
     async _authRequest(url, body, successHandler, successMsg, failMsg) {

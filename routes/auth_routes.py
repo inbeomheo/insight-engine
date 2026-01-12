@@ -7,7 +7,8 @@ from services.supabase_service import (
     get_supabase, is_supabase_enabled, require_auth,
     save_api_keys, get_api_keys,
     get_histories, delete_history, update_history,
-    save_custom_style, get_custom_styles, delete_custom_style
+    save_custom_style, get_custom_styles, delete_custom_style,
+    get_usage
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -333,3 +334,15 @@ def delete_user_style(style_id):
     if delete_custom_style(g.user_id, style_id):
         return _success_response()
     return _error_response('삭제에 실패했습니다.', 500)
+
+
+# =============================================
+# 사용량 조회
+# =============================================
+
+@auth_bp.route('/api/user/usage', methods=['GET'])
+@require_auth
+def get_user_usage():
+    """사용자 사용량 조회 (남은 횟수, 최대 횟수)"""
+    usage = get_usage(g.user_id)
+    return jsonify(usage)

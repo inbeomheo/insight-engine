@@ -31,8 +31,12 @@ class ContentAnalysis {
             this.styleManager,
             this.urlManager,
             this.reportManager,
-            this.ui
+            this.ui,
+            this.authManager
         );
+
+        // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
+        this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
 
         // ReportManager에 MindmapManager 연결
         this.reportManager.setMindmapManager(this.mindmapManager);
@@ -47,6 +51,11 @@ class ContentAnalysis {
         // 인증 초기화 (Supabase 활성화 여부 확인)
         await this.authManager.init();
 
+        // 인증 상태 변경 콜백 설정
+        this.authManager.onAuthChange = (isLoggedIn, user) => {
+            this.updateGenerateButtonState();
+        };
+
         await this.providerManager.loadProviders();
         this.setupEventListeners();
         this.modalManager.setupSettingsModal();
@@ -57,6 +66,104 @@ class ContentAnalysis {
         this.modalManager.checkFirstTimeUser();
         this.providerManager.updateProviderLabel();
         this.reportManager.loadHistory();
+
+        // 초기 버튼 상태 업데이트
+        this.updateGenerateButtonState();
+    }
+
+    // 생성 버튼 상태 업데이트 (로그인 + 사용량 체크)
+    async updateGenerateButtonState() {
+        const startBtn = document.getElementById('start-btn');
+        const runBtn = document.getElementById('run-analysis-btn');
+        const aiAnalyzeBtn = document.getElementById('ai-analyze-btn');
+
+        // Supabase가 활성화되어 있지 않으면 로컬 모드 (제한 없음)
+        if (!this.authManager.isEnabled) {
+            this.updateUsageDisplay(null);
+            return;
+        }
+
+        const isLoggedIn = this.authManager.isLoggedIn();
+
+        if (!isLoggedIn) {
+            // 비로그인: 버튼 비활성화 + 안내
+            [startBtn, runBtn, aiAnalyzeBtn].forEach(btn => {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.title = '로그인이 필요합니다';
+                }
+            });
+            this.updateUsageDisplay({ requireLogin: true });
+            return;
+        }
+
+        // 로그인됨: 사용량 체크
+        const usage = await this.authManager.getUsage();
+
+        if (!usage.can_use) {
+            // 사용량 소진
+            [startBtn, runBtn, aiAnalyzeBtn].forEach(btn => {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.title = '오늘 사용 가능 횟수를 모두 소진했습니다';
+                }
+            });
+        } else {
+            // 사용 가능
+            [startBtn, runBtn, aiAnalyzeBtn].forEach(btn => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.title = '';
+                }
+            });
+        }
+
+        this.updateUsageDisplay(usage);
+    }
+
+    // 남은 횟수 표시 업데이트
+    updateUsageDisplay(usage) {
+        let usageDisplay = document.getElementById('usage-display');
+
+        // 요소가 없으면 생성
+        if (!usageDisplay) {
+            const authContainer = document.getElementById('auth-container');
+            if (authContainer) {
+                usageDisplay = document.createElement('div');
+                usageDisplay.id = 'usage-display';
+                usageDisplay.className = 'text-xs mr-3';
+                authContainer.parentNode.insertBefore(usageDisplay, authContainer);
+            }
+        }
+
+        if (!usageDisplay) return;
+
+        if (usage === null) {
+            // 로컬 모드
+            usageDisplay.innerHTML = '';
+            return;
+        }
+
+        if (usage.requireLogin) {
+            usageDisplay.innerHTML = `
+                <span class="text-amber-500 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">lock</span>
+                    로그인 필요
+                </span>
+            `;
+            return;
+        }
+
+        const remaining = usage.usage_count || 0;
+        const max = usage.max_usage || 5;
+        const colorClass = remaining === 0 ? 'text-red-400' : remaining <= 2 ? 'text-amber-500' : 'text-gray-text';
+
+        usageDisplay.innerHTML = `
+            <span class="${colorClass} flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">bolt</span>
+                ${remaining}/${max}회
+            </span>
+        `;
     }
 
     setupEventListeners() {
