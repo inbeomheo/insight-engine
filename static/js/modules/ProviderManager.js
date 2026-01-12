@@ -67,10 +67,12 @@ export class ProviderManager {
             }
         });
 
-        // 저장된 프로바이더 선택 복원
+        // 저장된 프로바이더 선택 복원 (기본값: gemini)
         const savedProvider = this.storage.getSelectedProvider();
         if (savedProvider && providerIds.includes(savedProvider)) {
             providerSelect.value = savedProvider;
+        } else if (providerIds.includes('gemini')) {
+            providerSelect.value = 'gemini';
         } else if (providerIds.length > 0) {
             providerSelect.value = providerIds[0];
         }
