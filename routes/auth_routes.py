@@ -134,6 +134,37 @@ def oauth_login(provider):
         return _error_response(f'OAuth 오류: {str(e)}')
 
 
+@auth_bp.route('/api/auth/oauth/callback', methods=['POST'])
+def oauth_callback():
+    """OAuth 인증 코드를 세션으로 교환"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    code = _get_json_data().get('code')
+    if not code:
+        return _error_response('인증 코드가 필요합니다.')
+
+    try:
+        # Supabase에서 코드를 세션으로 교환
+        result = get_supabase().auth.exchange_code_for_session({'auth_code': code})
+
+        if result.user and result.session:
+            return _success_response({
+                'user': {'id': result.user.id, 'email': result.user.email},
+                'session': {
+                    'access_token': result.session.access_token,
+                    'refresh_token': result.session.refresh_token,
+                    'expires_at': result.session.expires_at
+                }
+            })
+        return _error_response('세션 생성에 실패했습니다.', 401)
+
+    except Exception as e:
+        error_msg = str(e)
+        return _error_response(f'OAuth 콜백 오류: {error_msg}', 401)
+
+
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
     """로그인"""

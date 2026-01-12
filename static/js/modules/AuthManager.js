@@ -23,6 +23,8 @@ export class AuthManager {
         }
 
         if (this.isEnabled) {
+            // OAuth 콜백 처리 (URL에 code 또는 access_token이 있는 경우)
+            await this.handleOAuthCallback();
             this.restoreSession();
             this.setupAuthUI();
         } else {
@@ -30,6 +32,68 @@ export class AuthManager {
         }
 
         return this.isEnabled;
+    }
+
+    // OAuth 콜백 처리
+    async handleOAuthCallback() {
+        const url = new URL(window.location.href);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+        // Supabase는 access_token을 URL 해시에 반환
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const expiresAt = hashParams.get('expires_at');
+
+        if (accessToken && refreshToken) {
+            // 해시에서 토큰을 찾은 경우 (implicit flow)
+            this.session = {
+                access_token: accessToken,
+                refresh_token: refreshToken,
+                expires_at: expiresAt ? parseInt(expiresAt) : null
+            };
+            this.saveSession();
+
+            // URL 정리 (해시 제거)
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // 세션 검증
+            await this.verifySession();
+            this.ui.showAlert('Google 로그인 성공!', 'success');
+            return;
+        }
+
+        // URL 파라미터에서 code 확인 (PKCE flow)
+        const code = url.searchParams.get('code');
+        if (code) {
+            // code가 있으면 서버에서 토큰으로 교환해야 함
+            const result = await this.exchangeCodeForSession(code);
+
+            // URL 정리
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            if (result.success) {
+                this.ui.showAlert('Google 로그인 성공!', 'success');
+            }
+        }
+    }
+
+    // 인증 코드를 세션으로 교환
+    async exchangeCodeForSession(code) {
+        const { ok, data } = await this._fetchJson('/api/auth/oauth/callback', {
+            method: 'POST',
+            body: JSON.stringify({ code })
+        });
+
+        if (ok && data.session) {
+            this.user = data.user;
+            this.session = data.session;
+            this.saveSession();
+            this.updateAuthUI(true);
+            this.onAuthChange?.(true, this.user);
+            return { success: true };
+        }
+
+        return { success: false, error: data.error };
     }
 
     // ==================== API 헬퍼 ====================
