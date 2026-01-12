@@ -32,6 +32,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Claude Code temp files
+tmpclaude-*
+
 # Build
 build/
 dist/
