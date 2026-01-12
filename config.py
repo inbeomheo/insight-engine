@@ -34,8 +34,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
     'gemini': {
         'name': 'Google Gemini',
         'models': [
-            {'id': 'gemini/gemini-2.0-flash-lite', 'name': 'Gemini 2.0 Flash Lite', 'max_input_tokens': 750000},
-            {'id': 'gemini/gemini-flash-lite-latest', 'name': 'Gemini Flash Lite (Latest)', 'max_input_tokens': 750000},
+            {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000},
         ]
     },
     'deepseek': {
