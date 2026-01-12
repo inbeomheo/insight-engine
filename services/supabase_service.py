@@ -419,3 +419,115 @@ def decrement_usage(user_id: str) -> bool:
         return True
 
     return _db_operation('Usage decrement', False, operation)
+
+# =============================================
+# 관리자 관리
+# =============================================
+
+def is_admin(user_id: str) -> bool:
+    """사용자가 관리자인지 확인"""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return False
+
+    def operation():
+        result = supabase.table('ie_admins') \
+            .select('user_id') \
+            .eq('user_id', user_id) \
+            .single() \
+            .execute()
+        return bool(result.data)
+
+    return _db_operation('Admin check', False, operation)
+
+
+def get_admin_permissions(user_id: str) -> dict:
+    """관리자 권한 조회"""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return {}
+
+    def operation():
+        result = supabase.table('ie_admins') \
+            .select('permissions') \
+            .eq('user_id', user_id) \
+            .single() \
+            .execute()
+        return result.data.get('permissions', {}) if result.data else {}
+
+    return _db_operation('Admin permissions', {}, operation)
+
+
+def get_all_users_usage() -> list:
+    """모든 사용자의 사용량 조회 (관리자용)"""
+    supabase = get_supabase()
+    if not supabase:
+        return []
+
+    def operation():
+        result = supabase.table('ie_usage') \
+            .select('*') \
+            .order('usage_count', desc=False) \
+            .execute()
+        return result.data or []
+
+    return _db_operation('All users usage', [], operation)
+
+
+def reset_user_usage(user_id: str) -> bool:
+    """특정 사용자 사용량 리셋 (관리자용)"""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return False
+
+    def operation():
+        from datetime import date
+        supabase.table('ie_usage') \
+            .update({
+                'usage_count': MAX_USAGE_COUNT,
+                'last_reset_date': date.today().isoformat(),
+                'updated_at': 'now()'
+            }) \
+            .eq('user_id', user_id) \
+            .execute()
+        return True
+
+    return _db_operation('Reset user usage', False, operation)
+
+
+def get_usage_stats() -> dict:
+    """사용량 통계 조회 (관리자용)"""
+    supabase = get_supabase()
+    if not supabase:
+        return {}
+
+    def operation():
+        # 전체 사용자 수
+        users_result = supabase.table('ie_usage').select('user_id', count='exact').execute()
+        total_users = users_result.count or 0
+
+        # 오늘 사용한 사용자 수
+        from datetime import date
+        today = date.today().isoformat()
+        active_result = supabase.table('ie_usage') \
+            .select('user_id', count='exact') \
+            .eq('last_reset_date', today) \
+            .lt('usage_count', MAX_USAGE_COUNT) \
+            .execute()
+        active_today = active_result.count or 0
+
+        # 사용량 소진 사용자 수
+        exhausted_result = supabase.table('ie_usage') \
+            .select('user_id', count='exact') \
+            .eq('usage_count', 0) \
+            .execute()
+        exhausted_users = exhausted_result.count or 0
+
+        return {
+            'total_users': total_users,
+            'active_today': active_today,
+            'exhausted_users': exhausted_users,
+            'max_usage': MAX_USAGE_COUNT
+        }
+
+    return _db_operation('Usage stats', {}, operation)

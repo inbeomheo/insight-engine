@@ -12,7 +12,7 @@ from config import get_model_max_tokens
 from services import ai_service, content_service
 from services.content_service import clear_cache
 from services.supabase_service import (
-    require_auth, is_supabase_enabled, get_usage, decrement_usage
+    require_auth, is_supabase_enabled, get_usage, decrement_usage, is_admin
 )
 
 blog_bp = Blueprint('blog', __name__)
@@ -323,16 +323,20 @@ def generate_style():
 def generate():
     """단일 YouTube URL에서 콘텐츠를 생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용.
+    로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
     try:
-        # 사용량 체크
-        usage = get_usage(g.user_id)
-        if not usage['can_use']:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'usage': usage
-            }), 429
+        # 관리자는 사용량 제한 없음
+        user_is_admin = is_admin(g.user_id)
+
+        # 사용량 체크 (관리자 제외)
+        if not user_is_admin:
+            usage = get_usage(g.user_id)
+            if not usage['can_use']:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                    'usage': usage
+                }), 429
 
         start_time = time.time()
         params = _get_request_data(request)
@@ -366,9 +370,10 @@ def generate():
             modifiers=params['modifiers']
         )
 
-        # 성공 시에만 사용량 차감
-        decrement_usage(g.user_id)
-        updated_usage = get_usage(g.user_id)
+        # 성공 시에만 사용량 차감 (관리자 제외)
+        if not user_is_admin:
+            decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id) if not user_is_admin else {'usage_count': 999, 'max_usage': 999, 'can_use': True, 'is_admin': True}
 
         elapsed_time = round(time.time() - start_time, 2)
 
@@ -393,16 +398,20 @@ def generate():
 def regenerate():
     """기존 콘텐츠를 새로운 스타일로 재생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용.
+    로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
     try:
-        # 사용량 체크
-        usage = get_usage(g.user_id)
-        if not usage['can_use']:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'usage': usage
-            }), 429
+        # 관리자는 사용량 제한 없음
+        user_is_admin = is_admin(g.user_id)
+
+        # 사용량 체크 (관리자 제외)
+        if not user_is_admin:
+            usage = get_usage(g.user_id)
+            if not usage['can_use']:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                    'usage': usage
+                }), 429
 
         params = _get_request_data(request)
         content = params['content']
@@ -418,9 +427,10 @@ def regenerate():
             return_prompt=True
         )
 
-        # 성공 시에만 사용량 차감
-        decrement_usage(g.user_id)
-        updated_usage = get_usage(g.user_id)
+        # 성공 시에만 사용량 차감 (관리자 제외)
+        if not user_is_admin:
+            decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id) if not user_is_admin else {'usage_count': 999, 'max_usage': 999, 'can_use': True, 'is_admin': True}
 
         return jsonify({**result, "prompt": used_prompt, "usage": updated_usage})
 
@@ -501,16 +511,20 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
 def generate_batch():
     """여러 URL을 배치로 처리합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용 (배치 전체가 1회로 계산).
+    로그인 필수, 하루 5회 제한 적용 (배치 전체가 1회로 계산, 관리자는 무제한).
     """
     try:
-        # 사용량 체크
-        usage = get_usage(g.user_id)
-        if not usage['can_use']:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'usage': usage
-            }), 429
+        # 관리자는 사용량 제한 없음
+        user_is_admin = is_admin(g.user_id)
+
+        # 사용량 체크 (관리자 제외)
+        if not user_is_admin:
+            usage = get_usage(g.user_id)
+            if not usage['can_use']:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                    'usage': usage
+                }), 429
 
         current_app.logger.info("Batch generate request received")
 
@@ -578,11 +592,11 @@ def generate_batch():
 
         current_app.logger.info(f"Batch processing completed. Success: {success_count}, Failed: {fail_count}")
 
-        # 성공한 결과가 1개 이상이면 사용량 차감 (배치 전체가 1회로 계산)
-        if success_count > 0:
+        # 성공한 결과가 1개 이상이면 사용량 차감 (배치 전체가 1회로 계산, 관리자 제외)
+        if success_count > 0 and not user_is_admin:
             decrement_usage(g.user_id)
 
-        updated_usage = get_usage(g.user_id)
+        updated_usage = get_usage(g.user_id) if not user_is_admin else {'usage_count': 999, 'max_usage': 999, 'can_use': True, 'is_admin': True}
 
         return jsonify({
             'success': True,
@@ -607,16 +621,20 @@ def generate_batch():
 def generate_mindmap():
     """기존 콘텐츠를 마인드맵 형식의 마크다운으로 변환합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용.
+    로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
     try:
-        # 사용량 체크
-        usage = get_usage(g.user_id)
-        if not usage['can_use']:
-            return jsonify({
-                'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
-                'usage': usage
-            }), 429
+        # 관리자는 사용량 제한 없음
+        user_is_admin = is_admin(g.user_id)
+
+        # 사용량 체크 (관리자 제외)
+        if not user_is_admin:
+            usage = get_usage(g.user_id)
+            if not usage['can_use']:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
+                    'usage': usage
+                }), 429
 
         start_time = time.time()
         data = request.get_json(silent=True) or {}
@@ -643,9 +661,10 @@ def generate_mindmap():
             mindmap_prompt
         )
 
-        # 성공 시에만 사용량 차감
-        decrement_usage(g.user_id)
-        updated_usage = get_usage(g.user_id)
+        # 성공 시에만 사용량 차감 (관리자 제외)
+        if not user_is_admin:
+            decrement_usage(g.user_id)
+        updated_usage = get_usage(g.user_id) if not user_is_admin else {'usage_count': 999, 'max_usage': 999, 'can_use': True, 'is_admin': True}
 
         elapsed_time = round(time.time() - start_time, 2)
 

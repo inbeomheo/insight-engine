@@ -8,7 +8,7 @@ from services.supabase_service import (
     save_api_keys, get_api_keys,
     get_histories, delete_history, update_history,
     save_custom_style, get_custom_styles, delete_custom_style,
-    get_usage
+    get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -345,4 +345,61 @@ def delete_user_style(style_id):
 def get_user_usage():
     """사용자 사용량 조회 (남은 횟수, 최대 횟수)"""
     usage = get_usage(g.user_id)
+    # 관리자 여부 추가
+    usage['is_admin'] = is_admin(g.user_id)
     return jsonify(usage)
+
+
+# =============================================
+# 관리자 API
+# =============================================
+
+def _require_admin():
+    """관리자 권한 확인"""
+    if not is_admin(g.user_id):
+        return _error_response('관리자 권한이 필요합니다.', 403)
+    return None
+
+
+@auth_bp.route('/api/admin/check', methods=['GET'])
+@require_auth
+def check_admin():
+    """현재 사용자가 관리자인지 확인"""
+    return jsonify({'is_admin': is_admin(g.user_id)})
+
+
+@auth_bp.route('/api/admin/users', methods=['GET'])
+@require_auth
+def get_admin_users():
+    """모든 사용자의 사용량 조회 (관리자 전용)"""
+    error = _require_admin()
+    if error:
+        return error
+
+    users = get_all_users_usage()
+    return jsonify({'users': users})
+
+
+@auth_bp.route('/api/admin/users/<user_id>/reset', methods=['POST'])
+@require_auth
+def admin_reset_user(user_id):
+    """특정 사용자 사용량 리셋 (관리자 전용)"""
+    error = _require_admin()
+    if error:
+        return error
+
+    if reset_user_usage(user_id):
+        return _success_response({'message': f'사용자 {user_id}의 사용량이 리셋되었습니다.'})
+    return _error_response('리셋에 실패했습니다.', 500)
+
+
+@auth_bp.route('/api/admin/stats', methods=['GET'])
+@require_auth
+def get_admin_stats():
+    """사용량 통계 조회 (관리자 전용)"""
+    error = _require_admin()
+    if error:
+        return error
+
+    stats = get_usage_stats()
+    return jsonify(stats)

@@ -100,6 +100,18 @@ class ContentAnalysis {
         // 로그인됨: 사용량 체크
         const usage = await this.authManager.getUsage();
 
+        // 관리자는 항상 사용 가능
+        if (usage.is_admin) {
+            [startBtn, runBtn, aiAnalyzeBtn].forEach(btn => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.title = '관리자 - 무제한 사용';
+                }
+            });
+            this.updateUsageDisplay(usage);
+            return;
+        }
+
         if (!usage.can_use) {
             // 사용량 소진
             [startBtn, runBtn, aiAnalyzeBtn].forEach(btn => {
@@ -149,6 +161,17 @@ class ContentAnalysis {
                 <span class="text-amber-500 flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm">lock</span>
                     로그인 필요
+                </span>
+            `;
+            return;
+        }
+
+        // 관리자인 경우 특별 표시
+        if (usage.is_admin) {
+            usageDisplay.innerHTML = `
+                <span class="text-primary-accent flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">shield_person</span>
+                    관리자
                 </span>
             `;
             return;
