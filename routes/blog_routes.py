@@ -12,8 +12,9 @@ from config import get_model_max_tokens
 from services import ai_service, content_service
 from services.content_service import clear_cache
 from services.supabase_service import (
-    require_auth, is_supabase_enabled, get_usage, decrement_usage, is_admin
+    require_auth, is_supabase_enabled, get_usage, decrement_usage, is_admin, save_history
 )
+import uuid
 
 blog_bp = Blueprint('blog', __name__)
 _CLIENT_TRACKER: Dict[str, float] = {}
@@ -377,8 +378,24 @@ def generate():
 
         elapsed_time = round(time.time() - start_time, 2)
 
+        # 히스토리 저장 (클라우드)
+        report_id = str(uuid.uuid4())
+        if g.user_id:
+            save_history(g.user_id, {
+                'id': report_id,
+                'url': url,
+                'title': result.get('title', youtube_title),
+                'style': params['style'],
+                'content': result.get('content', ''),
+                'html': result.get('html', ''),
+                'transcript': raw_transcript,
+                'usage': result.get('usage'),
+                'elapsed_time': elapsed_time
+            })
+
         return jsonify({
             **result,
+            "id": report_id,
             "prompt": used_prompt,
             "elapsed_time": elapsed_time,
             "youtube_title": youtube_title,
@@ -597,6 +614,24 @@ def generate_batch():
             decrement_usage(g.user_id)
 
         updated_usage = get_usage(g.user_id) if not user_is_admin else {'usage_count': 999, 'max_usage': 999, 'can_use': True, 'is_admin': True}
+
+        # 성공한 결과들 히스토리 저장 (클라우드)
+        if g.user_id:
+            for result in ordered_results:
+                if result.get('success'):
+                    report_id = str(uuid.uuid4())
+                    result['id'] = report_id  # 결과에 ID 추가
+                    save_history(g.user_id, {
+                        'id': report_id,
+                        'url': result.get('url'),
+                        'title': result.get('title'),
+                        'style': style,
+                        'content': result.get('content', ''),
+                        'html': result.get('html', ''),
+                        'transcript': None,  # 배치에서는 자막 저장 생략
+                        'usage': None,
+                        'elapsed_time': None
+                    })
 
         return jsonify({
             'success': True,
