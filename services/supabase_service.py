@@ -325,7 +325,7 @@ def delete_custom_style(user_id: str, style_id: str) -> bool:
 # 사용량 관리
 # =============================================
 
-MAX_USAGE_COUNT = 5  # 기본 최대 사용 횟수
+MAX_USAGE_COUNT = 5  # 기본 최대 사용 횟수 (하루 5회)
 
 
 def get_usage(user_id: str) -> dict:
