@@ -61,6 +61,7 @@ class ContentAnalysis {
         this.modalManager.setupSettingsModal();
         this.providerManager.setupProviderSelectEvents();
         this.styleManager.setupAdvancedOptions();
+        this.styleManager.setupStyleSelection(); // 모바일 스타일 선택 지원
         this.modalManager.setupCustomStyleModal();
         this.styleManager.renderCustomStyles();
         this.modalManager.checkFirstTimeUser();

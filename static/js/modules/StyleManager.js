@@ -136,4 +136,33 @@ export class StyleManager {
             });
         }
     }
+
+    // ==================== Style Selection Setup (모바일 터치 지원) ====================
+
+    setupStyleSelection() {
+        const styleOptions = document.getElementById('style-options');
+        if (!styleOptions) return;
+
+        // 모든 스타일 라벨에 클릭 이벤트 추가
+        styleOptions.querySelectorAll('label').forEach(label => {
+            label.addEventListener('click', (e) => {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio) {
+                    // 명시적으로 라디오 버튼 선택
+                    radio.checked = true;
+                    // 시각적 업데이트를 위해 change 이벤트 발생
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+
+            // 터치 이벤트도 지원
+            label.addEventListener('touchend', (e) => {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        });
+    }
 }
