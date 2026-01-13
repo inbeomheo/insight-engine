@@ -17,22 +17,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(OpenAI, Claude, Gemini, GLM-4)을 활용해 고품질 한국어 블로그 포스트를 자동 생성하는 Flask 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원.
+**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(OpenAI, Claude, Gemini, GLM-4, DeepSeek)을 활용해 고품질 한국어 블로그 포스트를 자동 생성하는 Flask 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원.
 
 ## Commands
 
 ```bash
 # 의존성 설치
-pip install -r "스마트 콘텐츠 생성기 20250705(완성)/requirements.txt"
+pip install -r requirements.txt
 
 # 앱 실행 (개발 모드) → http://localhost:5001
-python "스마트 콘텐츠 생성기 20250705(완성)/app.py"
+python app.py
 
 # 테스트 실행
-pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/"
+pytest tests/ -v
 
 # 단일 테스트 실행
-pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/test_routes_smoke.py" -v
+pytest tests/test_routes_smoke.py -v
+
+# 특정 테스트 함수 실행
+pytest tests/test_routes_smoke.py::test_home_page -v
 ```
 
 ## Architecture
@@ -88,10 +91,11 @@ pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/test_routes_smoke.p
 
 | Provider | 모델 예시 |
 |----------|----------|
-| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo |
+| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini, o3-mini |
 | Anthropic | claude-sonnet-4-20250514, claude-3-5-sonnet, claude-3-haiku |
 | Gemini | gemini/gemini-3-flash-preview, gemini/gemini-2.5-flash |
 | Zhipu | glm-4, glm-4-flash, glm-4-air |
+| DeepSeek | deepseek-chat, deepseek-reasoner |
 
 ### Style System (config.py)
 
@@ -115,14 +119,28 @@ pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/test_routes_smoke.p
 
 ## API Configuration
 
-`.env` 파일 (선택):
-```
-YOUTUBE_API_KEY=your-youtube-api-key  # 댓글/제목 조회용
+`.env.example` 파일을 `.env`로 복사하여 사용. API 키가 설정된 프로바이더만 UI에 표시됨.
+
+```bash
+# AI Provider API Keys (최소 하나 필수)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
+ZHIPU_API_KEY=...
+DEEPSEEK_API_KEY=...
+
+# 선택 사항
+SUPADATA_API_KEY=           # YouTube 자막 백업 서비스
+YOUTUBE_API_KEY=            # 댓글/제목 조회용
+SUPABASE_URL=               # 클라우드 히스토리 저장
+SUPABASE_ANON_KEY=          # Supabase Anonymous Key
+
+# 프록시 (YouTube 자막 차단 우회용)
+YT_HTTP_PROXY=http://your-proxy:port
+YT_HTTPS_PROXY=http://your-proxy:port
 ```
 
 **사용자 입력 API 키**: 프론트엔드에서 각 요청마다 `apiKey` 파라미터로 전달 (서버 저장 없음)
-
-선택: `YT_HTTP_PROXY`, `YT_HTTPS_PROXY` (YouTube 자막 차단 우회용)
 
 ## Key Patterns
 
@@ -134,17 +152,6 @@ YOUTUBE_API_KEY=your-youtube-api-key  # 댓글/제목 조회용
 - 사용자 정의 프롬프트: `customPrompt` 파라미터로 스타일 프롬프트 오버라이드 가능
 
 ## Testing
-
-```bash
-# 전체 테스트
-pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/" -v
-
-# 특정 테스트 파일
-pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/test_routes_smoke.py" -v
-
-# 특정 테스트 함수
-pytest "스마트 콘텐츠 생성기 20250705(완성)/tests/test_routes_smoke.py::test_home_page" -v
-```
 
 주요 테스트 파일:
 - `test_routes_smoke.py`: API 라우트 기본 동작
