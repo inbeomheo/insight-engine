@@ -31,95 +31,120 @@ python app.py
 # 테스트 실행
 pytest tests/ -v
 
-# 단일 테스트 실행
+# UI 테스트 제외 (Playwright 필요)
+pytest tests/ -v --ignore=tests/test_ui_comprehensive.py
+
+# 단일 테스트 파일 실행
 pytest tests/test_routes_smoke.py -v
 
 # 특정 테스트 함수 실행
-pytest tests/test_routes_smoke.py::test_home_page -v
+pytest tests/test_routes_smoke.py::TestRoutesSmoke::test_generate_web_smoke -v
+
+# 커버리지 리포트
+pytest tests/ --cov=. --cov-report=html
 ```
 
 ## Architecture
 
-메인 앱: `스마트 콘텐츠 생성기 20250705(완성)/`
+### Backend Structure
 
-| 파일 | 역할 |
-|------|------|
-| app.py | Flask 앱 팩토리, 블루프린트 등록 (port 5001) |
-| config.py | 토큰 제한, 지원 프로바이더/모델, 스타일 프롬프트 정의 |
-| routes/blog_routes.py | API 엔드포인트 (아래 참조) |
-| prompts.py | 스타일별 프롬프트 템플릿 정의 |
-| services/ai_service.py | LiteLLM `completion()` 호출로 다중 AI 프로바이더 통합 |
-| services/content_service.py | YouTube 자막 추출 (Supadata API 우선 → youtube-transcript-api → watch 페이지 폴백) |
+```
+app.py                      # Flask 앱 팩토리, 블루프린트 등록 (port 5001)
+config.py                   # 토큰 제한, 지원 프로바이더/모델 정의
+prompts/                    # 스타일별 프롬프트 패키지
+├── __init__.py             # STYLE_PROMPTS 매핑
+├── blog.py                 # blog, detailed
+├── summary.py              # summary, easy
+├── professional.py         # seo, news
+├── creative.py             # script, sns
+├── analytical.py           # needs, compare, infographic
+└── structured.py           # qna, mindmap
 
-### API Endpoints (routes/blog_routes.py)
+routes/
+├── blog_routes.py          # 콘텐츠 생성 API (@require_usage 데코레이터)
+└── auth_routes.py          # 인증, API 키, 히스토리, 사용량 관리
 
-| 엔드포인트 | 설명 |
-|-----------|------|
-| `POST /generate` | 단일 URL 콘텐츠 생성 |
-| `POST /generate-batch` | 다중 URL 배치 처리 (최대 10개) |
-| `POST /regenerate` | 기존 콘텐츠 재생성 |
-| `GET /api/providers` | AI 서비스/모델 목록 |
-| `POST /api/recommend-style` | YouTube 제목 분석 → 스타일 추천 |
-| `POST /api/generate-style` | YouTube 제목+자막 → 맞춤 프롬프트 생성 |
+services/
+├── ai_service.py           # LiteLLM completion() 호출
+├── content_service.py      # YouTube 자막/댓글 추출
+├── supabase_service.py     # Supabase 클라이언트, 인증, CRUD
+├── logging_config.py       # 통합 로거 (ServiceLogger)
+├── exceptions/             # 커스텀 예외 클래스
+│   └── __init__.py         # InsightEngineError, ValidationError 등
+└── usage/                  # 사용량 관리
+    ├── __init__.py
+    ├── usage_service.py    # UsageService 클래스
+    └── usage_decorator.py  # @require_usage, @check_usage
+```
+
+### Frontend Structure (ES6 모듈)
+
+```
+static/js/
+├── main.js                 # 모듈 오케스트레이터
+├── core/                   # 핵심 인프라
+│   ├── EventBus.js         # Pub/Sub 패턴 (EVENTS 상수)
+│   └── DOMCache.js         # DOM 쿼리 캐싱
+├── constants/
+│   └── messages.js         # 에러/알림 메시지 상수
+├── services/               # 비즈니스 로직 분리
+│   ├── CustomStyleService.js   # 커스텀 스타일 CRUD
+│   └── GenerationContext.js    # 생성 파라미터 수집
+└── modules/                # UI 모듈
+    ├── StorageManager.js   # LocalStorage
+    ├── ProviderManager.js  # AI 서비스/모델 선택
+    ├── StyleManager.js     # 스타일 선택, 모디파이어
+    ├── UrlManager.js       # URL 입력/파싱
+    ├── ContentGenerator.js # API 호출
+    ├── ReportManager.js    # 리포트 카드
+    ├── ModalManager.js     # 모달 관리
+    ├── UIManager.js        # Toast, 로딩 상태
+    ├── MindmapManager.js   # 마인드맵 생성
+    └── AuthManager.js      # 인증 상태
+```
+
+### API Endpoints
+
+| 엔드포인트 | 설명 | 데코레이터 |
+|-----------|------|-----------|
+| `POST /generate` | 단일 URL 콘텐츠 생성 | @require_usage |
+| `POST /generate-batch` | 다중 URL 배치 처리 (최대 10개) | @check_usage |
+| `POST /regenerate` | 기존 콘텐츠 재생성 | @require_usage |
+| `POST /api/generate-mindmap` | 마인드맵 생성 | @require_usage |
+| `GET /api/providers` | AI 서비스/모델 목록 | - |
+| `POST /api/recommend-style` | 스타일 추천 | - |
+| `POST /api/generate-style` | 맞춤 프롬프트 생성 | - |
 
 ### Request Flow
 
 1. 사용자 URL + API 키 입력 → `/generate` 또는 `/generate-batch`
-2. `content_service`가 자막 추출 (Supadata → youtube-transcript-api → watch 페이지 파싱)
-3. `content_service.get_top_comments()`로 댓글 수집 (YouTube Data API)
-4. `ai_service.create_content()`가 LiteLLM을 통해 선택된 AI 모델 호출
-5. JSON 응답 (title, markdown content, html)
-
-### Frontend Architecture (ES6 모듈)
-
-`static/js/main.js` → 모듈 오케스트레이터
-
-| 모듈 | 역할 |
-|------|------|
-| StorageManager.js | LocalStorage (설정, 히스토리, 커스텀 스타일) |
-| ProviderManager.js | AI 서비스/모델 선택, API 키 관리 |
-| StyleManager.js | 스타일 선택, 모디파이어, 커스텀 스타일 렌더링 |
-| UrlManager.js | URL 입력, 파싱, 다중 URL 관리 |
-| ContentGenerator.js | `/generate`, `/generate-batch` API 호출 |
-| ReportManager.js | 리포트 카드 생성, 히스토리 로딩, 접기/펼치기 |
-| ModalManager.js | 설정 모달, 온보딩, 커스텀 스타일 모달 |
-| UIManager.js | 알림(Toast), 로딩 상태, 유틸리티 함수 |
-
-**디자인**: TailwindCSS CDN + 커스텀 테마 (앰버/골드 #D4A574, 다크 모드)
-
-### AI Providers (config.py의 SUPPORTED_PROVIDERS)
-
-| Provider | 모델 예시 |
-|----------|----------|
-| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini, o3-mini |
-| Anthropic | claude-sonnet-4-20250514, claude-3-5-sonnet, claude-3-haiku |
-| Gemini | gemini/gemini-3-flash-preview, gemini/gemini-2.5-flash |
-| Zhipu | glm-4, glm-4-flash, glm-4-air |
-| DeepSeek | deepseek-chat, deepseek-reasoner |
-
-### Style System (config.py)
-
-**STYLE_PROMPTS** (prompts.py) - 12가지 스타일:
-`blog`, `detailed`, `summary`, `easy`, `news`, `script`, `seo`, `needs`, `qna`, `infographic`, `compare`, `sns`
-
-**STYLE_MODIFIERS** - 세부 옵션:
-- `length`: short/medium/long (분량 조절)
-- `tone`: professional/friendly/humorous (말투)
-- `language`: ko/en/ja (출력 언어)
-- `emoji`: use/none (이모지 사용 여부)
+2. `@require_usage` 데코레이터가 사용량 체크/차감
+3. `content_service`가 자막 추출 (Supadata → youtube-transcript-api → watch 페이지)
+4. `content_service.get_top_comments()`로 댓글 수집
+5. `ai_service.create_content()`가 LiteLLM으로 AI 호출
+6. JSON 응답 (title, content, html, usage)
 
 ### YouTube Transcript Handling
 
 `content_service.py` 우선순위 폴백:
-1. Supadata API (`supadata_api_key` 제공 시)
+1. Supadata API (`SUPADATA_API_KEY` 설정 시)
 2. `youtube-transcript-api` 라이브러리 (지수 백오프 재시도 3회)
 3. watch 페이지 직접 파싱 (`_get_transcript_from_watch_page`)
 
-예외 처리: 429 rate limit, IP 차단, 연령 제한, PoToken 필요 등
+### Style System
+
+**13가지 스타일** (`prompts/`):
+`blog`, `detailed`, `summary`, `easy`, `news`, `script`, `seo`, `needs`, `qna`, `infographic`, `compare`, `sns`, `mindmap`
+
+**모디파이어** (`config.py`):
+- `length`: short/medium/long
+- `tone`: professional/friendly/humorous
+- `language`: ko/en/ja
+- `emoji`: use/none
 
 ## API Configuration
 
-`.env.example` 파일을 `.env`로 복사하여 사용. API 키가 설정된 프로바이더만 UI에 표시됨.
+`.env.example` → `.env` 복사. API 키가 설정된 프로바이더만 UI에 표시.
 
 ```bash
 # AI Provider API Keys (최소 하나 필수)
@@ -132,29 +157,43 @@ DEEPSEEK_API_KEY=...
 # 선택 사항
 SUPADATA_API_KEY=           # YouTube 자막 백업 서비스
 YOUTUBE_API_KEY=            # 댓글/제목 조회용
-SUPABASE_URL=               # 클라우드 히스토리 저장
+SUPABASE_URL=               # 클라우드 저장
 SUPABASE_ANON_KEY=          # Supabase Anonymous Key
+ENCRYPTION_SECRET=          # API 키 암호화 (Fernet, 필수 설정)
 
 # 프록시 (YouTube 자막 차단 우회용)
 YT_HTTP_PROXY=http://your-proxy:port
 YT_HTTPS_PROXY=http://your-proxy:port
 ```
 
-**사용자 입력 API 키**: 프론트엔드에서 각 요청마다 `apiKey` 파라미터로 전달 (서버 저장 없음)
-
 ## Key Patterns
 
 - 모든 API 라우트는 실패 시 JSON `{"error": "메시지"}` 반환
 - 배치 처리: `ThreadPoolExecutor` max 5 workers, 최대 10 URL
-- `truncate_text()`로 토큰 제한 준수 (MAX_CONTENT_TOKENS: 900,000)
-- AI 프롬프트 끝에 한국어 출력 강제: `"결과는 반드시 한국어로 작성해주세요."`
-- 클라이언트 하트비트: `/api/heartbeat`, `/api/close` (세션 추적용)
-- 사용자 정의 프롬프트: `customPrompt` 파라미터로 스타일 프롬프트 오버라이드 가능
+- 사용량 제한: 일반 사용자 5회/일, 관리자 무제한
+- `@require_usage`: 사용량 체크 + 성공 시 자동 차감
+- `@check_usage`: 사용량 체크만 (배치용)
+- 커스텀 예외: `InsightEngineError` 계층 (`services/exceptions/`)
+- 로깅: `ServiceLogger` 사용 (`services/logging_config.py`)
 
 ## Testing
 
-주요 테스트 파일:
-- `test_routes_smoke.py`: API 라우트 기본 동작
-- `test_content_service_transcript_fallback.py`: 자막 폴백 로직
-- `test_style_prompts.py`: 스타일 프롬프트 설정
-- `test_app_lifecycle_smoke.py`: 앱 생명주기
+```
+tests/
+├── test_routes_smoke.py                    # API 라우트 스모크 테스트
+├── test_ai_service.py                      # AI 서비스 단위 테스트
+├── test_config.py                          # 설정 검증 테스트
+├── test_usage_service.py                   # 사용량 서비스 테스트
+├── test_content_service_transcript_fallback.py  # 자막 폴백 테스트
+├── test_style_prompts.py                   # 스타일 프롬프트 테스트
+├── test_app_lifecycle_smoke.py             # 앱 생명주기 테스트
+├── test_url_drag_sort_contract.py          # URL 드래그 정렬 테스트
+└── test_ui_comprehensive.py                # UI 테스트 (Playwright 필요)
+```
+
+**테스트 작성 시 주의**: 인증이 필요한 엔드포인트 테스트 시 `is_supabase_enabled`를 mock하여 우회:
+```python
+@patch('services.supabase_service.is_supabase_enabled', return_value=False)
+def test_example(self, mock_enabled):
+    # 테스트 코드
+```
