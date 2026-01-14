@@ -17,7 +17,8 @@ class TestRoutesSmoke(unittest.TestCase):
     def test_generate_web_smoke(self):
         """YouTube URL로 /generate 엔드포인트 테스트"""
         fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>'}
-        with patch('routes.blog_routes.content_service.is_youtube_url', return_value=True), \
+        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('routes.blog_routes.content_service.is_youtube_url', return_value=True), \
              patch('routes.blog_routes.content_service.get_video_id', return_value='test123'), \
              patch('routes.blog_routes.content_service.get_transcript', return_value='테스트 자막 내용'), \
              patch('routes.blog_routes.content_service.get_top_comments', return_value=['댓글1', '댓글2']), \
@@ -37,7 +38,8 @@ class TestRoutesSmoke(unittest.TestCase):
     def test_regenerate_smoke_json(self):
         """기존 콘텐츠로 /regenerate 엔드포인트 테스트"""
         fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>'}
-        with patch('routes.blog_routes.ai_service.create_content', return_value=(fake_result, 'PROMPT2')):
+        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('routes.blog_routes.ai_service.create_content', return_value=(fake_result, 'PROMPT2')):
             res = self.client.post('/regenerate', json={
                 'content': 'ORIGINAL CONTENT',
                 'model': 'gpt-4o-mini',
@@ -52,7 +54,8 @@ class TestRoutesSmoke(unittest.TestCase):
     def test_generate_batch_smoke(self):
         """배치 처리 /generate-batch 엔드포인트 테스트"""
         fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>'}
-        with patch('routes.blog_routes.content_service.is_youtube_url', return_value=True), \
+        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('routes.blog_routes.content_service.is_youtube_url', return_value=True), \
              patch('routes.blog_routes.content_service.get_video_id', return_value='test123'), \
              patch('routes.blog_routes.content_service.get_content_title', return_value='TITLE'), \
              patch('routes.blog_routes.content_service.get_transcript', return_value='테스트 자막'), \

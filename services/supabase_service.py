@@ -10,9 +10,16 @@ from flask import request, jsonify, g
 from supabase import create_client, Client
 from cryptography.fernet import Fernet
 
+from services.logging_config import supabase_logger as logger
+from services.exceptions import (
+    ConfigurationError, AuthenticationError,
+    TokenExpiredError, TokenInvalidError
+)
+
 # Supabase 클라이언트 초기화
 _supabase_client: Client = None
 _fernet_instance: Fernet = None
+_encryption_enabled: bool = None  # 암호화 활성화 여부
 
 
 def get_supabase() -> Client:
@@ -36,12 +43,34 @@ def is_supabase_enabled() -> bool:
     return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
 
 
+def _is_encryption_enabled() -> bool:
+    """암호화 활성화 여부 확인"""
+    global _encryption_enabled
+    if _encryption_enabled is None:
+        secret = os.getenv('ENCRYPTION_SECRET')
+        _encryption_enabled = bool(secret and secret.strip())
+        if not _encryption_enabled:
+            logger.warning("ENCRYPTION_SECRET이 설정되지 않았습니다. API 키 암호화가 비활성화됩니다.")
+    return _encryption_enabled
+
+
 def _get_fernet() -> Fernet:
-    """Fernet 인스턴스 싱글톤 (암호화용)"""
+    """Fernet 인스턴스 싱글톤 (암호화용)
+
+    Raises:
+        ConfigurationError: ENCRYPTION_SECRET 환경변수가 설정되지 않은 경우
+    """
     global _fernet_instance
 
     if _fernet_instance is None:
-        secret = os.getenv('ENCRYPTION_SECRET', 'default-secret-change-in-production')
+        secret = os.getenv('ENCRYPTION_SECRET')
+
+        if not secret or not secret.strip():
+            raise ConfigurationError(
+                "ENCRYPTION_SECRET 환경변수가 필요합니다. API 키 암호화를 위해 설정해주세요.",
+                config_key='ENCRYPTION_SECRET'
+            )
+
         key = hashlib.sha256(secret.encode()).digest()
         _fernet_instance = Fernet(base64.urlsafe_b64encode(key))
 
@@ -49,17 +78,37 @@ def _get_fernet() -> Fernet:
 
 
 def encrypt_api_key(api_key: str) -> str:
-    """API 키 암호화"""
-    return _get_fernet().encrypt(api_key.encode()).decode() if api_key else None
+    """API 키 암호화
+
+    암호화가 비활성화된 경우 원본 반환 (개발 환경용)
+    """
+    if not api_key:
+        return None
+    if not _is_encryption_enabled():
+        logger.debug("암호화 비활성화 상태, 원본 저장")
+        return api_key
+    try:
+        return _get_fernet().encrypt(api_key.encode()).decode()
+    except ConfigurationError:
+        logger.warning("암호화 설정 오류, 원본 저장")
+        return api_key
 
 
 def decrypt_api_key(encrypted_key: str) -> str:
-    """API 키 복호화"""
+    """API 키 복호화
+
+    암호화가 비활성화된 경우 원본 반환
+    """
     if not encrypted_key:
         return None
+    if not _is_encryption_enabled():
+        return encrypted_key
     try:
         return _get_fernet().decrypt(encrypted_key.encode()).decode()
-    except Exception:
+    except ConfigurationError:
+        return encrypted_key
+    except Exception as e:
+        logger.warning(f"API 키 복호화 실패: {e}")
         return None
 
 # =============================================
@@ -72,16 +121,34 @@ def _extract_bearer_token() -> str:
     return auth_header[7:] if auth_header.startswith('Bearer ') else None
 
 
-def _validate_token(token: str) -> bool:
-    """토큰 검증 및 g 객체에 사용자 정보 설정"""
+def _validate_token(token: str) -> dict:
+    """토큰 검증 및 g 객체에 사용자 정보 설정
+
+    Returns:
+        dict: {'valid': bool, 'error': str|None, 'code': str|None}
+    """
     try:
         supabase = get_supabase()
         user = supabase.auth.get_user(token)
         g.user_id = user.user.id
         g.access_token = token
-        return True
-    except Exception:
-        return False
+        return {'valid': True, 'error': None, 'code': None}
+    except Exception as e:
+        error_str = str(e).lower()
+
+        # 토큰 만료 감지
+        if 'expired' in error_str or 'token has expired' in error_str:
+            logger.debug("토큰 만료")
+            return {'valid': False, 'error': '인증 토큰이 만료되었습니다.', 'code': 'TOKEN_EXPIRED'}
+
+        # 무효 토큰 감지
+        if 'invalid' in error_str or 'malformed' in error_str:
+            logger.debug("무효 토큰")
+            return {'valid': False, 'error': '유효하지 않은 토큰입니다.', 'code': 'TOKEN_INVALID'}
+
+        # 기타 인증 오류
+        logger.warning(f"토큰 검증 실패: {e}")
+        return {'valid': False, 'error': '인증에 실패했습니다.', 'code': 'AUTH_FAILED'}
 
 
 def require_auth(f):
@@ -94,10 +161,11 @@ def require_auth(f):
 
         token = _extract_bearer_token()
         if not token:
-            return jsonify({'error': '인증이 필요합니다.'}), 401
+            return jsonify({'error': '인증이 필요합니다.', 'code': 'AUTH_REQUIRED'}), 401
 
-        if not _validate_token(token):
-            return jsonify({'error': '유효하지 않은 토큰입니다.'}), 401
+        result = _validate_token(token)
+        if not result['valid']:
+            return jsonify({'error': result['error'], 'code': result['code']}), 401
 
         return f(*args, **kwargs)
     return decorated
@@ -115,7 +183,7 @@ def optional_auth(f):
 
         token = _extract_bearer_token()
         if token:
-            _validate_token(token)  # 실패해도 무시
+            _validate_token(token)  # 실패해도 무시 (결과 사용 안 함)
 
         return f(*args, **kwargs)
     return decorated
@@ -129,7 +197,7 @@ def _db_operation(operation_name: str, default_return, operation_func):
     try:
         return operation_func()
     except Exception as e:
-        print(f"{operation_name} error: {e}")
+        logger.error(f"{operation_name} 오류: {e}")
         return default_return
 
 

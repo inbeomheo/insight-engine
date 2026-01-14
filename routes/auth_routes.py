@@ -257,10 +257,16 @@ def get_current_user():
 # =============================================
 
 def _mask_api_key(key):
-    """API 키 마스킹 (보안)"""
-    if not key or len(key) <= 12:
-        return '****' if key else None
-    return f'{key[:8]}...{key[-4:]}'
+    """API 키 마스킹 (보안 강화)
+
+    기존: 8자 + 4자 = 12자 노출
+    변경: 4자 + 2자 = 6자 노출
+    """
+    if not key:
+        return None
+    if len(key) <= 8:
+        return '****'
+    return f'{key[:4]}...{key[-2:]}'
 
 
 @auth_bp.route('/api/user/keys', methods=['GET'])
