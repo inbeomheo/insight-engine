@@ -14,23 +14,30 @@ export class AuthManager {
     }
 
     async init() {
+        console.log('[AuthManager] init() 시작');
         try {
             const response = await fetch('/api/auth/status');
             const data = await response.json();
             this.isEnabled = data.enabled;
-        } catch {
+            console.log('[AuthManager] Supabase enabled:', this.isEnabled);
+        } catch (e) {
+            console.error('[AuthManager] auth/status 오류:', e);
             this.isEnabled = false;
         }
 
         if (this.isEnabled) {
             // OAuth 콜백 처리 (URL에 code 또는 access_token이 있는 경우)
+            console.log('[AuthManager] OAuth 콜백 처리 시작');
             await this.handleOAuthCallback();
-            this.restoreSession();
+            console.log('[AuthManager] 세션 복원 시작');
+            await this.restoreSession();
+            console.log('[AuthManager] Auth UI 설정');
             this.setupAuthUI();
         } else {
             this.setupLocalModeUI();
         }
 
+        console.log('[AuthManager] init() 완료, user:', this.user);
         return this.isEnabled;
     }
 
@@ -38,6 +45,10 @@ export class AuthManager {
     async handleOAuthCallback() {
         const url = new URL(window.location.href);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+        console.log('[AuthManager] handleOAuthCallback - URL:', window.location.href);
+        console.log('[AuthManager] handleOAuthCallback - hash:', window.location.hash);
+        console.log('[AuthManager] handleOAuthCallback - search:', window.location.search);
 
         // Supabase는 access_token을 URL 해시에 반환
         const accessToken = hashParams.get('access_token');
@@ -64,9 +75,12 @@ export class AuthManager {
 
         // URL 파라미터에서 code 확인 (PKCE flow)
         const code = url.searchParams.get('code');
+        console.log('[AuthManager] OAuth code:', code ? '있음' : '없음');
         if (code) {
+            console.log('[AuthManager] 코드를 세션으로 교환 시도');
             // code가 있으면 서버에서 토큰으로 교환해야 함
             const result = await this.exchangeCodeForSession(code);
+            console.log('[AuthManager] 코드 교환 결과:', result);
 
             // URL 정리
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -119,21 +133,26 @@ export class AuthManager {
 
     // ==================== 세션 관리 ====================
 
-    restoreSession() {
+    async restoreSession() {
         const sessionStr = localStorage.getItem('auth_session');
+        console.log('[AuthManager] restoreSession - localStorage:', sessionStr ? '있음' : '없음');
         if (!sessionStr) return;
 
         try {
             const session = JSON.parse(sessionStr);
             const isExpired = session.expires_at && session.expires_at * 1000 <= Date.now();
+            console.log('[AuthManager] 세션 만료 여부:', isExpired, 'expires_at:', session.expires_at);
 
             if (isExpired) {
-                this.refreshToken(session.refresh_token);
+                console.log('[AuthManager] 토큰 갱신 시도');
+                await this.refreshToken(session.refresh_token);
             } else {
                 this.session = session;
-                this.verifySession();
+                console.log('[AuthManager] 세션 검증 시도');
+                await this.verifySession();
             }
-        } catch {
+        } catch (e) {
+            console.error('[AuthManager] restoreSession 오류:', e);
             this.clearSession();
         }
     }
@@ -217,10 +236,12 @@ export class AuthManager {
     // ==================== 인증 액션 ====================
 
     async _authRequest(url, body, successHandler, successMsg, failMsg) {
+        console.log('[AuthManager] _authRequest:', url, body);
         const { ok, data, isNetworkError } = await this._fetchJson(url, {
             method: 'POST',
             body: JSON.stringify(body)
         });
+        console.log('[AuthManager] Response:', { ok, data, isNetworkError });
 
         if (isNetworkError) {
             this.ui.showAlert('네트워크 오류', 'error');
@@ -304,8 +325,13 @@ export class AuthManager {
     // ==================== UI ====================
 
     setupAuthUI() {
+        console.log('[AuthManager] setupAuthUI() 호출됨');
         const authContainer = document.getElementById('auth-container');
-        if (!authContainer) return;
+        if (!authContainer) {
+            console.error('[AuthManager] auth-container 요소를 찾을 수 없음!');
+            return;
+        }
+        console.log('[AuthManager] auth-container 찾음, UI 설정 중...');
 
         authContainer.innerHTML = `
             <div id="auth-logged-out" class="flex items-center gap-2">
@@ -353,10 +379,15 @@ export class AuthManager {
     }
 
     showAuthModal() {
+        console.log('[AuthManager] showAuthModal() 호출됨');
         const modal = document.getElementById('auth-modal');
-        if (!modal) return;
+        if (!modal) {
+            console.error('[AuthManager] auth-modal 요소를 찾을 수 없음!');
+            return;
+        }
 
         modal.classList.add('active');
+        console.log('[AuthManager] 모달 active 클래스 추가됨');
 
         if (!this._modalEventsSetup) {
             this.setupAuthModalEvents();

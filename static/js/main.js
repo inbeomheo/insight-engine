@@ -384,7 +384,7 @@ class ContentAnalysis {
 
             // 새 커스텀 스타일로 저장
             const customStyle = {
-                id: 'generated-' + Date.now(),
+                id: 'custom_' + Date.now(),
                 name: data.styleName || 'AI 생성 스타일',
                 prompt: data.stylePrompt,
                 createdAt: Date.now()

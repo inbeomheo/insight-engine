@@ -14,22 +14,41 @@ from .professional import SEO_PROMPT, NEWS_PROMPT
 from .creative import SCRIPT_PROMPT, SNS_PROMPT
 from .analytical import NEEDS_PROMPT, COMPARE_PROMPT, INFOGRAPHIC_PROMPT
 from .structured import QNA_PROMPT, MINDMAP_PROMPT
+from .review import REVIEW_PROMPT
+from .tutorial import TUTORIAL_PROMPT
+from .newsletter import NEWSLETTER_PROMPT
 
-# 스타일 프롬프트 매핑
+# 스타일 프롬프트 매핑 (16개 스타일)
 STYLE_PROMPTS = {
+    # 블로그 계열
     'blog': BLOG_PROMPT,
     'detailed': BLOG_PROMPT,  # blog와 동일
-    'seo': SEO_PROMPT,
+
+    # 요약 계열
     'summary': SUMMARY_PROMPT,
     'easy': EASY_PROMPT,
+
+    # 전문가 계열
+    'seo': SEO_PROMPT,
     'news': NEWS_PROMPT,
+
+    # 크리에이티브 계열
     'script': SCRIPT_PROMPT,
-    'needs': NEEDS_PROMPT,
-    'qna': QNA_PROMPT,
-    'infographic': INFOGRAPHIC_PROMPT,
-    'compare': COMPARE_PROMPT,
     'sns': SNS_PROMPT,
-    'mindmap': MINDMAP_PROMPT
+
+    # 분석 계열
+    'needs': NEEDS_PROMPT,
+    'compare': COMPARE_PROMPT,
+    'infographic': INFOGRAPHIC_PROMPT,
+
+    # 구조화 계열
+    'qna': QNA_PROMPT,
+    'mindmap': MINDMAP_PROMPT,
+
+    # 신규 스타일
+    'review': REVIEW_PROMPT,
+    'tutorial': TUTORIAL_PROMPT,
+    'newsletter': NEWSLETTER_PROMPT,
 }
 
 # 개별 프롬프트도 export (하위 호환성)
@@ -47,4 +66,7 @@ __all__ = [
     'INFOGRAPHIC_PROMPT',
     'QNA_PROMPT',
     'MINDMAP_PROMPT',
+    'REVIEW_PROMPT',
+    'TUTORIAL_PROMPT',
+    'NEWSLETTER_PROMPT',
 ]

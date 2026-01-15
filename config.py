@@ -70,7 +70,7 @@ def get_provider_from_model(model_id: str) -> str:
         return 'deepseek'
     return 'openai'  # 기본값
 
-# 스타일/톤 옵션
+# 스타일/톤 옵션 (16개)
 STYLE_OPTIONS: List[tuple] = [
     ('blog', '📝 블로그 포스트'),
     ('detailed', '📝 상세 요약'),
@@ -83,7 +83,10 @@ STYLE_OPTIONS: List[tuple] = [
     ('qna', '❓ Q&A 형식'),
     ('infographic', '📊 인포그래픽용'),
     ('compare', '⚖️ 비교분석'),
-    ('sns', '📱 SNS 포스팅')
+    ('sns', '📱 SNS 포스팅'),
+    ('review', '⭐ 리뷰'),
+    ('tutorial', '📚 튜토리얼'),
+    ('newsletter', '✉️ 뉴스레터'),
 ]
 
 # 세부 옵션 (길이, 톤, 언어, 이모지)
