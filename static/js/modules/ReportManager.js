@@ -53,37 +53,46 @@ export class ReportManager {
 
     _buildPendingCardHtml(styleLabel, timeStr, url, shortUrl) {
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-accent/50 via-primary-accent/30 to-transparent rounded-full animate-pulse"></div>
+            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary/50 via-primary/30 to-transparent rounded-full animate-pulse"></div>
             <div class="card-header p-6 md:p-8 border-b border-border-dark/30">
                 <div class="space-y-3">
                     <div class="flex items-center gap-3 flex-wrap">
-                        <span class="bg-gradient-to-r from-primary-accent/60 to-primary-glow/60 text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md">${styleLabel}</span>
-                        <span class="text-gray-text/50 text-[10px] font-mono tracking-wide">${timeStr}</span>
-                        <span class="stats-badge inline-flex items-center gap-1.5 text-primary-accent/80 animate-pulse">
+                        <span class="bg-gradient-to-r from-primary/60 to-primary-glow/60 text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md">${styleLabel}</span>
+                        <span class="text-text-subtle/50 text-[10px] font-mono tracking-wide">${timeStr}</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-medium animate-pulse">
                             <span class="material-symbols-outlined text-xs loading-spinner">progress_activity</span>
-                            <span>분석 중...</span>
+                            <span>분석 중</span>
                         </span>
                     </div>
-                    <h3 class="text-xl md:text-2xl font-display font-semibold text-warm-white/60 leading-snug tracking-tight">
-                        <span class="inline-flex items-center gap-2">
-                            <span class="material-symbols-outlined loading-spinner">hourglass_empty</span>
-                            분석 진행 중...
-                        </span>
-                    </h3>
-                    <a class="inline-flex items-center gap-1.5 text-gray-text/40 text-xs font-mono" href="${url}" target="_blank">
+                    <!-- Skeleton Title -->
+                    <div class="space-y-2">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text" style="width: 50%;"></div>
+                    </div>
+                    <a class="inline-flex items-center gap-1.5 text-text-subtle/40 text-xs font-mono hover:text-text-subtle/60 transition-colors" href="${url}" target="_blank">
                         <span class="material-symbols-outlined text-sm">play_circle</span>
                         <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
                     </a>
                 </div>
             </div>
-            <div class="p-6 md:p-8 flex items-center justify-center min-h-[120px]">
-                <div class="flex flex-col items-center gap-3 text-gray-text/40">
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 bg-primary-accent/60 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
-                        <span class="w-2 h-2 bg-primary-accent/60 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
-                        <span class="w-2 h-2 bg-primary-accent/60 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+            <!-- Skeleton Content Area -->
+            <div class="p-6 md:p-8">
+                <div class="space-y-4">
+                    <!-- Skeleton paragraph lines -->
+                    <div class="skeleton skeleton-text" style="width: 100%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 95%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 88%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 92%;"></div>
+                    <div class="skeleton skeleton-text" style="width: 75%;"></div>
+                </div>
+                <!-- Loading indicator -->
+                <div class="flex items-center justify-center gap-3 mt-8 pt-6 border-t border-border-dark/20">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
                     </div>
-                    <span class="text-xs">AI가 영상을 분석하고 있습니다</span>
+                    <span class="text-[11px] text-text-subtle/50 font-medium">AI가 영상을 분석하고 있습니다</span>
                 </div>
             </div>
         `;
@@ -120,7 +129,7 @@ export class ReportManager {
 
         // 에러 카드로 변환
         const shortUrl = this._formatShortUrl(data.url);
-        card.className = 'report-card bg-black border border-red-500/30 relative opacity-80 rounded-xl overflow-hidden';
+        card.className = 'report-card bg-surface-dark border border-red-500/30 relative opacity-80 rounded-xl overflow-hidden';
         card.removeAttribute('data-pending-id');
         card.innerHTML = this._createErrorCardHtml(data.url, shortUrl, data.error);
 
@@ -195,7 +204,7 @@ export class ReportManager {
     }
 
     _buildStatsBadge(icon, value) {
-        return `<span class="stats-badge inline-flex items-center gap-1.5 text-primary-accent/80"><span class="material-symbols-outlined text-xs">${icon}</span>${value}</span>`;
+        return `<span class="stats-badge inline-flex items-center gap-1.5 text-primary/80"><span class="material-symbols-outlined text-xs">${icon}</span>${value}</span>`;
     }
 
     _buildStatsBadges(data) {
@@ -209,13 +218,13 @@ export class ReportManager {
         return badges.length ? `<div class="flex items-center gap-2 mt-1">${badges.join('')}</div>` : '';
     }
 
-    _buildFooterButton(className, icon, label, hoverColor = 'primary-accent') {
+    _buildFooterButton(className, icon, label, hoverColor = 'primary') {
         const colorClasses = hoverColor === 'purple'
             ? 'hover:text-purple-400 hover:bg-purple-500/10'
             : hoverColor === 'red'
                 ? 'hover:text-red-400 hover:bg-red-500/10'
-                : 'hover:text-primary-accent hover:bg-primary-accent/10';
-        return `<button class="${className} inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-text/60 ${colorClasses} px-3 py-2 transition-all duration-200 rounded-lg">
+                : 'hover:text-primary hover:bg-primary/10';
+        return `<button class="${className} inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-subtle/60 ${colorClasses} px-3 py-2 transition-all duration-200 rounded-lg">
             <span class="material-symbols-outlined text-sm">${icon}</span>
             <span>${label}</span>
         </button>`;
@@ -227,16 +236,16 @@ export class ReportManager {
         const contentDisplay = isExpanded ? 'block' : 'none';
 
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-accent via-primary-accent/60 to-transparent rounded-full"></div>
+            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary via-primary/60 to-transparent rounded-full"></div>
             <div class="card-header p-6 md:p-8 border-b border-border-dark/30 flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div class="space-y-3 flex-1 min-w-0">
                     <div class="flex items-center gap-3 flex-wrap">
-                        <span class="bg-gradient-to-r from-primary-accent to-primary-glow text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md shadow-lg shadow-primary-accent/20">${styleLabel}</span>
-                        <span class="text-gray-text/50 text-[10px] font-mono tracking-wide">#${data.id} • ${data.time}</span>
+                        <span class="bg-gradient-to-r from-primary to-primary-glow text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md shadow-lg shadow-primary/20">${styleLabel}</span>
+                        <span class="text-text-subtle/50 text-[10px] font-mono tracking-wide">#${data.id} • ${data.time}</span>
                     </div>
-                    <h3 class="text-xl md:text-2xl font-display font-semibold text-warm-white leading-snug tracking-tight line-clamp-2">${this.ui.escapeHtml(data.title)}</h3>
+                    <h3 class="text-xl md:text-2xl font-display font-semibold text-white leading-snug tracking-tight line-clamp-2">${this.ui.escapeHtml(data.title)}</h3>
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <a class="inline-flex items-center gap-1.5 text-gray-text/60 hover:text-primary-accent transition-colors text-xs font-mono group" href="${data.url}" target="_blank">
+                        <a class="inline-flex items-center gap-1.5 text-text-subtle/60 hover:text-primary transition-colors text-xs font-mono group" href="${data.url}" target="_blank">
                             <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">play_circle</span>
                             <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
                             <span class="material-symbols-outlined text-xs opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
@@ -244,7 +253,7 @@ export class ReportManager {
                         ${statsHtml}
                     </div>
                 </div>
-                <button class="toggle-btn flex items-center justify-center size-9 text-gray-text/50 hover:text-primary-accent hover:bg-primary-accent/10 transition-all duration-300 rounded-lg border border-transparent hover:border-primary-accent/20" title="${toggleTitle}">
+                <button class="toggle-btn flex items-center justify-center size-9 text-text-subtle/50 hover:text-primary hover:bg-primary/10 transition-all duration-300 rounded-lg border border-transparent hover:border-primary/20" title="${toggleTitle}">
                     <span class="material-symbols-outlined text-xl transition-transform duration-300">${toggleIcon}</span>
                 </button>
             </div>
@@ -252,9 +261,9 @@ export class ReportManager {
                 ${data.html}
             </div>
             <div class="card-footer bg-background-dark/60 border-t border-border-dark/30 px-4 py-3 flex items-center justify-between">
-                <span class="text-[10px] text-gray-text/40 font-mono">Insight Engine</span>
+                <span class="text-[10px] text-text-subtle/40 font-mono">Insight Engine</span>
                 <div class="flex items-center gap-1">
-                    ${this._buildFooterButton('prompt-btn', 'code', '프롬프트', 'primary-accent')}
+                    ${this._buildFooterButton('prompt-btn', 'code', '프롬프트', 'primary')}
                     ${this._buildFooterButton('mindmap-btn', 'account_tree', '마인드맵', 'purple')}
                     ${this._buildFooterButton('copy-btn', 'content_copy', '복사')}
                     ${this._buildFooterButton('download-btn', 'download', '저장')}
@@ -326,7 +335,7 @@ export class ReportManager {
                 <div class="space-y-3">
                     <div class="flex items-center gap-3">
                         <span class="bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest px-2 py-1">Error</span>
-                        <span class="text-gray-text text-xs font-mono">ID: ${reportId} • ${timeStr}</span>
+                        <span class="text-text-subtle text-xs font-mono">ID: ${reportId} • ${timeStr}</span>
                     </div>
                     <h3 class="text-xl font-bold text-red-400 leading-tight">분석 실패</h3>
                     <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono uppercase tracking-wide" href="${url}" target="_blank">
@@ -351,7 +360,7 @@ export class ReportManager {
         this._setEmptyStateVisibility(false);
 
         const card = this._createCardElement(
-            'report-card bg-black border border-red-500/30 relative opacity-80',
+            'report-card bg-surface-dark border border-red-500/30 relative opacity-80',
             this._buildErrorCardHtml(
                 this.ui.generateReportId(),
                 this._getCurrentTimeStr(),

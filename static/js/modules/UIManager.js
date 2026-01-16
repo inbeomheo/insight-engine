@@ -125,6 +125,63 @@ export class UIManager {
         }
     }
 
+    // ==================== Button Disabled Feedback ====================
+
+    /**
+     * 버튼 비활성화 시 이유를 표시하는 오버레이를 설정합니다.
+     * @param {HTMLElement} button - 대상 버튼 요소
+     * @param {string|null} reason - 비활성화 이유 (null이면 오버레이 제거)
+     */
+    setButtonDisabledReason(button, reason) {
+        if (!button) return;
+
+        // 기존 오버레이 제거
+        const existingOverlay = button.querySelector('.disabled-reason-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+
+        // reason이 null이면 오버레이 없이 종료
+        if (!reason) {
+            button.classList.remove('has-disabled-reason');
+            return;
+        }
+
+        // 버튼에 relative 클래스 추가 (이미 있으면 무시)
+        if (!button.classList.contains('relative')) {
+            button.classList.add('relative');
+        }
+        button.classList.add('has-disabled-reason');
+
+        // 오버레이 생성
+        const overlay = document.createElement('div');
+        overlay.className = 'disabled-reason-overlay';
+        overlay.innerHTML = `
+            <span class="material-symbols-outlined text-xs mr-1">info</span>
+            <span>${this.escapeHtml(reason)}</span>
+        `;
+
+        button.appendChild(overlay);
+    }
+
+    /**
+     * 분석 버튼의 비활성화 상태와 이유를 업데이트합니다.
+     * @param {boolean} disabled - 비활성화 여부
+     * @param {string|null} reason - 비활성화 이유
+     */
+    updateAnalyzeButtonState(disabled, reason = null) {
+        const runBtn = document.getElementById('run-analysis-btn');
+        const startBtn = document.getElementById('start-btn');
+        const aiAnalyzeBtn = document.getElementById('ai-analyze-btn');
+
+        [runBtn, startBtn, aiAnalyzeBtn].forEach(btn => {
+            if (btn) {
+                btn.disabled = disabled;
+                this.setButtonDisabledReason(btn, disabled ? reason : null);
+            }
+        });
+    }
+
     // ==================== Utilities ====================
 
     escapeHtml(text) {

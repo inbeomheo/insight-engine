@@ -71,18 +71,18 @@ export class UrlManager {
         if (!container) return;
 
         container.innerHTML = this.urlList.map((url, index) => `
-            <div class="url-card flex items-center bg-black border border-border-dark p-2 group hover:border-primary-accent/50 transition-colors"
+            <div class="url-card flex items-center bg-surface-dark border border-card-border p-2 group hover:border-primary/50 transition-colors"
                  data-index="${index}" draggable="true">
-                <div class="url-drag-handle pl-2 pr-1 text-gray-text cursor-grab hover:text-primary-accent" title="드래그하여 순서 변경">
+                <div class="url-drag-handle pl-2 pr-1 text-text-subtle cursor-grab hover:text-primary" title="드래그하여 순서 변경">
                     <span class="material-symbols-outlined text-lg">drag_indicator</span>
                 </div>
-                <div class="pl-2 pr-3 text-gray-text">
+                <div class="pl-2 pr-3 text-text-subtle">
                     <span class="material-symbols-outlined text-xl">link</span>
                 </div>
                 <div class="flex-1 truncate text-text-light font-mono text-sm">
                     ${this.ui.escapeHtml(url)}
                 </div>
-                <button class="url-remove-btn p-2 text-gray-text hover:text-red-400 transition-colors" data-index="${index}" title="삭제">
+                <button class="url-remove-btn p-2 text-text-subtle hover:text-red-400 transition-colors" data-index="${index}" title="삭제">
                     <span class="material-symbols-outlined text-lg">close</span>
                 </button>
             </div>
@@ -115,16 +115,16 @@ export class UrlManager {
 
             card.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                e.currentTarget.classList.add('border-primary-accent');
+                e.currentTarget.classList.add('border-primary');
             });
 
             card.addEventListener('dragleave', (e) => {
-                e.currentTarget.classList.remove('border-primary-accent');
+                e.currentTarget.classList.remove('border-primary');
             });
 
             card.addEventListener('drop', (e) => {
                 e.preventDefault();
-                e.currentTarget.classList.remove('border-primary-accent');
+                e.currentTarget.classList.remove('border-primary');
                 const targetIndex = parseInt(e.currentTarget.dataset.index);
 
                 if (this.draggedUrlIndex !== null && this.draggedUrlIndex !== targetIndex) {
