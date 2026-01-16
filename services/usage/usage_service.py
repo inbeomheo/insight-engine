@@ -35,18 +35,22 @@ class UsageService:
             tuple: (can_use: bool, usage: dict)
         """
         if not is_supabase_enabled() or not user_id:
+            logger.info(f"Supabase 비활성 또는 user_id 없음, ADMIN_USAGE 반환")
             return True, ADMIN_USAGE
 
         # 관리자는 무제한
-        if is_admin(user_id):
-            logger.debug(f"관리자 사용: {user_id[:8]}...")
+        admin_status = is_admin(user_id)
+        logger.info(f"check_can_use: user_id={user_id[:8]}..., is_admin={admin_status}")
+        if admin_status:
+            logger.info(f"관리자 사용: {user_id[:8]}..., ADMIN_USAGE 반환")
             return True, ADMIN_USAGE
 
         usage = get_usage(user_id)
         can_use = usage.get('can_use', False)
+        logger.info(f"일반 사용자: user_id={user_id[:8]}..., usage={usage}, can_use={can_use}")
 
         if not can_use:
-            logger.info(f"사용량 소진: {user_id[:8]}...")
+            logger.warning(f"사용량 소진: {user_id[:8]}...")
 
         return can_use, usage
 

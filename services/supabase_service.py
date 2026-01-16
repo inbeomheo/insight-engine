@@ -496,6 +496,7 @@ def is_admin(user_id: str) -> bool:
     """사용자가 관리자인지 확인"""
     supabase = get_supabase()
     if not supabase or not user_id:
+        logger.warning(f"is_admin: supabase={supabase is not None}, user_id={user_id[:8] if user_id else None}")
         return False
 
     def operation():
@@ -504,9 +505,13 @@ def is_admin(user_id: str) -> bool:
             .eq('user_id', user_id) \
             .limit(1) \
             .execute()
-        return bool(result.data and len(result.data) > 0)
+        is_admin_user = bool(result.data and len(result.data) > 0)
+        logger.info(f"is_admin check: user_id={user_id[:8]}..., result.data={result.data}, is_admin={is_admin_user}")
+        return is_admin_user
 
-    return _db_operation('Admin check', False, operation)
+    result = _db_operation('Admin check', False, operation)
+    logger.info(f"is_admin final result for {user_id[:8] if user_id else None}: {result}")
+    return result
 
 
 def get_admin_permissions(user_id: str) -> dict:
