@@ -99,9 +99,8 @@
         }
 
         .glass-panel {
-            background: rgba(32, 36, 40, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(15, 117, 138, 0.15);
+            background: #1a1d21;
+            border: 1px solid #2a2e33;
         }
 
         /* Custom Scrollbar */
@@ -120,14 +119,12 @@
             background: #0f758a;
         }
 
-        /* Glow Effects - Teal */
+        /* Subtle shadow */
         .warm-glow {
-            box-shadow: 0 0 30px rgba(15, 117, 138, 0.15),
-                        0 0 60px rgba(15, 117, 138, 0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         .warm-glow:hover {
-            box-shadow: 0 0 40px rgba(15, 117, 138, 0.25),
-                        0 0 80px rgba(15, 117, 138, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         /* Animations */
@@ -203,27 +200,26 @@
             display: flex;
         }
         .modal-content {
-            background: linear-gradient(180deg, #202428 0%, #16191d 100%);
-            border: 1px solid rgba(15, 117, 138, 0.2);
+            background: #1a1d21;
+            border: 1px solid #2a2e33;
             border-radius: 12px;
             max-width: 520px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6),
-                        0 0 1px rgba(15, 117, 138, 0.3);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
         }
 
         /* Provider Card (for settings modal display) */
         .provider-card {
             border: 1px solid #2a2e33;
-            background: linear-gradient(135deg, #282c31 0%, #202428 100%);
+            background: #1e2227;
             padding: 1rem;
             border-radius: 8px;
         }
         .provider-card.configured {
             border-color: #0f758a;
-            background: linear-gradient(135deg, rgba(15, 117, 138, 0.08) 0%, #202428 100%);
+            background: #1e2227;
         }
 
         /* Loading Spinner */
@@ -239,56 +235,50 @@
         /* Report Card */
         .report-card {
             opacity: 0;
-            transform: translateY(40px) scale(0.98);
-            animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(20px);
+            animation: slideInUp 0.4s ease forwards;
+            transition: border-color 0.2s ease;
         }
         .report-card:hover {
-            transform: translateY(-3px) scale(1);
-            box-shadow: 0 12px 40px rgba(15, 117, 138, 0.15), 0 4px 16px rgba(0, 0, 0, 0.25);
-            border-color: rgba(15, 117, 138, 0.3);
+            border-color: #0f758a;
         }
         .report-card .card-header {
-            background: linear-gradient(135deg, rgba(15, 117, 138, 0.04) 0%, transparent 50%);
+            background: transparent;
         }
         .report-card .card-footer {
-            backdrop-filter: blur(8px);
+            background: transparent;
         }
         .report-card .card-footer button {
-            transition: all 0.2s ease;
+            transition: opacity 0.2s ease;
         }
         .report-card .card-footer button:hover {
-            transform: translateY(-2px);
-        }
-        .report-card .card-footer button:active {
-            transform: translateY(0) scale(0.98);
+            opacity: 0.8;
         }
         .report-card .stats-badge {
-            background: rgba(15, 117, 138, 0.1);
-            border: 1px solid rgba(15, 117, 138, 0.2);
+            background: #1e2227;
+            border: 1px solid #2a2e33;
             padding: 0.25rem 0.625rem;
-            border-radius: 9999px;
+            border-radius: 4px;
             font-size: 0.6875rem;
         }
         @keyframes slideInUp {
             0% {
                 opacity: 0;
-                transform: translateY(40px) scale(0.98);
+                transform: translateY(20px);
             }
             100% {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
         }
         @keyframes slideOut {
             from {
                 opacity: 1;
-                transform: translateY(0) scale(1);
+                transform: translateY(0);
             }
             to {
                 opacity: 0;
-                transform: translateY(-20px) scale(0.98);
+                transform: translateY(-10px);
             }
         }
 
@@ -873,59 +863,68 @@
                 padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
             }
         }
+
+        /* Icon Navigation Button */
+        .nav-icon-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: #9ca3af;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+        }
+        .nav-icon-btn:hover {
+            background: #202428;
+            color: #0f758a;
+        }
+        .nav-icon-btn.active {
+            background: rgba(15, 117, 138, 0.15);
+            color: #0f758a;
+        }
+        .nav-icon-btn .material-symbols-outlined {
+            font-size: 20px;
+        }
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
     <!-- Skip Link for Keyboard Users -->
     <a href="#url-input" class="skip-link">메인 콘텐츠로 건너뛰기</a>
 
-    <!-- ==================== Sidebar ==================== -->
-    <aside id="sidebar" class="w-20 lg:w-72 flex flex-col border-r border-[#243336] bg-[#111f22] flex-shrink-0 transition-all duration-300 fixed lg:relative h-full z-50 -translate-x-full lg:translate-x-0">
+    <!-- ==================== Sidebar (Icon Bar) ==================== -->
+    <aside id="sidebar" class="w-12 flex flex-col border-r border-border-dark bg-background-dark flex-shrink-0 h-full z-50">
         <!-- Logo Area -->
-        <div class="h-20 flex items-center px-4 lg:px-6 border-b border-[#243336]/50">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-[#244147] flex items-center justify-center shadow-[0_0_15px_rgba(15,117,138,0.3)]">
-                    <span class="material-symbols-outlined text-white text-[20px]">auto_awesome_motion</span>
-                </div>
-                <h1 class="text-xl font-bold tracking-tight hidden lg:block">Insight Engine</h1>
+        <div class="h-14 flex items-center justify-center border-b border-border-dark">
+            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-lg">auto_awesome_motion</span>
             </div>
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto py-6 flex flex-col gap-2 px-3">
-            <!-- Dashboard (Active) -->
-            <a class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg bg-primary/10 border border-primary/20 text-white group transition-all" href="#" data-section="dashboard">
-                <span class="material-symbols-outlined text-primary group-hover:text-white transition-colors">dashboard</span>
-                <span class="text-sm font-medium hidden lg:block">Dashboard</span>
-            </a>
-            <!-- History -->
-            <a class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-text-subtle hover:bg-[#244147]/50 hover:text-white transition-all group" href="#" data-section="history">
-                <span class="material-symbols-outlined group-hover:scale-110 transition-transform">history</span>
-                <span class="text-sm font-medium hidden lg:block">History</span>
-            </a>
-            <!-- Usage -->
-            <a class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-text-subtle hover:bg-[#244147]/50 hover:text-white transition-all group" href="#" data-section="usage">
-                <span class="material-symbols-outlined group-hover:scale-110 transition-transform">pie_chart</span>
-                <span class="text-sm font-medium hidden lg:block">Usage</span>
-            </a>
-            <!-- Settings -->
-            <a id="sidebar-settings-btn" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-text-subtle hover:bg-[#244147]/50 hover:text-white transition-all group cursor-pointer" data-section="settings">
-                <span class="material-symbols-outlined group-hover:scale-110 transition-transform">settings</span>
-                <span class="text-sm font-medium hidden lg:block">Settings</span>
-            </a>
+        <nav class="flex-1 flex flex-col items-center gap-1 py-4">
+            <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+            </button>
+            <button class="nav-icon-btn" data-section="history" title="History">
+                <span class="material-symbols-outlined">history</span>
+            </button>
+            <button class="nav-icon-btn" data-section="usage" title="Usage">
+                <span class="material-symbols-outlined">pie_chart</span>
+            </button>
+            <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
         </nav>
 
         <!-- User Profile / Auth (Bottom) -->
-        <div class="p-4 border-t border-[#243336]/50">
-            <div id="sidebar-auth-container" class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#244147]/30 cursor-pointer transition-colors">
-                <div class="w-10 h-10 rounded-full bg-[#244147] overflow-hidden relative border border-[#345d65] flex items-center justify-center">
-                    <span class="material-symbols-outlined text-text-subtle text-xl">person</span>
-                </div>
-                <div class="flex-col hidden lg:flex">
-                    <p class="text-sm font-medium text-white" id="sidebar-user-name">로그인</p>
-                    <p class="text-xs text-text-subtle" id="sidebar-user-status">클릭하여 로그인</p>
-                </div>
-            </div>
+        <div class="py-4 border-t border-border-dark flex justify-center">
+            <button id="sidebar-auth-container" class="nav-icon-btn" title="로그인">
+                <span class="material-symbols-outlined">person</span>
+            </button>
         </div>
     </aside>
 
@@ -935,7 +934,7 @@
     <!-- ==================== Main Content Area ==================== -->
     <div class="flex-1 flex flex-col h-full overflow-hidden relative">
         <!-- Top Bar -->
-        <header class="h-16 lg:h-20 flex items-center justify-between px-4 lg:px-8 border-b border-[#243336]/50 bg-background-dark/95 backdrop-blur-md z-30 flex-shrink-0">
+        <header class="h-16 lg:h-20 flex items-center justify-between px-4 lg:px-8 border-b border-border-dark bg-background-dark z-30 flex-shrink-0">
             <!-- Left: Mobile Menu + Title -->
             <div class="flex items-center gap-3">
                 <!-- Mobile Menu Button -->
@@ -944,13 +943,13 @@
                 </button>
                 <!-- Page Title -->
                 <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-[#244147] text-primary border border-primary/20">Beta v2.5</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-surface-dark text-primary">Beta v2.5</span>
                     <h2 class="text-lg lg:text-xl font-bold text-white hidden sm:block">New Generation</h2>
                 </div>
             </div>
 
             <!-- Center: Usage Display -->
-            <div id="usage-display-header" class="hidden md:flex items-center gap-2 px-4 py-1.5 bg-surface-dark/50 border border-border-dark/40 rounded-full">
+            <div id="usage-display-header" class="hidden md:flex items-center gap-2 px-4 py-1.5 bg-surface-dark rounded-lg">
                 <span class="material-symbols-outlined text-primary/70 text-sm" aria-hidden="true">bolt</span>
                 <span class="text-[10px] font-mono text-text-subtle/70">
                     <span id="header-usage-count" class="text-primary/90 font-semibold">-</span>
@@ -963,13 +962,13 @@
             <!-- Right: Provider Badge + Settings -->
             <div class="flex items-center gap-2 lg:gap-3">
                 <!-- AI Provider Badge -->
-                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-dark/50 border border-border-dark/40 rounded-lg cursor-pointer group hover:border-primary/30 transition-colors" id="provider-badge-header">
-                    <div class="size-5 rounded-md bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/40 flex items-center justify-center text-primary text-[8px] font-bold" aria-hidden="true">AI</div>
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg cursor-pointer group hover:bg-bg-elevated transition-colors" id="provider-badge-header">
+                    <div class="size-5 rounded-md bg-primary/20 flex items-center justify-center text-primary text-[8px] font-bold" aria-hidden="true">AI</div>
                     <span class="text-xs font-body text-text-subtle group-hover:text-primary transition-colors truncate max-w-[80px]" id="current-provider-label">미설정</span>
                 </div>
 
                 <!-- Settings Button (Desktop) -->
-                <button id="settings-btn" class="hidden lg:flex items-center gap-1.5 cursor-pointer text-text-subtle hover:text-primary transition-all duration-300 group p-2 rounded-lg hover:bg-primary/5" aria-label="설정">
+                <button id="settings-btn" class="hidden lg:flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정">
                     <span class="material-symbols-outlined text-lg group-hover:rotate-90 transition-transform duration-500" aria-hidden="true">settings</span>
                 </button>
 
@@ -1528,7 +1527,7 @@
                     </div>
 
                     <!-- AI Style Generate Button -->
-                    <button id="generate-style-btn" class="w-full mt-4 px-4 py-3 rounded-lg border border-dashed border-purple-400/50 hover:border-purple-400 bg-transparent text-purple-400/80 hover:text-purple-400 font-medium text-sm transition-all flex items-center justify-center gap-2" title="AI가 영상에 맞는 맞춤 프롬프트를 생성합니다">
+                    <button id="generate-style-btn" class="w-full mt-4 px-4 py-3 rounded-lg border border-border-dark hover:border-primary bg-transparent text-text-secondary hover:text-primary font-medium text-sm transition-colors flex items-center justify-center gap-2" title="AI가 영상에 맞는 맞춤 프롬프트를 생성합니다">
                         <span class="material-symbols-outlined text-lg">auto_awesome</span>
                         <span>AI 스타일 생성</span>
                     </button>
@@ -1619,7 +1618,7 @@
 
             <!-- Generate Button Card -->
             <div class="lg:col-span-7 flex items-stretch">
-                <button id="run-analysis-btn" class="relative w-full bg-gradient-to-r from-primary to-[#0d9488] text-white hover:shadow-xl hover:shadow-primary/30 font-bold py-4 md:py-5 px-6 tracking-wide transition-all duration-300 flex items-center justify-center gap-3 rounded-xl group">
+                <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-4 md:py-5 px-6 tracking-wide transition-colors duration-200 flex items-center justify-center gap-3 rounded-xl">
                     <span class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform duration-300" id="run-icon">auto_awesome</span>
                     <span id="run-text" class="text-base md:text-lg">콘텐츠 생성</span>
                     <span id="pending-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-lg animate-pulse">0</span>
@@ -1640,26 +1639,11 @@
                 </div>
             </div>
 
-            <!-- Empty State (Enhanced) -->
+            <!-- Empty State -->
             <div id="empty-state" class="flex flex-col items-center justify-center py-16 md:py-24 text-center">
-                <!-- Illustration with orbital animation -->
-                <div class="relative w-32 h-32 md:w-40 md:h-40 mb-10">
-                    <!-- Outer glow -->
-                    <div class="absolute inset-0 bg-gradient-to-br from-primary/25 to-primary/5 blur-3xl rounded-full animate-pulse-slow"></div>
-                    <!-- Orbital ring -->
-                    <div class="absolute inset-2 border border-primary/10 rounded-full animate-spin" style="animation-duration: 20s;"></div>
-                    <div class="absolute inset-4 border border-dashed border-primary/15 rounded-full animate-spin" style="animation-duration: 15s; animation-direction: reverse;"></div>
-                    <!-- Orbiting dots -->
-                    <div class="absolute inset-0 animate-spin" style="animation-duration: 8s;">
-                        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 bg-primary/60 rounded-full shadow-lg shadow-primary/30"></div>
-                    </div>
-                    <div class="absolute inset-0 animate-spin" style="animation-duration: 12s; animation-direction: reverse;">
-                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-primary-glow/50 rounded-full"></div>
-                    </div>
-                    <!-- Center icon -->
-                    <div class="absolute inset-6 md:inset-8 bg-gradient-to-br from-surface-dark to-background-dark border border-primary/25 flex items-center justify-center animate-float rounded-2xl shadow-xl shadow-primary/10">
-                        <span class="material-symbols-outlined text-primary text-4xl md:text-5xl" aria-hidden="true">auto_awesome</span>
-                    </div>
+                <!-- Simple Icon -->
+                <div class="w-20 h-20 md:w-24 md:h-24 mb-8 bg-surface-dark rounded-2xl flex items-center justify-center border border-border-dark">
+                    <span class="material-symbols-outlined text-primary text-4xl md:text-5xl" aria-hidden="true">auto_awesome</span>
                 </div>
 
                 <!-- Text content -->
@@ -1671,20 +1655,18 @@
 
                 <!-- Quick Guide Steps -->
                 <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-2">
-                    <div class="flex items-center gap-2 px-4 py-2 bg-surface-dark/80 border border-card-border/50 rounded-full">
-                        <span class="flex items-center justify-center w-5 h-5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">1</span>
-                        <span class="text-xs text-text-subtle font-medium">URL 입력</span>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-surface-dark rounded-lg">
+                        <span class="flex items-center justify-center w-5 h-5 bg-primary/20 text-primary text-[10px] font-bold rounded">1</span>
+                        <span class="text-xs text-text-secondary font-medium">URL 입력</span>
                     </div>
-                    <span class="material-symbols-outlined text-text-subtle/30 text-sm hidden sm:block" aria-hidden="true">arrow_forward</span>
-                    <span class="material-symbols-outlined text-text-subtle/30 text-sm sm:hidden" aria-hidden="true">arrow_downward</span>
-                    <div class="flex items-center gap-2 px-4 py-2 bg-surface-dark/80 border border-card-border/50 rounded-full">
-                        <span class="flex items-center justify-center w-5 h-5 bg-primary/20 text-primary text-[10px] font-bold rounded-full">2</span>
-                        <span class="text-xs text-text-subtle font-medium">스타일 선택</span>
+                    <span class="material-symbols-outlined text-text-secondary/30 text-sm hidden sm:block" aria-hidden="true">arrow_forward</span>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-surface-dark rounded-lg">
+                        <span class="flex items-center justify-center w-5 h-5 bg-primary/20 text-primary text-[10px] font-bold rounded">2</span>
+                        <span class="text-xs text-text-secondary font-medium">스타일 선택</span>
                     </div>
-                    <span class="material-symbols-outlined text-text-subtle/30 text-sm hidden sm:block" aria-hidden="true">arrow_forward</span>
-                    <span class="material-symbols-outlined text-text-subtle/30 text-sm sm:hidden" aria-hidden="true">arrow_downward</span>
-                    <div class="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full">
-                        <span class="flex items-center justify-center w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full">3</span>
+                    <span class="material-symbols-outlined text-text-secondary/30 text-sm hidden sm:block" aria-hidden="true">arrow_forward</span>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-primary/15 rounded-lg">
+                        <span class="flex items-center justify-center w-5 h-5 bg-primary text-white text-[10px] font-bold rounded">3</span>
                         <span class="text-xs text-primary font-medium">분석 시작</span>
                     </div>
                 </div>
