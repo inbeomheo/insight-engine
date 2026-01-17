@@ -44,6 +44,18 @@ def auth_status():
     """Supabase 활성화 상태 확인"""
     return jsonify({'enabled': is_supabase_enabled()})
 
+
+@auth_bp.route('/api/auth/config', methods=['GET'])
+def auth_config():
+    """프론트엔드용 Supabase 설정 반환 (JS SDK 초기화용)"""
+    import os
+    return jsonify({
+        'enabled': is_supabase_enabled(),
+        'url': os.getenv('SUPABASE_URL'),
+        'anonKey': os.getenv('SUPABASE_ANON_KEY')
+    })
+
+
 def _validate_email_password(data):
     """이메일/비밀번호 검증 공통 함수"""
     email = data.get('email')

@@ -1,6 +1,6 @@
 /**
  * AuthManager - 인증 관리 모듈
- * Supabase Auth 연동, 세션 관리
+ * Supabase JS SDK 연동, PKCE OAuth Flow 지원
  */
 export class AuthManager {
     constructor(storage, uiManager) {
@@ -11,103 +11,98 @@ export class AuthManager {
         this.isEnabled = false;
         this.onAuthChange = null;
         this._modalEventsSetup = false;
+        this.supabaseClient = null;  // Supabase JS SDK 클라이언트
     }
 
     async init() {
         console.log('[AuthManager] init() 시작');
         try {
-            const response = await fetch('/api/auth/status');
-            const data = await response.json();
-            this.isEnabled = data.enabled;
+            // Supabase 설정 가져오기
+            const response = await fetch('/api/auth/config');
+            const config = await response.json();
+            this.isEnabled = config.enabled;
             console.log('[AuthManager] Supabase enabled:', this.isEnabled);
+
+            // Supabase JS SDK 초기화
+            if (this.isEnabled && config.url && config.anonKey && window.supabase) {
+                this.supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+                console.log('[AuthManager] Supabase JS SDK 초기화 완료');
+
+                // 인증 상태 변경 리스너 등록
+                this.supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('[AuthManager] onAuthStateChange:', event, session?.user?.email);
+                    this._handleAuthStateChange(event, session);
+                });
+
+                // 현재 세션 확인 (OAuth 콜백 자동 처리 포함)
+                const { data: { session } } = await this.supabaseClient.auth.getSession();
+                if (session) {
+                    this.session = session;
+                    this.user = session.user;
+                    console.log('[AuthManager] 기존 세션 복원됨:', session.user?.email);
+                }
+            }
         } catch (e) {
-            console.error('[AuthManager] auth/status 오류:', e);
+            console.error('[AuthManager] init 오류:', e);
             this.isEnabled = false;
         }
 
         if (this.isEnabled) {
-            // OAuth 콜백 처리 (URL에 code 또는 access_token이 있는 경우)
-            console.log('[AuthManager] OAuth 콜백 처리 시작');
-            await this.handleOAuthCallback();
-            console.log('[AuthManager] 세션 복원 시작');
-            await this.restoreSession();
-            console.log('[AuthManager] Auth UI 설정');
             this.setupAuthUI();
+            this.updateAuthUI(this.isLoggedIn());
         } else {
             this.setupLocalModeUI();
         }
 
-        console.log('[AuthManager] init() 완료, user:', this.user);
+        console.log('[AuthManager] init() 완료, user:', this.user?.email);
         return this.isEnabled;
     }
 
-    // OAuth 콜백 처리
-    async handleOAuthCallback() {
-        const url = new URL(window.location.href);
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    // SDK 인증 상태 변경 핸들러
+    _handleAuthStateChange(event, session) {
+        console.log('[AuthManager] Auth event:', event);
 
-        console.log('[AuthManager] handleOAuthCallback - URL:', window.location.href);
-        console.log('[AuthManager] handleOAuthCallback - hash:', window.location.hash);
-        console.log('[AuthManager] handleOAuthCallback - search:', window.location.search);
-
-        // Supabase는 access_token을 URL 해시에 반환
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const expiresAt = hashParams.get('expires_at');
-
-        if (accessToken && refreshToken) {
-            // 해시에서 토큰을 찾은 경우 (implicit flow)
-            this.session = {
-                access_token: accessToken,
-                refresh_token: refreshToken,
-                expires_at: expiresAt ? parseInt(expiresAt) : null
-            };
-            this.saveSession();
-
-            // URL 정리 (해시 제거)
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            // 세션 검증
-            await this.verifySession();
-            this.ui.showAlert('Google 로그인 성공!', 'success');
-            return;
-        }
-
-        // URL 파라미터에서 code 확인 (PKCE flow)
-        const code = url.searchParams.get('code');
-        console.log('[AuthManager] OAuth code:', code ? '있음' : '없음');
-        if (code) {
-            console.log('[AuthManager] 코드를 세션으로 교환 시도');
-            // code가 있으면 서버에서 토큰으로 교환해야 함
-            const result = await this.exchangeCodeForSession(code);
-            console.log('[AuthManager] 코드 교환 결과:', result);
-
-            // URL 정리
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            if (result.success) {
-                this.ui.showAlert('Google 로그인 성공!', 'success');
+        if (event === 'INITIAL_SESSION') {
+            // 초기 세션 로드 - 알림 없이 상태만 업데이트
+            if (session) {
+                this.session = session;
+                this.user = session.user;
+                this.updateAuthUI(true);
+                this.onAuthChange?.(true, this.user);
             }
+        } else if (event === 'SIGNED_IN' && session) {
+            this.session = session;
+            this.user = session.user;
+            this.updateAuthUI(true);
+            this.onAuthChange?.(true, this.user);
+            // OAuth 콜백 또는 새로운 로그인 시에만 알림
+            this.ui.showAlert('로그인 성공!', 'success');
+            // OAuth 콜백 URL 정리
+            this.handleOAuthCallback();
+        } else if (event === 'SIGNED_OUT') {
+            this.session = null;
+            this.user = null;
+            this.updateAuthUI(false);
+            this.onAuthChange?.(false, null);
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+            this.session = session;
+            console.log('[AuthManager] 토큰 갱신됨');
         }
     }
 
-    // 인증 코드를 세션으로 교환
-    async exchangeCodeForSession(code) {
-        const { ok, data } = await this._fetchJson('/api/auth/oauth/callback', {
-            method: 'POST',
-            body: JSON.stringify({ code })
-        });
+    // OAuth 콜백 처리 (SDK가 자동으로 처리하므로 URL 정리만 수행)
+    async handleOAuthCallback() {
+        // SDK가 URL 해시/파라미터의 인증 정보를 자동으로 처리함
+        // URL에 code나 access_token이 있으면 정리만 수행
+        const url = new URL(window.location.href);
+        const hasAuthParams = url.searchParams.has('code') ||
+            url.searchParams.has('error') ||
+            window.location.hash.includes('access_token');
 
-        if (ok && data.session) {
-            this.user = data.user;
-            this.session = data.session;
-            this.saveSession();
-            this.updateAuthUI(true);
-            this.onAuthChange?.(true, this.user);
-            return { success: true };
+        if (hasAuthParams) {
+            console.log('[AuthManager] OAuth 콜백 감지 - URL 정리');
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
-
-        return { success: false, error: data.error };
     }
 
     // ==================== API 헬퍼 ====================
@@ -131,78 +126,51 @@ export class AuthManager {
             : {};
     }
 
-    // ==================== 세션 관리 ====================
+    // ==================== 세션 관리 (SDK가 자동 처리) ====================
 
+    // SDK가 localStorage를 자동으로 관리하므로 별도 복원 불필요
     async restoreSession() {
-        const sessionStr = localStorage.getItem('auth_session');
-        console.log('[AuthManager] restoreSession - localStorage:', sessionStr ? '있음' : '없음');
-        if (!sessionStr) return;
-
-        try {
-            const session = JSON.parse(sessionStr);
-            const isExpired = session.expires_at && session.expires_at * 1000 <= Date.now();
-            console.log('[AuthManager] 세션 만료 여부:', isExpired, 'expires_at:', session.expires_at);
-
-            if (isExpired) {
-                console.log('[AuthManager] 토큰 갱신 시도');
-                await this.refreshToken(session.refresh_token);
-            } else {
-                this.session = session;
-                console.log('[AuthManager] 세션 검증 시도');
-                await this.verifySession();
-            }
-        } catch (e) {
-            console.error('[AuthManager] restoreSession 오류:', e);
-            this.clearSession();
-        }
+        // SDK 사용 시 getSession()이 자동으로 세션을 복원함
+        // init()에서 이미 처리되므로 이 메서드는 하위 호환성을 위해 유지
+        console.log('[AuthManager] restoreSession - SDK가 자동 처리');
     }
 
+    // SDK 사용 시 불필요하지만 하위 호환성을 위해 유지
     async verifySession() {
-        if (!this.session?.access_token) return;
+        if (!this.supabaseClient) return;
 
-        const { ok, data } = await this._fetchJson('/api/auth/me', {
-            headers: this._getAuthHeaders()
-        });
-
-        if (ok) {
-            this.user = data.user;
+        const { data: { session } } = await this.supabaseClient.auth.getSession();
+        if (session) {
+            this.session = session;
+            this.user = session.user;
             this.updateAuthUI(true);
             this.onAuthChange?.(true, this.user);
-        } else {
-            this.clearSession();
         }
     }
 
-    async refreshToken(refreshToken) {
-        if (!refreshToken) {
+    // SDK가 토큰 갱신을 자동으로 처리
+    async refreshToken() {
+        if (!this.supabaseClient) return;
+
+        const { data, error } = await this.supabaseClient.auth.refreshSession();
+        if (error) {
+            console.error('[AuthManager] 토큰 갱신 실패:', error);
             this.clearSession();
-            return;
-        }
-
-        const { ok, data } = await this._fetchJson('/api/auth/refresh', {
-            method: 'POST',
-            body: JSON.stringify({ refresh_token: refreshToken })
-        });
-
-        if (ok) {
+        } else if (data.session) {
             this.session = data.session;
-            this.saveSession();
-            this.verifySession();
-        } else {
-            this.clearSession();
+            this.user = data.session.user;
+            console.log('[AuthManager] 토큰 갱신 성공');
         }
     }
 
+    // SDK가 자동으로 localStorage 관리 - 하위 호환성을 위해 유지
     saveSession() {
-        if (this.session) {
-            localStorage.setItem('auth_session', JSON.stringify(this.session));
-        }
+        // SDK가 자동으로 처리
     }
 
     clearSession() {
         this.user = null;
         this.session = null;
-        localStorage.removeItem('auth_session');
         this.updateAuthUI(false);
         this.onAuthChange?.(false, null);
     }
@@ -285,15 +253,18 @@ export class AuthManager {
     }
 
     async logout() {
-        if (this.session?.access_token) {
-            await this._fetchJson('/api/auth/logout', {
-                method: 'POST',
-                headers: this._getAuthHeaders()
-            });
+        try {
+            if (this.supabaseClient) {
+                // SDK를 통한 로그아웃 (세션 자동 정리)
+                await this.supabaseClient.auth.signOut();
+            }
+            this.clearSession();
+            this.ui.showAlert('로그아웃되었습니다.', 'info');
+        } catch (error) {
+            console.error('[AuthManager] 로그아웃 오류:', error);
+            this.clearSession();
+            this.ui.showAlert('로그아웃되었습니다.', 'info');
         }
-
-        this.clearSession();
-        this.ui.showAlert('로그아웃되었습니다.', 'info');
     }
 
     async resetPassword(email) {
@@ -307,17 +278,30 @@ export class AuthManager {
     }
 
     async oauthLogin(provider) {
+        // Supabase JS SDK를 사용한 OAuth 로그인 (PKCE 자동 처리)
+        if (!this.supabaseClient) {
+            this.ui.showAlert('인증 서비스가 초기화되지 않았습니다.', 'error');
+            return;
+        }
+
         try {
             const redirectUrl = window.location.origin;
-            const response = await fetch(`/api/auth/oauth/${provider}?redirect_url=${encodeURIComponent(redirectUrl)}`);
-            const data = await response.json();
+            console.log('[AuthManager] OAuth 로그인 시작:', provider, 'redirect:', redirectUrl);
 
-            if (response.ok && data.url) {
-                window.location.href = data.url;
-            } else {
-                this.ui.showAlert(data.error || 'OAuth 로그인 실패', 'error');
+            const { data, error } = await this.supabaseClient.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: redirectUrl
+                }
+            });
+
+            if (error) {
+                console.error('[AuthManager] OAuth 오류:', error);
+                this.ui.showAlert(error.message || 'OAuth 로그인 실패', 'error');
             }
+            // 성공 시 자동으로 리다이렉트됨
         } catch (error) {
+            console.error('[AuthManager] OAuth 요청 오류:', error);
             this.ui.showAlert('OAuth 요청 중 오류가 발생했습니다.', 'error');
         }
     }
@@ -349,6 +333,12 @@ export class AuthManager {
 
         document.getElementById('login-btn')?.addEventListener('click', () => this.showAuthModal());
         document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
+
+        // 모달 이벤트 미리 등록 (사이드바에서 직접 모달을 열 수 있으므로)
+        if (!this._modalEventsSetup) {
+            this.setupAuthModalEvents();
+            this._modalEventsSetup = true;
+        }
     }
 
     setupLocalModeUI() {
