@@ -740,6 +740,67 @@
 
         /* Touch target sizing */
         @media (max-width: 768px) {
+            /* 사이드바 숨김 */
+            #sidebar {
+                display: none;
+            }
+
+            /* 2-Panel을 탭 방식으로 전환 */
+            #input-panel,
+            #result-panel {
+                width: 100% !important;
+                display: none;
+            }
+
+            #input-panel.active,
+            #result-panel.active {
+                display: flex;
+            }
+
+            /* 모바일 탭 바 */
+            .mobile-tab-bar {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: #16191d;
+                border-top: 1px solid #2a2e33;
+                z-index: 50;
+            }
+
+            .mobile-tab-bar button {
+                flex: 1;
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                color: #9ca3af;
+                font-size: 10px;
+                border: none;
+                background: transparent;
+                min-height: 56px;
+            }
+
+            .mobile-tab-bar button.active {
+                color: #0f758a;
+            }
+
+            .mobile-tab-bar button .material-symbols-outlined {
+                font-size: 22px;
+            }
+
+            /* 콘텐츠 영역 하단 여백 (탭바 높이만큼) */
+            #main-content {
+                padding-bottom: 60px;
+            }
+
+            /* 기존 모바일 네비 숨김 (새 탭바로 대체) */
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+
             /* Ensure minimum 44x44px touch targets */
             button, [role="button"], label.cursor-pointer, a {
                 min-height: 44px;
@@ -801,6 +862,18 @@
             .report-card .card-footer button {
                 flex: 0 0 auto;
                 padding: 8px 10px;
+            }
+        }
+
+        /* 데스크톱에서는 탭 바 숨김, 패널 항상 표시 */
+        @media (min-width: 769px) {
+            .mobile-tab-bar {
+                display: none !important;
+            }
+
+            #input-panel,
+            #result-panel {
+                display: flex !important;
             }
         }
 
@@ -2041,6 +2114,56 @@
             document.querySelectorAll('.mobile-nav-item').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
         }
+    </script>
+
+    <!-- 모바일 탭 바 (768px 이하에서만 표시) -->
+    <div class="mobile-tab-bar">
+        <button class="mobile-tab active" data-panel="input">
+            <span class="material-symbols-outlined">edit</span>
+            <span>입력</span>
+        </button>
+        <button class="mobile-tab" data-panel="result">
+            <span class="material-symbols-outlined">article</span>
+            <span>결과</span>
+        </button>
+        <button class="mobile-tab" data-panel="settings" onclick="document.getElementById('settings-modal')?.classList.add('active')">
+            <span class="material-symbols-outlined">settings</span>
+            <span>설정</span>
+        </button>
+    </div>
+
+    <script>
+        // 모바일 탭 전환
+        document.querySelectorAll('.mobile-tab[data-panel]').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const panel = tab.dataset.panel;
+                if (panel === 'settings') return;
+
+                document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                document.getElementById('input-panel')?.classList.toggle('active', panel === 'input');
+                document.getElementById('result-panel')?.classList.toggle('active', panel === 'result');
+            });
+        });
+
+        // 모바일 초기 상태: 768px 이하에서 입력 패널 활성화
+        if (window.innerWidth <= 768) {
+            document.getElementById('input-panel')?.classList.add('active');
+        }
+
+        // 화면 크기 변경 시 패널 상태 조정
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 768) {
+                // 모바일: 탭 상태에 따라 패널 표시
+                const activeTab = document.querySelector('.mobile-tab.active');
+                const activePanel = activeTab?.dataset.panel;
+                if (activePanel && activePanel !== 'settings') {
+                    document.getElementById('input-panel')?.classList.toggle('active', activePanel === 'input');
+                    document.getElementById('result-panel')?.classList.toggle('active', activePanel === 'result');
+                }
+            }
+        });
     </script>
 </body>
 </html>
