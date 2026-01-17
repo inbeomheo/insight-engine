@@ -962,6 +962,132 @@
         .nav-icon-btn .material-symbols-outlined {
             font-size: 20px;
         }
+
+        /* 패널 뷰 전환 */
+        .panel-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .panel-view.hidden {
+            display: none;
+        }
+
+        /* 히스토리 아이템 */
+        .history-item {
+            background: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+        .history-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .history-item-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .history-item-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.25rem;
+            line-height: 1.4;
+        }
+        .history-item-url {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-item-preview {
+            font-size: 0.8125rem;
+            color: #9ca3af;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .history-delete-btn {
+            padding: 0.25rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        .history-delete-btn:hover {
+            color: #ef4444;
+        }
+
+        /* Usage 차트 */
+        .weekly-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .weekly-bar-fill {
+            width: 100%;
+            max-width: 2rem;
+            background: var(--primary);
+            border-radius: 0.25rem 0.25rem 0 0;
+            transition: height 0.3s;
+        }
+        .weekly-bar-label {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+        }
+        .weekly-bar-value {
+            font-size: 0.75rem;
+            color: white;
+            font-weight: 500;
+        }
+
+        .style-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .style-stat-label {
+            width: 4.5rem;
+            font-size: 0.75rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        .style-stat-bar-bg {
+            flex: 1;
+            height: 0.5rem;
+            background: var(--background-dark);
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+        .style-stat-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 0.25rem;
+            transition: width 0.3s;
+        }
+        .style-stat-value {
+            width: 5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
@@ -1650,25 +1776,100 @@
 
                 <!-- ==================== 결과 패널 (60%) ==================== -->
                 <div id="result-panel" class="w-3/5 h-full overflow-y-auto flex flex-col bg-background-dark">
-                    <!-- 헤더 -->
-                    <div class="p-4 border-b border-border-dark flex-shrink-0">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-semibold text-white">결과</h2>
-                            <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary">
-                                <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-                                <span>LIVE</span>
+                    <!-- ===== Dashboard View (기존) ===== -->
+                    <div id="dashboard-view" class="panel-view">
+                        <!-- 헤더 -->
+                        <div class="p-4 border-b border-border-dark flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-semibold text-white">결과</h2>
+                                <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary">
+                                    <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+                                    <span>LIVE</span>
+                                </div>
                             </div>
+                        </div>
+                        <!-- 리포트 스트림 -->
+                        <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto"></div>
+                        <!-- Empty State -->
+                        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4">article</span>
+                            <p class="text-text-muted text-lg mb-2">생성된 콘텐츠가 없습니다</p>
+                            <p class="text-text-muted text-sm">왼쪽에서 URL을 입력하고 콘텐츠를 생성하세요</p>
                         </div>
                     </div>
 
-                    <!-- 리포트 스트림 -->
-                    <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto"></div>
+                    <!-- ===== History View (신규) ===== -->
+                    <div id="history-view" class="panel-view hidden">
+                        <!-- 헤더 -->
+                        <div class="p-4 border-b border-border-dark flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <span class="material-symbols-outlined">history</span>
+                                    히스토리
+                                </h2>
+                                <button id="clear-all-history-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                    전체 삭제
+                                </button>
+                            </div>
+                        </div>
+                        <!-- 히스토리 목록 -->
+                        <div id="history-list" class="flex-1 p-4 space-y-3 overflow-y-auto"></div>
+                        <!-- Empty State -->
+                        <div id="history-empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4">history</span>
+                            <p class="text-text-muted text-lg mb-2">히스토리가 없습니다</p>
+                            <p class="text-text-muted text-sm">콘텐츠를 생성하면 여기에 기록됩니다</p>
+                        </div>
+                        <!-- 푸터 -->
+                        <div id="history-footer" class="p-3 border-t border-border-dark text-xs text-text-muted text-center hidden">
+                            총 <span id="history-count">0</span>개 항목 • 최대 50개 저장
+                        </div>
+                    </div>
 
-                    <!-- Empty State (report-stream이 비어있을 때 표시) -->
-                    <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                        <span class="material-symbols-outlined text-6xl text-text-muted mb-4">article</span>
-                        <p class="text-text-muted text-lg mb-2">생성된 콘텐츠가 없습니다</p>
-                        <p class="text-text-muted text-sm">왼쪽에서 URL을 입력하고 콘텐츠를 생성하세요</p>
+                    <!-- ===== Usage View (신규) ===== -->
+                    <div id="usage-view" class="panel-view hidden">
+                        <!-- 헤더 -->
+                        <div class="p-4 border-b border-border-dark flex-shrink-0">
+                            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined">bar_chart</span>
+                                사용량
+                            </h2>
+                        </div>
+                        <!-- 사용량 대시보드 -->
+                        <div class="flex-1 p-4 space-y-6 overflow-y-auto">
+                            <!-- 오늘 사용량 카드 -->
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
+                                <h3 class="text-sm font-medium text-text-muted mb-3">오늘 사용량</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span id="usage-current" class="text-white font-semibold">0</span>
+                                        <span id="usage-limit" class="text-text-muted">/ 5</span>
+                                    </div>
+                                    <div class="h-2 bg-background-dark rounded-full overflow-hidden">
+                                        <div id="usage-progress-bar" class="h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+                                    </div>
+                                    <p id="usage-remaining" class="text-xs text-text-muted">남은 횟수: 5회</p>
+                                </div>
+                            </div>
+
+                            <!-- 최근 7일 그래프 -->
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
+                                <h3 class="text-sm font-medium text-text-muted mb-4">최근 7일</h3>
+                                <div id="weekly-chart" class="flex items-end justify-between h-32 gap-2">
+                                    <!-- 바 차트 (JS로 생성) -->
+                                </div>
+                            </div>
+
+                            <!-- 스타일별 통계 -->
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
+                                <h3 class="text-sm font-medium text-text-muted mb-4">스타일별 사용</h3>
+                                <div id="style-stats" class="space-y-3">
+                                    <!-- 스타일 바 (JS로 생성) -->
+                                </div>
+                                <p id="style-stats-empty" class="text-center text-text-muted text-sm py-4 hidden">통계 데이터가 없습니다</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1692,6 +1893,46 @@
             sidebar.classList.toggle('-translate-x-full');
             overlay.classList.toggle('hidden');
         }
+
+        // 탭(패널 뷰) 전환
+        function switchPanelView(viewName) {
+            // 모든 패널 뷰 숨기기
+            document.querySelectorAll('.panel-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+
+            // 선택한 뷰만 표시
+            const targetView = document.getElementById(`${viewName}-view`);
+            if (targetView) {
+                targetView.classList.remove('hidden');
+            }
+
+            // 아이콘 버튼 활성화 상태 업데이트
+            document.querySelectorAll('.nav-icon-btn[data-section]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.section === viewName);
+            });
+
+            // 뷰별 초기화 이벤트
+            if (viewName === 'history') {
+                window.dispatchEvent(new CustomEvent('panel:history-opened'));
+            } else if (viewName === 'usage') {
+                window.dispatchEvent(new CustomEvent('panel:usage-opened'));
+            }
+        }
+
+        // 아이콘 바 버튼 클릭 이벤트 (Dashboard, History, Usage)
+        document.querySelectorAll('.nav-icon-btn[data-section]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = btn.dataset.section;
+                if (section && section !== 'settings') {
+                    switchPanelView(section);
+                    if (window.innerWidth < 1024) toggleSidebar();
+                }
+            });
+        });
+
+        // 전역으로 노출 (다른 모듈에서 사용)
+        window.switchPanelView = switchPanelView;
 
         // Sidebar settings button
         document.getElementById('sidebar-settings-btn')?.addEventListener('click', () => {

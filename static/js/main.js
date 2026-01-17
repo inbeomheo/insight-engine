@@ -12,6 +12,8 @@ import { ReportManager } from './modules/ReportManager.js';
 import { ContentGenerator } from './modules/ContentGenerator.js';
 import { MindmapManager } from './modules/MindmapManager.js';
 import { AuthManager } from './modules/AuthManager.js';
+import { HistoryPanelManager } from './modules/HistoryPanelManager.js';
+import { UsagePanelManager } from './modules/UsagePanelManager.js';
 
 class ContentAnalysis {
     constructor() {
@@ -35,6 +37,11 @@ class ContentAnalysis {
             this.authManager
         );
 
+        // 히스토리/사용량 패널 매니저 (간단한 이벤트 에미터 사용)
+        this.eventBus = this.createSimpleEventBus();
+        this.historyPanelManager = new HistoryPanelManager(this.storage, this.eventBus);
+        this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus);
+
         // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
         this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
 
@@ -44,7 +51,33 @@ class ContentAnalysis {
         // 모달 매니저에 커스텀 스타일 변경 콜백 연결
         this.modalManager.onCustomStylesChange = () => this.styleManager.renderCustomStyles();
 
+        // 히스토리에서 아이템 보기 이벤트 처리
+        this.eventBus.on('history:view-item', (item) => {
+            this.reportManager.displayHistoryItem(item);
+        });
+
         this.init();
+    }
+
+    // 간단한 이벤트 버스 생성
+    createSimpleEventBus() {
+        const listeners = {};
+        return {
+            on(event, callback) {
+                if (!listeners[event]) listeners[event] = [];
+                listeners[event].push(callback);
+            },
+            emit(event, data) {
+                if (listeners[event]) {
+                    listeners[event].forEach(cb => cb(data));
+                }
+            },
+            off(event, callback) {
+                if (listeners[event]) {
+                    listeners[event] = listeners[event].filter(cb => cb !== callback);
+                }
+            }
+        };
     }
 
     async init() {
@@ -67,6 +100,10 @@ class ContentAnalysis {
         this.modalManager.checkFirstTimeUser();
         this.providerManager.updateProviderLabel();
         this.reportManager.loadHistory();
+
+        // 히스토리/사용량 패널 초기화
+        this.historyPanelManager.init();
+        this.usagePanelManager.init();
 
         // 초기 버튼 상태 업데이트
         this.updateGenerateButtonState();

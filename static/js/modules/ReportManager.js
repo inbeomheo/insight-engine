@@ -541,4 +541,49 @@ export class ReportManager {
         this.setupCardEvents(card, data);
         this.elements.reportStream.appendChild(card);
     }
+
+    // ==================== History Panel Support ====================
+
+    /**
+     * 히스토리 패널에서 아이템 클릭 시 호출
+     * 해당 콘텐츠를 Dashboard에 표시
+     */
+    displayHistoryItem(item) {
+        const { reportStream } = this.elements;
+
+        // 기존 카드가 있는지 확인
+        const existingCard = reportStream.querySelector(`[data-report-id="${item.id}"]`);
+        if (existingCard) {
+            // 기존 카드가 있으면 펼치고 스크롤
+            const content = existingCard.querySelector('.report-content');
+            const preview = existingCard.querySelector('.card-preview');
+            const icon = existingCard.querySelector('[data-toggle="card"] .material-symbols-outlined');
+
+            if (content && content.style.display === 'none') {
+                this._collapseAllCards();
+                this._animateToggle(content, preview, icon, false);
+            }
+            existingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        // 카드가 없으면 새로 생성 (펼쳐진 상태)
+        this._setEmptyStateVisibility(false);
+        this._collapseAllCards();
+
+        const styleLabel = this.styleManager.getStyleLabel(item.style);
+        const shortUrl = this._formatShortUrl(item.url);
+
+        // 시간 포맷 변환 (timestamp가 있으면 사용)
+        const historyData = {
+            ...item,
+            time: item.time || new Date(item.createdAt || item.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        };
+
+        const card = this.createReportCard(historyData, styleLabel, shortUrl, true);
+        this.setupCardEvents(card, historyData);
+
+        reportStream.insertBefore(card, reportStream.firstChild);
+        setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
 }
