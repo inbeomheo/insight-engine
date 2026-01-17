@@ -179,6 +179,9 @@ export class ReportManager {
         const { reportStream } = this.elements;
         this._setEmptyStateVisibility(false);
 
+        // 기존 카드들 모두 접기
+        this._collapseAllCards();
+
         const styleLabel = this.styleManager.getStyleLabel(data.style);
         const historyData = {
             id: this.ui.generateReportId(),
@@ -311,12 +314,25 @@ export class ReportManager {
         if (isCollapsing) {
             content.style.display = 'none';
             if (preview) preview.style.display = 'block';
-            icon.textContent = 'expand_more';
+            if (icon) icon.textContent = 'expand_more';
         } else {
             content.style.display = 'block';
             if (preview) preview.style.display = 'none';
-            icon.textContent = 'expand_less';
+            if (icon) icon.textContent = 'expand_less';
         }
+    }
+
+    _collapseAllCards() {
+        const cards = this.elements.reportStream.querySelectorAll('.report-card');
+        cards.forEach(card => {
+            const content = card.querySelector('.report-content');
+            const preview = card.querySelector('.card-preview');
+            const icon = card.querySelector('[data-toggle="card"] .material-symbols-outlined');
+
+            if (content && content.style.display !== 'none') {
+                this._animateToggle(content, preview, icon, true);
+            }
+        });
     }
 
     _buildErrorCardHtml(reportId, timeStr, url, shortUrl, error) {
