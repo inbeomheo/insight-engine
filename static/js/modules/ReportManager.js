@@ -196,7 +196,8 @@ export class ReportManager {
 
         this.storage.addToHistory(historyData);
 
-        const card = this.createReportCard(historyData, styleLabel, this._formatShortUrl(data.url));
+        // 새로 생성된 카드는 펼쳐진 상태로 표시
+        const card = this.createReportCard(historyData, styleLabel, this._formatShortUrl(data.url), true);
         this.setupCardEvents(card, historyData);
 
         reportStream.insertBefore(card, reportStream.firstChild);
@@ -230,52 +231,58 @@ export class ReportManager {
         </button>`;
     }
 
-    _buildReportCardHtml(data, styleLabel, shortUrl, statsHtml, isExpanded) {
+    _buildReportCardHtml(data, styleLabel, shortUrl, statsHtml, isExpanded = false) {
         const toggleIcon = isExpanded ? 'expand_less' : 'expand_more';
-        const toggleTitle = isExpanded ? '접기' : '펼치기';
         const contentDisplay = isExpanded ? 'block' : 'none';
 
+        // 미리보기 텍스트 (처음 100자)
+        const previewText = data.content ?
+            data.content.replace(/[#*`]/g, '').substring(0, 100) + '...' : '';
+
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary via-primary/60 to-transparent rounded-full"></div>
-            <div class="card-header p-6 md:p-8 border-b border-border-dark/30 flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div class="space-y-3 flex-1 min-w-0">
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <span class="bg-gradient-to-r from-primary to-primary-glow text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md shadow-lg shadow-primary/20">${styleLabel}</span>
-                        <span class="text-text-subtle/50 text-[10px] font-mono tracking-wide">#${data.id} • ${data.time}</span>
+            <div class="card-header p-4 cursor-pointer hover:bg-surface-dark/50 transition-colors" data-toggle="card">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-sm text-text-secondary">${toggleIcon}</span>
+                            <span class="text-xs font-medium text-primary">${styleLabel}</span>
+                            <span class="text-xs text-text-secondary">${data.time}</span>
+                        </div>
+                        <h3 class="text-sm font-medium text-white truncate">${this.ui.escapeHtml(data.title)}</h3>
+                        <p class="text-xs text-text-secondary mt-1 line-clamp-2 card-preview" style="display: ${isExpanded ? 'none' : 'block'}">${this.ui.escapeHtml(previewText)}</p>
                     </div>
-                    <h3 class="text-xl md:text-2xl font-display font-semibold text-white leading-snug tracking-tight line-clamp-2">${this.ui.escapeHtml(data.title)}</h3>
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <a class="inline-flex items-center gap-1.5 text-text-subtle/60 hover:text-primary transition-colors text-xs font-mono group" href="${data.url}" target="_blank">
-                            <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">play_circle</span>
-                            <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
-                            <span class="material-symbols-outlined text-xs opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
-                        </a>
-                        ${statsHtml}
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button class="copy-btn p-1.5 text-text-secondary hover:text-primary hover:bg-primary/10 rounded transition-colors" title="복사">
+                            <span class="material-symbols-outlined text-sm">content_copy</span>
+                        </button>
+                        <button class="delete-btn p-1.5 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="삭제">
+                            <span class="material-symbols-outlined text-sm">delete</span>
+                        </button>
                     </div>
                 </div>
-                <button class="toggle-btn flex items-center justify-center size-9 text-text-subtle/50 hover:text-primary hover:bg-primary/10 transition-all duration-300 rounded-lg border border-transparent hover:border-primary/20" title="${toggleTitle}">
-                    <span class="material-symbols-outlined text-xl transition-transform duration-300">${toggleIcon}</span>
-                </button>
             </div>
-            <div class="report-content p-6 md:p-8" style="display: ${contentDisplay}">
-                ${data.html}
-            </div>
-            <div class="card-footer bg-background-dark/60 border-t border-border-dark/30 px-4 py-3 flex items-center justify-between">
-                <span class="text-[10px] text-text-subtle/40 font-mono">Insight Engine</span>
-                <div class="flex items-center gap-1">
-                    ${this._buildFooterButton('prompt-btn', 'code', '프롬프트', 'primary')}
-                    ${this._buildFooterButton('mindmap-btn', 'account_tree', '마인드맵', 'purple')}
-                    ${this._buildFooterButton('copy-btn', 'content_copy', '복사')}
-                    ${this._buildFooterButton('download-btn', 'download', '저장')}
-                    ${this._buildFooterButton('delete-btn', 'delete', '삭제', 'red')}
+            <div class="report-content border-t border-border-dark" style="display: ${contentDisplay}">
+                <div class="p-4">
+                    ${data.html}
+                </div>
+                <div class="card-footer border-t border-border-dark px-4 py-2 flex items-center justify-between bg-surface-dark/30">
+                    <div class="flex items-center gap-3 text-xs text-text-secondary">
+                        <span>${styleLabel}</span>
+                        ${statsHtml}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button class="prompt-btn px-2 py-1 text-xs text-text-secondary hover:text-primary transition-colors">프롬프트</button>
+                        <button class="mindmap-btn px-2 py-1 text-xs text-text-secondary hover:text-purple-400 transition-colors">마인드맵</button>
+                        <button class="download-btn px-2 py-1 text-xs text-text-secondary hover:text-primary transition-colors">저장</button>
+                    </div>
                 </div>
             </div>
         `;
     }
 
-    createReportCard(data, styleLabel, shortUrl, isExpanded = true) {
+    createReportCard(data, styleLabel, shortUrl, isExpanded = false) {
         const card = this._createCardElement(
-            'report-card bg-surface-dark border border-border-dark/50 relative rounded-xl overflow-hidden',
+            'report-card bg-surface-dark border border-border-dark rounded-lg overflow-hidden',
             this._buildReportCardHtml(data, styleLabel, shortUrl, this._buildStatsBadges(data), isExpanded)
         );
         card.dataset.reportId = data.id;
@@ -284,47 +291,31 @@ export class ReportManager {
     }
 
     setupToggleButton(card) {
-        const toggleBtn = card.querySelector('.toggle-btn');
+        const header = card.querySelector('[data-toggle="card"]');
         const content = card.querySelector('.report-content');
-        const icon = toggleBtn?.querySelector('.material-symbols-outlined');
+        const preview = card.querySelector('.card-preview');
+        const icon = header?.querySelector('.material-symbols-outlined');
 
-        if (!toggleBtn || !content || !icon) return;
+        if (!header || !content || !icon) return;
 
-        toggleBtn.addEventListener('click', () => {
+        header.addEventListener('click', (e) => {
+            // 버튼 클릭은 무시
+            if (e.target.closest('button')) return;
+
             const isExpanded = content.style.display !== 'none';
-            this._animateToggle(content, icon, toggleBtn, isExpanded);
+            this._animateToggle(content, preview, icon, isExpanded);
         });
     }
 
-    _animateToggle(content, icon, toggleBtn, isCollapsing) {
-        const ANIMATION_DURATION = 300;
-
+    _animateToggle(content, preview, icon, isCollapsing) {
         if (isCollapsing) {
-            content.style.maxHeight = `${content.scrollHeight}px`;
-            requestAnimationFrame(() => {
-                content.style.maxHeight = '0';
-                content.style.overflow = 'hidden';
-            });
-            setTimeout(() => {
-                content.style.display = 'none';
-                content.style.maxHeight = '';
-                content.style.overflow = '';
-            }, ANIMATION_DURATION);
+            content.style.display = 'none';
+            if (preview) preview.style.display = 'block';
             icon.textContent = 'expand_more';
-            toggleBtn.title = '펼치기';
         } else {
             content.style.display = 'block';
-            content.style.overflow = 'hidden';
-            content.style.maxHeight = '0';
-            requestAnimationFrame(() => {
-                content.style.maxHeight = `${content.scrollHeight}px`;
-            });
-            setTimeout(() => {
-                content.style.maxHeight = '';
-                content.style.overflow = '';
-            }, ANIMATION_DURATION);
+            if (preview) preview.style.display = 'none';
             icon.textContent = 'expand_less';
-            toggleBtn.title = '접기';
         }
     }
 
