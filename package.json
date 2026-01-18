@@ -1,0 +1,16 @@
+{
+  "name": "insight-engine",
+  "version": "1.0.0",
+  "description": "YouTube 영상으로 AI 블로그 포스트 자동 생성",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css",
+    "build:css:prod": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --watch"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19"
+  },
+  "private": true
+}
