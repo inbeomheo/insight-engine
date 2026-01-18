@@ -2,10 +2,14 @@
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "gcc"]
+nixPkgs = ["python311", "gcc"]
 
 [phases.install]
-cmds = ["python3 -m pip install -r requirements.txt"]
+cmds = [
+    "python3 -m ensurepip --upgrade",
+    "python3 -m pip install --upgrade pip",
+    "python3 -m pip install -r requirements.txt"
+]
 
 [start]
 cmd = "python3 -m gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
