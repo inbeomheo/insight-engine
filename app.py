@@ -3,8 +3,9 @@
 """
 import os
 import sys
+from urllib.parse import urlparse
 
-from flask import Flask
+from flask import Flask, request, jsonify
 
 try:
     from dotenv import load_dotenv
@@ -38,6 +39,44 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
+    # 보안 헤더 설정
+    @app.after_request
+    def add_security_headers(response):
+        """보안 헤더를 응답에 추가합니다."""
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # HTTPS 환경에서만 HSTS 활성화
+        if request.is_secure:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
+
+    # CSRF 보호 (Origin 헤더 검증)
+    @app.before_request
+    def csrf_protect():
+        """POST/PUT/DELETE 요청에 대해 Origin 헤더를 검증합니다."""
+        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            # 헬스체크, 정적 파일은 제외
+            if request.path in ('/health', '/api/heartbeat'):
+                return None
+            # Origin 또는 Referer 헤더 검증
+            origin = request.headers.get('Origin')
+            referer = request.headers.get('Referer')
+            host = request.host_url.rstrip('/')
+            if origin:
+                if not origin.startswith(host) and origin not in ('null', 'file://'):
+                    # 개발 환경에서는 localhost 허용
+                    if not (app.debug and 'localhost' in origin):
+                        return jsonify({'error': 'CSRF 검증 실패: 잘못된 Origin'}), 403
+            elif referer:
+                parsed = urlparse(referer)
+                referer_origin = f"{parsed.scheme}://{parsed.netloc}"
+                if not referer_origin.startswith(host):
+                    if not (app.debug and 'localhost' in referer_origin):
+                        return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
+        return None
+
     from routes.blog_routes import blog_bp
     from routes.auth_routes import auth_bp
     app.register_blueprint(blog_bp)
@@ -49,4 +88,6 @@ def create_app(test_config=None):
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
+    port = int(os.getenv('PORT', 5001))
+    app.run(debug=debug_mode, port=port)

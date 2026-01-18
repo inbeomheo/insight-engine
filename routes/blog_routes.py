@@ -51,19 +51,30 @@ def _extract_client_id(req) -> str:
 
 
 def _get_request_data(req):
-    """JSON 또는 form 데이터에서 공통 파라미터를 추출합니다.
+    """JSON 또는 form 데이터에서 공통 파라미터를 추출하고 검증합니다.
     API 키는 서버 환경변수에서 관리되므로 요청에서 추출하지 않습니다.
     """
     data = req.get_json(silent=True)
     if isinstance(data, dict) and data:
+        # modifiers 검증
+        modifiers, _ = _validate_modifiers(data.get('modifiers'))
+        # custom_prompt 검증
+        custom_prompt, _ = _validate_custom_prompt(data.get('customPrompt'))
+
+        # urls 검증 (리스트 형식 확인)
+        urls = data.get('urls', [])
+        if not isinstance(urls, list):
+            urls = []
+        urls = [u for u in urls if isinstance(u, str)][:MAX_BATCH_URLS]
+
         return {
-            'url': data.get('url'),
-            'urls': data.get('urls', []),
-            'content': data.get('content'),
-            'model': data.get('model', DEFAULT_MODEL),
-            'style': data.get('style', DEFAULT_STYLE),
-            'modifiers': data.get('modifiers'),
-            'custom_prompt': data.get('customPrompt'),
+            'url': data.get('url') if isinstance(data.get('url'), str) else None,
+            'urls': urls,
+            'content': data.get('content') if isinstance(data.get('content'), str) else None,
+            'model': data.get('model', DEFAULT_MODEL) if isinstance(data.get('model'), str) else DEFAULT_MODEL,
+            'style': data.get('style', DEFAULT_STYLE) if isinstance(data.get('style'), str) else DEFAULT_STYLE,
+            'modifiers': modifiers,
+            'custom_prompt': custom_prompt,
         }
 
     return {
@@ -77,6 +88,60 @@ def _get_request_data(req):
     }
 
 
+def _validate_modifiers(modifiers):
+    """modifiers 파라미터의 유효성을 검증합니다.
+
+    Args:
+        modifiers: dict 또는 None
+
+    Returns:
+        tuple: (validated_modifiers, error_message)
+    """
+    if modifiers is None:
+        return None, None
+
+    if not isinstance(modifiers, dict):
+        return None, 'modifiers는 객체 형식이어야 합니다.'
+
+    # 허용된 키와 값 정의
+    allowed_keys = {'length', 'tone', 'language', 'emoji'}
+    allowed_values = {
+        'length': {'short', 'medium', 'long'},
+        'tone': {'professional', 'friendly', 'humorous'},
+        'language': {'ko', 'en', 'ja'},
+        'emoji': {'use', 'none'}
+    }
+
+    validated = {}
+    for key, value in modifiers.items():
+        if key not in allowed_keys:
+            continue  # 알 수 없는 키는 무시
+        if not isinstance(value, str):
+            continue
+        # 값 검증
+        if key in allowed_values and value not in allowed_values[key]:
+            continue  # 잘못된 값은 무시
+        validated[key] = value[:50]  # 길이 제한
+
+    return validated, None
+
+
+def _validate_custom_prompt(custom_prompt):
+    """customPrompt 파라미터의 유효성을 검증합니다.
+
+    Returns:
+        tuple: (validated_prompt, error_message)
+    """
+    if custom_prompt is None:
+        return None, None
+
+    if not isinstance(custom_prompt, str):
+        return None, 'customPrompt는 문자열이어야 합니다.'
+
+    # 길이 제한 (2000자)
+    return custom_prompt.strip()[:2000], None
+
+
 def _get_style_prompt(style, custom_prompt=None):
     """스타일에 맞는 프롬프트를 반환합니다."""
     if custom_prompt and custom_prompt.strip():
@@ -85,11 +150,27 @@ def _get_style_prompt(style, custom_prompt=None):
     return style_prompts.get(style, '')
 
 
-def _handle_error_response(error_msg):
-    """에러 메시지에 따른 적절한 HTTP 상태 코드를 반환합니다."""
+def _handle_error_response(error_msg, log_detail=None):
+    """에러 메시지에 따른 적절한 HTTP 상태 코드를 반환합니다.
+
+    Args:
+        error_msg: 사용자에게 보여줄 에러 메시지
+        log_detail: 로깅용 상세 에러 (선택사항)
+    """
+    # 로깅 (상세 정보는 서버에만 기록)
+    if log_detail:
+        current_app.logger.error(f'Error: {log_detail}')
+
+    # API 키 관련 에러는 사용자에게 명확히 전달
     if 'API 키' in error_msg or 'authentication' in error_msg.lower():
         return jsonify({'error': error_msg}), 401
-    return jsonify({'error': error_msg}), 500
+
+    # 내부 에러 상세 정보는 숨김
+    safe_msg = error_msg
+    if any(keyword in error_msg.lower() for keyword in ['traceback', 'exception', 'error:', 'file "']):
+        safe_msg = '서버 처리 중 오류가 발생했습니다.'
+
+    return jsonify({'error': safe_msg}), 500
 
 
 def _fetch_youtube_content(video_id):
@@ -108,6 +189,12 @@ def _fetch_youtube_content(video_id):
 
     final_content = f"[영상 자막]\n{transcript}\n\n[시청자 댓글]\n{comments_text}"
     return final_content, None, transcript
+
+
+@blog_bp.route('/health')
+def health():
+    """헬스체크 엔드포인트 (Railway/Docker용)"""
+    return jsonify({'status': 'healthy'}), 200
 
 
 @blog_bp.route('/')
