@@ -1,9 +1,11 @@
 # Nixpacks 빌드 설정 - Python 프로젝트 명시
+providers = ["python"]
+
 [phases.setup]
-nixPkgs = ["python311", "gcc"]
+nixPkgs = ["python311", "python311Packages.pip", "gcc"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python3 -m pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
+cmd = "python3 -m gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120"
