@@ -179,9 +179,6 @@ export class ReportManager {
         const { reportStream } = this.elements;
         this._setEmptyStateVisibility(false);
 
-        // 기존 카드들 모두 접기
-        this._collapseAllCards();
-
         const styleLabel = this.styleManager.getStyleLabel(data.style);
         const historyData = {
             id: this.ui.generateReportId(),
@@ -199,7 +196,7 @@ export class ReportManager {
 
         this.storage.addToHistory(historyData);
 
-        // 새로 생성된 카드는 펼쳐진 상태로 표시
+        // 새로운 카드 그룹 생성 (제목, 본문, 메타정보 카드)
         const card = this.createReportCard(historyData, styleLabel, this._formatShortUrl(data.url), true);
         this.setupCardEvents(card, historyData);
 
@@ -235,49 +232,103 @@ export class ReportManager {
     }
 
     _buildReportCardHtml(data, styleLabel, shortUrl, statsHtml, isExpanded = false) {
-        const toggleIcon = isExpanded ? 'expand_less' : 'expand_more';
-        const contentDisplay = isExpanded ? 'block' : 'none';
+        // 메타 정보 빌드
+        const metaItems = [];
+        if (data.usage?.total_tokens) {
+            metaItems.push({ label: '토큰', value: data.usage.total_tokens.toLocaleString(), icon: 'token' });
+        }
+        if (data.usage?.prompt_tokens) {
+            metaItems.push({ label: '입력', value: data.usage.prompt_tokens.toLocaleString(), icon: 'input' });
+        }
+        if (data.usage?.completion_tokens) {
+            metaItems.push({ label: '출력', value: data.usage.completion_tokens.toLocaleString(), icon: 'output' });
+        }
+        if (data.elapsed_time) {
+            metaItems.push({ label: '처리 시간', value: `${data.elapsed_time}초`, icon: 'schedule' });
+        }
 
-        // 미리보기 텍스트 (처음 100자)
-        const previewText = data.content ?
-            data.content.replace(/[#*`]/g, '').substring(0, 100) + '...' : '';
+        const metaGridHtml = metaItems.length > 0 ? metaItems.map(item => `
+            <div class="meta-item">
+                <span class="meta-label">${item.label}</span>
+                <span class="meta-value">${item.value}</span>
+            </div>
+        `).join('') : '<div class="meta-item"><span class="meta-label">정보 없음</span></div>';
 
         return `
-            <div class="card-header p-4 cursor-pointer hover:bg-surface-dark/50 transition-colors" data-toggle="card">
-                <div class="flex items-start justify-between gap-3">
+            <!-- 제목 카드 -->
+            <div class="result-card result-card--title">
+                <div class="result-card-header">
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="material-symbols-outlined text-sm text-text-secondary">${toggleIcon}</span>
-                            <span class="text-xs font-medium text-primary">${styleLabel}</span>
-                            <span class="text-xs text-text-secondary">${data.time}</span>
+                        <h3 class="card-title">${this.ui.escapeHtml(data.title)}</h3>
+                        <div class="card-meta">
+                            <span class="style-badge">${styleLabel}</span>
+                            <span class="time-badge">${data.time}</span>
                         </div>
-                        <h3 class="text-sm font-medium text-white truncate">${this.ui.escapeHtml(data.title)}</h3>
-                        <p class="text-xs text-text-secondary mt-1 line-clamp-2 card-preview" style="display: ${isExpanded ? 'none' : 'block'}">${this.ui.escapeHtml(previewText)}</p>
+                        <a class="source-link" href="${data.url}" target="_blank" rel="noopener noreferrer">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">play_circle</span>
+                            <span>${this.ui.escapeHtml(shortUrl)}</span>
+                        </a>
                     </div>
-                    <div class="flex items-center gap-1 flex-shrink-0">
-                        <button class="copy-btn p-1.5 text-text-secondary hover:text-primary hover:bg-primary/10 rounded transition-colors" title="복사">
-                            <span class="material-symbols-outlined text-sm">content_copy</span>
-                        </button>
-                        <button class="delete-btn p-1.5 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="삭제">
-                            <span class="material-symbols-outlined text-sm">delete</span>
-                        </button>
-                    </div>
+                    <button class="card-copy-btn copy-title-btn" title="제목 복사" data-copy-type="title">
+                        <span class="material-symbols-outlined">content_copy</span>
+                        <span>복사</span>
+                    </button>
                 </div>
             </div>
-            <div class="report-content border-t border-border-dark" style="display: ${contentDisplay}">
-                <div class="p-4">
+
+            <!-- 본문 카드 -->
+            <div class="result-card result-card--content">
+                <div class="result-card-header">
+                    <div class="card-label">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">article</span>
+                        <span>본문</span>
+                    </div>
+                    <button class="card-copy-btn copy-content-btn" title="본문 복사" data-copy-type="content">
+                        <span class="material-symbols-outlined">content_copy</span>
+                        <span>복사</span>
+                    </button>
+                </div>
+                <div class="card-body report-content">
                     ${data.html}
                 </div>
-                <div class="card-footer border-t border-border-dark px-4 py-2 flex items-center justify-between bg-surface-dark/30">
-                    <div class="flex items-center gap-3 text-xs text-text-secondary">
-                        <span>${styleLabel}</span>
-                        ${statsHtml}
+                <div class="result-card-actions">
+                    <button class="prompt-btn">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">code</span>
+                        <span>프롬프트</span>
+                    </button>
+                    <button class="mindmap-btn">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">account_tree</span>
+                        <span>마인드맵</span>
+                    </button>
+                    <button class="download-btn">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">download</span>
+                        <span>저장</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 메타정보 카드 -->
+            <div class="result-card result-card--meta">
+                <div class="result-card-header">
+                    <div class="card-label">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">analytics</span>
+                        <span>메타정보</span>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button class="prompt-btn px-2 py-1 text-xs text-text-secondary hover:text-primary transition-colors">프롬프트</button>
-                        <button class="mindmap-btn px-2 py-1 text-xs text-text-secondary hover:text-purple-400 transition-colors">마인드맵</button>
-                        <button class="download-btn px-2 py-1 text-xs text-text-secondary hover:text-primary transition-colors">저장</button>
+                    <button class="card-copy-btn copy-meta-btn" title="메타정보 복사" data-copy-type="meta">
+                        <span class="material-symbols-outlined">content_copy</span>
+                        <span>복사</span>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="meta-grid">
+                        ${metaGridHtml}
                     </div>
+                </div>
+                <div class="result-card-actions">
+                    <button class="delete-btn">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                        <span>삭제</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -285,54 +336,11 @@ export class ReportManager {
 
     createReportCard(data, styleLabel, shortUrl, isExpanded = false) {
         const card = this._createCardElement(
-            'report-card bg-surface-dark border border-border-dark rounded-lg overflow-hidden',
+            'result-card-group',
             this._buildReportCardHtml(data, styleLabel, shortUrl, this._buildStatsBadges(data), isExpanded)
         );
         card.dataset.reportId = data.id;
-        this.setupToggleButton(card);
         return card;
-    }
-
-    setupToggleButton(card) {
-        const header = card.querySelector('[data-toggle="card"]');
-        const content = card.querySelector('.report-content');
-        const preview = card.querySelector('.card-preview');
-        const icon = header?.querySelector('.material-symbols-outlined');
-
-        if (!header || !content || !icon) return;
-
-        header.addEventListener('click', (e) => {
-            // 버튼 클릭은 무시
-            if (e.target.closest('button')) return;
-
-            const isExpanded = content.style.display !== 'none';
-            this._animateToggle(content, preview, icon, isExpanded);
-        });
-    }
-
-    _animateToggle(content, preview, icon, isCollapsing) {
-        if (isCollapsing) {
-            content.style.display = 'none';
-            if (preview) preview.style.display = 'block';
-            if (icon) icon.textContent = 'expand_more';
-        } else {
-            content.style.display = 'block';
-            if (preview) preview.style.display = 'none';
-            if (icon) icon.textContent = 'expand_less';
-        }
-    }
-
-    _collapseAllCards() {
-        const cards = this.elements.reportStream.querySelectorAll('.report-card');
-        cards.forEach(card => {
-            const content = card.querySelector('.report-content');
-            const preview = card.querySelector('.card-preview');
-            const icon = card.querySelector('[data-toggle="card"] .material-symbols-outlined');
-
-            if (content && content.style.display !== 'none') {
-                this._animateToggle(content, preview, icon, true);
-            }
-        });
     }
 
     _buildErrorCardHtml(reportId, timeStr, url, shortUrl, error) {
@@ -386,9 +394,29 @@ export class ReportManager {
     setupCardEvents(card, data) {
         const promptBtn = card.querySelector('.prompt-btn');
         const mindmapBtn = card.querySelector('.mindmap-btn');
-        const copyBtn = card.querySelector('.copy-btn');
         const downloadBtn = card.querySelector('.download-btn');
         const deleteBtn = card.querySelector('.delete-btn');
+
+        // 개별 카드 복사 버튼들
+        const copyTitleBtn = card.querySelector('.copy-title-btn');
+        const copyContentBtn = card.querySelector('.copy-content-btn');
+        const copyMetaBtn = card.querySelector('.copy-meta-btn');
+
+        // 제목 복사 버튼
+        copyTitleBtn?.addEventListener('click', () => {
+            this._handleCardCopyClick(copyTitleBtn, data.title);
+        });
+
+        // 본문 복사 버튼
+        copyContentBtn?.addEventListener('click', () => {
+            this._handleCardCopyClick(copyContentBtn, data.content);
+        });
+
+        // 메타정보 복사 버튼
+        copyMetaBtn?.addEventListener('click', () => {
+            const metaText = this._buildMetaText(data);
+            this._handleCardCopyClick(copyMetaBtn, metaText);
+        });
 
         // 프롬프트 보기 버튼 이벤트
         if (promptBtn) {
@@ -407,9 +435,50 @@ export class ReportManager {
             mindmapBtn.addEventListener('click', () => this._handleMindmapClick(mindmapBtn, data));
         }
 
-        copyBtn?.addEventListener('click', () => this._handleCopyClick(copyBtn, data.content));
         downloadBtn?.addEventListener('click', () => this._handleDownloadClick(data));
         deleteBtn?.addEventListener('click', () => this._handleDeleteClick(card, data.id));
+    }
+
+    _buildMetaText(data) {
+        const lines = [];
+        lines.push(`제목: ${data.title}`);
+        lines.push(`스타일: ${data.style}`);
+        lines.push(`생성 시간: ${data.time}`);
+        if (data.usage?.total_tokens) {
+            lines.push(`총 토큰: ${data.usage.total_tokens.toLocaleString()}`);
+        }
+        if (data.usage?.prompt_tokens) {
+            lines.push(`입력 토큰: ${data.usage.prompt_tokens.toLocaleString()}`);
+        }
+        if (data.usage?.completion_tokens) {
+            lines.push(`출력 토큰: ${data.usage.completion_tokens.toLocaleString()}`);
+        }
+        if (data.elapsed_time) {
+            lines.push(`처리 시간: ${data.elapsed_time}초`);
+        }
+        return lines.join('\n');
+    }
+
+    async _handleCardCopyClick(btn, content) {
+        try {
+            await navigator.clipboard.writeText(content);
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const label = btn.querySelector('span:last-child');
+            const originalIcon = icon.textContent;
+            const originalLabel = label.textContent;
+
+            icon.textContent = 'check';
+            label.textContent = '완료!';
+            btn.classList.add('copied');
+
+            setTimeout(() => {
+                icon.textContent = originalIcon;
+                label.textContent = originalLabel;
+                btn.classList.remove('copied');
+            }, 2000);
+        } catch {
+            this.ui.showAlert('복사 실패', 'error');
+        }
     }
 
     _handlePromptClick(data) {
@@ -485,22 +554,6 @@ export class ReportManager {
         }
     }
 
-    async _handleCopyClick(btn, content) {
-        try {
-            await navigator.clipboard.writeText(content);
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined text-sm">check</span><span>완료!</span>';
-            btn.classList.add('text-green-400');
-
-            setTimeout(() => {
-                btn.innerHTML = originalHtml;
-                btn.classList.remove('text-green-400');
-            }, 2000);
-        } catch {
-            this.ui.showAlert('복사 실패', 'error');
-        }
-    }
-
     _handleDownloadClick(data) {
         const blob = new Blob([data.content], { type: 'text/markdown;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -554,22 +607,13 @@ export class ReportManager {
         // 기존 카드가 있는지 확인
         const existingCard = reportStream.querySelector(`[data-report-id="${item.id}"]`);
         if (existingCard) {
-            // 기존 카드가 있으면 펼치고 스크롤
-            const content = existingCard.querySelector('.report-content');
-            const preview = existingCard.querySelector('.card-preview');
-            const icon = existingCard.querySelector('[data-toggle="card"] .material-symbols-outlined');
-
-            if (content && content.style.display === 'none') {
-                this._collapseAllCards();
-                this._animateToggle(content, preview, icon, false);
-            }
+            // 기존 카드가 있으면 스크롤
             existingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
         }
 
-        // 카드가 없으면 새로 생성 (펼쳐진 상태)
+        // 카드가 없으면 새로 생성
         this._setEmptyStateVisibility(false);
-        this._collapseAllCards();
 
         const styleLabel = this.styleManager.getStyleLabel(item.style);
         const shortUrl = this._formatShortUrl(item.url);

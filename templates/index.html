@@ -537,15 +537,263 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Report Card */
+        /* ==================== Result Card System ==================== */
+
+        /* Result Card Container - 개별 결과 묶음 */
+        .result-card-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideInUp 0.4s ease forwards;
+            margin-bottom: 24px;
+        }
+
+        /* Base Result Card - 공통 스타일 */
+        .result-card {
+            background: var(--surface-dark, #202428);
+            border: 1px solid var(--border-dark, #2a2e33);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .result-card:hover {
+            border-color: var(--primary, #0f758a);
+            box-shadow: 0 4px 16px rgba(15, 117, 138, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Card Header with Copy Button */
+        .result-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px;
+        }
+
+        /* Title Card Specific */
+        .result-card--title {
+            border-left: 3px solid var(--primary, #0f758a);
+        }
+
+        .result-card--title .result-card-header {
+            padding-bottom: 12px;
+        }
+
+        .result-card--title .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary, #ffffff);
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .result-card--title .card-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .result-card--title .style-badge {
+            background: linear-gradient(135deg, var(--primary, #0f758a), var(--primary-glow, #14a3bd));
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        .result-card--title .time-badge {
+            color: var(--text-secondary, #9ca3af);
+            font-size: 11px;
+            font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        }
+
+        .result-card--title .source-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary, #9ca3af);
+            font-size: 12px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .result-card--title .source-link:hover {
+            color: var(--primary, #0f758a);
+        }
+
+        /* Content Card Specific */
+        .result-card--content {
+            border-left: 3px solid var(--primary-glow, #14a3bd);
+        }
+
+        .result-card--content .result-card-header {
+            background: var(--background-dark, #16191d);
+            border-bottom: 1px solid var(--border-dark, #2a2e33);
+            padding: 12px 16px;
+        }
+
+        .result-card--content .card-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary, #9ca3af);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-card--content .card-body {
+            padding: 20px;
+        }
+
+        /* Meta Card Specific */
+        .result-card--meta {
+            border-left: 3px solid #6366f1;
+        }
+
+        .result-card--meta .result-card-header {
+            background: var(--background-dark, #16191d);
+            border-bottom: 1px solid var(--border-dark, #2a2e33);
+            padding: 12px 16px;
+        }
+
+        .result-card--meta .card-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary, #9ca3af);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-card--meta .card-body {
+            padding: 16px;
+        }
+
+        .result-card--meta .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+        }
+
+        .result-card--meta .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .result-card--meta .meta-label {
+            font-size: 11px;
+            color: var(--text-secondary, #9ca3af);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-card--meta .meta-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary, #ffffff);
+            font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        }
+
+        /* Copy Button */
+        .card-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background: transparent;
+            border: 1px solid var(--border-dark, #2a2e33);
+            border-radius: 6px;
+            color: var(--text-secondary, #9ca3af);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .card-copy-btn:hover {
+            background: var(--primary, #0f758a);
+            border-color: var(--primary, #0f758a);
+            color: #ffffff;
+        }
+
+        .card-copy-btn.copied {
+            background: #10b981;
+            border-color: #10b981;
+            color: #ffffff;
+        }
+
+        .card-copy-btn .material-symbols-outlined {
+            font-size: 14px;
+        }
+
+        /* Card Actions Footer */
+        .result-card-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--background-dark, #16191d);
+            border-top: 1px solid var(--border-dark, #2a2e33);
+        }
+
+        .result-card-actions button {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary, #9ca3af);
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .result-card-actions button:hover {
+            background: var(--primary, #0f758a);
+            background-opacity: 0.1;
+            color: var(--primary, #0f758a);
+        }
+
+        .result-card-actions button.delete-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Legacy Report Card - 기존 호환성 유지 */
         .report-card {
             opacity: 0;
             transform: translateY(20px);
             animation: slideInUp 0.4s ease forwards;
-            transition: border-color 0.2s ease;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
         .report-card:hover {
             border-color: #0f758a;
+            box-shadow: 0 4px 16px rgba(15, 117, 138, 0.15);
+            transform: translateY(-2px);
         }
         .report-card .card-header {
             background: transparent;
