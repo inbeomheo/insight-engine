@@ -1041,192 +1041,65 @@
             background: transparent;
         }
 
-        /* ==================== Mobile Optimizations ==================== */
+        /* ==================== Responsive Breakpoints System ==================== */
 
-        /* Touch target sizing */
-        @media (max-width: 768px) {
-            /* 사이드바 숨김 */
-            #sidebar {
-                display: none !important;
-            }
-
-            /* 3-Panel을 탭 방식으로 전환 */
-            #input-panel,
-            #result-panel {
-                width: 100% !important;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                display: none !important;
-            }
-
-            #input-panel.active,
-            #result-panel.active {
-                display: flex !important;
-            }
-
-            /* 모바일 탭 바 */
-            .mobile-tab-bar {
-                display: flex;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: #16191d;
-                border-top: 1px solid #2a2e33;
-                z-index: 50;
-            }
-
-            .mobile-tab-bar button {
-                flex: 1;
-                padding: 8px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 2px;
-                color: #9ca3af;
-                font-size: 9px;
-                border: none;
-                background: transparent;
-                min-height: 48px;
-            }
-
-            .mobile-tab-bar button.active {
-                color: #0f758a;
-            }
-
-            .mobile-tab-bar button .material-symbols-outlined {
-                font-size: 22px;
-            }
-
-            /* 콘텐츠 영역 하단 여백 (탭바 높이만큼) */
-            #main-content {
-                padding-bottom: 52px;
-            }
-
-            /* 기존 모바일 네비 숨김 (새 탭바로 대체) */
-            #mobile-bottom-nav {
-                display: none !important;
-            }
-
-            /* Ensure minimum 44x44px touch targets */
-            button, [role="button"], label.cursor-pointer, a {
-                min-height: 44px;
-                min-width: 44px;
-            }
-
-            /* Style cards on mobile - keep touch-friendly */
-            .style-card {
-                min-height: 44px;
-            }
-
-            /* Modal as bottom sheet on mobile */
-            .modal-overlay .modal-content {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                max-width: 100%;
-                width: 100%;
-                max-height: 90vh;
-                border-radius: 20px 20px 0 0;
-                animation: slideUp 0.3s ease-out;
-            }
-
-            @keyframes slideUp {
-                from {
-                    transform: translateY(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateY(0);
-                    opacity: 1;
-                }
-            }
-
-            /* Bottom sheet handle indicator */
-            .modal-content::before {
-                content: '';
-                display: block;
-                width: 36px;
-                height: 4px;
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 2px;
-                margin: 8px auto 4px;
-            }
-
-            /* Improve tap feedback */
-            button:active, [role="button"]:active, label.cursor-pointer:active {
-                opacity: 0.7;
-            }
-
-            /* Footer buttons stack on small screens */
-            .report-card .card-footer .flex.items-center.gap-1 {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 4px;
-            }
-
-            .report-card .card-footer button {
-                flex: 0 0 auto;
-                padding: 8px 10px;
-            }
+        /* Hamburger Menu Button (hidden by default) */
+        .hamburger-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .hamburger-btn:hover {
+            background: var(--surface-dark);
+        }
+        .hamburger-btn .material-symbols-outlined {
+            font-size: 24px;
+            color: var(--text-primary);
         }
 
-        /* 데스크톱에서는 탭 바 숨김, 패널 항상 표시 */
-        @media (min-width: 769px) {
-            .mobile-tab-bar {
-                display: none !important;
-            }
-
-            #sidebar {
-                display: flex !important;
-            }
-
-            #input-panel {
-                display: flex !important;
-                width: 350px !important;
-                min-width: 320px !important;
-                max-width: 400px !important;
-            }
-
-            #result-panel {
-                display: flex !important;
-                flex: 1 1 0% !important;
-                min-width: 400px !important;
-            }
+        /* Mobile Tab Bar (hidden by default, shown on sm) */
+        .mobile-tab-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface-dark);
+            border-top: 1px solid var(--border-dark);
+            z-index: 60;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .mobile-tab-bar button {
+            flex: 1;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 500;
+            border: none;
+            background: transparent;
+            min-height: 48px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .mobile-tab-bar button.active {
+            color: var(--primary);
+        }
+        .mobile-tab-bar button .material-symbols-outlined {
+            font-size: 22px;
         }
 
-        /* Very small screens */
-        @media (max-width: 375px) {
-            .style-card {
-                padding: 10px;
-            }
-
-            .report-card .card-footer button span:last-child {
-                display: none;
-            }
-        }
-
-        /* Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-        /* Safe area for notched devices */
-        @supports (padding-bottom: env(safe-area-inset-bottom)) {
-            body {
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-            .modal-content {
-                padding-bottom: calc(16px + env(safe-area-inset-bottom));
-            }
-        }
-
-        /* ==================== Mobile Bottom Navigation ==================== */
+        /* Mobile Bottom Navigation */
         .mobile-nav-item {
             display: flex;
             flex-direction: column;
@@ -1250,9 +1123,373 @@
         .pb-safe {
             padding-bottom: env(safe-area-inset-bottom, 0px);
         }
-        @media (max-width: 1023px) {
+
+        /* Sidebar Overlay */
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 90;
+            backdrop-filter: blur(2px);
+        }
+        #sidebar-overlay.active {
+            display: block;
+        }
+
+        /* ========== xl (1280px+): 3-column layout - Full sidebar, Input panel, Result panel ========== */
+        @media (min-width: 1280px) {
+            .mobile-tab-bar {
+                display: none !important;
+            }
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+            #sidebar {
+                width: 200px !important;
+                min-width: 200px;
+                max-width: 200px;
+                position: static;
+                transform: none;
+            }
+            #sidebar .sidebar-title {
+                display: block;
+            }
+            #sidebar .nav-label {
+                display: inline;
+            }
+            #sidebar .nav-icon-btn {
+                justify-content: flex-start;
+                padding: 0 var(--spacing-md);
+            }
+            #input-panel {
+                display: flex !important;
+                width: 350px !important;
+                min-width: 320px;
+                max-width: 400px;
+            }
+            #result-panel {
+                display: flex !important;
+                flex: 1 1 0%;
+                min-width: 400px;
+            }
+            .hamburger-btn {
+                display: none !important;
+            }
+        }
+
+        /* ========== lg (1024px ~ 1279px): Sidebar collapsed (icons only), 2-column maintained ========== */
+        @media (min-width: 1024px) and (max-width: 1279px) {
+            .mobile-tab-bar {
+                display: none !important;
+            }
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+            /* Collapsed sidebar - icons only */
+            #sidebar {
+                width: 64px !important;
+                min-width: 64px;
+                max-width: 64px;
+                position: static;
+                transform: none;
+            }
+            #sidebar .sidebar-header {
+                justify-content: center;
+                padding: 0;
+            }
+            #sidebar .sidebar-title {
+                display: none;
+            }
+            #sidebar .nav-icon-btn {
+                justify-content: center;
+                padding: 0;
+                width: 100%;
+            }
+            #sidebar .nav-label {
+                display: none;
+            }
+            #sidebar .p-3 {
+                padding: 0.5rem !important;
+            }
+            /* Tooltip on hover for collapsed sidebar */
+            #sidebar .nav-icon-btn {
+                position: relative;
+            }
+            #sidebar .nav-icon-btn::after {
+                content: attr(title);
+                position: absolute;
+                left: calc(100% + 8px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: var(--surface-dark);
+                color: var(--text-primary);
+                padding: 6px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s;
+                z-index: 100;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            #sidebar .nav-icon-btn:hover::after {
+                opacity: 1;
+            }
+            /* Input panel slightly narrower */
+            #input-panel {
+                display: flex !important;
+                width: 320px !important;
+                min-width: 280px;
+                max-width: 350px;
+            }
+            #result-panel {
+                display: flex !important;
+                flex: 1 1 0%;
+                min-width: 350px;
+            }
+            .hamburger-btn {
+                display: none !important;
+            }
+        }
+
+        /* ========== md (768px ~ 1023px): Sidebar hidden, hamburger menu, 2-column layout ========== */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .mobile-tab-bar {
+                display: none !important;
+            }
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+            /* Sidebar off-canvas */
+            #sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 200px !important;
+                min-width: 200px;
+                max-width: 200px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 100;
+            }
+            #sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            #sidebar .sidebar-title {
+                display: block;
+            }
+            #sidebar .nav-label {
+                display: inline;
+            }
+            #sidebar .nav-icon-btn {
+                justify-content: flex-start;
+                padding: 0 var(--spacing-md);
+            }
+            /* Show hamburger button */
+            .hamburger-btn {
+                display: flex !important;
+            }
+            /* Main container takes full width */
+            .main-container {
+                width: 100%;
+            }
+            /* 2-column layout maintained */
+            #input-panel {
+                display: flex !important;
+                width: 300px !important;
+                min-width: 260px;
+                max-width: 320px;
+            }
+            #result-panel {
+                display: flex !important;
+                flex: 1 1 0%;
+                min-width: 300px;
+            }
+        }
+
+        /* ========== sm (< 768px): Single column, tab navigation ========== */
+        @media (max-width: 767px) {
+            /* Hide mobile-bottom-nav, use mobile-tab-bar instead */
+            #mobile-bottom-nav {
+                display: none !important;
+            }
+            /* Show mobile tab bar */
+            .mobile-tab-bar {
+                display: flex !important;
+            }
+            /* Sidebar off-canvas */
+            #sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 200px !important;
+                min-width: 200px;
+                max-width: 200px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 100;
+            }
+            #sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+            #sidebar .sidebar-title {
+                display: block;
+            }
+            #sidebar .nav-label {
+                display: inline;
+            }
+            /* Show hamburger button */
+            .hamburger-btn {
+                display: flex !important;
+            }
+            /* Single column layout */
+            .content-area,
+            #main-content {
+                flex-direction: column;
+            }
+            /* Panels stack and toggle visibility via tabs */
+            #input-panel,
+            #result-panel {
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                border-right: none;
+            }
+            #input-panel {
+                display: none !important;
+                border-bottom: 1px solid var(--border-dark);
+            }
+            #result-panel {
+                display: none !important;
+                padding-bottom: 60px; /* Space for tab bar */
+            }
+            #input-panel.active {
+                display: flex !important;
+            }
+            #result-panel.active {
+                display: flex !important;
+            }
+            /* Content padding for tab bar */
             #main-content {
                 padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+            }
+            /* Header adjustments */
+            header.h-14 {
+                height: 52px !important;
+            }
+            header .px-6 {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            /* Hide usage display to save space */
+            #usage-display-header {
+                display: none;
+            }
+            /* Smaller provider badge */
+            #provider-badge-header {
+                padding: 0.25rem 0.5rem !important;
+            }
+            /* Compact input sections */
+            #input-panel .p-4 {
+                padding: 0.75rem !important;
+            }
+            /* Touch targets */
+            button, [role="button"], label.cursor-pointer, a {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            .style-card {
+                min-height: 44px;
+            }
+            /* Modal as bottom sheet */
+            .modal-overlay .modal-content {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                max-width: 100%;
+                width: 100%;
+                max-height: 90vh;
+                border-radius: 20px 20px 0 0;
+                animation: slideUp 0.3s ease-out;
+            }
+            @keyframes slideUp {
+                from {
+                    transform: translateY(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            .modal-content::before {
+                content: '';
+                display: block;
+                width: 36px;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 2px;
+                margin: 8px auto 4px;
+            }
+            /* Tap feedback */
+            button:active, [role="button"]:active, label.cursor-pointer:active {
+                opacity: 0.7;
+            }
+            /* Footer buttons wrap */
+            .report-card .card-footer .flex.items-center.gap-1 {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+            .report-card .card-footer button {
+                flex: 0 0 auto;
+                padding: 8px 10px;
+            }
+        }
+
+        /* ========== xs (< 375px): Extra compact for very small screens ========== */
+        @media (max-width: 374px) {
+            header.h-14 {
+                height: 48px !important;
+            }
+            #provider-badge-header {
+                display: none;
+            }
+            #input-panel .p-4 {
+                padding: 0.5rem !important;
+            }
+            .mobile-tab-bar {
+                height: 52px;
+            }
+            .style-card {
+                padding: 10px;
+            }
+            .report-card .card-footer button span:last-child {
+                display: none;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Safe area for notched devices */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            body {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            .modal-content {
+                padding-bottom: calc(16px + env(safe-area-inset-bottom));
             }
         }
 
@@ -1433,6 +1670,7 @@
             text-align: right;
             flex-shrink: 0;
         }
+
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
@@ -1479,14 +1717,18 @@
     </aside>
 
     <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+    <div id="sidebar-overlay"></div>
 
     <!-- ==================== Main Content Area (3-Column Layout) ==================== -->
     <div class="main-container">
         <!-- Top Bar (Header) -->
         <header class="h-14 flex items-center justify-between px-6 border-b border-border-dark bg-background-dark flex-shrink-0">
-            <!-- Left: Version Badge -->
+            <!-- Left: Hamburger + Version Badge -->
             <div class="flex items-center gap-3">
+                <!-- Hamburger Menu Button (visible on md and below) -->
+                <button class="hamburger-btn" id="hamburger-btn" aria-label="메뉴 열기" onclick="toggleSidebar()">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-dark text-primary">Beta v2.5</span>
             </div>
 
@@ -2244,9 +2486,19 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
+            const isOpen = sidebar.classList.contains('sidebar-open');
+
+            if (isOpen) {
+                sidebar.classList.remove('sidebar-open');
+                overlay.classList.remove('active');
+            } else {
+                sidebar.classList.add('sidebar-open');
+                overlay.classList.add('active');
+            }
         }
+
+        // Close sidebar when clicking overlay
+        document.getElementById('sidebar-overlay')?.addEventListener('click', toggleSidebar);
 
         // 탭(패널 뷰) 전환
         function switchPanelView(viewName) {
