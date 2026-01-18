@@ -49,6 +49,11 @@
        Typography - 타이포그래피 변수
        ---------------------------------------- */
 
+    /* Font Families - 폰트 패밀리 변수 */
+    --font-family-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    --font-family-display: "Space Grotesk", "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
     /* Font Sizes */
     --font-size-xs: 0.75rem;         /* 12px */
     --font-size-sm: 0.875rem;        /* 14px */
@@ -163,5 +168,31 @@
                 fill 150ms ease-in-out,
                 stroke 150ms ease-in-out,
                 box-shadow 150ms ease-in-out !important;
+  }
+
+  /* ----------------------------------------
+     Font Family - 기본 폰트 적용
+     US-004: Pretendard 웹폰트 적용
+     ---------------------------------------- */
+
+  html {
+    font-family: var(--font-family-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-family-sans);
+  }
+
+  /* 디스플레이/헤딩용 폰트 */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-display);
+  }
+
+  /* 코드/모노스페이스용 폰트 */
+  code, kbd, pre, samp {
+    font-family: var(--font-family-mono);
   }
 }
