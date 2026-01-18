@@ -53,9 +53,15 @@ export class StyleManager {
             modifiers.tone = toneChecked.value;
         }
 
-        const languageSelect = document.getElementById('language-select');
-        if (languageSelect) {
-            modifiers.language = languageSelect.value;
+        // 언어: 칩 라디오 버튼 우선, fallback으로 select
+        const languageChecked = document.querySelector('input[name="language"]:checked');
+        if (languageChecked) {
+            modifiers.language = languageChecked.value;
+        } else {
+            const languageSelect = document.getElementById('language-select');
+            if (languageSelect) {
+                modifiers.language = languageSelect.value;
+            }
         }
 
         const emojiCheckbox = document.getElementById('emoji-checkbox');
@@ -133,6 +139,22 @@ export class StyleManager {
                     panel.classList.add('hidden');
                     if (arrow) arrow.textContent = 'expand_more';
                 }
+            });
+        }
+
+        // 언어 칩 라디오 버튼과 hidden select 동기화
+        this.setupLanguageChipSync();
+    }
+
+    setupLanguageChipSync() {
+        const languageRadios = document.querySelectorAll('input[name="language"]');
+        const languageSelect = document.getElementById('language-select');
+
+        if (languageRadios.length > 0 && languageSelect) {
+            languageRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    languageSelect.value = radio.value;
+                });
             });
         }
     }

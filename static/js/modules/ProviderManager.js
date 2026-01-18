@@ -93,6 +93,7 @@ export class ProviderManager {
 
         if (!provider || !provider.models) {
             modelSelect.innerHTML = '<option value="">서비스를 먼저 선택하세요</option>';
+            this.updateSelectedModelInfo();
             return;
         }
 
@@ -111,6 +112,32 @@ export class ProviderManager {
         } else if (provider.models.length > 0) {
             modelSelect.value = provider.models[0].id;
         }
+
+        this.updateSelectedModelInfo();
+    }
+
+    updateSelectedModelInfo() {
+        const infoContainer = document.getElementById('selected-model-info');
+        const infoText = document.getElementById('selected-model-text');
+        if (!infoContainer || !infoText) return;
+
+        const providerSelect = document.getElementById('provider');
+        const modelSelect = document.getElementById('model');
+
+        const providerId = providerSelect?.value;
+        const modelId = modelSelect?.value;
+        const provider = this.providers[providerId];
+
+        if (provider && modelId) {
+            const model = provider.models?.find(m => m.id === modelId);
+            if (model) {
+                infoText.textContent = `${provider.name} - ${model.name}`;
+                infoContainer.classList.remove('hidden');
+                return;
+            }
+        }
+
+        infoContainer.classList.add('hidden');
     }
 
     updateProviderLabel() {
@@ -145,6 +172,7 @@ export class ProviderManager {
         if (modelSelect) {
             modelSelect.addEventListener('change', () => {
                 this.storage.saveSelectedModel(modelSelect.value);
+                this.updateSelectedModelInfo();
             });
         }
     }
