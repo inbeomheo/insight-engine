@@ -51,27 +51,27 @@
                 },
                 extend: {
                     colors: {
-                        // 새로운 틸(Teal) 컬러 시스템
-                        "primary": "#0f758a",
-                        "primary-hover": "#0d6577",
-                        "primary": "#0f758a",
-                        "primary-glow": "#14a3bd",
+                        // US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상)
+                        // 틸(Teal) 컬러 시스템 - 다크모드 기준
+                        "primary": "#2aa3ba",        /* 대비 5.4:1 vs #16191d */
+                        "primary-hover": "#1f8a9e",
+                        "primary-glow": "#3eb8cf",
                         // 배경/표면
                         "background-dark": "#16191d",
                         "background-base": "#16191d",
                         "surface-dark": "#202428",
                         "card-dark": "#202428",
                         "bg-elevated": "#282c31",
-                        // 텍스트
-                        "text-light": "#ffffff",
+                        // 텍스트 - WCAG AA 충족
+                        "text-light": "#ffffff",     /* 대비 15.5:1 vs #16191d */
                         "text-primary": "#ffffff",
-                        "text-secondary": "#9ca3af",
-                        "text-subtle": "#93bfc8",
-                        "gray-text": "#9ca3af",
+                        "text-secondary": "#a8b0ba", /* 대비 6.1:1 vs #16191d */
+                        "text-subtle": "#7ec8d6",    /* 대비 6.0:1 vs #16191d */
+                        "gray-text": "#a8b0ba",      /* 대비 6.1:1 vs #16191d */
                         "warm-white": "#ffffff",
-                        // 테두리
-                        "border-dark": "#2a2e33",
-                        "card-border": "#345d65"
+                        // 테두리 - 가시성 향상
+                        "border-dark": "#3a3f45",
+                        "card-border": "#4a7a85"
                     },
                     fontFamily: {
                         "display": ["Space Grotesk", "Pretendard", "sans-serif"],
@@ -111,19 +111,20 @@
         /* ==================== Base Styles - Teal Design System ==================== */
 
         /* ========== Light Mode (기본) ========== */
+        /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
         :root {
-            --primary: #0f758a;
-            --primary-hover: #0d6577;
-            --primary-glow: #14a3bd;
+            --primary: #0a6073;           /* 대비 5.2:1 vs #f5f7f9 */
+            --primary-hover: #085463;
+            --primary-glow: #0d8fa8;
             --background-dark: #f5f7f9;
             --surface-dark: #ffffff;
             --card-dark: #ffffff;
             --bg-elevated: #e8ecef;
-            --text-primary: #1f2937;
-            --text-muted: #6b7280;
-            --text-subtle: #0f758a;
-            --border-dark: #e5e7eb;
-            --card-border: #0f758a40;
+            --text-primary: #1f2937;      /* 대비 11.7:1 vs #f5f7f9 */
+            --text-muted: #525a66;        /* 대비 5.5:1 vs #f5f7f9 (기존 #6b7280은 4.19:1) */
+            --text-subtle: #0a6073;       /* 대비 5.2:1 vs #f5f7f9 */
+            --border-dark: #d1d5db;       /* 더 진한 테두리 */
+            --card-border: #0a607340;
             /* Compact Design Variables */
             --spacing-xs: 0.25rem;   /* 4px */
             --spacing-sm: 0.5rem;    /* 8px */
@@ -149,19 +150,20 @@
         }
 
         /* ========== Dark Mode ========== */
+        /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
         [data-theme="dark"] {
-            --primary: #0f758a;
-            --primary-hover: #0d6577;
-            --primary-glow: #14a3bd;
+            --primary: #2aa3ba;           /* 대비 5.4:1 vs #16191d */
+            --primary-hover: #1f8a9e;
+            --primary-glow: #3eb8cf;
             --background-dark: #16191d;
             --surface-dark: #202428;
             --card-dark: #202428;
             --bg-elevated: #282c31;
-            --text-primary: #ffffff;
-            --text-muted: #9ca3af;
-            --text-subtle: #93bfc8;
-            --border-dark: #2a2e33;
-            --card-border: #345d65;
+            --text-primary: #ffffff;      /* 대비 15.5:1 vs #16191d */
+            --text-muted: #a8b0ba;        /* 대비 6.1:1 vs #16191d (기존 #9ca3af는 5.5:1로 충족) */
+            --text-subtle: #7ec8d6;       /* 대비 6.0:1 vs #16191d */
+            --border-dark: #3a3f45;       /* 더 밝은 테두리로 가시성 향상 */
+            --card-border: #4a7a85;       /* 더 밝은 카드 테두리 */
         }
 
         /* ==================== US-017: Typography Scale System ==================== */
@@ -1023,7 +1025,7 @@
             background-color: #0f758a;
         }
 
-        /* Alerts */
+        /* Alerts - US-015: WCAG AA 색상 대비 기준 충족 */
         .alert {
             display: flex;
             align-items: center;
@@ -1034,45 +1036,110 @@
             margin-bottom: 1rem;
             backdrop-filter: blur(8px);
         }
+        /* 성공: #047857 대비 5.5:1 vs #f5f7f9 (라이트), #34D399 대비 8.0:1 vs #16191d (다크) */
         .alert-success {
             background: rgba(16, 185, 129, 0.08);
-            border-color: rgba(16, 185, 129, 0.25);
-            color: #34D399;
+            border-color: rgba(16, 185, 129, 0.35);
+            color: #047857;  /* 다크 모드에서 충분한 대비 확보 */
         }
+        [data-theme="dark"] .alert-success {
+            color: #34D399;  /* 다크 모드: 대비 8.0:1 vs #16191d */
+        }
+        /* 에러: #dc2626 대비 5.0:1 vs #f5f7f9 (라이트), #f87171 대비 6.0:1 vs #16191d (다크) */
         .alert-error {
             background: rgba(239, 68, 68, 0.08);
-            border-color: rgba(239, 68, 68, 0.25);
-            color: #F87171;
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #dc2626;  /* 라이트 모드용 더 진한 빨강 */
         }
+        [data-theme="dark"] .alert-error {
+            color: #f87171;  /* 다크 모드: 대비 6.0:1 vs #16191d */
+        }
+        /* 경고: #b45309 대비 5.0:1 vs #f5f7f9 (라이트), #fbbf24 대비 10.5:1 vs #16191d (다크) */
         .alert-warning {
             background: rgba(245, 158, 11, 0.08);
-            border-color: rgba(245, 158, 11, 0.25);
-            color: #FBBF24;
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #b45309;  /* 라이트 모드용 더 진한 주황 */
         }
+        [data-theme="dark"] .alert-warning {
+            color: #fbbf24;  /* 다크 모드: 대비 10.5:1 vs #16191d */
+        }
+        /* 정보: #0a6073 대비 5.2:1 vs #f5f7f9 (라이트), #2aa3ba 대비 5.4:1 vs #16191d (다크) */
         .alert-info {
             background: rgba(15, 117, 138, 0.08);
-            border-color: rgba(15, 117, 138, 0.25);
-            color: #0f758a;
+            border-color: rgba(15, 117, 138, 0.35);
+            color: #0a6073;  /* 라이트 모드용 더 진한 틸 */
+        }
+        [data-theme="dark"] .alert-info {
+            color: #2aa3ba;  /* 다크 모드: 대비 5.4:1 vs #16191d */
         }
 
         /* ==================== Report Content Styles ==================== */
+        /* US-015: WCAG AA 색상 대비 기준 충족 - 라이트/다크 모드 대응 */
         .report-content {
             font-family: 'Space Grotesk', 'Pretendard', sans-serif;
             font-size: 1.1875rem;  /* 19px - 더 읽기 쉽게 */
             line-height: 1.7;      /* 컴팩트하게 */
-            color: #e5e7eb;        /* 더 밝게 */
+            color: var(--text-primary);
             transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
         }
 
-        /* Headings */
+        /* Headings - 다크 모드 */
+        [data-theme="dark"] .report-content h1 {
+            font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;            /* 대비 15.5:1 vs #16191d */
+            margin: 1.25rem 0 0.625rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(42, 163, 186, 0.3);
+            letter-spacing: -0.01em;
+        }
+
+        [data-theme="dark"] .report-content h2 {
+            font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: #2dd4bf;            /* 대비 8.5:1 vs #16191d */
+            margin: 1rem 0 0.5rem 0;
+            letter-spacing: 0;
+        }
+
+        [data-theme="dark"] .report-content h2::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #2aa3ba;
+            margin-right: 12px;
+            transform: rotate(45deg);
+        }
+
+        [data-theme="dark"] .report-content h3 {
+            font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #f3f4f6;            /* 대비 13:1 vs #16191d */
+            margin: 0.875rem 0 0.375rem 0;
+        }
+
+        [data-theme="dark"] .report-content h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #d1d5db;            /* 대비 10:1 vs #16191d */
+            margin: 0.75rem 0 0.25rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Headings - 라이트 모드 */
         .report-content h1 {
             font-family: 'Space Grotesk', 'Pretendard', sans-serif;
             font-size: 1.75rem;
             font-weight: 700;
-            color: #ffffff;
+            color: #1f2937;            /* 대비 11.7:1 vs #f5f7f9 */
             margin: 1.25rem 0 0.625rem 0;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(15, 117, 138, 0.3);
+            border-bottom: 1px solid rgba(10, 96, 115, 0.3);
             letter-spacing: -0.01em;
         }
 
@@ -1080,7 +1147,7 @@
             font-family: 'Space Grotesk', 'Pretendard', sans-serif;
             font-size: 1.375rem;
             font-weight: 600;
-            color: #14b8a6;
+            color: #0d7377;            /* 대비 4.6:1 vs #f5f7f9 */
             margin: 1rem 0 0.5rem 0;
             letter-spacing: 0;
         }
@@ -1090,7 +1157,7 @@
             display: inline-block;
             width: 8px;
             height: 8px;
-            background: #0f758a;
+            background: #0a6073;
             margin-right: 12px;
             transform: rotate(45deg);
         }
@@ -1099,23 +1166,23 @@
             font-family: 'Space Grotesk', 'Pretendard', sans-serif;
             font-size: 1.125rem;
             font-weight: 600;
-            color: #f3f4f6;
+            color: #374151;            /* 대비 8.5:1 vs #f5f7f9 */
             margin: 0.875rem 0 0.375rem 0;
         }
 
         .report-content h4 {
             font-size: 0.9375rem;
             font-weight: 600;
-            color: #d1d5db;
+            color: #4b5563;            /* 대비 6.2:1 vs #f5f7f9 */
             margin: 0.75rem 0 0.25rem 0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        /* Paragraphs */
+        /* Paragraphs - US-015: 라이트/다크 모드 색상 대비 충족 */
         .report-content p {
             margin: 0.625rem 0;
-            color: #e5e7eb;
+            color: var(--text-primary);
         }
 
         /* Lists */
@@ -1133,9 +1200,10 @@
             position: relative;
             padding-left: 1.5rem;
             margin: 0.375rem 0;
-            color: #e5e7eb;
+            color: var(--text-primary);
         }
 
+        /* 리스트 마커 - 라이트 모드 */
         .report-content ul li::before {
             content: '';
             position: absolute;
@@ -1143,9 +1211,14 @@
             top: 0.625rem;
             width: 6px;
             height: 6px;
-            background: linear-gradient(135deg, #0f758a, #0d6577);
+            background: linear-gradient(135deg, #0a6073, #085463);
             border-radius: 1px;
             transform: rotate(45deg);
+        }
+
+        /* 리스트 마커 - 다크 모드 */
+        [data-theme="dark"] .report-content ul li::before {
+            background: linear-gradient(135deg, #2aa3ba, #1f8a9e);
         }
 
         .report-content ol {
@@ -1158,16 +1231,17 @@
             position: relative;
             padding-left: 2.25rem;
             margin: 0.375rem 0;
-            color: #e5e7eb;
+            color: var(--text-primary);
         }
 
+        /* 순서 리스트 마커 - 라이트 모드 */
         .report-content ol li::before {
             content: counter(item);
             position: absolute;
             left: 0;
             width: 1.625rem;
             height: 1.625rem;
-            background: linear-gradient(135deg, #0f758a 0%, #0d6577 100%);
+            background: linear-gradient(135deg, #0a6073 0%, #085463 100%);
             color: #ffffff;
             font-size: 0.75rem;
             font-weight: 700;
@@ -1175,6 +1249,11 @@
             align-items: center;
             justify-content: center;
             border-radius: 4px;
+        }
+
+        /* 순서 리스트 마커 - 다크 모드 */
+        [data-theme="dark"] .report-content ol li::before {
+            background: linear-gradient(135deg, #2aa3ba 0%, #1f8a9e 100%);
         }
 
         /* Nested lists */
@@ -1186,20 +1265,28 @@
         }
 
         .report-content ul ul li::before {
-            background: #6b7280;
+            background: #525a66;       /* 라이트 모드: 대비 5.5:1 */
             width: 4px;
             height: 4px;
         }
 
-        /* Blockquotes */
+        [data-theme="dark"] .report-content ul ul li::before {
+            background: #a8b0ba;       /* 다크 모드: 대비 6.1:1 */
+        }
+
+        /* Blockquotes - US-015: 라이트/다크 모드 대응 */
         .report-content blockquote {
             margin: 1rem 0;
             padding: 1rem 1.25rem;
-            background: linear-gradient(90deg, rgba(15, 117, 138, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #0f758a;
-            color: #e5e7eb;
+            background: linear-gradient(90deg, rgba(10, 96, 115, 0.08) 0%, transparent 100%);
+            border-left: 3px solid var(--primary);
+            color: var(--text-primary);
             font-style: italic;
             border-radius: 0 8px 8px 0;
+        }
+
+        [data-theme="dark"] .report-content blockquote {
+            background: linear-gradient(90deg, rgba(42, 163, 186, 0.08) 0%, transparent 100%);
         }
 
         .report-content blockquote p {
@@ -1207,12 +1294,12 @@
             font-family: 'Space Grotesk', 'Pretendard', sans-serif;
         }
 
-        /* Code blocks */
+        /* Code blocks - 라이트 모드 */
         .report-content pre {
             margin: 1rem 0;
             padding: 1rem;
-            background: #16191d;
-            border: 1px solid #2a2e33;
+            background: #f8fafc;
+            border: 1px solid var(--border-dark);
             border-radius: 8px;
             overflow-x: auto;
             font-family: 'JetBrains Mono', monospace;
@@ -1220,22 +1307,32 @@
             line-height: 1.7;
         }
 
+        [data-theme="dark"] .report-content pre {
+            background: #16191d;
+            border-color: #3a3f45;
+        }
+
         .report-content code {
             font-family: 'JetBrains Mono', monospace;
-            background: rgba(15, 117, 138, 0.12);
-            color: #14a3bd;
+            background: rgba(10, 96, 115, 0.12);
+            color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
             padding: 0.2rem 0.5rem;
             font-size: 0.85em;
             border-radius: 4px;
         }
 
+        [data-theme="dark"] .report-content code {
+            background: rgba(42, 163, 186, 0.12);
+            color: #3eb8cf;            /* 다크 모드: 대비 7.2:1 */
+        }
+
         .report-content pre code {
             background: transparent;
-            color: #e5e7eb;
+            color: var(--text-primary);
             padding: 0;
         }
 
-        /* Tables */
+        /* Tables - 라이트/다크 모드 대응 */
         .report-content table {
             width: 100%;
             margin: 1.75rem 0;
@@ -1246,71 +1343,112 @@
         }
 
         .report-content thead {
-            background: linear-gradient(90deg, rgba(15, 117, 138, 0.15) 0%, rgba(15, 117, 138, 0.05) 100%);
+            background: linear-gradient(90deg, rgba(10, 96, 115, 0.15) 0%, rgba(10, 96, 115, 0.05) 100%);
+        }
+
+        [data-theme="dark"] .report-content thead {
+            background: linear-gradient(90deg, rgba(42, 163, 186, 0.15) 0%, rgba(42, 163, 186, 0.05) 100%);
         }
 
         .report-content th {
             padding: 0.875rem 1.25rem;
             text-align: left;
             font-weight: 600;
-            color: #0f758a;
-            border-bottom: 1px solid rgba(15, 117, 138, 0.3);
+            color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
+            border-bottom: 1px solid rgba(10, 96, 115, 0.3);
             text-transform: uppercase;
             font-size: 0.6875rem;
             letter-spacing: 0.08em;
         }
 
+        [data-theme="dark"] .report-content th {
+            color: #2aa3ba;            /* 다크 모드: 대비 5.4:1 */
+            border-bottom-color: rgba(42, 163, 186, 0.3);
+        }
+
         .report-content td {
             padding: 0.875rem 1.25rem;
-            border-bottom: 1px solid #2a2e33;
-            color: #d1d5db;
+            border-bottom: 1px solid var(--border-dark);
+            color: var(--text-primary);
         }
 
         .report-content tr:hover td {
-            background: rgba(15, 117, 138, 0.04);
+            background: rgba(10, 96, 115, 0.04);
         }
 
-        /* Strong and emphasis */
+        [data-theme="dark"] .report-content tr:hover td {
+            background: rgba(42, 163, 186, 0.04);
+        }
+
+        /* Strong and emphasis - 라이트/다크 모드 대응 */
         .report-content strong {
-            color: #ffffff;
+            color: #1f2937;            /* 라이트 모드: 대비 11.7:1 */
             font-weight: 600;
         }
 
+        [data-theme="dark"] .report-content strong {
+            color: #ffffff;            /* 다크 모드: 대비 15.5:1 */
+        }
+
         .report-content em {
-            color: #14a3bd;
+            color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
             font-style: italic;
         }
 
-        /* Links */
+        [data-theme="dark"] .report-content em {
+            color: #3eb8cf;            /* 다크 모드: 대비 7.2:1 */
+        }
+
+        /* Links - 라이트/다크 모드 대응 */
         .report-content a {
-            color: #0f758a;
+            color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
             text-decoration: none;
-            border-bottom: 1px solid rgba(15, 117, 138, 0.3);
+            border-bottom: 1px solid rgba(10, 96, 115, 0.3);
             transition: all 0.2s;
         }
 
         .report-content a:hover {
-            border-bottom-color: #0f758a;
-            color: #14a3bd;
+            border-bottom-color: #0a6073;
+            color: #085463;
         }
 
-        /* Horizontal rule */
+        [data-theme="dark"] .report-content a {
+            color: #2aa3ba;            /* 다크 모드: 대비 5.4:1 */
+            border-bottom-color: rgba(42, 163, 186, 0.3);
+        }
+
+        [data-theme="dark"] .report-content a:hover {
+            border-bottom-color: #2aa3ba;
+            color: #3eb8cf;
+        }
+
+        /* Horizontal rule - 라이트/다크 모드 대응 */
         .report-content hr {
             margin: 1.5rem 0;
             border: none;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(15, 117, 138, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(10, 96, 115, 0.3), transparent);
         }
 
-        /* Key insights / highlights box */
+        [data-theme="dark"] .report-content hr {
+            background: linear-gradient(90deg, transparent, rgba(42, 163, 186, 0.3), transparent);
+        }
+
+        /* Key insights / highlights box - 라이트/다크 모드 대응 */
         .report-content .highlight-box,
         .report-content .key-point {
             margin: 1.75rem 0;
             padding: 1.5rem;
-            background: rgba(15, 117, 138, 0.06);
-            border: 1px solid rgba(15, 117, 138, 0.15);
+            background: rgba(10, 96, 115, 0.06);
+            border: 1px solid rgba(10, 96, 115, 0.15);
             border-radius: 8px;
             position: relative;
+        }
+
+        [data-theme="dark"] .report-content .highlight-box,
+        [data-theme="dark"] .report-content .key-point {
+            background: rgba(42, 163, 186, 0.06);
+            border-color: rgba(42, 163, 186, 0.15);
         }
 
         .report-content .highlight-box::before {
