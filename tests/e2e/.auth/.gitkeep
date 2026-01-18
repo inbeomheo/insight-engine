@@ -1,0 +1,2 @@
+# 이 디렉토리는 인증 상태 파일을 저장합니다.
+# user.json 파일은 auth/setup.spec.ts에 의해 생성됩니다.

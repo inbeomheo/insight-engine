@@ -1,0 +1,33 @@
+{
+  "name": "insight-engine-e2e-tests",
+  "version": "1.0.0",
+  "description": "Insight Engine E2E 테스트 (Playwright)",
+  "scripts": {
+    "test": "playwright test",
+    "test:parallel": "playwright test --workers=auto",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+
+    "test:no-auth": "playwright test --project=no-auth-chromium",
+    "test:content": "playwright test --project=content-generation",
+    "test:batch": "playwright test --project=batch-generation",
+    "test:auth": "playwright test --project=auth-setup --project=authenticated-tests",
+    "test:error": "playwright test --project=error-handling",
+    "test:performance": "playwright test --project=performance",
+    "test:a11y": "playwright test tests/e2e/accessibility/",
+    "test:responsive": "playwright test tests/e2e/responsive/",
+
+    "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
+    "test:cross-browser": "playwright test --project=no-auth-chromium --project=firefox --project=webkit",
+
+    "test:ci": "playwright test --workers=4 --retries=2",
+    "test:shard": "playwright test --shard=",
+
+    "report": "playwright show-report tests/test-results/html-report",
+    "install-browsers": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
