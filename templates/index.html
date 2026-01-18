@@ -130,17 +130,126 @@
             --card-border: #345d65;
         }
 
+        /* ==================== 3-Column Layout Grid System ==================== */
+
+        /* Main Layout Container */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Sidebar - 200px fixed width */
+        #sidebar {
+            width: 200px !important;
+            min-width: 200px;
+            max-width: 200px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-dark);
+            background: var(--background-dark);
+            height: 100%;
+            z-index: 50;
+        }
+
+        /* Input Panel - 350px fixed width */
+        #input-panel {
+            width: 350px !important;
+            min-width: 320px;
+            max-width: 400px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-dark);
+            background: var(--background-dark);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* Result Panel - flex-1 (remaining space) */
+        #result-panel {
+            flex: 1 1 0%;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            background: var(--background-dark);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* Main Content Area - contains input and result panels */
+        #main-content {
+            flex: 1;
+            display: flex;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Main Container - flex column for header + content */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Content Area - flex row for panels */
+        .content-area {
+            flex: 1;
+            display: flex;
+            height: 100%;
+            overflow: hidden;
+        }
+
         /* ==================== Compact Design System ==================== */
 
         /* Header - 56px → 48px */
         header.h-14 { height: 48px !important; }
 
-        /* Sidebar - 48px → 40px */
-        #sidebar { width: 40px !important; }
-        #sidebar .h-14 { height: 48px !important; }
-        #sidebar .w-8 { width: 28px !important; height: 28px !important; }
-        #sidebar .nav-icon-btn { width: 32px !important; height: 32px !important; }
-        #sidebar .nav-icon-btn .material-symbols-outlined { font-size: 18px !important; }
+        /* Sidebar internal layout */
+        #sidebar .sidebar-header {
+            height: 48px !important;
+            padding: 0 var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-dark);
+        }
+        #sidebar .sidebar-logo {
+            width: 28px !important;
+            height: 28px !important;
+            flex-shrink: 0;
+        }
+        #sidebar .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #sidebar .nav-icon-btn {
+            width: 100% !important;
+            height: 40px !important;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: 0 var(--spacing-md);
+            border-radius: var(--radius-md);
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #sidebar .nav-icon-btn .material-symbols-outlined {
+            font-size: 20px !important;
+            flex-shrink: 0;
+        }
+        #sidebar .nav-icon-btn .nav-label {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
 
         /* Input Panel Sections - p-4 → p-3 */
         #input-panel > div.p-4 { padding: 0.75rem !important; }
@@ -938,19 +1047,21 @@
         @media (max-width: 768px) {
             /* 사이드바 숨김 */
             #sidebar {
-                display: none;
+                display: none !important;
             }
 
-            /* 2-Panel을 탭 방식으로 전환 */
+            /* 3-Panel을 탭 방식으로 전환 */
             #input-panel,
             #result-panel {
                 width: 100% !important;
-                display: none;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                display: none !important;
             }
 
             #input-panel.active,
             #result-panel.active {
-                display: flex;
+                display: flex !important;
             }
 
             /* 모바일 탭 바 */
@@ -1067,9 +1178,21 @@
                 display: none !important;
             }
 
-            #input-panel,
+            #sidebar {
+                display: flex !important;
+            }
+
+            #input-panel {
+                display: flex !important;
+                width: 350px !important;
+                min-width: 320px !important;
+                max-width: 400px !important;
+            }
+
             #result-panel {
                 display: flex !important;
+                flex: 1 1 0% !important;
+                min-width: 400px !important;
             }
         }
 
@@ -1134,12 +1257,14 @@
         }
 
         /* Icon Navigation Button */
+        /* Sidebar Navigation Buttons - 200px layout */
         .nav-icon-btn {
-            width: 36px;
-            height: 36px;
+            width: 100%;
+            height: 40px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 0.5rem;
+            padding: 0 0.75rem;
             border-radius: 8px;
             color: #9ca3af;
             transition: all 0.2s;
@@ -1157,6 +1282,12 @@
         }
         .nav-icon-btn .material-symbols-outlined {
             font-size: 20px;
+            flex-shrink: 0;
+        }
+        .nav-icon-btn .nav-label {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         /* 패널 뷰 전환 */
@@ -1308,35 +1439,41 @@
     <!-- Skip Link for Keyboard Users -->
     <a href="#url-input" class="skip-link">메인 콘텐츠로 건너뛰기</a>
 
-    <!-- ==================== Sidebar (Icon Bar) ==================== -->
-    <aside id="sidebar" class="w-12 flex flex-col border-r border-border-dark bg-background-dark flex-shrink-0 h-full z-50">
-        <!-- Logo Area -->
-        <div class="h-14 flex items-center justify-center border-b border-border-dark">
-            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span class="material-symbols-outlined text-white text-lg">auto_awesome_motion</span>
+    <!-- ==================== Sidebar (200px) ==================== -->
+    <aside id="sidebar" class="flex flex-col bg-background-dark flex-shrink-0 h-full z-50">
+        <!-- Logo Area with Title -->
+        <div class="sidebar-header">
+            <div class="sidebar-logo rounded-lg bg-primary flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-base">auto_awesome_motion</span>
             </div>
+            <span class="sidebar-title">Insight Engine</span>
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 flex flex-col items-center gap-1 py-4">
+        <nav class="flex-1 flex flex-col gap-1 p-3">
             <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard">
                 <span class="material-symbols-outlined">dashboard</span>
+                <span class="nav-label">Dashboard</span>
             </button>
             <button class="nav-icon-btn" data-section="history" title="History">
                 <span class="material-symbols-outlined">history</span>
+                <span class="nav-label">History</span>
             </button>
             <button class="nav-icon-btn" data-section="usage" title="Usage">
                 <span class="material-symbols-outlined">pie_chart</span>
+                <span class="nav-label">Usage</span>
             </button>
             <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings">
                 <span class="material-symbols-outlined">settings</span>
+                <span class="nav-label">Settings</span>
             </button>
         </nav>
 
         <!-- User Profile / Auth (Bottom) -->
-        <div class="py-4 border-t border-border-dark flex justify-center">
+        <div class="p-3 border-t border-border-dark">
             <button id="sidebar-auth-container" class="nav-icon-btn" title="로그인">
                 <span class="material-symbols-outlined">person</span>
+                <span class="nav-label">로그인</span>
             </button>
         </div>
     </aside>
@@ -1344,17 +1481,16 @@
     <!-- Mobile Sidebar Overlay -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
 
-    <!-- ==================== Main Content Area ==================== -->
-    <div class="flex-1 flex flex-col h-full overflow-hidden">
-        <!-- Top Bar (Simplified for 2-Panel Layout) -->
+    <!-- ==================== Main Content Area (3-Column Layout) ==================== -->
+    <div class="main-container">
+        <!-- Top Bar (Header) -->
         <header class="h-14 flex items-center justify-between px-6 border-b border-border-dark bg-background-dark flex-shrink-0">
-            <!-- Left: Title -->
+            <!-- Left: Version Badge -->
             <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold text-white">Insight Engine</span>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-dark text-primary">Beta v2.5</span>
             </div>
 
-            <!-- Right: Usage Display + Provider Badge -->
+            <!-- Right: Usage Display + Provider Badge + Actions -->
             <div class="flex items-center gap-3">
                 <!-- Usage Display -->
                 <div id="usage-display-header" class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg text-xs">
@@ -1705,11 +1841,10 @@
         </div>
     </div>
 
-        <!-- Main Content Area - 2-Panel Layout -->
-        <main id="main-content" class="flex-1 overflow-hidden">
-            <div class="h-full flex">
-                <!-- ==================== 입력 패널 (40%) ==================== -->
-                <div id="input-panel" class="w-2/5 h-full overflow-y-auto border-r border-border-dark flex flex-col bg-background-dark">
+        <!-- Main Content Area - 3-Column Layout (Input 350px + Result flex-1) -->
+        <main id="main-content" class="content-area">
+                <!-- ==================== 입력 패널 (350px) ==================== -->
+                <div id="input-panel" class="flex flex-col bg-background-dark">
                     <!-- Alert Container -->
                     <div id="alert-container" class="px-4 pt-4"></div>
 
@@ -1994,8 +2129,8 @@
                     </div>
                 </div>
 
-                <!-- ==================== 결과 패널 (60%) ==================== -->
-                <div id="result-panel" class="w-3/5 h-full overflow-y-auto flex flex-col bg-background-dark">
+                <!-- ==================== 결과 패널 (flex-1) ==================== -->
+                <div id="result-panel" class="flex flex-col bg-background-dark">
                     <!-- ===== Dashboard View (기존) ===== -->
                     <div id="dashboard-view" class="panel-view">
                         <!-- 헤더 -->
@@ -2092,7 +2227,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
         </main>
     </div><!-- End Main Content Area -->
 
