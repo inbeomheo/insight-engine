@@ -110,6 +110,12 @@ def _fetch_youtube_content(video_id):
     return final_content, None, transcript
 
 
+@blog_bp.route('/health')
+def health():
+    """헬스체크 엔드포인트 (Railway/Docker용)"""
+    return jsonify({'status': 'healthy'}), 200
+
+
 @blog_bp.route('/')
 def home():
     """메인 페이지를 렌더링합니다."""
