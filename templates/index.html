@@ -1048,20 +1048,36 @@
             display: none;
             align-items: center;
             justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
             background: transparent;
-            border: none;
+            border: 1px solid transparent;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
         }
         .hamburger-btn:hover {
             background: var(--surface-dark);
+            border-color: var(--border-dark);
+        }
+        .hamburger-btn:active {
+            transform: scale(0.95);
+        }
+        .hamburger-btn:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
         }
         .hamburger-btn .material-symbols-outlined {
             font-size: 24px;
             color: var(--text-primary);
+            transition: transform 0.2s ease;
+        }
+        .hamburger-btn:hover .material-symbols-outlined {
+            color: var(--primary);
+        }
+        /* Animated hamburger to X transformation */
+        .hamburger-btn.active .material-symbols-outlined {
+            transform: rotate(90deg);
         }
 
         /* Mobile Tab Bar (hidden by default, shown on sm) */
@@ -1101,24 +1117,48 @@
 
         /* Mobile Bottom Navigation */
         .mobile-nav-item {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
-            color: var(--text-subtle);
+            gap: 4px;
+            padding: 8px 4px;
+            color: var(--text-muted);
             font-size: 10px;
             font-weight: 500;
-            transition: color 0.2s ease;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: color 0.2s ease, transform 0.2s ease;
         }
         .mobile-nav-item:hover {
-            color: var(--text-light);
+            color: var(--text-primary);
+        }
+        .mobile-nav-item:active {
+            transform: scale(0.95);
         }
         .mobile-nav-item.active {
             color: var(--primary);
         }
+        /* Active indicator dot */
+        .mobile-nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
         .mobile-nav-item .material-symbols-outlined {
-            font-size: 22px;
+            font-size: 24px;
+            transition: transform 0.2s ease;
+        }
+        .mobile-nav-item.active .material-symbols-outlined {
+            transform: translateY(-2px);
         }
         .pb-safe {
             padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -1158,9 +1198,21 @@
             #sidebar .nav-label {
                 display: inline;
             }
+            #sidebar .nav-section-header {
+                display: block;
+            }
+            #sidebar .nav-divider {
+                margin: 0.75rem 0.75rem;
+            }
             #sidebar .nav-icon-btn {
                 justify-content: flex-start;
-                padding: 0 var(--spacing-md);
+                padding: 0 1rem;
+                width: 100%;
+                height: 44px;
+                border-radius: 8px;
+            }
+            #sidebar .nav-icon-btn.active::before {
+                display: block;
             }
             #input-panel {
                 display: flex !important;
@@ -1204,13 +1256,31 @@
             #sidebar .nav-icon-btn {
                 justify-content: center;
                 padding: 0;
-                width: 100%;
+                width: 44px;
+                height: 44px;
+                margin: 0 auto;
+                border-radius: 12px;
             }
             #sidebar .nav-label {
                 display: none;
             }
+            #sidebar .nav-section-header {
+                display: none;
+            }
+            #sidebar .nav-divider {
+                margin: 0.5rem auto;
+                width: 32px;
+            }
             #sidebar .p-3 {
                 padding: 0.5rem !important;
+            }
+            /* Hide active indicator bar in collapsed mode */
+            #sidebar .nav-icon-btn.active::before {
+                display: none;
+            }
+            /* Centered active state for collapsed mode */
+            #sidebar .nav-icon-btn.active {
+                background: rgba(15, 117, 138, 0.2);
             }
             /* Tooltip on hover for collapsed sidebar */
             #sidebar .nav-icon-btn {
@@ -1219,23 +1289,26 @@
             #sidebar .nav-icon-btn::after {
                 content: attr(title);
                 position: absolute;
-                left: calc(100% + 8px);
+                left: calc(100% + 12px);
                 top: 50%;
                 transform: translateY(-50%);
                 background: var(--surface-dark);
                 color: var(--text-primary);
-                padding: 6px 10px;
-                border-radius: 6px;
+                padding: 8px 12px;
+                border-radius: 8px;
                 font-size: 12px;
+                font-weight: 500;
                 white-space: nowrap;
                 opacity: 0;
                 pointer-events: none;
-                transition: opacity 0.2s;
+                transition: opacity 0.2s, transform 0.2s;
                 z-index: 100;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--border-dark);
             }
             #sidebar .nav-icon-btn:hover::after {
                 opacity: 1;
+                transform: translateY(-50%) translateX(4px);
             }
             /* Input panel slightly narrower */
             #input-panel {
@@ -1268,12 +1341,13 @@
                 left: 0;
                 top: 0;
                 height: 100%;
-                width: 200px !important;
-                min-width: 200px;
-                max-width: 200px;
+                width: 240px !important;
+                min-width: 240px;
+                max-width: 240px;
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 z-index: 100;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
             }
             #sidebar.sidebar-open {
                 transform: translateX(0);
@@ -1283,6 +1357,12 @@
             }
             #sidebar .nav-label {
                 display: inline;
+            }
+            #sidebar .nav-section-header {
+                display: block;
+            }
+            #sidebar .nav-divider {
+                margin: 0.75rem 0.75rem;
             }
             #sidebar .nav-icon-btn {
                 justify-content: flex-start;
@@ -1326,12 +1406,13 @@
                 left: 0;
                 top: 0;
                 height: 100%;
-                width: 200px !important;
-                min-width: 200px;
-                max-width: 200px;
+                width: 280px !important;
+                min-width: 280px;
+                max-width: 280px;
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 z-index: 100;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
             }
             #sidebar.sidebar-open {
                 transform: translateX(0);
@@ -1341,6 +1422,12 @@
             }
             #sidebar .nav-label {
                 display: inline;
+            }
+            #sidebar .nav-section-header {
+                display: block;
+            }
+            #sidebar .nav-divider {
+                margin: 0.75rem 0.75rem;
             }
             /* Show hamburger button */
             .hamburger-btn {
@@ -1493,38 +1580,113 @@
             }
         }
 
-        /* Icon Navigation Button */
-        /* Sidebar Navigation Buttons - 200px layout */
+        /* ==================== Sidebar Navigation System ==================== */
+
+        /* Navigation Buttons - Enhanced Visual Design */
         .nav-icon-btn {
+            position: relative;
             width: 100%;
-            height: 40px;
+            height: 44px;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0 0.75rem;
+            gap: 0.75rem;
+            padding: 0 1rem;
             border-radius: 8px;
-            color: #9ca3af;
-            transition: all 0.2s;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
             cursor: pointer;
             border: none;
             background: transparent;
+            text-align: left;
         }
+
+        /* Hover state */
         .nav-icon-btn:hover {
-            background: #202428;
-            color: #0f758a;
+            background: var(--surface-dark);
+            color: var(--text-primary);
         }
+
+        /* Active state with left indicator */
         .nav-icon-btn.active {
-            background: rgba(15, 117, 138, 0.15);
-            color: #0f758a;
+            background: rgba(15, 117, 138, 0.12);
+            color: var(--primary);
         }
+
+        /* Active indicator bar */
+        .nav-icon-btn.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 0 3px 3px 0;
+        }
+
+        /* Focus state for keyboard navigation */
+        .nav-icon-btn:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: -2px;
+        }
+
+        /* Icon styling */
         .nav-icon-btn .material-symbols-outlined {
             font-size: 20px;
             flex-shrink: 0;
+            transition: transform 0.2s ease;
         }
+
+        .nav-icon-btn:hover .material-symbols-outlined {
+            transform: scale(1.05);
+        }
+
+        /* Label styling */
         .nav-icon-btn .nav-label {
             font-size: 13px;
             font-weight: 500;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Navigation group divider */
+        .nav-divider {
+            height: 1px;
+            margin: 0.5rem 0.75rem;
+            background: var(--border-dark);
+        }
+
+        /* Navigation section header */
+        .nav-section-header {
+            padding: 0.5rem 1rem;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Badge for menu items */
+        .nav-badge {
+            margin-left: auto;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 600;
+            border-radius: 10px;
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Light mode adjustments */
+        [data-theme="light"] .nav-icon-btn:hover {
+            background: var(--bg-elevated);
+        }
+
+        [data-theme="light"] .nav-icon-btn.active {
+            background: rgba(15, 117, 138, 0.08);
         }
 
         /* 패널 뷰 전환 */
@@ -1678,39 +1840,51 @@
     <a href="#url-input" class="skip-link">메인 콘텐츠로 건너뛰기</a>
 
     <!-- ==================== Sidebar (200px) ==================== -->
-    <aside id="sidebar" class="flex flex-col bg-background-dark flex-shrink-0 h-full z-50">
+    <aside id="sidebar" class="flex flex-col bg-background-dark flex-shrink-0 h-full z-50" role="navigation" aria-label="메인 네비게이션">
         <!-- Logo Area with Title -->
         <div class="sidebar-header">
             <div class="sidebar-logo rounded-lg bg-primary flex items-center justify-center">
-                <span class="material-symbols-outlined text-white text-base">auto_awesome_motion</span>
+                <span class="material-symbols-outlined text-white text-base" aria-hidden="true">auto_awesome_motion</span>
             </div>
             <span class="sidebar-title">Insight Engine</span>
         </div>
 
-        <!-- Navigation -->
-        <nav class="flex-1 flex flex-col gap-1 p-3">
-            <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span class="nav-label">Dashboard</span>
-            </button>
-            <button class="nav-icon-btn" data-section="history" title="History">
-                <span class="material-symbols-outlined">history</span>
-                <span class="nav-label">History</span>
-            </button>
-            <button class="nav-icon-btn" data-section="usage" title="Usage">
-                <span class="material-symbols-outlined">pie_chart</span>
-                <span class="nav-label">Usage</span>
-            </button>
-            <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings">
-                <span class="material-symbols-outlined">settings</span>
-                <span class="nav-label">Settings</span>
-            </button>
+        <!-- Main Navigation -->
+        <nav class="flex-1 flex flex-col p-3" aria-label="주요 메뉴">
+            <!-- Primary Navigation Group -->
+            <div class="nav-section-header">메인</div>
+            <div class="flex flex-col gap-1">
+                <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard" aria-current="page">
+                    <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+                    <span class="nav-label">대시보드</span>
+                </button>
+                <button class="nav-icon-btn" data-section="history" title="History">
+                    <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                    <span class="nav-label">히스토리</span>
+                </button>
+                <button class="nav-icon-btn" data-section="usage" title="Usage">
+                    <span class="material-symbols-outlined" aria-hidden="true">pie_chart</span>
+                    <span class="nav-label">사용량</span>
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="nav-divider" role="separator"></div>
+
+            <!-- Settings Group -->
+            <div class="nav-section-header">설정</div>
+            <div class="flex flex-col gap-1">
+                <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                    <span class="nav-label">환경설정</span>
+                </button>
+            </div>
         </nav>
 
         <!-- User Profile / Auth (Bottom) -->
         <div class="p-3 border-t border-border-dark">
-            <button id="sidebar-auth-container" class="nav-icon-btn" title="로그인">
-                <span class="material-symbols-outlined">person</span>
+            <button id="sidebar-auth-container" class="nav-icon-btn" title="로그인" aria-label="로그인">
+                <span class="material-symbols-outlined" aria-hidden="true">person</span>
                 <span class="nav-label">로그인</span>
             </button>
         </div>
@@ -2486,19 +2660,34 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
             const isOpen = sidebar.classList.contains('sidebar-open');
 
             if (isOpen) {
                 sidebar.classList.remove('sidebar-open');
                 overlay.classList.remove('active');
+                hamburgerBtn?.classList.remove('active');
+                hamburgerBtn?.setAttribute('aria-expanded', 'false');
             } else {
                 sidebar.classList.add('sidebar-open');
                 overlay.classList.add('active');
+                hamburgerBtn?.classList.add('active');
+                hamburgerBtn?.setAttribute('aria-expanded', 'true');
             }
         }
 
         // Close sidebar when clicking overlay
         document.getElementById('sidebar-overlay')?.addEventListener('click', toggleSidebar);
+
+        // Close sidebar on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar?.classList.contains('sidebar-open')) {
+                    toggleSidebar();
+                }
+            }
+        });
 
         // 탭(패널 뷰) 전환
         function switchPanelView(viewName) {
