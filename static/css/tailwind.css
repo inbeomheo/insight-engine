@@ -1,3 +1,150 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   Design Tokens - CSS Custom Properties
+   US-002: 일관된 스타일 시스템을 위한 디자인 토큰
+   ============================================ */
+
+@layer base {
+  :root {
+    /* ----------------------------------------
+       Colors - 색상 변수
+       ---------------------------------------- */
+
+    /* Background Colors */
+    --bg-primary: #f7f6f8;           /* 메인 배경 - 밝은 회색 */
+    --bg-secondary: #ffffff;          /* 보조 배경 - 순백색 */
+    --bg-tertiary: #f3f4f6;          /* 3차 배경 - 연한 회색 */
+    --bg-surface: rgba(255, 255, 255, 0.8);  /* 표면 배경 */
+    --bg-overlay: rgba(0, 0, 0, 0.6);        /* 오버레이 배경 */
+
+    /* Text Colors */
+    --text-primary: #111827;         /* 기본 텍스트 - 거의 검정 */
+    --text-secondary: #4b5563;       /* 보조 텍스트 - 진회색 */
+    --text-tertiary: #6b7280;        /* 3차 텍스트 - 중회색 */
+    --text-muted: #9ca3af;           /* 흐린 텍스트 - 연회색 */
+    --text-inverse: #ffffff;         /* 반전 텍스트 - 흰색 */
+
+    /* Brand Colors */
+    --color-primary: #ad2bee;        /* 프라이머리 - 보라 */
+    --color-primary-hover: #9333ea;  /* 프라이머리 호버 */
+    --color-primary-light: rgba(173, 43, 238, 0.1);  /* 프라이머리 연한 */
+    --color-primary-dark: #7c3aed;   /* 프라이머리 진한 */
+
+    /* Semantic Colors */
+    --color-success: #10b981;        /* 성공 - 에메랄드 */
+    --color-warning: #f59e0b;        /* 경고 - 앰버 */
+    --color-error: #ef4444;          /* 에러 - 레드 */
+    --color-info: #3b82f6;           /* 정보 - 블루 */
+
+    /* Border Colors */
+    --border-primary: rgba(229, 231, 235, 0.5);  /* 기본 테두리 */
+    --border-secondary: rgba(229, 231, 235, 0.3); /* 연한 테두리 */
+    --border-focus: #ad2bee;                      /* 포커스 테두리 */
+    --border-dark: #553267;                       /* 다크모드 테두리 */
+
+    /* ----------------------------------------
+       Typography - 타이포그래피 변수
+       ---------------------------------------- */
+
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;         /* 12px */
+    --font-size-sm: 0.875rem;        /* 14px */
+    --font-size-base: 1rem;          /* 16px */
+    --font-size-lg: 1.125rem;        /* 18px */
+    --font-size-xl: 1.25rem;         /* 20px */
+    --font-size-2xl: 1.5rem;         /* 24px */
+    --font-size-3xl: 1.875rem;       /* 30px */
+
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+
+    /* Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* ----------------------------------------
+       Spacing - 간격 변수
+       ---------------------------------------- */
+
+    --spacing-1: 0.25rem;            /* 4px */
+    --spacing-2: 0.5rem;             /* 8px */
+    --spacing-3: 0.75rem;            /* 12px */
+    --spacing-4: 1rem;               /* 16px */
+    --spacing-5: 1.25rem;            /* 20px */
+    --spacing-6: 1.5rem;             /* 24px */
+    --spacing-7: 1.75rem;            /* 28px */
+    --spacing-8: 2rem;               /* 32px */
+
+    /* ----------------------------------------
+       Shadows - 그림자 변수
+       ---------------------------------------- */
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(173, 43, 238, 0.4);
+    --shadow-primary: 0 8px 32px rgba(173, 43, 238, 0.15);
+
+    /* ----------------------------------------
+       Transitions - 트랜지션 변수
+       ---------------------------------------- */
+
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 200ms ease-in-out;
+    --transition-slow: 300ms ease-in-out;
+
+    /* Specific Transitions */
+    --transition-colors: color var(--transition-normal),
+                        background-color var(--transition-normal),
+                        border-color var(--transition-normal);
+    --transition-transform: transform var(--transition-normal);
+    --transition-all: all var(--transition-normal);
+
+    /* ----------------------------------------
+       Border Radius - 모서리 반경
+       ---------------------------------------- */
+
+    --radius-sm: 0.25rem;            /* 4px */
+    --radius-md: 0.5rem;             /* 8px */
+    --radius-lg: 0.75rem;            /* 12px */
+    --radius-xl: 1rem;               /* 16px */
+    --radius-full: 9999px;           /* 완전 원형 */
+  }
+
+  /* ----------------------------------------
+     Dark Mode - 다크모드 변수 오버라이드
+     ---------------------------------------- */
+
+  [data-theme="dark"] {
+    /* Background Colors */
+    --bg-primary: #1c1022;           /* 메인 배경 - 어두운 보라 */
+    --bg-secondary: #2b1933;         /* 보조 배경 */
+    --bg-tertiary: #3d2449;          /* 3차 배경 */
+    --bg-surface: rgba(43, 25, 51, 0.8);     /* 표면 배경 */
+    --bg-overlay: rgba(0, 0, 0, 0.8);        /* 오버레이 배경 */
+
+    /* Text Colors */
+    --text-primary: #ffffff;         /* 기본 텍스트 - 흰색 */
+    --text-secondary: #d1d5db;       /* 보조 텍스트 */
+    --text-tertiary: #9ca3af;        /* 3차 텍스트 */
+    --text-muted: #6b7280;           /* 흐린 텍스트 */
+    --text-inverse: #111827;         /* 반전 텍스트 */
+
+    /* Border Colors */
+    --border-primary: rgba(85, 50, 103, 0.5);
+    --border-secondary: rgba(85, 50, 103, 0.3);
+
+    /* Shadows - 다크모드용 그림자 */
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}
