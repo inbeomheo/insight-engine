@@ -2177,6 +2177,116 @@
             flex-shrink: 0;
         }
 
+        /* ==================== Panel Resize Handle ==================== */
+
+        /* 리사이즈 핸들 기본 스타일 */
+        .resize-handle {
+            position: absolute;
+            right: -3px;
+            top: 0;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 100;
+            background: transparent;
+            transition: background-color 0.15s ease;
+        }
+
+        /* 호버 시 핸들 배경 */
+        .resize-handle:hover {
+            background: linear-gradient(to right,
+                transparent 0%,
+                rgba(173, 43, 238, 0.1) 50%,
+                transparent 100%);
+        }
+
+        /* 활성 상태 핸들 */
+        .resize-handle.active {
+            background: linear-gradient(to right,
+                transparent 0%,
+                rgba(173, 43, 238, 0.2) 50%,
+                transparent 100%);
+        }
+
+        /* 그립 라인 (핸들 중앙 시각적 표시) */
+        .resize-handle-grip {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 40px;
+            background: var(--border-dark);
+            border-radius: 2px;
+            opacity: 0;
+            transition: opacity 0.15s ease, background-color 0.15s ease, height 0.15s ease;
+        }
+
+        /* 핸들 호버 시 그립 표시 */
+        .resize-handle:hover .resize-handle-grip {
+            opacity: 1;
+            background: var(--color-primary);
+            height: 60px;
+        }
+
+        /* 핸들 활성 시 그립 스타일 */
+        .resize-handle.active .resize-handle-grip {
+            opacity: 1;
+            background: var(--color-primary);
+            height: 80px;
+            box-shadow: 0 0 8px rgba(173, 43, 238, 0.5);
+        }
+
+        /* 핸들 포커스 상태 (키보드 접근성) */
+        .resize-handle:focus {
+            outline: none;
+        }
+
+        .resize-handle:focus .resize-handle-grip {
+            opacity: 1;
+            background: var(--color-primary);
+            box-shadow: 0 0 0 2px rgba(173, 43, 238, 0.3);
+        }
+
+        /* 리사이즈 중 body 스타일 */
+        body.resizing {
+            cursor: col-resize !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+
+        body.resizing * {
+            cursor: col-resize !important;
+        }
+
+        /* input-panel에 position relative 추가 (핸들 위치 기준) */
+        #input-panel {
+            position: relative;
+        }
+
+        /* 리사이즈 가능 상태 표시 (xl 이상에서만) */
+        @media (min-width: 1280px) {
+            #input-panel {
+                transition: width 0.05s ease-out;
+            }
+
+            /* 핸들이 보이도록 패널 overflow 조정 */
+            #input-panel {
+                overflow: visible;
+            }
+
+            #input-panel > *:not(.resize-handle) {
+                overflow-y: auto;
+            }
+        }
+
+        /* xl 미만에서는 핸들 숨김 */
+        @media (max-width: 1279px) {
+            .resize-handle {
+                display: none !important;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">

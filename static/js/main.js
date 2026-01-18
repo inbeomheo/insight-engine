@@ -15,6 +15,7 @@ import { AuthManager } from './modules/AuthManager.js';
 import { HistoryPanelManager } from './modules/HistoryPanelManager.js';
 import { UsagePanelManager } from './modules/UsagePanelManager.js';
 import { ThemeManager } from './modules/ThemeManager.js';
+import { PanelResizeManager } from './modules/PanelResizeManager.js';
 
 class ContentAnalysis {
     constructor() {
@@ -46,6 +47,9 @@ class ContentAnalysis {
         this.eventBus = this.createSimpleEventBus();
         this.historyPanelManager = new HistoryPanelManager(this.storage, this.eventBus);
         this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus);
+
+        // 패널 리사이즈 매니저
+        this.panelResizeManager = new PanelResizeManager();
 
         // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
         this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
@@ -109,6 +113,9 @@ class ContentAnalysis {
         // 히스토리/사용량 패널 초기화
         this.historyPanelManager.init();
         this.usagePanelManager.init();
+
+        // 패널 리사이즈 초기화
+        this.panelResizeManager.init();
 
         // 초기 버튼 상태 업데이트
         this.updateGenerateButtonState();
