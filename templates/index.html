@@ -32,10 +32,10 @@
     <!-- 폰트 최적화: preconnect 및 preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
-    <!-- 웹폰트: Pretendard (한글, 메인) + Space Grotesk (영문 디스플레이) -->
+    <!-- 웹폰트: Pretendard (한글) + Outfit (영문 디스플레이) + Fira Code (코드) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
     <script>
         tailwind.config = {
@@ -52,31 +52,37 @@
                 extend: {
                     colors: {
                         // US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상)
-                        // 틸(Teal) 컬러 시스템 - 다크모드 기준
+                        // 틸(Teal) + 마젠타 악센트 컬러 시스템 - 다크모드 기준
                         "primary": "#2aa3ba",        /* 대비 5.4:1 vs #16191d */
                         "primary-hover": "#1f8a9e",
                         "primary-glow": "#3eb8cf",
+                        // 악센트 컬러 (Creative Studio 느낌)
+                        "accent": "#c084fc",         /* 보라/마젠타 */
+                        "accent-hover": "#a855f7",
+                        "accent-glow": "#d8b4fe",
+                        "accent-warm": "#fb7185",    /* 코랄 핑크 */
+                        "accent-lime": "#a3e635",    /* 라임 그린 */
                         // 배경/표면
-                        "background-dark": "#16191d",
-                        "background-base": "#16191d",
-                        "surface-dark": "#202428",
-                        "card-dark": "#202428",
-                        "bg-elevated": "#282c31",
+                        "background-dark": "#0f1214",
+                        "background-base": "#0f1214",
+                        "surface-dark": "#181c20",
+                        "card-dark": "#1e2227",
+                        "bg-elevated": "#262b31",
                         // 텍스트 - WCAG AA 충족
                         "text-light": "#ffffff",     /* 대비 15.5:1 vs #16191d */
                         "text-primary": "#ffffff",
                         "text-secondary": "#a8b0ba", /* 대비 6.1:1 vs #16191d */
                         "text-subtle": "#7ec8d6",    /* 대비 6.0:1 vs #16191d */
                         "gray-text": "#a8b0ba",      /* 대비 6.1:1 vs #16191d */
-                        "warm-white": "#ffffff",
+                        "warm-white": "#f8fafc",
                         // 테두리 - 가시성 향상
-                        "border-dark": "#3a3f45",
-                        "card-border": "#4a7a85"
+                        "border-dark": "#2d3238",
+                        "card-border": "#3d5a63"
                     },
                     fontFamily: {
-                        "display": ["Space Grotesk", "Pretendard", "sans-serif"],
-                        "body": ["Space Grotesk", "Pretendard", "sans-serif"],
-                        "mono": ["JetBrains Mono", "monospace"]
+                        "display": ["Outfit", "Pretendard", "sans-serif"],
+                        "body": ["Outfit", "Pretendard", "sans-serif"],
+                        "mono": ["Fira Code", "monospace"]
                     },
                     fontSize: {
                         // US-017: 4단계 타이포그래피 스케일 (최소 14px 보장)
@@ -121,10 +127,10 @@
             --card-dark: #ffffff;
             --bg-elevated: #e8ecef;
             --text-primary: #1f2937;      /* 대비 11.7:1 vs #f5f7f9 */
-            --text-muted: #525a66;        /* 대비 5.5:1 vs #f5f7f9 (기존 #6b7280은 4.19:1) */
+            --text-muted: #4b5563;        /* 대비 7.0:1 vs #ffffff (더 진하게 개선) */
             --text-subtle: #0a6073;       /* 대비 5.2:1 vs #f5f7f9 */
-            --border-dark: #d1d5db;       /* 더 진한 테두리 */
-            --card-border: #0a607340;
+            --border-dark: #9ca3af;       /* gray-400: 더 진한 테두리로 가시성 향상 */
+            --card-border: #0a607360;
             /* Compact Design Variables */
             --spacing-xs: 0.25rem;   /* 4px */
             --spacing-sm: 0.5rem;    /* 8px */
@@ -151,19 +157,31 @@
 
         /* ========== Dark Mode ========== */
         /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
+        /* Creative Studio 테마: 더 깊은 다크 + 악센트 글로우 */
         [data-theme="dark"] {
-            --primary: #2aa3ba;           /* 대비 5.4:1 vs #16191d */
+            --primary: #2aa3ba;           /* 대비 5.4:1 vs #0f1214 */
             --primary-hover: #1f8a9e;
             --primary-glow: #3eb8cf;
-            --background-dark: #16191d;
-            --surface-dark: #202428;
-            --card-dark: #202428;
-            --bg-elevated: #282c31;
-            --text-primary: #ffffff;      /* 대비 15.5:1 vs #16191d */
-            --text-muted: #a8b0ba;        /* 대비 6.1:1 vs #16191d (기존 #9ca3af는 5.5:1로 충족) */
-            --text-subtle: #7ec8d6;       /* 대비 6.0:1 vs #16191d */
-            --border-dark: #3a3f45;       /* 더 밝은 테두리로 가시성 향상 */
-            --card-border: #4a7a85;       /* 더 밝은 카드 테두리 */
+            /* 악센트 컬러 */
+            --accent: #c084fc;
+            --accent-hover: #a855f7;
+            --accent-glow: #d8b4fe;
+            --accent-warm: #fb7185;
+            --accent-lime: #a3e635;
+            /* 배경 - 더 깊은 다크 */
+            --background-dark: #0f1214;
+            --surface-dark: #181c20;
+            --card-dark: #1e2227;
+            --bg-elevated: #262b31;
+            --text-primary: #ffffff;      /* 대비 15.5:1 vs #0f1214 */
+            --text-muted: #a8b0ba;        /* 대비 6.1:1 vs #0f1214 */
+            --text-subtle: #7ec8d6;       /* 대비 6.0:1 vs #0f1214 */
+            --border-dark: #2d3238;
+            --card-border: #3d5a63;
+            /* 그라데이션 */
+            --gradient-primary: linear-gradient(135deg, #2aa3ba 0%, #c084fc 100%);
+            --gradient-accent: linear-gradient(135deg, #c084fc 0%, #fb7185 100%);
+            --gradient-glow: radial-gradient(ellipse at center, rgba(42, 163, 186, 0.15) 0%, transparent 70%);
         }
 
         /* ==================== US-017: Typography Scale System ==================== */
@@ -277,6 +295,13 @@
             overflow-y: auto;
         }
 
+        /* Style Section - flex grow and scroll */
+        #style-section {
+            flex: 1 1 0% !important;
+            overflow-y: auto !important;
+            min-height: 0 !important;
+        }
+
         /* Main Content Area - contains input and result panels */
         #main-content {
             flex: 1;
@@ -371,10 +396,19 @@
         #input-panel select.py-2\.5 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
         #input-panel .px-3 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
 
-        /* Style cards - smaller padding */
+        /* Style cards - 적절한 패딩 유지 (글씨 잘림 방지) */
         #input-panel .style-card,
         #input-panel [class*="style-options"] label > div {
-            padding: 0.375rem 0.625rem !important;
+            padding: 0.5rem 0.5rem !important;
+            min-height: 70px;
+        }
+        /* 스타일 카드 한글 설명 - 가독성 확보 및 모든 화면에서 표시 */
+        #input-panel .style-card span.text-\[9px\] {
+            display: block !important;  /* hidden sm:block 오버라이드 - 모든 화면에서 표시 */
+            font-size: 10px !important;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: visible;
         }
 
         /* Buttons - smaller */
@@ -455,8 +489,21 @@
         #input-panel .material-symbols-outlined.text-base { font-size: 15px !important; }
         #input-panel .material-symbols-outlined.text-lg { font-size: 18px !important; }
 
-        /* Select dropdowns - compact */
-        #input-panel select { padding: 0.5rem 2rem 0.5rem 0.5rem !important; }
+        /* Select dropdowns - compact but readable */
+        #input-panel select {
+            padding: 0.5rem 2rem 0.5rem 0.5rem !important;
+            text-overflow: ellipsis;
+            font-size: 13px !important;
+        }
+
+        /* AI 모델 섹션 - 전체 너비 사용으로 텍스트 잘림 방지 */
+        #input-panel fieldset .select-card {
+            grid-column: span 2;
+        }
+        /* AI 모델 그리드를 2열로 변경 */
+        #input-panel fieldset .grid.grid-cols-4:has(.select-card) {
+            grid-template-columns: 1fr 1fr !important;
+        }
 
         /* Result panel - compact header and content */
         #result-panel .text-lg { font-size: 1rem !important; }
@@ -519,20 +566,116 @@
             border: 1px solid #2a2e33;
         }
 
-        /* Custom Scrollbar */
+        /* ==================== Creative Studio 배경 텍스처 ==================== */
+
+        /* 미묘한 그리드 패턴 배경 */
+        [data-theme="dark"] .app-layout {
+            background:
+                /* 미세 도트 패턴 */
+                radial-gradient(circle at center, rgba(42, 163, 186, 0.03) 1px, transparent 1px),
+                /* 그리드 라인 */
+                linear-gradient(rgba(42, 163, 186, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(42, 163, 186, 0.02) 1px, transparent 1px),
+                /* 베이스 컬러 */
+                var(--background-dark);
+            background-size:
+                24px 24px,
+                48px 48px,
+                48px 48px,
+                100% 100%;
+        }
+
+        /* 글로우 오브 효과 (결과 패널) */
+        [data-theme="dark"] #result-panel::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            right: 15%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(ellipse, rgba(42, 163, 186, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(40px);
+            animation: glowPulse 8s ease-in-out infinite;
+        }
+        [data-theme="dark"] #result-panel::after {
+            content: '';
+            position: absolute;
+            bottom: 30%;
+            left: 20%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(ellipse, rgba(192, 132, 252, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(50px);
+            animation: glowPulse 10s ease-in-out infinite reverse;
+        }
+        #result-panel {
+            position: relative;
+            overflow: hidden;
+        }
+        #result-panel > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        @keyframes arrowPulse {
+            0%, 100% { transform: translateX(0); opacity: 0.7; }
+            50% { transform: translateX(-8px); opacity: 1; }
+        }
+
+        /* 사이드바 그라데이션 보더 */
+        [data-theme="dark"] #sidebar {
+            border-right: 1px solid transparent;
+            background:
+                linear-gradient(var(--background-dark), var(--background-dark)) padding-box,
+                linear-gradient(180deg, rgba(42, 163, 186, 0.3) 0%, rgba(192, 132, 252, 0.1) 50%, transparent 100%) border-box;
+        }
+
+        /* 입력 패널 상단 글로우 */
+        [data-theme="dark"] #input-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: linear-gradient(180deg, rgba(42, 163, 186, 0.05) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        #input-panel {
+            position: relative;
+        }
+        #input-panel > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Custom Scrollbar - Creative Studio 테마 */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #16191d;
+            background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: #345d65;
-            border-radius: 4px;
+            background: linear-gradient(180deg, rgba(42, 163, 186, 0.4) 0%, rgba(192, 132, 252, 0.3) 100%);
+            border-radius: 3px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #0f758a;
+            background: linear-gradient(180deg, rgba(42, 163, 186, 0.6) 0%, rgba(192, 132, 252, 0.5) 100%);
+        }
+        ::-webkit-scrollbar-corner {
+            background: transparent;
         }
 
         /* Subtle shadow */
@@ -541,6 +684,117 @@
         }
         .warm-glow:hover {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ==================== Creative Studio 카드 스타일 ==================== */
+
+        /* 글래스모피즘 카드 */
+        [data-theme="dark"] .glass-card {
+            background: linear-gradient(135deg, rgba(30, 34, 39, 0.8) 0%, rgba(24, 28, 32, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(42, 163, 186, 0.15);
+            border-radius: 12px;
+            box-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] .glass-card:hover {
+            border-color: rgba(42, 163, 186, 0.3);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(42, 163, 186, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        /* 스타일 선택 카드 개선 */
+        [data-theme="dark"] input[type="radio"] + div {
+            background: linear-gradient(135deg, rgba(24, 28, 32, 0.6) 0%, rgba(30, 34, 39, 0.4) 100%);
+            border: 1px solid rgba(45, 50, 56, 0.8);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] input[type="radio"]:checked + div {
+            background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.08) 100%);
+            border-color: var(--primary);
+            box-shadow:
+                0 0 20px rgba(42, 163, 186, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        [data-theme="dark"] input[type="radio"] + div:hover {
+            background: linear-gradient(135deg, rgba(30, 34, 39, 0.8) 0%, rgba(38, 43, 49, 0.6) 100%);
+            border-color: rgba(42, 163, 186, 0.4);
+        }
+
+        /* 프라이머리 버튼 그라데이션 */
+        [data-theme="dark"] .btn-primary,
+        [data-theme="dark"] button[class*="bg-primary"] {
+            background: linear-gradient(135deg, #2aa3ba 0%, #1f8a9e 100%);
+            border: 1px solid rgba(42, 163, 186, 0.3);
+            box-shadow:
+                0 4px 16px rgba(42, 163, 186, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] .btn-primary:hover,
+        [data-theme="dark"] button[class*="bg-primary"]:hover {
+            background: linear-gradient(135deg, #3eb8cf 0%, #2aa3ba 100%);
+            box-shadow:
+                0 6px 24px rgba(42, 163, 186, 0.35),
+                0 0 40px rgba(42, 163, 186, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* 악센트 버튼 (Custom, AI 자동 분석 등) */
+        [data-theme="dark"] .btn-accent {
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(192, 132, 252, 0.05) 100%);
+            border: 1px solid rgba(192, 132, 252, 0.3);
+            color: var(--accent);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [data-theme="dark"] .btn-accent:hover {
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.25) 0%, rgba(192, 132, 252, 0.1) 100%);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(192, 132, 252, 0.2);
+        }
+
+        /* 입력 필드 포커스 글로우 */
+        [data-theme="dark"] input:focus,
+        [data-theme="dark"] select:focus,
+        [data-theme="dark"] textarea:focus {
+            border-color: var(--primary) !important;
+            box-shadow:
+                0 0 0 3px rgba(42, 163, 186, 0.15),
+                0 0 20px rgba(42, 163, 186, 0.1) !important;
+            outline: none !important;
+        }
+
+        /* 네비게이션 버튼 호버 */
+        [data-theme="dark"] .nav-icon-btn:hover {
+            background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(42, 163, 186, 0.05) 100%);
+        }
+        [data-theme="dark"] .nav-icon-btn.active {
+            background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%);
+            border-left: 2px solid var(--primary);
+        }
+
+        /* 태그/뱃지 스타일 */
+        [data-theme="dark"] .tag-primary {
+            background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(42, 163, 186, 0.1) 100%);
+            border: 1px solid rgba(42, 163, 186, 0.3);
+            color: #7ec8d6;
+        }
+        [data-theme="dark"] .tag-accent {
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%);
+            border: 1px solid rgba(192, 132, 252, 0.3);
+            color: #d8b4fe;
+        }
+        [data-theme="dark"] .tag-warm {
+            background: linear-gradient(135deg, rgba(251, 113, 133, 0.2) 0%, rgba(251, 113, 133, 0.1) 100%);
+            border: 1px solid rgba(251, 113, 133, 0.3);
+            color: #fda4af;
         }
 
         /* Animations */
@@ -562,6 +816,124 @@
             background: linear-gradient(90deg, transparent, rgba(15, 117, 138, 0.1), transparent);
             background-size: 200% 100%;
             animation: shimmer 3s infinite;
+        }
+
+        /* ==================== 페이지 로드 Stagger 애니메이션 ==================== */
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeSlideLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Stagger 애니메이션 클래스 */
+        .animate-fade-up {
+            animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+        .animate-fade-left {
+            animation: fadeSlideLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+        .animate-scale-in {
+            animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+
+        /* 딜레이 클래스 */
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-500 { animation-delay: 0.5s; }
+
+        /* 사이드바 아이템 stagger */
+        #sidebar .nav-icon-btn {
+            animation: fadeSlideLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+        #sidebar .nav-icon-btn:nth-child(1) { animation-delay: 0.1s; }
+        #sidebar .nav-icon-btn:nth-child(2) { animation-delay: 0.15s; }
+        #sidebar .nav-icon-btn:nth-child(3) { animation-delay: 0.2s; }
+        #sidebar .nav-icon-btn:nth-child(4) { animation-delay: 0.25s; }
+
+        /* 입력 섹션 stagger */
+        #input-panel > div {
+            animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+        #input-panel > div:nth-child(1) { animation-delay: 0.15s; }
+        #input-panel > div:nth-child(2) { animation-delay: 0.25s; }
+        #input-panel > div:nth-child(3) { animation-delay: 0.35s; }
+        #input-panel > div:nth-child(4) { animation-delay: 0.45s; }
+
+        /* 결과 패널 등장 */
+        #result-panel > div {
+            animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+        }
+
+        /* 호버 트랜지션 강화 */
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 버튼 클릭 피드백 */
+        .btn-click {
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-click:active {
+            transform: scale(0.97);
+        }
+
+        /* 아이콘 호버 회전 */
+        .icon-hover-rotate {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .icon-hover-rotate:hover .material-symbols-outlined {
+            transform: rotate(15deg);
+        }
+
+        /* 링 펄스 애니메이션 (AI 관련 버튼) */
+        @keyframes ringPulse {
+            0% { box-shadow: 0 0 0 0 rgba(42, 163, 186, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(42, 163, 186, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(42, 163, 186, 0); }
+        }
+        .animate-ring-pulse {
+            animation: ringPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         /* Skeleton Loading */
@@ -620,8 +992,8 @@
             opacity: 1;
         }
         .modal-content {
-            background: linear-gradient(145deg, #1e2127 0%, #16181c 100%);
-            border: 1px solid rgba(173, 43, 238, 0.2);
+            background: var(--surface-dark);
+            border: 1px solid var(--border-dark);
             border-radius: 16px;
             max-width: 520px;
             width: 90%;
@@ -1514,10 +1886,49 @@
         /* Style Card Enhancement */
         .style-card {
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--surface-dark) !important;
+            border-color: var(--border-dark) !important;
+            color: var(--text-primary);
+        }
+        /* Style card subtitle - light mode readable */
+        .style-card span[class*="text-text-secondary"] {
+            color: var(--text-muted) !important;
+        }
+        /* Light mode: 입력 필드 및 드롭다운 테두리 강화 */
+        :root:not([data-theme="dark"]) input.border-gray-300,
+        :root:not([data-theme="dark"]) select.border-gray-300 {
+            border-color: #9ca3af !important;
+        }
+        :root:not([data-theme="dark"]) input.border-gray-300:focus,
+        :root:not([data-theme="dark"]) select.border-gray-300:focus {
+            border-color: var(--primary) !important;
+        }
+        /* text-text-muted 클래스 - CSS 변수 사용 */
+        .text-text-muted {
+            color: var(--text-muted) !important;
+        }
+        /* 카드 배경색 - CSS 변수 사용 */
+        .bg-card-dark {
+            background-color: var(--card-dark) !important;
+        }
+        /* 결과 패널 제목 - 라이트 모드 대응 */
+        #history-view h2,
+        #usage-view h2,
+        #result-panel h2 {
+            color: var(--text-primary) !important;
+        }
+        /* 모달 텍스트 색상 - 라이트 모드 대응 */
+        .modal-content {
+            color: var(--text-primary);
+        }
+        .modal-content h2,
+        .modal-content h3 {
+            color: var(--text-primary) !important;
         }
         .style-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            background-color: var(--bg-elevated) !important;
         }
         /* Style card selection animation */
         @keyframes cardSelect {
@@ -3110,7 +3521,7 @@
             <!-- 접근성: 페이지 h1 (시각적으로 숨김) -->
             <h1 class="sr-only">Insight Engine - AI 콘텐츠 분석 도구</h1>
                 <!-- ==================== 입력 패널 (350px) ==================== -->
-                <section id="input-panel" class="flex flex-col bg-background-dark" role="region" aria-label="콘텐츠 생성 입력">
+                <section id="input-panel" class="flex flex-col" style="background-color: var(--surface-dark);" role="region" aria-label="콘텐츠 생성 입력">
                     <!-- Alert Container -->
                     <div id="alert-container" class="px-4 pt-4" role="alert" aria-live="polite"></div>
 
@@ -3118,13 +3529,13 @@
                     <fieldset class="p-4 border-b border-border-dark">
                         <legend class="flex items-center gap-2 mb-3">
                             <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">link</span>
-                            <span class="text-sm font-medium text-white">YouTube URL</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
                         </legend>
                         <!-- URL 입력 필드 - 크기 증가 및 placeholder 개선 -->
                         <div class="flex gap-2">
                             <div class="relative flex-1">
                                 <input type="url" id="url-input"
-                                       class="w-full bg-surface-dark border border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-white placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                                       class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                        placeholder="YouTube 영상 URL을 붙여넣기 하세요"
                                        aria-label="YouTube 영상 URL 입력"
                                        aria-describedby="url-hint"
@@ -3162,15 +3573,15 @@
                     <fieldset class="p-4 border-b border-border-dark">
                         <legend class="flex items-center gap-2 mb-3">
                             <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">psychology</span>
-                            <span class="text-sm font-medium text-white">AI 모델</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
                         </legend>
                         <!-- 개선된 드롭다운 - 카드 형태 -->
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-4 gap-1.5">
                             <!-- 서비스 선택 카드 -->
                             <div class="select-card">
                                 <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
                                 <div class="relative">
-                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
+                                    <select id="provider" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -3182,7 +3593,7 @@
                             <div class="select-card">
                                 <label for="model" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
                                 <div class="relative">
-                                    <select id="model" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
+                                    <select id="model" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -3201,11 +3612,11 @@
                     </fieldset>
 
                     <!-- ===== 스타일 섹션 ===== -->
-                    <fieldset class="p-4 border-b border-border-dark flex-1 overflow-y-auto">
+                    <fieldset id="style-section" class="p-4 border-b border-border-dark">
                         <div class="flex items-center justify-between mb-4">
                             <legend class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">style</span>
-                                <span class="text-sm font-medium text-white">스타일</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
                             </legend>
                             <!-- 커스텀 스타일 추가 버튼 -->
                             <button id="add-custom-style-btn" class="px-2.5 py-1.5 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1" aria-label="커스텀 스타일 추가" aria-haspopup="dialog">
@@ -3217,41 +3628,45 @@
                         <!-- 스타일 그리드 - 통합 레이아웃 -->
                         <div class="style-grid-container" role="region" aria-label="스타일 선택">
                             <!-- 기본 스타일 카테고리 -->
-                            <div class="mb-4">
-                                <span id="style-basic-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-primary rounded-full" aria-hidden="true"></span>
+                            <div class="mb-3">
+                                <span id="style-basic-label" class="text-xs font-semibold text-primary uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     기본
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options" role="radiogroup" aria-labelledby="style-basic-label">
+                                <div class="grid grid-cols-4 gap-1.5" id="style-options" role="radiogroup" aria-labelledby="style-basic-label">
                                     <label class="style-grid-item cursor-pointer group">
                                         <input checked name="style" type="radio" value="blog" class="peer sr-only" aria-describedby="style-blog-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">edit_note</span>
-                                            <span class="text-[10px] font-medium">Blog</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-primary peer-checked:to-primary-hover peer-checked:border-primary peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-primary/30 text-text-secondary hover:border-primary/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">edit_note</span>
+                                            <span class="text-xs font-semibold mt-1">Blog</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">블로그 포스트</span>
                                         </div>
                                         <span id="style-blog-desc" class="sr-only">블로그 포스트 형태로 작성합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="summary" class="peer sr-only" aria-describedby="style-summary-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">description</span>
-                                            <span class="text-[10px] font-medium">Summary</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-primary peer-checked:to-primary-hover peer-checked:border-primary peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-primary/30 text-text-secondary hover:border-primary/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">description</span>
+                                            <span class="text-xs font-semibold mt-1">Summary</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">핵심 요약</span>
                                         </div>
                                         <span id="style-summary-desc" class="sr-only">핵심 내용만 간결하게 요약합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="detailed" class="peer sr-only" aria-describedby="style-detailed-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">article</span>
-                                            <span class="text-[10px] font-medium">Detail</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-primary peer-checked:to-primary-hover peer-checked:border-primary peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-primary/30 text-text-secondary hover:border-primary/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">article</span>
+                                            <span class="text-xs font-semibold mt-1">Detail</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">상세 분석</span>
                                         </div>
                                         <span id="style-detailed-desc" class="sr-only">상세하고 풍부하게 작성합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="easy" class="peer sr-only" aria-describedby="style-easy-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">forum</span>
-                                            <span class="text-[10px] font-medium">Easy</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-primary peer-checked:to-primary-hover peer-checked:border-primary peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-primary/30 text-text-secondary hover:border-primary/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">forum</span>
+                                            <span class="text-xs font-semibold mt-1">Easy</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">쉬운 설명</span>
                                         </div>
                                         <span id="style-easy-desc" class="sr-only">누구나 이해하기 쉬운 말로 풀어서 설명합니다</span>
                                     </label>
@@ -3259,41 +3674,45 @@
                             </div>
 
                             <!-- 분석 스타일 카테고리 -->
-                            <div class="mb-4">
-                                <span id="style-analysis-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-amber-500 rounded-full" aria-hidden="true"></span>
+                            <div class="mb-3">
+                                <span id="style-analysis-label" class="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-amber-400 rounded-full" aria-hidden="true"></span>
                                     분석
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options-analysis" role="radiogroup" aria-labelledby="style-analysis-label">
+                                <div class="grid grid-cols-4 gap-1.5" id="style-options-analysis" role="radiogroup" aria-labelledby="style-analysis-label">
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="needs" class="peer sr-only" aria-describedby="style-needs-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">lightbulb</span>
-                                            <span class="text-[10px] font-medium">Ideas</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-amber-500 peer-checked:to-orange-500 peer-checked:border-amber-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-amber-500/30 text-text-secondary hover:border-amber-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">lightbulb</span>
+                                            <span class="text-xs font-semibold mt-1">Ideas</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">니즈 분석</span>
                                         </div>
                                         <span id="style-needs-desc" class="sr-only">영상에서 언급된 니즈와 추천 아이템을 분석합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="qna" class="peer sr-only" aria-describedby="style-qna-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">quiz</span>
-                                            <span class="text-[10px] font-medium">Q&A</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-amber-500 peer-checked:to-orange-500 peer-checked:border-amber-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-amber-500/30 text-text-secondary hover:border-amber-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">quiz</span>
+                                            <span class="text-xs font-semibold mt-1">Q&A</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">질문과 답변</span>
                                         </div>
                                         <span id="style-qna-desc" class="sr-only">질문과 답변 형식으로 정리합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="infographic" class="peer sr-only" aria-describedby="style-info-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">insert_chart</span>
-                                            <span class="text-[10px] font-medium">Info</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-amber-500 peer-checked:to-orange-500 peer-checked:border-amber-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-amber-500/30 text-text-secondary hover:border-amber-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">insert_chart</span>
+                                            <span class="text-xs font-semibold mt-1">Info</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">인포그래픽</span>
                                         </div>
                                         <span id="style-info-desc" class="sr-only">인포그래픽 제작에 적합한 핵심 데이터를 추출합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="compare" class="peer sr-only" aria-describedby="style-compare-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">compare</span>
-                                            <span class="text-[10px] font-medium">Compare</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-amber-500 peer-checked:to-orange-500 peer-checked:border-amber-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-amber-500/30 text-text-secondary hover:border-amber-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">compare</span>
+                                            <span class="text-xs font-semibold mt-1">Compare</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">비교 분석</span>
                                         </div>
                                         <span id="style-compare-desc" class="sr-only">여러 요소를 비교 분석하여 정리합니다</span>
                                     </label>
@@ -3301,41 +3720,45 @@
                             </div>
 
                             <!-- 콘텐츠 스타일 카테고리 -->
-                            <div class="mb-4">
-                                <span id="style-content-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full" aria-hidden="true"></span>
+                            <div class="mb-3">
+                                <span id="style-content-label" class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-emerald-400 rounded-full" aria-hidden="true"></span>
                                     콘텐츠
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options-content" role="radiogroup" aria-labelledby="style-content-label">
+                                <div class="grid grid-cols-4 gap-1.5" id="style-options-content" role="radiogroup" aria-labelledby="style-content-label">
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="news" class="peer sr-only" aria-describedby="style-news-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">newspaper</span>
-                                            <span class="text-[10px] font-medium">News</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-teal-500 peer-checked:border-emerald-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-emerald-500/30 text-text-secondary hover:border-emerald-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">newspaper</span>
+                                            <span class="text-xs font-semibold mt-1">News</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">뉴스 기사</span>
                                         </div>
                                         <span id="style-news-desc" class="sr-only">뉴스 기사 형태로 객관적으로 작성합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="script" class="peer sr-only" aria-describedby="style-script-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">movie</span>
-                                            <span class="text-[10px] font-medium">Script</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-teal-500 peer-checked:border-emerald-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-emerald-500/30 text-text-secondary hover:border-emerald-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">movie</span>
+                                            <span class="text-xs font-semibold mt-1">Script</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">영상 대본</span>
                                         </div>
                                         <span id="style-script-desc" class="sr-only">영상 대본/스크립트 형태로 재구성합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="sns" class="peer sr-only" aria-describedby="style-sns-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">share</span>
-                                            <span class="text-[10px] font-medium">SNS</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-teal-500 peer-checked:border-emerald-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-emerald-500/30 text-text-secondary hover:border-emerald-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">share</span>
+                                            <span class="text-xs font-semibold mt-1">SNS</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">소셜 포스트</span>
                                         </div>
                                         <span id="style-sns-desc" class="sr-only">SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다</span>
                                     </label>
                                     <label class="style-grid-item cursor-pointer group">
                                         <input name="style" type="radio" value="seo" class="peer sr-only" aria-describedby="style-seo-desc"/>
-                                        <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-black text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">search</span>
-                                            <span class="text-[10px] font-medium">SEO</span>
+                                        <div class="style-card flex flex-col items-center justify-center py-2 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-emerald-500 peer-checked:to-teal-500 peer-checked:border-emerald-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-emerald-500/30 text-text-secondary hover:border-emerald-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                            <span class="material-symbols-outlined text-xl" aria-hidden="true">search</span>
+                                            <span class="text-xs font-semibold mt-1">SEO</span>
+                                            <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">검색 최적화</span>
                                         </div>
                                         <span id="style-seo-desc" class="sr-only">SEO에 최적화된 형태로 작성합니다</span>
                                     </label>
@@ -3344,12 +3767,12 @@
                         </div>
 
                         <!-- Custom Styles Section -->
-                        <div id="custom-styles-section" class="hidden mb-4" role="region" aria-label="사용자 정의 스타일">
-                            <span id="style-custom-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 bg-purple-400 rounded-full" aria-hidden="true"></span>
+                        <div id="custom-styles-section" class="hidden mb-5" role="region" aria-label="사용자 정의 스타일">
+                            <span id="style-custom-label" class="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                <span class="w-2 h-2 bg-purple-400 rounded-full" aria-hidden="true"></span>
                                 My Styles
                             </span>
-                            <div id="custom-styles-grid" class="grid grid-cols-4 gap-2">
+                            <div id="custom-styles-grid" class="grid grid-cols-4 gap-1.5">
                                 <!-- Custom styles will be inserted here -->
                             </div>
                         </div>
@@ -3502,7 +3925,7 @@
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-semibold text-white">결과</h2>
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">결과</h2>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>
@@ -3512,11 +3935,54 @@
                         </div>
                         <!-- 리포트 스트림 - US-016: feed는 콘텐츠 있을 때만 적용, 빈 상태에서는 region 사용 -->
                         <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto" role="region" aria-label="생성된 콘텐츠 목록" aria-live="polite"></div>
-                        <!-- Empty State -->
+                        <!-- Empty State - Creative Studio Design -->
                         <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center" role="status">
-                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4" aria-hidden="true">article</span>
-                            <p class="text-text-muted text-lg mb-2">생성된 콘텐츠가 없습니다</p>
-                            <p class="text-text-muted text-sm">왼쪽에서 URL을 입력하고 콘텐츠를 생성하세요</p>
+                            <!-- Animated Icon Container -->
+                            <div class="relative mb-8">
+                                <!-- Multi-layer Glow Effect -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-primary/30 to-purple-500/20 rounded-full blur-3xl scale-[2] animate-pulse"></div>
+                                <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-violet-500/15 rounded-full blur-2xl scale-150" style="animation: glowPulse 6s ease-in-out infinite reverse;"></div>
+                                <!-- Icon Circle with Gradient Border -->
+                                <div class="relative w-36 h-36 rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-pink-500">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1f24] dark:to-[#12161a] flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-6xl bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
+                                    </div>
+                                </div>
+                                <!-- Floating Particles -->
+                                <div class="absolute -top-3 -right-1 w-4 h-4 bg-gradient-to-br from-primary to-cyan-400 rounded-full animate-bounce shadow-lg shadow-primary/50"></div>
+                                <div class="absolute -bottom-2 -left-4 w-3 h-3 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full animate-bounce shadow-lg shadow-purple-500/50" style="animation-delay: 0.3s;"></div>
+                                <div class="absolute top-1/2 -right-5 w-2.5 h-2.5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full animate-bounce shadow-lg shadow-amber-500/50" style="animation-delay: 0.6s;"></div>
+                                <div class="absolute top-4 -left-3 w-2 h-2 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-full animate-bounce shadow-lg shadow-emerald-500/50" style="animation-delay: 0.9s;"></div>
+                            </div>
+
+                            <!-- Text Content -->
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
+                            <p class="text-gray-600 dark:text-text-secondary text-base mb-6 max-w-sm">
+                                YouTube 영상 URL을 입력하면<br/>
+                                AI가 자동으로 콘텐츠를 분석하고 생성합니다
+                            </p>
+
+                            <!-- Feature Pills - Creative Studio Style -->
+                            <div class="flex flex-wrap justify-center gap-3 mb-8">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-primary dark:text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
+                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">bolt</span>
+                                    빠른 분석
+                                </span>
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-400 dark:text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
+                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">psychology</span>
+                                    AI 기반
+                                </span>
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-400 dark:text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
+                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">translate</span>
+                                    한국어 최적화
+                                </span>
+                            </div>
+
+                            <!-- Arrow Hint with Animation -->
+                            <div class="flex items-center gap-2 text-gray-500 dark:text-text-muted text-sm">
+                                <span class="material-symbols-outlined text-lg" style="animation: arrowPulse 1.5s ease-in-out infinite;">arrow_back</span>
+                                <span>왼쪽에서 URL을 입력하세요</span>
+                            </div>
                         </div>
                     </div>
 
