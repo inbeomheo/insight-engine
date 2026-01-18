@@ -1,10 +1,33 @@
 <!DOCTYPE html>
-<html class="dark" lang="ko">
+<html lang="ko">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Insight Engine — AI Content Analysis</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <!-- FOUC 방지: DOM 로드 전 저장된 테마 적용 -->
+    <script>
+        (function() {
+            const storageKey = 'cad_theme_v1';
+            const saved = localStorage.getItem(storageKey);
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            let theme;
+            if (saved === 'light') {
+                theme = 'light';
+            } else if (saved === 'dark') {
+                theme = 'dark';
+            } else {
+                // system 또는 저장 없음 → 시스템 설정 따름
+                theme = prefersDark ? 'dark' : 'light';
+            }
+
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <!-- 새 폰트: Space Grotesk (영문) + Pretendard (한글) -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -66,7 +89,30 @@
     <style>
         /* ==================== Base Styles - Teal Design System ==================== */
 
+        /* ========== Light Mode (기본) ========== */
         :root {
+            --primary: #0f758a;
+            --primary-hover: #0d6577;
+            --primary-glow: #14a3bd;
+            --background-dark: #f5f7f9;
+            --surface-dark: #ffffff;
+            --card-dark: #ffffff;
+            --bg-elevated: #e8ecef;
+            --text-primary: #1f2937;
+            --text-muted: #6b7280;
+            --text-subtle: #0f758a;
+            --border-dark: #e5e7eb;
+            --card-border: #0f758a40;
+            /* Compact Design Variables */
+            --spacing-xs: 0.25rem;   /* 4px */
+            --spacing-sm: 0.5rem;    /* 8px */
+            --spacing-md: 0.75rem;   /* 12px */
+            --spacing-lg: 1rem;      /* 16px */
+            --spacing-xl: 1.25rem;   /* 20px */
+        }
+
+        /* ========== Dark Mode ========== */
+        [data-theme="dark"] {
             --primary: #0f758a;
             --primary-hover: #0d6577;
             --primary-glow: #14a3bd;
@@ -80,6 +126,138 @@
             --border-dark: #2a2e33;
             --card-border: #345d65;
         }
+
+        /* ==================== Compact Design System ==================== */
+
+        /* Header - 56px → 48px */
+        header.h-14 { height: 48px !important; }
+
+        /* Sidebar - 48px → 40px */
+        #sidebar { width: 40px !important; }
+        #sidebar .h-14 { height: 48px !important; }
+        #sidebar .w-8 { width: 28px !important; height: 28px !important; }
+        #sidebar .nav-icon-btn { width: 32px !important; height: 32px !important; }
+        #sidebar .nav-icon-btn .material-symbols-outlined { font-size: 18px !important; }
+
+        /* Input Panel Sections - p-4 → p-3 */
+        #input-panel > div.p-4 { padding: 0.75rem !important; }
+        #input-panel > div.p-4.border-b { padding: 0.75rem !important; }
+
+        /* Section Headers - mb-3 → mb-2 */
+        #input-panel .mb-3 { margin-bottom: 0.5rem !important; }
+        #input-panel .mb-4 { margin-bottom: 0.75rem !important; }
+
+        /* Gaps - gap-2 → gap-1.5, gap-3 → gap-2 */
+        #input-panel .gap-2 { gap: 0.375rem !important; }
+        #input-panel .gap-3 { gap: 0.5rem !important; }
+        #input-panel .gap-1\.5 { gap: 0.25rem !important; }
+
+        /* Space-y adjustments */
+        #input-panel .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.375rem !important; }
+        #input-panel .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem !important; }
+
+        /* Input fields - py-2.5 → py-2 */
+        #input-panel input.py-2\.5,
+        #input-panel select.py-2\.5 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+        #input-panel .px-3 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+
+        /* Style cards - smaller padding */
+        #input-panel .style-card,
+        #input-panel [class*="style-options"] label > div {
+            padding: 0.375rem 0.625rem !important;
+        }
+
+        /* Buttons - smaller */
+        #input-panel button.py-3 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+        #input-panel button.py-2\.5 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+
+        /* Result Panel Header */
+        #result-panel > div > div.p-4 { padding: 0.75rem !important; }
+
+        /* Report cards - compact spacing */
+        .report-card { margin-bottom: 0.75rem !important; }
+        .report-card .p-4 { padding: 0.75rem !important; }
+        .report-card .p-6 { padding: 1rem !important; }
+
+        /* Modal - compact */
+        .modal-content.p-6 { padding: 1rem !important; }
+        .modal-content .mb-6 { margin-bottom: 1rem !important; }
+        .modal-content .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
+        .modal-content .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem !important; }
+
+        /* Alert - compact */
+        .alert { padding: 0.625rem 1rem !important; margin-bottom: 0.75rem !important; }
+
+        /* Provider card - compact */
+        .provider-card { padding: 0.75rem !important; }
+
+        /* History item - compact */
+        .history-item { padding: 0.75rem !important; }
+        .history-item-header { margin-bottom: 0.375rem !important; }
+
+        /* Header elements - compact */
+        header .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+        header .gap-3 { gap: 0.5rem !important; }
+        header .px-3 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        header .py-1\.5 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+
+        /* Report content - slightly tighter */
+        .report-content { line-height: 1.6 !important; }
+        .report-content h1 { margin: 1rem 0 0.5rem 0 !important; }
+        .report-content h2 { margin: 0.875rem 0 0.375rem 0 !important; }
+        .report-content h3 { margin: 0.75rem 0 0.25rem 0 !important; }
+        .report-content p { margin: 0.5rem 0 !important; }
+        .report-content ul, .report-content ol { margin: 0.5rem 0 !important; }
+        .report-content li { margin: 0.25rem 0 !important; }
+        .report-content blockquote { margin: 0.75rem 0 !important; padding: 0.75rem 1rem !important; }
+        .report-content pre { margin: 0.75rem 0 !important; padding: 0.75rem !important; }
+        .report-content table { margin: 1rem 0 !important; }
+        .report-content th, .report-content td { padding: 0.625rem 1rem !important; }
+        .report-content .highlight-box, .report-content .key-point { margin: 1rem 0 !important; padding: 1rem !important; }
+        .report-content .summary, .report-content .executive-summary { padding: 1rem !important; margin: 1rem 0 !important; }
+
+        /* Advanced options panel - compact */
+        #advanced-options-panel.p-4 { padding: 0.75rem !important; }
+        #advanced-options-panel .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
+        #advanced-options-panel label > div.p-2 { padding: 0.375rem !important; }
+
+        /* Dashboard/History/Usage views - compact */
+        #dashboard-view .p-4 { padding: 0.75rem !important; }
+        #history-view .p-4 { padding: 0.75rem !important; }
+        #usage-view .p-4 { padding: 0.75rem !important; }
+
+        /* URL list container - compact */
+        #url-list-container { max-height: 120px !important; }
+        #url-list-container .space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem !important; }
+
+        /* Style section labels - tighter */
+        #input-panel .text-\[10px\] { margin-bottom: 0.375rem !important; }
+
+        /* Flex wrap gaps - compact */
+        .flex-wrap.gap-1\.5 { gap: 0.25rem !important; }
+        .flex-wrap.gap-2 { gap: 0.375rem !important; }
+
+        /* Panel view headers - compact */
+        .panel-view .p-4.border-b { padding: 0.625rem 0.75rem !important; }
+
+        /* Icon sizes in compact mode */
+        #input-panel .material-symbols-outlined.text-sm { font-size: 14px !important; }
+        #input-panel .material-symbols-outlined.text-base { font-size: 15px !important; }
+        #input-panel .material-symbols-outlined.text-lg { font-size: 18px !important; }
+
+        /* Select dropdowns - compact */
+        #input-panel select { padding: 0.5rem 2rem 0.5rem 0.5rem !important; }
+
+        /* Result panel - compact header and content */
+        #result-panel .text-lg { font-size: 1rem !important; }
+        #result-panel .border-b.flex-shrink-0 { padding: 0.625rem 0.75rem !important; }
+
+        /* Stats badges - compact */
+        .stats-badge { padding: 0.125rem 0.5rem !important; font-size: 0.625rem !important; }
+
+        /* Cards container - reduce spacing */
+        #cards-container { padding: 0.75rem !important; }
+        #cards-container > * { margin-bottom: 0.75rem !important; }
 
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -786,16 +964,16 @@
 
             .mobile-tab-bar button {
                 flex: 1;
-                padding: 12px;
+                padding: 8px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 4px;
+                gap: 2px;
                 color: #9ca3af;
-                font-size: 10px;
+                font-size: 9px;
                 border: none;
                 background: transparent;
-                min-height: 56px;
+                min-height: 48px;
             }
 
             .mobile-tab-bar button.active {
@@ -808,7 +986,7 @@
 
             /* 콘텐츠 영역 하단 여백 (탭바 높이만큼) */
             #main-content {
-                padding-bottom: 60px;
+                padding-bottom: 52px;
             }
 
             /* 기존 모바일 네비 숨김 (새 탭바로 대체) */
@@ -822,9 +1000,9 @@
                 min-width: 44px;
             }
 
-            /* Style cards on mobile */
+            /* Style cards on mobile - keep touch-friendly */
             .style-card {
-                min-height: 72px;
+                min-height: 44px;
             }
 
             /* Modal as bottom sheet on mobile */
@@ -1188,6 +1366,12 @@
                     <span class="text-primary text-[10px] font-bold">AI</span>
                     <span class="text-xs text-text-secondary" id="current-provider-label">미설정</span>
                 </div>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" class="relative flex items-center justify-center cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark group" aria-label="테마 전환">
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">contrast</span>
+                    <span class="theme-tooltip absolute top-full mt-1 px-2 py-1 bg-surface-dark text-xs text-text-secondary rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">시스템 설정</span>
+                </button>
 
                 <!-- Settings Button -->
                 <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정">

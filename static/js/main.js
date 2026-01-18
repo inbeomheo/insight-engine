@@ -14,9 +14,14 @@ import { MindmapManager } from './modules/MindmapManager.js';
 import { AuthManager } from './modules/AuthManager.js';
 import { HistoryPanelManager } from './modules/HistoryPanelManager.js';
 import { UsagePanelManager } from './modules/UsagePanelManager.js';
+import { ThemeManager } from './modules/ThemeManager.js';
 
 class ContentAnalysis {
     constructor() {
+        // 테마 매니저 초기화 (가장 먼저 실행)
+        this.themeManager = new ThemeManager();
+        this.themeManager.init();
+
         // 모듈 초기화
         this.storage = new StorageManager();
         this.ui = new UIManager();

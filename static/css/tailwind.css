@@ -147,4 +147,21 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
     --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
+
+  /* ----------------------------------------
+     Theme Transition - 테마 전환 트랜지션
+     US-003: 부드러운 150ms 전환
+     ---------------------------------------- */
+
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: background-color 150ms ease-in-out,
+                border-color 150ms ease-in-out,
+                color 150ms ease-in-out,
+                fill 150ms ease-in-out,
+                stroke 150ms ease-in-out,
+                box-shadow 150ms ease-in-out !important;
+  }
 }
