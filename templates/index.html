@@ -499,6 +499,19 @@
             top: 0;
         }
 
+        /* Screen reader only - visually hidden but accessible */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
         .glass-panel {
             background: #1a1d21;
             border: 1px solid #2a2e33;
@@ -2533,10 +2546,10 @@
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
     <!-- Skip Link for Keyboard Users -->
-    <a href="#url-input" class="skip-link">메인 콘텐츠로 건너뛰기</a>
+    <a href="#main-content" class="skip-link">메인 콘텐츠로 건너뛰기</a>
 
     <!-- ==================== Sidebar (200px) ==================== -->
-    <aside id="sidebar" class="flex flex-col bg-background-dark flex-shrink-0 h-full z-50" role="navigation" aria-label="메인 네비게이션">
+    <aside id="sidebar" class="flex flex-col bg-background-dark flex-shrink-0 h-full z-50" role="complementary" aria-label="사이드바 네비게이션">
         <!-- Logo Area with Title -->
         <div class="sidebar-header">
             <div class="sidebar-logo rounded-lg bg-primary flex items-center justify-center">
@@ -2592,12 +2605,12 @@
     <!-- ==================== Main Content Area (3-Column Layout) ==================== -->
     <div class="main-container">
         <!-- Top Bar (Header) -->
-        <header class="h-14 flex items-center justify-between px-6 border-b border-border-dark bg-background-dark flex-shrink-0">
+        <header class="h-14 flex items-center justify-between px-6 border-b border-border-dark bg-background-dark flex-shrink-0" role="banner" aria-label="상단 헤더">
             <!-- Left: Hamburger + Version Badge -->
             <div class="flex items-center gap-3">
                 <!-- Hamburger Menu Button (visible on md and below) -->
-                <button class="hamburger-btn" id="hamburger-btn" aria-label="메뉴 열기" onclick="toggleSidebar()">
-                    <span class="material-symbols-outlined">menu</span>
+                <button class="hamburger-btn" id="hamburger-btn" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar" onclick="toggleSidebar()">
+                    <span class="material-symbols-outlined" aria-hidden="true">menu</span>
                 </button>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-dark text-primary">Beta v2.5</span>
             </div>
@@ -2605,16 +2618,16 @@
             <!-- Right: Usage Display + Provider Badge + Actions -->
             <div class="flex items-center gap-3">
                 <!-- Usage Display -->
-                <div id="usage-display-header" class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg text-xs">
+                <div id="usage-display-header" class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg text-xs" role="status" aria-label="사용량 현황" aria-live="polite">
                     <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">bolt</span>
                     <span class="text-text-secondary">
-                        <span id="header-usage-count">-</span> / <span id="header-usage-limit">-</span>
+                        <span id="header-usage-count" aria-label="현재 사용량">-</span> / <span id="header-usage-limit" aria-label="일일 제한">-</span>
                     </span>
                 </div>
 
                 <!-- AI Provider Badge -->
-                <div id="provider-badge-header" class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg cursor-pointer hover:bg-bg-elevated transition-colors">
-                    <span class="text-primary text-[10px] font-bold">AI</span>
+                <div id="provider-badge-header" class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark rounded-lg cursor-pointer hover:bg-bg-elevated transition-colors" role="status" aria-label="현재 AI 서비스">
+                    <span class="text-primary text-[10px] font-bold" aria-hidden="true">AI</span>
                     <span class="text-xs text-text-secondary" id="current-provider-label">미설정</span>
                 </div>
 
@@ -2625,7 +2638,7 @@
                 </button>
 
                 <!-- Settings Button -->
-                <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정">
+                <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정 열기" aria-haspopup="dialog">
                     <span class="material-symbols-outlined text-lg" aria-hidden="true">settings</span>
                 </button>
 
@@ -2650,7 +2663,7 @@
             <!-- AI Services Section -->
             <div class="mb-6">
                 <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
-                    <span class="material-symbols-outlined text-primary">smart_toy</span>
+                    <span class="material-symbols-outlined text-primary" aria-hidden="true">smart_toy</span>
                     AI 서비스
                 </h3>
                 <div id="provider-list" class="space-y-3 max-h-[40vh] overflow-y-auto">
@@ -2661,16 +2674,17 @@
             <!-- Cache Management Section -->
             <div class="pt-4 border-t border-border-dark/50">
                 <h3 class="font-bold mb-3 flex items-center gap-2 text-sm">
-                    <span class="material-symbols-outlined text-orange-400">cached</span>
+                    <span class="material-symbols-outlined text-orange-400" aria-hidden="true">cached</span>
                     캐시 관리
                 </h3>
                 <p class="text-xs text-text-subtle mb-3 font-body">
                     저장된 자막/댓글 캐시를 삭제합니다. 같은 영상을 새로 분석하려면 캐시를 삭제하세요.
                 </p>
-                <button type="button" id="clear-cache-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all rounded-lg text-sm font-medium">
-                    <span class="material-symbols-outlined text-base">delete</span>
+                <button type="button" id="clear-cache-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all rounded-lg text-sm font-medium" aria-describedby="cache-description">
+                    <span class="material-symbols-outlined text-base" aria-hidden="true">delete</span>
                     <span>전체 캐시 삭제</span>
                 </button>
+                <span id="cache-description" class="sr-only">저장된 자막과 댓글 캐시를 모두 삭제합니다</span>
             </div>
 
             <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-border-dark/50">
@@ -2954,106 +2968,108 @@
     </div>
 
         <!-- Main Content Area - 3-Column Layout (Input 350px + Result flex-1) -->
-        <main id="main-content" class="content-area">
+        <main id="main-content" class="content-area" role="main" aria-label="메인 콘텐츠 영역">
                 <!-- ==================== 입력 패널 (350px) ==================== -->
-                <div id="input-panel" class="flex flex-col bg-background-dark">
+                <section id="input-panel" class="flex flex-col bg-background-dark" role="region" aria-label="콘텐츠 생성 입력">
                     <!-- Alert Container -->
-                    <div id="alert-container" class="px-4 pt-4"></div>
+                    <div id="alert-container" class="px-4 pt-4" role="alert" aria-live="polite"></div>
 
                     <!-- ===== URL 입력 섹션 ===== -->
-                    <div class="p-4 border-b border-border-dark">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-symbols-outlined text-primary text-sm">link</span>
+                    <fieldset class="p-4 border-b border-border-dark">
+                        <legend class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">link</span>
                             <span class="text-sm font-medium text-white">YouTube URL</span>
-                        </div>
+                        </legend>
                         <!-- URL 입력 필드 - 크기 증가 및 placeholder 개선 -->
                         <div class="flex gap-2">
                             <div class="relative flex-1">
-                                <input type="text" id="url-input"
+                                <input type="url" id="url-input"
                                        class="w-full bg-surface-dark border border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-white placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                        placeholder="YouTube 영상 URL을 붙여넣기 하세요"
-                                       aria-label="YouTube 영상 URL 입력">
-                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                                       aria-label="YouTube 영상 URL 입력"
+                                       aria-describedby="url-hint"
+                                       autocomplete="off">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-primary" aria-hidden="true">
                                     <span class="material-symbols-outlined text-xl">smart_display</span>
                                 </div>
                             </div>
-                            <button id="start-btn" class="px-4 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl transition-all flex items-center gap-2 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30" title="URL 추가">
-                                <span class="material-symbols-outlined text-xl">add</span>
+                            <button id="start-btn" class="px-4 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl transition-all flex items-center gap-2 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30" aria-label="URL 목록에 추가">
+                                <span class="material-symbols-outlined text-xl" aria-hidden="true">add</span>
                                 <span class="text-sm hidden sm:inline">추가</span>
                             </button>
                         </div>
                         <!-- URL 힌트 텍스트 -->
-                        <p class="mt-2 text-xs text-text-secondary/60 flex items-center gap-1">
-                            <span class="material-symbols-outlined text-xs">info</span>
+                        <p id="url-hint" class="mt-2 text-xs text-text-secondary/60 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs" aria-hidden="true">info</span>
                             youtube.com, youtu.be 형식 지원 (최대 10개)
                         </p>
                         <!-- URL 목록 -->
-                        <div id="url-list-container" class="mt-3 space-y-1.5 max-h-[150px] overflow-y-auto"></div>
+                        <div id="url-list-container" class="mt-3 space-y-1.5 max-h-[150px] overflow-y-auto" role="list" aria-label="추가된 URL 목록" aria-live="polite"></div>
                         <!-- URL 개수 및 AI 자동 분석 -->
                         <div class="flex items-center justify-between mt-3">
-                            <span class="text-xs text-text-secondary flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-xs text-primary/60">playlist_add</span>
+                            <span class="text-xs text-text-secondary flex items-center gap-1.5" role="status" aria-label="URL 개수">
+                                <span class="material-symbols-outlined text-xs text-primary/60" aria-hidden="true">playlist_add</span>
                                 <span id="url-count">0</span>/10 URLs
                             </span>
-                            <button id="ai-analyze-btn" class="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors" title="AI가 제목을 분석하여 최적 세팅 후 바로 분석합니다">
-                                <span class="material-symbols-outlined text-sm">auto_awesome</span>
+                            <button id="ai-analyze-btn" class="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors" aria-label="AI 자동 분석: 제목을 분석하여 최적 세팅 후 바로 분석">
+                                <span class="material-symbols-outlined text-sm" aria-hidden="true">auto_awesome</span>
                                 <span>AI 자동 분석</span>
                             </button>
                         </div>
-                    </div>
+                    </fieldset>
 
                     <!-- ===== AI 모델 섹션 ===== -->
-                    <div class="p-4 border-b border-border-dark">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="material-symbols-outlined text-primary text-sm">psychology</span>
+                    <fieldset class="p-4 border-b border-border-dark">
+                        <legend class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">psychology</span>
                             <span class="text-sm font-medium text-white">AI 모델</span>
-                        </div>
+                        </legend>
                         <!-- 개선된 드롭다운 - 카드 형태 -->
                         <div class="grid grid-cols-2 gap-3">
                             <!-- 서비스 선택 카드 -->
                             <div class="select-card">
-                                <label class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
+                                <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
                                 <div class="relative">
-                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
+                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
                                         <option value="">선택하세요</option>
                                     </select>
-                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60">
+                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
                                         <span class="material-symbols-outlined text-lg">unfold_more</span>
                                     </div>
                                 </div>
                             </div>
                             <!-- 모델 선택 카드 -->
                             <div class="select-card">
-                                <label class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
+                                <label for="model" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
                                 <div class="relative">
                                     <select id="model" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
                                         <option value="">선택하세요</option>
                                     </select>
-                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60">
+                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
                                         <span class="material-symbols-outlined text-lg">unfold_more</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <!-- 선택된 모델 정보 표시 -->
-                        <div id="selected-model-info" class="mt-3 p-2.5 bg-primary/5 border border-primary/20 rounded-xl hidden">
+                        <div id="selected-model-info" class="mt-3 p-2.5 bg-primary/5 border border-primary/20 rounded-xl hidden" role="status" aria-live="polite">
                             <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+                                <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">check_circle</span>
                                 <span id="selected-model-text" class="text-xs text-text-secondary"></span>
                             </div>
                         </div>
-                    </div>
+                    </fieldset>
 
                     <!-- ===== 스타일 섹션 ===== -->
-                    <div class="p-4 border-b border-border-dark flex-1 overflow-y-auto">
+                    <fieldset class="p-4 border-b border-border-dark flex-1 overflow-y-auto">
                         <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-sm">style</span>
+                            <legend class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">style</span>
                                 <span class="text-sm font-medium text-white">스타일</span>
-                            </div>
+                            </legend>
                             <!-- 커스텀 스타일 추가 버튼 -->
-                            <button id="add-custom-style-btn" class="px-2.5 py-1.5 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1">
-                                <span class="material-symbols-outlined text-sm">add</span>
+                            <button id="add-custom-style-btn" class="px-2.5 py-1.5 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1" aria-label="커스텀 스타일 추가" aria-haspopup="dialog">
+                                <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
                                 Custom
                             </button>
                         </div>
@@ -3067,33 +3083,37 @@
                                     기본
                                 </span>
                                 <div class="grid grid-cols-4 gap-2" id="style-options" role="radiogroup" aria-labelledby="style-basic-label">
-                                    <label class="style-grid-item cursor-pointer group" title="블로그 포스트 형태로 작성합니다">
-                                        <input checked name="style" type="radio" value="blog" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input checked name="style" type="radio" value="blog" class="peer sr-only" aria-describedby="style-blog-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">edit_note</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">edit_note</span>
                                             <span class="text-[10px] font-medium">Blog</span>
                                         </div>
+                                        <span id="style-blog-desc" class="sr-only">블로그 포스트 형태로 작성합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="핵심 내용만 간결하게 요약합니다">
-                                        <input name="style" type="radio" value="summary" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="summary" class="peer sr-only" aria-describedby="style-summary-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">description</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">description</span>
                                             <span class="text-[10px] font-medium">Summary</span>
                                         </div>
+                                        <span id="style-summary-desc" class="sr-only">핵심 내용만 간결하게 요약합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="상세하고 풍부하게 작성합니다">
-                                        <input name="style" type="radio" value="detailed" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="detailed" class="peer sr-only" aria-describedby="style-detailed-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">article</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">article</span>
                                             <span class="text-[10px] font-medium">Detail</span>
                                         </div>
+                                        <span id="style-detailed-desc" class="sr-only">상세하고 풍부하게 작성합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="누구나 이해하기 쉬운 말로 풀어서 설명합니다">
-                                        <input name="style" type="radio" value="easy" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="easy" class="peer sr-only" aria-describedby="style-easy-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">forum</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">forum</span>
                                             <span class="text-[10px] font-medium">Easy</span>
                                         </div>
+                                        <span id="style-easy-desc" class="sr-only">누구나 이해하기 쉬운 말로 풀어서 설명합니다</span>
                                     </label>
                                 </div>
                             </div>
@@ -3105,33 +3125,37 @@
                                     분석
                                 </span>
                                 <div class="grid grid-cols-4 gap-2" id="style-options-analysis" role="radiogroup" aria-labelledby="style-analysis-label">
-                                    <label class="style-grid-item cursor-pointer group" title="영상에서 언급된 니즈와 추천 아이템을 분석합니다">
-                                        <input name="style" type="radio" value="needs" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="needs" class="peer sr-only" aria-describedby="style-needs-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">lightbulb</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">lightbulb</span>
                                             <span class="text-[10px] font-medium">Ideas</span>
                                         </div>
+                                        <span id="style-needs-desc" class="sr-only">영상에서 언급된 니즈와 추천 아이템을 분석합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="질문과 답변 형식으로 정리합니다">
-                                        <input name="style" type="radio" value="qna" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="qna" class="peer sr-only" aria-describedby="style-qna-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">quiz</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">quiz</span>
                                             <span class="text-[10px] font-medium">Q&A</span>
                                         </div>
+                                        <span id="style-qna-desc" class="sr-only">질문과 답변 형식으로 정리합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="인포그래픽 제작에 적합한 핵심 데이터를 추출합니다">
-                                        <input name="style" type="radio" value="infographic" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="infographic" class="peer sr-only" aria-describedby="style-info-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">insert_chart</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">insert_chart</span>
                                             <span class="text-[10px] font-medium">Info</span>
                                         </div>
+                                        <span id="style-info-desc" class="sr-only">인포그래픽 제작에 적합한 핵심 데이터를 추출합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="여러 요소를 비교 분석하여 정리합니다">
-                                        <input name="style" type="radio" value="compare" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="compare" class="peer sr-only" aria-describedby="style-compare-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">compare</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">compare</span>
                                             <span class="text-[10px] font-medium">Compare</span>
                                         </div>
+                                        <span id="style-compare-desc" class="sr-only">여러 요소를 비교 분석하여 정리합니다</span>
                                     </label>
                                 </div>
                             </div>
@@ -3143,42 +3167,46 @@
                                     콘텐츠
                                 </span>
                                 <div class="grid grid-cols-4 gap-2" id="style-options-content" role="radiogroup" aria-labelledby="style-content-label">
-                                    <label class="style-grid-item cursor-pointer group" title="뉴스 기사 형태로 객관적으로 작성합니다">
-                                        <input name="style" type="radio" value="news" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="news" class="peer sr-only" aria-describedby="style-news-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">newspaper</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">newspaper</span>
                                             <span class="text-[10px] font-medium">News</span>
                                         </div>
+                                        <span id="style-news-desc" class="sr-only">뉴스 기사 형태로 객관적으로 작성합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="영상 대본/스크립트 형태로 재구성합니다">
-                                        <input name="style" type="radio" value="script" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="script" class="peer sr-only" aria-describedby="style-script-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">movie</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">movie</span>
                                             <span class="text-[10px] font-medium">Script</span>
                                         </div>
+                                        <span id="style-script-desc" class="sr-only">영상 대본/스크립트 형태로 재구성합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다">
-                                        <input name="style" type="radio" value="sns" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="sns" class="peer sr-only" aria-describedby="style-sns-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">share</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">share</span>
                                             <span class="text-[10px] font-medium">SNS</span>
                                         </div>
+                                        <span id="style-sns-desc" class="sr-only">SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다</span>
                                     </label>
-                                    <label class="style-grid-item cursor-pointer group" title="SEO에 최적화된 형태로 작성합니다">
-                                        <input name="style" type="radio" value="seo" class="peer sr-only"/>
+                                    <label class="style-grid-item cursor-pointer group">
+                                        <input name="style" type="radio" value="seo" class="peer sr-only" aria-describedby="style-seo-desc"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
-                                            <span class="material-symbols-outlined text-xl mb-1">search</span>
+                                            <span class="material-symbols-outlined text-xl mb-1" aria-hidden="true">search</span>
                                             <span class="text-[10px] font-medium">SEO</span>
                                         </div>
+                                        <span id="style-seo-desc" class="sr-only">SEO에 최적화된 형태로 작성합니다</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Custom Styles Section -->
-                        <div id="custom-styles-section" class="hidden mb-4">
-                            <span class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                        <div id="custom-styles-section" class="hidden mb-4" role="region" aria-label="사용자 정의 스타일">
+                            <span id="style-custom-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-purple-400 rounded-full" aria-hidden="true"></span>
                                 My Styles
                             </span>
                             <div id="custom-styles-grid" class="grid grid-cols-4 gap-2">
@@ -3187,77 +3215,77 @@
                         </div>
 
                         <!-- AI Style Generate Button -->
-                        <button id="generate-style-btn" class="w-full px-3 py-2.5 rounded-xl border border-border-dark hover:border-primary bg-gradient-to-r from-primary/5 to-purple-500/5 text-text-secondary hover:text-primary text-xs font-medium transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/10" title="AI가 영상에 맞는 맞춤 프롬프트를 생성합니다">
-                            <span class="material-symbols-outlined text-base">auto_awesome</span>
+                        <button id="generate-style-btn" class="w-full px-3 py-2.5 rounded-xl border border-border-dark hover:border-primary bg-gradient-to-r from-primary/5 to-purple-500/5 text-text-secondary hover:text-primary text-xs font-medium transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/10" aria-label="AI 스타일 생성: 영상에 맞는 맞춤 프롬프트를 자동 생성합니다">
+                            <span class="material-symbols-outlined text-base" aria-hidden="true">auto_awesome</span>
                             <span>AI 스타일 생성</span>
                         </button>
-                    </div>
+                    </fieldset>
 
                     <!-- ===== 모디파이어 옵션 (칩 형태) ===== -->
                     <div class="border-b border-border-dark">
-                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors">
+                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="false" aria-controls="advanced-options-panel">
                             <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm text-primary">tune</span>
+                                <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">tune</span>
                                 <span class="text-sm font-medium">모디파이어</span>
                             </div>
-                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow">expand_more</span>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow" aria-hidden="true">expand_more</span>
                         </button>
-                        <div id="advanced-options-panel" class="hidden p-4 pt-0 space-y-4">
+                        <div id="advanced-options-panel" class="hidden p-4 pt-0 space-y-4" role="region" aria-label="콘텐츠 생성 옵션">
                             <!-- 길이 - 칩 형태 -->
-                            <div class="modifier-group">
-                                <label class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
-                                    <span class="material-symbols-outlined text-xs text-amber-500">straighten</span>
+                            <div class="modifier-group" role="group" aria-labelledby="length-label">
+                                <span id="length-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
+                                    <span class="material-symbols-outlined text-xs text-amber-500" aria-hidden="true">straighten</span>
                                     길이
-                                </label>
-                                <div class="flex flex-wrap gap-2">
+                                </span>
+                                <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="length-label">
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="short" class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">short_text</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">short_text</span>
                                             짧게
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="medium" checked class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">notes</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">notes</span>
                                             보통
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="long" class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">subject</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">subject</span>
                                             상세
                                         </div>
                                     </label>
                                 </div>
                             </div>
                             <!-- 톤 - 칩 형태 -->
-                            <div class="modifier-group">
-                                <label class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
-                                    <span class="material-symbols-outlined text-xs text-emerald-500">record_voice_over</span>
+                            <div class="modifier-group" role="group" aria-labelledby="tone-label">
+                                <span id="tone-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
+                                    <span class="material-symbols-outlined text-xs text-emerald-500" aria-hidden="true">record_voice_over</span>
                                     톤
-                                </label>
-                                <div class="flex flex-wrap gap-2">
+                                </span>
+                                <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="tone-label">
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="professional" checked class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">business_center</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">business_center</span>
                                             전문적
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="friendly" class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">sentiment_satisfied</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">sentiment_satisfied</span>
                                             친근
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="humorous" class="peer sr-only"/>
                                         <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-sm">mood</span>
+                                            <span class="material-symbols-outlined text-sm" aria-hidden="true">mood</span>
                                             유머
                                         </div>
                                     </label>
@@ -3265,12 +3293,12 @@
                             </div>
                             <!-- 언어 & 이모지 - 칩 형태 -->
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="modifier-group">
-                                    <label class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
-                                        <span class="material-symbols-outlined text-xs text-blue-500">translate</span>
+                                <div class="modifier-group" role="group" aria-labelledby="language-label">
+                                    <span id="language-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
+                                        <span class="material-symbols-outlined text-xs text-blue-500" aria-hidden="true">translate</span>
                                         언어
-                                    </label>
-                                    <div class="flex flex-wrap gap-2">
+                                    </span>
+                                    <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="language-label">
                                         <label class="modifier-chip cursor-pointer">
                                             <input type="radio" name="language" value="ko" checked class="peer sr-only"/>
                                             <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium">
@@ -3291,22 +3319,22 @@
                                         </label>
                                     </div>
                                     <!-- 기존 select 숨김 처리 (JS 호환성) -->
-                                    <select id="language-select" class="hidden">
+                                    <select id="language-select" class="hidden" aria-hidden="true">
                                         <option value="ko">한국어</option>
                                         <option value="en">English</option>
                                         <option value="ja">日本語</option>
                                     </select>
                                 </div>
-                                <div class="modifier-group">
-                                    <label class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
-                                        <span class="material-symbols-outlined text-xs text-pink-500">add_reaction</span>
+                                <div class="modifier-group" role="group" aria-labelledby="emoji-label">
+                                    <span id="emoji-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
+                                        <span class="material-symbols-outlined text-xs text-pink-500" aria-hidden="true">add_reaction</span>
                                         이모지
-                                    </label>
+                                    </span>
                                     <div class="flex flex-wrap gap-2">
                                         <label class="modifier-chip cursor-pointer">
-                                            <input type="checkbox" id="emoji-checkbox" class="peer sr-only"/>
+                                            <input type="checkbox" id="emoji-checkbox" class="peer sr-only" aria-labelledby="emoji-label"/>
                                             <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
-                                                <span class="material-symbols-outlined text-sm">sentiment_very_satisfied</span>
+                                                <span class="material-symbols-outlined text-sm" aria-hidden="true">sentiment_very_satisfied</span>
                                                 사용
                                             </div>
                                         </label>
@@ -3318,112 +3346,114 @@
 
                     <!-- ===== 생성 버튼 (하단 고정) ===== -->
                     <div class="p-4 mt-auto">
-                        <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-xl" id="run-icon">auto_awesome</span>
+                        <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" aria-describedby="pending-badge-desc">
+                            <span class="material-symbols-outlined text-xl" id="run-icon" aria-hidden="true">auto_awesome</span>
                             <span id="run-text">콘텐츠 생성</span>
-                            <span id="pending-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-lg animate-pulse">0</span>
+                            <span id="pending-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-lg animate-pulse" role="status" aria-live="polite">0</span>
+                            <span id="pending-badge-desc" class="sr-only">대기 중인 URL 개수</span>
                         </button>
                     </div>
-                </div>
+                </section>
 
                 <!-- ==================== 결과 패널 (flex-1) ==================== -->
-                <div id="result-panel" class="flex flex-col bg-background-dark">
+                <section id="result-panel" class="flex flex-col bg-background-dark" role="region" aria-label="생성 결과">
                     <!-- ===== Dashboard View (기존) ===== -->
-                    <div id="dashboard-view" class="panel-view">
+                    <div id="dashboard-view" class="panel-view" role="tabpanel" aria-labelledby="dashboard-tab">
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-lg font-semibold text-white">결과</h2>
-                                <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary">
-                                    <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-                                    <span>LIVE</span>
+                                <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
+                                    <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
+                                    <span>생성 중</span>
+                                    <span class="sr-only">콘텐츠 생성이 진행 중입니다</span>
                                 </div>
                             </div>
                         </div>
                         <!-- 리포트 스트림 -->
-                        <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto"></div>
+                        <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto" role="feed" aria-label="생성된 콘텐츠 목록" aria-live="polite"></div>
                         <!-- Empty State -->
-                        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4">article</span>
+                        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center" role="status">
+                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4" aria-hidden="true">article</span>
                             <p class="text-text-muted text-lg mb-2">생성된 콘텐츠가 없습니다</p>
                             <p class="text-text-muted text-sm">왼쪽에서 URL을 입력하고 콘텐츠를 생성하세요</p>
                         </div>
                     </div>
 
                     <!-- ===== History View (신규) ===== -->
-                    <div id="history-view" class="panel-view hidden overflow-hidden">
+                    <div id="history-view" class="panel-view hidden overflow-hidden" role="tabpanel" aria-labelledby="history-tab">
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                                    <span class="material-symbols-outlined">history</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">history</span>
                                     히스토리
                                 </h2>
-                                <button id="clear-all-history-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                <button id="clear-all-history-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors flex items-center gap-1" aria-label="전체 히스토리 삭제">
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
                                     전체 삭제
                                 </button>
                             </div>
                         </div>
                         <!-- 히스토리 목록 -->
-                        <div id="history-list" class="flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden"></div>
+                        <div id="history-list" class="flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden" role="list" aria-label="히스토리 목록"></div>
                         <!-- Empty State -->
-                        <div id="history-empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4">history</span>
+                        <div id="history-empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center" role="status">
+                            <span class="material-symbols-outlined text-6xl text-text-muted mb-4" aria-hidden="true">history</span>
                             <p class="text-text-muted text-lg mb-2">히스토리가 없습니다</p>
                             <p class="text-text-muted text-sm">콘텐츠를 생성하면 여기에 기록됩니다</p>
                         </div>
                         <!-- 푸터 -->
-                        <div id="history-footer" class="p-3 border-t border-border-dark text-xs text-text-muted text-center hidden">
+                        <div id="history-footer" class="p-3 border-t border-border-dark text-xs text-text-muted text-center hidden" role="status">
                             총 <span id="history-count">0</span>개 항목 • 최대 50개 저장
                         </div>
                     </div>
 
                     <!-- ===== Usage View (신규) ===== -->
-                    <div id="usage-view" class="panel-view hidden">
+                    <div id="usage-view" class="panel-view hidden" role="tabpanel" aria-labelledby="usage-tab">
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                                <span class="material-symbols-outlined">bar_chart</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">bar_chart</span>
                                 사용량
                             </h2>
                         </div>
                         <!-- 사용량 대시보드 -->
                         <div class="flex-1 p-4 space-y-6 overflow-y-auto">
                             <!-- 오늘 사용량 카드 -->
-                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
-                                <h3 class="text-sm font-medium text-text-muted mb-3">오늘 사용량</h3>
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4" role="region" aria-labelledby="today-usage-title">
+                                <h3 id="today-usage-title" class="text-sm font-medium text-text-muted mb-3">오늘 사용량</h3>
                                 <div class="space-y-2">
                                     <div class="flex justify-between text-sm">
-                                        <span id="usage-current" class="text-white font-semibold">0</span>
-                                        <span id="usage-limit" class="text-text-muted">/ 5</span>
+                                        <span id="usage-current" class="text-white font-semibold" aria-label="현재 사용 횟수">0</span>
+                                        <span id="usage-limit" class="text-text-muted" aria-label="일일 제한">/ 5</span>
                                     </div>
-                                    <div class="h-2 bg-background-dark rounded-full overflow-hidden">
+                                    <div class="h-2 bg-background-dark rounded-full overflow-hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="사용량 진행률">
                                         <div id="usage-progress-bar" class="h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
                                     </div>
-                                    <p id="usage-remaining" class="text-xs text-text-muted">남은 횟수: 5회</p>
+                                    <p id="usage-remaining" class="text-xs text-text-muted" role="status" aria-live="polite">남은 횟수: 5회</p>
                                 </div>
                             </div>
 
                             <!-- 최근 7일 그래프 -->
-                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
-                                <h3 class="text-sm font-medium text-text-muted mb-4">최근 7일</h3>
-                                <div id="weekly-chart" class="flex items-end justify-between h-32 gap-2">
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4" role="region" aria-labelledby="weekly-chart-title">
+                                <h3 id="weekly-chart-title" class="text-sm font-medium text-text-muted mb-4">최근 7일</h3>
+                                <div id="weekly-chart" class="flex items-end justify-between h-32 gap-2" role="img" aria-label="최근 7일간 사용량 차트">
                                     <!-- 바 차트 (JS로 생성) -->
                                 </div>
                             </div>
 
                             <!-- 스타일별 통계 -->
-                            <div class="bg-card-dark border border-card-border rounded-xl p-4">
-                                <h3 class="text-sm font-medium text-text-muted mb-4">스타일별 사용</h3>
-                                <div id="style-stats" class="space-y-3">
+                            <div class="bg-card-dark border border-card-border rounded-xl p-4" role="region" aria-labelledby="style-stats-title">
+                                <h3 id="style-stats-title" class="text-sm font-medium text-text-muted mb-4">스타일별 사용</h3>
+                                <div id="style-stats" class="space-y-3" role="list" aria-label="스타일별 사용 통계">
                                     <!-- 스타일 바 (JS로 생성) -->
                                 </div>
-                                <p id="style-stats-empty" class="text-center text-text-muted text-sm py-4 hidden">통계 데이터가 없습니다</p>
+                                <p id="style-stats-empty" class="text-center text-text-muted text-sm py-4 hidden" role="status">통계 데이터가 없습니다</p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
         </main>
     </div><!-- End Main Content Area -->
 
@@ -3526,22 +3556,22 @@
     <script type="module" src="/static/js/main.js"></script>
 
     <!-- ==================== Mobile Bottom Navigation ==================== -->
-    <nav id="mobile-bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background-dark/95 backdrop-blur-md border-t border-card-border/50">
-        <div class="grid grid-cols-4 h-14 pb-safe">
-            <button class="mobile-nav-item active" data-section="dashboard" onclick="scrollToSection('url-input')">
-                <span class="material-symbols-outlined">dashboard</span>
+    <nav id="mobile-bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background-dark/95 backdrop-blur-md border-t border-card-border/50" role="navigation" aria-label="모바일 하단 메뉴">
+        <div class="grid grid-cols-4 h-14 pb-safe" role="tablist">
+            <button class="mobile-nav-item active" data-section="dashboard" onclick="scrollToSection('url-input')" role="tab" aria-selected="true" aria-label="홈으로 이동">
+                <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
                 <span>홈</span>
             </button>
-            <button class="mobile-nav-item" data-section="styles" onclick="scrollToSection('style-options')">
-                <span class="material-symbols-outlined">palette</span>
+            <button class="mobile-nav-item" data-section="styles" onclick="scrollToSection('style-options')" role="tab" aria-selected="false" aria-label="스타일 선택으로 이동">
+                <span class="material-symbols-outlined" aria-hidden="true">palette</span>
                 <span>스타일</span>
             </button>
-            <button class="mobile-nav-item" data-section="reports" onclick="scrollToSection('report-stream')">
-                <span class="material-symbols-outlined">article</span>
+            <button class="mobile-nav-item" data-section="reports" onclick="scrollToSection('report-stream')" role="tab" aria-selected="false" aria-label="리포트 영역으로 이동">
+                <span class="material-symbols-outlined" aria-hidden="true">article</span>
                 <span>리포트</span>
             </button>
-            <button class="mobile-nav-item" data-section="settings" onclick="document.getElementById('settings-modal')?.classList.add('active')">
-                <span class="material-symbols-outlined">settings</span>
+            <button class="mobile-nav-item" data-section="settings" onclick="document.getElementById('settings-modal')?.classList.add('active')" role="tab" aria-selected="false" aria-label="설정 열기" aria-haspopup="dialog">
+                <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                 <span>설정</span>
             </button>
         </div>
@@ -3559,20 +3589,20 @@
     </script>
 
     <!-- 모바일 탭 바 (768px 이하에서만 표시) -->
-    <div class="mobile-tab-bar">
-        <button class="mobile-tab active" data-panel="input">
-            <span class="material-symbols-outlined">edit</span>
+    <nav class="mobile-tab-bar" role="tablist" aria-label="모바일 패널 전환">
+        <button class="mobile-tab active" data-panel="input" role="tab" aria-selected="true" aria-controls="input-panel">
+            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
             <span>입력</span>
         </button>
-        <button class="mobile-tab" data-panel="result">
-            <span class="material-symbols-outlined">article</span>
+        <button class="mobile-tab" data-panel="result" role="tab" aria-selected="false" aria-controls="result-panel">
+            <span class="material-symbols-outlined" aria-hidden="true">article</span>
             <span>결과</span>
         </button>
-        <button class="mobile-tab" data-panel="settings" onclick="document.getElementById('settings-modal')?.classList.add('active')">
-            <span class="material-symbols-outlined">settings</span>
+        <button class="mobile-tab" data-panel="settings" onclick="document.getElementById('settings-modal')?.classList.add('active')" role="tab" aria-selected="false" aria-haspopup="dialog">
+            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
             <span>설정</span>
         </button>
-    </div>
+    </nav>
 
     <script>
         // 모바일 탭 전환
