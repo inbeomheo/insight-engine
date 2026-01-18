@@ -78,6 +78,24 @@
                         "body": ["Space Grotesk", "Pretendard", "sans-serif"],
                         "mono": ["JetBrains Mono", "monospace"]
                     },
+                    fontSize: {
+                        // US-017: 4단계 타이포그래피 스케일 (최소 14px 보장)
+                        'xs': ['0.875rem', { lineHeight: '1.5' }],     // 14px - 최소 크기
+                        'sm': ['0.875rem', { lineHeight: '1.5' }],     // 14px - 캡션/보조
+                        'base': ['1rem', { lineHeight: '1.625' }],     // 16px - 본문
+                        'lg': ['1.125rem', { lineHeight: '1.625' }],   // 18px - 큰 본문
+                        'xl': ['1.25rem', { lineHeight: '1.375' }],    // 20px - h4
+                        '2xl': ['1.5rem', { lineHeight: '1.375' }],    // 24px - h3
+                        '3xl': ['1.875rem', { lineHeight: '1.25' }],   // 30px - h2
+                        '4xl': ['2.25rem', { lineHeight: '1.25' }],    // 36px - h1
+                    },
+                    lineHeight: {
+                        'tight': '1.25',
+                        'snug': '1.375',
+                        'normal': '1.5',
+                        'relaxed': '1.625',
+                        'loose': '1.75',
+                    },
                     borderRadius: {
                         "DEFAULT": "0.25rem",
                         "lg": "0.5rem",
@@ -112,6 +130,22 @@
             --spacing-md: 0.75rem;   /* 12px */
             --spacing-lg: 1rem;      /* 16px */
             --spacing-xl: 1.25rem;   /* 20px */
+
+            /* US-017: 타이포그래피 스케일 */
+            --font-size-caption: 0.875rem;   /* 14px - 최소 크기 */
+            --font-size-body: 1rem;          /* 16px - 본문 */
+            --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
+            --font-size-h4: 1.25rem;         /* 20px - 소제목 */
+            --font-size-h3: 1.5rem;          /* 24px - 중제목 */
+            --font-size-h2: 1.875rem;        /* 30px - 대제목 */
+            --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
+
+            /* Line Heights */
+            --line-height-tight: 1.25;
+            --line-height-snug: 1.375;
+            --line-height-normal: 1.5;
+            --line-height-relaxed: 1.625;
+            --line-height-loose: 1.75;
         }
 
         /* ========== Dark Mode ========== */
@@ -128,6 +162,68 @@
             --text-subtle: #93bfc8;
             --border-dark: #2a2e33;
             --card-border: #345d65;
+        }
+
+        /* ==================== US-017: Typography Scale System ==================== */
+
+        /* Headings - 제목 스타일 */
+        h1, .h1, .page-title {
+            font-size: var(--font-size-h1);
+            font-weight: 700;
+            line-height: var(--line-height-tight);
+            letter-spacing: -0.025em;
+        }
+
+        h2, .h2, .section-title {
+            font-size: var(--font-size-h2);
+            font-weight: 700;
+            line-height: var(--line-height-tight);
+            letter-spacing: -0.02em;
+        }
+
+        h3, .h3, .card-title {
+            font-size: var(--font-size-h3);
+            font-weight: 600;
+            line-height: var(--line-height-snug);
+            letter-spacing: -0.015em;
+        }
+
+        h4, .h4, .subsection-title {
+            font-size: var(--font-size-h4);
+            font-weight: 600;
+            line-height: var(--line-height-snug);
+            letter-spacing: -0.01em;
+        }
+
+        /* Body Text - 본문 스타일 */
+        body {
+            font-size: var(--font-size-body);
+            line-height: var(--line-height-relaxed);
+        }
+
+        p, .body-text {
+            font-size: var(--font-size-body);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .body-lg {
+            font-size: var(--font-size-body-lg);
+            line-height: var(--line-height-relaxed);
+        }
+
+        /* Caption - 캡션/보조 텍스트 (최소 14px) */
+        .caption, small, .text-caption {
+            font-size: var(--font-size-caption);
+            line-height: var(--line-height-normal);
+        }
+
+        /* Overline/Label - 라벨/카테고리용 */
+        .overline, .text-label {
+            font-size: var(--font-size-caption);
+            font-weight: 600;
+            line-height: var(--line-height-normal);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
 
         /* ==================== 3-Column Layout Grid System ==================== */

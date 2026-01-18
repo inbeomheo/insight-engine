@@ -51,6 +51,7 @@
 
     /* ----------------------------------------
        Typography - 타이포그래피 변수
+       US-017: 4단계 타이포그래피 스케일
        ---------------------------------------- */
 
     /* Font Families - 폰트 패밀리 변수 */
@@ -58,19 +59,31 @@
     --font-family-display: "Space Grotesk", "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
     --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-    /* Font Sizes */
-    --font-size-xs: 0.75rem;         /* 12px */
-    --font-size-sm: 0.875rem;        /* 14px */
+    /* Font Sizes - 4단계 타이포그래피 스케일 (최소 14px 보장) */
+    --font-size-caption: 0.875rem;   /* 14px - 캡션/보조 텍스트 (최소 크기) */
+    --font-size-body: 1rem;          /* 16px - 본문 */
+    --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
+    --font-size-h4: 1.25rem;         /* 20px - 소제목 */
+    --font-size-h3: 1.5rem;          /* 24px - 중제목 */
+    --font-size-h2: 1.875rem;        /* 30px - 대제목 */
+    --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
+
+    /* Legacy Font Sizes (하위 호환성) */
+    --font-size-xs: 0.875rem;        /* 14px - 최소 크기로 상향 조정 */
+    --font-size-sm: 0.875rem;        /* 14px - 최소 크기로 상향 조정 */
     --font-size-base: 1rem;          /* 16px */
     --font-size-lg: 1.125rem;        /* 18px */
     --font-size-xl: 1.25rem;         /* 20px */
     --font-size-2xl: 1.5rem;         /* 24px */
     --font-size-3xl: 1.875rem;       /* 30px */
+    --font-size-4xl: 2.25rem;        /* 36px */
 
-    /* Line Heights */
-    --line-height-tight: 1.25;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.625;
+    /* Line Heights - 본문 기준 1.5~1.75 */
+    --line-height-tight: 1.25;       /* 제목용 - 밀집 */
+    --line-height-snug: 1.375;       /* 소제목용 */
+    --line-height-normal: 1.5;       /* 본문 기본 */
+    --line-height-relaxed: 1.625;    /* 본문 여유 */
+    --line-height-loose: 1.75;       /* 가독성 높은 본문 */
 
     /* Font Weights */
     --font-weight-normal: 400;
@@ -203,6 +216,76 @@
   code, kbd, pre, samp {
     font-family: var(--font-family-mono);
   }
+
+  /* ----------------------------------------
+     Typography Scale - 타이포그래피 계층 구조
+     US-017: 4단계 타이포그래피 스케일
+     ---------------------------------------- */
+
+  /* Headings - 제목 스타일 */
+  h1, .h1 {
+    font-size: var(--font-size-h1);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.025em;
+    font-family: var(--font-family-display);
+  }
+
+  h2, .h2 {
+    font-size: var(--font-size-h2);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.02em;
+    font-family: var(--font-family-display);
+  }
+
+  h3, .h3 {
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.015em;
+    font-family: var(--font-family-display);
+  }
+
+  h4, .h4 {
+    font-size: var(--font-size-h4);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.01em;
+    font-family: var(--font-family-display);
+  }
+
+  /* Body Text - 본문 스타일 */
+  body {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-relaxed);
+  }
+
+  p, .body-text {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-relaxed);
+    font-weight: var(--font-weight-normal);
+  }
+
+  .body-lg {
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+  }
+
+  /* Caption - 캡션/보조 텍스트 (최소 14px) */
+  .caption, small, .text-caption {
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
+  }
+
+  /* Overline - 라벨/카테고리용 */
+  .overline {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
 }
 
 /* ============================================
@@ -211,6 +294,81 @@
    ============================================ */
 
 @layer components {
+  /* ----------------------------------------
+     Typography Components - 타이포그래피 컴포넌트
+     US-017: 폰트 계층 구조 적용
+     ---------------------------------------- */
+
+  /* Page Title - 페이지 최상위 제목 */
+  .page-title {
+    font-size: var(--font-size-h1);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.025em;
+    font-family: var(--font-family-display);
+    color: var(--text-primary);
+  }
+
+  /* Section Title - 섹션 제목 */
+  .section-title {
+    font-size: var(--font-size-h2);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.02em;
+    font-family: var(--font-family-display);
+    color: var(--text-primary);
+  }
+
+  /* Card Title - 카드/패널 제목 */
+  .card-title {
+    font-size: var(--font-size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.015em;
+    font-family: var(--font-family-display);
+    color: var(--text-primary);
+  }
+
+  /* Subsection Title - 소제목 */
+  .subsection-title {
+    font-size: var(--font-size-h4);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.01em;
+    font-family: var(--font-family-display);
+    color: var(--text-primary);
+  }
+
+  /* Body Text Variants */
+  .text-body {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  .text-body-lg {
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+    color: var(--text-secondary);
+  }
+
+  /* Label Text - 폼 라벨, 작은 제목 */
+  .text-label {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-normal);
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  /* Helper Text - 도움말, 힌트 */
+  .text-helper {
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
+    color: var(--text-muted);
+  }
+
   /* ----------------------------------------
      Button Base - 버튼 공통 스타일
      ---------------------------------------- */
