@@ -4,6 +4,11 @@ module.exports = {
     "./templates/**/*.html",
     "./static/js/**/*.js"
   ],
+  safelist: [
+    'url-input-group',
+    'dragging',
+    'drag-over',
+  ],
   theme: {
     extend: {
       /* ----------------------------------------
@@ -41,6 +46,10 @@ module.exports = {
         'border-secondary': 'var(--border-secondary)',
         'border-focus': 'var(--border-focus)',
         'border-dark': 'var(--border-dark)',
+
+        // Surface Colors (컴포넌트용)
+        'surface-dark': 'var(--surface-dark)',
+        'bg-elevated': 'var(--bg-elevated)',
       },
 
       /* ----------------------------------------
