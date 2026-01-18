@@ -69,7 +69,7 @@ export class ReportManager {
                         <div class="skeleton skeleton-title"></div>
                         <div class="skeleton skeleton-text" style="width: 50%;"></div>
                     </div>
-                    <a class="inline-flex items-center gap-1.5 text-text-subtle/40 text-xs font-mono hover:text-text-subtle/60 transition-colors" href="${url}" target="_blank">
+                    <a class="inline-flex items-center gap-1.5 text-text-subtle/40 text-xs font-mono hover:text-text-subtle/60 transition-colors" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
                         <span class="material-symbols-outlined text-sm">play_circle</span>
                         <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
                     </a>
@@ -144,7 +144,7 @@ export class ReportManager {
                     <span class="bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">Error</span>
                 </div>
                 <h3 class="text-xl font-bold text-red-400 leading-tight">분석 실패</h3>
-                <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono" href="${url}" target="_blank">
+                <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
                     <span class="material-symbols-outlined text-sm">open_in_new</span> ${this.ui.escapeHtml(shortUrl)}
                 </a>
             </div>
@@ -264,7 +264,7 @@ export class ReportManager {
                             <span class="style-badge">${styleLabel}</span>
                             <span class="time-badge">${data.time}</span>
                         </div>
-                        <a class="source-link" href="${data.url}" target="_blank" rel="noopener noreferrer">
+                        <a class="source-link" href="${this.ui.sanitizeUrl(data.url)}" target="_blank" rel="noopener noreferrer">
                             <span class="material-symbols-outlined" style="font-size: 14px;">play_circle</span>
                             <span>${this.ui.escapeHtml(shortUrl)}</span>
                         </a>
@@ -289,7 +289,7 @@ export class ReportManager {
                     </button>
                 </div>
                 <div class="card-body report-content">
-                    ${data.html}
+                    ${this.ui.sanitizeHtml(data.html)}
                 </div>
                 <div class="result-card-actions">
                     <button class="prompt-btn">
@@ -353,7 +353,7 @@ export class ReportManager {
                         <span class="text-text-subtle text-xs font-mono">ID: ${reportId} • ${timeStr}</span>
                     </div>
                     <h3 class="text-xl font-bold text-red-400 leading-tight">분석 실패</h3>
-                    <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono uppercase tracking-wide" href="${url}" target="_blank">
+                    <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono uppercase tracking-wide" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
                         <span class="material-symbols-outlined text-sm">open_in_new</span> ${this.ui.escapeHtml(shortUrl)}
                     </a>
                 </div>

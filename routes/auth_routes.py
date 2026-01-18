@@ -90,10 +90,15 @@ def signup():
         return _error_response('회원가입에 실패했습니다.')
 
     except Exception as e:
-        error_msg = str(e)
-        if 'already registered' in error_msg.lower():
+        error_msg = str(e).lower()
+        if 'already registered' in error_msg:
             return _error_response('이미 등록된 이메일입니다.')
-        return _error_response(f'회원가입 오류: {error_msg}')
+        if 'invalid' in error_msg and 'email' in error_msg:
+            return _error_response('유효하지 않은 이메일 형식입니다.')
+        # 보안: 상세 에러 메시지는 로깅만 하고 일반 메시지 반환
+        import logging
+        logging.getLogger(__name__).error(f'회원가입 오류: {e}')
+        return _error_response('회원가입 처리 중 오류가 발생했습니다.')
 
 
 @auth_bp.route('/api/auth/reset-password', methods=['POST'])
@@ -113,10 +118,13 @@ def reset_password():
             'message': '비밀번호 재설정 이메일을 발송했습니다. 이메일을 확인해주세요.'
         })
     except Exception as e:
-        error_msg = str(e)
-        if 'not found' in error_msg.lower():
+        error_msg = str(e).lower()
+        if 'not found' in error_msg:
             return _error_response('등록되지 않은 이메일입니다.')
-        return _error_response(f'이메일 발송 오류: {error_msg}')
+        # 보안: 상세 에러 메시지는 로깅만 하고 일반 메시지 반환
+        import logging
+        logging.getLogger(__name__).error(f'비밀번호 재설정 오류: {e}')
+        return _error_response('이메일 발송 중 오류가 발생했습니다.')
 
 
 @auth_bp.route('/api/auth/oauth/<provider>', methods=['GET'])

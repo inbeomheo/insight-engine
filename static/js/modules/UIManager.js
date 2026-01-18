@@ -29,7 +29,7 @@ export class UIManager {
         alert.innerHTML = `
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined">${iconMap[type] || iconMap.info}</span>
-                <span>${message}</span>
+                <span>${this.escapeHtml(message)}</span>
             </div>
             <button class="p-1 hover:bg-white/10 transition-colors" onclick="this.parentElement.remove()">
                 <span class="material-symbols-outlined text-sm">close</span>
@@ -191,6 +191,37 @@ export class UIManager {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * URL을 안전하게 이스케이프합니다 (XSS 방지).
+     * javascript: 프로토콜 등 위험한 URL을 차단합니다.
+     */
+    sanitizeUrl(url) {
+        if (!url || typeof url !== 'string') return '#';
+        const trimmed = url.trim().toLowerCase();
+        // 위험한 프로토콜 차단
+        if (trimmed.startsWith('javascript:') ||
+            trimmed.startsWith('data:') ||
+            trimmed.startsWith('vbscript:')) {
+            return '#';
+        }
+        // HTML 속성용 이스케이프
+        return this.escapeHtml(url);
+    }
+
+    /**
+     * HTML 콘텐츠에서 위험한 요소를 제거합니다 (기본 sanitize).
+     */
+    sanitizeHtml(html) {
+        if (!html || typeof html !== 'string') return '';
+        // script, iframe, on* 이벤트 핸들러 제거
+        return html
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, '')
+            .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
+            .replace(/javascript:/gi, '');
     }
 
     getKoreanErrorMessage(error) {
