@@ -2351,6 +2351,184 @@
             }
         }
 
+        /* ==================== US-013: 키보드 네비게이션 스타일 ==================== */
+
+        /* 키보드 네비게이션 모드 감지 */
+        body.keyboard-navigation *:focus {
+            outline: 2px solid var(--primary, #0f758a) !important;
+            outline-offset: 2px !important;
+        }
+
+        body.mouse-navigation *:focus:not(:focus-visible) {
+            outline: none !important;
+        }
+
+        /* focus-visible 기본 스타일 강화 */
+        :focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.2);
+        }
+
+        /* 버튼 focus-visible */
+        button:focus-visible,
+        [role="button"]:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.25);
+        }
+
+        /* 입력 필드 focus-visible */
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: none;
+            border-color: var(--primary, #0f758a);
+            box-shadow: 0 0 0 3px rgba(15, 117, 138, 0.2);
+        }
+
+        /* 링크 focus-visible */
+        a:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* 스타일 카드 focus-visible */
+        .style-card:focus-visible,
+        label.style-grid-item input:focus-visible + .style-card,
+        label.style-grid-item:focus-within .style-card {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.2);
+        }
+
+        /* 라디오/체크박스 라벨 focus-within */
+        label.cursor-pointer:focus-within {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            border-radius: 8px;
+        }
+
+        /* 모디파이어 칩 focus-visible */
+        .modifier-chip:focus-within .chip-content,
+        label.modifier-chip input:focus-visible + .chip-content {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.2);
+        }
+
+        /* 사이드바 버튼 focus-visible */
+        .nav-icon-btn:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: -2px;
+            background: rgba(15, 117, 138, 0.15);
+        }
+
+        /* 모달 닫기 버튼 focus-visible */
+        .modal-close-btn:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.2);
+        }
+
+        /* 복사 버튼 focus-visible */
+        .card-copy-btn:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+        }
+
+        /* 드롭다운 select focus-visible */
+        select:focus-visible {
+            border-color: var(--primary, #0f758a);
+            box-shadow: 0 0 0 3px rgba(15, 117, 138, 0.2);
+        }
+
+        /* sr-only 라디오/체크박스도 focus 시 부모 스타일 적용 */
+        input.sr-only:focus-visible {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+        }
+
+        /* Skip link 스타일 개선 */
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 16px;
+            background: var(--primary, #0f758a);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 9999;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: top 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .skip-link:focus {
+            top: 16px;
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
+        }
+
+        /* 포커스 링 애니메이션 (키보드 네비게이션 시에만) */
+        body.keyboard-navigation *:focus-visible {
+            animation: focusPulse 0.3s ease-out;
+        }
+
+        @keyframes focusPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(15, 117, 138, 0.4);
+            }
+            100% {
+                box-shadow: 0 0 0 4px rgba(15, 117, 138, 0.2);
+            }
+        }
+
+        /* 키보드로 선택된 요소 하이라이트 */
+        .keyboard-selected {
+            outline: 2px solid var(--primary, #0f758a) !important;
+            outline-offset: 2px !important;
+        }
+
+        /* 모달 내 포커스 트랩 시각적 표시 */
+        .modal-overlay.active .modal-content:focus-within {
+            box-shadow: 0 0 0 2px rgba(15, 117, 138, 0.3),
+                        0 24px 64px rgba(0, 0, 0, 0.6);
+        }
+
+        /* 카드 액션 버튼 그룹 focus-visible */
+        .result-card-actions button:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+            background: rgba(15, 117, 138, 0.1);
+        }
+
+        /* 히스토리/사용량 뷰 버튼 focus-visible */
+        #history-view button:focus-visible,
+        #usage-view button:focus-visible {
+            outline: 2px solid var(--primary, #0f758a);
+            outline-offset: 2px;
+        }
+
+        /* 고대비 모드 지원 */
+        @media (prefers-contrast: high) {
+            :focus-visible {
+                outline: 3px solid currentColor !important;
+                outline-offset: 3px !important;
+            }
+        }
+
+        /* 모션 감소 모드에서 포커스 애니메이션 제거 */
+        @media (prefers-reduced-motion: reduce) {
+            body.keyboard-navigation *:focus-visible {
+                animation: none;
+            }
+        }
+
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
@@ -2370,17 +2548,17 @@
         <!-- Main Navigation -->
         <nav class="flex-1 flex flex-col p-3" aria-label="주요 메뉴">
             <!-- Primary Navigation Group -->
-            <div class="nav-section-header">메인</div>
-            <div class="flex flex-col gap-1">
-                <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard" aria-current="page">
+            <div class="nav-section-header" id="nav-main-label">메인</div>
+            <div class="flex flex-col gap-1" role="group" aria-labelledby="nav-main-label">
+                <button class="nav-icon-btn active" data-section="dashboard" title="Dashboard" aria-current="page" tabindex="0">
                     <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
                     <span class="nav-label">대시보드</span>
                 </button>
-                <button class="nav-icon-btn" data-section="history" title="History">
+                <button class="nav-icon-btn" data-section="history" title="History" tabindex="0">
                     <span class="material-symbols-outlined" aria-hidden="true">history</span>
                     <span class="nav-label">히스토리</span>
                 </button>
-                <button class="nav-icon-btn" data-section="usage" title="Usage">
+                <button class="nav-icon-btn" data-section="usage" title="Usage" tabindex="0">
                     <span class="material-symbols-outlined" aria-hidden="true">pie_chart</span>
                     <span class="nav-label">사용량</span>
                 </button>
@@ -2390,9 +2568,9 @@
             <div class="nav-divider" role="separator"></div>
 
             <!-- Settings Group -->
-            <div class="nav-section-header">설정</div>
-            <div class="flex flex-col gap-1">
-                <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings">
+            <div class="nav-section-header" id="nav-settings-label">설정</div>
+            <div class="flex flex-col gap-1" role="group" aria-labelledby="nav-settings-label">
+                <button id="sidebar-settings-btn" class="nav-icon-btn" title="Settings" tabindex="0" aria-label="환경설정 열기">
                     <span class="material-symbols-outlined" aria-hidden="true">settings</span>
                     <span class="nav-label">환경설정</span>
                 </button>
@@ -2881,14 +3059,14 @@
                         </div>
 
                         <!-- 스타일 그리드 - 통합 레이아웃 -->
-                        <div class="style-grid-container">
+                        <div class="style-grid-container" role="region" aria-label="스타일 선택">
                             <!-- 기본 스타일 카테고리 -->
                             <div class="mb-4">
-                                <span class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                                <span id="style-basic-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-primary rounded-full" aria-hidden="true"></span>
                                     기본
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options">
+                                <div class="grid grid-cols-4 gap-2" id="style-options" role="radiogroup" aria-labelledby="style-basic-label">
                                     <label class="style-grid-item cursor-pointer group" title="블로그 포스트 형태로 작성합니다">
                                         <input checked name="style" type="radio" value="blog" class="peer sr-only"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
@@ -2922,11 +3100,11 @@
 
                             <!-- 분석 스타일 카테고리 -->
                             <div class="mb-4">
-                                <span class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                                <span id="style-analysis-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-amber-500 rounded-full" aria-hidden="true"></span>
                                     분석
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options-analysis">
+                                <div class="grid grid-cols-4 gap-2" id="style-options-analysis" role="radiogroup" aria-labelledby="style-analysis-label">
                                     <label class="style-grid-item cursor-pointer group" title="영상에서 언급된 니즈와 추천 아이템을 분석합니다">
                                         <input name="style" type="radio" value="needs" class="peer sr-only"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">
@@ -2960,11 +3138,11 @@
 
                             <!-- 콘텐츠 스타일 카테고리 -->
                             <div class="mb-4">
-                                <span class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                <span id="style-content-label" class="text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-2.5 block flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full" aria-hidden="true"></span>
                                     콘텐츠
                                 </span>
-                                <div class="grid grid-cols-4 gap-2" id="style-options-content">
+                                <div class="grid grid-cols-4 gap-2" id="style-options-content" role="radiogroup" aria-labelledby="style-content-label">
                                     <label class="style-grid-item cursor-pointer group" title="뉴스 기사 형태로 객관적으로 작성합니다">
                                         <input name="style" type="radio" value="news" class="peer sr-only"/>
                                         <div class="style-card flex flex-col items-center justify-center p-2.5 rounded-xl bg-surface-dark border border-border-dark peer-checked:bg-primary peer-checked:border-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all group-hover:scale-[1.02]">

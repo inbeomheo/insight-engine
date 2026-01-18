@@ -16,6 +16,7 @@ import { HistoryPanelManager } from './modules/HistoryPanelManager.js';
 import { UsagePanelManager } from './modules/UsagePanelManager.js';
 import { ThemeManager } from './modules/ThemeManager.js';
 import { PanelResizeManager } from './modules/PanelResizeManager.js';
+import { KeyboardNavigationManager } from './modules/KeyboardNavigationManager.js';
 
 class ContentAnalysis {
     constructor() {
@@ -50,6 +51,9 @@ class ContentAnalysis {
 
         // 패널 리사이즈 매니저
         this.panelResizeManager = new PanelResizeManager();
+
+        // 키보드 네비게이션 매니저 (US-013)
+        this.keyboardNavManager = new KeyboardNavigationManager();
 
         // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
         this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
@@ -116,6 +120,9 @@ class ContentAnalysis {
 
         // 패널 리사이즈 초기화
         this.panelResizeManager.init();
+
+        // 키보드 네비게이션 접근성 속성 설정 (US-013)
+        this.keyboardNavManager.setupAccessibilityAttributes();
 
         // 초기 버튼 상태 업데이트
         this.updateGenerateButtonState();
