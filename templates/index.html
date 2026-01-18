@@ -586,29 +586,93 @@
             animation: spin 1s linear infinite;
         }
 
-        /* Modal Styles */
+        /* Modal Styles - Enhanced Design */
         .modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 100;
             align-items: center;
             justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
         }
         .modal-overlay.active {
             display: flex;
+            opacity: 1;
         }
         .modal-content {
-            background: #1a1d21;
-            border: 1px solid #2a2e33;
-            border-radius: 12px;
+            background: linear-gradient(145deg, #1e2127 0%, #16181c 100%);
+            border: 1px solid rgba(173, 43, 238, 0.2);
+            border-radius: 16px;
             max-width: 520px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+            box-shadow:
+                0 24px 64px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+                0 0 80px rgba(173, 43, 238, 0.1);
+            transform: scale(0.95) translateY(10px);
+            opacity: 0;
+            animation: modalSlideIn 0.25s ease-out forwards;
+        }
+        @keyframes modalSlideIn {
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-overlay:not(.active) .modal-content {
+            animation: modalSlideOut 0.2s ease-in forwards;
+        }
+        @keyframes modalSlideOut {
+            from {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: scale(0.95) translateY(10px);
+                opacity: 0;
+            }
+        }
+
+        /* Modal Close Button - Enhanced */
+        .modal-close-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .modal-close-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            transform: rotate(90deg);
+        }
+        .modal-close-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(173, 43, 238, 0.3);
+        }
+
+        /* Modal Header */
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         /* Provider Card (for settings modal display) */
@@ -2400,7 +2464,7 @@
                     <span class="material-symbols-outlined text-primary" aria-hidden="true">settings</span>
                     설정
                 </h2>
-                <button id="modal-close" class="p-2 hover:bg-white/10 text-text-subtle hover:text-white transition-colors rounded-lg" aria-label="설정 닫기">
+                <button id="modal-close" class="modal-close-btn" aria-label="설정 닫기" title="닫기 (ESC)">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
             </div>
@@ -2445,7 +2509,7 @@
                     <span class="material-symbols-outlined text-primary" aria-hidden="true">edit_note</span>
                     <span id="custom-style-modal-title">새 스타일 만들기</span>
                 </h2>
-                <button id="custom-style-modal-close" class="p-2 hover:bg-white/10 text-text-subtle hover:text-white transition-colors" aria-label="스타일 편집 닫기">
+                <button id="custom-style-modal-close" class="modal-close-btn" aria-label="스타일 편집 닫기" title="닫기 (ESC)">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
             </div>
@@ -2522,7 +2586,7 @@
                     <span class="material-symbols-outlined text-primary" aria-hidden="true">person</span>
                     로그인 / 회원가입
                 </h2>
-                <button id="auth-modal-close" class="p-2 hover:bg-white/10 text-text-subtle hover:text-white transition-colors rounded-lg" aria-label="로그인 창 닫기">
+                <button id="auth-modal-close" class="modal-close-btn" aria-label="로그인 창 닫기" title="닫기 (ESC)">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
             </div>
@@ -2634,7 +2698,7 @@
                         <span class="material-symbols-outlined text-sm">fit_screen</span>
                     </button>
                     <div class="h-5 w-px bg-border-dark mx-1"></div>
-                    <button id="mindmap-close" class="p-2 hover:bg-white/10 text-text-subtle hover:text-white transition-colors rounded">
+                    <button id="mindmap-close" class="modal-close-btn" aria-label="마인드맵 닫기" title="닫기 (ESC)">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -2670,7 +2734,7 @@
                         <span class="material-symbols-outlined text-sm">content_copy</span>
                         <span>복사</span>
                     </button>
-                    <button id="prompt-close" class="p-2 hover:bg-white/10 text-text-subtle hover:text-white transition-colors rounded">
+                    <button id="prompt-close" class="modal-close-btn" aria-label="프롬프트 창 닫기" title="닫기 (ESC)">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>

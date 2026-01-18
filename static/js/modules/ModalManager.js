@@ -9,6 +9,62 @@ export class ModalManager {
         this.providerManager = providerManager;
         this.ui = uiManager;
         this.onCustomStylesChange = null;
+
+        // ESC 키로 모달 닫기 설정
+        this.setupEscapeKeyHandler();
+    }
+
+    // ==================== ESC Key Handler ====================
+
+    /**
+     * ESC 키를 눌렀을 때 열린 모달을 닫는 전역 이벤트 핸들러
+     */
+    setupEscapeKeyHandler() {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeActiveModal();
+            }
+        });
+    }
+
+    /**
+     * 현재 열려있는 모달을 닫습니다
+     * 우선순위: prompt > custom-style > auth > settings > onboarding
+     * 참고: mindmap-modal은 MindmapManager에서 자체 ESC 핸들러로 처리
+     */
+    closeActiveModal() {
+        // 모달 우선순위 순서대로 체크 (가장 위에 떠있을 가능성 높은 순)
+        const modalPriority = [
+            { id: 'prompt-modal', hide: () => this.hidePromptModal() },
+            { id: 'custom-style-modal', hide: () => this.hideCustomStyleModal() },
+            { id: 'auth-modal', hide: () => this.hideAuthModal() },
+            { id: 'settings-modal', hide: () => this.hideSettingsModal() },
+            { id: 'onboarding-modal', hide: () => this.closeOnboarding() }
+        ];
+
+        for (const modal of modalPriority) {
+            const element = document.getElementById(modal.id);
+            if (element && element.classList.contains('active')) {
+                modal.hide();
+                return; // 하나만 닫고 종료
+            }
+        }
+    }
+
+    // ==================== Additional Modal Helpers ====================
+
+    hidePromptModal() {
+        const modal = document.getElementById('prompt-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    hideAuthModal() {
+        const modal = document.getElementById('auth-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
     }
 
     // ==================== Settings Modal ====================
