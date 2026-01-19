@@ -295,11 +295,13 @@
             overflow-y: auto;
         }
 
-        /* Style Section - flex grow and scroll */
+        /* Style Section - 자연스러운 높이 유지, 축소 방지 */
         #style-section {
-            flex: 1 1 0% !important;
-            overflow-y: auto !important;
-            min-height: 0 !important;
+            flex: 0 0 auto !important;
+            overflow-y: visible !important;
+            min-height: auto !important;
+            height: auto !important;
+            flex-shrink: 0 !important;
         }
 
         /* Main Content Area - contains input and result panels */
@@ -3612,7 +3614,7 @@
                     </fieldset>
 
                     <!-- ===== 스타일 섹션 ===== -->
-                    <fieldset id="style-section" class="p-4 border-b border-border-dark">
+                    <fieldset id="style-section" class="p-4 border-b border-border-dark" style="flex: 0 0 auto !important; height: auto !important; flex-shrink: 0 !important;">
                         <div class="flex items-center justify-between mb-4">
                             <legend class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">style</span>
