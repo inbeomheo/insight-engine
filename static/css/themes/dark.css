@@ -1,0 +1,1246 @@
+/* ========================================
+   🌌 COSMIC TECH DESIGN SYSTEM
+   우주적 깊이감 + 글래스모피즘 + 네온 글로우
+   ======================================== */
+
+/* 노이즈 텍스처 오버레이 */
+[data-theme="dark"] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ========== 사이드바 - 깊은 우주 ========== */
+[data-theme="dark"] #sidebar,
+.dark #sidebar {
+    background: linear-gradient(
+        180deg,
+        rgba(15, 18, 20, 1) 0%,
+        rgba(12, 15, 18, 1) 50%,
+        rgba(8, 10, 12, 1) 100%
+    ) !important;
+    border-right: 1px solid rgba(42, 163, 186, 0.08) !important;
+    position: relative;
+}
+
+/* 사이드바 상단 글로우 */
+[data-theme="dark"] #sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: radial-gradient(
+        ellipse at 50% -50%,
+        rgba(42, 163, 186, 0.08) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+}
+
+/* 사이드바 로고 - 글로우 효과 */
+[data-theme="dark"] #sidebar .sidebar-logo {
+    background: linear-gradient(135deg, var(--primary) 0%, #1d7a8a 100%) !important;
+    box-shadow:
+        0 0 20px rgba(42, 163, 186, 0.3),
+        0 0 40px rgba(42, 163, 186, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] #sidebar .sidebar-logo:hover {
+    transform: scale(1.08) rotate(3deg);
+    box-shadow:
+        0 0 30px rgba(42, 163, 186, 0.5),
+        0 0 60px rgba(42, 163, 186, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* 사이드바 타이틀 - 그라데이션 텍스트 */
+[data-theme="dark"] #sidebar .sidebar-title,
+[data-theme="dark"] #sidebar .sidebar-header > div:last-child {
+    background: linear-gradient(135deg, #fff 0%, var(--primary-glow) 50%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* 네비게이션 버튼 - 글래스 효과 */
+[data-theme="dark"] #sidebar button[data-section] {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    margin: 3px 10px;
+    border: 1px solid transparent;
+    overflow: hidden;
+}
+
+[data-theme="dark"] #sidebar button[data-section]::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.1) 0%, rgba(192, 132, 252, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] #sidebar button[data-section]:hover {
+    background: rgba(42, 163, 186, 0.08) !important;
+    border-color: rgba(42, 163, 186, 0.15);
+    transform: translateX(4px);
+}
+
+[data-theme="dark"] #sidebar button[data-section]:hover::before {
+    opacity: 1;
+}
+
+[data-theme="dark"] #sidebar button[data-section].active {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.08) 100%) !important;
+    border: 1px solid rgba(42, 163, 186, 0.25);
+    box-shadow:
+        0 0 20px rgba(42, 163, 186, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* 네비게이션 아이콘 글로우 */
+[data-theme="dark"] #sidebar button[data-section]:hover .material-symbols-outlined {
+    color: var(--primary-glow);
+    text-shadow: 0 0 12px rgba(42, 163, 186, 0.6);
+}
+
+[data-theme="dark"] #sidebar button[data-section].active .material-symbols-outlined {
+    color: var(--primary-glow);
+    text-shadow: 0 0 15px rgba(42, 163, 186, 0.8);
+}
+
+/* 로그인 버튼 - 그라데이션 보더 */
+[data-theme="dark"] #sidebar #sidebar-auth-container button,
+[data-theme="dark"] #sidebar-auth-container button {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.1) 0%, rgba(192, 132, 252, 0.05) 100%) !important;
+    border: 1px solid rgba(42, 163, 186, 0.2) !important;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] #sidebar #sidebar-auth-container button:hover,
+[data-theme="dark"] #sidebar-auth-container button:hover {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%) !important;
+    border-color: rgba(42, 163, 186, 0.4) !important;
+    box-shadow:
+        0 4px 20px rgba(42, 163, 186, 0.2),
+        0 0 30px rgba(42, 163, 186, 0.1);
+    transform: translateY(-2px);
+}
+
+/* ========== 헤더 - 글래스모피즘 ========== */
+[data-theme="dark"] header[role="banner"],
+.dark header[role="banner"] {
+    background: linear-gradient(
+        90deg,
+        rgba(15, 18, 20, 0.95) 0%,
+        rgba(18, 22, 26, 0.9) 50%,
+        rgba(15, 18, 20, 0.95) 100%
+    ) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(42, 163, 186, 0.1) !important;
+    box-shadow:
+        0 4px 30px rgba(0, 0, 0, 0.3),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+}
+
+/* 헤더 버전 뱃지 - 네온 효과 */
+[data-theme="dark"] header .text-xs.px-2 {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.1) 100%);
+    border: 1px solid rgba(42, 163, 186, 0.25);
+    box-shadow:
+        0 0 15px rgba(42, 163, 186, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    color: var(--primary-glow) !important;
+    text-shadow: 0 0 10px rgba(42, 163, 186, 0.5);
+}
+
+/* 헤더 상태 표시 - 글래스 카드 */
+[data-theme="dark"] header [role="status"] {
+    background: rgba(30, 34, 39, 0.8) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] header [role="status"]:hover {
+    background: rgba(42, 163, 186, 0.1) !important;
+    border-color: rgba(42, 163, 186, 0.25);
+    box-shadow: 0 0 20px rgba(42, 163, 186, 0.15);
+}
+
+/* 헤더 버튼 호버 */
+[data-theme="dark"] header button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+}
+
+[data-theme="dark"] header button:hover {
+    background: rgba(42, 163, 186, 0.1) !important;
+    box-shadow: 0 0 15px rgba(42, 163, 186, 0.15);
+}
+
+/* ========== 입력 패널 - 깊은 우주 ========== */
+[data-theme="dark"] #input-panel,
+.dark #input-panel {
+    background: linear-gradient(
+        180deg,
+        rgba(18, 22, 28, 1) 0%,
+        rgba(15, 19, 24, 1) 50%,
+        rgba(12, 16, 20, 1) 100%
+    ) !important;
+    border-right: 1px solid rgba(42, 163, 186, 0.08) !important;
+    position: relative;
+}
+
+/* 입력 패널 상단 글로우 */
+[data-theme="dark"] #input-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: radial-gradient(
+        ellipse at 30% -20%,
+        rgba(42, 163, 186, 0.06) 0%,
+        transparent 60%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 섹션 헤더 버튼 - 글래스 효과 */
+[data-theme="dark"] #input-panel .section-toggle-btn,
+[data-theme="dark"] #input-panel button[aria-expanded] {
+    background: rgba(30, 34, 39, 0.6) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-radius: 14px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] #input-panel .section-toggle-btn:hover,
+[data-theme="dark"] #input-panel button[aria-expanded]:hover {
+    background: rgba(42, 163, 186, 0.08) !important;
+    border-color: rgba(42, 163, 186, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 스타일 카드 - 홀로그램 효과 */
+[data-theme="dark"] .style-card,
+[data-theme="dark"] .style-option .style-card {
+    background: linear-gradient(
+        145deg,
+        rgba(30, 34, 39, 0.9) 0%,
+        rgba(26, 30, 35, 0.8) 100%
+    ) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-radius: 14px !important;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .style-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(42, 163, 186, 0.1) 50%,
+        transparent 100%
+    );
+    transition: left 0.5s ease;
+}
+
+[data-theme="dark"] .style-card:hover::before {
+    left: 100%;
+}
+
+[data-theme="dark"] .style-card:hover {
+    background: linear-gradient(
+        145deg,
+        rgba(42, 163, 186, 0.12) 0%,
+        rgba(30, 34, 39, 0.9) 100%
+    ) !important;
+    border-color: rgba(42, 163, 186, 0.25) !important;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(42, 163, 186, 0.1);
+    transform: translateY(-3px);
+}
+
+/* 선택된 스타일 카드 */
+[data-theme="dark"] .peer:checked + .style-card,
+[data-theme="dark"] input:checked + .style-card {
+    background: linear-gradient(
+        145deg,
+        rgba(42, 163, 186, 0.2) 0%,
+        rgba(30, 34, 39, 0.95) 100%
+    ) !important;
+    border: 1px solid rgba(42, 163, 186, 0.4) !important;
+    box-shadow:
+        0 0 30px rgba(42, 163, 186, 0.2),
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 콘텐츠 생성 버튼 - 네온 그라데이션 */
+[data-theme="dark"] #run-analysis-btn {
+    background: linear-gradient(
+        135deg,
+        var(--primary) 0%,
+        #1d8a9e 50%,
+        var(--primary) 100%
+    ) !important;
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+    border: none !important;
+    box-shadow:
+        0 4px 20px rgba(42, 163, 186, 0.4),
+        0 0 40px rgba(42, 163, 186, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] #run-analysis-btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+        0 8px 30px rgba(42, 163, 186, 0.5),
+        0 0 60px rgba(42, 163, 186, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* ========== 결과 패널 - 우주 배경 ========== */
+[data-theme="dark"] #result-panel,
+.dark #result-panel {
+    background: linear-gradient(
+        135deg,
+        rgba(12, 15, 18, 1) 0%,
+        rgba(15, 18, 22, 1) 50%,
+        rgba(10, 12, 15, 1) 100%
+    ) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 결과 패널 우주 글로우 */
+[data-theme="dark"] #result-panel::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+        circle,
+        rgba(42, 163, 186, 0.03) 0%,
+        rgba(192, 132, 252, 0.02) 30%,
+        transparent 70%
+    );
+    pointer-events: none;
+}
+
+/* 결과 패널 별 효과 */
+[data-theme="dark"] #result-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.15), transparent),
+        radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.1), transparent),
+        radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.12), transparent),
+        radial-gradient(1px 1px at 70% 60%, rgba(255, 255, 255, 0.08), transparent);
+    pointer-events: none;
+    animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* 빈 상태 영역 - 플로팅 카드 */
+[data-theme="dark"] #result-panel [role="status"] {
+    background: linear-gradient(
+        145deg,
+        rgba(30, 34, 39, 0.6) 0%,
+        rgba(25, 29, 34, 0.4) 100%
+    ) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(42, 163, 186, 0.15) !important;
+    border-radius: 24px !important;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(42, 163, 186, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 1;
+}
+
+/* 빈 상태 아이콘 - 펄스 글로우 */
+[data-theme="dark"] #result-panel [role="status"] .material-symbols-outlined {
+    animation: cosmicPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes cosmicPulse {
+    0%, 100% {
+        text-shadow:
+            0 0 20px rgba(42, 163, 186, 0.4),
+            0 0 40px rgba(42, 163, 186, 0.2);
+        transform: scale(1);
+    }
+    50% {
+        text-shadow:
+            0 0 30px rgba(42, 163, 186, 0.6),
+            0 0 60px rgba(42, 163, 186, 0.3),
+            0 0 80px rgba(192, 132, 252, 0.2);
+        transform: scale(1.08);
+    }
+}
+
+/* 결과 카드 - 프리미엄 글래스 */
+[data-theme="dark"] .result-card {
+    background: linear-gradient(
+        145deg,
+        rgba(30, 34, 39, 0.8) 0%,
+        rgba(25, 29, 34, 0.6) 100%
+    ) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 20px !important;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .result-card:hover {
+    border-color: rgba(42, 163, 186, 0.3) !important;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(42, 163, 186, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-5px);
+}
+
+/* ========== 전역 스크롤바 - 네온 ========== */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: rgba(15, 18, 20, 0.8);
+    border-radius: 5px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        180deg,
+        rgba(42, 163, 186, 0.4) 0%,
+        rgba(192, 132, 252, 0.3) 100%
+    );
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgba(42, 163, 186, 0.6) 0%,
+        rgba(192, 132, 252, 0.5) 100%
+    );
+}
+
+/* ========== 모디파이어 칩 - 글래스 ========== */
+[data-theme="dark"] .chip-radio-label,
+[data-theme="dark"] [class*="chip"] {
+    background: rgba(30, 34, 39, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] .chip-radio-label:hover,
+[data-theme="dark"] [class*="chip"]:hover {
+    background: rgba(42, 163, 186, 0.1) !important;
+    border-color: rgba(42, 163, 186, 0.2) !important;
+}
+
+[data-theme="dark"] .peer:checked + .chip-radio-label,
+[data-theme="dark"] input:checked + [class*="chip"] {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%) !important;
+    border-color: rgba(42, 163, 186, 0.4) !important;
+    box-shadow: 0 0 15px rgba(42, 163, 186, 0.2);
+}
+/* ========================================
+   🚀 ENHANCED MICRO-INTERACTIONS v2
+   더 세련된 마이크로 인터랙션
+   ======================================== */
+
+/* ========== 타이포그래피 강화 ========== */
+[data-theme="dark"] h1,
+[data-theme="dark"] .page-title {
+    font-family: 'Outfit', 'Pretendard', sans-serif;
+    background: linear-gradient(135deg, #fff 0%, var(--primary-glow) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+}
+
+/* ========== URL 입력 필드 - 네온 포커스 ========== */
+[data-theme="dark"] #url-input,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="url"] {
+    background: rgba(20, 24, 30, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] #url-input:focus,
+[data-theme="dark"] input[type="text"]:focus,
+[data-theme="dark"] input[type="url"]:focus {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 3px rgba(42, 163, 186, 0.15),
+        0 0 20px rgba(42, 163, 186, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    outline: none !important;
+}
+
+[data-theme="dark"] #url-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ========== 추가 버튼 - 펄스 효과 ========== */
+[data-theme="dark"] #add-url-btn:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary) 0%, #1d8a9e 100%) !important;
+    box-shadow:
+        0 4px 15px rgba(42, 163, 186, 0.3),
+        0 0 30px rgba(42, 163, 186, 0.15);
+    animation: subtlePulse 2s ease-in-out infinite;
+}
+
+@keyframes subtlePulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(42, 163, 186, 0.3), 0 0 30px rgba(42, 163, 186, 0.15); }
+    50% { box-shadow: 0 4px 20px rgba(42, 163, 186, 0.4), 0 0 40px rgba(42, 163, 186, 0.25); }
+}
+
+[data-theme="dark"] #add-url-btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow:
+        0 6px 25px rgba(42, 163, 186, 0.5),
+        0 0 50px rgba(42, 163, 186, 0.3);
+}
+
+/* ========== 카테고리 라벨 - 컬러 포인트 ========== */
+[data-theme="dark"] .text-xs.text-primary {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+[data-theme="dark"] .text-xs.text-primary::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+    animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* 분석 카테고리 - 노란색 포인트 */
+[data-theme="dark"] .text-xs.text-yellow-400::before,
+[data-theme="dark"] [class*="yellow"]::before {
+    background: #facc15 !important;
+    box-shadow: 0 0 8px #facc15 !important;
+}
+
+/* 콘텐츠 카테고리 - 보라색 포인트 */
+[data-theme="dark"] .text-xs.text-accent::before {
+    background: var(--accent) !important;
+    box-shadow: 0 0 8px var(--accent) !important;
+}
+
+/* ========== 섹션 아이콘 글로우 ========== */
+[data-theme="dark"] .section-toggle-btn .material-symbols-outlined,
+[data-theme="dark"] button[aria-expanded] .material-symbols-outlined {
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .section-toggle-btn:hover .material-symbols-outlined,
+[data-theme="dark"] button[aria-expanded]:hover .material-symbols-outlined {
+    color: var(--primary-glow);
+    text-shadow: 0 0 15px rgba(42, 163, 186, 0.6);
+    transform: scale(1.1);
+}
+
+/* ========== AI 자동 분석 버튼 - 특별한 그라데이션 ========== */
+[data-theme="dark"] button[class*="auto-analyze"],
+[data-theme="dark"] button:has(.material-symbols-outlined:contains("auto_awesome")):not(#run-analysis-btn) {
+    background: linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(42, 163, 186, 0.1) 100%) !important;
+    border: 1px solid rgba(192, 132, 252, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] button[class*="auto-analyze"]:hover:not(:disabled),
+[data-theme="dark"] button:has(.material-symbols-outlined:contains("auto_awesome")):hover:not(:disabled):not(#run-analysis-btn) {
+    background: linear-gradient(135deg, rgba(192, 132, 252, 0.25) 0%, rgba(42, 163, 186, 0.15) 100%) !important;
+    border-color: rgba(192, 132, 252, 0.4) !important;
+    box-shadow: 0 0 25px rgba(192, 132, 252, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ========== 스타일 카드 아이콘 - 개별 색상 ========== */
+[data-theme="dark"] .style-card .material-symbols-outlined {
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .style-card:hover .material-symbols-outlined {
+    transform: scale(1.15) translateY(-2px);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+[data-theme="dark"] .peer:checked + .style-card .material-symbols-outlined {
+    color: var(--primary-glow);
+    text-shadow: 0 0 20px rgba(42, 163, 186, 0.8);
+    transform: scale(1.1);
+}
+
+/* ========== URL 카드 - 호버 효과 ========== */
+[data-theme="dark"] .url-card {
+    background: linear-gradient(145deg, rgba(30, 34, 39, 0.8) 0%, rgba(25, 29, 34, 0.6) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-radius: 14px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .url-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+[data-theme="dark"] .url-card:hover {
+    border-color: rgba(42, 163, 186, 0.2) !important;
+    transform: translateX(4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .url-card:hover::before {
+    opacity: 1;
+}
+
+/* ========== 결과 탭 - 언더라인 효과 ========== */
+[data-theme="dark"] #result-panel [role="tab"] {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] #result-panel [role="tab"]::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(-50%);
+}
+
+[data-theme="dark"] #result-panel [role="tab"]:hover::after {
+    width: 60%;
+}
+
+[data-theme="dark"] #result-panel [role="tab"][aria-selected="true"]::after {
+    width: 80%;
+    box-shadow: 0 0 10px rgba(42, 163, 186, 0.5);
+}
+
+/* ========== 피처 배지 - 플로팅 효과 ========== */
+[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div {
+    background: rgba(30, 34, 39, 0.8) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 20px !important;
+    padding: 8px 16px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:hover {
+    transform: translateY(-3px);
+    border-color: rgba(42, 163, 186, 0.3) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* 빠른 분석 배지 - 시안 */
+[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:first-child {
+    border-color: rgba(42, 163, 186, 0.3) !important;
+}
+
+/* AI 기반 배지 - 보라 */
+[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:nth-child(2) {
+    border-color: rgba(192, 132, 252, 0.3) !important;
+}
+
+/* 한국어 최적화 배지 - 핑크 */
+[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:last-child {
+    border-color: rgba(251, 113, 133, 0.3) !important;
+}
+
+/* ========== 모디파이어 섹션 - 레이블 스타일 ========== */
+[data-theme="dark"] fieldset legend,
+[data-theme="dark"] .modifier-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+[data-theme="dark"] fieldset legend .material-symbols-outlined,
+[data-theme="dark"] .modifier-label .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--primary);
+}
+
+/* ========== 로딩 상태 - 스켈레톤 ========== */
+[data-theme="dark"] .skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(30, 34, 39, 0.8) 0%,
+        rgba(42, 163, 186, 0.1) 50%,
+        rgba(30, 34, 39, 0.8) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    border-radius: 8px;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ========== 툴팁 스타일 ========== */
+[data-theme="dark"] [title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    background: rgba(15, 18, 20, 0.95);
+    border: 1px solid rgba(42, 163, 186, 0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ========== 전역 포커스 링 ========== */
+[data-theme="dark"] *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ========== 선택 영역 스타일 ========== */
+[data-theme="dark"] ::selection {
+    background: rgba(42, 163, 186, 0.3);
+    color: #fff;
+}
+
+/* ========== 패널 리사이저 ========== */
+[data-theme="dark"] .resize-handle,
+[data-theme="dark"] [role="separator"] {
+    background: transparent !important;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+[data-theme="dark"] .resize-handle::after,
+[data-theme="dark"] [role="separator"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 40px;
+    background: rgba(42, 163, 186, 0.2);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .resize-handle:hover::after,
+[data-theme="dark"] [role="separator"]:hover::after {
+    background: rgba(42, 163, 186, 0.5);
+    height: 60px;
+    box-shadow: 0 0 15px rgba(42, 163, 186, 0.3);
+}
+
+/* ========== 스크롤 힌트 애니메이션 ========== */
+[data-theme="dark"] .scroll-hint {
+    animation: scrollHint 2s ease-in-out infinite;
+}
+
+@keyframes scrollHint {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(5px); opacity: 1; }
+}
+
+/* ========== 버튼 리플 효과 ========== */
+[data-theme="dark"] button {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+}
+
+[data-theme="dark"] button:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* ==================== FINAL POLISH v3 - 마무리 터치 ==================== */
+
+/* ========== 아코디언 헤더 강화 ========== */
+[data-theme="dark"] .accordion-header {
+    background: linear-gradient(135deg,
+        rgba(30, 34, 39, 0.9) 0%,
+        rgba(38, 43, 49, 0.7) 100%) !important;
+    border: 1px solid rgba(61, 90, 99, 0.4) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .accordion-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(42, 163, 186, 0.4) 50%,
+        transparent 100%);
+}
+
+[data-theme="dark"] .accordion-header:hover {
+    background: linear-gradient(135deg,
+        rgba(38, 43, 49, 0.95) 0%,
+        rgba(45, 50, 58, 0.8) 100%) !important;
+    border-color: rgba(42, 163, 186, 0.5) !important;
+    transform: translateX(2px);
+}
+
+[data-theme="dark"] .accordion-header[aria-expanded="true"] {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 4px 20px rgba(42, 163, 186, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ========== 아코디언 컨텐츠 영역 ========== */
+[data-theme="dark"] .accordion-content {
+    background: linear-gradient(180deg,
+        rgba(24, 28, 32, 0.6) 0%,
+        rgba(24, 28, 32, 0.9) 100%) !important;
+    border: 1px solid rgba(61, 90, 99, 0.2) !important;
+    border-top: none !important;
+    border-radius: 0 0 12px 12px !important;
+    margin-top: -4px;
+    padding-top: 16px !important;
+}
+
+/* ========== 결과 패널 빈 상태 개선 ========== */
+[data-theme="dark"] #result-panel .empty-state,
+[data-theme="dark"] [role="status"]:has(.empty-state-icon) {
+    background: radial-gradient(ellipse at center,
+        rgba(42, 163, 186, 0.08) 0%,
+        transparent 70%) !important;
+}
+
+[data-theme="dark"] .empty-state-icon,
+[data-theme="dark"] #result-panel [role="status"] > div:first-child {
+    position: relative;
+}
+
+[data-theme="dark"] .empty-state-icon::after,
+[data-theme="dark"] #result-panel [role="status"] > div:first-child::after {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    background: radial-gradient(circle,
+        rgba(42, 163, 186, 0.15) 0%,
+        transparent 70%);
+    animation: emptyStatePulse 3s ease-in-out infinite;
+    z-index: -1;
+    border-radius: 50%;
+}
+
+@keyframes emptyStatePulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* ========== 스타일 카드 선택 상태 강화 ========== */
+[data-theme="dark"] .style-card:has(input:checked) {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.2) 0%,
+        rgba(42, 163, 186, 0.1) 100%) !important;
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 2px rgba(42, 163, 186, 0.3),
+        0 8px 25px rgba(42, 163, 186, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-2px) scale(1.02);
+}
+
+[data-theme="dark"] .style-card:has(input:checked)::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(135deg,
+        var(--primary) 0%,
+        var(--accent) 100%);
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+[data-theme="dark"] .style-card:has(input:checked) .material-symbols-outlined {
+    color: var(--primary) !important;
+    filter: drop-shadow(0 0 8px rgba(42, 163, 186, 0.6));
+    animation: selectedIconGlow 2s ease-in-out infinite;
+}
+
+@keyframes selectedIconGlow {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(42, 163, 186, 0.6)); }
+    50% { filter: drop-shadow(0 0 15px rgba(42, 163, 186, 0.9)); }
+}
+
+/* ========== 모디파이어 칩 선택 상태 ========== */
+[data-theme="dark"] .modifier-chip:has(input:checked),
+[data-theme="dark"] [role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.25) 0%,
+        rgba(42, 163, 186, 0.15) 100%) !important;
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 1px rgba(42, 163, 186, 0.4),
+        0 4px 12px rgba(42, 163, 186, 0.2) !important;
+    color: var(--primary-glow) !important;
+}
+
+/* ========== 피처 뱃지 개선 ========== */
+[data-theme="dark"] .feature-badge,
+[data-theme="dark"] #result-panel [role="status"] .flex.gap-2 > div {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.15) 0%,
+        rgba(192, 132, 252, 0.1) 100%) !important;
+    border: 1px solid rgba(42, 163, 186, 0.3) !important;
+    border-radius: 20px !important;
+    padding: 6px 14px !important;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .feature-badge:hover,
+[data-theme="dark"] #result-panel [role="status"] .flex.gap-2 > div:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(42, 163, 186, 0.25);
+    border-color: var(--primary) !important;
+}
+
+/* ========== 입력 패널 섹션 간격 개선 ========== */
+[data-theme="dark"] #input-panel > form > div {
+    margin-bottom: 12px;
+}
+
+/* ========== URL 카드 스타일 보강 ========== */
+[data-theme="dark"] .url-card {
+    background: linear-gradient(135deg,
+        rgba(30, 34, 39, 0.95) 0%,
+        rgba(38, 43, 49, 0.8) 100%) !important;
+    border: 1px solid rgba(61, 90, 99, 0.4) !important;
+    border-radius: 10px !important;
+    padding: 12px 14px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+[data-theme="dark"] .url-card:hover {
+    border-color: rgba(42, 163, 186, 0.5) !important;
+    background: linear-gradient(135deg,
+        rgba(38, 43, 49, 0.98) 0%,
+        rgba(45, 52, 60, 0.85) 100%) !important;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(42, 163, 186, 0.2) !important;
+    transform: translateX(4px);
+}
+
+/* ========== 사이드바 네비게이션 호버 ========== */
+[data-theme="dark"] .nav-icon-btn {
+    position: relative;
+    transition: all 0.3s ease !important;
+}
+
+[data-theme="dark"] .nav-icon-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: linear-gradient(180deg, var(--primary), var(--accent));
+    border-radius: 0 3px 3px 0;
+    transition: height 0.3s ease;
+}
+
+[data-theme="dark"] .nav-icon-btn:hover::before {
+    height: 60%;
+}
+
+[data-theme="dark"] .nav-icon-btn.active::before {
+    height: 80%;
+}
+
+[data-theme="dark"] .nav-icon-btn:hover {
+    background: linear-gradient(90deg,
+        rgba(42, 163, 186, 0.15) 0%,
+        transparent 100%) !important;
+}
+
+/* ========== 헤더 상태 뱃지 ========== */
+[data-theme="dark"] header [role="status"] {
+    background: rgba(30, 34, 39, 0.8) !important;
+    border: 1px solid rgba(61, 90, 99, 0.4) !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] header [role="status"]:hover {
+    border-color: rgba(42, 163, 186, 0.5) !important;
+    background: rgba(38, 43, 49, 0.9) !important;
+}
+
+/* ========== 결과 패널 제목 스타일 ========== */
+[data-theme="dark"] #result-panel h2,
+[data-theme="dark"] #result-panel h3 {
+    background: linear-gradient(135deg,
+        var(--text-light) 0%,
+        var(--primary-glow) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ========== 스크롤바 트랙 호버 ========== */
+[data-theme="dark"] ::-webkit-scrollbar-track:hover {
+    background: rgba(30, 34, 39, 0.8);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg,
+        var(--primary) 0%,
+        var(--accent) 100%);
+}
+
+/* ========== 토스트/알림 스타일 ========== */
+[data-theme="dark"] .toast,
+[data-theme="dark"] [role="alert"] {
+    background: linear-gradient(135deg,
+        rgba(30, 34, 39, 0.98) 0%,
+        rgba(38, 43, 49, 0.95) 100%) !important;
+    border: 1px solid rgba(61, 90, 99, 0.5) !important;
+    border-radius: 12px !important;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+    backdrop-filter: blur(10px);
+}
+
+/* ========== 인풋 플레이스홀더 스타일 ========== */
+[data-theme="dark"] input::placeholder {
+    color: rgba(148, 163, 184, 0.5) !important;
+    font-style: italic;
+}
+
+/* ========== AI 자동 분석 버튼 스타일 ========== */
+[data-theme="dark"] [aria-label*="AI 자동 분석"] {
+    background: linear-gradient(135deg,
+        rgba(192, 132, 252, 0.2) 0%,
+        rgba(42, 163, 186, 0.2) 100%) !important;
+    border: 1px solid rgba(192, 132, 252, 0.4) !important;
+    color: var(--accent) !important;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] [aria-label*="AI 자동 분석"]:hover:not(:disabled) {
+    background: linear-gradient(135deg,
+        rgba(192, 132, 252, 0.3) 0%,
+        rgba(42, 163, 186, 0.3) 100%) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 4px 20px rgba(192, 132, 252, 0.3);
+    transform: translateY(-1px);
+}
+
+/* ========== AI 스타일 생성 버튼 ========== */
+[data-theme="dark"] button:has(.material-symbols-outlined:first-child):has(span:contains("AI 스타일")),
+[data-theme="dark"] [aria-label*="AI 스타일"] {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.1) 0%,
+        rgba(192, 132, 252, 0.1) 100%) !important;
+    border: 1px dashed rgba(42, 163, 186, 0.4) !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] [aria-label*="AI 스타일"]:hover {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.2) 0%,
+        rgba(192, 132, 252, 0.2) 100%) !important;
+    border-style: solid !important;
+    border-color: var(--primary) !important;
+}
+
+/* ========== 글로벌 텍스트 선택 스타일 ========== */
+[data-theme="dark"] ::selection {
+    background: rgba(42, 163, 186, 0.4);
+    color: #fff;
+}
+
+/* ========== 포커스 링 개선 ========== */
+[data-theme="dark"] *:focus-visible {
+    outline: none !important;
+    box-shadow:
+        0 0 0 2px var(--surface-dark),
+        0 0 0 4px rgba(42, 163, 186, 0.5) !important;
+}
+
+/* ========== 배지/태그 스타일 (Beta 등) ========== */
+[data-theme="dark"] header .text-xs.font-medium {
+    background: linear-gradient(135deg,
+        rgba(42, 163, 186, 0.2) 0%,
+        rgba(62, 184, 207, 0.1) 100%) !important;
+    border: 1px solid rgba(42, 163, 186, 0.4) !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    color: var(--primary-glow) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+    animation: betaBadgePulse 3s ease-in-out infinite;
+}
+
+@keyframes betaBadgePulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(42, 163, 186, 0.2); }
+    50% { box-shadow: 0 0 20px rgba(42, 163, 186, 0.4); }
+}
+
+/* ========== 로딩 스피너 스타일 ========== */
+[data-theme="dark"] .spinner,
+[data-theme="dark"] .loading-spinner {
+    border-color: rgba(42, 163, 186, 0.2) !important;
+    border-top-color: var(--primary) !important;
+}
+
+/* ========== 구분선 스타일 ========== */
+[data-theme="dark"] hr,
+[data-theme="dark"] .divider,
+[data-theme="dark"] [role="separator"] {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(61, 90, 99, 0.5) 50%,
+        transparent 100%) !important;
+    border: none !important;
+    height: 1px !important;
+}
+

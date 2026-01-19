@@ -1,0 +1,120 @@
+/* ==================== Creative Studio 배경 텍스처 ==================== */
+
+/* 미묘한 그리드 패턴 배경 */
+[data-theme="dark"] .app-layout {
+    background:
+        /* 미세 도트 패턴 */
+        radial-gradient(circle at center, rgba(42, 163, 186, 0.03) 1px, transparent 1px),
+        /* 그리드 라인 */
+        linear-gradient(rgba(42, 163, 186, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 163, 186, 0.02) 1px, transparent 1px),
+        /* 베이스 컬러 */
+        var(--background-dark);
+    background-size:
+        24px 24px,
+        48px 48px,
+        48px 48px,
+        100% 100%;
+}
+
+/* 글로우 오브 효과 (결과 패널) */
+[data-theme="dark"] #result-panel::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    right: 15%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(42, 163, 186, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(40px);
+    animation: glowPulse 8s ease-in-out infinite;
+}
+[data-theme="dark"] #result-panel::after {
+    content: '';
+    position: absolute;
+    bottom: 30%;
+    left: 20%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(ellipse, rgba(192, 132, 252, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(50px);
+    animation: glowPulse 10s ease-in-out infinite reverse;
+}
+#result-panel {
+    position: relative;
+    overflow: hidden;
+}
+#result-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes glowPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes arrowPulse {
+    0%, 100% { transform: translateX(0); opacity: 0.7; }
+    50% { transform: translateX(-8px); opacity: 1; }
+}
+
+/* 사이드바 그라데이션 보더 */
+[data-theme="dark"] #sidebar {
+    border-right: 1px solid transparent;
+    background:
+        linear-gradient(var(--background-dark), var(--background-dark)) padding-box,
+        linear-gradient(180deg, rgba(42, 163, 186, 0.3) 0%, rgba(192, 132, 252, 0.1) 50%, transparent 100%) border-box;
+}
+
+/* 입력 패널 상단 글로우 */
+[data-theme="dark"] #input-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: linear-gradient(180deg, rgba(42, 163, 186, 0.05) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+#input-panel {
+    position: relative;
+}
+#input-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Custom Scrollbar - Creative Studio 테마 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(42, 163, 186, 0.4) 0%, rgba(192, 132, 252, 0.3) 100%);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(42, 163, 186, 0.6) 0%, rgba(192, 132, 252, 0.5) 100%);
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Subtle shadow */
+.warm-glow {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.warm-glow:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+

@@ -1,0 +1,38 @@
+/**
+ * Insight Engine - Main CSS Entry Point
+ *
+ * 빌드 명령어:
+ *   npm run build:css      - 개발 빌드
+ *   npm run build:css:prod - 프로덕션 빌드 (압축)
+ *   npm run watch:css      - 변경 감지 빌드
+ */
+
+/* ==================== Base ==================== */
+@import "./base/variables.css";
+@import "./base/typography.css";
+
+/* ==================== Tailwind ==================== */
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* ==================== Layout ==================== */
+@import "./layout/panels.css";
+@import "./layout/sidebar.css";
+@import "./layout/header.css";
+
+/* ==================== Components ==================== */
+@import "./components/cards.css";
+@import "./components/forms.css";
+
+/* ==================== Features ==================== */
+@import "./features/backgrounds.css";
+@import "./features/input-section.css";
+@import "./features/result-section.css";
+
+/* ==================== Animations ==================== */
+@import "./animations.css";
+
+/* ==================== Themes ==================== */
+@import "./themes/light.css";
+@import "./themes/dark.css";

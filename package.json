@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "description": "YouTube 영상으로 AI 블로그 포스트 자동 생성",
   "scripts": {
-    "build:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css",
-    "build:css:prod": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --minify",
-    "watch:css": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css --watch"
+    "build:css": "postcss static/css/main.css -o static/css/dist/main.css",
+    "build:css:prod": "cross-env NODE_ENV=production postcss static/css/main.css -o static/css/dist/main.css",
+    "watch:css": "postcss static/css/main.css -o static/css/dist/main.css --watch",
+    "build:css:legacy": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
+    "cssnano": "^7.1.2",
     "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
+    "postcss-import": "^16.1.1",
     "tailwindcss": "^3.4.19"
   },
   "private": true

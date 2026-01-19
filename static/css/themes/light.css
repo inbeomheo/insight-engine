@@ -1,0 +1,18 @@
+/* ========== 라이트 모드 ========== */
+:root #sidebar,
+[data-theme="light"] #sidebar {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    border-right: 1px solid rgba(42, 163, 186, 0.15) !important;
+}
+
+:root header[role="banner"],
+[data-theme="light"] header[role="banner"] {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(42, 163, 186, 0.15) !important;
+}
+
+[data-theme="light"] #result-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+}
+
