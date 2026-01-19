@@ -1,0 +1,53 @@
+/* ========== 헤더 - 글래스모피즘 ========== */
+[data-theme="dark"] header[role="banner"],
+.dark header[role="banner"] {
+    background: linear-gradient(
+        90deg,
+        rgba(15, 18, 20, 0.95) 0%,
+        rgba(18, 22, 26, 0.9) 50%,
+        rgba(15, 18, 20, 0.95) 100%
+    ) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(42, 163, 186, 0.1) !important;
+    box-shadow:
+        0 4px 30px rgba(0, 0, 0, 0.3),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+}
+
+/* 헤더 버전 뱃지 - 네온 효과 */
+[data-theme="dark"] header .text-xs.px-2 {
+    background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.1) 100%);
+    border: 1px solid rgba(42, 163, 186, 0.25);
+    box-shadow:
+        0 0 15px rgba(42, 163, 186, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    color: var(--primary-glow) !important;
+    text-shadow: 0 0 10px rgba(42, 163, 186, 0.5);
+}
+
+/* 헤더 상태 표시 - 글래스 카드 */
+[data-theme="dark"] header [role="status"] {
+    background: rgba(30, 34, 39, 0.8) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] header [role="status"]:hover {
+    background: rgba(42, 163, 186, 0.1) !important;
+    border-color: rgba(42, 163, 186, 0.25);
+    box-shadow: 0 0 20px rgba(42, 163, 186, 0.15);
+}
+
+/* 헤더 버튼 호버 */
+[data-theme="dark"] header button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 10px;
+}
+
+[data-theme="dark"] header button:hover {
+    background: rgba(42, 163, 186, 0.1) !important;
+    box-shadow: 0 0 15px rgba(42, 163, 186, 0.15);
+}
+
