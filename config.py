@@ -1,13 +1,24 @@
 """
 스마트 콘텐츠 생성기 설정 파일
 AI 서비스, 스타일 옵션 정의
-프롬프트 템플릿은 prompts.py에서 관리
+프롬프트 템플릿은 prompts/ 패키지에서 관리
+
+v2.0 업데이트:
+- 8개 핵심 스타일 (15개에서 통합)
+- 7개 모디파이어 (4개에서 확장)
+- 베이스 프롬프트 + 스타일 오버라이드 구조
 """
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 import os
 
-# prompts.py에서 프롬프트 가져오기
-from prompts import STYLE_PROMPTS
+# prompts 패키지에서 가져오기
+from prompts import (
+    STYLE_PROMPTS,
+    MODIFIER_OPTIONS,
+    DEFAULT_MODIFIERS,
+    build_full_prompt,
+    get_available_styles,
+)
 
 # YouTube API Key
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
@@ -70,8 +81,24 @@ def get_provider_from_model(model_id: str) -> str:
         return 'deepseek'
     return 'openai'  # 기본값
 
-# 스타일/톤 옵션 (16개)
-STYLE_OPTIONS: List[tuple] = [
+
+# ============================================================
+# 스타일 옵션 v2.0 (8개 핵심 스타일)
+# ============================================================
+
+STYLE_OPTIONS: List[Tuple[str, str]] = [
+    ('professional', '📝 전문 블로그/아티클'),
+    ('summary', '⚡ 핵심 요약 리포트'),
+    ('tutorial', '📚 단계별 튜토리얼'),
+    ('review', '⭐ 리뷰/비교 분석'),
+    ('seo', '🔍 SEO 최적화'),
+    ('creative', '🎬 크리에이티브 (숏폼/SNS)'),
+    ('analysis', '📊 분석 리포트'),
+    ('structured', '📋 구조화된 정보'),
+]
+
+# 하위 호환성: 레거시 스타일 옵션 (UI에서 기존 스타일명 사용 시)
+LEGACY_STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('blog', '📝 블로그 포스트'),
     ('detailed', '📝 상세 요약'),
     ('summary', '⚡ 핵심 요약'),
@@ -89,11 +116,36 @@ STYLE_OPTIONS: List[tuple] = [
     ('newsletter', '✉️ 뉴스레터'),
 ]
 
-# 세부 옵션 (길이, 톤, 언어, 이모지)
+# 스타일 매핑 (레거시 → 새 스타일)
+STYLE_MAPPING: Dict[str, str] = {
+    'blog': 'professional',
+    'detailed': 'professional',
+    'news': 'professional',
+    'easy': 'tutorial',
+    'script': 'creative',
+    'sns': 'creative',
+    'needs': 'analysis',
+    'infographic': 'analysis',
+    'qna': 'structured',
+    'mindmap': 'structured',
+    'newsletter': 'structured',
+    'compare': 'review',
+}
+
+
+# ============================================================
+# 모디파이어 v2.0 (7개로 확장)
+# ============================================================
+
+# 새 모디파이어 시스템 (prompts/modifiers.py에서 import)
+# MODIFIER_OPTIONS: UI 표시용 옵션 정보
+# DEFAULT_MODIFIERS: 기본값
+
+# 하위 호환성: 레거시 STYLE_MODIFIERS (간단한 텍스트 버전)
 STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
     'length': {
-        'short': '총 분량은 약 300자 내외로 핵심만 간결하게 작성하세요.',
-        'medium': '총 분량은 약 800자 내외로 적절히 작성하세요.',
+        'short': '총 분량은 약 300~500자로 핵심만 간결하게 작성하세요.',
+        'medium': '총 분량은 약 800~1200자로 적절히 작성하세요.',
         'long': '총 분량은 약 1500자 이상으로 상세하고 풍부하게 작성하세요.'
     },
     'tone': {
@@ -109,10 +161,29 @@ STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
     'emoji': {
         'use': '적절한 이모지를 활용하여 가독성과 재미를 높이세요. 각 섹션이나 중요 포인트에 이모지를 추가하세요.',
         'none': '이모지는 사용하지 마세요. 텍스트만으로 작성하세요.'
+    },
+    # 신규 모디파이어
+    'target': {
+        'general': '일반 독자 대상으로 전문 용어 사용 시 설명을 추가하세요.',
+        'expert': '전문가 대상으로 심층적인 분석과 업계 맥락을 포함하세요.',
+        'beginner': '입문자 대상으로 기초부터 친절하게 설명하세요.'
+    },
+    'focus': {
+        'actionable': '실행 가능한 팁과 액션 아이템 중심으로 작성하세요.',
+        'informative': '정보 전달과 개념 설명 중심으로 작성하세요.',
+        'persuasive': '논리적 근거와 설득력 있는 구조로 작성하세요.'
+    },
+    'depth': {
+        'overview': '개요 수준으로 핵심만 빠르게 훑으세요.',
+        'detailed': '상세하게 각 포인트를 충분히 설명하세요.',
+        'comprehensive': '종합적으로 모든 측면을 빠짐없이 다루세요.'
     }
 }
 
-# STYLE_PROMPTS는 prompts.py에서 import됨
+
+# ============================================================
+# 유틸리티 함수
+# ============================================================
 
 def get_model_max_tokens(model_id: str) -> int:
     """모델 ID로 최대 입력 토큰 수를 반환합니다."""
@@ -122,18 +193,70 @@ def get_model_max_tokens(model_id: str) -> int:
                 return model.get('max_input_tokens', MAX_CONTENT_TOKENS)
     return MAX_CONTENT_TOKENS  # fallback
 
+
+def normalize_style(style: str) -> str:
+    """레거시 스타일 이름을 새 스타일로 변환합니다."""
+    return STYLE_MAPPING.get(style, style)
+
+
+def get_style_options(use_legacy: bool = False) -> List[Tuple[str, str]]:
+    """
+    스타일 옵션 목록을 반환합니다.
+
+    Args:
+        use_legacy: True면 기존 15개 스타일, False면 새 8개 스타일
+
+    Returns:
+        (style_id, label) 튜플 리스트
+    """
+    return LEGACY_STYLE_OPTIONS if use_legacy else STYLE_OPTIONS
+
+
+def get_modifier_options() -> Dict[str, Dict[str, Any]]:
+    """
+    모디파이어 옵션 정보를 반환합니다 (UI 구성용).
+
+    Returns:
+        MODIFIER_OPTIONS 딕셔너리
+    """
+    return MODIFIER_OPTIONS
+
+
+# ============================================================
+# Export
+# ============================================================
+
 __all__ = [
+    # API Keys
     'YOUTUBE_API_KEY',
     'PROVIDER_API_KEYS',
     'SUPADATA_API_KEY',
+
+    # Token Limits
     'MAX_TRANSCRIPT_TOKENS',
     'MAX_COMMENTS_TOKENS',
     'MAX_CONTENT_TOKENS',
+
+    # Providers
     'SUPPORTED_PROVIDERS',
-    'STYLE_OPTIONS',
-    'STYLE_MODIFIERS',
-    'STYLE_PROMPTS',
-    'get_model_max_tokens',
     'get_available_providers',
-    'get_provider_from_model'
+    'get_provider_from_model',
+    'get_model_max_tokens',
+
+    # Styles (v2.0)
+    'STYLE_OPTIONS',
+    'LEGACY_STYLE_OPTIONS',
+    'STYLE_MAPPING',
+    'STYLE_PROMPTS',
+    'normalize_style',
+    'get_style_options',
+
+    # Modifiers (v2.0)
+    'STYLE_MODIFIERS',
+    'MODIFIER_OPTIONS',
+    'DEFAULT_MODIFIERS',
+    'get_modifier_options',
+
+    # Prompt Builder
+    'build_full_prompt',
 ]
