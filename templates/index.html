@@ -282,6 +282,13 @@
             background: var(--background-dark);
             height: 100%;
             overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* 패널 내부 컨텐츠 너비 제한 */
+        #input-panel > * {
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         /* Result Panel - flex-1 (remaining space) */
@@ -308,11 +315,23 @@
         /* Style Section */
         #style-section {
             flex: 0 0 auto !important;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        /* 스타일 그리드 너비 제한 */
+        #style-section .grid {
+            width: 100%;
+            max-width: 100%;
         }
 
         /* 모디파이어 섹션 */
         #modifier-section {
             flex: 0 0 auto !important;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         /* 콘텐츠 생성 버튼 */
