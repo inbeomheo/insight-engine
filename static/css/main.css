@@ -33,6 +33,5 @@
 /* ==================== Animations ==================== */
 @import "./animations.css";
 
-/* ==================== Themes ==================== */
-@import "./themes/light.css";
+/* ==================== Theme (Dark Mode Only) ==================== */
 @import "./themes/dark.css";

@@ -1,21 +1,41 @@
-/* CSS Variables - Light & Dark Mode */
+/* CSS Variables - Dark Mode Only */
 /* ==================== Base Styles - Teal Design System ==================== */
 
-/* ========== Light Mode (기본) ========== */
 /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
+/* Creative Studio 테마: 더 깊은 다크 + 악센트 글로우 */
 :root {
-    --primary: #0a6073;           /* 대비 5.2:1 vs #f5f7f9 */
-    --primary-hover: #085463;
-    --primary-glow: #0d8fa8;
-    --background-dark: #f5f7f9;
-    --surface-dark: #ffffff;
-    --card-dark: #ffffff;
-    --bg-elevated: #e8ecef;
-    --text-primary: #1f2937;      /* 대비 11.7:1 vs #f5f7f9 */
-    --text-muted: #4b5563;        /* 대비 7.0:1 vs #ffffff (더 진하게 개선) */
-    --text-subtle: #0a6073;       /* 대비 5.2:1 vs #f5f7f9 */
-    --border-dark: #9ca3af;       /* gray-400: 더 진한 테두리로 가시성 향상 */
-    --card-border: #0a607360;
+    /* Primary Colors */
+    --primary: #2aa3ba;           /* 대비 5.4:1 vs #0f1214 */
+    --primary-hover: #1f8a9e;
+    --primary-glow: #3eb8cf;
+
+    /* Accent Colors */
+    --accent: #c084fc;
+    --accent-hover: #a855f7;
+    --accent-glow: #d8b4fe;
+    --accent-warm: #fb7185;
+    --accent-lime: #a3e635;
+
+    /* Background - Deep Dark */
+    --background-dark: #0f1214;
+    --surface-dark: #181c20;
+    --card-dark: #1e2227;
+    --bg-elevated: #262b31;
+
+    /* Text Colors */
+    --text-primary: #ffffff;      /* 대비 15.5:1 vs #0f1214 */
+    --text-muted: #a8b0ba;        /* 대비 6.1:1 vs #0f1214 */
+    --text-subtle: #7ec8d6;       /* 대비 6.0:1 vs #0f1214 */
+
+    /* Borders */
+    --border-dark: #2d3238;
+    --card-border: #3d5a63;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #2aa3ba 0%, #c084fc 100%);
+    --gradient-accent: linear-gradient(135deg, #c084fc 0%, #fb7185 100%);
+    --gradient-glow: radial-gradient(ellipse at center, rgba(42, 163, 186, 0.15) 0%, transparent 70%);
+
     /* Compact Design Variables */
     --spacing-xs: 0.25rem;   /* 4px */
     --spacing-sm: 0.5rem;    /* 8px */
@@ -39,33 +59,3 @@
     --line-height-relaxed: 1.625;
     --line-height-loose: 1.75;
 }
-
-/* ========== Dark Mode ========== */
-/* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
-/* Creative Studio 테마: 더 깊은 다크 + 악센트 글로우 */
-[data-theme="dark"] {
-    --primary: #2aa3ba;           /* 대비 5.4:1 vs #0f1214 */
-    --primary-hover: #1f8a9e;
-    --primary-glow: #3eb8cf;
-    /* 악센트 컬러 */
-    --accent: #c084fc;
-    --accent-hover: #a855f7;
-    --accent-glow: #d8b4fe;
-    --accent-warm: #fb7185;
-    --accent-lime: #a3e635;
-    /* 배경 - 더 깊은 다크 */
-    --background-dark: #0f1214;
-    --surface-dark: #181c20;
-    --card-dark: #1e2227;
-    --bg-elevated: #262b31;
-    --text-primary: #ffffff;      /* 대비 15.5:1 vs #0f1214 */
-    --text-muted: #a8b0ba;        /* 대비 6.1:1 vs #0f1214 */
-    --text-subtle: #7ec8d6;       /* 대비 6.0:1 vs #0f1214 */
-    --border-dark: #2d3238;
-    --card-border: #3d5a63;
-    /* 그라데이션 */
-    --gradient-primary: linear-gradient(135deg, #2aa3ba 0%, #c084fc 100%);
-    --gradient-accent: linear-gradient(135deg, #c084fc 0%, #fb7185 100%);
-    --gradient-glow: radial-gradient(ellipse at center, rgba(42, 163, 186, 0.15) 0%, transparent 70%);
-}
-

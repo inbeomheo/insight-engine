@@ -4,7 +4,7 @@
    ======================================== */
 
 /* 노이즈 텍스처 오버레이 */
-[data-theme="dark"] body::before {
+body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -18,8 +18,8 @@
 }
 
 /* ========== 사이드바 - 깊은 우주 ========== */
-[data-theme="dark"] #sidebar,
-.dark #sidebar {
+#sidebar,
+#sidebar {
     background: linear-gradient(
         180deg,
         rgba(15, 18, 20, 1) 0%,
@@ -31,7 +31,7 @@
 }
 
 /* 사이드바 상단 글로우 */
-[data-theme="dark"] #sidebar::before {
+#sidebar::before {
     content: '';
     position: absolute;
     top: 0;
@@ -47,7 +47,7 @@
 }
 
 /* 사이드바 로고 - 글로우 효과 */
-[data-theme="dark"] #sidebar .sidebar-logo {
+#sidebar .sidebar-logo {
     background: linear-gradient(135deg, var(--primary) 0%, #1d7a8a 100%) !important;
     box-shadow:
         0 0 20px rgba(42, 163, 186, 0.3),
@@ -56,7 +56,7 @@
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] #sidebar .sidebar-logo:hover {
+#sidebar .sidebar-logo:hover {
     transform: scale(1.08) rotate(3deg);
     box-shadow:
         0 0 30px rgba(42, 163, 186, 0.5),
@@ -65,8 +65,8 @@
 }
 
 /* 사이드바 타이틀 - 그라데이션 텍스트 */
-[data-theme="dark"] #sidebar .sidebar-title,
-[data-theme="dark"] #sidebar .sidebar-header > div:last-child {
+#sidebar .sidebar-title,
+#sidebar .sidebar-header > div:last-child {
     background: linear-gradient(135deg, #fff 0%, var(--primary-glow) 50%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -76,7 +76,7 @@
 }
 
 /* 네비게이션 버튼 - 글래스 효과 */
-[data-theme="dark"] #sidebar button[data-section] {
+#sidebar button[data-section] {
     position: relative;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 12px;
@@ -85,7 +85,7 @@
     overflow: hidden;
 }
 
-[data-theme="dark"] #sidebar button[data-section]::before {
+#sidebar button[data-section]::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -94,17 +94,17 @@
     transition: opacity 0.3s ease;
 }
 
-[data-theme="dark"] #sidebar button[data-section]:hover {
+#sidebar button[data-section]:hover {
     background: rgba(42, 163, 186, 0.08) !important;
     border-color: rgba(42, 163, 186, 0.15);
     transform: translateX(4px);
 }
 
-[data-theme="dark"] #sidebar button[data-section]:hover::before {
+#sidebar button[data-section]:hover::before {
     opacity: 1;
 }
 
-[data-theme="dark"] #sidebar button[data-section].active {
+#sidebar button[data-section].active {
     background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.08) 100%) !important;
     border: 1px solid rgba(42, 163, 186, 0.25);
     box-shadow:
@@ -113,19 +113,19 @@
 }
 
 /* 네비게이션 아이콘 글로우 */
-[data-theme="dark"] #sidebar button[data-section]:hover .material-symbols-outlined {
+#sidebar button[data-section]:hover .material-symbols-outlined {
     color: var(--primary-glow);
     text-shadow: 0 0 12px rgba(42, 163, 186, 0.6);
 }
 
-[data-theme="dark"] #sidebar button[data-section].active .material-symbols-outlined {
+#sidebar button[data-section].active .material-symbols-outlined {
     color: var(--primary-glow);
     text-shadow: 0 0 15px rgba(42, 163, 186, 0.8);
 }
 
 /* 로그인 버튼 - 그라데이션 보더 */
-[data-theme="dark"] #sidebar #sidebar-auth-container button,
-[data-theme="dark"] #sidebar-auth-container button {
+#sidebar #sidebar-auth-container button,
+#sidebar-auth-container button {
     background: linear-gradient(135deg, rgba(42, 163, 186, 0.1) 0%, rgba(192, 132, 252, 0.05) 100%) !important;
     border: 1px solid rgba(42, 163, 186, 0.2) !important;
     border-radius: 10px;
@@ -134,8 +134,8 @@
     overflow: hidden;
 }
 
-[data-theme="dark"] #sidebar #sidebar-auth-container button:hover,
-[data-theme="dark"] #sidebar-auth-container button:hover {
+#sidebar #sidebar-auth-container button:hover,
+#sidebar-auth-container button:hover {
     background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%) !important;
     border-color: rgba(42, 163, 186, 0.4) !important;
     box-shadow:
@@ -145,8 +145,8 @@
 }
 
 /* ========== 헤더 - 글래스모피즘 ========== */
-[data-theme="dark"] header[role="banner"],
-.dark header[role="banner"] {
+header[role="banner"],
+header[role="banner"] {
     background: linear-gradient(
         90deg,
         rgba(15, 18, 20, 0.95) 0%,
@@ -162,7 +162,7 @@
 }
 
 /* 헤더 버전 뱃지 - 네온 효과 */
-[data-theme="dark"] header .text-xs.px-2 {
+header .text-xs.px-2 {
     background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(192, 132, 252, 0.1) 100%);
     border: 1px solid rgba(42, 163, 186, 0.25);
     box-shadow:
@@ -173,33 +173,33 @@
 }
 
 /* 헤더 상태 표시 - 글래스 카드 */
-[data-theme="dark"] header [role="status"] {
+header [role="status"] {
     background: rgba(30, 34, 39, 0.8) !important;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] header [role="status"]:hover {
+header [role="status"]:hover {
     background: rgba(42, 163, 186, 0.1) !important;
     border-color: rgba(42, 163, 186, 0.25);
     box-shadow: 0 0 20px rgba(42, 163, 186, 0.15);
 }
 
 /* 헤더 버튼 호버 */
-[data-theme="dark"] header button {
+header button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 10px;
 }
 
-[data-theme="dark"] header button:hover {
+header button:hover {
     background: rgba(42, 163, 186, 0.1) !important;
     box-shadow: 0 0 15px rgba(42, 163, 186, 0.15);
 }
 
 /* ========== 입력 패널 - 깊은 우주 ========== */
-[data-theme="dark"] #input-panel,
-.dark #input-panel {
+#input-panel,
+#input-panel {
     background: linear-gradient(
         180deg,
         rgba(18, 22, 28, 1) 0%,
@@ -211,7 +211,7 @@
 }
 
 /* 입력 패널 상단 글로우 */
-[data-theme="dark"] #input-panel::before {
+#input-panel::before {
     content: '';
     position: absolute;
     top: 0;
@@ -228,8 +228,8 @@
 }
 
 /* 섹션 헤더 버튼 - 글래스 효과 */
-[data-theme="dark"] #input-panel .section-toggle-btn,
-[data-theme="dark"] #input-panel button[aria-expanded] {
+#input-panel .section-toggle-btn,
+#input-panel button[aria-expanded] {
     background: rgba(30, 34, 39, 0.6) !important;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.04) !important;
@@ -237,16 +237,16 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] #input-panel .section-toggle-btn:hover,
-[data-theme="dark"] #input-panel button[aria-expanded]:hover {
+#input-panel .section-toggle-btn:hover,
+#input-panel button[aria-expanded]:hover {
     background: rgba(42, 163, 186, 0.08) !important;
     border-color: rgba(42, 163, 186, 0.15) !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* 스타일 카드 - 홀로그램 효과 */
-[data-theme="dark"] .style-card,
-[data-theme="dark"] .style-option .style-card {
+.style-card,
+.style-option .style-card {
     background: linear-gradient(
         145deg,
         rgba(30, 34, 39, 0.9) 0%,
@@ -259,7 +259,7 @@
     overflow: hidden;
 }
 
-[data-theme="dark"] .style-card::before {
+.style-card::before {
     content: '';
     position: absolute;
     top: 0;
@@ -275,11 +275,11 @@
     transition: left 0.5s ease;
 }
 
-[data-theme="dark"] .style-card:hover::before {
+.style-card:hover::before {
     left: 100%;
 }
 
-[data-theme="dark"] .style-card:hover {
+.style-card:hover {
     background: linear-gradient(
         145deg,
         rgba(42, 163, 186, 0.12) 0%,
@@ -293,8 +293,8 @@
 }
 
 /* 선택된 스타일 카드 */
-[data-theme="dark"] .peer:checked + .style-card,
-[data-theme="dark"] input:checked + .style-card {
+.peer:checked + .style-card,
+input:checked + .style-card {
     background: linear-gradient(
         145deg,
         rgba(42, 163, 186, 0.2) 0%,
@@ -308,7 +308,7 @@
 }
 
 /* 콘텐츠 생성 버튼 - 네온 그라데이션 */
-[data-theme="dark"] #run-analysis-btn {
+#run-analysis-btn {
     background: linear-gradient(
         135deg,
         var(--primary) 0%,
@@ -325,7 +325,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] #run-analysis-btn:hover:not(:disabled) {
+#run-analysis-btn:hover:not(:disabled) {
     transform: translateY(-2px) scale(1.02);
     box-shadow:
         0 8px 30px rgba(42, 163, 186, 0.5),
@@ -339,8 +339,8 @@
 }
 
 /* ========== 결과 패널 - 우주 배경 ========== */
-[data-theme="dark"] #result-panel,
-.dark #result-panel {
+#result-panel,
+#result-panel {
     background: linear-gradient(
         135deg,
         rgba(12, 15, 18, 1) 0%,
@@ -352,7 +352,7 @@
 }
 
 /* 결과 패널 우주 글로우 */
-[data-theme="dark"] #result-panel::before {
+#result-panel::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -370,7 +370,7 @@
 }
 
 /* 결과 패널 별 효과 */
-[data-theme="dark"] #result-panel::after {
+#result-panel::after {
     content: '';
     position: absolute;
     top: 0;
@@ -392,7 +392,7 @@
 }
 
 /* 빈 상태 영역 - 플로팅 카드 */
-[data-theme="dark"] #result-panel [role="status"] {
+#result-panel [role="status"] {
     background: linear-gradient(
         145deg,
         rgba(30, 34, 39, 0.6) 0%,
@@ -410,7 +410,7 @@
 }
 
 /* 빈 상태 아이콘 - 펄스 글로우 */
-[data-theme="dark"] #result-panel [role="status"] .material-symbols-outlined {
+#result-panel [role="status"] .material-symbols-outlined {
     animation: cosmicPulse 2.5s ease-in-out infinite;
 }
 
@@ -431,7 +431,7 @@
 }
 
 /* 결과 카드 - 프리미엄 글래스 */
-[data-theme="dark"] .result-card {
+.result-card {
     background: linear-gradient(
         145deg,
         rgba(30, 34, 39, 0.8) 0%,
@@ -446,7 +446,7 @@
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] .result-card:hover {
+.result-card:hover {
     border-color: rgba(42, 163, 186, 0.3) !important;
     box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.4),
@@ -456,17 +456,17 @@
 }
 
 /* ========== 전역 스크롤바 - 네온 ========== */
-[data-theme="dark"] ::-webkit-scrollbar {
+::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
 
-[data-theme="dark"] ::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     background: rgba(15, 18, 20, 0.8);
     border-radius: 5px;
 }
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     background: linear-gradient(
         180deg,
         rgba(42, 163, 186, 0.4) 0%,
@@ -477,7 +477,7 @@
     background-clip: padding-box;
 }
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(
         180deg,
         rgba(42, 163, 186, 0.6) 0%,
@@ -486,21 +486,21 @@
 }
 
 /* ========== 모디파이어 칩 - 글래스 ========== */
-[data-theme="dark"] .chip-radio-label,
-[data-theme="dark"] [class*="chip"] {
+.chip-radio-label,
+[class*="chip"] {
     background: rgba(30, 34, 39, 0.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] .chip-radio-label:hover,
-[data-theme="dark"] [class*="chip"]:hover {
+.chip-radio-label:hover,
+[class*="chip"]:hover {
     background: rgba(42, 163, 186, 0.1) !important;
     border-color: rgba(42, 163, 186, 0.2) !important;
 }
 
-[data-theme="dark"] .peer:checked + .chip-radio-label,
-[data-theme="dark"] input:checked + [class*="chip"] {
+.peer:checked + .chip-radio-label,
+input:checked + [class*="chip"] {
     background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%) !important;
     border-color: rgba(42, 163, 186, 0.4) !important;
     box-shadow: 0 0 15px rgba(42, 163, 186, 0.2);
@@ -511,8 +511,8 @@
    ======================================== */
 
 /* ========== 타이포그래피 강화 ========== */
-[data-theme="dark"] h1,
-[data-theme="dark"] .page-title {
+h1,
+.page-title {
     font-family: 'Outfit', 'Pretendard', sans-serif;
     background: linear-gradient(135deg, #fff 0%, var(--primary-glow) 100%);
     -webkit-background-clip: text;
@@ -522,9 +522,9 @@
 }
 
 /* ========== URL 입력 필드 - 네온 포커스 ========== */
-[data-theme="dark"] #url-input,
-[data-theme="dark"] input[type="text"],
-[data-theme="dark"] input[type="url"] {
+#url-input,
+input[type="text"],
+input[type="url"] {
     background: rgba(20, 24, 30, 0.8) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
     border-radius: 12px !important;
@@ -532,9 +532,9 @@
     backdrop-filter: blur(10px);
 }
 
-[data-theme="dark"] #url-input:focus,
-[data-theme="dark"] input[type="text"]:focus,
-[data-theme="dark"] input[type="url"]:focus {
+#url-input:focus,
+input[type="text"]:focus,
+input[type="url"]:focus {
     border-color: var(--primary) !important;
     box-shadow:
         0 0 0 3px rgba(42, 163, 186, 0.15),
@@ -543,12 +543,12 @@
     outline: none !important;
 }
 
-[data-theme="dark"] #url-input::placeholder {
+#url-input::placeholder {
     color: rgba(255, 255, 255, 0.3);
 }
 
 /* ========== 추가 버튼 - 펄스 효과 ========== */
-[data-theme="dark"] #add-url-btn:not(:disabled) {
+#add-url-btn:not(:disabled) {
     background: linear-gradient(135deg, var(--primary) 0%, #1d8a9e 100%) !important;
     box-shadow:
         0 4px 15px rgba(42, 163, 186, 0.3),
@@ -561,7 +561,7 @@
     50% { box-shadow: 0 4px 20px rgba(42, 163, 186, 0.4), 0 0 40px rgba(42, 163, 186, 0.25); }
 }
 
-[data-theme="dark"] #add-url-btn:hover:not(:disabled) {
+#add-url-btn:hover:not(:disabled) {
     transform: translateY(-2px) scale(1.05);
     box-shadow:
         0 6px 25px rgba(42, 163, 186, 0.5),
@@ -569,7 +569,7 @@
 }
 
 /* ========== 카테고리 라벨 - 컬러 포인트 ========== */
-[data-theme="dark"] .text-xs.text-primary {
+.text-xs.text-primary {
     font-family: 'Outfit', sans-serif;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -580,7 +580,7 @@
     gap: 6px;
 }
 
-[data-theme="dark"] .text-xs.text-primary::before {
+.text-xs.text-primary::before {
     content: '';
     width: 6px;
     height: 6px;
@@ -596,41 +596,41 @@
 }
 
 /* 분석 카테고리 - 노란색 포인트 */
-[data-theme="dark"] .text-xs.text-yellow-400::before,
-[data-theme="dark"] [class*="yellow"]::before {
+.text-xs.text-yellow-400::before,
+[class*="yellow"]::before {
     background: #facc15 !important;
     box-shadow: 0 0 8px #facc15 !important;
 }
 
 /* 콘텐츠 카테고리 - 보라색 포인트 */
-[data-theme="dark"] .text-xs.text-accent::before {
+.text-xs.text-accent::before {
     background: var(--accent) !important;
     box-shadow: 0 0 8px var(--accent) !important;
 }
 
 /* ========== 섹션 아이콘 글로우 ========== */
-[data-theme="dark"] .section-toggle-btn .material-symbols-outlined,
-[data-theme="dark"] button[aria-expanded] .material-symbols-outlined {
+.section-toggle-btn .material-symbols-outlined,
+button[aria-expanded] .material-symbols-outlined {
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .section-toggle-btn:hover .material-symbols-outlined,
-[data-theme="dark"] button[aria-expanded]:hover .material-symbols-outlined {
+.section-toggle-btn:hover .material-symbols-outlined,
+button[aria-expanded]:hover .material-symbols-outlined {
     color: var(--primary-glow);
     text-shadow: 0 0 15px rgba(42, 163, 186, 0.6);
     transform: scale(1.1);
 }
 
 /* ========== AI 자동 분석 버튼 - 특별한 그라데이션 ========== */
-[data-theme="dark"] button[class*="auto-analyze"],
-[data-theme="dark"] button:has(.material-symbols-outlined:contains("auto_awesome")):not(#run-analysis-btn) {
+button[class*="auto-analyze"],
+button:has(.material-symbols-outlined:contains("auto_awesome")):not(#run-analysis-btn) {
     background: linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(42, 163, 186, 0.1) 100%) !important;
     border: 1px solid rgba(192, 132, 252, 0.25) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] button[class*="auto-analyze"]:hover:not(:disabled),
-[data-theme="dark"] button:has(.material-symbols-outlined:contains("auto_awesome")):hover:not(:disabled):not(#run-analysis-btn) {
+button[class*="auto-analyze"]:hover:not(:disabled),
+button:has(.material-symbols-outlined:contains("auto_awesome")):hover:not(:disabled):not(#run-analysis-btn) {
     background: linear-gradient(135deg, rgba(192, 132, 252, 0.25) 0%, rgba(42, 163, 186, 0.15) 100%) !important;
     border-color: rgba(192, 132, 252, 0.4) !important;
     box-shadow: 0 0 25px rgba(192, 132, 252, 0.2);
@@ -638,23 +638,23 @@
 }
 
 /* ========== 스타일 카드 아이콘 - 개별 색상 ========== */
-[data-theme="dark"] .style-card .material-symbols-outlined {
+.style-card .material-symbols-outlined {
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .style-card:hover .material-symbols-outlined {
+.style-card:hover .material-symbols-outlined {
     transform: scale(1.15) translateY(-2px);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
-[data-theme="dark"] .peer:checked + .style-card .material-symbols-outlined {
+.peer:checked + .style-card .material-symbols-outlined {
     color: var(--primary-glow);
     text-shadow: 0 0 20px rgba(42, 163, 186, 0.8);
     transform: scale(1.1);
 }
 
 /* ========== URL 카드 - 호버 효과 ========== */
-[data-theme="dark"] .url-card {
+.url-card {
     background: linear-gradient(145deg, rgba(30, 34, 39, 0.8) 0%, rgba(25, 29, 34, 0.6) 100%) !important;
     border: 1px solid rgba(255, 255, 255, 0.04) !important;
     border-radius: 14px !important;
@@ -663,7 +663,7 @@
     overflow: hidden;
 }
 
-[data-theme="dark"] .url-card::before {
+.url-card::before {
     content: '';
     position: absolute;
     left: 0;
@@ -675,23 +675,23 @@
     transition: opacity 0.3s ease;
 }
 
-[data-theme="dark"] .url-card:hover {
+.url-card:hover {
     border-color: rgba(42, 163, 186, 0.2) !important;
     transform: translateX(4px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme="dark"] .url-card:hover::before {
+.url-card:hover::before {
     opacity: 1;
 }
 
 /* ========== 결과 탭 - 언더라인 효과 ========== */
-[data-theme="dark"] #result-panel [role="tab"] {
+#result-panel [role="tab"] {
     position: relative;
     overflow: hidden;
 }
 
-[data-theme="dark"] #result-panel [role="tab"]::after {
+#result-panel [role="tab"]::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -703,17 +703,17 @@
     transform: translateX(-50%);
 }
 
-[data-theme="dark"] #result-panel [role="tab"]:hover::after {
+#result-panel [role="tab"]:hover::after {
     width: 60%;
 }
 
-[data-theme="dark"] #result-panel [role="tab"][aria-selected="true"]::after {
+#result-panel [role="tab"][aria-selected="true"]::after {
     width: 80%;
     box-shadow: 0 0 10px rgba(42, 163, 186, 0.5);
 }
 
 /* ========== 피처 배지 - 플로팅 효과 ========== */
-[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div {
+#result-panel [role="status"] > div:last-of-type > div {
     background: rgba(30, 34, 39, 0.8) !important;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
@@ -722,30 +722,30 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:hover {
+#result-panel [role="status"] > div:last-of-type > div:hover {
     transform: translateY(-3px);
     border-color: rgba(42, 163, 186, 0.3) !important;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 /* 빠른 분석 배지 - 시안 */
-[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:first-child {
+#result-panel [role="status"] > div:last-of-type > div:first-child {
     border-color: rgba(42, 163, 186, 0.3) !important;
 }
 
 /* AI 기반 배지 - 보라 */
-[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:nth-child(2) {
+#result-panel [role="status"] > div:last-of-type > div:nth-child(2) {
     border-color: rgba(192, 132, 252, 0.3) !important;
 }
 
 /* 한국어 최적화 배지 - 핑크 */
-[data-theme="dark"] #result-panel [role="status"] > div:last-of-type > div:last-child {
+#result-panel [role="status"] > div:last-of-type > div:last-child {
     border-color: rgba(251, 113, 133, 0.3) !important;
 }
 
 /* ========== 모디파이어 섹션 - 레이블 스타일 ========== */
-[data-theme="dark"] fieldset legend,
-[data-theme="dark"] .modifier-label {
+fieldset legend,
+.modifier-label {
     font-family: 'Outfit', sans-serif;
     font-size: 11px;
     font-weight: 600;
@@ -757,14 +757,14 @@
     gap: 6px;
 }
 
-[data-theme="dark"] fieldset legend .material-symbols-outlined,
-[data-theme="dark"] .modifier-label .material-symbols-outlined {
+fieldset legend .material-symbols-outlined,
+.modifier-label .material-symbols-outlined {
     font-size: 16px;
     color: var(--primary);
 }
 
 /* ========== 로딩 상태 - 스켈레톤 ========== */
-[data-theme="dark"] .skeleton {
+.skeleton {
     background: linear-gradient(
         90deg,
         rgba(30, 34, 39, 0.8) 0%,
@@ -782,7 +782,7 @@
 }
 
 /* ========== 툴팁 스타일 ========== */
-[data-theme="dark"] [title]:hover::after {
+[title]:hover::after {
     content: attr(title);
     position: absolute;
     bottom: 100%;
@@ -799,28 +799,28 @@
 }
 
 /* ========== 전역 포커스 링 ========== */
-[data-theme="dark"] *:focus-visible {
+*:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
     border-radius: 4px;
 }
 
 /* ========== 선택 영역 스타일 ========== */
-[data-theme="dark"] ::selection {
+::selection {
     background: rgba(42, 163, 186, 0.3);
     color: #fff;
 }
 
 /* ========== 패널 리사이저 ========== */
-[data-theme="dark"] .resize-handle,
-[data-theme="dark"] [role="separator"] {
+.resize-handle,
+[role="separator"] {
     background: transparent !important;
     transition: all 0.3s ease;
     position: relative;
 }
 
-[data-theme="dark"] .resize-handle::after,
-[data-theme="dark"] [role="separator"]::after {
+.resize-handle::after,
+[role="separator"]::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -833,15 +833,15 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .resize-handle:hover::after,
-[data-theme="dark"] [role="separator"]:hover::after {
+.resize-handle:hover::after,
+[role="separator"]:hover::after {
     background: rgba(42, 163, 186, 0.5);
     height: 60px;
     box-shadow: 0 0 15px rgba(42, 163, 186, 0.3);
 }
 
 /* ========== 스크롤 힌트 애니메이션 ========== */
-[data-theme="dark"] .scroll-hint {
+.scroll-hint {
     animation: scrollHint 2s ease-in-out infinite;
 }
 
@@ -851,12 +851,12 @@
 }
 
 /* ========== 버튼 리플 효과 ========== */
-[data-theme="dark"] button {
+button {
     position: relative;
     overflow: hidden;
 }
 
-[data-theme="dark"] button::after {
+button::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -869,7 +869,7 @@
     transition: width 0.6s ease, height 0.6s ease;
 }
 
-[data-theme="dark"] button:active::after {
+button:active::after {
     width: 200px;
     height: 200px;
 }
@@ -877,7 +877,7 @@
 /* ==================== FINAL POLISH v3 - 마무리 터치 ==================== */
 
 /* ========== 아코디언 헤더 강화 ========== */
-[data-theme="dark"] .accordion-header {
+.accordion-header {
     background: linear-gradient(135deg,
         rgba(30, 34, 39, 0.9) 0%,
         rgba(38, 43, 49, 0.7) 100%) !important;
@@ -888,7 +888,7 @@
     overflow: hidden;
 }
 
-[data-theme="dark"] .accordion-header::before {
+.accordion-header::before {
     content: '';
     position: absolute;
     top: 0;
@@ -901,7 +901,7 @@
         transparent 100%);
 }
 
-[data-theme="dark"] .accordion-header:hover {
+.accordion-header:hover {
     background: linear-gradient(135deg,
         rgba(38, 43, 49, 0.95) 0%,
         rgba(45, 50, 58, 0.8) 100%) !important;
@@ -909,7 +909,7 @@
     transform: translateX(2px);
 }
 
-[data-theme="dark"] .accordion-header[aria-expanded="true"] {
+.accordion-header[aria-expanded="true"] {
     border-color: var(--primary) !important;
     box-shadow:
         0 4px 20px rgba(42, 163, 186, 0.15),
@@ -917,7 +917,7 @@
 }
 
 /* ========== 아코디언 컨텐츠 영역 ========== */
-[data-theme="dark"] .accordion-content {
+.accordion-content {
     background: linear-gradient(180deg,
         rgba(24, 28, 32, 0.6) 0%,
         rgba(24, 28, 32, 0.9) 100%) !important;
@@ -929,20 +929,20 @@
 }
 
 /* ========== 결과 패널 빈 상태 개선 ========== */
-[data-theme="dark"] #result-panel .empty-state,
-[data-theme="dark"] [role="status"]:has(.empty-state-icon) {
+#result-panel .empty-state,
+[role="status"]:has(.empty-state-icon) {
     background: radial-gradient(ellipse at center,
         rgba(42, 163, 186, 0.08) 0%,
         transparent 70%) !important;
 }
 
-[data-theme="dark"] .empty-state-icon,
-[data-theme="dark"] #result-panel [role="status"] > div:first-child {
+.empty-state-icon,
+#result-panel [role="status"] > div:first-child {
     position: relative;
 }
 
-[data-theme="dark"] .empty-state-icon::after,
-[data-theme="dark"] #result-panel [role="status"] > div:first-child::after {
+.empty-state-icon::after,
+#result-panel [role="status"] > div:first-child::after {
     content: '';
     position: absolute;
     inset: -20px;
@@ -966,7 +966,7 @@
 }
 
 /* ========== 스타일 카드 선택 상태 강화 ========== */
-[data-theme="dark"] .style-card:has(input:checked) {
+.style-card:has(input:checked) {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.2) 0%,
         rgba(42, 163, 186, 0.1) 100%) !important;
@@ -978,7 +978,7 @@
     transform: translateY(-2px) scale(1.02);
 }
 
-[data-theme="dark"] .style-card:has(input:checked)::before {
+.style-card:has(input:checked)::before {
     content: '';
     position: absolute;
     top: -1px;
@@ -993,7 +993,7 @@
     opacity: 0.3;
 }
 
-[data-theme="dark"] .style-card:has(input:checked) .material-symbols-outlined {
+.style-card:has(input:checked) .material-symbols-outlined {
     color: var(--primary) !important;
     filter: drop-shadow(0 0 8px rgba(42, 163, 186, 0.6));
     animation: selectedIconGlow 2s ease-in-out infinite;
@@ -1005,8 +1005,8 @@
 }
 
 /* ========== 모디파이어 칩 선택 상태 ========== */
-[data-theme="dark"] .modifier-chip:has(input:checked),
-[data-theme="dark"] [role="radiogroup"] label:has(input:checked) {
+.modifier-chip:has(input:checked),
+[role="radiogroup"] label:has(input:checked) {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.25) 0%,
         rgba(42, 163, 186, 0.15) 100%) !important;
@@ -1018,8 +1018,8 @@
 }
 
 /* ========== 피처 뱃지 개선 ========== */
-[data-theme="dark"] .feature-badge,
-[data-theme="dark"] #result-panel [role="status"] .flex.gap-2 > div {
+.feature-badge,
+#result-panel [role="status"] .flex.gap-2 > div {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.15) 0%,
         rgba(192, 132, 252, 0.1) 100%) !important;
@@ -1030,20 +1030,20 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .feature-badge:hover,
-[data-theme="dark"] #result-panel [role="status"] .flex.gap-2 > div:hover {
+.feature-badge:hover,
+#result-panel [role="status"] .flex.gap-2 > div:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(42, 163, 186, 0.25);
     border-color: var(--primary) !important;
 }
 
 /* ========== 입력 패널 섹션 간격 개선 ========== */
-[data-theme="dark"] #input-panel > form > div {
+#input-panel > form > div {
     margin-bottom: 12px;
 }
 
 /* ========== URL 카드 스타일 보강 ========== */
-[data-theme="dark"] .url-card {
+.url-card {
     background: linear-gradient(135deg,
         rgba(30, 34, 39, 0.95) 0%,
         rgba(38, 43, 49, 0.8) 100%) !important;
@@ -1053,7 +1053,7 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-[data-theme="dark"] .url-card:hover {
+.url-card:hover {
     border-color: rgba(42, 163, 186, 0.5) !important;
     background: linear-gradient(135deg,
         rgba(38, 43, 49, 0.98) 0%,
@@ -1065,12 +1065,12 @@
 }
 
 /* ========== 사이드바 네비게이션 호버 ========== */
-[data-theme="dark"] .nav-icon-btn {
+.nav-icon-btn {
     position: relative;
     transition: all 0.3s ease !important;
 }
 
-[data-theme="dark"] .nav-icon-btn::before {
+.nav-icon-btn::before {
     content: '';
     position: absolute;
     left: 0;
@@ -1083,22 +1083,22 @@
     transition: height 0.3s ease;
 }
 
-[data-theme="dark"] .nav-icon-btn:hover::before {
+.nav-icon-btn:hover::before {
     height: 60%;
 }
 
-[data-theme="dark"] .nav-icon-btn.active::before {
+.nav-icon-btn.active::before {
     height: 80%;
 }
 
-[data-theme="dark"] .nav-icon-btn:hover {
+.nav-icon-btn:hover {
     background: linear-gradient(90deg,
         rgba(42, 163, 186, 0.15) 0%,
         transparent 100%) !important;
 }
 
 /* ========== 헤더 상태 뱃지 ========== */
-[data-theme="dark"] header [role="status"] {
+header [role="status"] {
     background: rgba(30, 34, 39, 0.8) !important;
     border: 1px solid rgba(61, 90, 99, 0.4) !important;
     border-radius: 8px !important;
@@ -1107,14 +1107,14 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] header [role="status"]:hover {
+header [role="status"]:hover {
     border-color: rgba(42, 163, 186, 0.5) !important;
     background: rgba(38, 43, 49, 0.9) !important;
 }
 
 /* ========== 결과 패널 제목 스타일 ========== */
-[data-theme="dark"] #result-panel h2,
-[data-theme="dark"] #result-panel h3 {
+#result-panel h2,
+#result-panel h3 {
     background: linear-gradient(135deg,
         var(--text-light) 0%,
         var(--primary-glow) 100%);
@@ -1124,19 +1124,19 @@
 }
 
 /* ========== 스크롤바 트랙 호버 ========== */
-[data-theme="dark"] ::-webkit-scrollbar-track:hover {
+::-webkit-scrollbar-track:hover {
     background: rgba(30, 34, 39, 0.8);
 }
 
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg,
         var(--primary) 0%,
         var(--accent) 100%);
 }
 
 /* ========== 토스트/알림 스타일 ========== */
-[data-theme="dark"] .toast,
-[data-theme="dark"] [role="alert"] {
+.toast,
+[role="alert"] {
     background: linear-gradient(135deg,
         rgba(30, 34, 39, 0.98) 0%,
         rgba(38, 43, 49, 0.95) 100%) !important;
@@ -1149,13 +1149,13 @@
 }
 
 /* ========== 인풋 플레이스홀더 스타일 ========== */
-[data-theme="dark"] input::placeholder {
+input::placeholder {
     color: rgba(148, 163, 184, 0.5) !important;
     font-style: italic;
 }
 
 /* ========== AI 자동 분석 버튼 스타일 ========== */
-[data-theme="dark"] [aria-label*="AI 자동 분석"] {
+[aria-label*="AI 자동 분석"] {
     background: linear-gradient(135deg,
         rgba(192, 132, 252, 0.2) 0%,
         rgba(42, 163, 186, 0.2) 100%) !important;
@@ -1164,7 +1164,7 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] [aria-label*="AI 자동 분석"]:hover:not(:disabled) {
+[aria-label*="AI 자동 분석"]:hover:not(:disabled) {
     background: linear-gradient(135deg,
         rgba(192, 132, 252, 0.3) 0%,
         rgba(42, 163, 186, 0.3) 100%) !important;
@@ -1174,8 +1174,8 @@
 }
 
 /* ========== AI 스타일 생성 버튼 ========== */
-[data-theme="dark"] button:has(.material-symbols-outlined:first-child):has(span:contains("AI 스타일")),
-[data-theme="dark"] [aria-label*="AI 스타일"] {
+button:has(.material-symbols-outlined:first-child):has(span:contains("AI 스타일")),
+[aria-label*="AI 스타일"] {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.1) 0%,
         rgba(192, 132, 252, 0.1) 100%) !important;
@@ -1184,7 +1184,7 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] [aria-label*="AI 스타일"]:hover {
+[aria-label*="AI 스타일"]:hover {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.2) 0%,
         rgba(192, 132, 252, 0.2) 100%) !important;
@@ -1193,13 +1193,13 @@
 }
 
 /* ========== 글로벌 텍스트 선택 스타일 ========== */
-[data-theme="dark"] ::selection {
+::selection {
     background: rgba(42, 163, 186, 0.4);
     color: #fff;
 }
 
 /* ========== 포커스 링 개선 ========== */
-[data-theme="dark"] *:focus-visible {
+*:focus-visible {
     outline: none !important;
     box-shadow:
         0 0 0 2px var(--surface-dark),
@@ -1207,7 +1207,7 @@
 }
 
 /* ========== 배지/태그 스타일 (Beta 등) ========== */
-[data-theme="dark"] header .text-xs.font-medium {
+header .text-xs.font-medium {
     background: linear-gradient(135deg,
         rgba(42, 163, 186, 0.2) 0%,
         rgba(62, 184, 207, 0.1) 100%) !important;
@@ -1226,16 +1226,16 @@
 }
 
 /* ========== 로딩 스피너 스타일 ========== */
-[data-theme="dark"] .spinner,
-[data-theme="dark"] .loading-spinner {
+.spinner,
+.loading-spinner {
     border-color: rgba(42, 163, 186, 0.2) !important;
     border-top-color: var(--primary) !important;
 }
 
 /* ========== 구분선 스타일 ========== */
-[data-theme="dark"] hr,
-[data-theme="dark"] .divider,
-[data-theme="dark"] [role="separator"] {
+hr,
+.divider,
+[role="separator"] {
     background: linear-gradient(90deg,
         transparent 0%,
         rgba(61, 90, 99, 0.5) 50%,
