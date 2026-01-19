@@ -470,7 +470,7 @@
                         <button id="url-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="url-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">link</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
+                                <span class="text-sm font-medium text-white">YouTube URL</span>
                                 <span id="url-count-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full hidden">0</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="url-section-arrow" aria-hidden="true">expand_less</span>
@@ -480,8 +480,8 @@
                         <div class="flex gap-2">
                             <div class="relative flex-1">
                                 <input type="url" id="url-input"
-                                       class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
-                                       placeholder="YouTube 영상 URL을 붙여넣기 하세요"
+                                       class="w-full bg-surface-dark border border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-white placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                                       placeholder="URL을 붙여넣으세요"
                                        aria-label="YouTube 영상 URL 입력"
                                        aria-describedby="url-hint"
                                        autocomplete="off">
@@ -520,7 +520,7 @@
                         <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="ai-model-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">psychology</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
+                                <span class="text-sm font-medium text-white">AI 모델</span>
                                 <span id="ai-model-badge" class="text-xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full hidden">선택됨</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_less</span>
@@ -532,7 +532,7 @@
                             <div class="select-card">
                                 <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
                                 <div class="relative">
-                                    <select id="provider" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
+                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -544,7 +544,7 @@
                             <div class="select-card">
                                 <label for="model" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
                                 <div class="relative">
-                                    <select id="model" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
+                                    <select id="model" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -568,7 +568,7 @@
                         <button id="style-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="style-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">style</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
+                                <span class="text-sm font-medium text-white">스타일</span>
                                 <span id="style-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Blog</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -882,7 +882,7 @@
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">결과</h2>
+                                <h2 class="text-lg font-semibold text-white">결과</h2>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>
@@ -901,7 +901,7 @@
                                 <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-violet-500/15 rounded-full blur-2xl scale-150" style="animation: glowPulse 6s ease-in-out infinite reverse;"></div>
                                 <!-- Icon Circle with Gradient Border -->
                                 <div class="relative w-36 h-36 rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-pink-500">
-                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1f24] dark:to-[#12161a] flex items-center justify-center">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#1a1f24] to-[#12161a] flex items-center justify-center">
                                         <span class="material-symbols-outlined text-6xl bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
                                     </div>
                                 </div>
@@ -913,30 +913,30 @@
                             </div>
 
                             <!-- Text Content -->
-                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
-                            <p class="text-gray-600 dark:text-text-secondary text-base mb-6 max-w-sm">
+                            <h3 class="text-2xl font-bold text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
+                            <p class="text-text-secondary text-base mb-6 max-w-sm">
                                 YouTube 영상 URL을 입력하면<br/>
                                 AI가 자동으로 콘텐츠를 분석하고 생성합니다
                             </p>
 
                             <!-- Feature Pills - Creative Studio Style -->
                             <div class="flex flex-wrap justify-center gap-3 mb-8">
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-primary dark:text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">bolt</span>
                                     빠른 분석
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-400 dark:text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">psychology</span>
                                     AI 기반
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-400 dark:text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">translate</span>
                                     한국어 최적화
                                 </span>
                             </div>
 
                             <!-- Arrow Hint with Animation -->
-                            <div class="flex items-center gap-2 text-gray-500 dark:text-text-muted text-sm">
+                            <div class="flex items-center gap-2 text-text-muted text-sm">
                                 <span class="material-symbols-outlined text-lg" style="animation: arrowPulse 1.5s ease-in-out infinite;">arrow_back</span>
                                 <span>왼쪽에서 URL을 입력하세요</span>
                             </div>
