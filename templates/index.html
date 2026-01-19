@@ -4154,8 +4154,15 @@
 
         // Sidebar auth container click
         document.getElementById('sidebar-auth-container')?.addEventListener('click', () => {
-            document.getElementById('auth-modal')?.classList.add('active');
-            if (window.innerWidth < 1024) toggleSidebar();
+            if (window.innerWidth < 1024) {
+                // 모바일: 사이드바 먼저 닫고 → 애니메이션 후 모달 열기
+                toggleSidebar();
+                setTimeout(() => {
+                    document.getElementById('auth-modal')?.classList.add('active');
+                }, 320); // 사이드바 닫힘 애니메이션(0.3s) 후
+            } else {
+                document.getElementById('auth-modal')?.classList.add('active');
+            }
         });
     </script>
 
