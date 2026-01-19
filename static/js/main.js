@@ -509,5 +509,34 @@ document.head.appendChild(style);
 
 // DOM 로드 시 초기화
 window.addEventListener('DOMContentLoaded', () => {
+    // 섹션 레이아웃 수정 - 모든 섹션이 펼쳐진 상태로 표시되도록 함
+    ['url-section', 'ai-model-section', 'style-section', 'modifier-section'].forEach(id => {
+        const section = document.getElementById(id);
+        if (section) {
+            section.style.flex = '0 0 auto';
+        }
+    });
+
+    // AI 모델 섹션 그리드를 1열로 변경 (서비스, 모델이 위아래로)
+    const aiModelPanel = document.getElementById('ai-model-panel');
+    if (aiModelPanel) {
+        const grid = aiModelPanel.querySelector('.grid');
+        if (grid) {
+            grid.classList.remove('grid-cols-4', 'grid-cols-2', 'gap-1.5');
+            grid.classList.add('grid-cols-1', 'gap-2');
+        }
+
+        // AI 모델 섹션 기본적으로 접힌 상태로 설정 (!important 우선순위 적용)
+        aiModelPanel.style.setProperty('display', 'none', 'important');
+        const aiModelToggle = document.getElementById('ai-model-toggle');
+        const aiModelArrow = document.getElementById('ai-model-arrow');
+        if (aiModelToggle) {
+            aiModelToggle.setAttribute('aria-expanded', 'false');
+        }
+        if (aiModelArrow) {
+            aiModelArrow.textContent = 'expand_more';
+        }
+    }
+
     new ContentAnalysis();
 });

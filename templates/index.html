@@ -295,16 +295,60 @@
             overflow-y: auto;
         }
 
-        /* Style Section - 자연스러운 높이, 스크롤 없음 */
+        /* URL Section */
+        #url-section {
+            flex: 0 0 auto !important;
+        }
+
+        /* AI Model Section */
+        #ai-model-section {
+            flex: 0 0 auto !important;
+        }
+
+        /* Style Section */
         #style-section {
             flex: 0 0 auto !important;
-            overflow: visible !important;
         }
 
         /* 모디파이어 섹션 */
         #modifier-section {
             flex: 0 0 auto !important;
-            overflow: visible !important;
+        }
+
+        /* 콘텐츠 생성 버튼 */
+        #generate-btn-container {
+            flex: 0 0 auto !important;
+        }
+
+        /* ==================== Desktop: 스크롤 없이 모든 요소 표시 ==================== */
+        @media (min-width: 1024px) {
+            /* 스타일 카드 콤팩트화 - 데스크톱 */
+            #style-section .style-card {
+                padding: 0.375rem 0.25rem !important;
+            }
+            #style-section .style-card .material-symbols-outlined {
+                font-size: 1.125rem !important;
+            }
+            #style-section .style-card .text-xs {
+                font-size: 0.625rem !important;
+                margin-top: 0.125rem !important;
+            }
+            /* 스타일 카드 설명 숨김 - 데스크톱에서만 */
+            #style-section .style-card > span:last-child {
+                display: none !important;
+            }
+            /* 카테고리 레이블 콤팩트화 */
+            #style-section .mb-3 {
+                margin-bottom: 0.375rem !important;
+            }
+            #style-section .text-\[10px\] {
+                font-size: 9px !important;
+                margin-bottom: 0.25rem !important;
+            }
+            /* 그리드 간격 줄임 */
+            #style-section .gap-1\.5 {
+                gap: 0.25rem !important;
+            }
         }
 
         /* Main Content Area - contains input and result panels */
@@ -3096,6 +3140,268 @@
             }
         }
 
+        /* ========== 데스크톱 접기/펼치기 기본 상태 ========== */
+        /* 모든 섹션 패널 항상 표시 */
+        #url-section-panel,
+        #ai-model-panel,
+        #style-section-panel,
+        #modifier-section-panel {
+            display: block !important;
+        }
+
+        /* ========== 왼쪽 패널 디자인 개선 ========== */
+
+        /* 패널 배경 - 다크모드 그라데이션 */
+        [data-theme="dark"] #input-panel,
+        .dark #input-panel {
+            background: linear-gradient(
+                180deg,
+                rgba(15, 23, 42, 1) 0%,
+                rgba(20, 30, 50, 0.98) 50%,
+                rgba(15, 25, 45, 1) 100%
+            ) !important;
+            border-right: 1px solid rgba(42, 163, 186, 0.2) !important;
+        }
+
+        /* 섹션 공통 스타일 */
+        #url-section,
+        #ai-model-section,
+        #style-section,
+        #modifier-section {
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: visible;
+        }
+
+        [data-theme="dark"] #url-section,
+        [data-theme="dark"] #ai-model-section,
+        [data-theme="dark"] #style-section,
+        [data-theme="dark"] #modifier-section {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+        }
+
+        /* 섹션 호버 효과 */
+        [data-theme="dark"] #url-section:hover,
+        [data-theme="dark"] #ai-model-section:hover,
+        [data-theme="dark"] #style-section:hover,
+        [data-theme="dark"] #modifier-section:hover {
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+
+        /* 섹션별 좌측 악센트 바 */
+        #url-section::before,
+        #ai-model-section::before,
+        #style-section::before,
+        #modifier-section::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            border-radius: 0 4px 4px 0;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        /* 호버 시 악센트 바 나타남 */
+        #url-section:hover::before { height: 60%; }
+        #ai-model-section:hover::before { height: 60%; }
+        #style-section:hover::before { height: 60%; }
+        #modifier-section:hover::before { height: 60%; }
+
+        /* 섹션별 고유 악센트 컬러 */
+        #url-section::before {
+            background: linear-gradient(180deg, #f472b6, #ec4899);
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+        }
+        #ai-model-section::before {
+            background: linear-gradient(180deg, #34d399, #10b981);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        }
+        #style-section::before {
+            background: linear-gradient(180deg, #a78bfa, #8b5cf6);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
+        }
+        #modifier-section::before {
+            background: linear-gradient(180deg, #fbbf24, #f59e0b);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+        }
+
+        /* 섹션 토글 버튼 스타일 */
+        #url-section-toggle,
+        #ai-model-toggle,
+        #style-section-toggle,
+        #advanced-options-toggle {
+            padding: 0.875rem 1rem 0.875rem 1.25rem !important;
+            transition: all 0.2s ease;
+        }
+
+        /* 섹션 아이콘 스타일 - div > span 구조 대응 */
+        #url-section-toggle > div:first-child > .material-symbols-outlined:first-child,
+        #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child,
+        #style-section-toggle > div:first-child > .material-symbols-outlined:first-child,
+        #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
+            font-size: 1.125rem !important;
+            padding: 0.375rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        /* 섹션별 아이콘 배경색 */
+        [data-theme="dark"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child {
+            background: rgba(236, 72, 153, 0.15) !important;
+            color: #f472b6 !important;
+        }
+        [data-theme="dark"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #34d399 !important;
+        }
+        [data-theme="dark"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child {
+            background: rgba(139, 92, 246, 0.15) !important;
+            color: #a78bfa !important;
+        }
+        [data-theme="dark"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
+            background: rgba(245, 158, 11, 0.15) !important;
+            color: #fbbf24 !important;
+        }
+
+        /* 섹션 제목 타이포그래피 */
+        #url-section-toggle .font-medium,
+        #ai-model-toggle .font-medium,
+        #style-section-toggle .font-medium,
+        #advanced-options-toggle .font-medium {
+            font-weight: 600 !important;
+            letter-spacing: 0.01em;
+        }
+
+        /* 토글 화살표 애니메이션 */
+        #url-section-arrow,
+        #ai-model-arrow,
+        #style-section-arrow,
+        #advanced-options-arrow {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease !important;
+            opacity: 0.4;
+        }
+
+        #url-section-toggle:hover #url-section-arrow,
+        #ai-model-toggle:hover #ai-model-arrow,
+        #style-section-toggle:hover #style-section-arrow,
+        #advanced-options-toggle:hover #advanced-options-arrow {
+            opacity: 1;
+        }
+
+        /* 펼쳐진 상태 화살표 회전 */
+        [aria-expanded="true"] #url-section-arrow,
+        [aria-expanded="true"] #ai-model-arrow,
+        [aria-expanded="true"] #style-section-arrow,
+        [aria-expanded="true"] #advanced-options-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* 배지 스타일 개선 */
+        [data-theme="dark"] #style-badge {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(168, 139, 250, 0.35)) !important;
+            color: #c4b5fd !important;
+            border: 1px solid rgba(139, 92, 246, 0.4) !important;
+            font-weight: 600 !important;
+        }
+
+        /* 콘텐츠 생성 버튼 개선 */
+        [data-theme="dark"] #generate-btn-container {
+            padding: 1rem !important;
+            background: linear-gradient(
+                180deg,
+                rgba(42, 163, 186, 0.08) 0%,
+                transparent 100%
+            ) !important;
+            border-top: 1px solid rgba(42, 163, 186, 0.15) !important;
+        }
+
+        [data-theme="dark"] #run-analysis-btn {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f758a 0%, #0d6b7e 50%, #0a5a6b 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow:
+                0 4px 20px rgba(15, 117, 138, 0.5),
+                0 2px 4px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        [data-theme="dark"] #run-analysis-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.25),
+                transparent
+            );
+            transition: left 0.6s ease;
+        }
+
+        [data-theme="dark"] #run-analysis-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow:
+                0 8px 30px rgba(15, 117, 138, 0.6),
+                0 4px 12px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+        }
+
+        [data-theme="dark"] #run-analysis-btn:hover::before {
+            left: 100%;
+        }
+
+        /* 버튼 아이콘 애니메이션 */
+        #run-analysis-btn #run-icon {
+            animation: sparkle 3s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.05) rotate(-3deg); }
+            50% { transform: scale(1) rotate(0deg); }
+            75% { transform: scale(1.05) rotate(3deg); }
+        }
+
+        /* Custom 버튼 스타일 */
+        [data-theme="dark"] #add-custom-style-btn {
+            background: rgba(139, 92, 246, 0.12) !important;
+            border-color: rgba(139, 92, 246, 0.4) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        [data-theme="dark"] #add-custom-style-btn:hover {
+            background: rgba(139, 92, 246, 0.22) !important;
+            border-color: rgba(139, 92, 246, 0.6) !important;
+            transform: scale(1.02);
+        }
+
+        /* 패널 스크롤바 커스텀 */
+        [data-theme="dark"] #input-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        [data-theme="dark"] #input-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        [data-theme="dark"] #input-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(
+                180deg,
+                rgba(42, 163, 186, 0.4),
+                rgba(139, 92, 246, 0.4)
+            );
+            border-radius: 4px;
+        }
+
     </style>
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
@@ -3530,12 +3836,17 @@
                     <!-- Alert Container -->
                     <div id="alert-container" class="px-4 pt-4" role="alert" aria-live="polite"></div>
 
-                    <!-- ===== URL 입력 섹션 ===== -->
-                    <fieldset class="p-4 border-b border-border-dark">
-                        <legend class="flex items-center gap-2 mb-3">
-                            <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">link</span>
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
-                        </legend>
+                    <!-- ===== URL 입력 섹션 (접기/펼치기) ===== -->
+                    <div id="url-section" class="border-b border-border-dark" style="flex: 0 0 auto !important;">
+                        <button id="url-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="url-section-panel">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">link</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
+                                <span id="url-count-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full hidden">0</span>
+                            </div>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="url-section-arrow" aria-hidden="true">expand_less</span>
+                        </button>
+                        <div id="url-section-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
                         <!-- URL 입력 필드 - 크기 증가 및 placeholder 개선 -->
                         <div class="flex gap-2">
                             <div class="relative flex-1">
@@ -3572,16 +3883,22 @@
                                 <span>AI 자동 분석</span>
                             </button>
                         </div>
-                    </fieldset>
+                        </div>
+                    </div>
 
-                    <!-- ===== AI 모델 섹션 ===== -->
-                    <fieldset class="p-4 border-b border-border-dark">
-                        <legend class="flex items-center gap-2 mb-3">
-                            <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">psychology</span>
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
-                        </legend>
+                    <!-- ===== AI 모델 섹션 (접기/펼치기) ===== -->
+                    <div id="ai-model-section" class="border-b border-border-dark" style="flex: 0 0 auto !important;">
+                        <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="ai-model-panel">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">psychology</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
+                                <span id="ai-model-badge" class="text-xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full hidden">선택됨</span>
+                            </div>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_less</span>
+                        </button>
+                        <div id="ai-model-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
                         <!-- 개선된 드롭다운 - 카드 형태 -->
-                        <div class="grid grid-cols-4 gap-1.5">
+                        <div class="grid grid-cols-2 gap-3">
                             <!-- 서비스 선택 카드 -->
                             <div class="select-card">
                                 <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
@@ -3614,21 +3931,26 @@
                                 <span id="selected-model-text" class="text-xs text-text-secondary"></span>
                             </div>
                         </div>
-                    </fieldset>
-
-                    <!-- ===== 스타일 섹션 ===== -->
-                    <fieldset id="style-section" class="p-4 border-b border-border-dark">
-                        <div class="flex items-center justify-between mb-4">
-                            <legend class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">style</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
-                            </legend>
-                            <!-- 커스텀 스타일 추가 버튼 -->
-                            <button id="add-custom-style-btn" class="px-2.5 py-1.5 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1" aria-label="커스텀 스타일 추가" aria-haspopup="dialog">
-                                <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
-                                Custom
-                            </button>
                         </div>
+                    </div>
+
+                    <!-- ===== 스타일 섹션 (접기/펼치기) ===== -->
+                    <div id="style-section" class="border-b border-border-dark">
+                        <button id="style-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="style-section-panel">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">style</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
+                                <span id="style-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Blog</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="add-custom-style-btn" role="button" tabindex="0" class="px-2 py-1 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer" aria-label="커스텀 스타일 추가" aria-haspopup="dialog" onclick="event.stopPropagation()">
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
+                                    Custom
+                                </span>
+                                <span class="material-symbols-outlined text-sm transition-transform" id="style-section-arrow" aria-hidden="true">expand_less</span>
+                            </div>
+                        </button>
+                        <div id="style-section-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
 
                         <!-- 스타일 그리드 - 통합 레이아웃 -->
                         <div class="style-grid-container" role="region" aria-label="스타일 선택">
@@ -3787,18 +4109,19 @@
                             <span class="material-symbols-outlined text-base" aria-hidden="true">auto_awesome</span>
                             <span>AI 스타일 생성</span>
                         </button>
-                    </fieldset>
+                        </div>
+                    </div>
 
                     <!-- ===== 모디파이어 옵션 (칩 형태) ===== -->
                     <div id="modifier-section" class="border-b border-border-dark">
-                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="false" aria-controls="advanced-options-panel">
+                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="advanced-options-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">tune</span>
                                 <span class="text-sm font-medium">모디파이어</span>
                             </div>
-                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow" aria-hidden="true">expand_more</span>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow" aria-hidden="true">expand_less</span>
                         </button>
-                        <div id="advanced-options-panel" class="hidden p-4 pt-0 space-y-4" role="region" aria-label="콘텐츠 생성 옵션">
+                        <div id="advanced-options-panel" class="p-4 pt-0 space-y-4" role="region" aria-label="콘텐츠 생성 옵션">
                             <!-- 길이 - 칩 형태 -->
                             <div class="modifier-group" role="group" aria-labelledby="length-label">
                                 <span id="length-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
@@ -3912,8 +4235,8 @@
                         </div>
                     </div>
 
-                    <!-- ===== 생성 버튼 ===== -->
-                    <div class="p-4">
+                    <!-- ===== 생성 버튼 (하단 고정) ===== -->
+                    <div id="generate-btn-container" class="p-4">
                         <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" aria-describedby="pending-badge-desc">
                             <span class="material-symbols-outlined text-xl" id="run-icon" aria-hidden="true">auto_awesome</span>
                             <span id="run-text">콘텐츠 생성</span>
@@ -4255,5 +4578,77 @@
             }
         });
     </script>
+
+    <!-- 섹션 토글 기능 -->
+    <script>
+        // 섹션 토글 함수 - 모든 섹션 항상 펼침
+        function setupSectionToggle(toggleId, panelId, arrowId, defaultExpanded = true) {
+            const toggle = document.getElementById(toggleId);
+            const panel = document.getElementById(panelId);
+            const arrow = document.getElementById(arrowId);
+
+            if (!toggle || !panel) return;
+
+            // 초기 상태: 항상 펼침
+            panel.style.display = 'block';
+            if (arrow) arrow.textContent = 'expand_less';
+            toggle.setAttribute('aria-expanded', 'true');
+
+            toggle.addEventListener('click', function(e) {
+                if (e.target.closest('#add-custom-style-btn')) return;
+
+                const isHidden = panel.style.display === 'none';
+                if (isHidden) {
+                    panel.style.display = 'block';
+                    if (arrow) arrow.textContent = 'expand_less';
+                    toggle.setAttribute('aria-expanded', 'true');
+                } else {
+                    panel.style.display = 'none';
+                    if (arrow) arrow.textContent = 'expand_more';
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // 모든 섹션 토글 설정 (항상 펼침)
+        setupSectionToggle('url-section-toggle', 'url-section-panel', 'url-section-arrow', true);
+        setupSectionToggle('ai-model-toggle', 'ai-model-panel', 'ai-model-arrow', true);
+        setupSectionToggle('style-section-toggle', 'style-section-panel', 'style-section-arrow', true);
+
+        // 모든 섹션에 flex 스타일 적용 (레이아웃 문제 해결)
+        ['url-section', 'ai-model-section', 'style-section', 'modifier-section'].forEach(id => {
+            const section = document.getElementById(id);
+            if (section) {
+                section.style.flex = '0 0 auto';
+            }
+        });
+
+        // URL 개수 뱃지 업데이트
+        const urlCountEl = document.getElementById('url-count');
+        const urlBadge = document.getElementById('url-count-badge');
+        if (urlCountEl && urlBadge) {
+            const observer = new MutationObserver(function() {
+                const count = parseInt(urlCountEl.textContent) || 0;
+                urlBadge.textContent = count;
+                urlBadge.classList.toggle('hidden', count === 0);
+            });
+            observer.observe(urlCountEl, { childList: true, characterData: true, subtree: true });
+        }
+
+        // 스타일 뱃지 업데이트
+        const styleInputs = document.querySelectorAll('input[name="style"]');
+        const styleBadge = document.getElementById('style-badge');
+        styleInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.checked && styleBadge) {
+                    const label = this.closest('label');
+                    const nameEl = label?.querySelector('.text-xs.font-semibold');
+                    styleBadge.textContent = nameEl?.textContent || this.value;
+                }
+            });
+        });
+    </script>
+    <!-- 섹션 레이아웃 수정 스크립트 -->
+    <script src="/static/js/section-fix.js"></script>
 </body>
 </html>
