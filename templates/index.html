@@ -295,13 +295,16 @@
             overflow-y: auto;
         }
 
-        /* Style Section - 자연스러운 높이 유지, 축소 방지 */
+        /* Style Section - 자연스러운 높이, 스크롤 없음 */
         #style-section {
             flex: 0 0 auto !important;
-            overflow-y: visible !important;
-            min-height: auto !important;
-            height: auto !important;
-            flex-shrink: 0 !important;
+            overflow: visible !important;
+        }
+
+        /* 모디파이어 섹션 */
+        #modifier-section {
+            flex: 0 0 auto !important;
+            overflow: visible !important;
         }
 
         /* Main Content Area - contains input and result panels */
@@ -3614,7 +3617,7 @@
                     </fieldset>
 
                     <!-- ===== 스타일 섹션 ===== -->
-                    <fieldset id="style-section" class="p-4 border-b border-border-dark" style="flex: 0 0 auto !important; height: auto !important; flex-shrink: 0 !important;">
+                    <fieldset id="style-section" class="p-4 border-b border-border-dark">
                         <div class="flex items-center justify-between mb-4">
                             <legend class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary text-sm" aria-hidden="true">style</span>
@@ -3787,7 +3790,7 @@
                     </fieldset>
 
                     <!-- ===== 모디파이어 옵션 (칩 형태) ===== -->
-                    <div class="border-b border-border-dark">
+                    <div id="modifier-section" class="border-b border-border-dark">
                         <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="false" aria-controls="advanced-options-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">tune</span>
@@ -3909,8 +3912,8 @@
                         </div>
                     </div>
 
-                    <!-- ===== 생성 버튼 (하단 고정) ===== -->
-                    <div class="p-4 mt-auto">
+                    <!-- ===== 생성 버튼 ===== -->
+                    <div class="p-4">
                         <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" aria-describedby="pending-badge-desc">
                             <span class="material-symbols-outlined text-xl" id="run-icon" aria-hidden="true">auto_awesome</span>
                             <span id="run-text">콘텐츠 생성</span>
