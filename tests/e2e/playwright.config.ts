@@ -59,8 +59,11 @@ export default defineConfig({
       testMatch: [
         '**/main-page/**/*.spec.ts',
         '**/url-input/**/*.spec.ts',
+        '**/url-management/**/*.spec.ts',
         '**/accessibility/**/*.spec.ts',
         '**/responsive/**/*.spec.ts',
+        '**/settings-modals/**/*.spec.ts',
+        '**/history-usage/**/*.spec.ts',
         '**/auth/login.spec.ts', // 로그인 테스트는 인증 없이 실행
       ],
       use: {

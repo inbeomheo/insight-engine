@@ -140,10 +140,10 @@ def test_example(self, mock_enabled):
 
 ### E2E 테스트 (`tests/e2e/`)
 
-Playwright 기반, 79개 테스트 케이스. `playwright.config.ts`에서 webServer가 Flask 앱 자동 실행 (Supabase 비활성화 상태).
+Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 실행 (Supabase 비활성화 상태).
 
 **테스트 그룹:**
-- `no-auth-chromium`: 메인 페이지, URL 입력, 접근성, 반응형
+- `no-auth-chromium`: 메인 페이지, URL 입력, 접근성, 반응형, 모달, 패널
 - `content-generation`: 콘텐츠 생성
 - `batch-generation`: 배치 처리
 - `authenticated-tests`: 히스토리, 설정, 사용량 (인증 필요 시 스킵)
@@ -155,6 +155,20 @@ Playwright 기반, 79개 테스트 케이스. `playwright.config.ts`에서 webSe
 - `urlInput.addUrl(url)`: URL 입력 후 Enter
 - `urlInput.removeUrl(index)`: JavaScript evaluate로 삭제 버튼 클릭
 - `contentGenerator.clickGenerate()`: `#run-analysis-btn` 클릭
+
+**E2E 테스트 실행 시 주의사항:**
+```bash
+# 병렬 실행 시 Flask 서버 타임아웃 발생 가능 → workers=1 권장
+npx playwright test --workers=1
+
+# 특정 폴더만 실행
+npx playwright test settings-modals/ history-usage/
+```
+
+**자주 발생하는 테스트 오류:**
+- `strict mode violation`: 데스크톱/모바일 버튼 중복 → `#sidebar button[data-section="..."]` 사용
+- 서버 타임아웃: `--workers=1`로 실행
+- localStorage 키 불일치: 여러 키 시도 또는 UI에서 직접 확인
 
 ## Configuration
 
