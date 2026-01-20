@@ -29,6 +29,10 @@ def create_app(test_config=None):
     )
 
     app.config.from_object('config')
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.jinja_env.auto_reload = True
+    app.jinja_env.cache = None
 
     import config as config_module
     app.config['STYLE_PROMPTS'] = config_module.STYLE_PROMPTS
@@ -88,6 +92,6 @@ def create_app(test_config=None):
 app = create_app()
 
 if __name__ == '__main__':
-    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
+    debug_mode = os.getenv('FLASK_DEBUG', 'true').lower() in ('true', '1', 'yes')  # Temporarily enabled
     port = int(os.getenv('PORT', 5001))
     app.run(debug=debug_mode, port=port)

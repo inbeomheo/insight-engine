@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(OpenAI, Claude, Gemini, GLM-4, DeepSeek)을 활용해 고품질 한국어 블로그 포스트를 자동 생성하는 Flask 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원.
+**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek)을 활용해 고품질 한국어 블로그 포스트를 자동 생성하는 Flask 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더.
 
 ## Commands
 
@@ -72,7 +72,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다중 프로바이더 통합 |
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 폴백 로직 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD |
-| 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델 정의 |
+| 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격 정의 |
 | 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (16개 스타일) |
 
 ### Frontend Module Communication (EventBus)
@@ -142,6 +142,18 @@ def generate_batch():
 1. `prompts/` 디렉토리에 새 파일 생성 또는 기존 파일에 추가
 2. `prompts/__init__.py`의 `STYLE_PROMPTS` 딕셔너리에 매핑 추가
 3. `config.py`의 `STYLE_CONFIG`에 메타데이터 추가
+
+### 지원 모델 (LiteLLM 형식)
+
+| 프로바이더 | 모델 ID | 가격 ($/1M tokens) |
+|-----------|---------|-------------------|
+| Gemini | `gemini/gemini-3-flash-preview` | $0.50 / $3.00 |
+| Gemini | `gemini/gemini-2.5-flash-lite-preview-09-2025` | $0.10 / $0.40 |
+| DeepSeek | `deepseek/deepseek-chat` | $0.27 / $1.10 |
+| DeepSeek | `deepseek/deepseek-reasoner` | $0.55 / $2.19 |
+
+- Gemini 모델은 `reasoning_effort="minimal"` 옵션으로 초고속 응답 (`ai_service.py`)
+- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS`에 `price_input`, `price_output` 필수
 
 ### 모디파이어 (`config.py`)
 - `length`: short/medium/long

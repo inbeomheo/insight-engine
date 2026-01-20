@@ -1,38 +1,67 @@
-/* ==================== Button Styles ==================== */
+/* ==================== Button Styles - Warm Cream Theme ==================== */
 
-/* 프라이머리 버튼 그라데이션 */
-[data-theme="dark"] .btn-primary,
-[data-theme="dark"] button[class*="bg-primary"] {
-    background: linear-gradient(135deg, #2aa3ba 0%, #1f8a9e 100%);
-    border: 1px solid rgba(42, 163, 186, 0.3);
+/* 프라이머리 버튼 - 브라운 그라데이션 */
+.btn-primary,
+button[class*="bg-primary"] {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    border: 1px solid rgba(139, 115, 85, 0.3);
     box-shadow:
-        0 4px 16px rgba(42, 163, 186, 0.25),
+        0 4px 16px rgba(139, 115, 85, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.15);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] .btn-primary:hover,
-[data-theme="dark"] button[class*="bg-primary"]:hover {
-    background: linear-gradient(135deg, #3eb8cf 0%, #2aa3ba 100%);
+.btn-primary:hover,
+button[class*="bg-primary"]:hover {
+    background: linear-gradient(135deg, var(--primary-glow) 0%, var(--primary) 100%);
     box-shadow:
-        0 6px 24px rgba(42, 163, 186, 0.35),
-        0 0 40px rgba(42, 163, 186, 0.15),
+        0 6px 24px rgba(139, 115, 85, 0.35),
+        0 0 40px rgba(139, 115, 85, 0.15),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
 }
 
-/* 악센트 버튼 (Custom, AI 자동 분석 등) */
-[data-theme="dark"] .btn-accent {
-    background: linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(192, 132, 252, 0.05) 100%);
-    border: 1px solid rgba(192, 132, 252, 0.3);
+/* 다크 모드 프라이머리 버튼 */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] button[class*="bg-primary"] {
+    background: linear-gradient(135deg, #C4956A 0%, #A07B52 100%);
+    border: 1px solid rgba(196, 149, 106, 0.3);
+    box-shadow:
+        0 4px 16px rgba(196, 149, 106, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] button[class*="bg-primary"]:hover {
+    background: linear-gradient(135deg, #D4A57A 0%, #C4956A 100%);
+    box-shadow:
+        0 6px 24px rgba(196, 149, 106, 0.35),
+        0 0 40px rgba(196, 149, 106, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* 악센트 버튼 - 오렌지 */
+.btn-accent {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.3);
     color: var(--accent);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] .btn-accent:hover {
-    background: linear-gradient(135deg, rgba(192, 132, 252, 0.25) 0%, rgba(192, 132, 252, 0.1) 100%);
+.btn-accent:hover {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
     border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(192, 132, 252, 0.2);
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="dark"] .btn-accent {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+[data-theme="dark"] .btn-accent:hover {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.2);
 }
 
 /* Button press feedback */
@@ -67,12 +96,12 @@ button:active:not(:disabled) {
     bottom: calc(100% + 8px);
     left: 50%;
     transform: translateX(-50%) scale(0.95);
-    background: rgba(32, 36, 40, 0.95);
-    border: 1px solid rgba(15, 117, 138, 0.3);
+    background: rgba(253, 248, 243, 0.98);
+    border: 1px solid rgba(139, 115, 85, 0.3);
     border-radius: 8px;
     padding: 8px 14px;
     font-size: 11px;
-    color: #0f758a;
+    color: var(--primary);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
@@ -80,8 +109,15 @@ button:active:not(:disabled) {
     z-index: 50;
     display: flex;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     pointer-events: none;
+}
+
+[data-theme="dark"] .disabled-reason-overlay {
+    background: rgba(45, 38, 32, 0.98);
+    border-color: rgba(196, 149, 106, 0.3);
+    color: #C4956A;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .disabled-reason-overlay::after {
@@ -91,7 +127,11 @@ button:active:not(:disabled) {
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: rgba(15, 117, 138, 0.3);
+    border-top-color: rgba(139, 115, 85, 0.3);
+}
+
+[data-theme="dark"] .disabled-reason-overlay::after {
+    border-top-color: rgba(196, 149, 106, 0.3);
 }
 
 button.has-disabled-reason:disabled:hover .disabled-reason-overlay {

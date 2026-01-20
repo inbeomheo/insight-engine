@@ -1,4 +1,4 @@
-/* ==================== 3-Column Layout Grid System ==================== */
+/* ==================== 3-Column Layout Grid System - Warm Cream Theme ==================== */
 
 /* Main Layout Container */
 .app-layout {
@@ -6,6 +6,19 @@
     height: 100vh;
     width: 100%;
     overflow: hidden;
+    background: var(--background-dark);
+}
+
+/* 라이트 모드 미묘한 텍스처 */
+:root:not([data-theme="dark"]) .app-layout {
+    background:
+        /* 미세 도트 패턴 */
+        radial-gradient(circle at center, rgba(139, 115, 85, 0.02) 1px, transparent 1px),
+        /* 베이스 컬러 */
+        var(--background-dark);
+    background-size:
+        24px 24px,
+        100% 100%;
 }
 
 /* Sidebar - 200px fixed width */
@@ -99,10 +112,10 @@
 }
 
 /* ========== 데스크톱 접기/펼치기 기본 상태 ========== */
-/* 모든 섹션 패널 항상 표시 */
+/* 섹션 패널 기본값 - JavaScript로 토글 가능 */
 #url-section-panel,
 #ai-model-panel,
 #style-section-panel,
 #modifier-section-panel {
-    display: block !important;
+    /* display는 JavaScript에서 제어 */
 }

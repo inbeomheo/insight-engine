@@ -100,7 +100,12 @@ export class ProviderManager {
         provider.models.forEach(model => {
             const option = document.createElement('option');
             option.value = model.id;
-            option.textContent = model.name;
+            // 가격 정보 포함 (Input/Output $/1M tokens)
+            let label = model.name;
+            if (model.price_input !== undefined && model.price_output !== undefined) {
+                label += ` ($${model.price_input}/$${model.price_output})`;
+            }
+            option.textContent = label;
             modelSelect.appendChild(option);
         });
 
@@ -131,7 +136,12 @@ export class ProviderManager {
         if (provider && modelId) {
             const model = provider.models?.find(m => m.id === modelId);
             if (model) {
-                infoText.textContent = `${provider.name} - ${model.name}`;
+                // 가격 정보 포함 ($/1M tokens)
+                let infoStr = `${provider.name} - ${model.name}`;
+                if (model.price_input !== undefined && model.price_output !== undefined) {
+                    infoStr += ` ($${model.price_input}/${model.price_output})`;
+                }
+                infoText.textContent = infoStr;
                 infoContainer.classList.remove('hidden');
                 return;
             }

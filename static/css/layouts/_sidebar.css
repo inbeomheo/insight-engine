@@ -1,4 +1,53 @@
-/* ==================== Sidebar Navigation System ==================== */
+/* ==================== Sidebar Navigation System - Warm Cream Theme ==================== */
+
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.sidebar-logo {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.sidebar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: absolute;
+    top: 12px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.sidebar-toggle:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
 
 /* Navigation Buttons - Enhanced Visual Design */
 .nav-icon-btn {
@@ -20,13 +69,13 @@
 
 /* Hover state */
 .nav-icon-btn:hover {
-    background: var(--surface-dark);
+    background: var(--bg-elevated);
     color: var(--text-primary);
 }
 
 /* Active state with left indicator */
 .nav-icon-btn.active {
-    background: rgba(15, 117, 138, 0.12);
+    background: rgba(139, 115, 85, 0.12);
     color: var(--primary);
 }
 
@@ -104,17 +153,84 @@
 }
 
 [data-theme="light"] .nav-icon-btn.active {
-    background: rgba(15, 117, 138, 0.08);
+    background: rgba(139, 115, 85, 0.08);
 }
 
-/* 네비게이션 버튼 호버 */
+/* 다크 모드 네비게이션 버튼 */
 [data-theme="dark"] .nav-icon-btn:hover {
-    background: linear-gradient(135deg, rgba(42, 163, 186, 0.15) 0%, rgba(42, 163, 186, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.15) 0%, rgba(196, 149, 106, 0.05) 100%);
 }
 
 [data-theme="dark"] .nav-icon-btn.active {
-    background: linear-gradient(135deg, rgba(42, 163, 186, 0.2) 0%, rgba(192, 132, 252, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
     border-left: 2px solid var(--primary);
+}
+
+/* ==================== Sidebar Collapsed State ==================== */
+
+/* 접힌 상태 */
+#sidebar.collapsed {
+    width: 64px !important;
+    min-width: 64px;
+    max-width: 64px;
+}
+
+#sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 1rem 0.5rem;
+}
+
+#sidebar.collapsed .sidebar-title {
+    display: none;
+}
+
+#sidebar.collapsed .nav-label {
+    display: none;
+}
+
+#sidebar.collapsed .nav-section-header {
+    display: none;
+}
+
+#sidebar.collapsed .nav-icon-btn {
+    justify-content: center;
+    padding: 0;
+}
+
+#sidebar.collapsed .nav-badge {
+    display: none;
+}
+
+/* 접힌 상태 토글 버튼 회전 */
+#sidebar.collapsed .sidebar-toggle .material-symbols-outlined {
+    transform: rotate(180deg);
+}
+
+/* 접힌 상태 툴팁 */
+#sidebar.collapsed .nav-icon-btn::after {
+    content: attr(title);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 8px;
+    padding: 4px 8px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100;
+    pointer-events: none;
+}
+
+#sidebar.collapsed .nav-icon-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Sidebar Overlay */
