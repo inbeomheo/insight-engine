@@ -458,7 +458,9 @@
         width: 100%;
         max-height: 90vh;
         border-radius: 20px 20px 0 0;
-        animation: slideUp 0.3s ease-out;
+        transform: none;
+        opacity: 1;
+        animation: slideUp 0.3s ease-out forwards;
     }
     @keyframes slideUp {
         from {
