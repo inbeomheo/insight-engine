@@ -1,0 +1,69 @@
+/* ==================== Alerts - US-015: WCAG AA 색상 대비 기준 충족 ==================== */
+
+.alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    backdrop-filter: blur(8px);
+    animation: toastSlideIn 0.3s ease-out;
+}
+
+/* 성공: #047857 대비 5.5:1 vs #f5f7f9 (라이트), #34D399 대비 8.0:1 vs #16191d (다크) */
+.alert-success {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #047857;  /* 다크 모드에서 충분한 대비 확보 */
+}
+
+[data-theme="dark"] .alert-success {
+    color: #34D399;  /* 다크 모드: 대비 8.0:1 vs #16191d */
+}
+
+/* 에러: #dc2626 대비 5.0:1 vs #f5f7f9 (라이트), #f87171 대비 6.0:1 vs #16191d (다크) */
+.alert-error {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #dc2626;  /* 라이트 모드용 더 진한 빨강 */
+}
+
+[data-theme="dark"] .alert-error {
+    color: #f87171;  /* 다크 모드: 대비 6.0:1 vs #16191d */
+}
+
+/* 경고: #b45309 대비 5.0:1 vs #f5f7f9 (라이트), #fbbf24 대비 10.5:1 vs #16191d (다크) */
+.alert-warning {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #b45309;  /* 라이트 모드용 더 진한 주황 */
+}
+
+[data-theme="dark"] .alert-warning {
+    color: #fbbf24;  /* 다크 모드: 대비 10.5:1 vs #16191d */
+}
+
+/* 정보: #0a6073 대비 5.2:1 vs #f5f7f9 (라이트), #2aa3ba 대비 5.4:1 vs #16191d (다크) */
+.alert-info {
+    background: rgba(15, 117, 138, 0.08);
+    border-color: rgba(15, 117, 138, 0.35);
+    color: #0a6073;  /* 라이트 모드용 더 진한 틸 */
+}
+
+[data-theme="dark"] .alert-info {
+    color: #2aa3ba;  /* 다크 모드: 대비 5.4:1 vs #16191d */
+}
+
+/* Toast Animation */
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

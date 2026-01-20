@@ -1,37 +1,33 @@
 /**
- * Insight Engine - Main CSS Entry Point
- *
- * 빌드 명령어:
- *   npm run build:css      - 개발 빌드
- *   npm run build:css:prod - 프로덕션 빌드 (압축)
- *   npm run watch:css      - 변경 감지 빌드
+ * Insight Engine - Main CSS
+ * 모든 CSS 모듈을 통합하는 엔트리 포인트
  */
 
 /* ==================== Base ==================== */
-@import "./base/variables.css";
-@import "./base/typography.css";
+@import url('base/_tokens.css');
+@import url('base/_theme.css');
+@import url('base/_typography.css');
 
-/* ==================== Tailwind ==================== */
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
-
-/* ==================== Layout ==================== */
-@import "./layout/panels.css";
-@import "./layout/sidebar.css";
-@import "./layout/header.css";
+/* ==================== Layouts ==================== */
+@import url('layouts/_app-layout.css');
+@import url('layouts/_compact.css');
+@import url('layouts/_sidebar.css');
+@import url('layouts/_panels.css');
 
 /* ==================== Components ==================== */
-@import "./components/cards.css";
-@import "./components/forms.css";
+@import url('components/_buttons.css');
+@import url('components/_cards.css');
+@import url('components/_modals.css');
+@import url('components/_inputs.css');
+@import url('components/_alerts.css');
+@import url('components/_skeleton.css');
+@import url('components/_report-content.css');
+@import url('components/_mindmap.css');
 
-/* ==================== Features ==================== */
-@import "./features/backgrounds.css";
-@import "./features/input-section.css";
-@import "./features/result-section.css";
+/* ==================== Utilities ==================== */
+@import url('utilities/_animations.css');
+@import url('utilities/_scrollbar.css');
+@import url('utilities/_accessibility.css');
 
-/* ==================== Animations ==================== */
-@import "./animations.css";
-
-/* ==================== Theme (Dark Mode Only) ==================== */
-@import "./themes/dark.css";
+/* ==================== Responsive ==================== */
+@import url('responsive/_breakpoints.css');

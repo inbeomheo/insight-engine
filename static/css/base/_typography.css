@@ -1,0 +1,66 @@
+/* ==================== US-017: Typography Scale System ==================== */
+
+/* Headings - 제목 스타일 */
+h1, .h1, .page-title {
+    font-size: var(--font-size-h1);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.025em;
+}
+
+h2, .h2, .section-title {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.02em;
+}
+
+h3, .h3, .card-title {
+    font-size: var(--font-size-h3);
+    font-weight: 600;
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.015em;
+}
+
+h4, .h4, .subsection-title {
+    font-size: var(--font-size-h4);
+    font-weight: 600;
+    line-height: var(--line-height-snug);
+    letter-spacing: -0.01em;
+}
+
+/* Body Text - 본문 스타일 */
+body {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-relaxed);
+}
+
+p, .body-text {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-relaxed);
+}
+
+.body-lg {
+    font-size: var(--font-size-body-lg);
+    line-height: var(--line-height-relaxed);
+}
+
+/* Caption - 캡션/보조 텍스트 (최소 14px) */
+.caption, small, .text-caption {
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-normal);
+}
+
+/* Overline/Label - 라벨/카테고리용 */
+.overline, .text-label {
+    font-size: var(--font-size-caption);
+    font-weight: 600;
+    line-height: var(--line-height-normal);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}

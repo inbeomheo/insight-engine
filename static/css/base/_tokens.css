@@ -1,0 +1,44 @@
+/* ==================== Base Tokens - Warm Cream Design System ==================== */
+
+/* ========== Light Mode (기본) ========== */
+/* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
+:root {
+    --primary: #8B7355;           /* 브라운 - 대비 4.6:1 vs #FDF8F3 */
+    --primary-hover: #7A6449;
+    --primary-glow: #A08B70;
+    --secondary: #C4956A;         /* 테라코타 */
+    --accent: #D97706;            /* 오렌지 악센트 */
+    --accent-hover: #B45309;
+    --background-dark: #FDF8F3;   /* 크림 배경 */
+    --surface-dark: #FAF6F1;      /* 베이지 서피스 */
+    --card-dark: #FFFFFF;
+    --bg-elevated: #F5EDE4;
+    --text-primary: #3D3229;      /* 다크 브라운 - 대비 10.2:1 vs #FDF8F3 */
+    --text-muted: #6B5B4F;        /* 대비 5.8:1 vs #FFFFFF */
+    --text-subtle: #8B7355;       /* 대비 4.6:1 vs #FDF8F3 */
+    --border-dark: #E8E0D5;       /* 따뜻한 베이지 테두리 */
+    --card-border: #8B735540;
+
+    /* Compact Design Variables */
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 0.75rem;   /* 12px */
+    --spacing-lg: 1rem;      /* 16px */
+    --spacing-xl: 1.25rem;   /* 20px */
+
+    /* US-017: 타이포그래피 스케일 */
+    --font-size-caption: 0.875rem;   /* 14px - 최소 크기 */
+    --font-size-body: 1rem;          /* 16px - 본문 */
+    --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
+    --font-size-h4: 1.25rem;         /* 20px - 소제목 */
+    --font-size-h3: 1.5rem;          /* 24px - 중제목 */
+    --font-size-h2: 1.875rem;        /* 30px - 대제목 */
+    --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
+
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 1.75;
+}

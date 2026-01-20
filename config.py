@@ -28,7 +28,6 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'openai': os.getenv('OPENAI_API_KEY', ''),
     'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
     'gemini': os.getenv('GEMINI_API_KEY', ''),
-    'zhipu': os.getenv('ZHIPU_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
 }
 
@@ -41,18 +40,20 @@ MAX_COMMENTS_TOKENS: int = 5000
 MAX_CONTENT_TOKENS: int = 100000  # 기본 fallback 값
 
 # 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
+# Gemini가 기본 프로바이더 (첫 번째 위치)
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
     'gemini': {
         'name': 'Google Gemini',
         'models': [
-            {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000},
+            {'id': 'gemini/gemini-3-flash-preview', 'name': 'Gemini 3.0 Flash', 'max_input_tokens': 750000, 'price_input': 0.50, 'price_output': 3.00},
+            {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000, 'price_input': 0.10, 'price_output': 0.40},
         ]
     },
     'deepseek': {
         'name': 'DeepSeek',
         'models': [
-            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000},
-            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000}
+            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000, 'price_input': 0.27, 'price_output': 1.10},
+            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000, 'price_input': 0.55, 'price_output': 2.19}
         ]
     }
 }
@@ -75,11 +76,9 @@ def get_provider_from_model(model_id: str) -> str:
         return 'anthropic'
     elif model_id.startswith('gemini/'):
         return 'gemini'
-    elif model_id.startswith('glm-'):
-        return 'zhipu'
     elif model_id.startswith('deepseek/'):
         return 'deepseek'
-    return 'openai'  # 기본값
+    return 'gemini'  # 기본값 (Gemini)
 
 
 # ============================================================

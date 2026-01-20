@@ -1,0 +1,266 @@
+/* ==================== Panel Views ==================== */
+
+/* 패널 뷰 전환 */
+.panel-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.panel-view.hidden {
+    display: none;
+}
+
+/* ==================== History Item ==================== */
+.history-item {
+    background: var(--card-dark);
+    border: 1px solid var(--card-border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.history-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.history-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+}
+
+.history-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    min-width: 0;
+    flex: 1;
+}
+
+.history-item-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.history-item-url {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.history-item-preview {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.history-delete-btn {
+    padding: 0.25rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.history-delete-btn:hover {
+    color: #ef4444;
+}
+
+/* ==================== Usage Chart ==================== */
+.weekly-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    height: 100%;
+}
+
+.weekly-bar-fill {
+    width: 100%;
+    max-width: 2rem;
+    min-height: 4px;
+    background: var(--primary);
+    border-radius: 0.25rem 0.25rem 0 0;
+    transition: height 0.3s;
+}
+
+.weekly-bar-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.weekly-bar-value {
+    font-size: 0.75rem;
+    color: white;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.style-stat-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.style-stat-label {
+    width: 4.5rem;
+    font-size: 0.75rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.style-stat-bar-bg {
+    flex: 1;
+    height: 0.5rem;
+    background: var(--background-dark);
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.style-stat-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 0.25rem;
+    transition: width 0.3s;
+}
+
+.style-stat-value {
+    width: 5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ==================== Panel Resize Handle ==================== */
+
+/* 리사이즈 핸들 기본 스타일 */
+.resize-handle {
+    position: absolute;
+    right: -3px;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 100;
+    background: transparent;
+    transition: background-color 0.15s ease;
+}
+
+/* 호버 시 핸들 배경 */
+.resize-handle:hover {
+    background: linear-gradient(to right,
+        transparent 0%,
+        rgba(173, 43, 238, 0.1) 50%,
+        transparent 100%);
+}
+
+/* 활성 상태 핸들 */
+.resize-handle.active {
+    background: linear-gradient(to right,
+        transparent 0%,
+        rgba(173, 43, 238, 0.2) 50%,
+        transparent 100%);
+}
+
+/* 그립 라인 (핸들 중앙 시각적 표시) */
+.resize-handle-grip {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: var(--border-dark);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.15s ease, height 0.15s ease;
+}
+
+/* 핸들 호버 시 그립 표시 */
+.resize-handle:hover .resize-handle-grip {
+    opacity: 1;
+    background: var(--color-primary);
+    height: 60px;
+}
+
+/* 핸들 활성 시 그립 스타일 */
+.resize-handle.active .resize-handle-grip {
+    opacity: 1;
+    background: var(--color-primary);
+    height: 80px;
+    box-shadow: 0 0 8px rgba(173, 43, 238, 0.5);
+}
+
+/* 핸들 포커스 상태 (키보드 접근성) */
+.resize-handle:focus {
+    outline: none;
+}
+
+.resize-handle:focus .resize-handle-grip {
+    opacity: 1;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(173, 43, 238, 0.3);
+}
+
+/* 리사이즈 중 body 스타일 */
+body.resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+body.resizing * {
+    cursor: col-resize !important;
+}
+
+/* 리사이즈 가능 상태 표시 (xl 이상에서만) */
+@media (min-width: 1280px) {
+    #input-panel {
+        transition: width 0.05s ease-out;
+    }
+
+    /* 핸들이 보이도록 패널 overflow 조정 */
+    #input-panel {
+        overflow: visible;
+    }
+
+    #input-panel > *:not(.resize-handle) {
+        overflow-y: auto;
+    }
+}
+
+/* xl 미만에서는 핸들 숨김 */
+@media (max-width: 1279px) {
+    .resize-handle {
+        display: none !important;
+    }
+}

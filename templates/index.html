@@ -28,8 +28,6 @@
             }
         })();
     </script>
-    <!-- CSS: PostCSS 빌드 결과물 -->
-    <link rel="stylesheet" href="/static/css/dist/main.css">
     <!-- 폰트 최적화: preconnect 및 preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
@@ -38,6 +36,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- DOMPurify - XSS 방지 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+    <!-- Tailwind CSS - 로컬 빌드 (CDN 대체) -->
+    <link rel="stylesheet" href="/static/css/tailwind.output.css">
+    <!-- Custom CSS - Modular Architecture -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <!-- CSS moved to /static/css/main.css -->
 </head>
 <body class="bg-background-dark text-text-light font-body overflow-hidden h-screen flex selection:bg-primary/30 selection:text-white">
     <!-- Skip Link for Keyboard Users -->
@@ -125,6 +130,12 @@
                     <span class="text-primary text-[10px] font-bold" aria-hidden="true">AI</span>
                     <span class="text-xs text-text-secondary" id="current-provider-label">미설정</span>
                 </div>
+
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle-btn" class="relative flex items-center justify-center cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark group" aria-label="테마 전환">
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">contrast</span>
+                    <span class="theme-tooltip absolute top-full mt-1 px-2 py-1 bg-surface-dark text-xs text-text-secondary rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">시스템 설정</span>
+                </button>
 
                 <!-- Settings Button -->
                 <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정 열기" aria-haspopup="dialog">
@@ -462,7 +473,7 @@
             <h1 class="sr-only">Insight Engine - AI 콘텐츠 분석 도구</h1>
                 <!-- ==================== 입력 패널 (350px) ==================== -->
                 <section id="input-panel" class="flex flex-col" style="background-color: var(--surface-dark);" role="region" aria-label="콘텐츠 생성 입력">
-                    <!-- Alert Container -->
+                        <!-- Alert Container -->
                     <div id="alert-container" class="px-4 pt-4" role="alert" aria-live="polite"></div>
 
                     <!-- ===== URL 입력 섹션 (접기/펼치기) ===== -->
@@ -470,18 +481,18 @@
                         <button id="url-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="url-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">link</span>
-                                <span class="text-sm font-medium text-white">YouTube URL</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
                                 <span id="url-count-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full hidden">0</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="url-section-arrow" aria-hidden="true">expand_less</span>
                         </button>
-                        <div id="url-section-panel" class="px-4 pb-4 pt-0">
+                        <div id="url-section-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
                         <!-- URL 입력 필드 - 크기 증가 및 placeholder 개선 -->
                         <div class="flex gap-2">
                             <div class="relative flex-1">
                                 <input type="url" id="url-input"
-                                       class="w-full bg-surface-dark border border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-white placeholder-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
-                                       placeholder="URL을 붙여넣으세요"
+                                       class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                                       placeholder="YouTube 영상 URL을 붙여넣기 하세요"
                                        aria-label="YouTube 영상 URL 입력"
                                        aria-describedby="url-hint"
                                        autocomplete="off">
@@ -520,19 +531,19 @@
                         <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="ai-model-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">psychology</span>
-                                <span class="text-sm font-medium text-white">AI 모델</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
                                 <span id="ai-model-badge" class="text-xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full hidden">선택됨</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_less</span>
                         </button>
-                        <div id="ai-model-panel" class="px-4 pb-4 pt-0">
+                        <div id="ai-model-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
                         <!-- 개선된 드롭다운 - 카드 형태 -->
                         <div class="grid grid-cols-2 gap-3">
                             <!-- 서비스 선택 카드 -->
                             <div class="select-card">
                                 <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
                                 <div class="relative">
-                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
+                                    <select id="provider" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -544,7 +555,7 @@
                             <div class="select-card">
                                 <label for="model" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
                                 <div class="relative">
-                                    <select id="model" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
+                                    <select id="model" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -568,7 +579,7 @@
                         <button id="style-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="style-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">style</span>
-                                <span class="text-sm font-medium text-white">스타일</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
                                 <span id="style-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Blog</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -760,21 +771,21 @@
                                 <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="length-label">
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="short" class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">short_text</span>
                                             짧게
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="medium" checked class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">notes</span>
                                             보통
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="length" value="long" class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">subject</span>
                                             상세
                                         </div>
@@ -790,21 +801,21 @@
                                 <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="tone-label">
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="professional" checked class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">business_center</span>
                                             전문적
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="friendly" class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">sentiment_satisfied</span>
                                             친근
                                         </div>
                                     </label>
                                     <label class="modifier-chip cursor-pointer">
                                         <input type="radio" name="tone" value="humorous" class="peer sr-only"/>
-                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                        <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-sm" aria-hidden="true">mood</span>
                                             유머
                                         </div>
@@ -821,19 +832,19 @@
                                     <div class="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="language-label">
                                         <label class="modifier-chip cursor-pointer">
                                             <input type="radio" name="language" value="ko" checked class="peer sr-only"/>
-                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium">
+                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium">
                                                 한국어
                                             </div>
                                         </label>
                                         <label class="modifier-chip cursor-pointer">
                                             <input type="radio" name="language" value="en" class="peer sr-only"/>
-                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium">
+                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium">
                                                 EN
                                             </div>
                                         </label>
                                         <label class="modifier-chip cursor-pointer">
                                             <input type="radio" name="language" value="ja" class="peer sr-only"/>
-                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium">
+                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium">
                                                 日本語
                                             </div>
                                         </label>
@@ -853,7 +864,7 @@
                                     <div class="flex flex-wrap gap-2">
                                         <label class="modifier-chip cursor-pointer">
                                             <input type="checkbox" id="emoji-checkbox" class="peer sr-only" aria-labelledby="emoji-label"/>
-                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:bg-bg-elevated peer-checked:hover:bg-primary transition-all text-xs font-medium flex items-center gap-1.5">
+                                            <div class="chip-content px-3 py-1.5 rounded-full border border-border-dark bg-surface-dark peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white text-text-secondary hover:border-primary/50 transition-all text-xs font-medium flex items-center gap-1.5">
                                                 <span class="material-symbols-outlined text-sm" aria-hidden="true">sentiment_very_satisfied</span>
                                                 사용
                                             </div>
@@ -876,13 +887,13 @@
                 </section>
 
                 <!-- ==================== 결과 패널 (flex-1) ==================== -->
-                <section id="result-panel" class="flex flex-col" role="region" aria-label="생성 결과">
+                <section id="result-panel" class="flex flex-col bg-background-dark" role="region" aria-label="생성 결과">
                     <!-- ===== Dashboard View (기존) ===== -->
                     <div id="dashboard-view" class="panel-view" role="tabpanel" aria-labelledby="dashboard-tab">
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-semibold text-white">결과</h2>
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">결과</h2>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>
@@ -901,7 +912,7 @@
                                 <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-violet-500/15 rounded-full blur-2xl scale-150" style="animation: glowPulse 6s ease-in-out infinite reverse;"></div>
                                 <!-- Icon Circle with Gradient Border -->
                                 <div class="relative w-36 h-36 rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-pink-500">
-                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#1a1f24] to-[#12161a] flex items-center justify-center">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1f24] dark:to-[#12161a] flex items-center justify-center">
                                         <span class="material-symbols-outlined text-6xl bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
                                     </div>
                                 </div>
@@ -913,30 +924,30 @@
                             </div>
 
                             <!-- Text Content -->
-                            <h3 class="text-2xl font-bold text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
-                            <p class="text-text-secondary text-base mb-6 max-w-sm">
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
+                            <p class="text-gray-600 dark:text-text-secondary text-base mb-6 max-w-sm">
                                 YouTube 영상 URL을 입력하면<br/>
                                 AI가 자동으로 콘텐츠를 분석하고 생성합니다
                             </p>
 
                             <!-- Feature Pills - Creative Studio Style -->
                             <div class="flex flex-wrap justify-center gap-3 mb-8">
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-primary dark:text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">bolt</span>
                                     빠른 분석
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-400 dark:text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">psychology</span>
                                     AI 기반
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-400 dark:text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">translate</span>
                                     한국어 최적화
                                 </span>
                             </div>
 
                             <!-- Arrow Hint with Animation -->
-                            <div class="flex items-center gap-2 text-text-muted text-sm">
+                            <div class="flex items-center gap-2 text-gray-500 dark:text-text-muted text-sm">
                                 <span class="material-symbols-outlined text-lg" style="animation: arrowPulse 1.5s ease-in-out infinite;">arrow_back</span>
                                 <span>왼쪽에서 URL을 입력하세요</span>
                             </div>
@@ -1277,7 +1288,5 @@
             });
         });
     </script>
-    <!-- 섹션 레이아웃 수정 스크립트 -->
-    <script src="/static/js/section-fix.js"></script>
 </body>
 </html>

@@ -1,0 +1,46 @@
+/* ==================== Input Styles - Warm Cream Theme ==================== */
+
+/* 기본 입력 필드 스타일 */
+input, select, textarea {
+    background: var(--card-dark);
+    border: 1px solid var(--border-dark);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+/* 입력 필드 포커스 - 라이트 모드 */
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 3px rgba(139, 115, 85, 0.15),
+        0 0 20px rgba(139, 115, 85, 0.08) !important;
+    outline: none !important;
+}
+
+/* 입력 필드 포커스 - 다크 모드 */
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 3px rgba(196, 149, 106, 0.15),
+        0 0 20px rgba(196, 149, 106, 0.1) !important;
+    outline: none !important;
+}
+
+/* Checkbox/Radio enhancement - 라이트 모드 */
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+    background-color: var(--primary);
+}
+
+/* Checkbox/Radio enhancement - 다크 모드 */
+[data-theme="dark"] input[type="checkbox"]:checked,
+[data-theme="dark"] input[type="radio"]:checked {
+    background-color: #C4956A;
+}
+
+/* 플레이스홀더 스타일 */
+input::placeholder, textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}

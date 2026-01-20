@@ -1,0 +1,141 @@
+/* ==================== Button Styles - Warm Cream Theme ==================== */
+
+/* 프라이머리 버튼 - 브라운 그라데이션 */
+.btn-primary,
+button[class*="bg-primary"] {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    border: 1px solid rgba(139, 115, 85, 0.3);
+    box-shadow:
+        0 4px 16px rgba(139, 115, 85, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary:hover,
+button[class*="bg-primary"]:hover {
+    background: linear-gradient(135deg, var(--primary-glow) 0%, var(--primary) 100%);
+    box-shadow:
+        0 6px 24px rgba(139, 115, 85, 0.35),
+        0 0 40px rgba(139, 115, 85, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* 다크 모드 프라이머리 버튼 */
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] button[class*="bg-primary"] {
+    background: linear-gradient(135deg, #C4956A 0%, #A07B52 100%);
+    border: 1px solid rgba(196, 149, 106, 0.3);
+    box-shadow:
+        0 4px 16px rgba(196, 149, 106, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] button[class*="bg-primary"]:hover {
+    background: linear-gradient(135deg, #D4A57A 0%, #C4956A 100%);
+    box-shadow:
+        0 6px 24px rgba(196, 149, 106, 0.35),
+        0 0 40px rgba(196, 149, 106, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* 악센트 버튼 - 오렌지 */
+.btn-accent {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    color: var(--accent);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-accent:hover {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="dark"] .btn-accent {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+[data-theme="dark"] .btn-accent:hover {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%);
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.2);
+}
+
+/* Button press feedback */
+button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* 버튼 클릭 피드백 */
+.btn-click {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-click:active {
+    transform: scale(0.97);
+}
+
+/* 버튼 아이콘 애니메이션 */
+#run-analysis-btn #run-icon {
+    animation: sparkle 3s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.05) rotate(-3deg); }
+    50% { transform: scale(1) rotate(0deg); }
+    75% { transform: scale(1.05) rotate(3deg); }
+}
+
+/* Disabled Button Reason Overlay */
+.disabled-reason-overlay {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    background: rgba(253, 248, 243, 0.98);
+    border: 1px solid rgba(139, 115, 85, 0.3);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--primary);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+}
+
+[data-theme="dark"] .disabled-reason-overlay {
+    background: rgba(45, 38, 32, 0.98);
+    border-color: rgba(196, 149, 106, 0.3);
+    color: #C4956A;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.disabled-reason-overlay::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(139, 115, 85, 0.3);
+}
+
+[data-theme="dark"] .disabled-reason-overlay::after {
+    border-top-color: rgba(196, 149, 106, 0.3);
+}
+
+button.has-disabled-reason:disabled:hover .disabled-reason-overlay {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
+}
