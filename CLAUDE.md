@@ -19,9 +19,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # 의존성 설치
 pip install -r requirements.txt
+npm install  # Tailwind CSS 빌드용
 
 # 앱 실행 (개발 모드) → http://localhost:5001
 python app.py
+
+# Tailwind CSS 빌드
+npm run build:css              # 개발용
+npm run build:css:prod         # 프로덕션 (minify)
+npm run watch:css              # 파일 변경 감지
 
 # 단위 테스트
 pytest tests/ -v
@@ -90,10 +96,27 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 | `UrlManager.js` | URL 입력/삭제/드래그 정렬, `#url-list-container .url-card` |
 | `ProviderManager.js` | AI 프로바이더/모델 선택, `#provider`, `#model` |
 | `StyleManager.js` | 스타일 카드 선택 |
-| `ContentGenerator.js` | `/generate` API 호출, `#run-analysis-btn` |
+| `ContentGenerator.js` | `/generate` API 호출, 재시도 로직 (지수 백오프) |
 | `HistoryPanelManager.js` | 히스토리 뷰, `button[data-section="history"]` |
 | `UsagePanelManager.js` | 사용량 뷰, `button[data-section="usage"]` |
 | `ModalManager.js` | 온보딩 모달 (`#onboarding-modal`, `#onboarding-save`) |
+| `report/` | ReportManager 분할 모듈 (CardHtmlBuilder, CardEventHandler, ReportFormatter) |
+
+### CSS 모듈 구조 (`static/css/`)
+
+```
+static/css/
+├── main.css              # 엔트리포인트 (@import)
+├── tailwind.css          # Tailwind 입력 파일
+├── tailwind.output.css   # 빌드 결과물
+├── base/                 # 토큰, 테마, 타이포그래피
+├── components/           # 버튼, 카드, 모달, 알림 등
+├── layouts/              # 앱 레이아웃, 사이드바, 패널
+├── utilities/            # 애니메이션, 스크롤바, 접근성
+└── responsive/           # 미디어 쿼리 브레이크포인트
+```
+
+CSS 수정 후 반드시 `npm run build:css:prod` 실행
 
 ### Usage Decorators
 
@@ -163,3 +186,8 @@ Playwright 기반, 79개 테스트 케이스. `playwright.config.ts`에서 webSe
 **필수**: AI Provider API 키 최소 하나 (API 키가 설정된 프로바이더만 UI에 표시)
 
 **선택**: `SUPADATA_API_KEY` (자막 백업), `YOUTUBE_API_KEY` (댓글), `SUPABASE_*` (클라우드 저장), `YT_*_PROXY` (차단 우회)
+
+## Security
+
+- XSS 방지: `UIManager.sanitizeHtml()`에서 DOMPurify 사용
+- HTML 콘텐츠 렌더링 시 반드시 `sanitizeHtml()` 호출
