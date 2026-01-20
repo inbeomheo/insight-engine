@@ -6,6 +6,7 @@ import sys
 from urllib.parse import urlparse
 
 from flask import Flask, request, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 try:
     from dotenv import load_dotenv
@@ -27,6 +28,9 @@ def create_app(test_config=None):
         template_folder=templates_dir,
         static_folder=static_dir,
     )
+
+    # 프록시 환경(Railway, Render 등)에서 올바른 host/scheme 인식
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     app.config.from_object('config')
     app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -68,16 +72,21 @@ def create_app(test_config=None):
             origin = request.headers.get('Origin')
             referer = request.headers.get('Referer')
             host = request.host_url.rstrip('/')
+
+            def is_local_dev(url):
+                """개발 환경의 로컬 주소인지 확인"""
+                return app.debug and any(local in url for local in ('localhost', '127.0.0.1'))
+
             if origin:
                 if not origin.startswith(host) and origin not in ('null', 'file://'):
-                    # 개발 환경에서는 localhost 허용
-                    if not (app.debug and 'localhost' in origin):
+                    # 개발 환경에서는 localhost/127.0.0.1 허용
+                    if not is_local_dev(origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Origin'}), 403
             elif referer:
                 parsed = urlparse(referer)
                 referer_origin = f"{parsed.scheme}://{parsed.netloc}"
                 if not referer_origin.startswith(host):
-                    if not (app.debug and 'localhost' in referer_origin):
+                    if not is_local_dev(referer_origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
         return None
 
