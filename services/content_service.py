@@ -486,7 +486,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
         video_id: YouTube 비디오 ID
 
     Returns:
-        자막 텍스트 문자열 또는 에러 딕셔너리
+        성공: {'text': '자막 내용', 'source': 'api'|'watch'|'supadata'|'cache'}
+        실패: {'error': '에러 메시지'}
 
     우선순위:
     0. 캐시 (있으면 바로 반환)
@@ -498,7 +499,10 @@ def get_transcript(video_id: str) -> TranscriptResult:
     cached = _load_cache(video_id, 'transcript')
     if cached:
         _log_info(f"Transcript loaded from cache for video_id={video_id}")
-        return cached
+        # 캐시된 데이터가 새 형식(dict)인지 구버전(str)인지 확인
+        if isinstance(cached, dict) and 'text' in cached:
+            return cached
+        return {'text': cached, 'source': 'cache'}
 
     supadata_api_key = os.getenv('SUPADATA_API_KEY', '')
     last_error = None
@@ -517,8 +521,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
         if fetched:
             text = _extract_text_from_transcript(fetched)
             if text:
-                _save_cache(video_id, 'transcript', text)
-                return text
+                result = {'text': text, 'source': 'api'}
+                _save_cache(video_id, 'transcript', result)
+                return result
 
     except (TranscriptsDisabled, NoTranscriptFound) as e:
         # 자막 자체가 없는 경우 - Supadata도 불가능하므로 바로 에러 반환
@@ -547,19 +552,21 @@ def get_transcript(video_id: str) -> TranscriptResult:
     watch_result = _get_transcript_from_watch_page(video_id)
     if isinstance(watch_result, str) and watch_result.strip():
         _log_info(f"Transcript fallback succeeded from watch page for video_id={video_id}")
-        _save_cache(video_id, 'transcript', watch_result)
-        return watch_result
+        result = {'text': watch_result, 'source': 'watch'}
+        _save_cache(video_id, 'transcript', result)
+        return result
 
     # 3순위: Supadata API (유료 - 마지막 폴백)
     if supadata_api_key:
         _log_info(f"Trying Supadata API fallback for video_id={video_id}")
-        result = get_transcript_via_supadata(video_id, supadata_api_key)
-        if isinstance(result, str) and result.strip():
+        supadata_result = get_transcript_via_supadata(video_id, supadata_api_key)
+        if isinstance(supadata_result, str) and supadata_result.strip():
             _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
+            result = {'text': supadata_result, 'source': 'supadata'}
             _save_cache(video_id, 'transcript', result)
             return result
-        if isinstance(result, dict) and result.get('error'):
-            return result
+        if isinstance(supadata_result, dict) and supadata_result.get('error'):
+            return supadata_result
 
     # 모든 방법 실패
     if last_error:

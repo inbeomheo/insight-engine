@@ -178,17 +178,22 @@ def _fetch_youtube_content(video_id):
     Supadata API 키는 환경변수에서 자동으로 로드됩니다.
 
     Returns:
-        tuple: (combined_content, error, raw_transcript)
+        tuple: (combined_content, error, raw_transcript, transcript_source)
+        - transcript_source: 'api' | 'watch' | 'supadata' | 'cache'
     """
-    transcript = content_service.get_transcript(video_id)
-    if isinstance(transcript, dict) and transcript.get('error'):
-        return None, transcript['error'], None
+    transcript_result = content_service.get_transcript(video_id)
+    if isinstance(transcript_result, dict) and transcript_result.get('error'):
+        return None, transcript_result['error'], None, None
+
+    # 새 형식: {'text': '...', 'source': '...'}
+    transcript_text = transcript_result.get('text', '')
+    transcript_source = transcript_result.get('source', 'unknown')
 
     comments = content_service.get_top_comments(video_id)
     comments_text = '\n'.join(comments[:20]) if comments else '(댓글 없음)'
 
-    final_content = f"[영상 자막]\n{transcript}\n\n[시청자 댓글]\n{comments_text}"
-    return final_content, None, transcript
+    final_content = f"[영상 자막]\n{transcript_text}\n\n[시청자 댓글]\n{comments_text}"
+    return final_content, None, transcript_text, transcript_source
 
 
 @blog_bp.route('/health')
@@ -433,7 +438,7 @@ def generate():
         # YouTube 원본 제목 가져오기
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        content, error, raw_transcript = _fetch_youtube_content(video_id)
+        content, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
         if error:
             return jsonify({'error': error}), 400
 
@@ -462,6 +467,7 @@ def generate():
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
                 'transcript': raw_transcript,
+                'transcript_source': transcript_source,
                 'usage': result.get('usage'),
                 'elapsed_time': elapsed_time
             })
@@ -473,6 +479,7 @@ def generate():
             "elapsed_time": elapsed_time,
             "youtube_title": youtube_title,
             "transcript": raw_transcript,
+            "transcript_source": transcript_source,
             "usage": get_usage_for_response()
         })
 
@@ -543,7 +550,7 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
             title = content_service.get_content_title(url) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            content, error, raw_transcript = _fetch_youtube_content(video_id)
+            content, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
             if error:
                 return {
                     'success': False,
@@ -567,7 +574,8 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                 'title': result.get('title', title),
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
-                'prompt': used_prompt
+                'prompt': used_prompt,
+                'transcript_source': transcript_source
             }
 
         except Exception as e:

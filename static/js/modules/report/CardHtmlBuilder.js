@@ -140,6 +140,20 @@ export class CardHtmlBuilder {
     }
 
     /**
+     * 자막 소스 뱃지 생성
+     */
+    _buildSourceBadge(source) {
+        const sourceLabels = {
+            'api': { label: 'API', icon: 'api', color: 'text-green-400' },
+            'watch': { label: 'Watch', icon: 'web', color: 'text-blue-400' },
+            'supadata': { label: 'Supadata', icon: 'cloud', color: 'text-purple-400' },
+            'cache': { label: 'Cache', icon: 'cached', color: 'text-yellow-400' }
+        };
+        const info = sourceLabels[source] || { label: source || '?', icon: 'help', color: 'text-gray-400' };
+        return `<span class="source-badge ${info.color}" title="자막 소스: ${info.label}"><span class="material-symbols-outlined">${info.icon}</span></span>`;
+    }
+
+    /**
      * 리포트 카드 HTML 생성 (통합 컴팩트 디자인)
      */
     buildReportCardHtml(data, styleLabel, shortUrl) {
@@ -152,6 +166,9 @@ export class CardHtmlBuilder {
             metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">schedule</span>${data.elapsed_time}초</span>`);
         }
 
+        // 자막 소스 뱃지
+        const sourceBadge = data.transcript_source ? this._buildSourceBadge(data.transcript_source) : '';
+
         return `
             <!-- 통합 결과 카드 -->
             <div class="result-card result-card--unified">
@@ -161,6 +178,7 @@ export class CardHtmlBuilder {
                         <div class="header-badges">
                             <span class="style-badge">${styleLabel}</span>
                             <span class="time-badge">${data.time}</span>
+                            ${sourceBadge}
                         </div>
                         <div class="header-actions">
                             <button class="icon-btn copy-title-btn" title="제목 복사" data-copy-type="title">
