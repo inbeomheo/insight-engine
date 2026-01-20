@@ -217,6 +217,7 @@ def save_history(user_id: str, data: dict) -> dict:
             'content': data.get('content'),
             'html': data.get('html'),
             'transcript': data.get('transcript'),
+            'transcript_source': data.get('transcript_source'),
             'mindmap_markdown': data.get('mindmapMarkdown'),
             'usage': data.get('usage'),
             'elapsed_time': data.get('elapsed_time')
