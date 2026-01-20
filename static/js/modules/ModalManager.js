@@ -110,19 +110,19 @@ export class ModalManager {
             providerList.innerHTML = `
                 <div class="text-center py-4 mb-4">
                     <span class="material-symbols-outlined text-3xl text-green-500 mb-2">check_circle</span>
-                    <p class="text-sm text-gray-text">
+                    <p class="text-sm text-text-muted">
                         <strong class="text-white">${providerCount}개</strong>의 AI 서비스가 사용 가능합니다
                     </p>
                 </div>
                 <div class="space-y-2">
                     ${Object.entries(providers).map(([id, provider]) => `
-                        <div class="flex items-center gap-2 p-2 bg-surface-lighter/50 rounded-lg">
+                        <div class="flex items-center gap-2 p-2 bg-bg-elevated/50 rounded-lg">
                             <span class="material-symbols-outlined text-sm text-green-500">check</span>
                             <span class="text-sm">${provider.name}</span>
                         </div>
                     `).join('')}
                 </div>
-                <p class="text-xs text-gray-text mt-4 text-center">
+                <p class="text-xs text-text-muted mt-4 text-center">
                     API 키는 서버 환경변수에서 관리됩니다.
                 </p>
             `;
@@ -130,10 +130,10 @@ export class ModalManager {
             providerList.innerHTML = `
                 <div class="text-center py-6">
                     <span class="material-symbols-outlined text-3xl text-yellow-500 mb-2">warning</span>
-                    <p class="text-sm text-gray-text">
+                    <p class="text-sm text-text-muted">
                         사용 가능한 AI 서비스가 없습니다.
                     </p>
-                    <p class="text-xs text-gray-text mt-2">
+                    <p class="text-xs text-text-muted mt-2">
                         서버 관리자에게 API 키 설정을 요청하세요.
                     </p>
                 </div>
@@ -215,16 +215,16 @@ export class ModalManager {
                 <div class="text-center mb-4">
                     <span class="material-symbols-outlined text-4xl text-green-500 mb-2">rocket_launch</span>
                     <h3 class="text-lg font-bold mb-1">준비 완료!</h3>
-                    <p class="text-sm text-gray-text">
+                    <p class="text-sm text-text-muted">
                         ${providerCount}개의 AI 서비스가 사용 가능합니다
                     </p>
                 </div>
                 <div class="space-y-2 mb-4">
                     ${Object.entries(providers).map(([id, provider]) => `
-                        <div class="flex items-center gap-2 p-3 bg-surface-lighter/50 rounded-lg">
+                        <div class="flex items-center gap-2 p-3 bg-bg-elevated/50 rounded-lg">
                             <span class="material-symbols-outlined text-base text-green-500">smart_toy</span>
                             <span class="font-medium">${provider.name}</span>
-                            <span class="text-xs text-gray-text ml-auto">${provider.models?.length || 0}개 모델</span>
+                            <span class="text-xs text-text-muted ml-auto">${provider.models?.length || 0}개 모델</span>
                         </div>
                     `).join('')}
                 </div>
@@ -234,7 +234,7 @@ export class ModalManager {
                 <div class="text-center py-6">
                     <span class="material-symbols-outlined text-4xl text-yellow-500 mb-2">warning</span>
                     <h3 class="text-lg font-bold mb-1">설정 필요</h3>
-                    <p class="text-sm text-gray-text">
+                    <p class="text-sm text-text-muted">
                         사용 가능한 AI 서비스가 없습니다.<br>
                         서버 관리자에게 문의하세요.
                     </p>

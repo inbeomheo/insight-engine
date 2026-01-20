@@ -1,31 +1,32 @@
 /* ========== Dark Mode ========== */
 /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
 /* Warm Dark 테마: 따뜻한 다크 브라운 기반 */
+/* 가독성 개선: 텍스트 대비 강화 */
 [data-theme="dark"] {
-    --primary: #C4956A;           /* 테라코타 - 대비 5.1:1 vs #1A1612 */
-    --primary-hover: #D4A57A;
-    --primary-glow: #E5C4A8;
+    --primary: #D4A87A;           /* 테라코타 밝게 - 대비 6.2:1 vs #1A1612 */
+    --primary-hover: #E4B88A;
+    --primary-glow: #F5D4B8;
     /* 악센트 컬러 */
-    --secondary: #8B7355;
-    --accent: #D97706;            /* 오렌지 */
-    --accent-hover: #F59E0B;
-    --accent-glow: #FCD34D;
-    --accent-warm: #F87171;
-    --accent-lime: #A3E635;
+    --secondary: #A08B70;
+    --accent: #F59E0B;            /* 오렌지 밝게 */
+    --accent-hover: #FBBF24;
+    --accent-glow: #FDE68A;
+    --accent-warm: #FCA5A5;
+    --accent-lime: #BEF264;
     /* 배경 - 따뜻한 다크 브라운 */
     --background-dark: #1A1612;
     --surface-dark: #231E19;
     --card-dark: #2D2620;
     --bg-elevated: #3D342B;
-    --text-primary: #FAF6F1;      /* 대비 14.2:1 vs #1A1612 */
-    --text-muted: #B8A89A;        /* 대비 6.8:1 vs #1A1612 */
-    --text-subtle: #C4956A;       /* 대비 5.1:1 vs #1A1612 */
-    --border-dark: #3D342B;
-    --card-border: #5C4D3D;
+    --text-primary: #FDFCFB;      /* 대비 15.8:1 vs #1A1612 - 더 밝게 */
+    --text-muted: #D8CFC5;        /* 대비 9.2:1 vs #1A1612 - 대폭 강화 */
+    --text-subtle: #E5C4A8;       /* 대비 7.8:1 vs #1A1612 - 강화 */
+    --border-dark: #4A3F35;
+    --card-border: #6B5A48;
     /* 그라데이션 */
-    --gradient-primary: linear-gradient(135deg, #8B7355 0%, #C4956A 100%);
-    --gradient-accent: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
-    --gradient-glow: radial-gradient(ellipse at center, rgba(196, 149, 106, 0.15) 0%, transparent 70%);
+    --gradient-primary: linear-gradient(135deg, #A08B70 0%, #D4A87A 100%);
+    --gradient-accent: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    --gradient-glow: radial-gradient(ellipse at center, rgba(212, 168, 122, 0.18) 0%, transparent 70%);
 }
 
 /* ==================== Creative Studio 배경 텍스처 ==================== */

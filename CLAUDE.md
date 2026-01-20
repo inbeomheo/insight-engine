@@ -109,14 +109,59 @@ static/css/
 ├── main.css              # 엔트리포인트 (@import)
 ├── tailwind.css          # Tailwind 입력 파일
 ├── tailwind.output.css   # 빌드 결과물
-├── base/                 # 토큰, 테마, 타이포그래피
+├── base/                 # 토큰(_tokens.css), 테마(_theme.css), 타이포그래피
 ├── components/           # 버튼, 카드, 모달, 알림 등
 ├── layouts/              # 앱 레이아웃, 사이드바, 패널
-├── utilities/            # 애니메이션, 스크롤바, 접근성
+├── utilities/            # 애니메이션, 스크롤바, 접근성, 가독성(_readability.css)
 └── responsive/           # 미디어 쿼리 브레이크포인트
 ```
 
-CSS 수정 후 반드시 `npm run build:css:prod` 실행
+**CSS 수정 워크플로우:**
+1. CSS 파일 수정
+2. `npm run build:css:prod` 실행 (필수)
+3. 브라우저 새로고침 (캐시 무시: Ctrl+Shift+R)
+
+### 테마 색상 시스템 (Warm Cream 다크 모드 전용)
+
+**CSS 변수 정의 위치:**
+- `base/_tokens.css`: 유일한 CSS 변수 정의 소스 (다크 모드 전용)
+- `base/_theme.css`: 추가 다크 모드 스타일
+- `tailwind.css`: CSS 변수 정의 **없음** (Tailwind 지시문만)
+
+**주요 색상 변수:**
+```css
+--primary: #D4A87A;           /* 테라코타 골드 */
+--background-dark: #1A1612;   /* 따뜻한 다크 브라운 */
+--surface-dark: #231E19;
+--text-primary: #FDFCFB;
+--text-muted: #D8CFC5;
+```
+
+**Tailwind와 CSS 변수 동기화 (중요):**
+```javascript
+// tailwind.config.js - _tokens.css 변수 직접 참조
+colors: {
+  'bg-primary': 'var(--background-dark)',
+  'primary': 'var(--primary)',
+  'text-primary': 'var(--text-primary)',
+}
+```
+
+**하드코딩 금지 패턴:**
+```css
+/* ❌ 하드코딩 */
+background: #ffffff;
+color: white;
+
+/* ✅ CSS 변수 사용 */
+background: var(--background-dark);
+color: var(--text-primary);
+```
+
+**테마 색상 문제 디버깅:**
+1. `tailwind.config.js`의 색상이 `_tokens.css` 변수를 참조하는지 확인
+2. `tailwind.css`에 `:root` 색상 정의가 **없는지** 확인 (충돌 방지)
+3. 빌드 후 확인: `npm run build:css:prod`
 
 ### Usage Decorators
 
@@ -217,3 +262,23 @@ npx playwright test settings-modals/ history-usage/
 
 - XSS 방지: `UIManager.sanitizeHtml()`에서 DOMPurify 사용
 - HTML 콘텐츠 렌더링 시 반드시 `sanitizeHtml()` 호출
+- 마크다운 테이블 폴백: `UIManager.convertMarkdownTables()` - 백엔드 변환 실패 시 프론트엔드에서 `|` 테이블을 HTML `<table>`로 변환
+
+## Result Card Structure
+
+결과 카드는 통합 컴팩트 디자인 (`result-card--unified`):
+```
+┌─────────────────────────────────────┐
+│ [스타일뱃지] 12:34  [복사][복사]    │  ← unified-header
+│ 제목                                │
+│ ▶ youtu.be/xxx                      │
+├─────────────────────────────────────┤
+│ 본문 내용 (report-content)          │  ← unified-body
+├─────────────────────────────────────┤
+│ [토큰] [시간]  프롬/맵/저장/삭제    │  ← unified-footer
+└─────────────────────────────────────┘
+```
+
+- `CardHtmlBuilder.buildReportCardHtml()` - HTML 템플릿 생성
+- `_cards.css` - 통합 카드 스타일
+- `_report-content.css` - 본문 타이포그래피 (Warm Cream 테마)

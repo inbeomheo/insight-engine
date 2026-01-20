@@ -319,13 +319,13 @@ export class AuthManager {
 
         authContainer.innerHTML = `
             <div id="auth-logged-out" class="flex items-center gap-2">
-                <button id="login-btn" class="text-xs text-gray-text hover:text-primary-accent transition-colors px-3 py-1.5 border border-border-dark rounded-lg hover:border-primary-accent/50">
+                <button id="login-btn" class="text-xs text-text-muted hover:text-primary transition-colors px-3 py-1.5 border border-border-dark rounded-lg hover:border-primary/50">
                     로그인
                 </button>
             </div>
             <div id="auth-logged-in" class="hidden flex items-center gap-2">
-                <span id="user-email" class="text-xs text-gray-text truncate max-w-[120px]"></span>
-                <button id="logout-btn" class="text-xs text-gray-text hover:text-red-400 transition-colors px-2 py-1">
+                <span id="user-email" class="text-xs text-text-muted truncate max-w-[120px]"></span>
+                <button id="logout-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors px-2 py-1">
                     <span class="material-symbols-outlined text-sm">logout</span>
                 </button>
             </div>
@@ -346,7 +346,7 @@ export class AuthManager {
         if (!authContainer) return;
 
         authContainer.innerHTML = `
-            <span class="text-xs text-gray-text/50 flex items-center gap-1">
+            <span class="text-xs text-text-muted/50 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm">cloud_off</span>
                 로컬 모드
             </span>
@@ -390,10 +390,10 @@ export class AuthManager {
     }
 
     _setTabActive(activeTab, inactiveTab, activeForm, inactiveForm) {
-        activeTab.classList.add('border-primary-accent', 'text-primary-accent');
-        activeTab.classList.remove('border-transparent', 'text-gray-text');
-        inactiveTab.classList.remove('border-primary-accent', 'text-primary-accent');
-        inactiveTab.classList.add('border-transparent', 'text-gray-text');
+        activeTab.classList.add('border-primary', 'text-primary');
+        activeTab.classList.remove('border-transparent', 'text-text-muted');
+        inactiveTab.classList.remove('border-primary', 'text-primary');
+        inactiveTab.classList.add('border-transparent', 'text-text-muted');
         activeForm?.classList.remove('hidden');
         inactiveForm?.classList.add('hidden');
     }
@@ -498,8 +498,8 @@ export class AuthManager {
             loginForm?.classList.add('hidden');
             signupForm?.classList.add('hidden');
             resetForm?.classList.remove('hidden');
-            loginTab?.classList.remove('border-primary-accent', 'text-primary-accent');
-            loginTab?.classList.add('border-transparent', 'text-gray-text');
+            loginTab?.classList.remove('border-primary', 'text-primary');
+            loginTab?.classList.add('border-transparent', 'text-text-muted');
         });
 
         // 로그인으로 돌아가기

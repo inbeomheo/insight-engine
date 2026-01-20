@@ -79,7 +79,7 @@ export class UrlManager {
                 <div class="pl-2 pr-3 text-text-subtle">
                     <span class="material-symbols-outlined text-xl">link</span>
                 </div>
-                <div class="flex-1 truncate text-text-light font-mono text-sm">
+                <div class="flex-1 truncate text-text-primary font-mono text-sm">
                     ${this.ui.escapeHtml(url)}
                 </div>
                 <button class="url-remove-btn p-2 text-text-subtle hover:text-red-400 transition-colors" data-index="${index}" title="삭제">

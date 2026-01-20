@@ -28,6 +28,7 @@
 @import url('utilities/_animations.css');
 @import url('utilities/_scrollbar.css');
 @import url('utilities/_accessibility.css');
+@import url('utilities/_readability.css');
 
 /* ==================== Responsive ==================== */
 @import url('responsive/_breakpoints.css');

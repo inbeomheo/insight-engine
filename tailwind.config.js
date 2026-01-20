@@ -15,25 +15,31 @@ module.exports = {
          Colors - CSS 변수 기반 색상
          ---------------------------------------- */
       colors: {
-        // Background Colors
-        'bg-primary': 'var(--bg-primary)',
-        'bg-secondary': 'var(--bg-secondary)',
-        'bg-tertiary': 'var(--bg-tertiary)',
-        'bg-surface': 'var(--bg-surface)',
+        // Background Colors - _tokens.css 변수 참조
+        'bg-primary': 'var(--background-dark)',
+        'bg-secondary': 'var(--surface-dark)',
+        'bg-tertiary': 'var(--card-dark)',
+        'bg-surface': 'var(--surface-dark)',
         'bg-overlay': 'var(--bg-overlay)',
+        'background-dark': 'var(--background-dark)',
+        'card-dark': 'var(--card-dark)',
+        'bg-elevated': 'var(--bg-elevated)',
+        'surface-lighter': 'var(--bg-elevated)',
 
         // Text Colors
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
         'text-tertiary': 'var(--text-tertiary)',
         'text-muted': 'var(--text-muted)',
+        'text-subtle': 'var(--text-subtle)',
         'text-inverse': 'var(--text-inverse)',
 
-        // Brand Colors
-        'primary': 'var(--color-primary)',
-        'primary-hover': 'var(--color-primary-hover)',
-        'primary-light': 'var(--color-primary-light)',
-        'primary-dark': 'var(--color-primary-dark)',
+        // Brand Colors - _tokens.css의 --primary 직접 참조
+        'primary': 'var(--primary)',
+        'primary-hover': 'var(--primary-hover)',
+        'primary-light': 'var(--primary-light)',
+        'primary-dark': 'var(--primary-dark)',
+        'primary-glow': 'var(--primary-glow)',
 
         // Semantic Colors
         'success': 'var(--color-success)',
@@ -46,10 +52,10 @@ module.exports = {
         'border-secondary': 'var(--border-secondary)',
         'border-focus': 'var(--border-focus)',
         'border-dark': 'var(--border-dark)',
+        'card-border': 'var(--card-border)',
 
         // Surface Colors (컴포넌트용)
         'surface-dark': 'var(--surface-dark)',
-        'bg-elevated': 'var(--bg-elevated)',
       },
 
       /* ----------------------------------------

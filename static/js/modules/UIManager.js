@@ -211,11 +211,107 @@ export class UIManager {
     }
 
     /**
+     * 마크다운 테이블을 HTML 테이블로 변환 (폴백용)
+     */
+    convertMarkdownTables(html) {
+        // 마크다운 테이블 패턴: | col | col | 로 시작하는 연속된 줄
+        const lines = html.split('\n');
+        const result = [];
+        let tableLines = [];
+        let inTable = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            const isTableLine = line.startsWith('|') && line.endsWith('|');
+            const isSeparator = /^\|[-:\s|]+\|$/.test(line);
+
+            if (isTableLine || isSeparator) {
+                if (!inTable) {
+                    inTable = true;
+                }
+                tableLines.push(line);
+            } else {
+                if (inTable && tableLines.length > 0) {
+                    result.push(this._parseMarkdownTable(tableLines));
+                    tableLines = [];
+                    inTable = false;
+                }
+                result.push(lines[i]);
+            }
+        }
+
+        // 마지막 테이블 처리
+        if (tableLines.length > 0) {
+            result.push(this._parseMarkdownTable(tableLines));
+        }
+
+        return result.join('\n');
+    }
+
+    /**
+     * 마크다운 테이블 라인들을 HTML 테이블로 변환
+     */
+    _parseMarkdownTable(lines) {
+        if (lines.length < 2) return lines.join('\n');
+
+        const rows = [];
+        let hasHeader = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            // 구분선 스킵 (|---|---|)
+            if (/^\|[-:\s|]+\|$/.test(line)) {
+                hasHeader = true;
+                continue;
+            }
+            // 셀 파싱
+            const cells = line.split('|')
+                .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
+                .map(cell => cell.trim());
+            rows.push(cells);
+        }
+
+        if (rows.length === 0) return lines.join('\n');
+
+        // HTML 테이블 생성
+        let tableHtml = '<table>';
+
+        rows.forEach((cells, idx) => {
+            if (idx === 0 && hasHeader) {
+                tableHtml += '<thead><tr>';
+                cells.forEach(cell => {
+                    tableHtml += `<th>${this.escapeHtml(cell)}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody>';
+            } else {
+                if (idx === 1 && hasHeader) {
+                    // tbody 이미 열림
+                } else if (idx === 0 && !hasHeader) {
+                    tableHtml += '<tbody>';
+                }
+                tableHtml += '<tr>';
+                cells.forEach(cell => {
+                    tableHtml += `<td>${this.escapeHtml(cell)}</td>`;
+                });
+                tableHtml += '</tr>';
+            }
+        });
+
+        tableHtml += '</tbody></table>';
+        return tableHtml;
+    }
+
+    /**
      * HTML 콘텐츠에서 위험한 요소를 제거합니다 (DOMPurify 사용).
      * 블로그 콘텐츠에 필요한 태그만 허용합니다.
      */
     sanitizeHtml(html) {
         if (!html || typeof html !== 'string') return '';
+
+        // 마크다운 테이블이 HTML로 변환되지 않은 경우 변환
+        if (html.includes('|') && !html.includes('<table')) {
+            html = this.convertMarkdownTables(html);
+        }
 
         // DOMPurify가 로드되었는지 확인
         if (typeof DOMPurify !== 'undefined') {

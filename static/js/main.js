@@ -206,7 +206,7 @@ class ContentAnalysis {
         // 관리자인 경우 특별 표시
         if (usage.is_admin) {
             usageDisplay.innerHTML = `
-                <span class="text-primary-accent flex items-center gap-1">
+                <span class="text-primary flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm">shield_person</span>
                     관리자
                 </span>
@@ -216,7 +216,7 @@ class ContentAnalysis {
 
         const remaining = usage.usage_count || 0;
         const max = usage.max_usage || 5;
-        const colorClass = remaining === 0 ? 'text-red-400' : remaining <= 2 ? 'text-amber-500' : 'text-gray-text';
+        const colorClass = remaining === 0 ? 'text-red-400' : remaining <= 2 ? 'text-amber-500' : 'text-text-muted';
 
         usageDisplay.innerHTML = `
             <span class="${colorClass} flex items-center gap-1">

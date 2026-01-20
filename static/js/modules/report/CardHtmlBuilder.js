@@ -140,106 +140,72 @@ export class CardHtmlBuilder {
     }
 
     /**
-     * 리포트 카드 HTML 생성 (제목/본문/메타정보 카드 그룹)
+     * 리포트 카드 HTML 생성 (통합 컴팩트 디자인)
      */
     buildReportCardHtml(data, styleLabel, shortUrl) {
-        // 메타 정보 빌드
-        const metaItems = [];
+        // 메타 정보 빌드 (인라인 형태)
+        const metaChips = [];
         if (data.usage?.total_tokens) {
-            metaItems.push({ label: '토큰', value: data.usage.total_tokens.toLocaleString(), icon: 'token' });
-        }
-        if (data.usage?.prompt_tokens) {
-            metaItems.push({ label: '입력', value: data.usage.prompt_tokens.toLocaleString(), icon: 'input' });
-        }
-        if (data.usage?.completion_tokens) {
-            metaItems.push({ label: '출력', value: data.usage.completion_tokens.toLocaleString(), icon: 'output' });
+            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">token</span>${data.usage.total_tokens.toLocaleString()}</span>`);
         }
         if (data.elapsed_time) {
-            metaItems.push({ label: '처리 시간', value: `${data.elapsed_time}초`, icon: 'schedule' });
+            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">schedule</span>${data.elapsed_time}초</span>`);
         }
 
-        const metaGridHtml = metaItems.length > 0 ? metaItems.map(item => `
-            <div class="meta-item">
-                <span class="meta-label">${item.label}</span>
-                <span class="meta-value">${item.value}</span>
-            </div>
-        `).join('') : '<div class="meta-item"><span class="meta-label">정보 없음</span></div>';
-
         return `
-            <!-- 제목 카드 -->
-            <div class="result-card result-card--title">
-                <div class="result-card-header">
-                    <div class="flex-1 min-w-0">
-                        <h3 class="card-title">${this.ui.escapeHtml(data.title)}</h3>
-                        <div class="card-meta">
+            <!-- 통합 결과 카드 -->
+            <div class="result-card result-card--unified">
+                <!-- 헤더: 제목 + 메타 + 복사버튼 -->
+                <div class="unified-header">
+                    <div class="unified-header-top">
+                        <div class="header-badges">
                             <span class="style-badge">${styleLabel}</span>
                             <span class="time-badge">${data.time}</span>
                         </div>
-                        <a class="source-link" href="${this.ui.sanitizeUrl(data.url)}" target="_blank" rel="noopener noreferrer">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">play_circle</span>
-                            <span>${this.ui.escapeHtml(shortUrl)}</span>
-                        </a>
+                        <div class="header-actions">
+                            <button class="icon-btn copy-title-btn" title="제목 복사" data-copy-type="title">
+                                <span class="material-symbols-outlined">content_copy</span>
+                            </button>
+                            <button class="icon-btn copy-content-btn" title="전체 복사" data-copy-type="content">
+                                <span class="material-symbols-outlined">file_copy</span>
+                            </button>
+                        </div>
                     </div>
-                    <button class="card-copy-btn copy-title-btn" title="제목 복사" data-copy-type="title">
-                        <span class="material-symbols-outlined">content_copy</span>
-                        <span>복사</span>
-                    </button>
+                    <h3 class="unified-title">${this.ui.escapeHtml(data.title)}</h3>
+                    <a class="source-link" href="${this.ui.sanitizeUrl(data.url)}" target="_blank" rel="noopener noreferrer">
+                        <span class="material-symbols-outlined">play_circle</span>
+                        <span>${this.ui.escapeHtml(shortUrl)}</span>
+                    </a>
                 </div>
-            </div>
 
-            <!-- 본문 카드 -->
-            <div class="result-card result-card--content">
-                <div class="result-card-header">
-                    <div class="card-label">
-                        <span class="material-symbols-outlined" style="font-size: 16px;">article</span>
-                        <span>본문</span>
-                    </div>
-                    <button class="card-copy-btn copy-content-btn" title="본문 복사" data-copy-type="content">
-                        <span class="material-symbols-outlined">content_copy</span>
-                        <span>복사</span>
-                    </button>
-                </div>
-                <div class="card-body report-content">
+                <!-- 본문 -->
+                <div class="unified-body report-content">
                     ${this.ui.sanitizeHtml(data.html)}
                 </div>
-                <div class="result-card-actions">
-                    <button class="prompt-btn">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">code</span>
-                        <span>프롬프트</span>
-                    </button>
-                    <button class="mindmap-btn">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">account_tree</span>
-                        <span>마인드맵</span>
-                    </button>
-                    <button class="download-btn">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">download</span>
-                        <span>저장</span>
-                    </button>
-                </div>
-            </div>
 
-            <!-- 메타정보 카드 -->
-            <div class="result-card result-card--meta">
-                <div class="result-card-header">
-                    <div class="card-label">
-                        <span class="material-symbols-outlined" style="font-size: 16px;">analytics</span>
-                        <span>메타정보</span>
+                <!-- 푸터: 메타 + 액션 -->
+                <div class="unified-footer">
+                    <div class="meta-chips">
+                        ${metaChips.join('')}
                     </div>
-                    <button class="card-copy-btn copy-meta-btn" title="메타정보 복사" data-copy-type="meta">
-                        <span class="material-symbols-outlined">content_copy</span>
-                        <span>복사</span>
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div class="meta-grid">
-                        ${metaGridHtml}
+                    <div class="footer-actions">
+                        <button class="action-btn prompt-btn">
+                            <span class="material-symbols-outlined">code</span>
+                            <span>프롬프트</span>
+                        </button>
+                        <button class="action-btn mindmap-btn">
+                            <span class="material-symbols-outlined">account_tree</span>
+                            <span>마인드맵</span>
+                        </button>
+                        <button class="action-btn download-btn">
+                            <span class="material-symbols-outlined">download</span>
+                            <span>저장</span>
+                        </button>
+                        <button class="action-btn delete-btn">
+                            <span class="material-symbols-outlined">delete</span>
+                            <span>삭제</span>
+                        </button>
                     </div>
-                </div>
-                <div class="result-card-actions">
-                    <button class="delete-btn">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
-                        <span>삭제</span>
-                    </button>
                 </div>
             </div>
         `;

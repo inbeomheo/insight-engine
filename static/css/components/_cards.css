@@ -174,18 +174,18 @@ input[type="radio"] + div:hover {
 .result-card-group {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     opacity: 0;
     transform: translateY(20px);
     animation: slideInUp 0.4s ease forwards;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 /* Base Result Card - 공통 스타일 */
 .result-card {
-    background: var(--surface-dark, #202428);
-    border: 1px solid var(--border-dark, #2a2e33);
-    border-radius: 12px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
     overflow: hidden;
@@ -195,12 +195,228 @@ input[type="radio"] + div:hover {
 .result-card:hover {
     border-color: var(--primary);
     box-shadow: 0 4px 16px rgba(139, 115, 85, 0.15);
-    transform: translateY(-2px);
 }
 
-[data-theme="dark"] .result-card:hover {
+/* ==================== Unified Result Card (통합 컴팩트) ==================== */
+
+.result-card--unified {
+    border-left: 3px solid var(--primary);
+}
+
+/* 헤더 */
+.unified-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-dark);
+    background: var(--card-dark);
+}
+
+.unified-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.header-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.unified-header .style-badge {
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: var(--background-dark);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.unified-header .time-badge {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.unified-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin: 0 0 6px 0;
+}
+
+.unified-header .source-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.unified-header .source-link:hover {
+    color: var(--primary);
+}
+
+.unified-header .source-link .material-symbols-outlined {
+    font-size: 14px;
+}
+
+/* 아이콘 버튼 */
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-btn:hover {
+    background: var(--primary);
     border-color: var(--primary);
-    box-shadow: 0 4px 16px rgba(196, 149, 106, 0.15);
+    color: var(--background-dark);
+}
+
+.icon-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.icon-btn.copied {
+    background: #10b981;
+    border-color: #10b981;
+    color: #fff;
+}
+
+/* 본문 */
+.unified-body {
+    padding: 16px;
+}
+
+.unified-body.report-content {
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+/* 푸터 */
+.unified-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--background-dark);
+    border-top: 1px solid var(--border-dark);
+}
+
+.meta-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+}
+
+.meta-chip .material-symbols-outlined {
+    font-size: 12px;
+    color: var(--primary);
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--primary);
+    background: rgba(212, 168, 122, 0.15);
+    color: var(--primary);
+}
+
+.action-btn .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.action-btn.delete-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 640px) {
+    .unified-header {
+        padding: 10px 12px;
+    }
+
+    .unified-body {
+        padding: 12px;
+    }
+
+    .unified-footer {
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .meta-chips {
+        justify-content: center;
+    }
+
+    .footer-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .action-btn span:not(.material-symbols-outlined) {
+        display: none;
+    }
+
+    .action-btn {
+        padding: 8px;
+    }
 }
 
 /* Card Header with Copy Button */

@@ -1,33 +1,11 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark" class="dark">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Insight Engine — AI Content Analysis</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <!-- FOUC 방지: DOM 로드 전 저장된 테마 적용 -->
-    <script>
-        (function() {
-            const storageKey = 'cad_theme_v1';
-            const saved = localStorage.getItem(storageKey);
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-            let theme;
-            if (saved === 'light') {
-                theme = 'light';
-            } else if (saved === 'dark') {
-                theme = 'dark';
-            } else {
-                // system 또는 저장 없음 → 시스템 설정 따름
-                theme = prefersDark ? 'dark' : 'light';
-            }
-
-            document.documentElement.setAttribute('data-theme', theme);
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
-        })();
-    </script>
+    <!-- 다크 모드 전용: HTML 속성으로 이미 설정됨 -->
     <!-- 폰트 최적화: preconnect 및 preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
@@ -188,7 +166,7 @@
             </div>
 
             <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-border-dark/50">
-                <button id="modal-cancel" class="px-6 py-2 text-sm font-bold bg-primary text-black hover:bg-white transition-colors rounded-lg">닫기</button>
+                <button id="modal-cancel" class="px-6 py-2 text-sm font-bold bg-primary text-text-inverse hover:bg-primary-hover transition-colors rounded-lg">닫기</button>
             </div>
         </div>
     </div>
@@ -210,7 +188,7 @@
                 <!-- Style Name -->
                 <div>
                     <label class="block text-xs font-mono text-text-subtle mb-2 uppercase">스타일 이름</label>
-                    <input type="text" id="custom-style-name" maxlength="20" placeholder="예: 내 분석 스타일" class="w-full bg-black border border-border-dark text-white p-3 focus:border-primary focus:outline-none"/>
+                    <input type="text" id="custom-style-name" maxlength="20" placeholder="예: 내 분석 스타일" class="w-full bg-surface-dark border border-border-dark text-text-primary p-3 rounded-lg focus:border-primary focus:outline-none"/>
                 </div>
 
                 <!-- Icon Selection -->
@@ -219,31 +197,31 @@
                     <div class="grid grid-cols-5 gap-2" id="icon-selection">
                         <label class="cursor-pointer">
                             <input type="radio" name="custom-icon" value="edit_note" checked class="peer sr-only"/>
-                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-500 transition-all">
+                            <div class="border border-border-dark bg-surface-dark p-3 text-center rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 hover:border-primary/50 transition-all">
                                 <span class="material-symbols-outlined text-text-subtle peer-checked:text-primary">edit_note</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="custom-icon" value="star" class="peer sr-only"/>
-                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-500 transition-all">
+                            <div class="border border-border-dark bg-surface-dark p-3 text-center rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 hover:border-primary/50 transition-all">
                                 <span class="material-symbols-outlined text-text-subtle peer-checked:text-primary">star</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="custom-icon" value="bookmark" class="peer sr-only"/>
-                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-500 transition-all">
+                            <div class="border border-border-dark bg-surface-dark p-3 text-center rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 hover:border-primary/50 transition-all">
                                 <span class="material-symbols-outlined text-text-subtle peer-checked:text-primary">bookmark</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="custom-icon" value="psychology" class="peer sr-only"/>
-                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-500 transition-all">
+                            <div class="border border-border-dark bg-surface-dark p-3 text-center rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 hover:border-primary/50 transition-all">
                                 <span class="material-symbols-outlined text-text-subtle peer-checked:text-primary">psychology</span>
                             </div>
                         </label>
                         <label class="cursor-pointer">
                             <input type="radio" name="custom-icon" value="rocket_launch" class="peer sr-only"/>
-                            <div class="border border-border-dark bg-black p-3 text-center peer-checked:border-primary peer-checked:bg-primary/10 hover:border-gray-500 transition-all">
+                            <div class="border border-border-dark bg-surface-dark p-3 text-center rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 hover:border-primary/50 transition-all">
                                 <span class="material-symbols-outlined text-text-subtle peer-checked:text-primary">rocket_launch</span>
                             </div>
                         </label>
@@ -253,7 +231,7 @@
                 <!-- Prompt -->
                 <div>
                     <label class="block text-xs font-mono text-text-subtle mb-2 uppercase">프롬프트</label>
-                    <textarea id="custom-style-prompt" maxlength="2000" rows="8" placeholder="AI에게 전달할 지시사항을 작성하세요.&#10;&#10;예:&#10;당신은 마케팅 전문가입니다.&#10;아래 영상의 내용을 분석하여 마케팅 인사이트를 도출해주세요.&#10;- 타겟 고객층&#10;- 핵심 메시지&#10;- 활용 가능한 채널" class="w-full bg-black border border-border-dark text-white p-3 focus:border-primary focus:outline-none resize-none font-mono text-sm"></textarea>
+                    <textarea id="custom-style-prompt" maxlength="2000" rows="8" placeholder="AI에게 전달할 지시사항을 작성하세요.&#10;&#10;예:&#10;당신은 마케팅 전문가입니다.&#10;아래 영상의 내용을 분석하여 마케팅 인사이트를 도출해주세요.&#10;- 타겟 고객층&#10;- 핵심 메시지&#10;- 활용 가능한 채널" class="w-full bg-surface-dark border border-border-dark text-text-primary p-3 rounded-lg focus:border-primary focus:outline-none resize-none font-mono text-sm"></textarea>
                     <div class="text-right text-xs text-text-subtle mt-1">
                         <span id="prompt-char-count">0</span>/2000자
                     </div>
@@ -264,7 +242,7 @@
                 <button id="custom-style-delete" class="px-4 py-2 text-sm font-bold text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors hidden">삭제</button>
                 <div class="flex gap-3 ml-auto">
                     <button id="custom-style-cancel" class="px-4 py-2 text-sm font-bold text-text-subtle hover:text-white transition-colors">취소</button>
-                    <button id="custom-style-save" class="px-6 py-2 text-sm font-bold bg-primary text-black hover:bg-white transition-colors">저장</button>
+                    <button id="custom-style-save" class="px-6 py-2 text-sm font-bold bg-primary text-text-inverse hover:bg-primary-hover transition-colors rounded-lg">저장</button>
                 </div>
             </div>
         </div>
@@ -395,7 +373,7 @@
                     </button>
                 </div>
             </div>
-            <div id="mindmap-container" class="relative bg-black" style="height: calc(95vh - 120px);">
+            <div id="mindmap-container" class="relative bg-surface-dark" style="height: calc(95vh - 120px);">
                 <!-- Loading state -->
                 <div id="mindmap-loading" class="absolute inset-0 flex items-center justify-center">
                     <div class="text-center">
@@ -431,7 +409,7 @@
                     </button>
                 </div>
             </div>
-            <div id="prompt-content" class="p-6 overflow-y-auto font-mono text-sm text-gray-300 leading-relaxed whitespace-pre-wrap bg-black/30" style="max-height: calc(90vh - 120px);">
+            <div id="prompt-content" class="p-6 overflow-y-auto font-mono text-sm text-text-secondary leading-relaxed whitespace-pre-wrap bg-surface-dark/30" style="max-height: calc(90vh - 120px);">
                 <!-- 프롬프트 내용이 여기에 표시됩니다 -->
             </div>
             <div class="p-3 border-t border-border-dark/50 flex items-center justify-between text-xs text-text-subtle">
@@ -456,7 +434,7 @@
                     <!-- Available services will be dynamically generated -->
                 </div>
             </div>
-            <button id="onboarding-save" class="w-full bg-primary text-black font-bold py-4 text-lg uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 rounded-xl">
+            <button id="onboarding-save" class="w-full bg-primary text-text-inverse font-bold py-4 text-lg uppercase tracking-wider hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 rounded-xl">
                 <span class="material-symbols-outlined">check</span>
                 시작하기
             </button>
@@ -481,7 +459,7 @@
                         <button id="url-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="url-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">link</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">YouTube URL</span>
+                                <span class="text-sm font-medium text-text-primary">YouTube URL</span>
                                 <span id="url-count-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full hidden">0</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="url-section-arrow" aria-hidden="true">expand_less</span>
@@ -491,7 +469,7 @@
                         <div class="flex gap-2">
                             <div class="relative flex-1">
                                 <input type="url" id="url-input"
-                                       class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                                       class="w-full bg-surface-dark border border-border-dark rounded-xl px-4 py-3.5 pl-12 text-base text-text-primary placeholder-text-secondary/70 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                        placeholder="YouTube 영상 URL을 붙여넣기 하세요"
                                        aria-label="YouTube 영상 URL 입력"
                                        aria-describedby="url-hint"
@@ -531,7 +509,7 @@
                         <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="ai-model-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">psychology</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">AI 모델</span>
+                                <span class="text-sm font-medium text-text-primary">AI 모델</span>
                                 <span id="ai-model-badge" class="text-xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full hidden">선택됨</span>
                             </div>
                             <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_less</span>
@@ -543,7 +521,7 @@
                             <div class="select-card">
                                 <label for="provider" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">서비스</label>
                                 <div class="relative">
-                                    <select id="provider" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
+                                    <select id="provider" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-text-primary cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50" aria-describedby="selected-model-info">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -555,7 +533,7 @@
                             <div class="select-card">
                                 <label for="model" class="block text-[10px] font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">모델</label>
                                 <div class="relative">
-                                    <select id="model" class="w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
+                                    <select id="model" class="w-full bg-surface-dark border border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-text-primary cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50">
                                         <option value="">선택하세요</option>
                                     </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60" aria-hidden="true">
@@ -579,7 +557,7 @@
                         <button id="style-section-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="style-section-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">style</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">스타일</span>
+                                <span class="text-sm font-medium text-text-primary">스타일</span>
                                 <span id="style-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Blog</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -893,7 +871,7 @@
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">결과</h2>
+                                <h2 class="text-lg font-semibold text-text-primary">결과</h2>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>
@@ -912,7 +890,7 @@
                                 <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-violet-500/15 rounded-full blur-2xl scale-150" style="animation: glowPulse 6s ease-in-out infinite reverse;"></div>
                                 <!-- Icon Circle with Gradient Border -->
                                 <div class="relative w-36 h-36 rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-pink-500">
-                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#1a1f24] dark:to-[#12161a] flex items-center justify-center">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#1a1f24] to-[#12161a] flex items-center justify-center">
                                         <span class="material-symbols-outlined text-6xl bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
                                     </div>
                                 </div>
@@ -924,30 +902,30 @@
                             </div>
 
                             <!-- Text Content -->
-                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">AI 콘텐츠 분석 준비 완료</h3>
-                            <p class="text-gray-600 dark:text-text-secondary text-base mb-6 max-w-sm">
+                            <h3 class="text-2xl font-bold text-text-primary mb-3">AI 콘텐츠 분석 준비 완료</h3>
+                            <p class="text-text-secondary text-base mb-6 max-w-sm">
                                 YouTube 영상 URL을 입력하면<br/>
                                 AI가 자동으로 콘텐츠를 분석하고 생성합니다
                             </p>
 
                             <!-- Feature Pills - Creative Studio Style -->
                             <div class="flex flex-wrap justify-center gap-3 mb-8">
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-primary dark:text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">bolt</span>
                                     빠른 분석
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-400 dark:text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">psychology</span>
                                     AI 기반
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-400 dark:text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
+                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
                                     <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">translate</span>
                                     한국어 최적화
                                 </span>
                             </div>
 
                             <!-- Arrow Hint with Animation -->
-                            <div class="flex items-center gap-2 text-gray-500 dark:text-text-muted text-sm">
+                            <div class="flex items-center gap-2 text-text-muted text-sm">
                                 <span class="material-symbols-outlined text-lg" style="animation: arrowPulse 1.5s ease-in-out infinite;">arrow_back</span>
                                 <span>왼쪽에서 URL을 입력하세요</span>
                             </div>

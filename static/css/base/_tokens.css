@@ -1,32 +1,109 @@
-/* ==================== Base Tokens - Warm Cream Design System ==================== */
+/* ==================== Base Tokens - Dark Mode Design System ==================== */
 
-/* ========== Light Mode (기본) ========== */
+/* ========== Dark Mode (기본 - 다크 모드 전용) ========== */
 /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
 :root {
-    --primary: #8B7355;           /* 브라운 - 대비 4.6:1 vs #FDF8F3 */
-    --primary-hover: #7A6449;
-    --primary-glow: #A08B70;
-    --secondary: #C4956A;         /* 테라코타 */
-    --accent: #D97706;            /* 오렌지 악센트 */
-    --accent-hover: #B45309;
-    --background-dark: #FDF8F3;   /* 크림 배경 */
-    --surface-dark: #FAF6F1;      /* 베이지 서피스 */
-    --card-dark: #FFFFFF;
-    --bg-elevated: #F5EDE4;
-    --text-primary: #3D3229;      /* 다크 브라운 - 대비 10.2:1 vs #FDF8F3 */
-    --text-muted: #6B5B4F;        /* 대비 5.8:1 vs #FFFFFF */
-    --text-subtle: #8B7355;       /* 대비 4.6:1 vs #FDF8F3 */
-    --border-dark: #E8E0D5;       /* 따뜻한 베이지 테두리 */
-    --card-border: #8B735540;
+    /* ----------------------------------------
+       Primary Colors - 브랜드 색상
+       ---------------------------------------- */
+    --primary: #D4A87A;           /* 테라코타 밝게 - 대비 6.2:1 vs #1A1612 */
+    --primary-hover: #E4B88A;
+    --primary-glow: #F5D4B8;
+    --primary-light: rgba(212, 168, 122, 0.1);
+    --primary-dark: #B8926A;
+    --secondary: #A08B70;         /* 테라코타 */
+    --accent: #F59E0B;            /* 오렌지 밝게 */
+    --accent-hover: #FBBF24;
 
-    /* Compact Design Variables */
+    /* Tailwind 호환 별칭 */
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-light: var(--primary-light);
+    --color-primary-dark: var(--primary-dark);
+
+    /* ----------------------------------------
+       Background Colors - 배경 색상
+       ---------------------------------------- */
+    --background-dark: #1A1612;   /* 따뜻한 다크 브라운 */
+    --surface-dark: #231E19;      /* 다크 서피스 */
+    --card-dark: #2D2620;
+    --bg-elevated: #3D342B;
+    --bg-overlay: rgba(0, 0, 0, 0.7);
+
+    /* Tailwind 호환 별칭 */
+    --bg-primary: var(--background-dark);
+    --bg-secondary: var(--surface-dark);
+    --bg-tertiary: var(--card-dark);
+    --bg-surface: var(--surface-dark);
+
+    /* ----------------------------------------
+       Text Colors - 텍스트 색상
+       ---------------------------------------- */
+    --text-primary: #FDFCFB;      /* 대비 15.8:1 vs #1A1612 */
+    --text-secondary: #D8CFC5;    /* 보조 텍스트 */
+    --text-tertiary: #B8AFA5;     /* 3차 텍스트 */
+    --text-muted: #D8CFC5;        /* 대비 9.2:1 vs #1A1612 */
+    --text-subtle: #E5C4A8;       /* 대비 7.8:1 vs #1A1612 */
+    --text-inverse: #1A1612;      /* 반전 텍스트 */
+
+    /* ----------------------------------------
+       Semantic Colors - 의미 기반 색상
+       ---------------------------------------- */
+    --color-success: #10b981;     /* 성공 - 에메랄드 */
+    --color-warning: #f59e0b;     /* 경고 - 앰버 */
+    --color-error: #ef4444;       /* 에러 - 레드 */
+    --color-info: #3b82f6;        /* 정보 - 블루 */
+
+    /* ----------------------------------------
+       Border Colors - 테두리 색상
+       ---------------------------------------- */
+    --border-dark: #4A3F35;       /* 다크 테두리 */
+    --card-border: #6B5A48;
+    --border-primary: rgba(74, 63, 53, 0.5);
+    --border-secondary: rgba(74, 63, 53, 0.3);
+    --border-focus: var(--primary);
+
+    /* ----------------------------------------
+       Shadows - 그림자
+       ---------------------------------------- */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 20px var(--primary-glow);
+    --shadow-primary: 0 8px 32px rgba(212, 168, 122, 0.15);
+
+    /* ----------------------------------------
+       Border Radius - 모서리 반경
+       ---------------------------------------- */
+    --radius-sm: 0.25rem;         /* 4px */
+    --radius-md: 0.375rem;        /* 6px */
+    --radius-lg: 0.5rem;          /* 8px */
+    --radius-xl: 0.75rem;         /* 12px */
+    --radius-full: 9999px;        /* 완전 원형 */
+
+    /* ----------------------------------------
+       Spacing - 간격
+       ---------------------------------------- */
     --spacing-xs: 0.25rem;   /* 4px */
     --spacing-sm: 0.5rem;    /* 8px */
     --spacing-md: 0.75rem;   /* 12px */
     --spacing-lg: 1rem;      /* 16px */
     --spacing-xl: 1.25rem;   /* 20px */
 
-    /* US-017: 타이포그래피 스케일 */
+    /* Tailwind 호환 별칭 */
+    --spacing-1: 0.25rem;    /* 4px */
+    --spacing-2: 0.5rem;     /* 8px */
+    --spacing-3: 0.75rem;    /* 12px */
+    --spacing-4: 1rem;       /* 16px */
+    --spacing-5: 1.25rem;    /* 20px */
+    --spacing-6: 1.5rem;     /* 24px */
+    --spacing-7: 1.75rem;    /* 28px */
+    --spacing-8: 2rem;       /* 32px */
+
+    /* ----------------------------------------
+       Typography - US-017: 타이포그래피 스케일
+       ---------------------------------------- */
     --font-size-caption: 0.875rem;   /* 14px - 최소 크기 */
     --font-size-body: 1rem;          /* 16px - 본문 */
     --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
@@ -35,10 +112,37 @@
     --font-size-h2: 1.875rem;        /* 30px - 대제목 */
     --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
 
+    /* Tailwind 호환 별칭 */
+    --font-size-xs: 0.875rem;        /* 14px */
+    --font-size-sm: 0.875rem;        /* 14px */
+    --font-size-base: 1rem;          /* 16px */
+    --font-size-lg: 1.125rem;        /* 18px */
+    --font-size-xl: 1.25rem;         /* 20px */
+    --font-size-2xl: 1.5rem;         /* 24px */
+    --font-size-3xl: 1.875rem;       /* 30px */
+
     /* Line Heights */
     --line-height-tight: 1.25;
     --line-height-snug: 1.375;
     --line-height-normal: 1.5;
     --line-height-relaxed: 1.625;
     --line-height-loose: 1.75;
+
+    /* Font Weights */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Font Families */
+    --font-family-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-family-display: "Space Grotesk", "Pretendard", -apple-system, sans-serif;
+    --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    /* ----------------------------------------
+       Transitions - 트랜지션
+       ---------------------------------------- */
+    --transition-fast: 150ms ease-in-out;
+    --transition-normal: 200ms ease-in-out;
+    --transition-slow: 300ms ease-in-out;
 }

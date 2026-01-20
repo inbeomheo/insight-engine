@@ -119,7 +119,7 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         result = {
             'title': title,
             'content': body,
-            'html': markdown.markdown(body, extensions=['tables', 'fenced_code']),
+            'html': markdown.markdown(body, extensions=['tables', 'fenced_code', 'nl2br']),
             'usage': token_usage
         }
 
