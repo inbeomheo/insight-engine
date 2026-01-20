@@ -93,12 +93,13 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         prompt = _build_prompt(content, style_prompt, modifiers)
 
         # LiteLLM이 환경변수에서 자동으로 API 키 로드
-        # Gemini 모델은 reasoning_effort="minimal"로 초고속 응답
+        # Gemini 모델 중 reasoning 지원 모델만 reasoning_effort 사용
         completion_kwargs = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}]
         }
-        if model.startswith("gemini/"):
+        # Flash Lite 모델은 reasoning_effort 미지원
+        if model.startswith("gemini/") and "lite" not in model.lower():
             completion_kwargs["reasoning_effort"] = "minimal"
 
         response = completion(**completion_kwargs)
