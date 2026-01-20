@@ -1,0 +1,41 @@
+/* ==================== Base Tokens - Teal Design System ==================== */
+
+/* ========== Light Mode (기본) ========== */
+/* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
+:root {
+    --primary: #0a6073;           /* 대비 5.2:1 vs #f5f7f9 */
+    --primary-hover: #085463;
+    --primary-glow: #0d8fa8;
+    --background-dark: #f5f7f9;
+    --surface-dark: #ffffff;
+    --card-dark: #ffffff;
+    --bg-elevated: #e8ecef;
+    --text-primary: #1f2937;      /* 대비 11.7:1 vs #f5f7f9 */
+    --text-muted: #4b5563;        /* 대비 7.0:1 vs #ffffff (더 진하게 개선) */
+    --text-subtle: #0a6073;       /* 대비 5.2:1 vs #f5f7f9 */
+    --border-dark: #9ca3af;       /* gray-400: 더 진한 테두리로 가시성 향상 */
+    --card-border: #0a607360;
+
+    /* Compact Design Variables */
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 0.75rem;   /* 12px */
+    --spacing-lg: 1rem;      /* 16px */
+    --spacing-xl: 1.25rem;   /* 20px */
+
+    /* US-017: 타이포그래피 스케일 */
+    --font-size-caption: 0.875rem;   /* 14px - 최소 크기 */
+    --font-size-body: 1rem;          /* 16px - 본문 */
+    --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
+    --font-size-h4: 1.25rem;         /* 20px - 소제목 */
+    --font-size-h3: 1.5rem;          /* 24px - 중제목 */
+    --font-size-h2: 1.875rem;        /* 30px - 대제목 */
+    --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
+
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 1.75;
+}

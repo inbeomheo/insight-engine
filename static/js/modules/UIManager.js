@@ -211,11 +211,36 @@ export class UIManager {
     }
 
     /**
-     * HTML 콘텐츠에서 위험한 요소를 제거합니다 (기본 sanitize).
+     * HTML 콘텐츠에서 위험한 요소를 제거합니다 (DOMPurify 사용).
+     * 블로그 콘텐츠에 필요한 태그만 허용합니다.
      */
     sanitizeHtml(html) {
         if (!html || typeof html !== 'string') return '';
-        // script, iframe, on* 이벤트 핸들러 제거
+
+        // DOMPurify가 로드되었는지 확인
+        if (typeof DOMPurify !== 'undefined') {
+            return DOMPurify.sanitize(html, {
+                ALLOWED_TAGS: [
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'p', 'br', 'hr',
+                    'ul', 'ol', 'li',
+                    'strong', 'b', 'em', 'i', 'u', 's', 'mark',
+                    'a', 'blockquote', 'code', 'pre',
+                    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                    'div', 'span', 'img'
+                ],
+                ALLOWED_ATTR: [
+                    'href', 'target', 'rel', 'src', 'alt', 'title',
+                    'class', 'id', 'style'
+                ],
+                ALLOW_DATA_ATTR: false,
+                ADD_ATTR: ['target'],
+                FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input'],
+                FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+            });
+        }
+
+        // DOMPurify 미로드 시 기본 sanitize (폴백)
         return html
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
             .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, '')

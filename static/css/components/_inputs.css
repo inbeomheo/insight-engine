@@ -1,0 +1,22 @@
+/* ==================== Input Styles ==================== */
+
+/* 입력 필드 포커스 글로우 */
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 3px rgba(42, 163, 186, 0.15),
+        0 0 20px rgba(42, 163, 186, 0.1) !important;
+    outline: none !important;
+}
+
+/* Input focus enhancement */
+input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 2px rgba(15, 117, 138, 0.15);
+}
+
+/* Checkbox/Radio enhancement */
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+    background-color: #0f758a;
+}

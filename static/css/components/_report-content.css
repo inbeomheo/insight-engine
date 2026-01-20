@@ -1,0 +1,438 @@
+/* ==================== Report Content Styles ==================== */
+/* US-015: WCAG AA 색상 대비 기준 충족 - 라이트/다크 모드 대응 */
+
+.report-content {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.1875rem;  /* 19px - 더 읽기 쉽게 */
+    line-height: 1.7;      /* 컴팩트하게 */
+    color: var(--text-primary);
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Headings - 다크 모드 */
+[data-theme="dark"] .report-content h1 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #ffffff;            /* 대비 15.5:1 vs #16191d */
+    margin: 1.25rem 0 0.625rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(42, 163, 186, 0.3);
+    letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] .report-content h2 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #2dd4bf;            /* 대비 8.5:1 vs #16191d */
+    margin: 1rem 0 0.5rem 0;
+    letter-spacing: 0;
+}
+
+[data-theme="dark"] .report-content h2::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #2aa3ba;
+    margin-right: 12px;
+    transform: rotate(45deg);
+}
+
+[data-theme="dark"] .report-content h3 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #f3f4f6;            /* 대비 13:1 vs #16191d */
+    margin: 0.875rem 0 0.375rem 0;
+}
+
+[data-theme="dark"] .report-content h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #d1d5db;            /* 대비 10:1 vs #16191d */
+    margin: 0.75rem 0 0.25rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Headings - 라이트 모드 */
+.report-content h1 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1f2937;            /* 대비 11.7:1 vs #f5f7f9 */
+    margin: 1.25rem 0 0.625rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(10, 96, 115, 0.3);
+    letter-spacing: -0.01em;
+}
+
+.report-content h2 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #0d7377;            /* 대비 4.6:1 vs #f5f7f9 */
+    margin: 1rem 0 0.5rem 0;
+    letter-spacing: 0;
+}
+
+.report-content h2::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #0a6073;
+    margin-right: 12px;
+    transform: rotate(45deg);
+}
+
+.report-content h3 {
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;            /* 대비 8.5:1 vs #f5f7f9 */
+    margin: 0.875rem 0 0.375rem 0;
+}
+
+.report-content h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #4b5563;            /* 대비 6.2:1 vs #f5f7f9 */
+    margin: 0.75rem 0 0.25rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Paragraphs - US-015: 라이트/다크 모드 색상 대비 충족 */
+.report-content p {
+    margin: 0.625rem 0;
+    color: var(--text-primary);
+}
+
+/* Lists */
+.report-content ul,
+.report-content ol {
+    margin: 0.625rem 0;
+    padding-left: 0;
+}
+
+.report-content ul {
+    list-style: none;
+}
+
+.report-content ul li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin: 0.375rem 0;
+    color: var(--text-primary);
+}
+
+/* 리스트 마커 - 라이트 모드 */
+.report-content ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.625rem;
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #0a6073, #085463);
+    border-radius: 1px;
+    transform: rotate(45deg);
+}
+
+/* 리스트 마커 - 다크 모드 */
+[data-theme="dark"] .report-content ul li::before {
+    background: linear-gradient(135deg, #2aa3ba, #1f8a9e);
+}
+
+.report-content ol {
+    list-style: none;
+    counter-reset: item;
+}
+
+.report-content ol li {
+    counter-increment: item;
+    position: relative;
+    padding-left: 2.25rem;
+    margin: 0.375rem 0;
+    color: var(--text-primary);
+}
+
+/* 순서 리스트 마커 - 라이트 모드 */
+.report-content ol li::before {
+    content: counter(item);
+    position: absolute;
+    left: 0;
+    width: 1.625rem;
+    height: 1.625rem;
+    background: linear-gradient(135deg, #0a6073 0%, #085463 100%);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+/* 순서 리스트 마커 - 다크 모드 */
+[data-theme="dark"] .report-content ol li::before {
+    background: linear-gradient(135deg, #2aa3ba 0%, #1f8a9e 100%);
+}
+
+/* Nested lists */
+.report-content ul ul,
+.report-content ol ol,
+.report-content ul ol,
+.report-content ol ul {
+    margin: 0.5rem 0;
+}
+
+.report-content ul ul li::before {
+    background: #525a66;       /* 라이트 모드: 대비 5.5:1 */
+    width: 4px;
+    height: 4px;
+}
+
+[data-theme="dark"] .report-content ul ul li::before {
+    background: #a8b0ba;       /* 다크 모드: 대비 6.1:1 */
+}
+
+/* Blockquotes - US-015: 라이트/다크 모드 대응 */
+.report-content blockquote {
+    margin: 1rem 0;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(90deg, rgba(10, 96, 115, 0.08) 0%, transparent 100%);
+    border-left: 3px solid var(--primary);
+    color: var(--text-primary);
+    font-style: italic;
+    border-radius: 0 8px 8px 0;
+}
+
+[data-theme="dark"] .report-content blockquote {
+    background: linear-gradient(90deg, rgba(42, 163, 186, 0.08) 0%, transparent 100%);
+}
+
+.report-content blockquote p {
+    margin: 0;
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+}
+
+/* Code blocks - 라이트 모드 */
+.report-content pre {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid var(--border-dark);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+}
+
+[data-theme="dark"] .report-content pre {
+    background: #16191d;
+    border-color: #3a3f45;
+}
+
+.report-content code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(10, 96, 115, 0.12);
+    color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
+    padding: 0.2rem 0.5rem;
+    font-size: 0.85em;
+    border-radius: 4px;
+}
+
+[data-theme="dark"] .report-content code {
+    background: rgba(42, 163, 186, 0.12);
+    color: #3eb8cf;            /* 다크 모드: 대비 7.2:1 */
+}
+
+.report-content pre code {
+    background: transparent;
+    color: var(--text-primary);
+    padding: 0;
+}
+
+/* Tables - 라이트/다크 모드 대응 */
+.report-content table {
+    width: 100%;
+    margin: 1.75rem 0;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.report-content thead {
+    background: linear-gradient(90deg, rgba(10, 96, 115, 0.15) 0%, rgba(10, 96, 115, 0.05) 100%);
+}
+
+[data-theme="dark"] .report-content thead {
+    background: linear-gradient(90deg, rgba(42, 163, 186, 0.15) 0%, rgba(42, 163, 186, 0.05) 100%);
+}
+
+.report-content th {
+    padding: 0.875rem 1.25rem;
+    text-align: left;
+    font-weight: 600;
+    color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
+    border-bottom: 1px solid rgba(10, 96, 115, 0.3);
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+[data-theme="dark"] .report-content th {
+    color: #2aa3ba;            /* 다크 모드: 대비 5.4:1 */
+    border-bottom-color: rgba(42, 163, 186, 0.3);
+}
+
+.report-content td {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border-dark);
+    color: var(--text-primary);
+}
+
+.report-content tr:hover td {
+    background: rgba(10, 96, 115, 0.04);
+}
+
+[data-theme="dark"] .report-content tr:hover td {
+    background: rgba(42, 163, 186, 0.04);
+}
+
+/* Strong and emphasis - 라이트/다크 모드 대응 */
+.report-content strong {
+    color: #1f2937;            /* 라이트 모드: 대비 11.7:1 */
+    font-weight: 600;
+}
+
+[data-theme="dark"] .report-content strong {
+    color: #ffffff;            /* 다크 모드: 대비 15.5:1 */
+}
+
+.report-content em {
+    color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
+    font-style: italic;
+}
+
+[data-theme="dark"] .report-content em {
+    color: #3eb8cf;            /* 다크 모드: 대비 7.2:1 */
+}
+
+/* Links - 라이트/다크 모드 대응 */
+.report-content a {
+    color: #0a6073;            /* 라이트 모드: 대비 5.2:1 */
+    text-decoration: none;
+    border-bottom: 1px solid rgba(10, 96, 115, 0.3);
+    transition: all 0.2s;
+}
+
+.report-content a:hover {
+    border-bottom-color: #0a6073;
+    color: #085463;
+}
+
+[data-theme="dark"] .report-content a {
+    color: #2aa3ba;            /* 다크 모드: 대비 5.4:1 */
+    border-bottom-color: rgba(42, 163, 186, 0.3);
+}
+
+[data-theme="dark"] .report-content a:hover {
+    border-bottom-color: #2aa3ba;
+    color: #3eb8cf;
+}
+
+/* Horizontal rule - 라이트/다크 모드 대응 */
+.report-content hr {
+    margin: 1.5rem 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(10, 96, 115, 0.3), transparent);
+}
+
+[data-theme="dark"] .report-content hr {
+    background: linear-gradient(90deg, transparent, rgba(42, 163, 186, 0.3), transparent);
+}
+
+/* Key insights / highlights box - 라이트/다크 모드 대응 */
+.report-content .highlight-box,
+.report-content .key-point {
+    margin: 1.75rem 0;
+    padding: 1.5rem;
+    background: rgba(10, 96, 115, 0.06);
+    border: 1px solid rgba(10, 96, 115, 0.15);
+    border-radius: 8px;
+    position: relative;
+}
+
+[data-theme="dark"] .report-content .highlight-box,
+[data-theme="dark"] .report-content .key-point {
+    background: rgba(42, 163, 186, 0.06);
+    border-color: rgba(42, 163, 186, 0.15);
+}
+
+.report-content .highlight-box::before {
+    content: '✦';
+    position: absolute;
+    top: -0.625rem;
+    left: 1rem;
+    background: #16191d;
+    padding: 0 0.5rem;
+    color: #0f758a;
+}
+
+/* Summary section styling */
+.report-content .summary,
+.report-content .executive-summary {
+    padding: 1.75rem;
+    background: linear-gradient(135deg, rgba(15, 117, 138, 0.08) 0%, rgba(13, 101, 119, 0.04) 100%);
+    border-left: 3px solid #0f758a;
+    border-radius: 0 8px 8px 0;
+    margin: 1.75rem 0;
+}
+
+/* Tags / Keywords */
+.report-content .tag,
+.report-content .keyword {
+    display: inline-block;
+    padding: 0.3rem 0.875rem;
+    background: rgba(15, 117, 138, 0.12);
+    color: #0f758a;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0.25rem;
+    border-radius: 4px;
+}
+
+/* Metric / Score displays */
+.report-content .metric {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1.25rem;
+    background: #202428;
+    border: 1px solid #2a2e33;
+    border-radius: 6px;
+}
+
+.report-content .metric-value {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: #0f758a;
+    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+}
+
+.report-content .metric-label {
+    font-size: 0.6875rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

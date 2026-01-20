@@ -1,0 +1,108 @@
+/* ==================== 3-Column Layout Grid System ==================== */
+
+/* Main Layout Container */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Sidebar - 200px fixed width */
+#sidebar {
+    width: 200px !important;
+    min-width: 200px;
+    max-width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-dark);
+    background: var(--background-dark);
+    height: 100%;
+    z-index: 50;
+}
+
+/* Input Panel - 350px fixed width */
+#input-panel {
+    width: 350px !important;
+    min-width: 320px;
+    max-width: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-dark);
+    background: var(--background-dark);
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Result Panel - flex-1 (remaining space) */
+#result-panel {
+    flex: 1 1 0%;
+    min-width: 400px;
+    display: flex;
+    flex-direction: column;
+    background: var(--background-dark);
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* URL Section */
+#url-section {
+    flex: 0 0 auto !important;
+}
+
+/* AI Model Section */
+#ai-model-section {
+    flex: 0 0 auto !important;
+}
+
+/* Style Section */
+#style-section {
+    flex: 0 0 auto !important;
+}
+
+/* 모디파이어 섹션 */
+#modifier-section {
+    flex: 0 0 auto !important;
+}
+
+/* 콘텐츠 생성 버튼 */
+#generate-btn-container {
+    flex: 0 0 auto !important;
+}
+
+/* Main Content Area - contains input and result panels */
+#main-content {
+    flex: 1;
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Main Container - flex column for header + content */
+.main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Content Area - flex row for panels */
+.content-area {
+    flex: 1;
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ========== 데스크톱 접기/펼치기 기본 상태 ========== */
+/* 모든 섹션 패널 항상 표시 */
+#url-section-panel,
+#ai-model-panel,
+#style-section-panel,
+#modifier-section-panel {
+    display: block !important;
+}

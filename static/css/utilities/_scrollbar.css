@@ -1,0 +1,23 @@
+/* ==================== Custom Scrollbar - Creative Studio 테마 ==================== */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(42, 163, 186, 0.4) 0%, rgba(192, 132, 252, 0.3) 100%);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(42, 163, 186, 0.6) 0%, rgba(192, 132, 252, 0.5) 100%);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}

@@ -17,6 +17,7 @@ import { UsagePanelManager } from './modules/UsagePanelManager.js';
 import { ThemeManager } from './modules/ThemeManager.js';
 import { PanelResizeManager } from './modules/PanelResizeManager.js';
 import { KeyboardNavigationManager } from './modules/KeyboardNavigationManager.js';
+import { getEventBus } from './core/EventBus.js';
 
 class ContentAnalysis {
     constructor() {
@@ -32,8 +33,8 @@ class ContentAnalysis {
         this.modalManager = new ModalManager(this.storage, this.providerManager, this.ui);
         this.styleManager = new StyleManager(this.storage, this.ui, this.modalManager);
         this.reportManager = new ReportManager(this.storage, this.styleManager, this.ui);
-        this.mindmapManager = new MindmapManager(this.storage, this.providerManager, this.ui);
         this.authManager = new AuthManager(this.storage, this.ui);
+        this.mindmapManager = new MindmapManager(this.storage, this.providerManager, this.ui, this.authManager);
         this.generator = new ContentGenerator(
             this.storage,
             this.providerManager,
@@ -44,8 +45,8 @@ class ContentAnalysis {
             this.authManager
         );
 
-        // 히스토리/사용량 패널 매니저 (간단한 이벤트 에미터 사용)
-        this.eventBus = this.createSimpleEventBus();
+        // 히스토리/사용량 패널 매니저 (중앙 EventBus 사용)
+        this.eventBus = getEventBus();
         this.historyPanelManager = new HistoryPanelManager(this.storage, this.eventBus);
         this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus);
 
@@ -70,27 +71,6 @@ class ContentAnalysis {
         });
 
         this.init();
-    }
-
-    // 간단한 이벤트 버스 생성
-    createSimpleEventBus() {
-        const listeners = {};
-        return {
-            on(event, callback) {
-                if (!listeners[event]) listeners[event] = [];
-                listeners[event].push(callback);
-            },
-            emit(event, data) {
-                if (listeners[event]) {
-                    listeners[event].forEach(cb => cb(data));
-                }
-            },
-            off(event, callback) {
-                if (listeners[event]) {
-                    listeners[event] = listeners[event].filter(cb => cb !== callback);
-                }
-            }
-        };
     }
 
     async init() {

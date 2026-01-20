@@ -1,12 +1,14 @@
 /**
  * MindmapManager - 마인드맵 생성 및 시각화 모듈
  * Markmap 라이브러리를 사용하여 마크다운을 마인드맵으로 변환
+ * API 키는 서버 환경변수에서 관리됩니다.
  */
 export class MindmapManager {
-    constructor(storage, providerManager, uiManager) {
+    constructor(storage, providerManager, uiManager, authManager) {
         this.storage = storage;
         this.providerManager = providerManager;
         this.ui = uiManager;
+        this.authManager = authManager;
         this.markmapInstance = null;
 
         // DOM 요소 캐싱
@@ -19,6 +21,16 @@ export class MindmapManager {
         };
 
         this.setupEventListeners();
+    }
+
+    // 인증 헤더 가져오기 (ContentGenerator 패턴 적용)
+    _getAuthHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = this.authManager?.getAccessToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
     }
 
     setupEventListeners() {
@@ -62,18 +74,12 @@ export class MindmapManager {
         this._setModalState(true, title || '마인드맵');
 
         try {
-            const provider = this.providerManager.getSelectedProvider();
             const model = this.providerManager.getSelectedModel();
-            const apiKey = this.storage.getApiKey(provider);
-
-            if (!apiKey) {
-                throw new Error('API 키가 설정되지 않았습니다.');
-            }
 
             const response = await fetch('/api/mindmap', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, model, apiKey })
+                headers: this._getAuthHeaders(),
+                body: JSON.stringify({ content, model })
             });
 
             const data = await response.json();

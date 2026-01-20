@@ -28,6 +28,48 @@ export class ContentGenerator {
         return headers;
     }
 
+    /**
+     * 지수 백오프로 API 요청 재시도
+     * @param {Function} fetchFn - fetch를 수행하는 함수
+     * @param {number} maxRetries - 최대 재시도 횟수 (기본: 3)
+     * @param {number} baseDelay - 기본 지연 시간 ms (기본: 1000)
+     * @returns {Promise<Response>}
+     */
+    async _fetchWithRetry(fetchFn, maxRetries = 3, baseDelay = 1000) {
+        let lastError;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const response = await fetchFn();
+
+                // 성공 또는 클라이언트 에러(4xx)는 재시도하지 않음
+                if (response.ok || (response.status >= 400 && response.status < 500)) {
+                    return response;
+                }
+
+                // 서버 에러(5xx)는 재시도
+                if (response.status >= 500) {
+                    lastError = new Error(`Server error: ${response.status}`);
+                    console.warn(`[ContentGenerator] 서버 에러 (${response.status}), 재시도 ${attempt + 1}/${maxRetries}`);
+                } else {
+                    return response;
+                }
+            } catch (error) {
+                // 네트워크 에러는 재시도
+                lastError = error;
+                console.warn(`[ContentGenerator] 네트워크 에러, 재시도 ${attempt + 1}/${maxRetries}:`, error.message);
+            }
+
+            // 마지막 시도가 아니면 지수 백오프로 대기
+            if (attempt < maxRetries - 1) {
+                const delay = baseDelay * Math.pow(2, attempt);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        throw lastError;
+    }
+
     // ==================== Main Generation ====================
 
     async handleGenerate() {
@@ -72,11 +114,13 @@ export class ContentGenerator {
             const modifiers = this.styleManager.getModifiers();
             const customPrompt = this.styleManager.getCustomPrompt();
 
-            const response = await fetch('/generate', {
-                method: 'POST',
-                headers: this._getAuthHeaders(),
-                body: JSON.stringify({ url, model, style, modifiers, customPrompt })
-            });
+            const response = await this._fetchWithRetry(() =>
+                fetch('/generate', {
+                    method: 'POST',
+                    headers: this._getAuthHeaders(),
+                    body: JSON.stringify({ url, model, style, modifiers, customPrompt })
+                })
+            );
 
             const data = await response.json();
 
@@ -131,11 +175,13 @@ export class ContentGenerator {
         const modifiers = this.styleManager.getModifiers();
         const customPrompt = this.styleManager.getCustomPrompt();
 
-        const response = await fetch('/generate', {
-            method: 'POST',
-            headers: this._getAuthHeaders(),
-            body: JSON.stringify({ url, model, style, modifiers, customPrompt })
-        });
+        const response = await this._fetchWithRetry(() =>
+            fetch('/generate', {
+                method: 'POST',
+                headers: this._getAuthHeaders(),
+                body: JSON.stringify({ url, model, style, modifiers, customPrompt })
+            })
+        );
 
         const data = await response.json();
 
@@ -168,11 +214,13 @@ export class ContentGenerator {
         const modifiers = this.styleManager.getModifiers();
         const customPrompt = this.styleManager.getCustomPrompt();
 
-        const response = await fetch('/generate-batch', {
-            method: 'POST',
-            headers: this._getAuthHeaders(),
-            body: JSON.stringify({ urls, model, style, modifiers, customPrompt })
-        });
+        const response = await this._fetchWithRetry(() =>
+            fetch('/generate-batch', {
+                method: 'POST',
+                headers: this._getAuthHeaders(),
+                body: JSON.stringify({ urls, model, style, modifiers, customPrompt })
+            })
+        );
 
         const data = await response.json();
 
