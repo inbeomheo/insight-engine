@@ -228,18 +228,22 @@ def save_history(user_id: str, data: dict) -> dict:
 
 
 def get_histories(user_id: str, limit: int = 50) -> list:
-    """사용자 히스토리 조회"""
+    """사용자 히스토리 조회
+    - 관리자: 모든 사용자의 히스토리
+    - 일반 사용자: 본인 히스토리만
+    """
     supabase = get_supabase()
     if not supabase or not user_id:
         return []
 
     def operation():
-        result = supabase.table('ie_histories') \
-            .select('*') \
-            .eq('user_id', user_id) \
-            .order('created_at', desc=True) \
-            .limit(limit) \
-            .execute()
+        query = supabase.table('ie_histories').select('*')
+
+        # 관리자가 아니면 본인 것만
+        if not is_admin(user_id):
+            query = query.eq('user_id', user_id)
+
+        result = query.order('created_at', desc=True).limit(limit).execute()
         return result.data or []
 
     return _db_operation('History fetch', [], operation)
