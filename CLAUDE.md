@@ -197,8 +197,20 @@ def generate_batch():
 | DeepSeek | `deepseek/deepseek-chat` | $0.27 / $1.10 |
 | DeepSeek | `deepseek/deepseek-reasoner` | $0.55 / $2.19 |
 
-- Gemini 모델은 `reasoning_effort="minimal"` 옵션으로 초고속 응답 (`ai_service.py`)
+- Gemini 모델은 `reasoning_effort="minimal"` 옵션 사용 (단, Flash Lite 모델은 미지원으로 제외)
 - 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS`에 `price_input`, `price_output` 필수
+
+### 스타일 프롬프트 규칙 (`prompts/styles/`)
+
+모든 스타일 프롬프트에 공통 적용:
+- **금지 표현**: 놀라운, 혁신적, 획기적, 최고의, 게임체인저, 압도적, 경이로운, 드디어, 탁월한, 인상적, 뛰어난, 강력한
+- **댓글 활용**: `[댓글]` 섹션이 입력에 없으면 시청자 반응 절대 언급 금지, 댓글은 본문에 자연스럽게 녹임
+- **원칙**: 자막에 있는 정보만 사용 (창작/추측 절대 금지)
+
+### 사용량 제한
+
+- 일일 사용량: 20회 (`services/supabase_service.py`의 `MAX_USAGE_COUNT`)
+- 관리자는 무제한 (999회)
 
 ### 모디파이어 (`config.py`)
 - `length`: short/medium/long
