@@ -187,7 +187,7 @@ def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[Transcr
     try:
         response = requests.get(
             SUPADATA_API_URL,
-            params={"video_id": video_id, "text": "true"},
+            params={"videoId": video_id, "text": "true"},
             headers={"x-api-key": api_key},
             timeout=HTTP_TIMEOUT
         )
