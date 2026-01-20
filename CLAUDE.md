@@ -54,7 +54,7 @@ pytest tests/ --cov=. --cov-report=html
     ↓
 [@require_usage] 사용량 체크/차감 (services/usage/)
     ↓
-[content_service] YouTube 자막 추출 (3단계 폴백: Supadata → youtube-transcript-api → watch 페이지 파싱)
+[content_service] YouTube 자막 추출 (3단계 폴백: youtube-transcript-api → watch 페이지 파싱 → Supadata API)
     ↓
 [content_service] 댓글 수집 (YOUTUBE_API_KEY 필요)
     ↓
@@ -268,7 +268,7 @@ npx playwright test settings-modals/ history-usage/
 
 **필수**: AI Provider API 키 최소 하나 (API 키가 설정된 프로바이더만 UI에 표시)
 
-**선택**: `SUPADATA_API_KEY` (자막 백업), `YOUTUBE_API_KEY` (댓글), `SUPABASE_*` (클라우드 저장), `YT_*_PROXY` (차단 우회)
+**선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_*` (클라우드 저장), `YT_*_PROXY` (차단 우회)
 
 ## Security
 

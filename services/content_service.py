@@ -202,6 +202,7 @@ def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[Transcr
             if transcript:
                 texts = [item.get("text", "") for item in transcript if item.get("text")]
                 return " ".join(texts)
+            _log_warning(f"Supadata returned empty content for video_id={video_id}")
             return None
 
         if response.status_code == 401:
@@ -209,9 +210,14 @@ def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[Transcr
         if response.status_code == 402:
             return {'error': 'Supadata API 사용량이 초과되었습니다. 플랜을 업그레이드하세요.'}
 
+        _log_warning(f"Supadata API returned status {response.status_code} for video_id={video_id}")
         return None
 
-    except (requests.exceptions.Timeout, requests.exceptions.RequestException):
+    except requests.exceptions.Timeout:
+        _log_warning(f"Supadata API timeout for video_id={video_id}")
+        return None
+    except requests.exceptions.RequestException as e:
+        _log_warning(f"Supadata API request failed for video_id={video_id}: {str(e)}")
         return None
 
 
@@ -484,9 +490,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
 
     우선순위:
     0. 캐시 (있으면 바로 반환)
-    1. Supadata API (키가 있는 경우)
-    2. youtube-transcript-api 라이브러리
-    3. watch 페이지 직접 파싱
+    1. youtube-transcript-api 라이브러리 (무료)
+    2. watch 페이지 직접 파싱 (무료)
+    3. Supadata API (유료 - 마지막 폴백)
     """
     # 0순위: 캐시 확인
     cached = _load_cache(video_id, 'transcript')
@@ -494,18 +500,10 @@ def get_transcript(video_id: str) -> TranscriptResult:
         _log_info(f"Transcript loaded from cache for video_id={video_id}")
         return cached
 
-    # 1순위: Supadata API (환경변수에서 키 로드)
     supadata_api_key = os.getenv('SUPADATA_API_KEY', '')
-    if supadata_api_key:
-        result = get_transcript_via_supadata(video_id, supadata_api_key)
-        if isinstance(result, str) and result.strip():
-            _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
-            _save_cache(video_id, 'transcript', result)
-            return result
-        if isinstance(result, dict) and result.get('error'):
-            return result
+    last_error = None
 
-    # 2순위: youtube-transcript-api
+    # 1순위: youtube-transcript-api (무료)
     try:
         ytt_api = _build_ytt_api()
         fetched = None
@@ -516,46 +514,63 @@ def get_transcript(video_id: str) -> TranscriptResult:
                 break
             time.sleep(0.5 * (2 ** attempt))
 
-        if not fetched:
-            watch_result = _get_transcript_from_watch_page(video_id)
-            if isinstance(watch_result, str) and watch_result.strip():
-                _log_info(f"Transcript fallback succeeded from watch page for video_id={video_id}")
-                _save_cache(video_id, 'transcript', watch_result)
-                return watch_result
-            if isinstance(watch_result, dict) and watch_result.get('error'):
-                _log_warning(f"Transcript fallback failed for video_id={video_id}: {watch_result.get('error')}")
-                return watch_result
-            return {'error': '자막을 찾을 수 없습니다.'}
+        if fetched:
+            text = _extract_text_from_transcript(fetched)
+            if text:
+                _save_cache(video_id, 'transcript', text)
+                return text
 
-        text = _extract_text_from_transcript(fetched)
-        if text:
-            _save_cache(video_id, 'transcript', text)
-            return text
-        return {'error': '자막을 가져오지 못했습니다.'}
-
-    except TranscriptsDisabled:
-        return {'error': '자막을 가져올 수 없습니다. 이 영상은 자막이 비활성화되어 있습니다.'}
-    except NoTranscriptFound:
+    except (TranscriptsDisabled, NoTranscriptFound) as e:
+        # 자막 자체가 없는 경우 - Supadata도 불가능하므로 바로 에러 반환
+        if isinstance(e, TranscriptsDisabled):
+            return {'error': '자막을 가져올 수 없습니다. 이 영상은 자막이 비활성화되어 있습니다.'}
         return {'error': '자막을 찾을 수 없습니다. 이 영상에 제공되는 자막 트랙이 없습니다.'}
-    except PoTokenRequired:
-        return {'error': '자막을 가져올 수 없습니다. YouTube가 봇 차단 상태로 판단하여 요청이 거부되었습니다.'}
-    except (IpBlocked, RequestBlocked):
-        return {'error': '자막을 가져올 수 없습니다. 네트워크/IP 차단으로 YouTube 요청이 거부되었습니다.'}
-    except AgeRestricted:
-        return {'error': '자막을 가져올 수 없습니다. 연령 제한 콘텐츠입니다.'}
-    except VideoUnplayable:
-        return {'error': '자막을 가져올 수 없습니다. 재생 불가 영상입니다.'}
-    except VideoUnavailable:
-        return {'error': '자막을 가져올 수 없습니다. 비공개/삭제/지역 제한 영상입니다.'}
-    except InvalidVideoId:
+    except (AgeRestricted, VideoUnplayable, VideoUnavailable, InvalidVideoId) as e:
+        # 영상 자체 문제 - Supadata도 불가능하므로 바로 에러 반환
+        if isinstance(e, AgeRestricted):
+            return {'error': '자막을 가져올 수 없습니다. 연령 제한 콘텐츠입니다.'}
+        if isinstance(e, VideoUnplayable):
+            return {'error': '자막을 가져올 수 없습니다. 재생 불가 영상입니다.'}
+        if isinstance(e, VideoUnavailable):
+            return {'error': '자막을 가져올 수 없습니다. 비공개/삭제/지역 제한 영상입니다.'}
         return {'error': '유효하지 않은 YouTube video_id 입니다.'}
-    except (YouTubeRequestFailed, CouldNotRetrieveTranscript) as e:
-        msg = str(e)
-        if '429' in msg or 'Too Many Requests' in msg:
-            return {'error': '자막을 가져올 수 없습니다. 요청이 너무 많아 일시적으로 차단되었습니다.'}
-        return {'error': f'자막을 가져올 수 없습니다. YouTube 요청 실패: {msg}'}
+    except (PoTokenRequired, IpBlocked, RequestBlocked, YouTubeRequestFailed, CouldNotRetrieveTranscript) as e:
+        # 네트워크/차단 문제 - 폴백 시도 가능
+        last_error = str(e)
+        _log_warning(f"youtube-transcript-api failed for video_id={video_id}: {last_error}")
     except Exception as e:
-        return {'error': f'자막 처리 중 오류 발생: {str(e)}'}
+        last_error = str(e)
+        _log_warning(f"youtube-transcript-api unexpected error for video_id={video_id}: {last_error}")
+
+    # 2순위: watch 페이지 직접 파싱 (무료)
+    _log_info(f"Trying watch page fallback for video_id={video_id}")
+    watch_result = _get_transcript_from_watch_page(video_id)
+    if isinstance(watch_result, str) and watch_result.strip():
+        _log_info(f"Transcript fallback succeeded from watch page for video_id={video_id}")
+        _save_cache(video_id, 'transcript', watch_result)
+        return watch_result
+
+    # 3순위: Supadata API (유료 - 마지막 폴백)
+    if supadata_api_key:
+        _log_info(f"Trying Supadata API fallback for video_id={video_id}")
+        result = get_transcript_via_supadata(video_id, supadata_api_key)
+        if isinstance(result, str) and result.strip():
+            _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
+            _save_cache(video_id, 'transcript', result)
+            return result
+        if isinstance(result, dict) and result.get('error'):
+            return result
+
+    # 모든 방법 실패
+    if last_error:
+        if '429' in last_error or 'Too Many Requests' in last_error:
+            return {'error': '자막을 가져올 수 없습니다. 요청이 너무 많아 일시적으로 차단되었습니다.'}
+        if 'IpBlocked' in last_error or 'RequestBlocked' in last_error:
+            return {'error': '자막을 가져올 수 없습니다. 네트워크/IP 차단으로 YouTube 요청이 거부되었습니다.'}
+        if 'PoTokenRequired' in last_error:
+            return {'error': '자막을 가져올 수 없습니다. YouTube가 봇 차단 상태로 판단하여 요청이 거부되었습니다.'}
+        return {'error': f'자막을 가져올 수 없습니다: {last_error}'}
+    return {'error': '자막을 찾을 수 없습니다.'}
 
 
 # ==================== YouTube API Functions ====================
