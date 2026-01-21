@@ -96,10 +96,12 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 | `UrlManager.js` | URL 입력/삭제/드래그 정렬, `#url-list-container .url-card` |
 | `ProviderManager.js` | AI 프로바이더/모델 선택, `#provider`, `#model` |
 | `StyleManager.js` | 스타일 카드 선택 |
+| `ThemeManager.js` | 테마 전환 (Dark/Light/Minimal), localStorage 저장 |
 | `ContentGenerator.js` | `/generate` API 호출, 재시도 로직 (지수 백오프) |
 | `HistoryPanelManager.js` | 히스토리 뷰, `button[data-section="history"]` |
 | `UsagePanelManager.js` | 사용량 뷰, `button[data-section="usage"]` |
 | `ModalManager.js` | 온보딩 모달 (`#onboarding-modal`, `#onboarding-save`) |
+| `AuthManager.js` | 인증 상태 관리, 사이드바/헤더 UI 업데이트 |
 | `report/` | ReportManager 분할 모듈 (CardHtmlBuilder, CardEventHandler, ReportFormatter) |
 
 ### CSS 모듈 구조 (`static/css/`)
@@ -121,20 +123,37 @@ static/css/
 2. `npm run build:css:prod` 실행 (필수)
 3. 브라우저 새로고침 (캐시 무시: Ctrl+Shift+R)
 
-### 테마 색상 시스템 (Warm Cream 다크 모드 전용)
+### 테마 시스템 (3가지 테마 지원)
+
+**지원 테마:**
+
+| 테마 | `data-theme` | 배경 | 텍스트 | 특징 |
+|------|-------------|------|--------|------|
+| Dark (기본) | `dark` | #1A1612 | #FDFCFB | Warm Cream 다크 |
+| Light | `light` | #F9FAFB | #1F2937 | 밝은 크림/화이트 |
+| Minimal | `minimal` | #FFFFFF | #171717 | 흑백 미니멀 |
 
 **CSS 변수 정의 위치:**
-- `base/_tokens.css`: 유일한 CSS 변수 정의 소스 (다크 모드 전용)
-- `base/_theme.css`: 추가 다크 모드 스타일
+- `base/_tokens.css`: CSS 변수 정의 (`:root`, `[data-theme="light"]`, `[data-theme="minimal"]`)
+- `base/_theme.css`: 테마별 추가 스타일, `::selection` 색상
 - `tailwind.css`: CSS 변수 정의 **없음** (Tailwind 지시문만)
 
-**주요 색상 변수:**
+**테마 전환:**
+```javascript
+// ThemeManager.js
+themeManager.applyTheme('light');  // 테마 적용
+themeManager.cycleTheme();         // 순환: dark → light → minimal → dark
+// localStorage 키: 'insight-engine-theme'
+```
+
+**주요 색상 변수 (Dark 테마 기준):**
 ```css
 --primary: #D4A87A;           /* 테라코타 골드 */
 --background-dark: #1A1612;   /* 따뜻한 다크 브라운 */
 --surface-dark: #231E19;
 --text-primary: #FDFCFB;
 --text-muted: #D8CFC5;
+--selection-bg: rgba(212, 168, 122, 0.5);  /* 텍스트 선택 색상 */
 ```
 
 **Tailwind와 CSS 변수 동기화 (중요):**
@@ -162,6 +181,7 @@ color: var(--text-primary);
 1. `tailwind.config.js`의 색상이 `_tokens.css` 변수를 참조하는지 확인
 2. `tailwind.css`에 `:root` 색상 정의가 **없는지** 확인 (충돌 방지)
 3. 빌드 후 확인: `npm run build:css:prod`
+4. `<html data-theme="...">` 속성이 올바른지 확인
 
 ### Usage Decorators
 
@@ -287,10 +307,11 @@ npx playwright test settings-modals/ history-usage/
 ├─────────────────────────────────────┤
 │ 본문 내용 (report-content)          │  ← unified-body
 ├─────────────────────────────────────┤
-│ [토큰] [시간]  프롬/맵/저장/삭제    │  ← unified-footer
+│ [토큰] [시간]  저장 [⋯] 삭제        │  ← unified-footer
 └─────────────────────────────────────┘
+        └─ 더보기 메뉴 (프롬프트/마인드맵)
 ```
 
 - `CardHtmlBuilder.buildReportCardHtml()` - HTML 템플릿 생성
-- `_cards.css` - 통합 카드 스타일
-- `_report-content.css` - 본문 타이포그래피 (Warm Cream 테마)
+- `_cards.css` - 통합 카드 스타일, 더보기 메뉴 (`.more-actions-btn`)
+- `_report-content.css` - 본문 타이포그래피
