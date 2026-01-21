@@ -201,27 +201,32 @@ export class CardHtmlBuilder {
                     ${this.ui.sanitizeHtml(data.html)}
                 </div>
 
-                <!-- 푸터: 메타 + 액션 -->
+                <!-- 푸터: 메타 + 액션 (간소화) -->
                 <div class="unified-footer">
                     <div class="meta-chips">
                         ${metaChips.join('')}
                     </div>
                     <div class="footer-actions">
-                        <button class="action-btn prompt-btn">
-                            <span class="material-symbols-outlined">code</span>
-                            <span>프롬프트</span>
-                        </button>
-                        <button class="action-btn mindmap-btn">
-                            <span class="material-symbols-outlined">account_tree</span>
-                            <span>마인드맵</span>
-                        </button>
-                        <button class="action-btn download-btn">
+                        <button class="action-btn download-btn" title="저장">
                             <span class="material-symbols-outlined">download</span>
-                            <span>저장</span>
                         </button>
-                        <button class="action-btn delete-btn">
+                        <div class="more-actions-btn">
+                            <button class="action-btn" title="더보기">
+                                <span class="material-symbols-outlined">more_horiz</span>
+                            </button>
+                            <div class="more-actions-menu">
+                                <button class="action-btn prompt-btn">
+                                    <span class="material-symbols-outlined">code</span>
+                                    <span>프롬프트</span>
+                                </button>
+                                <button class="action-btn mindmap-btn">
+                                    <span class="material-symbols-outlined">account_tree</span>
+                                    <span>마인드맵</span>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="action-btn delete-btn" title="삭제">
                             <span class="material-symbols-outlined">delete</span>
-                            <span>삭제</span>
                         </button>
                     </div>
                 </div>

@@ -358,13 +358,41 @@ export class AuthManager {
         const loggedIn = document.getElementById('auth-logged-in');
         const userEmail = document.getElementById('user-email');
 
-        if (!loggedOut || !loggedIn) return;
+        if (loggedOut && loggedIn) {
+            loggedOut.classList.toggle('hidden', isLoggedIn);
+            loggedIn.classList.toggle('hidden', !isLoggedIn);
 
-        loggedOut.classList.toggle('hidden', isLoggedIn);
-        loggedIn.classList.toggle('hidden', !isLoggedIn);
+            if (userEmail && isLoggedIn) {
+                userEmail.textContent = this.user?.email || '';
+            }
+        }
 
-        if (userEmail && isLoggedIn) {
-            userEmail.textContent = this.user?.email || '';
+        // 사이드바 하단 로그인 버튼 상태 업데이트
+        this.updateSidebarAuthUI(isLoggedIn);
+    }
+
+    updateSidebarAuthUI(isLoggedIn) {
+        const container = document.getElementById('sidebar-auth-container');
+        const icon = document.getElementById('sidebar-auth-icon');
+        const label = document.getElementById('sidebar-auth-label');
+
+        if (!container || !icon || !label) return;
+
+        if (isLoggedIn) {
+            // 로그인 상태: 이메일 표시
+            const email = this.user?.email || '';
+            const displayName = email.split('@')[0]; // @ 앞부분만 표시
+
+            icon.textContent = 'account_circle';
+            label.textContent = displayName || '사용자';
+            container.title = email;
+            container.setAttribute('aria-label', `${email} - 클릭하여 로그아웃`);
+        } else {
+            // 로그아웃 상태: 로그인 버튼
+            icon.textContent = 'person';
+            label.textContent = '로그인';
+            container.title = '로그인';
+            container.setAttribute('aria-label', '로그인');
         }
     }
 

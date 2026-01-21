@@ -518,5 +518,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    new ContentAnalysis();
+    // 앱 인스턴스 생성 및 전역 노출 (인라인 스크립트에서 접근용)
+    window.app = new ContentAnalysis();
 });

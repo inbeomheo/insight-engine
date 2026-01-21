@@ -152,16 +152,18 @@ export class ProviderManager {
 
     updateProviderLabel() {
         const label = document.getElementById('current-provider-label');
-        if (!label) return;
+        const summaryText = document.getElementById('ai-model-summary-text');
 
         const providerSelect = document.getElementById('provider');
         const providerId = providerSelect?.value;
         const provider = this.providers[providerId];
 
         if (provider) {
-            label.textContent = provider.name;
+            if (label) label.textContent = provider.name;
+            if (summaryText) summaryText.textContent = provider.name;
         } else {
-            label.textContent = '미설정';
+            if (label) label.textContent = '미설정';
+            if (summaryText) summaryText.textContent = '선택 필요';
         }
     }
 
@@ -183,6 +185,38 @@ export class ProviderManager {
             modelSelect.addEventListener('change', () => {
                 this.storage.saveSelectedModel(modelSelect.value);
                 this.updateSelectedModelInfo();
+            });
+        }
+
+        // AI 모델 섹션 토글 설정
+        this.setupAiModelToggle();
+    }
+
+    setupAiModelToggle() {
+        const toggleBtn = document.getElementById('ai-model-toggle');
+        const panel = document.getElementById('ai-model-panel');
+        const arrow = document.getElementById('ai-model-arrow');
+
+        if (toggleBtn && panel) {
+            // 초기 상태: 접힘 (hidden 클래스 사용, 인라인 스타일 제거)
+            panel.style.display = '';
+            panel.classList.add('hidden');
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            if (arrow) arrow.textContent = 'expand_more';
+
+            toggleBtn.addEventListener('click', () => {
+                const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+                if (isExpanded) {
+                    panel.style.display = '';
+                    panel.classList.add('hidden');
+                    toggleBtn.setAttribute('aria-expanded', 'false');
+                    if (arrow) arrow.textContent = 'expand_more';
+                } else {
+                    panel.style.display = '';
+                    panel.classList.remove('hidden');
+                    toggleBtn.setAttribute('aria-expanded', 'true');
+                    if (arrow) arrow.textContent = 'expand_less';
+                }
             });
         }
     }

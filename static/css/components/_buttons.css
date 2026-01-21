@@ -139,3 +139,132 @@ button.has-disabled-reason:disabled:hover .disabled-reason-overlay {
     visibility: visible;
     transform: translateX(-50%) scale(1);
 }
+
+/* ==================== Theme Dropdown ==================== */
+
+.theme-dropdown {
+    position: fixed;
+    z-index: 9999;
+    min-width: 140px;
+    padding: 6px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+}
+
+.theme-dropdown.hidden {
+    display: none;
+}
+
+.theme-dropdown-enter {
+    animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.theme-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.theme-dropdown-item:hover {
+    background: var(--primary-light);
+    color: var(--text-primary);
+}
+
+.theme-dropdown-item.active {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.theme-dropdown-item .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.theme-dropdown-item .theme-label {
+    flex: 1;
+    text-align: left;
+}
+
+.theme-dropdown-item .check-icon {
+    font-size: 16px;
+    color: var(--primary);
+}
+
+/* Dark 테마 드롭다운 */
+[data-theme="dark"] .theme-dropdown {
+    background: var(--card-dark);
+    border-color: var(--card-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .theme-dropdown-item:hover {
+    background: rgba(212, 168, 122, 0.15);
+}
+
+[data-theme="dark"] .theme-dropdown-item.active {
+    background: rgba(212, 168, 122, 0.2);
+    color: var(--primary);
+}
+
+/* Light 테마 드롭다운 */
+[data-theme="light"] .theme-dropdown {
+    background: #FFFFFF;
+    border-color: #E5E7EB;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .theme-dropdown-item:hover {
+    background: rgba(212, 168, 122, 0.1);
+}
+
+[data-theme="light"] .theme-dropdown-item.active {
+    background: rgba(212, 168, 122, 0.15);
+    color: #92400e;
+}
+
+/* Minimal 테마 드롭다운 */
+[data-theme="minimal"] .theme-dropdown {
+    background: #FFFFFF;
+    border-color: #E5E5E5;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="minimal"] .theme-dropdown-item {
+    border-radius: 6px;
+}
+
+[data-theme="minimal"] .theme-dropdown-item:hover {
+    background: #F5F5F5;
+}
+
+[data-theme="minimal"] .theme-dropdown-item.active {
+    background: #F5F5F5;
+    color: #171717;
+}
+
+[data-theme="minimal"] .theme-dropdown-item .check-icon {
+    color: #171717;
+}

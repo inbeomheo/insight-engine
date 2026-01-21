@@ -70,9 +70,10 @@
 
         <!-- User Profile / Auth (Bottom) -->
         <div class="p-3 border-t border-border-dark">
+            <!-- 로그아웃 상태 -->
             <button id="sidebar-auth-container" class="nav-icon-btn" title="로그인" aria-label="로그인">
-                <span class="material-symbols-outlined" aria-hidden="true">person</span>
-                <span class="nav-label">로그인</span>
+                <span id="sidebar-auth-icon" class="material-symbols-outlined" aria-hidden="true">person</span>
+                <span id="sidebar-auth-label" class="nav-label">로그인</span>
             </button>
         </div>
     </aside>
@@ -87,7 +88,7 @@
             <!-- Left: Hamburger + Version Badge -->
             <div class="flex items-center gap-3">
                 <!-- Hamburger Menu Button (visible on md and below) -->
-                <button class="hamburger-btn" id="hamburger-btn" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar" onclick="toggleSidebar()">
+                <button class="hamburger-btn" id="hamburger-btn" aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar" onclick="toggleSidebar()" title="메뉴">
                     <span class="material-symbols-outlined" aria-hidden="true">menu</span>
                 </button>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-dark text-primary">Beta v2.5</span>
@@ -110,13 +111,13 @@
                 </div>
 
                 <!-- Theme Toggle Button -->
-                <button id="theme-toggle-btn" class="relative flex items-center justify-center cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark group" aria-label="테마 전환">
+                <button id="theme-toggle-btn" class="relative flex items-center justify-center cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark group" aria-label="테마 전환" title="테마 전환">
                     <span class="material-symbols-outlined text-lg" aria-hidden="true">contrast</span>
                     <span class="theme-tooltip absolute top-full mt-1 px-2 py-1 bg-surface-dark text-xs text-text-secondary rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">시스템 설정</span>
                 </button>
 
                 <!-- Settings Button -->
-                <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정 열기" aria-haspopup="dialog">
+                <button id="settings-btn" class="flex items-center gap-1.5 cursor-pointer text-text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-dark" aria-label="설정 열기" aria-haspopup="dialog" title="설정">
                     <span class="material-symbols-outlined text-lg" aria-hidden="true">settings</span>
                 </button>
 
@@ -434,11 +435,11 @@
                     <!-- Available services will be dynamically generated -->
                 </div>
             </div>
-            <button id="onboarding-save" class="w-full bg-primary text-text-inverse font-bold py-4 text-lg uppercase tracking-wider hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 rounded-xl">
+            <button id="onboarding-save" class="w-full bg-primary text-text-inverse font-bold py-4 text-lg uppercase tracking-wider hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 rounded-xl" title="AI 서비스 선택 완료">
                 <span class="material-symbols-outlined">check</span>
                 시작하기
             </button>
-            <button id="onboarding-skip" class="w-full mt-3 bg-transparent border border-border-dark text-text-subtle font-medium py-3 text-sm hover:border-primary/50 hover:text-white transition-colors flex items-center justify-center gap-2 rounded-xl hidden">
+            <button id="onboarding-skip" class="w-full mt-3 bg-transparent border border-border-dark text-text-subtle font-medium py-3 text-sm hover:border-primary/50 hover:text-white transition-colors flex items-center justify-center gap-2 rounded-xl hidden" title="설정 없이 둘러보기">
                 <span class="material-symbols-outlined text-sm">visibility</span>
                 먼저 둘러보기
             </button>
@@ -478,7 +479,7 @@
                                     <span class="material-symbols-outlined text-xl">smart_display</span>
                                 </div>
                             </div>
-                            <button id="start-btn" class="px-4 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl transition-all flex items-center gap-2 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30" aria-label="URL 목록에 추가">
+                            <button id="start-btn" class="px-4 py-3.5 bg-primary hover:bg-primary-hover text-white rounded-xl transition-all flex items-center gap-2 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30" aria-label="URL 목록에 추가" title="URL 추가">
                                 <span class="material-symbols-outlined text-xl" aria-hidden="true">add</span>
                                 <span class="text-sm hidden sm:inline">추가</span>
                             </button>
@@ -496,7 +497,7 @@
                                 <span class="material-symbols-outlined text-xs text-primary/60" aria-hidden="true">playlist_add</span>
                                 <span id="url-count">0</span>/10 URLs
                             </span>
-                            <button id="ai-analyze-btn" class="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors" aria-label="AI 자동 분석: 제목을 분석하여 최적 세팅 후 바로 분석">
+                            <button id="ai-analyze-btn" class="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors" aria-label="AI 자동 분석: 제목을 분석하여 최적 세팅 후 바로 분석" title="제목을 분석하여 최적 세팅 후 바로 분석">
                                 <span class="material-symbols-outlined text-sm" aria-hidden="true">auto_awesome</span>
                                 <span>AI 자동 분석</span>
                             </button>
@@ -506,15 +507,17 @@
 
                     <!-- ===== AI 모델 섹션 (접기/펼치기) ===== -->
                     <div id="ai-model-section" class="border-b border-border-dark" style="flex: 0 0 auto !important;">
-                        <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="ai-model-panel">
+                        <button id="ai-model-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="false" aria-controls="ai-model-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">psychology</span>
                                 <span class="text-sm font-medium text-text-primary">AI 모델</span>
-                                <span id="ai-model-badge" class="text-xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full hidden">선택됨</span>
+                                <span id="ai-model-summary" class="section-summary-badge">
+                                    <span id="ai-model-summary-text">Gemini</span>
+                                </span>
                             </div>
-                            <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_less</span>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="ai-model-arrow" aria-hidden="true">expand_more</span>
                         </button>
-                        <div id="ai-model-panel" class="px-4 pb-4 pt-0" style="display: block !important;">
+                        <div id="ai-model-panel" class="px-4 pb-4 pt-0 hidden">
                         <!-- 개선된 드롭다운 - 카드 형태 -->
                         <div class="grid grid-cols-2 gap-3">
                             <!-- 서비스 선택 카드 -->
@@ -561,7 +564,7 @@
                                 <span id="style-badge" class="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">Blog</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="add-custom-style-btn" role="button" tabindex="0" class="px-2 py-1 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer" aria-label="커스텀 스타일 추가" aria-haspopup="dialog" onclick="event.stopPropagation()">
+                                <span id="add-custom-style-btn" role="button" tabindex="0" class="px-2 py-1 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer" aria-label="커스텀 스타일 추가" aria-haspopup="dialog" onclick="event.stopPropagation()" title="커스텀 스타일 추가">
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
                                     Custom
                                 </span>
@@ -723,7 +726,7 @@
                         </div>
 
                         <!-- AI Style Generate Button -->
-                        <button id="generate-style-btn" class="w-full px-3 py-2.5 rounded-xl border border-border-dark hover:border-primary bg-gradient-to-r from-primary/5 to-purple-500/5 text-text-secondary hover:text-primary text-xs font-medium transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/10" aria-label="AI 스타일 생성: 영상에 맞는 맞춤 프롬프트를 자동 생성합니다">
+                        <button id="generate-style-btn" class="w-full px-3 py-2.5 rounded-xl border border-border-dark hover:border-primary bg-gradient-to-r from-primary/5 to-purple-500/5 text-text-secondary hover:text-primary text-xs font-medium transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary/10" aria-label="AI 스타일 생성: 영상에 맞는 맞춤 프롬프트를 자동 생성합니다" title="영상에 맞는 맞춤 프롬프트를 자동 생성">
                             <span class="material-symbols-outlined text-base" aria-hidden="true">auto_awesome</span>
                             <span>AI 스타일 생성</span>
                         </button>
@@ -732,14 +735,17 @@
 
                     <!-- ===== 모디파이어 옵션 (칩 형태) ===== -->
                     <div id="modifier-section" class="border-b border-border-dark">
-                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="true" aria-controls="advanced-options-panel">
+                        <button id="advanced-options-toggle" class="w-full p-4 flex items-center justify-between text-text-secondary hover:text-white transition-colors" aria-expanded="false" aria-controls="advanced-options-panel">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-sm text-primary" aria-hidden="true">tune</span>
                                 <span class="text-sm font-medium">모디파이어</span>
+                                <span id="modifier-summary" class="section-summary-badge">
+                                    <span id="modifier-summary-text">보통 · 전문적</span>
+                                </span>
                             </div>
-                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow" aria-hidden="true">expand_less</span>
+                            <span class="material-symbols-outlined text-sm transition-transform" id="advanced-options-arrow" aria-hidden="true">expand_more</span>
                         </button>
-                        <div id="advanced-options-panel" class="p-4 pt-0 space-y-4" role="region" aria-label="콘텐츠 생성 옵션">
+                        <div id="advanced-options-panel" class="p-4 pt-0 space-y-4 hidden" role="region" aria-label="콘텐츠 생성 옵션">
                             <!-- 길이 - 칩 형태 -->
                             <div class="modifier-group" role="group" aria-labelledby="length-label">
                                 <span id="length-label" class="flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary mb-2.5 uppercase tracking-wider">
@@ -855,7 +861,7 @@
 
                     <!-- ===== 생성 버튼 (하단 고정) ===== -->
                     <div id="generate-btn-container" class="p-4">
-                        <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" aria-describedby="pending-badge-desc">
+                        <button id="run-analysis-btn" class="relative w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" aria-describedby="pending-badge-desc" title="선택한 URL로 콘텐츠 생성">
                             <span class="material-symbols-outlined text-xl" id="run-icon" aria-hidden="true">auto_awesome</span>
                             <span id="run-text">콘텐츠 생성</span>
                             <span id="pending-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5 shadow-lg animate-pulse" role="status" aria-live="polite">0</span>
@@ -881,53 +887,28 @@
                         </div>
                         <!-- 리포트 스트림 - US-016: feed는 콘텐츠 있을 때만 적용, 빈 상태에서는 region 사용 -->
                         <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto" role="region" aria-label="생성된 콘텐츠 목록" aria-live="polite"></div>
-                        <!-- Empty State - Creative Studio Design -->
-                        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center" role="status">
-                            <!-- Animated Icon Container -->
-                            <div class="relative mb-8">
-                                <!-- Multi-layer Glow Effect -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-primary/30 to-purple-500/20 rounded-full blur-3xl scale-[2] animate-pulse"></div>
-                                <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-violet-500/15 rounded-full blur-2xl scale-150" style="animation: glowPulse 6s ease-in-out infinite reverse;"></div>
-                                <!-- Icon Circle with Gradient Border -->
-                                <div class="relative w-36 h-36 rounded-full p-[2px] bg-gradient-to-br from-primary via-purple-500 to-pink-500">
-                                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#1a1f24] to-[#12161a] flex items-center justify-center">
-                                        <span class="material-symbols-outlined text-6xl bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
-                                    </div>
-                                </div>
-                                <!-- Floating Particles -->
-                                <div class="absolute -top-3 -right-1 w-4 h-4 bg-gradient-to-br from-primary to-cyan-400 rounded-full animate-bounce shadow-lg shadow-primary/50"></div>
-                                <div class="absolute -bottom-2 -left-4 w-3 h-3 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full animate-bounce shadow-lg shadow-purple-500/50" style="animation-delay: 0.3s;"></div>
-                                <div class="absolute top-1/2 -right-5 w-2.5 h-2.5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full animate-bounce shadow-lg shadow-amber-500/50" style="animation-delay: 0.6s;"></div>
-                                <div class="absolute top-4 -left-3 w-2 h-2 bg-gradient-to-br from-emerald-400 to-teal-400 rounded-full animate-bounce shadow-lg shadow-emerald-500/50" style="animation-delay: 0.9s;"></div>
+                        <!-- Empty State - Minimal Design -->
+                        <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-6 text-center" role="status">
+                            <!-- Compact Icon -->
+                            <div class="empty-state-icon mb-4">
+                                <span class="material-symbols-outlined text-5xl text-primary/60" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">auto_awesome</span>
                             </div>
 
-                            <!-- Text Content -->
-                            <h3 class="text-2xl font-bold text-text-primary mb-3">AI 콘텐츠 분석 준비 완료</h3>
-                            <p class="text-text-secondary text-base mb-6 max-w-sm">
-                                YouTube 영상 URL을 입력하면<br/>
-                                AI가 자동으로 콘텐츠를 분석하고 생성합니다
+                            <!-- Compact Text -->
+                            <p class="text-text-secondary text-sm mb-4">
+                                YouTube URL을 입력하고 콘텐츠를 생성하세요
                             </p>
 
-                            <!-- Feature Pills - Creative Studio Style -->
-                            <div class="flex flex-wrap justify-center gap-3 mb-8">
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-primary/15 to-cyan-500/10 border border-primary/40 text-cyan-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20">
-                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">bolt</span>
+                            <!-- Minimal Feature Indicators -->
+                            <div class="flex items-center gap-4 text-xs text-text-muted">
+                                <span class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm text-primary/60">bolt</span>
                                     빠른 분석
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/15 to-pink-500/10 border border-purple-500/40 text-purple-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20">
-                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">psychology</span>
+                                <span class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm text-primary/60">psychology</span>
                                     AI 기반
                                 </span>
-                                <span class="group px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-500/40 text-emerald-300 text-sm font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20">
-                                    <span class="material-symbols-outlined text-sm align-middle mr-1.5 group-hover:animate-pulse">translate</span>
-                                    한국어 최적화
-                                </span>
-                            </div>
-
-                            <!-- Arrow Hint with Animation -->
-                            <div class="flex items-center gap-2 text-text-muted text-sm">
-                                <span class="material-symbols-outlined text-lg" style="animation: arrowPulse 1.5s ease-in-out infinite;">arrow_back</span>
-                                <span>왼쪽에서 URL을 입력하세요</span>
                             </div>
                         </div>
                     </div>
@@ -941,7 +922,7 @@
                                     <span class="material-symbols-outlined" aria-hidden="true">history</span>
                                     히스토리
                                 </h2>
-                                <button id="clear-all-history-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors flex items-center gap-1" aria-label="전체 히스토리 삭제">
+                                <button id="clear-all-history-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors flex items-center gap-1" aria-label="전체 히스토리 삭제" title="전체 히스토리 삭제">
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
                                     전체 삭제
                                 </button>
@@ -1098,16 +1079,27 @@
             if (window.innerWidth < 1024) toggleSidebar();
         });
 
-        // Sidebar auth container click
+        // Sidebar auth container click - 로그인/로그아웃 분기
         document.getElementById('sidebar-auth-container')?.addEventListener('click', () => {
-            if (window.innerWidth < 1024) {
-                // 모바일: 사이드바 먼저 닫고 → 애니메이션 후 모달 열기
-                toggleSidebar();
-                setTimeout(() => {
-                    document.getElementById('auth-modal')?.classList.add('active');
-                }, 320); // 사이드바 닫힘 애니메이션(0.3s) 후
+            const isLoggedIn = window.app?.authManager?.isLoggedIn?.() || false;
+
+            if (isLoggedIn) {
+                // 로그인 상태: 로그아웃 확인
+                if (confirm('로그아웃 하시겠습니까?')) {
+                    window.app?.authManager?.logout?.();
+                    if (window.innerWidth < 1024) toggleSidebar();
+                }
             } else {
-                document.getElementById('auth-modal')?.classList.add('active');
+                // 로그아웃 상태: 로그인 모달 열기
+                if (window.innerWidth < 1024) {
+                    // 모바일: 사이드바 먼저 닫고 → 애니메이션 후 모달 열기
+                    toggleSidebar();
+                    setTimeout(() => {
+                        document.getElementById('auth-modal')?.classList.add('active');
+                    }, 320);
+                } else {
+                    document.getElementById('auth-modal')?.classList.add('active');
+                }
             }
         });
     </script>
@@ -1228,10 +1220,11 @@
             });
         }
 
-        // 모든 섹션 토글 설정 (항상 펼침)
+        // 섹션 토글 설정 (URL과 스타일만 - AI 모델과 모디파이어는 JS 모듈에서 처리)
         setupSectionToggle('url-section-toggle', 'url-section-panel', 'url-section-arrow', true);
-        setupSectionToggle('ai-model-toggle', 'ai-model-panel', 'ai-model-arrow', true);
         setupSectionToggle('style-section-toggle', 'style-section-panel', 'style-section-arrow', true);
+        // AI 모델 토글은 ProviderManager.setupAiModelToggle()에서 처리
+        // 모디파이어 토글은 StyleManager.setupAdvancedOptions()에서 처리
 
         // 모든 섹션에 flex 스타일 적용 (레이아웃 문제 해결)
         ['url-section', 'ai-model-section', 'style-section', 'modifier-section'].forEach(id => {

@@ -11,6 +11,33 @@
     display: none;
 }
 
+/* ==================== Empty State (Minimal) ==================== */
+#empty-state {
+    background: transparent;
+}
+
+.empty-state-icon {
+    position: relative;
+}
+
+.empty-state-icon .material-symbols-outlined {
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+#empty-state:hover .empty-state-icon .material-symbols-outlined {
+    transform: scale(1.1);
+    color: var(--primary);
+}
+
+/* 테마별 Empty State */
+[data-theme="light"] #empty-state {
+    background: var(--surface-dark);
+}
+
+[data-theme="minimal"] #empty-state .material-symbols-outlined {
+    color: var(--text-muted);
+}
+
 /* ==================== History Item ==================== */
 .history-item {
     background: var(--card-dark);
@@ -263,4 +290,270 @@ body.resizing * {
     .resize-handle {
         display: none !important;
     }
+}
+
+/* ==================== Input Panel Improvements ==================== */
+
+/* 입력 패널 레이아웃 - 전체 스크롤 가능 */
+#input-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0; /* flex 자식 스크롤 허용 핵심 속성 */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* URL 섹션 */
+#url-section {
+    flex-shrink: 0;
+}
+
+/* 스크롤 가능한 중간 영역 */
+#ai-model-section,
+#style-section,
+#modifier-section {
+    flex-shrink: 0;
+}
+
+/* 입력 패널 스크롤 컨테이너 (사용 시) */
+#input-panel > .scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 생성 버튼 하단 - sticky로 항상 보이게 */
+#generate-btn-container {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--surface-dark);
+    /* 그라데이션 오버레이로 자연스러운 페이드 효과 */
+    box-shadow: 0 -8px 16px var(--surface-dark);
+}
+
+/* ==================== 아코디언 섹션 개선 ==================== */
+
+/* 섹션 토글 버튼 */
+#url-section-toggle,
+#ai-model-toggle,
+#style-section-toggle,
+#advanced-options-toggle {
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+#url-section-toggle:hover,
+#ai-model-toggle:hover,
+#style-section-toggle:hover,
+#advanced-options-toggle:hover {
+    background: var(--primary-light);
+}
+
+/* 섹션 패널 애니메이션 */
+#url-section-panel,
+#ai-model-panel,
+#style-section-panel,
+#advanced-options-panel {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out;
+}
+
+/* 접힌 상태 */
+.section-collapsed #url-section-panel,
+.section-collapsed #ai-model-panel,
+.section-collapsed #style-section-panel,
+.section-collapsed #advanced-options-panel,
+[aria-expanded="false"] + #url-section-panel,
+[aria-expanded="false"] + #ai-model-panel,
+[aria-expanded="false"] + #style-section-panel,
+[aria-expanded="false"] + #advanced-options-panel {
+    max-height: 0 !important;
+    opacity: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* 펼쳐진 상태 */
+[aria-expanded="true"] + #url-section-panel,
+[aria-expanded="true"] + #ai-model-panel,
+[aria-expanded="true"] + #style-section-panel,
+[aria-expanded="true"] + #advanced-options-panel {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+/* 요약 뱃지 스타일 */
+.section-summary-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 9999px;
+    background: var(--primary-light);
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+/* 펼쳐진 상태에서 요약 뱃지 숨김 */
+[aria-expanded="true"] .section-summary-badge {
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+[aria-expanded="false"] .section-summary-badge {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ==================== 스타일 카드 인터랙션 강화 ==================== */
+
+/* 스타일 카드 호버 효과 */
+.style-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.style-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, var(--primary-light) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.style-grid-item:hover .style-card::before {
+    opacity: 1;
+}
+
+/* 선택된 스타일 카드 글로우 */
+.peer:checked + .style-card {
+    animation: cardSelect 0.3s ease-out;
+}
+
+@keyframes cardSelect {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* ==================== 모디파이어 칩 인터랙션 ==================== */
+
+.modifier-chip {
+    position: relative;
+}
+
+.chip-content {
+    position: relative;
+    overflow: hidden;
+}
+
+/* 칩 리플 효과 */
+.chip-content::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), var(--primary) 0%, transparent 70%);
+    opacity: 0;
+    transform: scale(0);
+    transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.modifier-chip:active .chip-content::after {
+    opacity: 0.3;
+    transform: scale(2);
+}
+
+/* 선택된 칩 글로우 */
+.peer:checked + .chip-content {
+    box-shadow: 0 0 12px var(--primary-light), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== 생성 버튼 개선 ==================== */
+
+#run-analysis-btn {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#run-analysis-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+#run-analysis-btn:hover::before {
+    left: 100%;
+}
+
+#run-analysis-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px var(--shadow-primary);
+}
+
+#run-analysis-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* 버튼 비활성화 상태 */
+#run-analysis-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#run-analysis-btn:disabled::before {
+    display: none;
+}
+
+/* ==================== 테마별 입력 패널 스타일 ==================== */
+
+/* Light 테마 */
+[data-theme="light"] #url-section,
+[data-theme="light"] #generate-btn-container {
+    background: var(--surface-dark);
+    border-color: var(--border-dark);
+}
+
+[data-theme="light"] .section-summary-badge {
+    background: rgba(212, 168, 122, 0.15);
+    color: #92400e;
+}
+
+[data-theme="light"] .peer:checked + .chip-content {
+    box-shadow: 0 0 12px rgba(212, 168, 122, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Minimal 테마 */
+[data-theme="minimal"] #url-section,
+[data-theme="minimal"] #generate-btn-container {
+    background: var(--surface-dark);
+}
+
+[data-theme="minimal"] .section-summary-badge {
+    background: rgba(23, 23, 23, 0.08);
+    color: #525252;
+}
+
+[data-theme="minimal"] .style-card::before {
+    display: none;
+}
+
+[data-theme="minimal"] .peer:checked + .chip-content {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="minimal"] #run-analysis-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }

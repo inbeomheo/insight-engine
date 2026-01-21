@@ -1,8 +1,9 @@
-/* ==================== Base Tokens - Dark Mode Design System ==================== */
+/* ==================== Base Tokens - Multi-Theme Design System ==================== */
 
-/* ========== Dark Mode (기본 - 다크 모드 전용) ========== */
+/* ========== Dark Mode (기본 테마) ========== */
 /* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
-:root {
+:root,
+[data-theme="dark"] {
     /* ----------------------------------------
        Primary Colors - 브랜드 색상
        ---------------------------------------- */
@@ -145,4 +146,150 @@
     --transition-fast: 150ms ease-in-out;
     --transition-normal: 200ms ease-in-out;
     --transition-slow: 300ms ease-in-out;
+
+    /* ----------------------------------------
+       텍스트 선택 색상
+       ---------------------------------------- */
+    --selection-bg: rgba(212, 168, 122, 0.5);
+    --selection-text: #FDFCFB;
+}
+
+/* ========== Light Theme (크림 화이트) ========== */
+[data-theme="light"] {
+    /* Primary Colors - 브랜드 색상 (유지) */
+    --primary: #D4A87A;
+    --primary-hover: #C49A6C;
+    --primary-glow: #E8B88A;
+    --primary-light: rgba(212, 168, 122, 0.15);
+    --primary-dark: #B8926A;
+    --secondary: #A08B70;
+    --accent: #E8B88A;
+    --accent-hover: #D4A87A;
+
+    /* Tailwind 호환 별칭 */
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-light: var(--primary-light);
+    --color-primary-dark: var(--primary-dark);
+
+    /* Background Colors - 밝은 배경 */
+    --background-dark: #F9FAFB;
+    --surface-dark: #FFFFFF;
+    --card-dark: #FFFFFF;
+    --bg-elevated: #F3F4F6;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+
+    /* Tailwind 호환 별칭 */
+    --bg-primary: var(--background-dark);
+    --bg-secondary: var(--surface-dark);
+    --bg-tertiary: var(--card-dark);
+    --bg-surface: var(--surface-dark);
+
+    /* Text Colors - 어두운 텍스트 */
+    --text-primary: #1F2937;
+    --text-secondary: #4B5563;
+    --text-tertiary: #6B7280;
+    --text-muted: #6B7280;
+    --text-subtle: #9CA3AF;
+    --text-inverse: #FFFFFF;
+
+    /* Semantic Colors */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
+
+    /* Border Colors - 밝은 테두리 */
+    --border-dark: #E5E7EB;
+    --card-border: #D1D5DB;
+    --border-primary: rgba(209, 213, 219, 0.8);
+    --border-secondary: rgba(209, 213, 219, 0.5);
+    --border-focus: var(--primary);
+
+    /* Shadows - 밝은 그림자 */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(212, 168, 122, 0.3);
+    --shadow-primary: 0 8px 32px rgba(212, 168, 122, 0.2);
+
+    /* 그라데이션 */
+    --gradient-primary: linear-gradient(135deg, #D4A87A 0%, #E8B88A 100%);
+    --gradient-accent: linear-gradient(135deg, #E8B88A 0%, #D4A87A 100%);
+    --gradient-glow: radial-gradient(ellipse at center, rgba(212, 168, 122, 0.1) 0%, transparent 70%);
+
+    /* 텍스트 선택 색상 */
+    --selection-bg: rgba(212, 168, 122, 0.4);
+    --selection-text: #1F2937;
+}
+
+/* ========== Minimal Theme (흑백 미니멀) ========== */
+[data-theme="minimal"] {
+    /* Primary Colors - 모노톤 */
+    --primary: #171717;
+    --primary-hover: #404040;
+    --primary-glow: #525252;
+    --primary-light: rgba(23, 23, 23, 0.08);
+    --primary-dark: #0a0a0a;
+    --secondary: #525252;
+    --accent: #171717;
+    --accent-hover: #404040;
+
+    /* Tailwind 호환 별칭 */
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-primary-light: var(--primary-light);
+    --color-primary-dark: var(--primary-dark);
+
+    /* Background Colors - 순백색 */
+    --background-dark: #FFFFFF;
+    --surface-dark: #FAFAFA;
+    --card-dark: #FFFFFF;
+    --bg-elevated: #F5F5F5;
+    --bg-overlay: rgba(0, 0, 0, 0.4);
+
+    /* Tailwind 호환 별칭 */
+    --bg-primary: var(--background-dark);
+    --bg-secondary: var(--surface-dark);
+    --bg-tertiary: var(--card-dark);
+    --bg-surface: var(--surface-dark);
+
+    /* Text Colors - 모노톤 */
+    --text-primary: #171717;
+    --text-secondary: #525252;
+    --text-tertiary: #737373;
+    --text-muted: #737373;
+    --text-subtle: #A3A3A3;
+    --text-inverse: #FFFFFF;
+
+    /* Semantic Colors */
+    --color-success: #22c55e;
+    --color-warning: #eab308;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
+
+    /* Border Colors - 미세한 테두리 */
+    --border-dark: #E5E5E5;
+    --card-border: #D4D4D4;
+    --border-primary: rgba(212, 212, 212, 0.8);
+    --border-secondary: rgba(212, 212, 212, 0.5);
+    --border-focus: var(--primary);
+
+    /* Shadows - 최소한의 그림자 */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06);
+    --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.08);
+    --shadow-glow: none;
+    --shadow-primary: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+    /* 그라데이션 (미니멀은 단색 선호) */
+    --gradient-primary: #171717;
+    --gradient-accent: #171717;
+    --gradient-glow: transparent;
+
+    /* 텍스트 선택 색상 */
+    --selection-bg: rgba(23, 23, 23, 0.2);
+    --selection-text: #171717;
 }

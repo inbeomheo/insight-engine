@@ -377,3 +377,296 @@
     );
     border-radius: 4px;
 }
+
+/* ==================== Light Theme ==================== */
+
+/* Light 테마 배경 */
+[data-theme="light"] .app-layout {
+    background: var(--background-dark);
+}
+
+/* Light 테마 사이드바 */
+[data-theme="light"] #sidebar {
+    background: var(--surface-dark);
+    border-right: 1px solid var(--border-dark);
+}
+
+/* Light 테마 입력 패널 */
+[data-theme="light"] #input-panel {
+    background: var(--surface-dark) !important;
+    border-right: 1px solid var(--border-dark) !important;
+}
+
+[data-theme="light"] #input-panel::before {
+    display: none;
+}
+
+/* Light 테마 결과 패널 */
+[data-theme="light"] #result-panel::before,
+[data-theme="light"] #result-panel::after {
+    display: none;
+}
+
+/* Light 테마 섹션 스타일 */
+[data-theme="light"] #url-section,
+[data-theme="light"] #ai-model-section,
+[data-theme="light"] #style-section,
+[data-theme="light"] #modifier-section {
+    border-bottom: 1px solid var(--border-dark) !important;
+}
+
+[data-theme="light"] #url-section:hover,
+[data-theme="light"] #ai-model-section:hover,
+[data-theme="light"] #style-section:hover,
+[data-theme="light"] #modifier-section:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Light 테마 섹션 아이콘 배경색 */
+[data-theme="light"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child {
+    background: rgba(236, 72, 153, 0.1) !important;
+    color: #db2777 !important;
+}
+
+[data-theme="light"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #059669 !important;
+}
+
+[data-theme="light"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child {
+    background: rgba(139, 92, 246, 0.1) !important;
+    color: #7c3aed !important;
+}
+
+[data-theme="light"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: #d97706 !important;
+}
+
+/* Light 테마 배지 */
+[data-theme="light"] #style-badge {
+    background: rgba(212, 168, 122, 0.2) !important;
+    color: #92400e !important;
+    border: 1px solid rgba(212, 168, 122, 0.4) !important;
+    font-weight: 600 !important;
+}
+
+/* Light 테마 생성 버튼 컨테이너 */
+[data-theme="light"] #generate-btn-container {
+    padding: 1rem !important;
+    background: var(--surface-dark) !important;
+    border-top: 1px solid var(--border-dark) !important;
+}
+
+/* Light 테마 생성 버튼 */
+[data-theme="light"] #run-analysis-btn {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #D4A87A 0%, #C49A6C 100%) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    color: white !important;
+    box-shadow:
+        0 4px 15px rgba(212, 168, 122, 0.35),
+        0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] #run-analysis-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow:
+        0 8px 25px rgba(212, 168, 122, 0.45),
+        0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Light 테마 Custom 버튼 */
+[data-theme="light"] #add-custom-style-btn {
+    background: rgba(139, 92, 246, 0.08) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+[data-theme="light"] #add-custom-style-btn:hover {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
+}
+
+/* Light 테마 스크롤바 */
+[data-theme="light"] #input-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+[data-theme="light"] #input-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+[data-theme="light"] #input-panel::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+/* Light 테마 glass-panel */
+[data-theme="light"] .glass-panel {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+}
+
+/* ==================== Minimal Theme ==================== */
+
+/* Minimal 테마 배경 */
+[data-theme="minimal"] .app-layout {
+    background: var(--background-dark);
+}
+
+/* Minimal 테마 사이드바 */
+[data-theme="minimal"] #sidebar {
+    background: var(--surface-dark);
+    border-right: 1px solid var(--border-dark);
+}
+
+/* Minimal 테마 입력 패널 */
+[data-theme="minimal"] #input-panel {
+    background: var(--surface-dark) !important;
+    border-right: 1px solid var(--border-dark) !important;
+}
+
+[data-theme="minimal"] #input-panel::before {
+    display: none;
+}
+
+/* Minimal 테마 결과 패널 - 효과 제거 */
+[data-theme="minimal"] #result-panel::before,
+[data-theme="minimal"] #result-panel::after {
+    display: none;
+}
+
+/* Minimal 테마 섹션 스타일 */
+[data-theme="minimal"] #url-section,
+[data-theme="minimal"] #ai-model-section,
+[data-theme="minimal"] #style-section,
+[data-theme="minimal"] #modifier-section {
+    border-bottom: 1px solid var(--border-dark) !important;
+}
+
+[data-theme="minimal"] #url-section:hover,
+[data-theme="minimal"] #ai-model-section:hover,
+[data-theme="minimal"] #style-section:hover,
+[data-theme="minimal"] #modifier-section:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Minimal 테마 - 악센트 바 숨김 */
+[data-theme="minimal"] #url-section::before,
+[data-theme="minimal"] #ai-model-section::before,
+[data-theme="minimal"] #style-section::before,
+[data-theme="minimal"] #modifier-section::before {
+    display: none;
+}
+
+/* Minimal 테마 섹션 아이콘 - 모노톤 */
+[data-theme="minimal"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child,
+[data-theme="minimal"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child,
+[data-theme="minimal"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child,
+[data-theme="minimal"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
+    background: rgba(23, 23, 23, 0.06) !important;
+    color: #525252 !important;
+}
+
+/* Minimal 테마 배지 */
+[data-theme="minimal"] #style-badge {
+    background: rgba(23, 23, 23, 0.08) !important;
+    color: #171717 !important;
+    border: 1px solid rgba(23, 23, 23, 0.2) !important;
+    font-weight: 600 !important;
+}
+
+/* Minimal 테마 생성 버튼 컨테이너 */
+[data-theme="minimal"] #generate-btn-container {
+    padding: 1rem !important;
+    background: transparent !important;
+    border-top: 1px solid var(--border-dark) !important;
+}
+
+/* Minimal 테마 생성 버튼 */
+[data-theme="minimal"] #run-analysis-btn {
+    position: relative;
+    overflow: hidden;
+    background: #171717 !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+[data-theme="minimal"] #run-analysis-btn:hover {
+    transform: translateY(-1px) !important;
+    background: #404040 !important;
+}
+
+[data-theme="minimal"] #run-analysis-btn::before {
+    display: none;
+}
+
+/* Minimal 테마 Custom 버튼 */
+[data-theme="minimal"] #add-custom-style-btn {
+    background: transparent !important;
+    border-color: var(--border-dark) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="minimal"] #add-custom-style-btn:hover {
+    background: rgba(0, 0, 0, 0.03) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Minimal 테마 스크롤바 */
+[data-theme="minimal"] #input-panel::-webkit-scrollbar {
+    width: 4px;
+}
+
+[data-theme="minimal"] #input-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+[data-theme="minimal"] #input-panel::-webkit-scrollbar-thumb {
+    background: #e5e5e5;
+    border-radius: 2px;
+}
+
+/* Minimal 테마 glass-panel */
+[data-theme="minimal"] .glass-panel {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+}
+
+/* ==================== 텍스트 선택(드래그) 스타일 ==================== */
+
+/* 기본 (Dark 테마) */
+::selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+::-moz-selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+/* Light 테마 선택 스타일 */
+[data-theme="light"] ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+[data-theme="light"] ::-moz-selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+/* Minimal 테마 선택 스타일 */
+[data-theme="minimal"] ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+[data-theme="minimal"] ::-moz-selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}

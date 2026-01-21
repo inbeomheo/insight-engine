@@ -131,19 +131,51 @@ export class StyleManager {
 
         if (toggleBtn && panel) {
             toggleBtn.addEventListener('click', () => {
-                const isHidden = panel.classList.contains('hidden');
-                if (isHidden) {
-                    panel.classList.remove('hidden');
-                    if (arrow) arrow.textContent = 'expand_less';
-                } else {
+                const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+                if (isExpanded) {
                     panel.classList.add('hidden');
+                    toggleBtn.setAttribute('aria-expanded', 'false');
                     if (arrow) arrow.textContent = 'expand_more';
+                } else {
+                    panel.classList.remove('hidden');
+                    toggleBtn.setAttribute('aria-expanded', 'true');
+                    if (arrow) arrow.textContent = 'expand_less';
                 }
             });
         }
 
         // 언어 칩 라디오 버튼과 hidden select 동기화
         this.setupLanguageChipSync();
+
+        // 모디파이어 변경 시 요약 뱃지 업데이트
+        this.setupModifierSummary();
+    }
+
+    setupModifierSummary() {
+        const lengthRadios = document.querySelectorAll('input[name="length"]');
+        const toneRadios = document.querySelectorAll('input[name="tone"]');
+        const summaryText = document.getElementById('modifier-summary-text');
+
+        const updateSummary = () => {
+            if (!summaryText) return;
+
+            const lengthLabels = { short: '짧게', medium: '보통', long: '상세' };
+            const toneLabels = { professional: '전문적', friendly: '친근', humorous: '유머' };
+
+            const selectedLength = document.querySelector('input[name="length"]:checked');
+            const selectedTone = document.querySelector('input[name="tone"]:checked');
+
+            const lengthText = selectedLength ? lengthLabels[selectedLength.value] || selectedLength.value : '보통';
+            const toneText = selectedTone ? toneLabels[selectedTone.value] || selectedTone.value : '전문적';
+
+            summaryText.textContent = `${lengthText} · ${toneText}`;
+        };
+
+        lengthRadios.forEach(radio => radio.addEventListener('change', updateSummary));
+        toneRadios.forEach(radio => radio.addEventListener('change', updateSummary));
+
+        // 초기값 설정
+        updateSummary();
     }
 
     setupLanguageChipSync() {
