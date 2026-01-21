@@ -35,11 +35,15 @@ export class CardEventHandler {
         const mindmapBtn = card.querySelector('.mindmap-btn');
         const downloadBtn = card.querySelector('.download-btn');
         const deleteBtn = card.querySelector('.delete-btn');
+        const collapseBtn = card.querySelector('.collapse-btn');
 
         // 개별 카드 복사 버튼들
         const copyTitleBtn = card.querySelector('.copy-title-btn');
         const copyContentBtn = card.querySelector('.copy-content-btn');
         const copyMetaBtn = card.querySelector('.copy-meta-btn');
+
+        // 접기/펼치기 버튼 이벤트
+        collapseBtn?.addEventListener('click', () => this._handleCollapseClick(card));
 
         // 제목 복사 버튼
         copyTitleBtn?.addEventListener('click', () => {
@@ -217,5 +221,20 @@ export class CardEventHandler {
             card.remove();
             this.onCardDelete?.();
         }, 300);
+    }
+
+    /**
+     * 카드 접기/펼치기 핸들러
+     */
+    _handleCollapseClick(card) {
+        const resultCard = card.querySelector('.result-card--unified') || card.closest('.result-card--unified') || card;
+        resultCard.classList.toggle('collapsed');
+
+        // 버튼 title 업데이트
+        const collapseBtn = card.querySelector('.collapse-btn');
+        if (collapseBtn) {
+            const isCollapsed = resultCard.classList.contains('collapsed');
+            collapseBtn.title = isCollapsed ? '펼치기' : '접기';
+        }
     }
 }

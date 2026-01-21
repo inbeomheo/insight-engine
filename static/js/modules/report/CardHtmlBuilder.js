@@ -187,6 +187,9 @@ export class CardHtmlBuilder {
                             <button class="icon-btn copy-content-btn" title="전체 복사" data-copy-type="content">
                                 <span class="material-symbols-outlined">file_copy</span>
                             </button>
+                            <button class="icon-btn collapse-btn" title="접기/펼치기">
+                                <span class="material-symbols-outlined">expand_less</span>
+                            </button>
                         </div>
                     </div>
                     <h3 class="unified-title">${this.ui.escapeHtml(data.title)}</h3>

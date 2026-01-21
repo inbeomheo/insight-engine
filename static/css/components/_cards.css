@@ -443,6 +443,38 @@ input[type="radio"] + div:hover {
     background: var(--primary-light);
 }
 
+/* ==================== 접기/펼치기 기능 ==================== */
+
+/* 접힌 상태 */
+.result-card--unified.collapsed .unified-body {
+    display: none;
+}
+
+.result-card--unified.collapsed .unified-footer {
+    display: none;
+}
+
+/* 접기 버튼 아이콘 회전 */
+.result-card--unified .collapse-btn .material-symbols-outlined {
+    transition: transform 0.2s ease;
+}
+
+.result-card--unified.collapsed .collapse-btn .material-symbols-outlined {
+    transform: rotate(180deg);
+}
+
+/* 접힌 상태 헤더 스타일 */
+.result-card--unified.collapsed .unified-header {
+    border-bottom: none;
+}
+
+/* 접힌 상태 표시 - 제목 옆에 축소 표시 */
+.result-card--unified.collapsed .unified-title::after {
+    content: '...';
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
 /* 모바일 반응형 */
 @media (max-width: 640px) {
     .unified-header {
