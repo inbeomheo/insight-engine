@@ -10,12 +10,14 @@ export class CardEventHandler {
      * @param {Object} uiManager - UIManager (showAlert 등)
      * @param {Object} mindmapManager - MindmapManager (optional)
      * @param {Function} onCardDelete - 카드 삭제 시 콜백 (empty state 체크용)
+     * @param {Function} onCollapseChange - 카드 접기/펼치기 시 콜백 (버튼 상태 동기화용)
      */
-    constructor(storage, uiManager, mindmapManager, onCardDelete) {
+    constructor(storage, uiManager, mindmapManager, onCardDelete, onCollapseChange = null) {
         this.storage = storage;
         this.ui = uiManager;
         this.mindmapManager = mindmapManager;
         this.onCardDelete = onCardDelete;
+        this.onCollapseChange = onCollapseChange;
     }
 
     /**
@@ -236,5 +238,8 @@ export class CardEventHandler {
             const isCollapsed = resultCard.classList.contains('collapsed');
             collapseBtn.title = isCollapsed ? '펼치기' : '접기';
         }
+
+        // 모두 접기 버튼 상태 동기화
+        this.onCollapseChange?.();
     }
 }

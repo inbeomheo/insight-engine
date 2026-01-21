@@ -463,16 +463,89 @@ input[type="radio"] + div:hover {
     transform: rotate(180deg);
 }
 
-/* 접힌 상태 헤더 스타일 */
+/* 접힌 상태 헤더 스타일 - 컴팩트화 */
 .result-card--unified.collapsed .unified-header {
     border-bottom: none;
+    padding: 8px 12px;
 }
 
-/* 접힌 상태 표시 - 제목 옆에 축소 표시 */
-.result-card--unified.collapsed .unified-title::after {
-    content: '...';
+/* 접힌 상태 제목 - 더 작게 */
+.result-card--unified.collapsed .unified-title {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 접힌 상태 - 소스 링크 숨김 */
+.result-card--unified.collapsed .source-link {
+    display: none;
+}
+
+/* 접힌 상태 - 헤더 상단 간격 축소 */
+.result-card--unified.collapsed .unified-header-top {
+    margin-bottom: 4px;
+}
+
+/* 접힌 상태 - 뱃지 간격 축소 */
+.result-card--unified.collapsed .header-badges {
+    gap: 6px;
+}
+
+.result-card--unified.collapsed .style-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+}
+
+.result-card--unified.collapsed .time-badge {
+    font-size: 10px;
+}
+
+/* 접힌 상태 - 소스 뱃지 숨김 */
+.result-card--unified.collapsed .source-badge {
+    display: none;
+}
+
+/* 접힌 상태 - 아이콘 버튼 크기 축소 */
+.result-card--unified.collapsed .icon-btn {
+    width: 24px;
+    height: 24px;
+}
+
+.result-card--unified.collapsed .icon-btn .material-symbols-outlined {
+    font-size: 14px;
+}
+
+/* ==================== 모두 접기 버튼 ==================== */
+
+.collapse-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
     color: var(--text-muted);
-    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.collapse-all-btn:hover {
+    background: var(--surface-dark);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.collapse-all-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.collapse-all-btn.hidden {
+    display: none;
 }
 
 /* 모바일 반응형 */

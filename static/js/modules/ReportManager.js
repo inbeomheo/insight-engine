@@ -16,8 +16,12 @@ export class ReportManager {
         this.elements = {
             reportStream: document.getElementById('report-stream'),
             emptyState: document.getElementById('empty-state'),
-            liveIndicator: document.getElementById('live-indicator')
+            liveIndicator: document.getElementById('live-indicator'),
+            collapseAllBtn: document.getElementById('collapse-all-btn')
         };
+
+        // 모두 접기 버튼 이벤트 바인딩
+        this._setupCollapseAllButton();
 
         // 모듈 초기화
         this.htmlBuilder = new CardHtmlBuilder(uiManager);
@@ -25,7 +29,8 @@ export class ReportManager {
             storage,
             uiManager,
             null, // mindmapManager는 나중에 설정
-            () => this._checkEmptyState()
+            () => this._checkEmptyState(),
+            () => this.syncCollapseAllButtonState() // 개별 카드 접기 시 버튼 상태 동기화
         );
     }
 
@@ -36,9 +41,74 @@ export class ReportManager {
     // ==================== 내부 헬퍼 ====================
 
     _setEmptyStateVisibility(visible) {
-        const { emptyState, liveIndicator } = this.elements;
+        const { emptyState, liveIndicator, collapseAllBtn } = this.elements;
         if (emptyState) emptyState.style.display = visible ? 'flex' : 'none';
         if (liveIndicator) liveIndicator.style.display = visible ? 'none' : 'flex';
+        // 카드가 없으면 모두 접기 버튼 숨김
+        if (collapseAllBtn) collapseAllBtn.classList.toggle('hidden', visible);
+    }
+
+    // ==================== 모두 접기/펼치기 ====================
+
+    _setupCollapseAllButton() {
+        const { collapseAllBtn } = this.elements;
+        if (!collapseAllBtn) return;
+
+        collapseAllBtn.addEventListener('click', () => this.toggleCollapseAll());
+    }
+
+    /**
+     * 모든 카드 접기/펼치기 토글
+     */
+    toggleCollapseAll() {
+        const cards = this.elements.reportStream.querySelectorAll('.result-card--unified');
+        if (cards.length === 0) return;
+
+        // 현재 상태 확인: 하나라도 펼쳐져 있으면 모두 접기, 전부 접혀있으면 모두 펼치기
+        const hasExpanded = Array.from(cards).some(card => !card.classList.contains('collapsed'));
+
+        cards.forEach(card => {
+            if (hasExpanded) {
+                card.classList.add('collapsed');
+            } else {
+                card.classList.remove('collapsed');
+            }
+        });
+
+        this._updateCollapseAllButton(!hasExpanded);
+    }
+
+    /**
+     * 모두 접기 버튼 상태 업데이트
+     * @param {boolean} allCollapsed - 모든 카드가 접힌 상태인지
+     */
+    _updateCollapseAllButton(allCollapsed) {
+        const { collapseAllBtn } = this.elements;
+        if (!collapseAllBtn) return;
+
+        const icon = collapseAllBtn.querySelector('.material-symbols-outlined');
+        const label = collapseAllBtn.querySelector('.collapse-all-label');
+
+        if (allCollapsed) {
+            icon.textContent = 'unfold_more';
+            label.textContent = '모두 펼치기';
+            collapseAllBtn.title = '모두 펼치기';
+        } else {
+            icon.textContent = 'unfold_less';
+            label.textContent = '모두 접기';
+            collapseAllBtn.title = '모두 접기';
+        }
+    }
+
+    /**
+     * 개별 카드 접기/펼치기 시 버튼 상태 동기화
+     */
+    syncCollapseAllButtonState() {
+        const cards = this.elements.reportStream.querySelectorAll('.result-card--unified');
+        if (cards.length === 0) return;
+
+        const allCollapsed = Array.from(cards).every(card => card.classList.contains('collapsed'));
+        this._updateCollapseAllButton(allCollapsed);
     }
 
     _checkEmptyState() {

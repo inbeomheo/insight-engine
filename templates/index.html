@@ -877,7 +877,13 @@
                         <!-- 헤더 -->
                         <div class="p-4 border-b border-border-dark flex-shrink-0">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-semibold text-text-primary">결과</h2>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-lg font-semibold text-text-primary">결과</h2>
+                                    <button id="collapse-all-btn" class="collapse-all-btn hidden" title="모두 접기" aria-label="모든 카드 접기/펼치기">
+                                        <span class="material-symbols-outlined">unfold_less</span>
+                                        <span class="collapse-all-label">모두 접기</span>
+                                    </button>
+                                </div>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>

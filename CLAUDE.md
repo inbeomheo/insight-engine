@@ -301,7 +301,7 @@ npx playwright test settings-modals/ history-usage/
 결과 카드는 통합 컴팩트 디자인 (`result-card--unified`):
 ```
 ┌─────────────────────────────────────┐
-│ [스타일뱃지] 12:34  [복사][복사]    │  ← unified-header
+│ [스타일뱃지] 12:34  [복사][복사][↑] │  ← unified-header (collapse-btn)
 │ 제목                                │
 │ ▶ youtu.be/xxx                      │
 ├─────────────────────────────────────┤
@@ -315,3 +315,24 @@ npx playwright test settings-modals/ history-usage/
 - `CardHtmlBuilder.buildReportCardHtml()` - HTML 템플릿 생성
 - `_cards.css` - 통합 카드 스타일, 더보기 메뉴 (`.more-actions-btn`)
 - `_report-content.css` - 본문 타이포그래피
+
+### 카드 접기/펼치기 기능
+
+**개별 카드 접기:**
+- 각 카드 헤더의 `collapse-btn` 클릭
+- `.collapsed` 클래스 토글 → unified-body, unified-footer 숨김
+- 접힌 상태: 패딩 축소, 제목 작게, 소스 링크 숨김
+
+**모두 접기/펼치기:**
+- 결과 패널 헤더의 `#collapse-all-btn` 버튼
+- `ReportManager.toggleCollapseAll()` - 모든 카드 토글
+- 버튼 상태 자동 동기화: 개별 카드 변경 시 `syncCollapseAllButtonState()` 호출
+
+```javascript
+// 모두 접기 토글
+reportManager.toggleCollapseAll();
+
+// 버튼 텍스트/아이콘 상태
+// 펼쳐진 카드 있음 → "모두 접기" (unfold_less)
+// 모두 접힘 → "모두 펼치기" (unfold_more)
+```
