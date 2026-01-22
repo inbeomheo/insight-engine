@@ -21,18 +21,9 @@
         100% 100%;
 }
 
-/* Sidebar - 200px fixed width */
+/* Sidebar - 숨김 (네비게이션 버튼 제거됨) */
 #sidebar {
-    width: 200px !important;
-    min-width: 200px;
-    max-width: 200px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--border-dark);
-    background: var(--background-dark);
-    height: 100%;
-    z-index: 50;
+    display: none !important;
 }
 
 /* Input Panel - 350px fixed width */

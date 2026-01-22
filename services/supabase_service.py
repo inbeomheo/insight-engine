@@ -604,3 +604,63 @@ def get_usage_stats() -> dict:
         }
 
     return _db_operation('Usage stats', {}, operation)
+
+
+def get_all_contents(page: int = 1, per_page: int = 20) -> dict:
+    """모든 사용자의 생성 콘텐츠 조회 (관리자용)"""
+    supabase = get_supabase()
+    if not supabase:
+        return {'contents': [], 'total': 0}
+
+    def operation():
+        # 전체 개수
+        count_result = supabase.table('ie_histories') \
+            .select('report_id', count='exact') \
+            .execute()
+        total = count_result.count or 0
+
+        # 페이지네이션
+        offset = (page - 1) * per_page
+        result = supabase.table('ie_histories') \
+            .select('report_id, user_id, url, title, style, created_at') \
+            .order('created_at', desc=True) \
+            .range(offset, offset + per_page - 1) \
+            .execute()
+
+        contents = []
+        for item in (result.data or []):
+            contents.append({
+                'id': item['report_id'],
+                'user_id': item['user_id'],
+                'url': item['url'],
+                'title': item['title'],
+                'style': item['style'],
+                'created_at': item['created_at']
+            })
+
+        return {
+            'contents': contents,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page
+        }
+
+    return _db_operation('All contents', {'contents': [], 'total': 0}, operation)
+
+
+def get_content_detail(report_id: str) -> dict:
+    """특정 콘텐츠 상세 조회 (관리자용)"""
+    supabase = get_supabase()
+    if not supabase or not report_id:
+        return {}
+
+    def operation():
+        result = supabase.table('ie_histories') \
+            .select('*') \
+            .eq('report_id', report_id) \
+            .single() \
+            .execute()
+        return result.data or {}
+
+    return _db_operation('Content detail', {}, operation)

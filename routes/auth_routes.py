@@ -6,9 +6,9 @@ from flask import Blueprint, request, jsonify, g
 from services.supabase_service import (
     get_supabase, is_supabase_enabled, require_auth,
     save_api_keys, get_api_keys,
-    get_histories, delete_history, update_history,
     save_custom_style, get_custom_styles, delete_custom_style,
-    get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats
+    get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
+    get_all_contents, get_content_detail
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -311,60 +311,6 @@ def save_user_keys():
 
 
 # =============================================
-# 히스토리 관리
-# =============================================
-
-def _format_history(h):
-    """DB 히스토리를 프론트엔드 형식으로 변환"""
-    return {
-        'id': h['report_id'],
-        'url': h['url'],
-        'title': h['title'],
-        'style': h['style'],
-        'content': h['content'],
-        'html': h['html'],
-        'transcript': h.get('transcript'),
-        'mindmapMarkdown': h.get('mindmap_markdown'),
-        'usage': h.get('usage'),
-        'elapsed_time': h.get('elapsed_time'),
-        'time': h['created_at'],
-        'timestamp': h['created_at']
-    }
-
-
-@auth_bp.route('/api/user/histories', methods=['GET'])
-@require_auth
-def get_user_histories():
-    """사용자 히스토리 조회"""
-    histories = get_histories(g.user_id)
-    return jsonify({'histories': [_format_history(h) for h in histories]})
-
-
-@auth_bp.route('/api/user/histories/<report_id>', methods=['DELETE'])
-@require_auth
-def delete_user_history(report_id):
-    """사용자 히스토리 삭제"""
-    if delete_history(g.user_id, report_id):
-        return _success_response()
-    return _error_response('삭제에 실패했습니다.', 500)
-
-
-@auth_bp.route('/api/user/histories/<report_id>', methods=['PATCH'])
-@require_auth
-def update_user_history(report_id):
-    """사용자 히스토리 업데이트"""
-    data = _get_json_data()
-    updates = {}
-
-    if 'mindmapMarkdown' in data:
-        updates['mindmap_markdown'] = data['mindmapMarkdown']
-
-    if update_history(g.user_id, report_id, updates):
-        return _success_response()
-    return _error_response('업데이트에 실패했습니다.', 500)
-
-
-# =============================================
 # 커스텀 스타일 관리
 # =============================================
 
@@ -460,3 +406,32 @@ def get_admin_stats():
 
     stats = get_usage_stats()
     return jsonify(stats)
+
+
+@auth_bp.route('/api/admin/contents', methods=['GET'])
+@require_auth
+def get_admin_contents():
+    """모든 사용자의 생성 콘텐츠 조회 (관리자 전용)"""
+    error = _require_admin()
+    if error:
+        return error
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    result = get_all_contents(page, per_page)
+    return jsonify(result)
+
+
+@auth_bp.route('/api/admin/contents/<report_id>', methods=['GET'])
+@require_auth
+def get_admin_content_detail(report_id):
+    """특정 콘텐츠 상세 조회 (관리자 전용)"""
+    error = _require_admin()
+    if error:
+        return error
+
+    content = get_content_detail(report_id)
+    if not content:
+        return _error_response('콘텐츠를 찾을 수 없습니다.', 404)
+    return jsonify(content)

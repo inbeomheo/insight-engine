@@ -12,8 +12,8 @@ import { ReportManager } from './modules/ReportManager.js';
 import { ContentGenerator } from './modules/ContentGenerator.js';
 import { MindmapManager } from './modules/MindmapManager.js';
 import { AuthManager } from './modules/AuthManager.js';
-import { HistoryPanelManager } from './modules/HistoryPanelManager.js';
 import { UsagePanelManager } from './modules/UsagePanelManager.js';
+import { AdminDashboard } from './modules/AdminDashboard.js';
 import { ThemeManager } from './modules/ThemeManager.js';
 import { PanelResizeManager } from './modules/PanelResizeManager.js';
 import { KeyboardNavigationManager } from './modules/KeyboardNavigationManager.js';
@@ -45,10 +45,12 @@ class ContentAnalysis {
             this.authManager
         );
 
-        // 히스토리/사용량 패널 매니저 (중앙 EventBus 사용)
+        // 사용량 패널 매니저 (중앙 EventBus 사용)
         this.eventBus = getEventBus();
-        this.historyPanelManager = new HistoryPanelManager(this.storage, this.eventBus);
         this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus);
+
+        // 관리자 대시보드
+        this.adminDashboard = new AdminDashboard(this.ui);
 
         // 패널 리사이즈 매니저
         this.panelResizeManager = new PanelResizeManager();
@@ -64,11 +66,6 @@ class ContentAnalysis {
 
         // 모달 매니저에 커스텀 스타일 변경 콜백 연결
         this.modalManager.onCustomStylesChange = () => this.styleManager.renderCustomStyles();
-
-        // 히스토리에서 아이템 보기 이벤트 처리
-        this.eventBus.on('history:view-item', (item) => {
-            this.reportManager.displayHistoryItem(item);
-        });
 
         this.init();
     }
@@ -94,9 +91,11 @@ class ContentAnalysis {
         this.providerManager.updateProviderLabel();
         this.reportManager.loadHistory();
 
-        // 히스토리/사용량 패널 초기화
-        this.historyPanelManager.init();
+        // 사용량 바 초기화
         this.usagePanelManager.init();
+
+        // 관리자 대시보드 초기화
+        this.adminDashboard.init();
 
         // 패널 리사이즈 초기화
         this.panelResizeManager.init();

@@ -107,3 +107,66 @@
     box-shadow: 0 0 0 2px rgba(15, 117, 138, 0.3),
                 0 24px 64px rgba(0, 0, 0, 0.6);
 }
+
+/* ==================== Admin Dashboard Modal ==================== */
+
+/* 관리자 탭 스타일 */
+.admin-tab {
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.admin-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-tab.active {
+    color: var(--primary);
+    background: var(--primary-bg, rgba(212, 168, 122, 0.15));
+    border-bottom: 2px solid var(--primary);
+}
+
+/* 관리자 테이블 스타일 */
+#admin-modal table {
+    border-collapse: collapse;
+}
+
+#admin-modal th {
+    background: var(--background-dark);
+}
+
+#admin-modal tbody tr:hover {
+    background: var(--background-dark);
+}
+
+/* 관리자 버튼 스타일 */
+.admin-reset-btn {
+    border: none;
+    cursor: pointer;
+}
+
+/* 콘텐츠 미리보기 */
+#admin-content-preview {
+    border: 1px solid var(--border-dark);
+}
+
+#admin-preview-content {
+    line-height: 1.6;
+}
+
+#admin-preview-content h1,
+#admin-preview-content h2,
+#admin-preview-content h3 {
+    color: var(--text-primary);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+#admin-preview-content p {
+    margin-bottom: 0.75rem;
+}
