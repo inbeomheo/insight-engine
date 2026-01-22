@@ -68,10 +68,10 @@ JSON 응답 {title, content, html, usage}
 | 레이어 | 파일 | 역할 |
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성 API, `@require_usage` 데코레이터 |
-| 라우트 | `routes/auth_routes.py` | 인증, API 키, 히스토리, 사용량 관리 |
+| 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자 API |
 | 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다중 프로바이더 통합 |
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 폴백 로직 |
-| 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD |
+| 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격 정의 |
 | 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (16개 스타일) |
 
@@ -98,8 +98,8 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 | `StyleManager.js` | 스타일 카드 선택 |
 | `ThemeManager.js` | 테마 전환 (Dark/Light/Minimal), localStorage 저장 |
 | `ContentGenerator.js` | `/generate` API 호출, 재시도 로직 (지수 백오프) |
-| `HistoryPanelManager.js` | 히스토리 뷰, `button[data-section="history"]` |
-| `UsagePanelManager.js` | 사용량 뷰, `button[data-section="usage"]` |
+| `UsagePanelManager.js` | 사용량 프로그레스 바 UI (`#usage-bar-*`) |
+| `AdminDashboard.js` | 관리자 대시보드 모달 (`#admin-modal`) - 사용자/콘텐츠 관리 |
 | `ModalManager.js` | 온보딩 모달 (`#onboarding-modal`, `#onboarding-save`) |
 | `AuthManager.js` | 인증 상태 관리, 사이드바/헤더 UI 업데이트 |
 | `report/` | ReportManager 분할 모듈 (CardHtmlBuilder, CardEventHandler, ReportFormatter) |
@@ -232,6 +232,16 @@ def generate_batch():
 - 일일 사용량: 20회 (`services/supabase_service.py`의 `MAX_USAGE_COUNT`)
 - 관리자는 무제한 (999회)
 
+### 관리자 API (`@require_auth` + `is_admin` 체크)
+
+| 엔드포인트 | 메서드 | 설명 |
+|-----------|--------|------|
+| `/api/admin/users` | GET | 전체 사용자 사용량 조회 |
+| `/api/admin/users/<user_id>/reset` | POST | 특정 사용자 사용량 리셋 |
+| `/api/admin/stats` | GET | 사용량 통계 (전체/오늘/소진) |
+| `/api/admin/contents` | GET | 모든 생성 콘텐츠 조회 (페이지네이션) |
+| `/api/admin/contents/<report_id>` | GET | 특정 콘텐츠 상세 조회 |
+
 ### 모디파이어 (`config.py`)
 - `length`: short/medium/long
 - `tone`: professional/friendly/humorous
@@ -255,10 +265,10 @@ def test_example(self, mock_enabled):
 Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 실행 (Supabase 비활성화 상태).
 
 **테스트 그룹:**
-- `no-auth-chromium`: 메인 페이지, URL 입력, 접근성, 반응형, 모달, 패널
+- `no-auth-chromium`: 메인 페이지, URL 입력, 접근성, 반응형, 모달
 - `content-generation`: 콘텐츠 생성
 - `batch-generation`: 배치 처리
-- `authenticated-tests`: 히스토리, 설정, 사용량 (인증 필요 시 스킵)
+- `authenticated-tests`: 설정, 사용량, 관리자 기능 (인증 필요 시 스킵)
 - `error-handling`: 에러 케이스
 - `performance`: 로드 시간
 
@@ -274,11 +284,11 @@ Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 �
 npx playwright test --workers=1
 
 # 특정 폴더만 실행
-npx playwright test settings-modals/ history-usage/
+npx playwright test settings-modals/ main-page/
 ```
 
 **자주 발생하는 테스트 오류:**
-- `strict mode violation`: 데스크톱/모바일 버튼 중복 → `#sidebar button[data-section="..."]` 사용
+- `strict mode violation`: 여러 요소 매칭 시 더 구체적인 선택자 사용
 - 서버 타임아웃: `--workers=1`로 실행
 - localStorage 키 불일치: 여러 키 시도 또는 UI에서 직접 확인
 
