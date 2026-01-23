@@ -3,9 +3,10 @@
  * 입력 패널 상단의 사용량 프로그레스 바를 관리
  */
 export class UsagePanelManager {
-    constructor(storageManager, eventBus) {
+    constructor(storageManager, eventBus, authManager) {
         this.storageManager = storageManager;
         this.eventBus = eventBus;
+        this.authManager = authManager;
         this.elements = {};
     }
 
@@ -37,7 +38,9 @@ export class UsagePanelManager {
 
     async updateUsageBar() {
         try {
-            const response = await fetch('/api/user/usage');
+            // 인증 헤더 추가
+            const headers = this.authManager?.getAuthHeaders?.() || {};
+            const response = await fetch('/api/user/usage', { headers });
             if (!response.ok) {
                 this.showLocalMode();
                 return;

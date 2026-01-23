@@ -47,7 +47,7 @@ class ContentAnalysis {
 
         // 사용량 패널 매니저 (중앙 EventBus 사용)
         this.eventBus = getEventBus();
-        this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus);
+        this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus, this.authManager);
 
         // 관리자 대시보드
         this.adminDashboard = new AdminDashboard(this.ui);
