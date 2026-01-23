@@ -34,6 +34,15 @@ Thumbs.db
 
 # Claude Code temp files
 tmpclaude-*
+.claude/
+
+# Playwright MCP screenshots
+.playwright-mcp/
+
+# Design mockups & reports
+landing.html
+mockup-*.html
+CODE_REVIEW.html
 
 # Build
 build/
