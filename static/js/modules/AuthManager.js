@@ -179,6 +179,10 @@ export class AuthManager {
         return this.session?.access_token || null;
     }
 
+    getAuthHeaders() {
+        return this._getAuthHeaders();
+    }
+
     isLoggedIn() {
         return Boolean(this.user && this.session);
     }
