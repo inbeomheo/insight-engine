@@ -228,7 +228,7 @@ export class AdminDashboard {
                 <td class="p-3 text-center">
                     <span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-xs">${content.style || '-'}</span>
                 </td>
-                <td class="p-3 text-center text-text-muted text-xs">${content.user_id?.substring(0, 8) || '-'}...</td>
+                <td class="p-3 text-center text-text-muted text-xs">${this.escapeHtml(content.user_email || '-')}</td>
                 <td class="p-3 text-center text-text-muted text-xs">${createdAt}</td>
             </tr>
         `;

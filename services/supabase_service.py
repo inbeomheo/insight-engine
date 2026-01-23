@@ -619,23 +619,26 @@ def get_all_contents(page: int = 1, per_page: int = 20) -> dict:
             .execute()
         total = count_result.count or 0
 
-        # 페이지네이션
+        # 페이지네이션 - view를 사용하여 이메일 포함 조회
         offset = (page - 1) * per_page
-        result = supabase.table('ie_histories') \
-            .select('report_id, user_id, url, title, style, created_at') \
+        result = supabase.table('ie_histories_with_email') \
+            .select('report_id, user_id, user_email, url, title, style, created_at') \
             .order('created_at', desc=True) \
             .range(offset, offset + per_page - 1) \
             .execute()
 
         contents = []
         for item in (result.data or []):
+            user_email = item.get('user_email')
+            user_id = item.get('user_id', '')
             contents.append({
-                'id': item['report_id'],
-                'user_id': item['user_id'],
-                'url': item['url'],
-                'title': item['title'],
-                'style': item['style'],
-                'created_at': item['created_at']
+                'id': item.get('report_id'),
+                'user_id': user_id,
+                'user_email': user_email or (user_id[:8] + '...' if user_id else '-'),
+                'url': item.get('url'),
+                'title': item.get('title'),
+                'style': item.get('style'),
+                'created_at': item.get('created_at')
             })
 
         return {
