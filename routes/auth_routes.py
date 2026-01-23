@@ -411,15 +411,22 @@ def get_admin_stats():
 @auth_bp.route('/api/admin/contents', methods=['GET'])
 @require_auth
 def get_admin_contents():
-    """모든 사용자의 생성 콘텐츠 조회 (관리자 전용)"""
+    """모든 사용자의 생성 콘텐츠 조회 (관리자 전용)
+
+    Query Parameters:
+        page: 페이지 번호 (기본값: 1)
+        per_page: 페이지당 항목 수 (기본값: 20)
+        user_id: 특정 사용자 필터 (선택)
+    """
     error = _require_admin()
     if error:
         return error
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
+    user_id = request.args.get('user_id', None, type=str)
 
-    result = get_all_contents(page, per_page)
+    result = get_all_contents(page, per_page, user_id)
     return jsonify(result)
 
 

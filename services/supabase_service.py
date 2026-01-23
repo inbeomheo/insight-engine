@@ -532,14 +532,15 @@ def get_admin_permissions(user_id: str) -> dict:
 
 
 def get_all_users_usage() -> list:
-    """모든 사용자의 사용량 조회 (관리자용)"""
+    """모든 사용자의 사용량 조회 (관리자용) - 이메일 포함"""
     supabase = get_supabase()
     if not supabase:
         return []
 
     def operation():
-        result = supabase.table('ie_usage') \
-            .select('*') \
+        # view를 사용하여 이메일 포함 조회
+        result = supabase.table('ie_usage_with_email') \
+            .select('user_id, usage_count, last_reset_date, email') \
             .order('usage_count', desc=False) \
             .execute()
         return result.data or []
@@ -606,35 +607,46 @@ def get_usage_stats() -> dict:
     return _db_operation('Usage stats', {}, operation)
 
 
-def get_all_contents(page: int = 1, per_page: int = 20) -> dict:
-    """모든 사용자의 생성 콘텐츠 조회 (관리자용)"""
+def get_all_contents(page: int = 1, per_page: int = 20, user_id: str = None) -> dict:
+    """모든 사용자의 생성 콘텐츠 조회 (관리자용)
+
+    Args:
+        page: 페이지 번호
+        per_page: 페이지당 항목 수
+        user_id: 특정 사용자 필터 (None이면 전체)
+    """
     supabase = get_supabase()
     if not supabase:
         return {'contents': [], 'total': 0}
 
     def operation():
-        # 전체 개수
-        count_result = supabase.table('ie_histories') \
-            .select('report_id', count='exact') \
-            .execute()
+        # 전체 개수 쿼리
+        count_query = supabase.table('ie_histories').select('report_id', count='exact')
+        if user_id:
+            count_query = count_query.eq('user_id', user_id)
+        count_result = count_query.execute()
         total = count_result.count or 0
 
         # 페이지네이션 - view를 사용하여 이메일 포함 조회
         offset = (page - 1) * per_page
-        result = supabase.table('ie_histories_with_email') \
-            .select('report_id, user_id, user_email, url, title, style, created_at') \
-            .order('created_at', desc=True) \
+        query = supabase.table('ie_histories_with_email') \
+            .select('report_id, user_id, user_email, url, title, style, created_at')
+
+        if user_id:
+            query = query.eq('user_id', user_id)
+
+        result = query.order('created_at', desc=True) \
             .range(offset, offset + per_page - 1) \
             .execute()
 
         contents = []
         for item in (result.data or []):
-            user_email = item.get('user_email')
-            user_id = item.get('user_id', '')
+            item_user_email = item.get('user_email')
+            item_user_id = item.get('user_id', '')
             contents.append({
                 'id': item.get('report_id'),
-                'user_id': user_id,
-                'user_email': user_email or (user_id[:8] + '...' if user_id else '-'),
+                'user_id': item_user_id,
+                'user_email': item_user_email or (item_user_id[:8] + '...' if item_user_id else '-'),
                 'url': item.get('url'),
                 'title': item.get('title'),
                 'style': item.get('style'),
@@ -646,7 +658,8 @@ def get_all_contents(page: int = 1, per_page: int = 20) -> dict:
             'total': total,
             'page': page,
             'per_page': per_page,
-            'total_pages': (total + per_page - 1) // per_page
+            'total_pages': (total + per_page - 1) // per_page,
+            'filtered_user_id': user_id
         }
 
     return _db_operation('All contents', {'contents': [], 'total': 0}, operation)

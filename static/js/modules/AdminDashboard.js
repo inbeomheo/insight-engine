@@ -8,6 +8,9 @@ export class AdminDashboard {
         this.currentPage = 1;
         this.perPage = 20;
         this.elements = {};
+        // 사용자 필터 상태
+        this.filterUserId = null;
+        this.filterUserEmail = null;
     }
 
     getHeaders() {
@@ -125,9 +128,21 @@ export class AdminDashboard {
 
             tbody.innerHTML = users.map(user => this.renderUserRow(user)).join('');
 
-            // 리셋 버튼 이벤트
+            // 리셋 버튼 이벤트 (이벤트 버블링 방지)
             tbody.querySelectorAll('.admin-reset-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.resetUser(btn.dataset.userId));
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.resetUser(btn.dataset.userId);
+                });
+            });
+
+            // 사용자 행 클릭 이벤트 - 해당 사용자의 콘텐츠 보기
+            tbody.querySelectorAll('.admin-user-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    const userId = row.dataset.userId;
+                    const userEmail = row.dataset.userEmail;
+                    this.filterByUser(userId, userEmail);
+                });
             });
 
         } catch (e) {
@@ -141,6 +156,7 @@ export class AdminDashboard {
         const maxUsage = 20;
         const used = maxUsage - usageCount;
         const percent = (used / maxUsage) * 100;
+        const userEmail = user.email || user.user_id?.substring(0, 12) + '...';
 
         // 색상 결정
         let colorClass = 'text-text-primary';
@@ -148,8 +164,13 @@ export class AdminDashboard {
         else if (percent >= 50) colorClass = 'text-amber-400';
 
         return `
-            <tr class="border-b border-border-dark/50 hover:bg-background-dark/50">
-                <td class="p-3 text-text-primary">${this.escapeHtml(user.user_id?.substring(0, 20) || '-')}...</td>
+            <tr class="admin-user-row border-b border-border-dark/50 hover:bg-primary/10 cursor-pointer transition-colors"
+                data-user-id="${user.user_id}"
+                data-user-email="${this.escapeHtml(userEmail)}"
+                title="클릭하여 이 사용자의 콘텐츠 보기">
+                <td class="p-3 text-text-primary">
+                    <span class="hover:text-primary">${this.escapeHtml(userEmail)}</span>
+                </td>
                 <td class="p-3 text-center">
                     <span class="${colorClass} font-medium">${used}/${maxUsage}</span>
                 </td>
@@ -184,6 +205,57 @@ export class AdminDashboard {
         }
     }
 
+    /**
+     * 특정 사용자의 콘텐츠만 필터링하여 보기
+     */
+    filterByUser(userId, userEmail) {
+        this.filterUserId = userId;
+        this.filterUserEmail = userEmail;
+        this.currentPage = 1;
+        this.switchTab('contents');
+    }
+
+    /**
+     * 필터 해제 - 전체 콘텐츠 보기
+     */
+    clearFilter() {
+        this.filterUserId = null;
+        this.filterUserEmail = null;
+        this.currentPage = 1;
+        this.loadContents(1);
+    }
+
+    /**
+     * 필터 상태 UI 렌더링
+     */
+    renderFilterStatus() {
+        const container = this.elements.contentsTab;
+        if (!container) return;
+
+        // 기존 필터 상태 UI 제거
+        const existing = container.querySelector('.filter-status');
+        if (existing) existing.remove();
+
+        // 필터가 활성화되어 있으면 UI 표시
+        if (this.filterUserId) {
+            const filterHtml = `
+                <div class="filter-status flex items-center gap-2 mb-4 p-3 bg-primary/10 rounded-lg border border-primary/30">
+                    <span class="material-symbols-outlined text-primary text-sm">filter_alt</span>
+                    <span class="text-sm text-text-primary">
+                        <strong class="text-primary">${this.escapeHtml(this.filterUserEmail)}</strong>의 콘텐츠만 표시 중
+                    </span>
+                    <button class="clear-filter-btn ml-auto px-3 py-1 text-xs bg-surface-dark hover:bg-red-500/20 text-text-muted hover:text-red-400 rounded transition-colors">
+                        필터 해제
+                    </button>
+                </div>
+            `;
+            container.insertAdjacentHTML('afterbegin', filterHtml);
+
+            // 필터 해제 버튼 이벤트
+            container.querySelector('.clear-filter-btn')?.addEventListener('click', () => this.clearFilter());
+        }
+    }
+
     async loadContents(page = 1) {
         this.currentPage = page;
         const tbody = this.elements.contentsTbody;
@@ -191,8 +263,17 @@ export class AdminDashboard {
 
         tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-text-muted">로딩 중...</td></tr>';
 
+        // 필터 상태 UI 렌더링
+        this.renderFilterStatus();
+
         try {
-            const response = await fetch(`/api/admin/contents?page=${page}&per_page=${this.perPage}`, {
+            // URL 파라미터 구성
+            let url = `/api/admin/contents?page=${page}&per_page=${this.perPage}`;
+            if (this.filterUserId) {
+                url += `&user_id=${encodeURIComponent(this.filterUserId)}`;
+            }
+
+            const response = await fetch(url, {
                 headers: this.getHeaders()
             });
             if (!response.ok) throw new Error('API 오류');
@@ -201,7 +282,10 @@ export class AdminDashboard {
             const contents = data.contents || [];
 
             if (contents.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-text-muted">콘텐츠가 없습니다.</td></tr>';
+                const message = this.filterUserId
+                    ? '이 사용자가 생성한 콘텐츠가 없습니다.'
+                    : '콘텐츠가 없습니다.';
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-text-muted">${message}</td></tr>`;
                 this.renderPagination(0, 0);
                 return;
             }
