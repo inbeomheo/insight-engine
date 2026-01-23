@@ -2,11 +2,16 @@
  * AdminDashboard - 관리자 대시보드 UI 관리
  */
 export class AdminDashboard {
-    constructor(uiManager) {
+    constructor(uiManager, authManager) {
         this.ui = uiManager;
+        this.authManager = authManager;
         this.currentPage = 1;
         this.perPage = 20;
         this.elements = {};
+    }
+
+    getHeaders() {
+        return this.authManager?.getAuthHeaders?.() || {};
     }
 
     init() {
@@ -88,7 +93,7 @@ export class AdminDashboard {
 
     async loadStats() {
         try {
-            const response = await fetch('/api/admin/stats');
+            const response = await fetch('/api/admin/stats', { headers: this.getHeaders() });
             if (!response.ok) return;
 
             const data = await response.json();
@@ -107,7 +112,7 @@ export class AdminDashboard {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-text-muted">로딩 중...</td></tr>';
 
         try {
-            const response = await fetch('/api/admin/users');
+            const response = await fetch('/api/admin/users', { headers: this.getHeaders() });
             if (!response.ok) throw new Error('API 오류');
 
             const data = await response.json();
@@ -162,7 +167,10 @@ export class AdminDashboard {
         if (!confirm('이 사용자의 사용량을 리셋하시겠습니까?')) return;
 
         try {
-            const response = await fetch(`/api/admin/users/${userId}/reset`, { method: 'POST' });
+            const response = await fetch(`/api/admin/users/${userId}/reset`, {
+                method: 'POST',
+                headers: this.getHeaders()
+            });
             if (response.ok) {
                 this.ui?.showAlert('사용량이 리셋되었습니다.', 'success');
                 await this.loadUsers();
@@ -184,7 +192,9 @@ export class AdminDashboard {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-text-muted">로딩 중...</td></tr>';
 
         try {
-            const response = await fetch(`/api/admin/contents?page=${page}&per_page=${this.perPage}`);
+            const response = await fetch(`/api/admin/contents?page=${page}&per_page=${this.perPage}`, {
+                headers: this.getHeaders()
+            });
             if (!response.ok) throw new Error('API 오류');
 
             const data = await response.json();
@@ -262,7 +272,9 @@ export class AdminDashboard {
 
     async showPreview(reportId) {
         try {
-            const response = await fetch(`/api/admin/contents/${reportId}`);
+            const response = await fetch(`/api/admin/contents/${reportId}`, {
+                headers: this.getHeaders()
+            });
             if (!response.ok) throw new Error('API 오류');
 
             const content = await response.json();

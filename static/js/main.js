@@ -50,7 +50,7 @@ class ContentAnalysis {
         this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus, this.authManager);
 
         // 관리자 대시보드
-        this.adminDashboard = new AdminDashboard(this.ui);
+        this.adminDashboard = new AdminDashboard(this.ui, this.authManager);
 
         // 패널 리사이즈 매니저
         this.panelResizeManager = new PanelResizeManager();
