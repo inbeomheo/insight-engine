@@ -373,6 +373,11 @@ export class AuthManager {
 
         // 사이드바 하단 로그인 버튼 상태 업데이트
         this.updateSidebarAuthUI(isLoggedIn);
+
+        // 인증 상태 변경 이벤트 발생 (UsagePanelManager 등에서 수신)
+        window.dispatchEvent(new CustomEvent('auth:state-changed', {
+            detail: { isLoggedIn, user: this.user }
+        }));
     }
 
     updateSidebarAuthUI(isLoggedIn) {
