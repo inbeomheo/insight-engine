@@ -274,6 +274,7 @@ def recommend_style():
     """YouTube 제목을 분석하여 최적의 스타일과 모디파이어를 AI로 추천합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     """
+    title: str | None = None  # P1 버그 수정: 예외 발생 전 title 미정의 방지
     try:
         data = request.get_json(silent=True) or {}
         url = data.get('url')
@@ -336,7 +337,7 @@ def recommend_style():
             'style': 'detailed',
             'reason': 'AI 응답 파싱 실패',
             'modifiers': {'length': 'medium', 'tone': 'professional', 'emoji': 'none'},
-            'title': title if 'title' in dir() else 'YouTube 영상'
+            'title': title or 'YouTube 영상'
         })
     except Exception as e:
         current_app.logger.error(f"Recommend style failed: {e}")
@@ -348,6 +349,7 @@ def generate_style():
     """YouTube 제목과 자막을 분석하여 맞춤형 프롬프트를 AI로 생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     """
+    title: str | None = None  # P1 버그 수정: 예외 발생 전 title 미정의 방지
     try:
         data = request.get_json(silent=True) or {}
         url = data.get('url')
@@ -368,7 +370,9 @@ def generate_style():
         if isinstance(transcript, dict) and transcript.get('error'):
             transcript_preview = "(자막 없음)"
         else:
-            transcript_preview = transcript[:500] if len(transcript) > 500 else transcript
+            # P2 버그 #4 수정: transcript가 dict이면 text 필드 추출
+            text = transcript.get('text', '') if isinstance(transcript, dict) else str(transcript or '')
+            transcript_preview = text[:500] if text else "(자막 없음)"
 
         prompt = f"""다음 YouTube 영상의 제목과 자막 일부를 분석하여, 이 영상 콘텐츠에 최적화된 블로그 작성 프롬프트를 생성해주세요.
 
@@ -404,7 +408,7 @@ def generate_style():
     except json.JSONDecodeError:
         return jsonify({
             'error': 'AI 응답 JSON 파싱 실패',
-            'title': title if 'title' in dir() else 'YouTube 영상'
+            'title': title or 'YouTube 영상'
         }), 500
     except Exception as e:
         current_app.logger.error(f"Generate style failed: {e}")
@@ -676,23 +680,47 @@ def generate_batch():
         if success_count > 0:
             updated_usage = UsageService.decrement(g.user_id)
 
-        # 성공한 결과들 히스토리 저장 (클라우드)
+        # P2 버그 #7 수정: 배치 히스토리 저장 (N+1 → 배치 INSERT)
+        # 배치에서는 transcript, usage, elapsed_time이 None (P3 #13 문서화)
         if g.user_id:
+            histories_to_save = []
             for result in ordered_results:
                 if result.get('success'):
                     report_id = str(uuid.uuid4())
-                    result['id'] = report_id  # 결과에 ID 추가
-                    save_history(g.user_id, {
+                    result['id'] = report_id
+                    histories_to_save.append({
                         'id': report_id,
                         'url': result.get('url'),
                         'title': result.get('title'),
                         'style': style,
                         'content': result.get('content', ''),
                         'html': result.get('html', ''),
-                        'transcript': None,  # 배치에서는 자막 저장 생략
+                        'transcript': None,
                         'usage': None,
                         'elapsed_time': None
                     })
+
+            # 배치 INSERT (1회 DB 호출)
+            if histories_to_save:
+                from services.supabase_service import get_supabase
+                supabase = get_supabase()
+                if supabase:
+                    try:
+                        batch_data = [{
+                            'user_id': g.user_id,
+                            'report_id': h['id'],
+                            'url': h['url'],
+                            'title': h['title'],
+                            'style': h['style'],
+                            'content': h['content'],
+                            'html': h['html'],
+                            'transcript': h['transcript'],
+                            'usage': h['usage'],
+                            'elapsed_time': h['elapsed_time']
+                        } for h in histories_to_save]
+                        supabase.table('ie_histories').insert(batch_data).execute()
+                    except Exception as e:
+                        current_app.logger.warning(f"배치 히스토리 저장 실패: {e}")
 
         return jsonify({
             'success': True,

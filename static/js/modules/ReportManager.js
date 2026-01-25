@@ -278,7 +278,11 @@ export class ReportManager {
             // 클라우드 데이터로 로컬 스토리지 동기화 (옵션)
             // this.storage.syncFromCloud(histories);
 
-            histories.forEach(h => this._displayHistoryCard(this._formatCloudHistory(h)));
+            // P2 버그 #9: null 필터링
+            histories
+                .map(h => this._formatCloudHistory(h))
+                .filter(Boolean)
+                .forEach(h => this._displayHistoryCard(h));
 
         } catch (e) {
             console.error('[ReportManager] 클라우드 히스토리 로드 오류:', e);
@@ -288,21 +292,40 @@ export class ReportManager {
 
     /**
      * 클라우드 히스토리를 프론트엔드 포맷으로 변환
+     * P2 버그 #9: null 체크 추가
      */
     _formatCloudHistory(h) {
+        // 유효성 검사
+        if (!h || typeof h !== 'object' || !h.id) {
+            console.warn('[ReportManager] 유효하지 않은 히스토리:', h);
+            return null;
+        }
+
         return {
             id: h.id,
-            url: h.url,
-            title: h.title,
-            style: h.style,
-            html: h.html,
-            content: h.content,
-            prompt: h.prompt,
-            usage: h.usage,
-            elapsed_time: h.elapsed_time,
-            time: h.createdAt ? new Date(h.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '',
-            timestamp: h.timestamp || h.createdAt
+            url: h.url || '',
+            title: h.title || '제목 없음',
+            style: h.style || 'blog_seo',
+            html: h.html || '',
+            content: h.content || '',
+            prompt: h.prompt ?? null,
+            usage: h.usage ?? null,
+            elapsed_time: h.elapsed_time ?? null,
+            time: this._formatHistoryTime(h.createdAt),
+            timestamp: h.timestamp ?? h.createdAt ?? Date.now()
         };
+    }
+
+    /**
+     * 히스토리 시간 포맷팅 헬퍼
+     */
+    _formatHistoryTime(createdAt) {
+        if (!createdAt) return '';
+        try {
+            return new Date(createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return '';
+        }
     }
 
     /**
@@ -317,6 +340,11 @@ export class ReportManager {
     }
 
     _displayHistoryCard(data) {
+        // 중복 체크: 이미 같은 ID의 카드가 있으면 스킵
+        if (this.elements.reportStream.querySelector(`[data-report-id="${data.id}"]`)) {
+            return;
+        }
+
         const styleLabel = this.styleManager.getStyleLabel(data.style);
         const shortUrl = ReportFormatter.formatShortUrl(data.url);
 

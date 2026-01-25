@@ -52,8 +52,14 @@ CaptionTrack = Dict[str, Any]
 SUPADATA_API_URL: str = "https://api.supadata.ai/v1/youtube/transcript"
 PREFERRED_LANGUAGES: tuple[str, ...] = ("ko", "en")
 MAX_RETRY_ATTEMPTS: int = 3
-HTTP_TIMEOUT: int = 30
 USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+
+# P2 버그 #8: HTTP 타임아웃 상수 정의
+TIMEOUT_CONNECT: int = 5        # 연결 타임아웃 (초)
+TIMEOUT_READ_SHORT: int = 10    # 짧은 읽기 타임아웃
+TIMEOUT_READ_MEDIUM: int = 20   # 중간 읽기 타임아웃
+TIMEOUT_READ_LONG: int = 30     # 긴 읽기 타임아웃 (기본)
+HTTP_TIMEOUT: tuple[int, int] = (TIMEOUT_CONNECT, TIMEOUT_READ_LONG)  # (connect, read)
 
 # YouTube URL Patterns
 YOUTUBE_URL_REGEX = re.compile(
@@ -70,6 +76,27 @@ VIDEO_ID_PATTERNS = [
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
 
+# YouTube video_id 형식: 11자 영숫자 + 하이픈 + 언더스코어
+VIDEO_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{11}$')
+
+
+def _sanitize_video_id(video_id: str) -> str:
+    """
+    video_id 형식을 검증하여 Path Traversal 공격을 방지합니다.
+
+    Args:
+        video_id: YouTube 비디오 ID
+
+    Returns:
+        검증된 video_id
+
+    Raises:
+        ValueError: 유효하지 않은 video_id 형식
+    """
+    if not video_id or not VIDEO_ID_PATTERN.match(video_id):
+        raise ValueError(f"Invalid video_id format: {video_id[:20] if video_id else 'None'}")
+    return video_id
+
 
 def _ensure_cache_dir() -> None:
     """캐시 디렉토리가 존재하는지 확인하고 없으면 생성합니다."""
@@ -78,8 +105,13 @@ def _ensure_cache_dir() -> None:
 
 
 def _get_cache_path(video_id: str, cache_type: str) -> str:
-    """캐시 파일 경로를 반환합니다."""
-    return os.path.join(CACHE_DIR, f"{video_id}_{cache_type}.json")
+    """
+    캐시 파일 경로를 반환합니다.
+    Path Traversal 방지를 위해 video_id를 검증합니다.
+    """
+    safe_id = _sanitize_video_id(video_id)
+    safe_type = cache_type if cache_type in ('transcript', 'comments') else 'unknown'
+    return os.path.join(CACHE_DIR, f"{safe_id}_{safe_type}.json")
 
 
 def _load_cache(video_id: str, cache_type: str) -> Optional[Any]:
@@ -402,7 +434,10 @@ def _parse_timedtext_xml(xml_text: str) -> str:
 
 
 def _download_caption_from_url(base_url: str) -> str:
-    """자막 URL에서 자막을 다운로드합니다."""
+    """자막 URL에서 자막을 다운로드합니다.
+
+    P2 버그 #8: 타임아웃 상수 사용 및 예외 처리 강화
+    """
     if not isinstance(base_url, str) or not base_url:
         return ""
 
@@ -415,16 +450,27 @@ def _download_caption_from_url(base_url: str) -> str:
         "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
     }
 
-    response = requests.get(url, headers=headers, timeout=15)
-    response.raise_for_status()
-    text = response.text or ""
+    try:
+        response = requests.get(url, headers=headers, timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT))
+        response.raise_for_status()
+        text = response.text or ""
 
-    if text.lstrip().startswith('WEBVTT'):
-        return _parse_vtt(text)
-    if '<transcript' in text or '<text' in text:
-        return _parse_timedtext_xml(text)
+        if text.lstrip().startswith('WEBVTT'):
+            return _parse_vtt(text)
+        if '<transcript' in text or '<text' in text:
+            return _parse_timedtext_xml(text)
 
-    return text.strip()
+        return text.strip()
+
+    except requests.exceptions.Timeout:
+        _log_warning(f"Caption download timeout: {url[:50]}...")
+        return ""
+    except requests.exceptions.HTTPError as e:
+        _log_warning(f"Caption download HTTP error: {e.response.status_code if e.response else 'unknown'}")
+        return ""
+    except requests.exceptions.RequestException as e:
+        _log_warning(f"Caption download failed: {str(e)[:100]}")
+        return ""
 
 
 def _get_transcript_from_watch_page(video_id: str) -> TranscriptResult:

@@ -117,10 +117,17 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
                 'total_tokens': getattr(usage, 'total_tokens', 0)
             }
 
+        # P3 버그 #11: 마크다운 렌더링 폴백
+        try:
+            html = markdown.markdown(body, extensions=['tables', 'fenced_code', 'nl2br'])
+        except Exception as md_err:
+            current_app.logger.warning(f"마크다운 변환 실패: {md_err}")
+            html = f"<pre>{body}</pre>"
+
         result = {
             'title': title,
             'content': body,
-            'html': markdown.markdown(body, extensions=['tables', 'fenced_code', 'nl2br']),
+            'html': html,
             'usage': token_usage
         }
 

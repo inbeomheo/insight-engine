@@ -29,6 +29,22 @@ export class ContentGenerator {
     }
 
     /**
+     * P2 버그 #5: 안전한 JSON 파싱
+     * response.json() 실패 시 에러 객체 반환
+     */
+    async _safeParseJson(response) {
+        try {
+            return await response.json();
+        } catch (parseError) {
+            console.error('[ContentGenerator] JSON 파싱 실패:', parseError);
+            return {
+                error: '서버 응답을 처리할 수 없습니다.',
+                _parseError: true
+            };
+        }
+    }
+
+    /**
      * 지수 백오프로 API 요청 재시도
      * @param {Function} fetchFn - fetch를 수행하는 함수
      * @param {number} maxRetries - 최대 재시도 횟수 (기본: 3)
@@ -122,7 +138,15 @@ export class ContentGenerator {
                 })
             );
 
-            const data = await response.json();
+            const data = await this._safeParseJson(response);
+
+            if (data._parseError) {
+                this.reportManager.updatePendingCard(pendingId, {
+                    url,
+                    error: data.error
+                }, true);
+                return;
+            }
 
             if (response.ok) {
                 this.originalContent = data.content;
@@ -136,7 +160,7 @@ export class ContentGenerator {
                     html: data.html,
                     content: data.content,
                     prompt: data.prompt,
-                    usage: data.usage,
+                    usage: data.usage ?? null,  // P3 버그 #10
                     elapsed_time: data.elapsed_time,
                     transcript: data.transcript
                 });
@@ -183,7 +207,8 @@ export class ContentGenerator {
             })
         );
 
-        const data = await response.json();
+        const data = await this._safeParseJson(response);  // P2 버그 #5
+        if (data._parseError) throw new Error(data.error);
 
         if (response.ok) {
             this.originalContent = data.content;
@@ -195,7 +220,7 @@ export class ContentGenerator {
                 html: data.html,
                 content: data.content,
                 prompt: data.prompt,
-                usage: data.usage,
+                usage: data.usage ?? null,  // P3 버그 #10
                 elapsed_time: data.elapsed_time
             });
             this.ui.showAlert('분석이 완료되었습니다!', 'success');
@@ -222,7 +247,8 @@ export class ContentGenerator {
             })
         );
 
-        const data = await response.json();
+        const data = await this._safeParseJson(response);  // P2 버그 #5
+        if (data._parseError) throw new Error(data.error);
 
         if (response.ok) {
             this.originalContent = data.content;

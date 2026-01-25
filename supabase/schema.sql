@@ -1,10 +1,25 @@
 -- =============================================
--- Insight Engine - Supabase Schema
+-- Insight Engine - Supabase Schema (v2)
 -- =============================================
 -- Supabase Dashboard > SQL Editor에서 실행하세요
+-- 테이블명: ie_ 접두사 (Insight Engine)
 
--- 1. 분석 히스토리 테이블
-CREATE TABLE IF NOT EXISTS histories (
+-- =============================================
+-- 1. 테이블 생성
+-- =============================================
+
+-- 1-1. 사용량 테이블 (일일 제한)
+CREATE TABLE IF NOT EXISTS ie_usage (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    usage_count INT DEFAULT 20,  -- 남은 사용 횟수 (기본 20회)
+    last_reset_date DATE DEFAULT CURRENT_DATE,  -- 마지막 리셋 날짜
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 1-2. 분석 히스토리 테이블
+CREATE TABLE IF NOT EXISTS ie_histories (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     report_id TEXT NOT NULL,
@@ -14,31 +29,30 @@ CREATE TABLE IF NOT EXISTS histories (
     content TEXT,
     html TEXT,
     mindmap_markdown TEXT,
+    transcript_preview TEXT,  -- 자막 미리보기 (500자)
     usage JSONB,
     elapsed_time FLOAT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. API 키 저장 테이블 (암호화됨)
-CREATE TABLE IF NOT EXISTS api_keys (
+-- 1-3. API 키 저장 테이블 (암호화됨)
+CREATE TABLE IF NOT EXISTS ie_api_keys (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-    -- 암호화된 API 키들 (pgcrypto 사용)
     openai_key TEXT,
     anthropic_key TEXT,
     google_key TEXT,
     zhipu_key TEXT,
     deepseek_key TEXT,
     supadata_key TEXT,
-    -- 선택된 프로바이더
     selected_provider TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. 커스텀 스타일 테이블
-CREATE TABLE IF NOT EXISTS custom_styles (
+-- 1-4. 커스텀 스타일 테이블
+CREATE TABLE IF NOT EXISTS ie_custom_styles (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     style_id TEXT NOT NULL,
@@ -50,105 +64,145 @@ CREATE TABLE IF NOT EXISTS custom_styles (
     UNIQUE(user_id, style_id)
 );
 
--- 4. 사용자 설정 테이블
-CREATE TABLE IF NOT EXISTS user_settings (
+-- 1-5. 관리자 테이블
+CREATE TABLE IF NOT EXISTS ie_admins (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-    default_style TEXT DEFAULT 'summary',
-    default_length TEXT DEFAULT 'medium',
-    default_tone TEXT DEFAULT 'professional',
-    default_language TEXT DEFAULT 'ko',
-    use_emoji BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- =============================================
--- Row Level Security (RLS) 정책
+-- 2. 뷰 생성 (이메일 조인)
 -- =============================================
 
--- histories 테이블 RLS
-ALTER TABLE histories ENABLE ROW LEVEL SECURITY;
+-- 2-1. 사용량 + 이메일 뷰 (관리자용)
+CREATE OR REPLACE VIEW ie_usage_with_email AS
+SELECT
+    u.id,
+    u.user_id,
+    u.usage_count,
+    u.last_reset_date,
+    u.created_at,
+    u.updated_at,
+    au.email
+FROM ie_usage u
+LEFT JOIN auth.users au ON u.user_id = au.id;
+
+-- 2-2. 히스토리 + 이메일 뷰 (관리자용)
+CREATE OR REPLACE VIEW ie_histories_with_email AS
+SELECT
+    h.id,
+    h.user_id,
+    h.report_id,
+    h.url,
+    h.title,
+    h.style,
+    h.content,
+    h.html,
+    h.mindmap_markdown,
+    h.transcript_preview,
+    h.usage,
+    h.elapsed_time,
+    h.created_at,
+    h.updated_at,
+    au.email
+FROM ie_histories h
+LEFT JOIN auth.users au ON h.user_id = au.id;
+
+-- =============================================
+-- 3. Row Level Security (RLS) 정책
+-- =============================================
+
+-- ie_usage 테이블 RLS
+ALTER TABLE ie_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own usage"
+    ON ie_usage FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own usage"
+    ON ie_usage FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own usage"
+    ON ie_usage FOR UPDATE
+    USING (auth.uid() = user_id);
+
+-- ie_histories 테이블 RLS
+ALTER TABLE ie_histories ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own histories"
-    ON histories FOR SELECT
+    ON ie_histories FOR SELECT
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own histories"
-    ON histories FOR INSERT
+    ON ie_histories FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own histories"
-    ON histories FOR UPDATE
+    ON ie_histories FOR UPDATE
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own histories"
-    ON histories FOR DELETE
+    ON ie_histories FOR DELETE
     USING (auth.uid() = user_id);
 
--- api_keys 테이블 RLS
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+-- ie_api_keys 테이블 RLS
+ALTER TABLE ie_api_keys ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own api_keys"
-    ON api_keys FOR SELECT
+    ON ie_api_keys FOR SELECT
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own api_keys"
-    ON api_keys FOR INSERT
+    ON ie_api_keys FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own api_keys"
-    ON api_keys FOR UPDATE
+    ON ie_api_keys FOR UPDATE
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own api_keys"
-    ON api_keys FOR DELETE
+    ON ie_api_keys FOR DELETE
     USING (auth.uid() = user_id);
 
--- custom_styles 테이블 RLS
-ALTER TABLE custom_styles ENABLE ROW LEVEL SECURITY;
+-- ie_custom_styles 테이블 RLS
+ALTER TABLE ie_custom_styles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own custom_styles"
-    ON custom_styles FOR SELECT
+    ON ie_custom_styles FOR SELECT
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own custom_styles"
-    ON custom_styles FOR INSERT
+    ON ie_custom_styles FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own custom_styles"
-    ON custom_styles FOR UPDATE
+    ON ie_custom_styles FOR UPDATE
     USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own custom_styles"
-    ON custom_styles FOR DELETE
+    ON ie_custom_styles FOR DELETE
     USING (auth.uid() = user_id);
 
--- user_settings 테이블 RLS
-ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+-- ie_admins 테이블 RLS
+ALTER TABLE ie_admins ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own settings"
-    ON user_settings FOR SELECT
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own settings"
-    ON user_settings FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own settings"
-    ON user_settings FOR UPDATE
-    USING (auth.uid() = user_id);
+CREATE POLICY "Only service role can manage admins"
+    ON ie_admins FOR ALL
+    USING (false);  -- 일반 사용자 접근 불가, service_role만 가능
 
 -- =============================================
--- 인덱스
+-- 4. 인덱스
 -- =============================================
 
-CREATE INDEX IF NOT EXISTS idx_histories_user_id ON histories(user_id);
-CREATE INDEX IF NOT EXISTS idx_histories_created_at ON histories(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_custom_styles_user_id ON custom_styles(user_id);
+CREATE INDEX IF NOT EXISTS idx_ie_usage_user_id ON ie_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_ie_histories_user_id ON ie_histories(user_id);
+CREATE INDEX IF NOT EXISTS idx_ie_histories_created_at ON ie_histories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ie_custom_styles_user_id ON ie_custom_styles(user_id);
 
 -- =============================================
--- 트리거: updated_at 자동 업데이트
+-- 5. 트리거: updated_at 자동 업데이트
 -- =============================================
 
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -159,18 +213,93 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER histories_updated_at
-    BEFORE UPDATE ON histories
+-- 기존 트리거가 있으면 삭제
+DROP TRIGGER IF EXISTS ie_usage_updated_at ON ie_usage;
+DROP TRIGGER IF EXISTS ie_histories_updated_at ON ie_histories;
+DROP TRIGGER IF EXISTS ie_api_keys_updated_at ON ie_api_keys;
+DROP TRIGGER IF EXISTS ie_custom_styles_updated_at ON ie_custom_styles;
+
+-- 트리거 생성
+CREATE TRIGGER ie_usage_updated_at
+    BEFORE UPDATE ON ie_usage
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER api_keys_updated_at
-    BEFORE UPDATE ON api_keys
+CREATE TRIGGER ie_histories_updated_at
+    BEFORE UPDATE ON ie_histories
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER custom_styles_updated_at
-    BEFORE UPDATE ON custom_styles
+CREATE TRIGGER ie_api_keys_updated_at
+    BEFORE UPDATE ON ie_api_keys
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER user_settings_updated_at
-    BEFORE UPDATE ON user_settings
+CREATE TRIGGER ie_custom_styles_updated_at
+    BEFORE UPDATE ON ie_custom_styles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =============================================
+-- 6. RPC 함수: 원자적 사용량 차감
+-- =============================================
+
+DROP FUNCTION IF EXISTS decrement_usage_safe(UUID);
+
+CREATE OR REPLACE FUNCTION decrement_usage_safe(p_user_id UUID)
+RETURNS JSON
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_new_count INT;
+BEGIN
+    -- 원자적 UPDATE: usage_count > 0인 경우에만 차감
+    UPDATE ie_usage
+    SET usage_count = usage_count - 1,
+        updated_at = NOW()
+    WHERE user_id = p_user_id
+      AND usage_count > 0
+    RETURNING usage_count INTO v_new_count;
+
+    IF FOUND THEN
+        RETURN json_build_object(
+            'success', true,
+            'new_count', v_new_count
+        );
+    ELSE
+        RETURN json_build_object(
+            'success', false,
+            'reason', 'no_usage_left'
+        );
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION decrement_usage_safe(UUID) TO authenticated;
+
+-- =============================================
+-- 7. RPC 함수: 일일 사용량 리셋 (선택)
+-- =============================================
+
+CREATE OR REPLACE FUNCTION reset_daily_usage()
+RETURNS INT
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count INT;
+BEGIN
+    UPDATE ie_usage
+    SET usage_count = 20,
+        last_reset_date = CURRENT_DATE,
+        updated_at = NOW()
+    WHERE last_reset_date < CURRENT_DATE;
+
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================
+-- 완료!
+-- =============================================
+-- 이제 .env 파일에 Supabase 설정을 추가하세요:
+-- SUPABASE_URL=https://your-project.supabase.co
+-- SUPABASE_ANON_KEY=your-anon-key

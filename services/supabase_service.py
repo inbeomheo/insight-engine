@@ -202,7 +202,12 @@ def _db_operation(operation_name: str, default_return, operation_func):
 
 
 def save_history(user_id: str, data: dict) -> dict:
-    """분석 히스토리 저장"""
+    """분석 히스토리 저장
+
+    P3 버그 #12: user_id가 None이면 저장하지 않고 None 반환 (의도된 동작)
+    - 비로그인 사용자는 클라우드 저장 생략
+    - 로컬 스토리지에서 별도 관리됨
+    """
     supabase = get_supabase()
     if not supabase or not user_id:
         return None

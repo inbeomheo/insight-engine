@@ -25,6 +25,10 @@ class ContentAnalysis {
         this.themeManager = new ThemeManager();
         this.themeManager.init();
 
+        // 히스토리 로드 상태 추적 (중복 로드 방지)
+        this._historyLoaded = false;
+        this._currentUserId = null;
+
         // 모듈 초기화
         this.storage = new StorageManager();
         this.ui = new UIManager();
@@ -72,18 +76,31 @@ class ContentAnalysis {
     }
 
     async init() {
-        // 인증 초기화 (Supabase 활성화 여부 확인)
-        await this.authManager.init();
+        // P2 버그 #6: 이벤트 구독자를 먼저 초기화 (초기화 순서 변경)
+        // 사용량 바 초기화 - AUTH_STATE_CHANGED 이벤트 구독
+        this.usagePanelManager.init();
 
-        // 인증 상태 변경 콜백 설정
+        // 관리자 대시보드 초기화 - AUTH_STATE_CHANGED 이벤트 구독
+        this.adminDashboard.init();
+
+        // 인증 상태 변경 콜백 설정 (init 전에 설정해야 초기 세션 감지 가능)
         this.authManager.onAuthChange = async (isLoggedIn, user) => {
             this.updateGenerateButtonState();
-            // 로그인 시 클라우드 히스토리 로드
-            if (isLoggedIn) {
+
+            const newUserId = user?.id || null;
+
+            // 계정이 변경된 경우에만 히스토리 다시 로드
+            if (this._currentUserId !== newUserId) {
+                this._currentUserId = newUserId;
+                this._historyLoaded = false;  // 다른 계정이면 다시 로드 허용
                 this._clearReportStream();
                 await this.reportManager.loadHistory();
+                this._historyLoaded = true;
             }
         };
+
+        // 그 다음 이벤트 발생원 초기화 (인증 상태 변경 이벤트 발생)
+        await this.authManager.init();
 
         await this.providerManager.loadProviders();
         this.setupEventListeners();
@@ -95,13 +112,12 @@ class ContentAnalysis {
         this.styleManager.renderCustomStyles();
         this.modalManager.checkFirstTimeUser();
         this.providerManager.updateProviderLabel();
-        await this.reportManager.loadHistory();
 
-        // 사용량 바 초기화
-        this.usagePanelManager.init();
-
-        // 관리자 대시보드 초기화
-        this.adminDashboard.init();
+        // 히스토리가 아직 로드되지 않았을 때만 로드 (중복 방지)
+        if (!this._historyLoaded) {
+            await this.reportManager.loadHistory();
+            this._historyLoaded = true;
+        }
 
         // 패널 리사이즈 초기화
         this.panelResizeManager.init();
