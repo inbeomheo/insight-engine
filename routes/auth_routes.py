@@ -8,7 +8,8 @@ from services.supabase_service import (
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
-    get_all_contents, get_content_detail
+    get_all_contents, get_content_detail,
+    get_histories
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -351,6 +352,47 @@ def get_user_usage():
     # 관리자 여부 추가
     usage['is_admin'] = is_admin(g.user_id)
     return jsonify(usage)
+
+
+# =============================================
+# 히스토리 조회 API
+# =============================================
+
+@auth_bp.route('/api/user/history', methods=['GET'])
+@require_auth
+def get_user_history():
+    """사용자 히스토리 조회 (클라우드 동기화)
+
+    - 일반 사용자: 본인 히스토리만
+    - 관리자: 모든 사용자 히스토리
+
+    Query Parameters:
+        limit: 조회할 최대 개수 (기본값: 50)
+    """
+    limit = request.args.get('limit', 50, type=int)
+    histories = get_histories(g.user_id, limit)
+
+    # 프론트엔드 포맷에 맞게 변환
+    result = []
+    for h in histories:
+        result.append({
+            'id': h.get('report_id'),
+            'url': h.get('url'),
+            'title': h.get('title'),
+            'style': h.get('style'),
+            'html': h.get('html'),
+            'content': h.get('content'),
+            'prompt': h.get('prompt'),
+            'usage': h.get('usage'),
+            'elapsed_time': h.get('elapsed_time'),
+            'createdAt': h.get('created_at'),
+            'timestamp': h.get('created_at')
+        })
+
+    return jsonify({
+        'histories': result,
+        'is_admin': is_admin(g.user_id)
+    })
 
 
 # =============================================

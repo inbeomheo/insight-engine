@@ -73,7 +73,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 폴백 로직 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격 정의 |
-| 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (16개 스타일) |
+| 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (5개 스타일) |
 
 ### Frontend Module Communication (EventBus)
 
@@ -203,10 +203,22 @@ def generate_batch():
 - 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}}`
 - 실패: `{"error": "메시지"}`
 
+### 5개 핵심 스타일 (v3.0)
+
+| 스타일 ID | 이름 | 설명 |
+|-----------|------|------|
+| `blog_seo` | 블로그+SEO | SEO 최적화된 블로그 포스트 |
+| `summary` | 요약 | 핵심 내용을 빠르게 파악 |
+| `tutorial` | 튜토리얼 | 단계별 학습 가이드 |
+| `qna` | Q&A | 질문-답변 형식 정리 |
+| `app_ideas` | 앱 아이디어 | 영상에서 개발 아이디어 추출 |
+
 ### 새 스타일 추가 방법
-1. `prompts/` 디렉토리에 새 파일 생성 또는 기존 파일에 추가
-2. `prompts/__init__.py`의 `STYLE_PROMPTS` 딕셔너리에 매핑 추가
-3. `config.py`의 `STYLE_CONFIG`에 메타데이터 추가
+1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
+2. `prompts/styles/__init__.py`에서 import 및 `STYLE_PROMPTS`에 추가
+3. `config.py`의 `STYLE_OPTIONS`에 메타데이터 추가
+4. `templates/index.html`의 스타일 그리드에 UI 추가
+5. `static/js/modules/StyleManager.js`의 `styleLabels`에 라벨 추가
 
 ### 지원 모델 (LiteLLM 형식)
 
@@ -242,11 +254,15 @@ def generate_batch():
 | `/api/admin/contents` | GET | 모든 생성 콘텐츠 조회 (페이지네이션) |
 | `/api/admin/contents/<report_id>` | GET | 특정 콘텐츠 상세 조회 |
 
-### 모디파이어 (`config.py`)
-- `length`: short/medium/long
-- `tone`: professional/friendly/humorous
-- `language`: ko/en/ja
-- `emoji`: use/none
+### 모디파이어 (v3.0 - 2개만 지원)
+
+| 모디파이어 | 값 | 설명 |
+|-----------|-----|------|
+| `length` | short/medium/long | 글 길이 (500-800 / 1000-1500 / 2000-3000자) |
+| `writing_style` | conversational/explanatory/casual/expert | 문체 (대화체/설명체/캐주얼/전문가) |
+
+- 기본값: `length: medium`, `writing_style: conversational`
+- 언어는 한국어 고정 (다국어 지원 제거됨)
 
 ## Testing
 

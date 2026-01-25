@@ -1,6 +1,6 @@
 /**
- * StyleManager - 스타일 관리 모듈
- * 스타일 선택, 커스텀 스타일 렌더링, 모디파이어 관리
+ * StyleManager - 스타일 관리 모듈 v3.0
+ * 5개 핵심 스타일, 2개 모디파이어 지원
  */
 export class StyleManager {
     constructor(storage, uiManager, modalManager) {
@@ -8,17 +8,21 @@ export class StyleManager {
         this.ui = uiManager;
         this.modalManager = modalManager;
 
+        // 5개 핵심 스타일 라벨
         this.styleLabels = {
-            'summary': 'Summary',
-            'easy': 'Thread',
-            'detailed': 'Blog Post',
-            'needs': 'Takeaways',
-            'news': 'Sentiment',
-            'script': 'Script',
+            'blog_seo': 'Blog+SEO',
+            'summary': '요약',
+            'tutorial': '튜토리얼',
             'qna': 'Q&A',
-            'infographic': 'Infographic',
-            'compare': 'Compare',
-            'sns': 'SNS'
+            'app_ideas': '앱 아이디어'
+        };
+
+        // 문체 라벨
+        this.writingStyleLabels = {
+            'conversational': '대화체',
+            'explanatory': '설명체',
+            'casual': '캐주얼',
+            'expert': '전문가'
         };
     }
 
@@ -26,7 +30,7 @@ export class StyleManager {
 
     getSelectedStyle() {
         const checked = document.querySelector('input[name="style"]:checked');
-        return checked ? checked.value : 'summary';
+        return checked ? checked.value : 'blog_seo';
     }
 
     getStyleLabel(style) {
@@ -43,30 +47,16 @@ export class StyleManager {
     getModifiers() {
         const modifiers = {};
 
+        // 길이
         const lengthChecked = document.querySelector('input[name="length"]:checked');
         if (lengthChecked) {
             modifiers.length = lengthChecked.value;
         }
 
-        const toneChecked = document.querySelector('input[name="tone"]:checked');
-        if (toneChecked) {
-            modifiers.tone = toneChecked.value;
-        }
-
-        // 언어: 칩 라디오 버튼 우선, fallback으로 select
-        const languageChecked = document.querySelector('input[name="language"]:checked');
-        if (languageChecked) {
-            modifiers.language = languageChecked.value;
-        } else {
-            const languageSelect = document.getElementById('language-select');
-            if (languageSelect) {
-                modifiers.language = languageSelect.value;
-            }
-        }
-
-        const emojiCheckbox = document.getElementById('emoji-checkbox');
-        if (emojiCheckbox) {
-            modifiers.emoji = emojiCheckbox.checked ? 'use' : 'none';
+        // 문체
+        const writingStyleChecked = document.querySelector('input[name="writing_style"]:checked');
+        if (writingStyleChecked) {
+            modifiers.writing_style = writingStyleChecked.value;
         }
 
         return modifiers;
@@ -144,64 +134,45 @@ export class StyleManager {
             });
         }
 
-        // 언어 칩 라디오 버튼과 hidden select 동기화
-        this.setupLanguageChipSync();
-
         // 모디파이어 변경 시 요약 뱃지 업데이트
         this.setupModifierSummary();
     }
 
     setupModifierSummary() {
         const lengthRadios = document.querySelectorAll('input[name="length"]');
-        const toneRadios = document.querySelectorAll('input[name="tone"]');
+        const writingStyleRadios = document.querySelectorAll('input[name="writing_style"]');
         const summaryText = document.getElementById('modifier-summary-text');
 
         const updateSummary = () => {
             if (!summaryText) return;
 
-            const lengthLabels = { short: '짧게', medium: '보통', long: '상세' };
-            const toneLabels = { professional: '전문적', friendly: '친근', humorous: '유머' };
+            const lengthLabels = { short: '짧게', medium: '보통', long: '길게' };
 
             const selectedLength = document.querySelector('input[name="length"]:checked');
-            const selectedTone = document.querySelector('input[name="tone"]:checked');
+            const selectedWritingStyle = document.querySelector('input[name="writing_style"]:checked');
 
             const lengthText = selectedLength ? lengthLabels[selectedLength.value] || selectedLength.value : '보통';
-            const toneText = selectedTone ? toneLabels[selectedTone.value] || selectedTone.value : '전문적';
+            const writingStyleText = selectedWritingStyle ? this.writingStyleLabels[selectedWritingStyle.value] || selectedWritingStyle.value : '대화체';
 
-            summaryText.textContent = `${lengthText} · ${toneText}`;
+            summaryText.textContent = `${lengthText} · ${writingStyleText}`;
         };
 
         lengthRadios.forEach(radio => radio.addEventListener('change', updateSummary));
-        toneRadios.forEach(radio => radio.addEventListener('change', updateSummary));
+        writingStyleRadios.forEach(radio => radio.addEventListener('change', updateSummary));
 
         // 초기값 설정
         updateSummary();
     }
 
-    setupLanguageChipSync() {
-        const languageRadios = document.querySelectorAll('input[name="language"]');
-        const languageSelect = document.getElementById('language-select');
-
-        if (languageRadios.length > 0 && languageSelect) {
-            languageRadios.forEach(radio => {
-                radio.addEventListener('change', () => {
-                    languageSelect.value = radio.value;
-                });
-            });
-        }
-    }
-
     // ==================== Style Selection Setup (모바일 터치 지원) ====================
 
     setupStyleSelection() {
-        // 모든 스타일 컨테이너 찾기 (카테고리 그룹핑 포함)
-        const styleContainers = document.querySelectorAll('#style-options, #style-options-analysis, #style-options-content');
+        // 스타일 컨테이너 찾기
+        const styleContainer = document.getElementById('style-options');
 
-        styleContainers.forEach(container => {
-            if (!container) return;
-
+        if (styleContainer) {
             // 모든 스타일 라벨에 클릭 이벤트 추가
-            container.querySelectorAll('label').forEach(label => {
+            styleContainer.querySelectorAll('label').forEach(label => {
                 label.addEventListener('click', (e) => {
                     const radio = label.querySelector('input[type="radio"]');
                     if (radio) {
@@ -221,7 +192,7 @@ export class StyleManager {
                     }
                 });
             });
-        });
+        }
 
         // 키보드 네비게이션 설정
         this.setupKeyboardNavigation();

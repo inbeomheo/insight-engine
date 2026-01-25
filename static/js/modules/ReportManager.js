@@ -7,10 +7,11 @@
 import { CardHtmlBuilder, CardEventHandler, ReportFormatter } from './report/index.js';
 
 export class ReportManager {
-    constructor(storage, styleManager, uiManager) {
+    constructor(storage, styleManager, uiManager, authManager = null) {
         this.storage = storage;
         this.styleManager = styleManager;
         this.ui = uiManager;
+        this.authManager = authManager;
 
         // DOM 요소 캐싱
         this.elements = {
@@ -32,6 +33,13 @@ export class ReportManager {
             () => this._checkEmptyState(),
             () => this.syncCollapseAllButtonState() // 개별 카드 접기 시 버튼 상태 동기화
         );
+    }
+
+    /**
+     * AuthManager 설정 (초기화 순서 문제 해결용)
+     */
+    setAuthManager(authManager) {
+        this.authManager = authManager;
     }
 
     setMindmapManager(mindmapManager) {
@@ -225,7 +233,82 @@ export class ReportManager {
 
     // ==================== History Loading ====================
 
-    loadHistory() {
+    /**
+     * 히스토리 로드 (로컬 + 클라우드 통합)
+     * - 로그인 상태: 클라우드에서 로드
+     * - 비로그인: 로컬 스토리지에서 로드
+     */
+    async loadHistory() {
+        // 클라우드 히스토리 로드 시도
+        if (this.authManager?.isLoggedIn?.()) {
+            await this._loadCloudHistory();
+            return;
+        }
+
+        // 로컬 히스토리 로드 (비로그인 또는 Supabase 비활성화)
+        this._loadLocalHistory();
+    }
+
+    /**
+     * 클라우드 히스토리 로드 (Supabase)
+     */
+    async _loadCloudHistory() {
+        try {
+            const headers = this.authManager.getAuthHeaders?.() || {};
+            const response = await fetch('/api/user/history?limit=50', { headers });
+
+            if (!response.ok) {
+                console.warn('[ReportManager] 클라우드 히스토리 로드 실패, 로컬로 폴백');
+                this._loadLocalHistory();
+                return;
+            }
+
+            const data = await response.json();
+            const histories = data.histories || [];
+
+            if (histories.length === 0) {
+                // 클라우드에 히스토리 없으면 로컬도 확인
+                this._loadLocalHistory();
+                return;
+            }
+
+            console.log(`[ReportManager] 클라우드 히스토리 ${histories.length}개 로드`);
+            this._setEmptyStateVisibility(false);
+
+            // 클라우드 데이터로 로컬 스토리지 동기화 (옵션)
+            // this.storage.syncFromCloud(histories);
+
+            histories.forEach(h => this._displayHistoryCard(this._formatCloudHistory(h)));
+
+        } catch (e) {
+            console.error('[ReportManager] 클라우드 히스토리 로드 오류:', e);
+            this._loadLocalHistory();
+        }
+    }
+
+    /**
+     * 클라우드 히스토리를 프론트엔드 포맷으로 변환
+     */
+    _formatCloudHistory(h) {
+        return {
+            id: h.id,
+            url: h.url,
+            title: h.title,
+            style: h.style,
+            html: h.html,
+            content: h.content,
+            prompt: h.prompt,
+            usage: h.usage,
+            elapsed_time: h.elapsed_time,
+            time: h.createdAt ? new Date(h.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '',
+            timestamp: h.timestamp || h.createdAt
+        };
+    }
+
+    /**
+     * 로컬 스토리지에서 히스토리 로드
+     */
+    _loadLocalHistory() {
         const history = this.storage.getHistory();
         if (history.length === 0) return;
 

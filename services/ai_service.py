@@ -10,25 +10,25 @@ DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세
 
 
 def _build_modifier_instructions(modifiers, style_modifiers):
-    """세부 옵션에서 추가 지시사항을 생성합니다."""
+    """세부 옵션에서 추가 지시사항을 생성합니다.
+
+    v3.0: 2개 모디파이어만 지원 (length, writing_style)
+    한국어 고정 (다국어 지원 제거)
+    """
     instructions = []
 
+    # 한국어 고정
+    instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
+
     if not modifiers:
-        instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
         return instructions
 
-    modifier_types = ['length', 'tone', 'emoji']
+    # v3.0: length, writing_style 2개만 지원
+    modifier_types = ['length', 'writing_style']
     for modifier_type in modifier_types:
         value = modifiers.get(modifier_type)
         if value and value in style_modifiers.get(modifier_type, {}):
             instructions.append(style_modifiers[modifier_type][value])
-
-    lang = modifiers.get('language', 'ko')
-    language_modifiers = style_modifiers.get('language', {})
-    if lang in language_modifiers:
-        instructions.append(language_modifiers[lang])
-    else:
-        instructions.append(language_modifiers.get('ko', DEFAULT_LANGUAGE_INSTRUCTION))
 
     return instructions
 

@@ -22,7 +22,7 @@ blog_bp = Blueprint('blog', __name__)
 _CLIENT_TRACKER: Dict[str, float] = {}
 
 DEFAULT_MODEL = 'gpt-4o'
-DEFAULT_STYLE = 'detailed'
+DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
 BATCH_CONTENT_TOKEN_LIMIT = 3000
@@ -103,13 +103,11 @@ def _validate_modifiers(modifiers):
     if not isinstance(modifiers, dict):
         return None, 'modifiers는 객체 형식이어야 합니다.'
 
-    # 허용된 키와 값 정의
-    allowed_keys = {'length', 'tone', 'language', 'emoji'}
+    # 허용된 키와 값 정의 (v3.0: 2개 모디파이어만 지원)
+    allowed_keys = {'length', 'writing_style'}
     allowed_values = {
         'length': {'short', 'medium', 'long'},
-        'tone': {'professional', 'friendly', 'humorous'},
-        'language': {'ko', 'en', 'ja'},
-        'emoji': {'use', 'none'}
+        'writing_style': {'conversational', 'explanatory', 'casual', 'expert'}
     }
 
     validated = {}

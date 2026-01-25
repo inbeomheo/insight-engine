@@ -87,11 +87,11 @@ class TestStyleConfiguration(unittest.TestCase):
             self.assertIsInstance(style_name, str)
 
     def test_expected_styles_present(self):
-        """필수 스타일 존재 확인"""
+        """필수 스타일 존재 확인 (v3.0 - 5개 핵심 스타일)"""
         from config import STYLE_OPTIONS
 
         style_ids = [opt[0] for opt in STYLE_OPTIONS]
-        expected_styles = ['blog', 'summary', 'easy', 'news']
+        expected_styles = ['blog_seo', 'summary', 'tutorial', 'qna', 'app_ideas']
 
         for style in expected_styles:
             self.assertIn(style, style_ids, f"{style} 스타일 누락")
@@ -139,11 +139,11 @@ class TestProviderFunctions(unittest.TestCase):
 
         self.assertEqual(get_provider_from_model('deepseek/deepseek-chat'), 'deepseek')
 
-    def test_get_provider_from_model_unknown_defaults_to_openai(self):
-        """알 수 없는 모델은 openai 기본값"""
+    def test_get_provider_from_model_unknown_defaults_to_gemini(self):
+        """알 수 없는 모델은 gemini 기본값"""
         from config import get_provider_from_model
 
-        self.assertEqual(get_provider_from_model('unknown-model'), 'openai')
+        self.assertEqual(get_provider_from_model('unknown-model'), 'gemini')
 
 
 class TestProviderApiKeys(unittest.TestCase):

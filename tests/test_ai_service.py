@@ -35,20 +35,20 @@ class TestBuildModifierInstructions(unittest.TestCase):
 
         self.assertIn('짧게 작성해주세요.', result)
 
-    def test_with_language_modifier(self):
-        """언어 모디파이어 적용"""
+    def test_with_writing_style_modifier(self):
+        """문체 모디파이어 적용 (v3.0: language 대신 writing_style 사용)"""
         from services.ai_service import _build_modifier_instructions
 
         style_modifiers = {
-            'language': {
-                'ko': '한국어로 작성해주세요.',
-                'en': 'Write in English.'
+            'writing_style': {
+                'conversational': '대화체로 작성해주세요.',
+                'expert': '전문가 톤으로 작성해주세요.'
             }
         }
 
-        result = _build_modifier_instructions({'language': 'en'}, style_modifiers)
+        result = _build_modifier_instructions({'writing_style': 'expert'}, style_modifiers)
 
-        self.assertIn('Write in English.', result)
+        self.assertIn('전문가 톤으로 작성해주세요.', result)
 
 
 class TestExtractTitleAndContent(unittest.TestCase):

@@ -61,8 +61,9 @@ class ContentAnalysis {
         // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
         this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
 
-        // ReportManager에 MindmapManager 연결
+        // ReportManager에 MindmapManager 및 AuthManager 연결
         this.reportManager.setMindmapManager(this.mindmapManager);
+        this.reportManager.setAuthManager(this.authManager);
 
         // 모달 매니저에 커스텀 스타일 변경 콜백 연결
         this.modalManager.onCustomStylesChange = () => this.styleManager.renderCustomStyles();
@@ -75,8 +76,13 @@ class ContentAnalysis {
         await this.authManager.init();
 
         // 인증 상태 변경 콜백 설정
-        this.authManager.onAuthChange = (isLoggedIn, user) => {
+        this.authManager.onAuthChange = async (isLoggedIn, user) => {
             this.updateGenerateButtonState();
+            // 로그인 시 클라우드 히스토리 로드
+            if (isLoggedIn) {
+                this._clearReportStream();
+                await this.reportManager.loadHistory();
+            }
         };
 
         await this.providerManager.loadProviders();
@@ -89,7 +95,7 @@ class ContentAnalysis {
         this.styleManager.renderCustomStyles();
         this.modalManager.checkFirstTimeUser();
         this.providerManager.updateProviderLabel();
-        this.reportManager.loadHistory();
+        await this.reportManager.loadHistory();
 
         // 사용량 바 초기화
         this.usagePanelManager.init();
@@ -105,6 +111,14 @@ class ContentAnalysis {
 
         // 초기 버튼 상태 업데이트
         this.updateGenerateButtonState();
+    }
+
+    // 리포트 스트림 초기화 (로그인 상태 변경 시)
+    _clearReportStream() {
+        const reportStream = document.getElementById('report-stream');
+        if (reportStream) {
+            reportStream.innerHTML = '';
+        }
     }
 
     // 생성 버튼 상태 업데이트 (로그인 + 사용량 체크)
