@@ -243,6 +243,7 @@ def generate_batch():
 
 - 일일 사용량: 20회 (`services/supabase_service.py`의 `MAX_USAGE_COUNT`)
 - 관리자는 무제한 (999회)
+- Race Condition 방지: `decrement_usage_safe` RPC 함수로 원자적 차감
 
 ### 관리자 API (`@require_auth` + `is_admin` 체크)
 
@@ -316,6 +317,38 @@ npx playwright test settings-modals/ main-page/
 
 **선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_*` (클라우드 저장), `YT_*_PROXY` (차단 우회)
 
+## Supabase 설정
+
+### 테이블 (ie_ 접두사)
+
+| 테이블 | 용도 |
+|--------|------|
+| `ie_usage` | 일일 사용량 (usage_count, last_reset_date) |
+| `ie_histories` | 분석 히스토리 (콘텐츠, HTML, 자막 미리보기) |
+| `ie_api_keys` | 사용자별 암호화된 API 키 |
+| `ie_custom_styles` | 커스텀 스타일 프롬프트 |
+| `ie_admins` | 관리자 목록 |
+
+### 뷰 (관리자용)
+
+- `ie_usage_with_email`: 사용량 + 이메일 조인
+- `ie_histories_with_email`: 히스토리 + 이메일 조인
+
+### RPC 함수
+
+```sql
+-- 원자적 사용량 차감 (Race Condition 방지)
+SELECT decrement_usage_safe('user-uuid');
+-- 반환: {"success": true, "new_count": 19} 또는 {"success": false, "reason": "no_usage_left"}
+```
+
+### 스키마 적용
+
+```bash
+# Supabase SQL Editor에서 실행
+# 파일: supabase/schema.sql
+```
+
 ## Security
 
 - XSS 방지: `UIManager.sanitizeHtml()`에서 DOMPurify 사용
@@ -362,3 +395,44 @@ reportManager.toggleCollapseAll();
 // 펼쳐진 카드 있음 → "모두 접기" (unfold_less)
 // 모두 접힘 → "모두 펼치기" (unfold_more)
 ```
+
+## 히스토리 로딩 최적화
+
+### 중복 로드 방지 (`main.js`)
+
+```javascript
+// 플래그로 중복 로드 방지
+this._historyLoaded = false;
+this._currentUserId = null;
+
+// 계정 변경 시에만 다시 로드
+this.authManager.onAuthChange = async (isLoggedIn, user) => {
+    const newUserId = user?.id || null;
+    if (this._currentUserId !== newUserId) {
+        this._currentUserId = newUserId;
+        this._historyLoaded = false;
+        this._clearReportStream();
+        await this.reportManager.loadHistory();
+        this._historyLoaded = true;
+    }
+};
+```
+
+### 중복 카드 방지 (`ReportManager.js`)
+
+```javascript
+_displayHistoryCard(data) {
+    // 이미 같은 ID의 카드가 있으면 스킵
+    if (this.elements.reportStream.querySelector(`[data-report-id="${data.id}"]`)) {
+        return;
+    }
+    // ...
+}
+```
+
+### 초기화 순서 (중요)
+
+1. `onAuthChange` 콜백 설정 (init 전에!)
+2. `authManager.init()` - `INITIAL_SESSION` 이벤트 발생
+3. 로그인 상태면 클라우드 히스토리 로드, `_historyLoaded = true`
+4. 마지막 `loadHistory()` 호출 시 `_historyLoaded` 체크로 스킵
