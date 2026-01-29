@@ -161,14 +161,31 @@ def _handle_error_response(error_msg, log_detail=None):
     if log_detail:
         current_app.logger.error(f'Error: {log_detail}')
 
-    # API 키 관련 에러는 사용자에게 명확히 전달
+    # 세분화된 에러 메시지 (ai_service에서 이미 처리된 경우)는 그대로 전달
+    error_prefixes = ['[인증 실패]', '[사용량 초과]', '[모델 오류]', '[타임아웃]',
+                      '[연결 실패]', '[서비스 불가]', '[서버 오류]', '[잔액 부족]',
+                      '[컨텐츠 차단]', '[AI 오류]']
+
+    is_formatted_error = any(error_msg.startswith(prefix) for prefix in error_prefixes)
+
+    if is_formatted_error:
+        # 인증 관련 에러는 401
+        if error_msg.startswith('[인증 실패]'):
+            return jsonify({'error': error_msg}), 401
+        # 사용량 초과는 429
+        if error_msg.startswith('[사용량 초과]'):
+            return jsonify({'error': error_msg}), 429
+        # 나머지는 503 (서비스 일시 불가)
+        return jsonify({'error': error_msg}), 503
+
+    # API 키 관련 에러 (레거시)
     if 'API 키' in error_msg or 'authentication' in error_msg.lower():
         return jsonify({'error': error_msg}), 401
 
-    # 내부 에러 상세 정보는 숨김
+    # 내부 에러 상세 정보는 숨김 (traceback 등)
     safe_msg = error_msg
-    if any(keyword in error_msg.lower() for keyword in ['traceback', 'exception', 'error:', 'file "']):
-        safe_msg = '서버 처리 중 오류가 발생했습니다.'
+    if any(keyword in error_msg.lower() for keyword in ['traceback', 'exception', 'file "', 'line ']):
+        safe_msg = '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'
 
     return jsonify({'error': safe_msg}), 500
 

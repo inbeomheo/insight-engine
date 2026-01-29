@@ -58,20 +58,47 @@ def _extract_title_and_content(markdown_content):
     return title, markdown_content
 
 
-def _convert_error_message(error_msg):
+def _convert_error_message(error_msg, model=None):
     """API 에러 메시지를 사용자 친화적인 한국어로 변환합니다."""
     error_lower = error_msg.lower()
+    model_info = f" (모델: {model})" if model else ""
 
-    if 'invalid_api_key' in error_lower or 'authentication' in error_lower:
-        return "API 키가 유효하지 않습니다. 설정에서 API 키를 확인해주세요."
+    # 인증 관련
+    if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
+        return f"[인증 실패] API 키가 유효하지 않습니다{model_info}. 환경변수를 확인해주세요."
 
-    if 'rate_limit' in error_lower or 'quota' in error_lower:
-        return "API 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+    # 사용량 제한
+    if 'rate_limit' in error_lower or 'quota' in error_lower or 'too many requests' in error_lower or '429' in error_lower:
+        return f"[사용량 초과] API 요청 한도에 도달했습니다{model_info}. 잠시 후 다시 시도해주세요."
 
-    if 'model' in error_lower and 'not found' in error_lower:
-        return "선택한 모델을 찾을 수 없습니다. 다른 모델을 선택해주세요."
+    # 모델 관련
+    if 'model' in error_lower and ('not found' in error_lower or 'does not exist' in error_lower):
+        return f"[모델 오류] 선택한 모델을 찾을 수 없습니다{model_info}. 다른 모델을 선택해주세요."
 
-    return f"콘텐츠 생성 중 오류 발생: {error_msg}"
+    # 연결/타임아웃
+    if 'timeout' in error_lower or 'timed out' in error_lower:
+        return f"[타임아웃] AI 서버 응답 시간 초과{model_info}. 다시 시도해주세요."
+
+    if 'connection' in error_lower or 'connect' in error_lower:
+        return f"[연결 실패] AI 서버에 연결할 수 없습니다{model_info}. 네트워크 상태를 확인하거나 다시 시도해주세요."
+
+    # 서비스 불가
+    if 'service' in error_lower and 'unavailable' in error_lower or '503' in error_lower:
+        return f"[서비스 불가] AI 서비스가 일시적으로 불가합니다{model_info}. 잠시 후 다시 시도해주세요."
+
+    if '500' in error_lower or 'internal' in error_lower:
+        return f"[서버 오류] AI 서버 내부 오류{model_info}. 잠시 후 다시 시도해주세요."
+
+    # 잔액 부족
+    if 'insufficient' in error_lower or 'balance' in error_lower or 'credit' in error_lower:
+        return f"[잔액 부족] API 크레딧이 부족합니다{model_info}. 충전이 필요합니다."
+
+    # 컨텐츠 정책
+    if 'content' in error_lower and ('policy' in error_lower or 'filter' in error_lower or 'blocked' in error_lower):
+        return f"[컨텐츠 차단] 요청이 컨텐츠 정책에 의해 차단되었습니다{model_info}."
+
+    # 기타 - 원본 메시지 포함
+    return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
 
 def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None):
@@ -128,8 +155,8 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         return result
 
     except Exception as e:
-        current_app.logger.error(f"AI content generation failed: {e}")
-        raise Exception(_convert_error_message(str(e))) from e
+        current_app.logger.error(f"AI content generation failed: model={model}, error={e}")
+        raise Exception(_convert_error_message(str(e), model)) from e
 
 
 def create_full_blog_post(content, model_name='gpt-4o', style_prompt=None, return_prompt=False):
