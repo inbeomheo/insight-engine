@@ -196,18 +196,27 @@ export class UIManager {
     /**
      * URL을 안전하게 이스케이프합니다 (XSS 방지).
      * javascript: 프로토콜 등 위험한 URL을 차단합니다.
+     * 프로토콜이 없는 URL에는 https://를 자동 추가합니다.
      */
     sanitizeUrl(url) {
         if (!url || typeof url !== 'string') return '#';
-        const trimmed = url.trim().toLowerCase();
+        let processedUrl = url.trim();
+        const lowerUrl = processedUrl.toLowerCase();
+
         // 위험한 프로토콜 차단
-        if (trimmed.startsWith('javascript:') ||
-            trimmed.startsWith('data:') ||
-            trimmed.startsWith('vbscript:')) {
+        if (lowerUrl.startsWith('javascript:') ||
+            lowerUrl.startsWith('data:') ||
+            lowerUrl.startsWith('vbscript:')) {
             return '#';
         }
+
+        // 프로토콜이 없으면 https:// 추가 (상대 경로 방지)
+        if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://')) {
+            processedUrl = 'https://' + processedUrl;
+        }
+
         // HTML 속성용 이스케이프
-        return this.escapeHtml(url);
+        return this.escapeHtml(processedUrl);
     }
 
     /**
