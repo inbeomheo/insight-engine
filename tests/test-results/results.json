@@ -1,0 +1,960 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\playwright.config.ts",
+    "rootDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "open": "never",
+          "outputFolder": "../test-results/html-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "no-auth-chromium",
+        "name": "no-auth-chromium",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/main-page/**/*.spec.ts",
+          "**/url-input/**/*.spec.ts",
+          "**/accessibility/**/*.spec.ts",
+          "**/responsive/**/*.spec.ts",
+          "**/auth/login.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "content-generation",
+        "name": "content-generation",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/content-generation/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "batch-generation",
+        "name": "batch-generation",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/batch-generation/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "auth-setup",
+        "name": "auth-setup",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/auth/setup.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "authenticated-tests",
+        "name": "authenticated-tests",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/settings/**/*.spec.ts",
+          "**/history/**/*.spec.ts",
+          "**/usage/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "error-handling",
+        "name": "error-handling",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/error-handling/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "performance",
+        "name": "performance",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/performance/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/responsive/**/*.spec.ts"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 1,
+    "webServer": {
+      "command": "python app.py",
+      "url": "http://localhost:5001",
+      "cwd": "../../",
+      "reuseExistingServer": true,
+      "timeout": 120000,
+      "env": {
+        "ACLOCAL_PATH": "C:\\Program Files\\Git\\mingw64\\share\\aclocal;C:\\Program Files\\Git\\usr\\share\\aclocal",
+        "ALLUSERSPROFILE": "C:\\ProgramData",
+        "APPDATA": "C:\\Users\\user\\AppData\\Roaming",
+        "ChocolateyInstall": "C:\\ProgramData\\chocolatey",
+        "ChocolateyLastPathUpdate": "133776745652416316",
+        "CLAUDECODE": "1",
+        "CLAUDE_CODE_ENTRYPOINT": "cli",
+        "COLOR": "0",
+        "COMMONPROGRAMFILES": "C:\\Program Files\\Common Files",
+        "CommonProgramFiles(x86)": "C:\\Program Files (x86)\\Common Files",
+        "CommonProgramW6432": "C:\\Program Files\\Common Files",
+        "COMPUTERNAME": "202310474_허인",
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "CONDA_PROMPT_MODIFIER": "False",
+        "CONFIG_SITE": "C:/Program Files/Git/etc/config.site",
+        "COREPACK_ENABLE_AUTO_PIN": "0",
+        "DISPLAY": "needs-to-be-defined",
+        "DriverData": "C:\\Windows\\System32\\Drivers\\DriverData",
+        "EDITOR": "C:\\WINDOWS\\notepad.exe",
+        "EFC_33008_1262719628": "1",
+        "EFC_33008_1592913036": "1",
+        "EFC_33008_2283032206": "1",
+        "EFC_33008_2775293581": "1",
+        "EFC_33008_3789132940": "1",
+        "EXEPATH": "C:\\Program Files\\Git\\bin",
+        "FPS_BROWSER_APP_PROFILE_STRING": "Internet Explorer",
+        "FPS_BROWSER_USER_PROFILE_STRING": "Default",
+        "GIT_EDITOR": "true",
+        "GOPATH": "C:\\Users\\user\\go",
+        "HOME": "C:\\Users\\user",
+        "HOMEDRIVE": "C:",
+        "HOMEPATH": "\\Users\\user",
+        "HOSTNAME": "202310474_ÇãÀιü",
+        "INFOPATH": "C:\\Program Files\\Git\\mingw64\\local\\info;C:\\Program Files\\Git\\mingw64\\share\\info;C:\\Program Files\\Git\\usr\\local\\info;C:\\Program Files\\Git\\usr\\share\\info;C:\\Program Files\\Git\\usr\\info;C:\\Program Files\\Git\\share\\info",
+        "INIT_CWD": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e",
+        "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\",
+        "LANG": "ko_KR.UTF-8",
+        "LOCALAPPDATA": "C:\\Users\\user\\AppData\\Local",
+        "LOGONSERVER": "\\\\202310474_허인",
+        "MANPATH": "C:\\Program Files\\Git\\mingw64\\local\\man;C:\\Program Files\\Git\\mingw64\\share\\man;C:\\Program Files\\Git\\usr\\local\\man;C:\\Program Files\\Git\\usr\\share\\man;C:\\Program Files\\Git\\usr\\man;C:\\Program Files\\Git\\share\\man",
+        "MINGW_CHOST": "x86_64-w64-mingw32",
+        "MINGW_PACKAGE_PREFIX": "mingw-w64-x86_64",
+        "MINGW_PREFIX": "C:/Program Files/Git/mingw64",
+        "MSYSTEM": "MINGW64",
+        "MSYSTEM_CARCH": "x86_64",
+        "MSYSTEM_CHOST": "x86_64-w64-mingw32",
+        "MSYSTEM_PREFIX": "C:/Program Files/Git/mingw64",
+        "NODE": "C:\\Program Files\\nodejs\\node.exe",
+        "NoDefaultCurrentDirectoryInExePath": "1",
+        "npm_command": "exec",
+        "npm_config_cache": "C:\\Users\\user\\AppData\\Local\\npm-cache",
+        "npm_config_globalconfig": "C:\\Users\\user\\AppData\\Roaming\\npm\\etc\\npmrc",
+        "npm_config_global_prefix": "C:\\Users\\user\\AppData\\Roaming\\npm",
+        "npm_config_init_module": "C:\\Users\\user\\.npm-init.js",
+        "npm_config_local_prefix": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e",
+        "npm_config_node_gyp": "C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js",
+        "npm_config_noproxy": "",
+        "npm_config_npm_version": "11.4.2",
+        "npm_config_prefix": "C:\\Users\\user\\AppData\\Roaming\\npm",
+        "npm_config_userconfig": "C:\\Users\\user\\.npmrc",
+        "npm_config_user_agent": "npm/11.4.2 node/v22.20.0 win32 x64 workspaces/false",
+        "npm_execpath": "C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js",
+        "npm_lifecycle_event": "npx",
+        "npm_lifecycle_script": "playwright",
+        "npm_node_execpath": "C:\\Program Files\\nodejs\\node.exe",
+        "npm_package_json": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\package.json",
+        "npm_package_name": "insight-engine-e2e-tests",
+        "npm_package_version": "1.0.0",
+        "NUMBER_OF_PROCESSORS": "16",
+        "OLDPWD": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠",
+        "OneDrive": "C:\\Users\\user\\OneDrive - 한성크린텍",
+        "OneDriveCommercial": "C:\\Users\\user\\OneDrive - 한성크린텍",
+        "OneDriveConsumer": "C:\\Users\\user\\OneDrive",
+        "ORIGINAL_PATH": "C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\user\\bin;C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\user\\AppData\\Local\\PowerToys\\DSCModules;C:\\Users\\user\\go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Warp\\bin;C:\\Program Files\\wkhtmltopdf\\bin",
+        "ORIGINAL_TEMP": "C:/Users/user/AppData/Local/Temp",
+        "ORIGINAL_TMP": "C:/Users/user/AppData/Local/Temp",
+        "OS": "Windows_NT",
+        "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "delta",
+        "PATH": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\node_modules\\.bin;C:\\Users\\user\\Desktop\\node_modules\\.bin;C:\\Users\\user\\node_modules\\.bin;C:\\Users\\node_modules\\.bin;C:\\node_modules\\.bin;C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\node_modules\\@npmcli\\run-script\\lib\\node-gyp-bin;C:\\Users\\user\\bin;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\local\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\user\\bin;C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\user\\AppData\\Local\\PowerToys\\DSCModules;C:\\Users\\user\\go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Warp\\bin;C:\\Program Files\\wkhtmltopdf\\bin;C:\\Program Files\\Git\\usr\\bin\\vendor_perl;C:\\Program Files\\Git\\usr\\bin\\core_perl",
+        "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY;.PYW;.CPL",
+        "PKG_CONFIG_PATH": "C:\\Program Files\\Git\\mingw64\\lib\\pkgconfig;C:\\Program Files\\Git\\mingw64\\share\\pkgconfig",
+        "PKG_CONFIG_SYSTEM_INCLUDE_PATH": "C:/Program Files/Git/mingw64/include",
+        "PKG_CONFIG_SYSTEM_LIBRARY_PATH": "C:/Program Files/Git/mingw64/lib",
+        "PLINK_PROTOCOL": "ssh",
+        "POSH_CURSOR_COLUMN": "1",
+        "POSH_CURSOR_LINE": "1",
+        "POSH_SESSION_ID": "ad2143f8-34e1-45a2-9dfc-1435f4155876",
+        "POSH_SHELL": "pwsh",
+        "POSH_SHELL_VERSION": "5.1.26100.7535",
+        "POWERLINE_COMMAND": "oh-my-posh",
+        "PROCESSOR_ARCHITECTURE": "AMD64",
+        "PROCESSOR_IDENTIFIER": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+        "PROCESSOR_LEVEL": "6",
+        "PROCESSOR_REVISION": "8d01",
+        "ProgramData": "C:\\ProgramData",
+        "PROGRAMFILES": "C:\\Program Files",
+        "ProgramFiles(x86)": "C:\\Program Files (x86)",
+        "ProgramW6432": "C:\\Program Files",
+        "PROMPT": "$P$G",
+        "PSModulePath": "C:\\Users\\user\\Documents\\WindowsPowerShell\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
+        "PUBLIC": "C:\\Users\\Public",
+        "PWD": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "PYENV_VIRTUALENV_DISABLE_PROMPT": "1",
+        "SESSIONNAME": "Console",
+        "SHELL": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+        "SHLVL": "1",
+        "SSH_ASKPASS": "C:/Program Files/Git/mingw64/bin/git-askpass.exe",
+        "SSH_SOCKET_DIR": "~/.ssh",
+        "SYSTEMDRIVE": "C:",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\user\\AppData\\Local\\Temp",
+        "TERM": "xterm-256color",
+        "TERM_PROGRAM": "WarpTerminal",
+        "TMP": "C:\\Users\\user\\AppData\\Local\\Temp",
+        "TMPDIR": "C:\\Users\\user\\AppData\\Local\\Temp",
+        "USERDOMAIN": "202310474_허인",
+        "USERDOMAIN_ROAMINGPROFILE": "202310474_허인",
+        "USERNAME": "user",
+        "USERPROFILE": "C:\\Users\\user",
+        "VIRTUAL_ENV_DISABLE_PROMPT": "1",
+        "VSTO_SUPPRESSDISPLAYALERTS": "0",
+        "WARP_HONOR_PS1": "0",
+        "WARP_IS_LOCAL_SHELL_SESSION": "1",
+        "WARP_PATH_APPEND": "",
+        "WARP_SHELL_DEBUG_MODE": "0",
+        "WARP_USE_SSH_WRAPPER": "1",
+        "WINDIR": "C:\\WINDOWS",
+        "ZES_ENABLE_SYSMAN": "1",
+        "SUPABASE_URL": "",
+        "SUPABASE_ANON_KEY": ""
+      }
+    }
+  },
+  "suites": [
+    {
+      "title": "main-page\\page-load.spec.ts",
+      "file": "main-page/page-load.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "메인 페이지 로드 @parallel @no-auth",
+          "file": "main-page/page-load.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "페이지 제목이 올바르게 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4761,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:54:47.823Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "610ce0a50dc7ed2de43c-6514e29aaf66c4daf0e1",
+              "file": "main-page/page-load.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "주요 UI 요소가 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4365,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:54:52.896Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "610ce0a50dc7ed2de43c-88d40127e70568d858d8",
+              "file": "main-page/page-load.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "콘솔에 JavaScript 에러가 없음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8048,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:54:57.284Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "610ce0a50dc7ed2de43c-25a533ef2644ad75a628",
+              "file": "main-page/page-load.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "페이지가 5초 이내에 로드됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7263,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:05.357Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "610ce0a50dc7ed2de43c-6514a57602d622d2b0e2",
+              "file": "main-page/page-load.spec.ts",
+              "line": 44,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "main-page\\provider-list.spec.ts",
+      "file": "main-page/provider-list.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "AI 프로바이더 목록 @parallel @no-auth",
+          "file": "main-page/provider-list.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "프로바이더 드롭다운이 표시됨",
+              "ok": false,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 14421,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n\n    at C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts:16:34",
+                        "location": {
+                          "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
+                          "column": 34,
+                          "line": 16
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 14 |\u001b[39m   test(\u001b[32m'프로바이더 드롭다운이 표시됨'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 15 |\u001b[39m     \u001b[36mconst\u001b[39m providerSelect \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#provider'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 16 |\u001b[39m     \u001b[36mawait\u001b[39m expect(providerSelect)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 17 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 18 |\u001b[39m\n \u001b[90m 19 |\u001b[39m   test(\u001b[32m'최소 1개 이상의 프로바이더 옵션이 있음'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
+                            "column": 34,
+                            "line": 16
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n\n\n  14 |   test('프로바이더 드롭다운이 표시됨', async ({ page }) => {\n  15 |     const providerSelect = page.locator('#provider');\n> 16 |     await expect(providerSelect).toBeVisible();\n     |                                  ^\n  17 |   });\n  18 |\n  19 |   test('최소 1개 이상의 프로바이더 옵션이 있음', async ({ page }) => {\n    at C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts:16:34"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:12.649Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
+                        "column": 34,
+                        "line": 16
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "44f55067fa7d71e19ed8-9dbcbad11294d7eacb4a",
+              "file": "main-page/provider-list.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "최소 1개 이상의 프로바이더 옵션이 있음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4329,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:28.499Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "44f55067fa7d71e19ed8-f921e5637556b0fd8987",
+              "file": "main-page/provider-list.spec.ts",
+              "line": 19,
+              "column": 7
+            },
+            {
+              "title": "프로바이더 선택이 가능함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4322,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:33.172Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "44f55067fa7d71e19ed8-1c24e0a40f9aa42bb90e",
+              "file": "main-page/provider-list.spec.ts",
+              "line": 25,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "main-page\\style-options.spec.ts",
+      "file": "main-page/style-options.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "스타일 옵션 @parallel @no-auth",
+          "file": "main-page/style-options.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "스타일 카드 섹션이 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4305,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:37.518Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c968dbd1ece7f0225a7b-c80516fb4900c74e0ddf",
+              "file": "main-page/style-options.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "다양한 스타일 옵션이 있음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4225,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:41.849Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c968dbd1ece7f0225a7b-d15fee741f88171e1957",
+              "file": "main-page/style-options.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "스타일 선택이 변경됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4691,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:46.093Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c968dbd1ece7f0225a7b-79d6ec412610a7bdc58b",
+              "file": "main-page/style-options.spec.ts",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "각 스타일에 한국어 이름이 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4529,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:50.803Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c968dbd1ece7f0225a7b-f6831dbe18d07671aa8d",
+              "file": "main-page/style-options.spec.ts",
+              "line": 49,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "main-page\\theme-toggle.spec.ts",
+      "file": "main-page/theme-toggle.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "테마 전환 @parallel @no-auth",
+          "file": "main-page/theme-toggle.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "테마 전환 버튼이 존재함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4370,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:55.363Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "04157ecee158eab72da7-a279bf5b1b06af443e53",
+              "file": "main-page/theme-toggle.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "테마 전환 시 배경색이 변경됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5166,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:55:59.755Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "04157ecee158eab72da7-ef78766c8ca08fef597b",
+              "file": "main-page/theme-toggle.spec.ts",
+              "line": 19,
+              "column": 7
+            },
+            {
+              "title": "테마 설정이 localStorage에 저장됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4817,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-20T01:56:04.941Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "04157ecee158eab72da7-d1f11a79d00a372809ef",
+              "file": "main-page/theme-toggle.spec.ts",
+              "line": 40,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-20T01:54:37.522Z",
+    "duration": 92928.66500000001,
+    "expected": 13,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

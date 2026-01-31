@@ -29,6 +29,7 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
     'gemini': os.getenv('GEMINI_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
+    'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
 }
 
 # Supadata API Key (YouTube 자막 백업 서비스)
@@ -55,6 +56,14 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000, 'price_input': 0.27, 'price_output': 1.10},
             {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000, 'price_input': 0.55, 'price_output': 2.19}
         ]
+    },
+    'zhipuai': {
+        'name': 'Zhipu AI (GLM)',
+        'api_base': 'https://open.bigmodel.cn/api/paas/v4/',
+        'models': [
+            {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7 (최신)', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
+            {'id': 'zhipuai/GLM-4.5-Air', 'name': 'GLM-4.5 Air (경량)', 'max_input_tokens': 128000, 'price_input': 0.10, 'price_output': 0.10},
+        ]
     }
 }
 
@@ -78,6 +87,8 @@ def get_provider_from_model(model_id: str) -> str:
         return 'gemini'
     elif model_id.startswith('deepseek/'):
         return 'deepseek'
+    elif model_id.startswith('zhipuai/'):
+        return 'zhipuai'
     return 'gemini'  # 기본값 (Gemini)
 
 

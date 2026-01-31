@@ -1,0 +1,282 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - link "메인 콘텐츠로 건너뛰기" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "사이드바 네비게이션" [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e6]: auto_awesome_motion
+      - generic [ref=e7]: Insight Engine
+    - navigation "주요 메뉴" [ref=e8]:
+      - generic [ref=e9]: 메인
+      - group "메인" [ref=e10]:
+        - button "대시보드" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: dashboard
+          - generic [ref=e13]: 대시보드
+        - button "히스토리" [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]: history
+          - generic [ref=e16]: 히스토리
+        - button "사용량" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: pie_chart
+          - generic [ref=e19]: 사용량
+      - separator [ref=e20]
+      - generic [ref=e21]: 설정
+      - group "설정" [ref=e22]:
+        - button "환경설정 열기" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: settings
+          - generic [ref=e25]: 환경설정
+    - button "로그인" [ref=e27] [cursor=pointer]:
+      - generic [ref=e28]: person
+      - generic [ref=e29]: 로그인
+  - generic [ref=e30]:
+    - banner "상단 헤더" [ref=e31]:
+      - generic [ref=e33]: Beta v2.5
+      - generic [ref=e34]:
+        - status "사용량 현황" [ref=e35]:
+          - generic [ref=e36]: bolt
+          - generic [ref=e37]: "- / -"
+        - status "현재 AI 서비스" [ref=e38] [cursor=pointer]:
+          - generic [ref=e39]: AI
+          - generic [ref=e40]: 미설정
+        - 'button "테마 전환 (현재: 시스템 설정)" [ref=e41] [cursor=pointer]':
+          - generic [ref=e42]: contrast
+          - generic: 시스템 설정
+        - button "설정 열기" [ref=e43] [cursor=pointer]:
+          - generic [ref=e44]: settings
+        - generic [ref=e46]:
+          - generic [ref=e47]: cloud_off
+          - text: 로컬 모드
+    - main "메인 콘텐츠 영역" [ref=e48]:
+      - heading "Insight Engine - AI 콘텐츠 분석 도구" [level=1] [ref=e49]
+      - region "콘텐츠 생성 입력" [ref=e50]:
+        - alert [ref=e51]
+        - generic [ref=e52]:
+          - button "YouTube URL" [expanded] [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]:
+              - generic [ref=e55]: link
+              - generic [ref=e56]: YouTube URL
+            - generic [ref=e57]: expand_less
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - textbox "YouTube 영상 URL 입력" [ref=e61]:
+                  - /placeholder: YouTube 영상 URL을 붙여넣기 하세요
+                - generic [ref=e63]: smart_display
+              - button "URL 목록에 추가" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]: add
+                - generic [ref=e66]: 추가
+            - paragraph [ref=e67]:
+              - generic [ref=e68]: info
+              - text: youtube.com, youtu.be 형식 지원 (최대 10개)
+            - group "추가된 URL 목록"
+            - generic [ref=e69]:
+              - status "URL 개수" [ref=e70]:
+                - generic [ref=e71]: playlist_add
+                - generic [ref=e72]: "0"
+                - text: /10 URLs
+              - 'button "AI 자동 분석: 제목을 분석하여 최적 세팅 후 바로 분석" [ref=e73] [cursor=pointer]':
+                - generic [ref=e74]: auto_awesome
+                - generic [ref=e75]: AI 자동 분석
+        - button "AI 모델" [ref=e77] [cursor=pointer]:
+          - generic [ref=e78]:
+            - generic [ref=e79]: psychology
+            - generic [ref=e80]: AI 모델
+          - generic [ref=e81]: expand_more
+        - generic [ref=e82]:
+          - button "스타일 Blog 커스텀 스타일 추가" [expanded] [ref=e83] [cursor=pointer]:
+            - generic [ref=e84]:
+              - generic [ref=e85]: style
+              - generic [ref=e86]: 스타일
+              - generic [ref=e87]: Blog
+            - generic [ref=e88]:
+              - button "커스텀 스타일 추가" [ref=e89]:
+                - generic [ref=e90]: add
+                - text: Custom
+              - generic [ref=e91]: expand_less
+          - generic [ref=e92]:
+            - region "스타일 선택" [ref=e93]:
+              - generic [ref=e94]:
+                - generic [ref=e95]: 기본
+                - radiogroup "기본" [ref=e97]:
+                  - generic [ref=e98] [cursor=pointer]:
+                    - radio "Blog 블로그 포스트 형태로 작성합니다" [checked] [ref=e99]
+                    - generic [ref=e100]:
+                      - generic [ref=e101]: edit_note
+                      - generic [ref=e102]: Blog
+                    - generic [ref=e103]: 블로그 포스트 형태로 작성합니다
+                  - generic [ref=e104] [cursor=pointer]:
+                    - radio "Summary 핵심 내용만 간결하게 요약합니다" [ref=e105]
+                    - generic [ref=e106]:
+                      - generic [ref=e107]: description
+                      - generic [ref=e108]: Summary
+                    - generic [ref=e109]: 핵심 내용만 간결하게 요약합니다
+                  - generic [ref=e110] [cursor=pointer]:
+                    - radio "Detail 상세하고 풍부하게 작성합니다" [ref=e111]
+                    - generic [ref=e112]:
+                      - generic [ref=e113]: article
+                      - generic [ref=e114]: Detail
+                    - generic [ref=e115]: 상세하고 풍부하게 작성합니다
+                  - generic [ref=e116] [cursor=pointer]:
+                    - radio "Easy 누구나 이해하기 쉬운 말로 풀어서 설명합니다" [ref=e117]
+                    - generic [ref=e118]:
+                      - generic [ref=e119]: forum
+                      - generic [ref=e120]: Easy
+                    - generic [ref=e121]: 누구나 이해하기 쉬운 말로 풀어서 설명합니다
+              - generic [ref=e122]:
+                - generic [ref=e123]: 분석
+                - radiogroup "분석" [ref=e125]:
+                  - generic [ref=e126] [cursor=pointer]:
+                    - radio "Ideas 영상에서 언급된 니즈와 추천 아이템을 분석합니다" [ref=e127]
+                    - generic [ref=e128]:
+                      - generic [ref=e129]: lightbulb
+                      - generic [ref=e130]: Ideas
+                    - generic [ref=e131]: 영상에서 언급된 니즈와 추천 아이템을 분석합니다
+                  - generic [ref=e132] [cursor=pointer]:
+                    - radio "Q&A 질문과 답변 형식으로 정리합니다" [ref=e133]
+                    - generic [ref=e134]:
+                      - generic [ref=e135]: quiz
+                      - generic [ref=e136]: Q&A
+                    - generic [ref=e137]: 질문과 답변 형식으로 정리합니다
+                  - generic [ref=e138] [cursor=pointer]:
+                    - radio "Info 인포그래픽 제작에 적합한 핵심 데이터를 추출합니다" [ref=e139]
+                    - generic [ref=e140]:
+                      - generic [ref=e141]: insert_chart
+                      - generic [ref=e142]: Info
+                    - generic [ref=e143]: 인포그래픽 제작에 적합한 핵심 데이터를 추출합니다
+                  - generic [ref=e144] [cursor=pointer]:
+                    - radio "Compare 여러 요소를 비교 분석하여 정리합니다" [ref=e145]
+                    - generic [ref=e146]:
+                      - generic [ref=e147]: compare
+                      - generic [ref=e148]: Compare
+                    - generic [ref=e149]: 여러 요소를 비교 분석하여 정리합니다
+              - generic [ref=e150]:
+                - generic [ref=e151]: 콘텐츠
+                - radiogroup "콘텐츠" [ref=e153]:
+                  - generic [ref=e154] [cursor=pointer]:
+                    - radio "News 뉴스 기사 형태로 객관적으로 작성합니다" [ref=e155]
+                    - generic [ref=e156]:
+                      - generic [ref=e157]: newspaper
+                      - generic [ref=e158]: News
+                    - generic [ref=e159]: 뉴스 기사 형태로 객관적으로 작성합니다
+                  - generic [ref=e160] [cursor=pointer]:
+                    - radio "Script 영상 대본/스크립트 형태로 재구성합니다" [ref=e161]
+                    - generic [ref=e162]:
+                      - generic [ref=e163]: movie
+                      - generic [ref=e164]: Script
+                    - generic [ref=e165]: 영상 대본/스크립트 형태로 재구성합니다
+                  - generic [ref=e166] [cursor=pointer]:
+                    - radio "SNS SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다" [ref=e167]
+                    - generic [ref=e168]:
+                      - generic [ref=e169]: share
+                      - generic [ref=e170]: SNS
+                    - generic [ref=e171]: SNS 포스팅에 적합한 짧고 임팩트 있는 글을 작성합니다
+                  - generic [ref=e172] [cursor=pointer]:
+                    - radio "SEO SEO에 최적화된 형태로 작성합니다" [ref=e173]
+                    - generic [ref=e174]:
+                      - generic [ref=e175]: search
+                      - generic [ref=e176]: SEO
+                    - generic [ref=e177]: SEO에 최적화된 형태로 작성합니다
+            - 'button "AI 스타일 생성: 영상에 맞는 맞춤 프롬프트를 자동 생성합니다" [ref=e178] [cursor=pointer]':
+              - generic [ref=e179]: auto_awesome
+              - generic [ref=e180]: AI 스타일 생성
+        - generic [ref=e181]:
+          - button "모디파이어" [expanded] [ref=e182] [cursor=pointer]:
+            - generic [ref=e183]:
+              - generic [ref=e184]: tune
+              - generic [ref=e185]: 모디파이어
+            - generic [ref=e186]: expand_less
+          - region "콘텐츠 생성 옵션" [ref=e187]:
+            - group "길이" [ref=e188]:
+              - generic [ref=e189]:
+                - generic [ref=e190]: straighten
+                - text: 길이
+              - radiogroup "길이" [ref=e191]:
+                - generic [ref=e192] [cursor=pointer]:
+                  - radio "짧게" [ref=e193]
+                  - generic [ref=e194]:
+                    - generic [ref=e195]: short_text
+                    - text: 짧게
+                - generic [ref=e196] [cursor=pointer]:
+                  - radio "보통" [checked] [ref=e197]
+                  - generic [ref=e198]:
+                    - generic [ref=e199]: notes
+                    - text: 보통
+                - generic [ref=e200] [cursor=pointer]:
+                  - radio "상세" [ref=e201]
+                  - generic [ref=e202]:
+                    - generic [ref=e203]: subject
+                    - text: 상세
+            - group "톤" [ref=e204]:
+              - generic [ref=e205]:
+                - generic [ref=e206]: record_voice_over
+                - text: 톤
+              - radiogroup "톤" [ref=e207]:
+                - generic [ref=e208] [cursor=pointer]:
+                  - radio "전문적" [checked] [ref=e209]
+                  - generic [ref=e210]:
+                    - generic [ref=e211]: business_center
+                    - text: 전문적
+                - generic [ref=e212] [cursor=pointer]:
+                  - radio "친근" [ref=e213]
+                  - generic [ref=e214]:
+                    - generic [ref=e215]: sentiment_satisfied
+                    - text: 친근
+                - generic [ref=e216] [cursor=pointer]:
+                  - radio "유머" [ref=e217]
+                  - generic [ref=e218]:
+                    - generic [ref=e219]: mood
+                    - text: 유머
+            - generic [ref=e220]:
+              - group "언어" [ref=e221]:
+                - generic [ref=e222]:
+                  - generic [ref=e223]: translate
+                  - text: 언어
+                - radiogroup "언어" [ref=e224]:
+                  - generic [ref=e225] [cursor=pointer]:
+                    - radio "한국어" [checked] [ref=e226]
+                    - generic [ref=e227]: 한국어
+                  - generic [ref=e228] [cursor=pointer]:
+                    - radio "EN" [ref=e229]
+                    - generic [ref=e230]: EN
+                  - generic [ref=e231] [cursor=pointer]:
+                    - radio "日本語" [ref=e232]
+                    - generic [ref=e233]: 日本語
+              - group "이모지" [ref=e234]:
+                - generic [ref=e235]:
+                  - generic [ref=e236]: add_reaction
+                  - text: 이모지
+                - generic [ref=e238] [cursor=pointer]:
+                  - checkbox "이모지" [ref=e239]
+                  - generic [ref=e240]:
+                    - generic [ref=e241]: sentiment_very_satisfied
+                    - text: 사용
+        - button "콘텐츠 생성 대기 중인 URL 개수" [ref=e243] [cursor=pointer]:
+          - generic [ref=e244]: auto_awesome
+          - generic [ref=e245]: 콘텐츠 생성
+          - generic [ref=e246]: 대기 중인 URL 개수
+        - separator "패널 크기 조절"
+      - region "생성 결과" [ref=e248]:
+        - tabpanel [ref=e249]:
+          - heading "결과" [level=2] [ref=e252]
+          - region "생성된 콘텐츠 목록" [ref=e253]
+          - status [ref=e254]:
+            - generic [ref=e260]: auto_awesome
+            - heading "AI 콘텐츠 분석 준비 완료" [level=3] [ref=e265]
+            - paragraph [ref=e266]:
+              - text: YouTube 영상 URL을 입력하면
+              - text: AI가 자동으로 콘텐츠를 분석하고 생성합니다
+            - generic [ref=e267]:
+              - generic [ref=e268]:
+                - generic [ref=e269]: bolt
+                - text: 빠른 분석
+              - generic [ref=e270]:
+                - generic [ref=e271]: psychology
+                - text: AI 기반
+              - generic [ref=e272]:
+                - generic [ref=e273]: translate
+                - text: 한국어 최적화
+            - generic [ref=e274]:
+              - generic [ref=e275]: arrow_back
+              - generic [ref=e276]: 왼쪽에서 URL을 입력하세요
+```
