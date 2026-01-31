@@ -652,33 +652,55 @@ def generate_batch():
         results = [None] * len(urls)
         combined_content = []
 
-        current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
+        # GLM-4.7은 동시성 제한으로 순차 처리 필요
+        is_sequential_model = model == 'zhipuai/GLM-4.7'
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
-            future_to_index = {
-                executor.submit(
-                    _process_single_url, app, url, model, style,
-                    modifiers, custom_prompt
-                ): i for i, url in enumerate(urls)
-            }
-
-            for future in concurrent.futures.as_completed(future_to_index):
-                index = future_to_index[future]
+        if is_sequential_model:
+            current_app.logger.info(f"Starting to process {len(urls)} URLs sequentially (GLM-4.7)")
+            for i, url in enumerate(urls):
                 try:
-                    result = future.result()
-                    results[index] = result
-                    current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
+                    result = _process_single_url(app, url, model, style, modifiers, custom_prompt)
+                    results[i] = result
+                    current_app.logger.info(f"Completed processing URL {i + 1}: {result.get('success', False)}")
 
                     if result['success'] and isinstance(result.get('content', ''), str):
                         combined_content.append(result['content'])
                 except Exception as e:
-                    current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
-                    results[index] = {
+                    current_app.logger.error(f"Exception for URL {i + 1}: {e}")
+                    results[i] = {
                         'success': False,
-                        'url': urls[index],
+                        'url': url,
                         'title': '오류 발생',
                         'error': f'처리 중 예외 발생: {str(e)}'
                     }
+        else:
+            current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
+                future_to_index = {
+                    executor.submit(
+                        _process_single_url, app, url, model, style,
+                        modifiers, custom_prompt
+                    ): i for i, url in enumerate(urls)
+                }
+
+                for future in concurrent.futures.as_completed(future_to_index):
+                    index = future_to_index[future]
+                    try:
+                        result = future.result()
+                        results[index] = result
+                        current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
+
+                        if result['success'] and isinstance(result.get('content', ''), str):
+                            combined_content.append(result['content'])
+                    except Exception as e:
+                        current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
+                        results[index] = {
+                            'success': False,
+                            'url': urls[index],
+                            'title': '오류 발생',
+                            'error': f'처리 중 예외 발생: {str(e)}'
+                        }
 
         url_to_result = {result['url']: result for result in results if result}
         ordered_results = [
