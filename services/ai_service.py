@@ -4,6 +4,7 @@ LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
 import os
 import markdown
+import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import current_app
@@ -11,6 +12,9 @@ from litellm import completion
 
 # Zhipu AI (GLM) OpenAI 호환 API 설정
 ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
+
+# GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
+_glm_lock = threading.Lock()
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
 
@@ -156,14 +160,22 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
 
         # Zhipu AI (GLM) 모델은 OpenAI 호환 API 사용
         # GLM은 reasoning 모델이라 충분한 max_tokens 필요
-        if model.startswith("zhipuai/"):
+        is_glm = model.startswith("zhipuai/")
+        if is_glm:
             actual_model = model.replace("zhipuai/", "")  # zhipuai/ 접두사 제거
             completion_kwargs["model"] = f"openai/{actual_model}"
             completion_kwargs["api_base"] = ZHIPUAI_API_BASE
             completion_kwargs["api_key"] = os.getenv("ZHIPUAI_API_KEY", "")
             completion_kwargs["max_tokens"] = 8192  # reasoning 모델용 충분한 토큰
 
-        response = completion(**completion_kwargs)
+        # GLM 모델은 동시성 제한으로 순차 처리 (락 사용)
+        if is_glm:
+            with _glm_lock:
+                current_app.logger.info(f"GLM 락 획득: {model}")
+                response = completion(**completion_kwargs)
+                current_app.logger.info(f"GLM 락 해제: {model}")
+        else:
+            response = completion(**completion_kwargs)
 
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
