@@ -2,9 +2,15 @@
 AI 콘텐츠 생성 서비스
 LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
+import os
 import markdown
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from flask import current_app
 from litellm import completion
+
+# Zhipu AI (GLM) OpenAI 호환 API 설정
+ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
 
@@ -33,9 +39,20 @@ def _build_modifier_instructions(modifiers, style_modifiers):
     return instructions
 
 
+def _get_korean_datetime():
+    """현재 한국 시간(KST)을 반환합니다."""
+    kst = ZoneInfo("Asia/Seoul")
+    now = datetime.now(kst)
+    return now.strftime("%Y년 %m월 %d일 %H시 %M분")
+
+
 def _build_prompt(content, style_prompt, modifiers):
     """프롬프트를 구성합니다."""
-    prompt = f"{content}\n\n{style_prompt}" if style_prompt else content
+    # 현재 한국 시간 추가
+    current_time = _get_korean_datetime()
+    time_context = f"[현재 시간: {current_time} (한국 표준시)]"
+
+    prompt = f"{time_context}\n\n{content}\n\n{style_prompt}" if style_prompt else f"{time_context}\n\n{content}"
 
     style_modifiers = current_app.config.get('STYLE_MODIFIERS', {})
     modifier_instructions = _build_modifier_instructions(modifiers, style_modifiers)
@@ -97,6 +114,12 @@ def _convert_error_message(error_msg, model=None):
     if 'content' in error_lower and ('policy' in error_lower or 'filter' in error_lower or 'blocked' in error_lower):
         return f"[컨텐츠 차단] 요청이 컨텐츠 정책에 의해 차단되었습니다{model_info}."
 
+    # Zhipu AI 관련 에러
+    if '1113' in error_msg:
+        return f"[권한 없음] 해당 모델에 대한 접근 권한이 없습니다{model_info}. API 키 권한을 확인해주세요."
+    if '1211' in error_msg:
+        return f"[모델 없음] 요청한 모델이 존재하지 않습니다{model_info}. 모델명을 확인해주세요."
+
     # 기타 - 원본 메시지 포함
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
@@ -120,13 +143,21 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         prompt = _build_prompt(content, style_prompt, modifiers)
 
         # LiteLLM이 환경변수에서 자동으로 API 키 로드
-        # Gemini 모델은 reasoning_effort="minimal"로 초고속 응답
         completion_kwargs = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}]
         }
+
+        # Gemini 모델은 reasoning_effort="minimal"로 초고속 응답
         if model.startswith("gemini/"):
             completion_kwargs["reasoning_effort"] = "minimal"
+
+        # Zhipu AI (GLM) 모델은 OpenAI 호환 API 사용
+        if model.startswith("zhipuai/"):
+            actual_model = model.replace("zhipuai/", "")  # zhipuai/ 접두사 제거
+            completion_kwargs["model"] = f"openai/{actual_model}"
+            completion_kwargs["api_base"] = ZHIPUAI_API_BASE
+            completion_kwargs["api_key"] = os.getenv("ZHIPUAI_API_KEY", "")
 
         response = completion(**completion_kwargs)
 
