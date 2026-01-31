@@ -119,6 +119,8 @@ def _convert_error_message(error_msg, model=None):
         return f"[권한 없음] 해당 모델에 대한 접근 권한이 없습니다{model_info}. API 키 권한을 확인해주세요."
     if '1211' in error_msg:
         return f"[모델 없음] 요청한 모델이 존재하지 않습니다{model_info}. 모델명을 확인해주세요."
+    if '1302' in error_msg:
+        return f"[동시성 초과] 동시 요청 수가 초과되었습니다{model_info}. 잠시 후 다시 시도해주세요."
 
     # 기타 - 원본 메시지 포함
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
@@ -153,11 +155,13 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             completion_kwargs["reasoning_effort"] = "minimal"
 
         # Zhipu AI (GLM) 모델은 OpenAI 호환 API 사용
+        # GLM은 reasoning 모델이라 충분한 max_tokens 필요
         if model.startswith("zhipuai/"):
             actual_model = model.replace("zhipuai/", "")  # zhipuai/ 접두사 제거
             completion_kwargs["model"] = f"openai/{actual_model}"
             completion_kwargs["api_base"] = ZHIPUAI_API_BASE
             completion_kwargs["api_key"] = os.getenv("ZHIPUAI_API_KEY", "")
+            completion_kwargs["max_tokens"] = 8192  # reasoning 모델용 충분한 토큰
 
         response = completion(**completion_kwargs)
 
