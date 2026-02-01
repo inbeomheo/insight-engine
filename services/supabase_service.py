@@ -232,26 +232,57 @@ def save_history(user_id: str, data: dict) -> dict:
     return _db_operation('History save', None, operation)
 
 
-def get_histories(user_id: str, limit: int = 50) -> list:
-    """사용자 히스토리 조회
+def get_histories(user_id: str, page: int = 1, per_page: int = 20) -> dict:
+    """사용자 히스토리 조회 (페이지네이션 지원)
     - 관리자: 모든 사용자의 히스토리
     - 일반 사용자: 본인 히스토리만
+
+    Returns:
+        dict: {
+            'histories': [...],
+            'total': int,
+            'page': int,
+            'per_page': int,
+            'total_pages': int,
+            'has_more': bool
+        }
     """
     supabase = get_supabase()
     if not supabase or not user_id:
-        return []
+        return {'histories': [], 'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0, 'has_more': False}
 
     def operation():
-        query = supabase.table('ie_histories').select('*')
+        is_admin_user = is_admin(user_id)
 
-        # 관리자가 아니면 본인 것만
-        if not is_admin(user_id):
+        # 1. 전체 개수 조회
+        count_query = supabase.table('ie_histories').select('report_id', count='exact')
+        if not is_admin_user:
+            count_query = count_query.eq('user_id', user_id)
+        count_result = count_query.execute()
+        total = count_result.count or 0
+
+        # 2. 페이지네이션 계산
+        offset = (page - 1) * per_page
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+
+        # 3. 데이터 조회
+        query = supabase.table('ie_histories').select('*')
+        if not is_admin_user:
             query = query.eq('user_id', user_id)
 
-        result = query.order('created_at', desc=True).limit(limit).execute()
-        return result.data or []
+        result = query.order('created_at', desc=True).range(offset, offset + per_page - 1).execute()
+        histories = result.data or []
 
-    return _db_operation('History fetch', [], operation)
+        return {
+            'histories': histories,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': total_pages,
+            'has_more': page < total_pages
+        }
+
+    return _db_operation('History fetch', {'histories': [], 'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 0, 'has_more': False}, operation)
 
 
 def update_history(user_id: str, report_id: str, updates: dict) -> bool:

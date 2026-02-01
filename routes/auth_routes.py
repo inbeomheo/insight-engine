@@ -361,16 +361,20 @@ def get_user_usage():
 @auth_bp.route('/api/user/history', methods=['GET'])
 @require_auth
 def get_user_history():
-    """사용자 히스토리 조회 (클라우드 동기화)
+    """사용자 히스토리 조회 (클라우드 동기화, 페이지네이션 지원)
 
     - 일반 사용자: 본인 히스토리만
     - 관리자: 모든 사용자 히스토리
 
     Query Parameters:
-        limit: 조회할 최대 개수 (기본값: 50)
+        page: 페이지 번호 (기본값: 1)
+        per_page: 페이지당 항목 수 (기본값: 20)
     """
-    limit = request.args.get('limit', 50, type=int)
-    histories = get_histories(g.user_id, limit)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    data = get_histories(g.user_id, page, per_page)
+    histories = data.get('histories', [])
 
     # 프론트엔드 포맷에 맞게 변환
     result = []
@@ -391,6 +395,11 @@ def get_user_history():
 
     return jsonify({
         'histories': result,
+        'total': data.get('total', 0),
+        'page': data.get('page', 1),
+        'per_page': data.get('per_page', 20),
+        'total_pages': data.get('total_pages', 0),
+        'has_more': data.get('has_more', False),
         'is_admin': is_admin(g.user_id)
     })
 
