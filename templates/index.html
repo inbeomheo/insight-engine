@@ -862,6 +862,13 @@
                         </div>
                         <!-- 리포트 스트림 - US-016: feed는 콘텐츠 있을 때만 적용, 빈 상태에서는 region 사용 -->
                         <div id="report-stream" class="flex-1 p-4 space-y-2 overflow-y-auto" role="region" aria-label="생성된 콘텐츠 목록" aria-live="polite"></div>
+                        <!-- 더보기 버튼 (페이지네이션) -->
+                        <div class="px-4 pb-4">
+                            <button id="load-more-btn" class="hidden w-full py-2.5 px-4 bg-surface-dark hover:bg-surface-dark/80 border border-border-dark/50 rounded-lg text-text-secondary text-sm font-medium transition-all flex items-center justify-center gap-2" aria-label="이전 결과 더보기">
+                                <span class="material-symbols-outlined text-sm">expand_more</span>
+                                더보기
+                            </button>
+                        </div>
                         <!-- Empty State - Minimal Design -->
                         <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-6 text-center" role="status">
                             <!-- Compact Icon -->

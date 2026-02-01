@@ -18,11 +18,24 @@ export class ReportManager {
             reportStream: document.getElementById('report-stream'),
             emptyState: document.getElementById('empty-state'),
             liveIndicator: document.getElementById('live-indicator'),
-            collapseAllBtn: document.getElementById('collapse-all-btn')
+            collapseAllBtn: document.getElementById('collapse-all-btn'),
+            loadMoreBtn: document.getElementById('load-more-btn')
+        };
+
+        // 페이지네이션 상태
+        this.pagination = {
+            currentPage: 1,
+            perPage: 20,
+            totalPages: 0,
+            hasMore: false,
+            isLoading: false
         };
 
         // 모두 접기 버튼 이벤트 바인딩
         this._setupCollapseAllButton();
+
+        // 더보기 버튼 이벤트 바인딩
+        this._setupLoadMoreButton();
 
         // 모듈 초기화
         this.htmlBuilder = new CardHtmlBuilder(uiManager);
@@ -63,6 +76,85 @@ export class ReportManager {
         if (!collapseAllBtn) return;
 
         collapseAllBtn.addEventListener('click', () => this.toggleCollapseAll());
+    }
+
+    _setupLoadMoreButton() {
+        const { loadMoreBtn } = this.elements;
+        if (!loadMoreBtn) return;
+
+        loadMoreBtn.addEventListener('click', () => this._loadMoreHistory());
+    }
+
+    /**
+     * 더보기 버튼 표시/숨김
+     */
+    _updateLoadMoreButton() {
+        const { loadMoreBtn } = this.elements;
+        if (!loadMoreBtn) return;
+
+        if (this.pagination.hasMore && !this.pagination.isLoading) {
+            loadMoreBtn.classList.remove('hidden');
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.innerHTML = `
+                <span class="material-symbols-outlined text-sm">expand_more</span>
+                더보기 (${this.pagination.currentPage}/${this.pagination.totalPages})
+            `;
+        } else if (this.pagination.isLoading) {
+            loadMoreBtn.classList.remove('hidden');
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = `
+                <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                로딩 중...
+            `;
+        } else {
+            loadMoreBtn.classList.add('hidden');
+        }
+    }
+
+    /**
+     * 다음 페이지 로드
+     */
+    async _loadMoreHistory() {
+        if (this.pagination.isLoading || !this.pagination.hasMore) return;
+        if (!this.authManager?.isLoggedIn?.()) return;
+
+        this.pagination.isLoading = true;
+        this._updateLoadMoreButton();
+
+        try {
+            const headers = this.authManager.getAuthHeaders?.() || {};
+            const nextPage = this.pagination.currentPage + 1;
+            const response = await fetch(
+                `/api/user/history?page=${nextPage}&per_page=${this.pagination.perPage}`,
+                { headers }
+            );
+
+            if (!response.ok) {
+                throw new Error('히스토리 로드 실패');
+            }
+
+            const data = await response.json();
+            const histories = data.histories || [];
+
+            // 페이지네이션 상태 업데이트
+            this.pagination.currentPage = data.page;
+            this.pagination.totalPages = data.total_pages;
+            this.pagination.hasMore = data.has_more;
+
+            // 히스토리 카드 추가 (하단에)
+            histories
+                .map(h => this._formatCloudHistory(h))
+                .filter(Boolean)
+                .forEach(h => this._displayHistoryCard(h));
+
+            console.log(`[ReportManager] 페이지 ${nextPage} 로드 완료 (${histories.length}개)`);
+
+        } catch (e) {
+            console.error('[ReportManager] 더보기 로드 오류:', e);
+        } finally {
+            this.pagination.isLoading = false;
+            this._updateLoadMoreButton();
+        }
     }
 
     /**
@@ -250,12 +342,20 @@ export class ReportManager {
     }
 
     /**
-     * 클라우드 히스토리 로드 (Supabase)
+     * 클라우드 히스토리 로드 (Supabase, 페이지네이션 지원)
      */
     async _loadCloudHistory() {
         try {
+            // 페이지네이션 초기화
+            this.pagination.currentPage = 1;
+            this.pagination.isLoading = true;
+            this._updateLoadMoreButton();
+
             const headers = this.authManager.getAuthHeaders?.() || {};
-            const response = await fetch('/api/user/history?limit=50', { headers });
+            const response = await fetch(
+                `/api/user/history?page=1&per_page=${this.pagination.perPage}`,
+                { headers }
+            );
 
             if (!response.ok) {
                 console.warn('[ReportManager] 클라우드 히스토리 로드 실패, 로컬로 폴백');
@@ -266,17 +366,19 @@ export class ReportManager {
             const data = await response.json();
             const histories = data.histories || [];
 
+            // 페이지네이션 상태 업데이트
+            this.pagination.currentPage = data.page || 1;
+            this.pagination.totalPages = data.total_pages || 0;
+            this.pagination.hasMore = data.has_more || false;
+
             if (histories.length === 0) {
                 // 클라우드에 히스토리 없으면 로컬도 확인
                 this._loadLocalHistory();
                 return;
             }
 
-            console.log(`[ReportManager] 클라우드 히스토리 ${histories.length}개 로드`);
+            console.log(`[ReportManager] 클라우드 히스토리 ${histories.length}개 로드 (총 ${data.total}개, ${this.pagination.totalPages}페이지)`);
             this._setEmptyStateVisibility(false);
-
-            // 클라우드 데이터로 로컬 스토리지 동기화 (옵션)
-            // this.storage.syncFromCloud(histories);
 
             // P2 버그 #9: null 필터링
             histories
@@ -287,6 +389,9 @@ export class ReportManager {
         } catch (e) {
             console.error('[ReportManager] 클라우드 히스토리 로드 오류:', e);
             this._loadLocalHistory();
+        } finally {
+            this.pagination.isLoading = false;
+            this._updateLoadMoreButton();
         }
     }
 
