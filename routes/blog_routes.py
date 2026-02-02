@@ -180,10 +180,24 @@ def _handle_error_response(error_msg, log_detail=None):
     if 'API 키' in error_msg or 'authentication' in error_msg.lower():
         return jsonify({'error': error_msg}), 401
 
-    # 내부 에러 상세 정보는 숨김 (traceback 등)
-    safe_msg = error_msg
-    if any(keyword in error_msg.lower() for keyword in ['traceback', 'exception', 'file "', 'line ']):
+    # 내부 에러 상세 정보는 숨김 - 허용된 메시지만 노출
+    ALLOWED_ERROR_PREFIXES = [
+        '[인증 실패]', '[사용량 초과]', '[입력 오류]', '[자막 없음]',
+        '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL'
+    ]
+
+    # 허용된 접두사로 시작하지 않거나 내부 정보 포함 시 일반 메시지로 대체
+    is_safe = any(error_msg.startswith(prefix) for prefix in ALLOWED_ERROR_PREFIXES)
+    has_internal_info = any(keyword in error_msg.lower() for keyword in [
+        'traceback', 'exception', 'file "', 'line ', 'error:', 'failed:',
+        '/home/', '/usr/', 'supabase', 'postgres', 'connection'
+    ])
+
+    if not is_safe or has_internal_info:
+        current_app.logger.error(f'Internal error hidden from user: {error_msg}')
         safe_msg = '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'
+    else:
+        safe_msg = error_msg
 
     return jsonify({'error': safe_msg}), 500
 
@@ -745,17 +759,23 @@ def generate_batch():
                 supabase = get_supabase()
                 if supabase:
                     try:
+                        def sanitize_text(text, max_length=50000):
+                            """입력 텍스트 검증 및 길이 제한"""
+                            if not isinstance(text, str):
+                                return ""
+                            return text[:max_length]
+
                         batch_data = [{
                             'user_id': g.user_id,
-                            'report_id': h['id'],
-                            'url': h['url'],
-                            'title': h['title'],
-                            'style': h['style'],
-                            'content': h['content'],
-                            'html': h['html'],
-                            'transcript': h['transcript'],
-                            'usage': h['usage'],
-                            'elapsed_time': h['elapsed_time']
+                            'report_id': sanitize_text(h.get('id', ''), 100),
+                            'url': sanitize_text(h.get('url', ''), 500),
+                            'title': sanitize_text(h.get('title', ''), 500),
+                            'style': sanitize_text(h.get('style', ''), 50),
+                            'content': sanitize_text(h.get('content', ''), 100000),
+                            'html': sanitize_text(h.get('html', ''), 200000),
+                            'transcript': sanitize_text(h.get('transcript', ''), 10000),
+                            'usage': h.get('usage'),
+                            'elapsed_time': h.get('elapsed_time')
                         } for h in histories_to_save]
                         supabase.table('ie_histories').insert(batch_data).execute()
                     except Exception as e:

@@ -499,33 +499,43 @@ def get_usage(user_id: str) -> dict:
 
 
 def decrement_usage(user_id: str) -> bool:
-    """사용량 1 차감. 성공 시 True 반환."""
+    """사용량 1 차감. 원자적 RPC 함수 사용으로 Race Condition 방지."""
     supabase = get_supabase()
     if not supabase or not user_id:
         return False
 
     def operation():
-        # 현재 사용량 확인
-        result = supabase.table('ie_usage') \
-            .select('usage_count') \
-            .eq('user_id', user_id) \
-            .limit(1) \
-            .execute()
-
-        if not result.data or len(result.data) == 0 or result.data[0].get('usage_count', 0) <= 0:
+        # 원자적 차감 (Race Condition 방지)
+        try:
+            result = supabase.rpc('decrement_usage_safe', {'p_user_id': user_id}).execute()
+            if result.data:
+                return result.data.get('success', False)
             return False
+        except Exception as e:
+            # RPC 함수가 없는 경우 기존 방식으로 폴백 (하위 호환성)
+            import logging
+            logging.warning(f"decrement_usage_safe RPC 실패, 폴백 사용: {e}")
 
-        # 차감
-        new_count = result.data[0]['usage_count'] - 1
-        supabase.table('ie_usage') \
-            .update({
-                'usage_count': new_count,
-                'updated_at': 'now()'
-            }) \
-            .eq('user_id', user_id) \
-            .execute()
+            # 폴백: 기존 방식 (Race Condition 가능성 있음)
+            result = supabase.table('ie_usage') \
+                .select('usage_count') \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
 
-        return True
+            if not result.data or len(result.data) == 0 or result.data[0].get('usage_count', 0) <= 0:
+                return False
+
+            new_count = result.data[0]['usage_count'] - 1
+            supabase.table('ie_usage') \
+                .update({
+                    'usage_count': new_count,
+                    'updated_at': 'now()'
+                }) \
+                .eq('user_id', user_id) \
+                .execute()
+
+            return True
 
     return _db_operation('Usage decrement', False, operation)
 

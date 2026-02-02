@@ -485,7 +485,7 @@ def _get_transcript_from_watch_page(video_id: str) -> TranscriptResult:
         }
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
 
-        response = requests.get(watch_url, headers=headers, timeout=15)
+        response = requests.get(watch_url, headers=headers, timeout=HTTP_TIMEOUT)
         response.raise_for_status()
 
         player = _extract_yt_initial_player_response(response.text)

@@ -167,10 +167,13 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         # GLM은 reasoning 모델이라 충분한 max_tokens 필요
         is_glm = model.startswith("zhipuai/")
         if is_glm:
+            zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
+            if not zhipuai_key:
+                raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
             actual_model = model.replace("zhipuai/", "")  # zhipuai/ 접두사 제거
             completion_kwargs["model"] = f"openai/{actual_model}"
             completion_kwargs["api_base"] = ZHIPUAI_API_BASE
-            completion_kwargs["api_key"] = os.getenv("ZHIPUAI_API_KEY", "")
+            completion_kwargs["api_key"] = zhipuai_key
             completion_kwargs["max_tokens"] = 8192  # reasoning 모델용 충분한 토큰
 
         # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
@@ -205,9 +208,9 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
 
-        # 토큰 사용량 정보 추출
+        # 토큰 사용량 정보 추출 (기본값 설정으로 None 방지)
+        token_usage = {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0}
         usage = getattr(response, 'usage', None)
-        token_usage = None
         if usage:
             token_usage = {
                 'prompt_tokens': getattr(usage, 'prompt_tokens', 0),

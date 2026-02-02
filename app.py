@@ -78,7 +78,8 @@ def create_app(test_config=None):
                 return app.debug and any(local in url for local in ('localhost', '127.0.0.1'))
 
             if origin:
-                if not origin.startswith(host) and origin not in ('null', 'file://'):
+                # 'null' origin 허용 제거 (보안 강화)
+                if not origin.startswith(host) and origin != 'file://':
                     # 개발 환경에서는 localhost/127.0.0.1 허용
                     if not is_local_dev(origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Origin'}), 403
