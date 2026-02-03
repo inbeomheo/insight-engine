@@ -164,7 +164,6 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             completion_kwargs["reasoning_effort"] = "minimal"
 
         # Zhipu AI (GLM) 모델은 OpenAI 호환 API 사용
-        # GLM은 reasoning 모델이라 충분한 max_tokens 필요
         is_glm = model.startswith("zhipuai/")
         if is_glm:
             zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
@@ -174,7 +173,7 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             completion_kwargs["model"] = f"openai/{actual_model}"
             completion_kwargs["api_base"] = ZHIPUAI_API_BASE
             completion_kwargs["api_key"] = zhipuai_key
-            completion_kwargs["max_tokens"] = 8192  # reasoning 모델용 충분한 토큰
+            completion_kwargs["reasoning_effort"] = "low"  # 추론 최소화
 
         # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
         if is_glm:
