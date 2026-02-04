@@ -73,7 +73,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 폴백 로직 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격 정의 |
-| 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (5개 스타일) |
+| 프롬프트 | `prompts/__init__.py` | `STYLE_PROMPTS` 매핑 (8개 스타일) |
 
 ### Frontend Module Communication (EventBus)
 
@@ -203,7 +203,7 @@ def generate_batch():
 - 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}}`
 - 실패: `{"error": "메시지"}`
 
-### 5개 핵심 스타일 (v3.0)
+### 8개 스타일 (v3.1)
 
 | 스타일 ID | 이름 | 설명 |
 |-----------|------|------|
@@ -212,6 +212,9 @@ def generate_batch():
 | `tutorial` | 튜토리얼 | 단계별 학습 가이드 |
 | `qna` | Q&A | 질문-답변 형식 정리 |
 | `app_ideas` | 앱 아이디어 | 영상에서 개발 아이디어 추출 |
+| `yozm_it` | 요즘IT | IT/개발자 대상 기술 아티클 (GeekNews 스타일) |
+| `brunch_essay` | 브런치 | 에세이/칼럼 스타일 (Medium 스타일) |
+| `naver_popular` | 네이버 | 대중적 SEO 블로그 (네이버 인기글 스타일) |
 
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
@@ -238,6 +241,33 @@ def generate_batch():
 - **금지 표현**: 놀라운, 혁신적, 획기적, 최고의, 게임체인저, 압도적, 경이로운, 드디어, 탁월한, 인상적, 뛰어난, 강력한
 - **댓글 활용**: `[댓글]` 섹션이 입력에 없으면 시청자 반응 절대 언급 금지, 댓글은 본문에 자연스럽게 녹임
 - **원칙**: 자막에 있는 정보만 사용 (창작/추측 절대 금지)
+
+### 프롬프트 구조 (v3.1)
+
+```
+┌─────────────────────────────────────────┐
+│ BASE_PROMPT (prompts/base.py)           │
+│ ├─ 역할, 입력, 핵심 원칙                │
+│ ├─ 작성 순서 (Chain-of-Thought)        │
+│ ├─ 불확실성 처리 지침                   │
+│ ├─ 금지 표현, 댓글 활용 규칙            │
+├─────────────────────────────────────────┤
+│ STYLE_PROMPT (prompts/styles/*.py)      │
+│ ├─ 스타일 목표, 작성 가이드             │
+│ ├─ 출력 형식                            │
+│ ├─ Few-shot 예시 (좋은 시작 예시)       │
+│ └─ Output Priming (작성 시작점)         │
+├─────────────────────────────────────────┤
+│ MODIFIER_TEXT (선택적)                  │
+├─────────────────────────────────────────┤
+│ SELF_CHECK (자기 검증 체크리스트)       │
+├─────────────────────────────────────────┤
+│ FORBIDDEN_REMINDER (금지 표현 재강조)   │
+└─────────────────────────────────────────┘
+```
+
+- `build_full_prompt(style_id, modifiers)`: 최종 프롬프트 조합 함수
+- 각 스타일 파일에 Few-shot 예시 + Output Priming 포함
 
 ### 사용량 제한
 

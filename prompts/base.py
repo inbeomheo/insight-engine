@@ -38,6 +38,19 @@ YouTube 영상 자막을 바탕으로 글을 작성해주세요.
 - 중요한 부분은 **볼드** 처리
 - 필요하면 목록이나 표 활용
 
+## 작성 순서 (단계별로 생각하세요)
+
+1. **핵심 파악**: 자막에서 핵심 메시지 3가지를 먼저 파악
+2. **독자 질문 예상**: "독자가 이 영상을 보는 이유가 뭘까?" 생각
+3. **구조 설계**: 핵심 메시지를 어떤 순서로 전달할지 결정
+4. **작성**: 설계한 구조에 따라 글 작성
+
+## 불확실한 내용 처리
+
+- 자막에서 명확하지 않은 내용은 "~로 보입니다", "~일 수 있습니다"로 표현
+- 추측하지 말고, 확실한 내용만 단정적으로 작성
+- 모르는 건 모른다고 인정하는 게 나음
+
 ## 절대 금지 표현
 다음 표현들은 사용하지 마세요: 놀라운, 혁신적, 획기적, 최고의, 게임체인저, 압도적, 경이로운, 드디어, 탁월한, 인상적, 뛰어난, 강력한
 
@@ -48,6 +61,19 @@ YouTube 영상 자막을 바탕으로 글을 작성해주세요.
 
 ---
 
+'''
+
+# 자기 검증 체크리스트 (프롬프트 끝 부분에 추가)
+SELF_CHECK = '''
+---
+
+## 작성 후 체크리스트
+
+작성을 마치면 다음을 확인하세요:
+- [ ] 금지 표현(놀라운, 혁신적 등)을 사용하지 않았는가?
+- [ ] 자막에 없는 내용을 추가하지 않았는가?
+- [ ] 불확실한 내용에 "~로 보입니다" 표현을 사용했는가?
+- [ ] 출력 형식을 제대로 따랐는가?
 '''
 
 # 금지 표현 재강조 (프롬프트 끝에 추가)
@@ -83,10 +109,13 @@ def build_prompt(style_prompt: str, modifiers: dict = None) -> str:
     if modifier_text:
         final_prompt += f"\n\n# 추가 지침\n{modifier_text}"
 
+    # 자기 검증 체크리스트 추가
+    final_prompt += SELF_CHECK
+
     # 금지 표현 재강조 (프롬프트 끝에 추가)
     final_prompt += FORBIDDEN_REMINDER
 
     return final_prompt
 
 
-__all__ = ['BASE_PROMPT', 'FORBIDDEN_EXPRESSIONS', 'FORBIDDEN_REMINDER', 'build_prompt']
+__all__ = ['BASE_PROMPT', 'FORBIDDEN_EXPRESSIONS', 'FORBIDDEN_REMINDER', 'SELF_CHECK', 'build_prompt']

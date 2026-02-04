@@ -1,73 +1,105 @@
-/* ==================== Report Content Styles ==================== */
-/* US-015: WCAG AA 색상 대비 기준 충족 - Warm Cream 다크 테마 */
+/* ==================== Report Content Styles v2.0 ==================== */
+/* Medium/Notion 스타일 타이포그래피 - 긴 글도 읽기 편하게 */
 
 .report-content {
-    font-family: 'Pretendard', sans-serif;
-    font-size: 1rem;       /* 16px */
-    font-weight: 400;      /* Regular - 편안한 가독성 */
-    line-height: 1.8;      /* 넉넉한 줄 간격 */
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 1.0625rem;    /* 17px - 긴 글 읽기 최적 */
+    font-weight: 400;
+    line-height: 1.85;       /* 넉넉한 줄 간격 */
     color: var(--text-primary);
+    letter-spacing: -0.01em;
+    word-break: keep-all;    /* 한글 단어 단위 줄바꿈 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
-/* Headings - Warm Cream 다크 테마 */
+/* ==================== Headings ==================== */
+/* 명확한 시각적 계층 구조 */
+
 .report-content h1 {
     font-family: 'Pretendard', sans-serif;
-    font-size: 1.375rem;
-    font-weight: 600;      /* Semi-bold */
+    font-size: 1.75rem;      /* 28px */
+    font-weight: 700;
     color: var(--text-primary);
-    margin: 1.5rem 0 0.75rem 0;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-dark);
+    margin: 2.5rem 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary);
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+}
+
+.report-content h1:first-child {
+    margin-top: 0;
 }
 
 .report-content h2 {
     font-family: 'Pretendard', sans-serif;
-    font-size: 1.125rem;
-    font-weight: 600;      /* Semi-bold */
-    color: var(--primary);
-    margin: 1.25rem 0 0.5rem 0;
-}
-
-.report-content h2::before {
-    content: '';
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    background: var(--primary);
-    margin-right: 10px;
-    transform: rotate(45deg);
+    font-size: 1.375rem;     /* 22px */
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 2rem 0 0.75rem 0;
+    padding-left: 0.875rem;
+    border-left: 4px solid var(--primary);
+    letter-spacing: -0.01em;
+    line-height: 1.4;
 }
 
 .report-content h3 {
     font-family: 'Pretendard', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;      /* Semi-bold */
+    font-size: 1.125rem;     /* 18px */
+    font-weight: 600;
     color: var(--text-primary);
-    margin: 1rem 0 0.5rem 0;
+    margin: 1.75rem 0 0.625rem 0;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.report-content h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.4em;
+    width: 6px;
+    height: 6px;
+    background: var(--primary);
+    border-radius: 2px;
 }
 
 .report-content h4 {
-    font-size: 0.9375rem;
-    font-weight: 500;      /* Medium */
+    font-size: 1rem;
+    font-weight: 600;
     color: var(--text-muted);
-    margin: 0.875rem 0 0.375rem 0;
+    margin: 1.5rem 0 0.5rem 0;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
+    font-size: 0.8125rem;
 }
 
-/* Paragraphs */
+/* ==================== Paragraphs ==================== */
+
 .report-content p {
-    margin: 0.75rem 0;
+    margin: 1.25rem 0;
     color: var(--text-primary);
 }
 
-/* Lists */
+.report-content p + p {
+    margin-top: 1rem;
+}
+
+/* 첫 문단 강조 (선택적) */
+.report-content > p:first-of-type {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    line-height: 1.9;
+}
+
+/* ==================== Lists ==================== */
+
 .report-content ul,
 .report-content ol {
-    margin: 0.75rem 0;
+    margin: 1.25rem 0;
     padding-left: 0;
 }
 
@@ -77,151 +109,236 @@
 
 .report-content ul li {
     position: relative;
-    padding-left: 1.25rem;
-    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+    margin: 0.625rem 0;
     color: var(--text-primary);
 }
 
-/* 리스트 마커 - Warm Cream 테마 */
+/* 리스트 마커 - 깔끔한 원형 */
 .report-content ul li::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 0.5rem;
-    width: 5px;
-    height: 5px;
+    left: 0.25rem;
+    top: 0.65em;
+    width: 6px;
+    height: 6px;
     background: var(--primary);
-    border-radius: 1px;
-    transform: rotate(45deg);
+    border-radius: 50%;
 }
 
+/* 순서 리스트 */
 .report-content ol {
     list-style: none;
-    counter-reset: item;
+    counter-reset: ol-counter;
 }
 
 .report-content ol li {
-    counter-increment: item;
+    counter-increment: ol-counter;
     position: relative;
-    padding-left: 2rem;
-    margin: 0.5rem 0;
+    padding-left: 2.25rem;
+    margin: 0.75rem 0;
     color: var(--text-primary);
 }
 
-/* 순서 리스트 마커 */
 .report-content ol li::before {
-    content: counter(item);
+    content: counter(ol-counter);
     position: absolute;
     left: 0;
-    width: 1.375rem;
-    height: 1.375rem;
-    background: var(--primary);
+    top: 0.1em;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: linear-gradient(135deg, var(--primary) 0%, rgba(212, 168, 122, 0.8) 100%);
     color: var(--background-dark);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 50%;
 }
 
-/* Nested lists */
+/* 중첩 리스트 */
 .report-content ul ul,
 .report-content ol ol,
 .report-content ul ol,
 .report-content ol ul {
-    margin: 0.375rem 0;
+    margin: 0.5rem 0 0.5rem 0.5rem;
 }
 
 .report-content ul ul li::before {
     background: var(--text-muted);
     width: 4px;
     height: 4px;
+    top: 0.7em;
 }
 
-/* Blockquotes - Warm Cream 테마 */
+.report-content ol ol li::before {
+    background: var(--surface-dark);
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    font-size: 0.65rem;
+}
+
+/* ==================== Blockquotes ==================== */
+
 .report-content blockquote {
-    margin: 0.75rem 0;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(90deg, rgba(212, 168, 122, 0.08) 0%, transparent 100%);
-    border-left: 3px solid var(--primary);
-    color: var(--text-primary);
-    font-style: italic;
-    border-radius: 0 6px 6px 0;
+    margin: 1.75rem 0;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 168, 122, 0.1) 0%, rgba(212, 168, 122, 0.03) 100%);
+    border-left: 4px solid var(--primary);
+    border-radius: 0 12px 12px 0;
+    position: relative;
+}
+
+.report-content blockquote::before {
+    content: '"';
+    position: absolute;
+    top: -0.25rem;
+    left: 1rem;
+    font-size: 3rem;
+    font-family: Georgia, serif;
+    color: var(--primary);
+    opacity: 0.3;
+    line-height: 1;
 }
 
 .report-content blockquote p {
     margin: 0;
-    font-family: 'Space Grotesk', 'Pretendard', sans-serif;
+    font-size: 1.0625rem;
+    font-style: italic;
+    color: var(--text-primary);
+    padding-left: 1.5rem;
 }
 
-/* Code blocks */
+.report-content blockquote p:not(:last-child) {
+    margin-bottom: 0.75rem;
+}
+
+/* 인용 출처 */
+.report-content blockquote cite,
+.report-content blockquote footer {
+    display: block;
+    margin-top: 0.75rem;
+    padding-left: 1.5rem;
+    font-size: 0.875rem;
+    font-style: normal;
+    color: var(--text-muted);
+}
+
+.report-content blockquote cite::before,
+.report-content blockquote footer::before {
+    content: '— ';
+}
+
+/* ==================== Code Blocks ==================== */
+
 .report-content pre {
-    margin: 0.75rem 0;
-    padding: 0.875rem;
+    margin: 1.5rem 0;
+    padding: 1.25rem;
     background: var(--background-dark);
     border: 1px solid var(--border-dark);
-    border-radius: 6px;
+    border-radius: 12px;
     overflow-x: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    line-height: 1.6;
+    position: relative;
 }
 
-.report-content code {
-    font-family: 'JetBrains Mono', monospace;
-    background: rgba(212, 168, 122, 0.12);
-    color: var(--primary);
-    padding: 0.15rem 0.4rem;
-    font-size: 0.85em;
-    border-radius: 3px;
+.report-content pre::before {
+    content: '';
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    width: 8px;
+    height: 8px;
+    background: #ff5f57;
+    border-radius: 50%;
+    box-shadow: 14px 0 0 #ffbd2e, 28px 0 0 #28c840;
 }
 
 .report-content pre code {
-    background: transparent;
+    display: block;
+    padding-top: 0.5rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
     color: var(--text-primary);
-    padding: 0;
+    background: transparent;
 }
 
-/* Tables */
+/* 인라인 코드 */
+.report-content code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: rgba(212, 168, 122, 0.15);
+    color: var(--primary);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.875em;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* ==================== Tables ==================== */
+
 .report-content table {
     width: 100%;
-    margin: 1rem 0;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-    border-radius: 6px;
+    margin: 1.75rem 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9375rem;
+    border-radius: 12px;
     overflow: hidden;
+    border: 1px solid var(--border-dark);
 }
 
 .report-content thead {
-    background: linear-gradient(90deg, rgba(212, 168, 122, 0.15) 0%, rgba(212, 168, 122, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(212, 168, 122, 0.2) 0%, rgba(212, 168, 122, 0.1) 100%);
 }
 
 .report-content th {
-    padding: 0.625rem 1rem;
+    padding: 0.875rem 1.25rem;
     text-align: left;
     font-weight: 600;
     color: var(--primary);
-    border-bottom: 1px solid var(--border-dark);
+    border-bottom: 2px solid var(--primary);
+    font-size: 0.75rem;
     text-transform: uppercase;
-    font-size: 0.65rem;
     letter-spacing: 0.08em;
 }
 
 .report-content td {
-    padding: 0.625rem 1rem;
+    padding: 0.875rem 1.25rem;
     border-bottom: 1px solid var(--border-dark);
     color: var(--text-primary);
+    vertical-align: top;
 }
 
-.report-content tr:hover td {
-    background: rgba(212, 168, 122, 0.04);
+/* Zebra striping */
+.report-content tbody tr:nth-child(even) {
+    background: rgba(212, 168, 122, 0.03);
 }
 
-/* Strong and emphasis */
+/* Hover 효과 */
+.report-content tbody tr {
+    transition: background 0.15s ease;
+}
+
+.report-content tbody tr:hover {
+    background: rgba(212, 168, 122, 0.08);
+}
+
+/* 마지막 행 border 제거 */
+.report-content tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* 첫 번째 열 강조 (선택적) */
+.report-content td:first-child {
+    font-weight: 500;
+}
+
+/* ==================== Strong & Emphasis ==================== */
+
 .report-content strong {
     color: var(--text-primary);
-    font-weight: 500;      /* Medium - 눈에 띄지만 과하지 않게 */
+    font-weight: 600;
 }
 
 .report-content em {
@@ -229,95 +346,292 @@
     font-style: italic;
 }
 
-/* Links */
+.report-content strong em,
+.report-content em strong {
+    color: var(--primary);
+    font-weight: 600;
+    font-style: italic;
+}
+
+/* ==================== Links ==================== */
+
 .report-content a {
     color: var(--primary);
     text-decoration: none;
-    border-bottom: 1px solid rgba(212, 168, 122, 0.3);
-    transition: all 0.2s;
+    background: linear-gradient(to bottom, transparent 60%, rgba(212, 168, 122, 0.3) 60%);
+    transition: background 0.2s ease;
 }
 
 .report-content a:hover {
-    border-bottom-color: var(--primary);
-    color: var(--primary-hover);
+    background: linear-gradient(to bottom, transparent 0%, rgba(212, 168, 122, 0.3) 0%);
 }
 
-/* Horizontal rule */
+/* ==================== Horizontal Rule ==================== */
+
 .report-content hr {
-    margin: 1rem 0;
+    margin: 2.5rem auto;
     border: none;
+    width: 100%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-dark), transparent);
+    background: linear-gradient(90deg, transparent, var(--border-dark) 20%, var(--border-dark) 80%, transparent);
 }
 
-/* Key insights / highlights box */
+/* 섹션 구분용 큰 hr */
+.report-content hr + h2,
+.report-content hr + h1 {
+    margin-top: 0.5rem;
+}
+
+/* ==================== Highlight Box ==================== */
+
 .report-content .highlight-box,
 .report-content .key-point {
-    margin: 1rem 0;
-    padding: 1rem;
-    background: rgba(212, 168, 122, 0.06);
-    border: 1px solid rgba(212, 168, 122, 0.15);
-    border-radius: 6px;
+    margin: 1.75rem 0;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 168, 122, 0.08) 0%, rgba(212, 168, 122, 0.02) 100%);
+    border: 1px solid rgba(212, 168, 122, 0.2);
+    border-radius: 12px;
     position: relative;
 }
 
 .report-content .highlight-box::before {
-    content: '✦';
+    content: '💡';
     position: absolute;
-    top: -0.5rem;
-    left: 0.875rem;
+    top: -0.75rem;
+    left: 1rem;
     background: var(--surface-dark);
-    padding: 0 0.375rem;
-    color: var(--primary);
-    font-size: 0.875rem;
+    padding: 0 0.5rem;
+    font-size: 1rem;
 }
 
-/* Summary section styling */
+/* ==================== Summary Section ==================== */
+
 .report-content .summary,
 .report-content .executive-summary {
-    padding: 1rem;
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.08) 0%, rgba(212, 168, 122, 0.04) 100%);
-    border-left: 3px solid var(--primary);
-    border-radius: 0 6px 6px 0;
-    margin: 1rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(212, 168, 122, 0.12) 0%, rgba(212, 168, 122, 0.04) 100%);
+    border-left: 4px solid var(--primary);
+    border-radius: 0 12px 12px 0;
+    margin: 1.5rem 0;
 }
 
-/* Tags / Keywords */
+.report-content .summary p:first-child,
+.report-content .executive-summary p:first-child {
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-top: 0;
+}
+
+/* ==================== Tags / Keywords ==================== */
+
 .report-content .tag,
 .report-content .keyword {
     display: inline-block;
-    padding: 0.25rem 0.625rem;
+    padding: 0.375rem 0.75rem;
     background: rgba(212, 168, 122, 0.12);
     color: var(--primary);
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin: 0.125rem;
-    border-radius: 3px;
+    letter-spacing: 0.02em;
+    margin: 0.25rem 0.25rem 0.25rem 0;
+    border-radius: 6px;
+    transition: all 0.15s ease;
 }
 
-/* Metric / Score displays */
+.report-content .tag:hover,
+.report-content .keyword:hover {
+    background: rgba(212, 168, 122, 0.2);
+    transform: translateY(-1px);
+}
+
+/* ==================== Metrics ==================== */
+
 .report-content .metric {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    gap: 0.625rem;
+    padding: 0.625rem 1.25rem;
     background: var(--card-dark);
     border: 1px solid var(--border-dark);
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 .report-content .metric-value {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary);
     font-family: 'Space Grotesk', 'Pretendard', sans-serif;
 }
 
 .report-content .metric-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+/* ==================== Checkbox Lists (for checklists) ==================== */
+
+.report-content ul li:has(input[type="checkbox"]),
+.report-content li:has(> input[type="checkbox"]) {
+    padding-left: 0;
+    list-style: none;
+}
+
+.report-content ul li:has(input[type="checkbox"])::before,
+.report-content li:has(> input[type="checkbox"])::before {
+    display: none;
+}
+
+.report-content input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-right: 0.625rem;
+    accent-color: var(--primary);
+    vertical-align: middle;
+}
+
+/* ==================== Images (if any) ==================== */
+
+.report-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+}
+
+.report-content figure {
+    margin: 1.75rem 0;
+}
+
+.report-content figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    font-style: italic;
+}
+
+/* ==================== Light Theme Overrides ==================== */
+
+[data-theme="light"] .report-content {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .report-content pre {
+    background: #f8f9fa;
+    border-color: #e9ecef;
+}
+
+[data-theme="light"] .report-content code {
+    background: rgba(212, 168, 122, 0.12);
+}
+
+[data-theme="light"] .report-content blockquote {
+    background: linear-gradient(135deg, rgba(212, 168, 122, 0.08) 0%, rgba(212, 168, 122, 0.02) 100%);
+}
+
+[data-theme="light"] .report-content tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .report-content tbody tr:hover {
+    background: rgba(212, 168, 122, 0.1);
+}
+
+/* ==================== Minimal Theme Overrides ==================== */
+
+[data-theme="minimal"] .report-content h2 {
+    border-left-color: #171717;
+}
+
+[data-theme="minimal"] .report-content h3::before {
+    background: #171717;
+}
+
+[data-theme="minimal"] .report-content blockquote {
+    border-left-color: #171717;
+    background: #f5f5f5;
+}
+
+[data-theme="minimal"] .report-content ol li::before {
+    background: #171717;
+}
+
+/* ==================== Responsive ==================== */
+
+@media (max-width: 768px) {
+    .report-content {
+        font-size: 1rem;
+        line-height: 1.8;
+    }
+
+    .report-content h1 {
+        font-size: 1.5rem;
+        margin: 2rem 0 0.875rem 0;
+    }
+
+    .report-content h2 {
+        font-size: 1.25rem;
+        margin: 1.75rem 0 0.625rem 0;
+    }
+
+    .report-content h3 {
+        font-size: 1.0625rem;
+    }
+
+    .report-content blockquote {
+        padding: 1rem 1.25rem;
+        margin: 1.25rem 0;
+    }
+
+    .report-content blockquote::before {
+        font-size: 2rem;
+    }
+
+    .report-content table {
+        font-size: 0.875rem;
+    }
+
+    .report-content th,
+    .report-content td {
+        padding: 0.625rem 0.875rem;
+    }
+
+    .report-content pre {
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .report-content pre code {
+        font-size: 0.75rem;
+    }
+}
+
+/* ==================== Print Styles ==================== */
+
+@media print {
+    .report-content {
+        font-size: 11pt;
+        line-height: 1.6;
+        color: #000;
+    }
+
+    .report-content h1,
+    .report-content h2,
+    .report-content h3 {
+        color: #000;
+        page-break-after: avoid;
+    }
+
+    .report-content pre,
+    .report-content blockquote,
+    .report-content table {
+        page-break-inside: avoid;
+    }
+
+    .report-content a {
+        color: #000;
+        text-decoration: underline;
+    }
 }
