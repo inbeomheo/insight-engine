@@ -16,8 +16,14 @@ class TestRoutesSmoke(unittest.TestCase):
 
     def test_generate_web_smoke(self):
         """YouTube URL로 /generate 엔드포인트 테스트"""
-        fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>'}
+        fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>', 'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0}}
         fake_transcript = {'text': '테스트 자막 내용', 'source': 'api'}
+
+        def fake_create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None):
+            if return_prompt:
+                return fake_result, 'PROMPT'
+            return fake_result
+
         with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
              patch('routes.blog_routes.content_service.is_youtube_url', return_value=True), \
              patch('routes.blog_routes.content_service.get_video_id', return_value='test123'), \
@@ -25,7 +31,7 @@ class TestRoutesSmoke(unittest.TestCase):
              patch('routes.blog_routes.content_service.get_transcript', return_value=fake_transcript), \
              patch('routes.blog_routes.content_service.get_top_comments', return_value=['댓글1', '댓글2']), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _max: t), \
-             patch('routes.blog_routes.ai_service.create_content', return_value=(fake_result, 'PROMPT')):
+             patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content):
             res = self.client.post('/generate', json={
                 'url': 'https://www.youtube.com/watch?v=test123',
                 'model': 'gpt-4o-mini',

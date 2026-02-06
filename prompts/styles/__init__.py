@@ -1,6 +1,7 @@
 """
 스타일 패키지 v3.1
 8개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular
++ 댓글 요약 전용 프롬프트 (UI 비노출)
 """
 
 from .blog_seo import BLOG_SEO_PROMPT
@@ -11,6 +12,7 @@ from .app_ideas import APP_IDEAS_PROMPT
 from .yozm_it import YOZM_IT_PROMPT
 from .brunch_essay import BRUNCH_ESSAY_PROMPT
 from .naver_popular import NAVER_POPULAR_PROMPT
+from .comment_summary import COMMENT_SUMMARY_PROMPT
 
 # 스타일 프롬프트 매핑
 STYLE_PROMPTS = {
@@ -49,4 +51,5 @@ __all__ = [
     'YOZM_IT_PROMPT',
     'BRUNCH_ESSAY_PROMPT',
     'NAVER_POPULAR_PROMPT',
+    'COMMENT_SUMMARY_PROMPT',
 ]

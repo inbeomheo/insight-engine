@@ -203,26 +203,39 @@ def _handle_error_response(error_msg, log_detail=None):
 
 
 def _fetch_youtube_content(video_id):
-    """YouTube 영상의 자막과 댓글을 가져옵니다.
+    """YouTube 영상의 자막과 댓글을 분리하여 가져옵니다.
     Supadata API 키는 환경변수에서 자동으로 로드됩니다.
 
     Returns:
-        tuple: (combined_content, error, raw_transcript, transcript_source)
+        tuple: (transcript_text, comments_list, error, raw_transcript, transcript_source)
+        - comments_list: 댓글 문자열 리스트 (전체) 또는 빈 리스트
         - transcript_source: 'api' | 'watch' | 'supadata' | 'cache'
     """
     transcript_result = content_service.get_transcript(video_id)
     if isinstance(transcript_result, dict) and transcript_result.get('error'):
-        return None, transcript_result['error'], None, None
+        return None, [], transcript_result['error'], None, None
 
     # 새 형식: {'text': '...', 'source': '...'}
     transcript_text = transcript_result.get('text', '')
     transcript_source = transcript_result.get('source', 'unknown')
 
-    comments = content_service.get_top_comments(video_id)
-    comments_text = '\n'.join(comments[:20]) if comments else '(댓글 없음)'
+    comments = content_service.get_top_comments(video_id) or []
 
-    final_content = f"[영상 자막]\n{transcript_text}\n\n[시청자 댓글]\n{comments_text}"
-    return final_content, None, transcript_text, transcript_source
+    return transcript_text, comments, None, transcript_text, transcript_source
+
+
+def _build_combined_content(transcript_text, comments):
+    """자막과 댓글을 기존 형식으로 합성합니다 (배치 처리 호환용).
+
+    Args:
+        transcript_text: 자막 텍스트
+        comments: 댓글 리스트
+
+    Returns:
+        str: "[영상 자막]\\n...\\n\\n[시청자 댓글]\\n..." 형식 문자열
+    """
+    comments_text = '\n'.join(comments[:20]) if comments else '(댓글 없음)'
+    return f"[영상 자막]\n{transcript_text}\n\n[시청자 댓글]\n{comments_text}"
 
 
 @blog_bp.route('/health')
@@ -446,6 +459,94 @@ def generate_style():
         return _handle_error_response(str(e))
 
 
+def _generate_main_content(app, content, model, style_prompt, modifiers):
+    """스레드에서 메인 콘텐츠를 생성합니다.
+
+    Returns:
+        tuple: (result_dict, used_prompt)
+    """
+    with app.app_context():
+        return ai_service.create_content(
+            content, model, style_prompt,
+            return_prompt=True, modifiers=modifiers
+        )
+
+
+def _generate_comment_summary(app, comments, model):
+    """스레드에서 댓글 요약을 생성합니다. 실패 시 None 반환.
+
+    Args:
+        app: Flask 앱 객체
+        comments: 댓글 리스트 (최대 50개 사용)
+        model: AI 모델 ID
+
+    Returns:
+        dict 또는 None: {'content': '...', 'usage': {...}} 또는 실패 시 None
+    """
+    from prompts.styles.comment_summary import COMMENT_SUMMARY_PROMPT
+
+    with app.app_context():
+        try:
+            comments_text = '\n'.join(comments[:50])
+            comment_content = f"[시청자 댓글]\n{comments_text}"
+
+            result = ai_service.create_content(
+                comment_content, model, COMMENT_SUMMARY_PROMPT
+            )
+            return result
+        except Exception as e:
+            current_app.logger.warning(f"댓글 요약 생성 실패 (무시): {e}")
+            return None
+
+
+def _combine_results(main_result, main_prompt, comment_result):
+    """메인 결과와 댓글 요약을 결합합니다.
+
+    Args:
+        main_result: 메인 AI 생성 결과 dict
+        main_prompt: 메인 생성에 사용된 프롬프트
+        comment_result: 댓글 요약 결과 dict 또는 None
+
+    Returns:
+        tuple: (combined_result, used_prompt)
+    """
+    if not comment_result:
+        return main_result, main_prompt
+
+    import markdown as md_lib
+
+    # 본문 끝에 댓글 요약 추가
+    comment_body = comment_result.get('content', '')
+    combined_content = main_result.get('content', '') + '\n\n' + comment_body
+
+    # HTML 재생성
+    try:
+        combined_html = md_lib.markdown(
+            combined_content,
+            extensions=['tables', 'fenced_code', 'nl2br']
+        )
+    except Exception:
+        combined_html = main_result.get('html', '') + comment_result.get('html', '')
+
+    # 토큰 사용량 합산
+    main_usage = main_result.get('usage', {})
+    comment_usage = comment_result.get('usage', {})
+    combined_usage = {
+        'prompt_tokens': main_usage.get('prompt_tokens', 0) + comment_usage.get('prompt_tokens', 0),
+        'completion_tokens': main_usage.get('completion_tokens', 0) + comment_usage.get('completion_tokens', 0),
+        'total_tokens': main_usage.get('total_tokens', 0) + comment_usage.get('total_tokens', 0),
+    }
+
+    combined_result = {
+        'title': main_result.get('title', ''),
+        'content': combined_content,
+        'html': combined_html,
+        'usage': combined_usage,
+    }
+
+    return combined_result, main_prompt
+
+
 @blog_bp.route('/generate', methods=['POST'])
 @require_auth
 @require_usage
@@ -471,21 +572,49 @@ def generate():
         # YouTube 원본 제목 가져오기
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        content, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
         if error:
             return jsonify({'error': error}), 400
 
         max_tokens = get_model_max_tokens(params['model'])
-        truncated_content = content_service.truncate_text(content, max_tokens)
+        main_content = f"[영상 자막]\n{transcript_text}"
+        truncated_content = content_service.truncate_text(main_content, max_tokens)
 
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
-        result, used_prompt = ai_service.create_content(
-            truncated_content,
-            params['model'],
-            style_prompt,
-            return_prompt=True,
-            modifiers=params['modifiers']
-        )
+        model = params['model']
+        is_glm = model.startswith('zhipuai/')
+
+        if comments:
+            app = current_app._get_current_object()
+
+            if is_glm:
+                # GLM 모델: 순차 실행 (글로벌 락 충돌 방지)
+                result, used_prompt = ai_service.create_content(
+                    truncated_content, model, style_prompt,
+                    return_prompt=True, modifiers=params['modifiers']
+                )
+                comment_result = _generate_comment_summary(app, comments, model)
+            else:
+                # 병렬 실행
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    main_future = executor.submit(
+                        _generate_main_content, app, truncated_content,
+                        model, style_prompt, params['modifiers']
+                    )
+                    comment_future = executor.submit(
+                        _generate_comment_summary, app, comments, model
+                    )
+
+                    result, used_prompt = main_future.result()
+                    comment_result = comment_future.result()
+
+            result, used_prompt = _combine_results(result, used_prompt, comment_result)
+        else:
+            # 댓글 없음: 기존과 동일하게 단일 AI 호출
+            result, used_prompt = ai_service.create_content(
+                truncated_content, model, style_prompt,
+                return_prompt=True, modifiers=params['modifiers']
+            )
 
         elapsed_time = round(time.time() - start_time, 2)
 
@@ -583,7 +712,7 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
             title = content_service.get_content_title(url) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            content, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+            transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
             if error:
                 return {
                     'success': False,
@@ -592,6 +721,8 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                     'error': error
                 }
 
+            # 배치 처리: 기존 방식(자막+댓글 합성)으로 처리
+            content = _build_combined_content(transcript_text, comments)
             max_tokens = get_model_max_tokens(model)
             content = content_service.truncate_text(content, max_tokens)
             style_prompt = _get_style_prompt(style, custom_prompt)
