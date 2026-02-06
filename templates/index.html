@@ -670,9 +670,9 @@
                         </button>
                         <div id="style-section-panel" class="px-4 pb-4 pt-0">
 
-                        <!-- 스타일 그리드 - 5개 핵심 스타일 -->
+                        <!-- 스타일 그리드 - 8개 스타일 -->
                         <div class="style-grid-container" role="region" aria-label="스타일 선택">
-                            <div class="grid grid-cols-5 gap-2" id="style-options" role="radiogroup" aria-label="콘텐츠 스타일 선택">
+                            <div class="grid grid-cols-4 sm:grid-cols-8 gap-2" id="style-options" role="radiogroup" aria-label="콘텐츠 스타일 선택">
                                 <!-- 블로그+SEO -->
                                 <label class="style-grid-item cursor-pointer group">
                                     <input checked name="style" type="radio" value="blog_seo" class="peer sr-only" aria-describedby="style-blog-seo-desc"/>
@@ -722,6 +722,36 @@
                                         <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">개발 아이디어</span>
                                     </div>
                                     <span id="style-app-ideas-desc" class="sr-only">영상에서 앱 개발 아이디어를 추출합니다</span>
+                                </label>
+                                <!-- 요즘IT -->
+                                <label class="style-grid-item cursor-pointer group">
+                                    <input name="style" type="radio" value="yozm_it" class="peer sr-only" aria-describedby="style-yozm-it-desc"/>
+                                    <div class="style-card flex flex-col items-center justify-center py-3 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-cyan-500 peer-checked:to-blue-500 peer-checked:border-cyan-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-cyan-500/30 text-text-secondary hover:border-cyan-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                        <span class="material-symbols-outlined text-2xl" aria-hidden="true">terminal</span>
+                                        <span class="text-xs font-semibold mt-1">요즘IT</span>
+                                        <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">기술 아티클</span>
+                                    </div>
+                                    <span id="style-yozm-it-desc" class="sr-only">개발자/IT 종사자 대상 기술 콘텐츠를 작성합니다</span>
+                                </label>
+                                <!-- 브런치 -->
+                                <label class="style-grid-item cursor-pointer group">
+                                    <input name="style" type="radio" value="brunch_essay" class="peer sr-only" aria-describedby="style-brunch-essay-desc"/>
+                                    <div class="style-card flex flex-col items-center justify-center py-3 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-orange-400 peer-checked:to-rose-500 peer-checked:border-orange-400 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-orange-400/30 text-text-secondary hover:border-orange-400/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                        <span class="material-symbols-outlined text-2xl" aria-hidden="true">edit_note</span>
+                                        <span class="text-xs font-semibold mt-1">브런치</span>
+                                        <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">에세이 스타일</span>
+                                    </div>
+                                    <span id="style-brunch-essay-desc" class="sr-only">개인적 통찰과 스토리텔링이 담긴 에세이를 작성합니다</span>
+                                </label>
+                                <!-- 네이버 -->
+                                <label class="style-grid-item cursor-pointer group">
+                                    <input name="style" type="radio" value="naver_popular" class="peer sr-only" aria-describedby="style-naver-popular-desc"/>
+                                    <div class="style-card flex flex-col items-center justify-center py-3 px-2 rounded-xl bg-surface-dark border-2 border-border-dark peer-checked:bg-gradient-to-br peer-checked:from-green-500 peer-checked:to-emerald-500 peer-checked:border-green-500 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-green-500/30 text-text-secondary hover:border-green-500/60 hover:bg-bg-elevated transition-all duration-300 group-hover:scale-[1.03]">
+                                        <span class="material-symbols-outlined text-2xl" aria-hidden="true">favorite</span>
+                                        <span class="text-xs font-semibold mt-1">네이버</span>
+                                        <span class="text-[9px] text-text-secondary/60 peer-checked:text-white/60 hidden sm:block">인기글 스타일</span>
+                                    </div>
+                                    <span id="style-naver-popular-desc" class="sr-only">친근하고 검색 최적화된 네이버 블로그 스타일로 작성합니다</span>
                                 </label>
                             </div>
                         </div>

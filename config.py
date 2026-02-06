@@ -93,7 +93,7 @@ def get_provider_from_model(model_id: str) -> str:
 
 
 # ============================================================
-# 스타일 옵션 v3.0 (5개 핵심 스타일)
+# 스타일 옵션 v3.1 (8개 스타일)
 # ============================================================
 
 STYLE_OPTIONS: List[Tuple[str, str]] = [
@@ -102,6 +102,9 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('tutorial', '📚 튜토리얼'),
     ('qna', '❓ Q&A'),
     ('app_ideas', '💡 앱 아이디어'),
+    ('yozm_it', '💻 요즘IT'),
+    ('brunch_essay', '✍️ 브런치'),
+    ('naver_popular', '💚 네이버'),
 ]
 
 

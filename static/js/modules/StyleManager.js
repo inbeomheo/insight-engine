@@ -1,6 +1,6 @@
 /**
- * StyleManager - 스타일 관리 모듈 v3.0
- * 5개 핵심 스타일, 2개 모디파이어 지원
+ * StyleManager - 스타일 관리 모듈 v3.1
+ * 8개 스타일, 2개 모디파이어 지원
  */
 export class StyleManager {
     constructor(storage, uiManager, modalManager) {
@@ -8,13 +8,16 @@ export class StyleManager {
         this.ui = uiManager;
         this.modalManager = modalManager;
 
-        // 5개 핵심 스타일 라벨
+        // 8개 스타일 라벨
         this.styleLabels = {
             'blog_seo': 'Blog+SEO',
             'summary': '요약',
             'tutorial': '튜토리얼',
             'qna': 'Q&A',
-            'app_ideas': '앱 아이디어'
+            'app_ideas': '앱 아이디어',
+            'yozm_it': '요즘IT',
+            'brunch_essay': '브런치',
+            'naver_popular': '네이버'
         };
 
         // 문체 라벨
