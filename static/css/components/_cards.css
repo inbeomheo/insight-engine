@@ -396,10 +396,10 @@ input[type="radio"] + div:hover {
     background: rgba(239, 68, 68, 0.1);
 }
 
-/* 더보기 드롭다운 - 프롬프트, 마인드맵은 더보기로 숨김 */
-.footer-actions .action-btn.prompt-btn,
-.footer-actions .action-btn.mindmap-btn {
-    display: none;
+/* 더보기 메뉴 내부에서는 프롬프트, 마인드맵 표시 */
+.footer-actions .more-actions-menu .action-btn.prompt-btn,
+.footer-actions .more-actions-menu .action-btn.mindmap-btn {
+    display: inline-flex;
 }
 
 /* 더보기 메뉴 버튼 */
