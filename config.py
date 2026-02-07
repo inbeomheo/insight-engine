@@ -43,6 +43,19 @@ MAX_CONTENT_TOKENS: int = 100000  # 기본 fallback 값
 # 히스토리 보존 기간 (일)
 HISTORY_RETENTION_DAYS: int = 7
 
+# 스타일별 temperature 설정 (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
+STYLE_TEMPERATURE: Dict[str, float] = {
+    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5,
+    'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7,
+    'brunch_essay': 0.85, 'naver_popular': 0.85,
+    'comment_summary': 0.5,
+}
+
+# 길이 모디파이어 기반 max_tokens 제한 (한국어 2토큰/자 가정)
+LENGTH_MAX_TOKENS: Dict[str, int] = {
+    'short': 2000, 'medium': 4000, 'long': 8000,
+}
+
 # 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
 # Gemini가 기본 프로바이더 (첫 번째 위치)
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
@@ -178,6 +191,10 @@ __all__ = [
     'MAX_TRANSCRIPT_TOKENS',
     'MAX_COMMENTS_TOKENS',
     'MAX_CONTENT_TOKENS',
+
+    # Style/Length Tuning
+    'STYLE_TEMPERATURE',
+    'LENGTH_MAX_TOKENS',
 
     # Providers
     'SUPPORTED_PROVIDERS',

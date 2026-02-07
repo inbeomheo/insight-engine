@@ -19,7 +19,7 @@ class TestRoutesSmoke(unittest.TestCase):
         fake_result = {'title': 'TT', 'content': 'X', 'html': '<p>X</p>', 'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0}}
         fake_transcript = {'text': '테스트 자막 내용', 'source': 'api'}
 
-        def fake_create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None):
+        def fake_create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None):
             if return_prompt:
                 return fake_result, 'PROMPT'
             return fake_result

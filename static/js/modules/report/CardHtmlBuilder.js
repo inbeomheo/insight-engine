@@ -136,6 +136,15 @@ export class CardHtmlBuilder {
         if (data.elapsed_time) {
             badges.push(this.buildStatsBadge('schedule', `${data.elapsed_time}s`));
         }
+        // 글자수/단어수
+        const charCount = (data.content || '').length;
+        if (charCount > 0) {
+            badges.push(this.buildStatsBadge('edit_note', `${charCount.toLocaleString()}자`));
+        }
+        const wordCount = (data.content || '').split(/\s+/).filter(w => w).length;
+        if (wordCount > 0) {
+            badges.push(this.buildStatsBadge('description', `${wordCount.toLocaleString()}단어`));
+        }
         return badges.length ? `<div class="flex items-center gap-2 mt-1">${badges.join('')}</div>` : '';
     }
 
@@ -165,6 +174,20 @@ export class CardHtmlBuilder {
         if (data.elapsed_time) {
             metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">schedule</span>${data.elapsed_time}초</span>`);
         }
+        // 글자수
+        const charCount = (data.content || '').length;
+        if (charCount > 0) {
+            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">edit_note</span>${charCount.toLocaleString()}자</span>`);
+        }
+        // 단어수
+        const wordCount = (data.content || '').split(/\s+/).filter(w => w).length;
+        if (wordCount > 0) {
+            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">description</span>${wordCount.toLocaleString()}단어</span>`);
+        }
+        // 댓글 요약 포함 여부
+        if (data.comment_summary_included === false) {
+            metaChips.push(`<span class="meta-chip meta-chip--muted"><span class="material-symbols-outlined">chat_bubble</span>댓글 요약 미포함</span>`);
+        }
 
         // 자막 소스 뱃지
         const sourceBadge = data.transcript_source ? this._buildSourceBadge(data.transcript_source) : '';
@@ -186,6 +209,9 @@ export class CardHtmlBuilder {
                             </button>
                             <button class="icon-btn copy-content-btn" title="전체 복사" data-copy-type="content">
                                 <span class="material-symbols-outlined">file_copy</span>
+                            </button>
+                            <button class="icon-btn copy-rich-btn" title="서식 복사">
+                                <span class="material-symbols-outlined">content_paste</span>
                             </button>
                             <button class="icon-btn collapse-btn" title="접기/펼치기">
                                 <span class="material-symbols-outlined">expand_less</span>
@@ -225,6 +251,18 @@ export class CardHtmlBuilder {
                                 <button class="action-btn mindmap-btn" role="menuitem">
                                     <span class="material-symbols-outlined">account_tree</span>
                                     <span>마인드맵</span>
+                                </button>
+                                <button class="action-btn html-export-btn" role="menuitem">
+                                    <span class="material-symbols-outlined">html</span>
+                                    <span>HTML</span>
+                                </button>
+                                <button class="action-btn regenerate-btn" role="menuitem">
+                                    <span class="material-symbols-outlined">refresh</span>
+                                    <span>다시 생성</span>
+                                </button>
+                                <button class="action-btn share-btn" role="menuitem">
+                                    <span class="material-symbols-outlined">share</span>
+                                    <span>공유</span>
                                 </button>
                             </div>
                         </div>

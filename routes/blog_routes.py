@@ -459,7 +459,7 @@ def generate_style():
         return _handle_error_response(str(e))
 
 
-def _generate_main_content(app, content, model, style_prompt, modifiers):
+def _generate_main_content(app, content, model, style_prompt, modifiers, style_id=None):
     """스레드에서 메인 콘텐츠를 생성합니다.
 
     Returns:
@@ -468,7 +468,8 @@ def _generate_main_content(app, content, model, style_prompt, modifiers):
     with app.app_context():
         return ai_service.create_content(
             content, model, style_prompt,
-            return_prompt=True, modifiers=modifiers
+            return_prompt=True, modifiers=modifiers,
+            style_id=style_id
         )
 
 
@@ -491,7 +492,8 @@ def _generate_comment_summary(app, comments, model):
             comment_content = f"[시청자 댓글]\n{comments_text}"
 
             result = ai_service.create_content(
-                comment_content, model, COMMENT_SUMMARY_PROMPT
+                comment_content, model, COMMENT_SUMMARY_PROMPT,
+                style_id='comment_summary'
             )
             return result
         except Exception as e:
@@ -591,7 +593,8 @@ def generate():
                 # GLM 모델: 순차 실행 (글로벌 락 충돌 방지)
                 result, used_prompt = ai_service.create_content(
                     truncated_content, model, style_prompt,
-                    return_prompt=True, modifiers=params['modifiers']
+                    return_prompt=True, modifiers=params['modifiers'],
+                    style_id=params['style']
                 )
                 comment_result = _generate_comment_summary(app, comments, model)
             else:
@@ -599,7 +602,8 @@ def generate():
                 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                     main_future = executor.submit(
                         _generate_main_content, app, truncated_content,
-                        model, style_prompt, params['modifiers']
+                        model, style_prompt, params['modifiers'],
+                        style_id=params['style']
                     )
                     comment_future = executor.submit(
                         _generate_comment_summary, app, comments, model
@@ -611,9 +615,11 @@ def generate():
             result, used_prompt = _combine_results(result, used_prompt, comment_result)
         else:
             # 댓글 없음: 기존과 동일하게 단일 AI 호출
+            comment_result = None
             result, used_prompt = ai_service.create_content(
                 truncated_content, model, style_prompt,
-                return_prompt=True, modifiers=params['modifiers']
+                return_prompt=True, modifiers=params['modifiers'],
+                style_id=params['style']
             )
 
         elapsed_time = round(time.time() - start_time, 2)
@@ -642,6 +648,7 @@ def generate():
             "youtube_title": youtube_title,
             "transcript": raw_transcript,
             "transcript_source": transcript_source,
+            "comment_summary_included": bool(comments and comment_result),
             "usage": get_usage_for_response()
         })
 
@@ -729,7 +736,8 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
 
             result, used_prompt = ai_service.create_content(
                 content, model, style_prompt,
-                return_prompt=True, modifiers=modifiers
+                return_prompt=True, modifiers=modifiers,
+                style_id=style
             )
 
             return {

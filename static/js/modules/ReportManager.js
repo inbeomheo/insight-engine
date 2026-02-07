@@ -19,7 +19,10 @@ export class ReportManager {
             emptyState: document.getElementById('empty-state'),
             liveIndicator: document.getElementById('live-indicator'),
             collapseAllBtn: document.getElementById('collapse-all-btn'),
-            loadMoreBtn: document.getElementById('load-more-btn')
+            loadMoreBtn: document.getElementById('load-more-btn'),
+            filterBar: document.getElementById('card-filter-bar'),
+            searchInput: document.getElementById('card-search-input'),
+            styleFilter: document.getElementById('style-filter')
         };
 
         // 페이지네이션 상태
@@ -37,6 +40,9 @@ export class ReportManager {
         // 더보기 버튼 이벤트 바인딩
         this._setupLoadMoreButton();
 
+        // 검색/필터 이벤트 바인딩
+        this._setupSearchAndFilter();
+
         // 모듈 초기화
         this.htmlBuilder = new CardHtmlBuilder(uiManager);
         this.eventHandler = new CardEventHandler(
@@ -45,7 +51,8 @@ export class ReportManager {
             null, // mindmapManager는 나중에 설정
             () => this._checkEmptyState(),
             () => this.syncCollapseAllButtonState(), // 개별 카드 접기 시 버튼 상태 동기화
-            authManager // 클라우드 히스토리 삭제 동기화용
+            authManager, // 클라우드 히스토리 삭제 동기화용
+            (url) => this._triggerRegenerate(url) // 재생성 콜백
         );
     }
 
@@ -63,11 +70,14 @@ export class ReportManager {
     // ==================== 내부 헬퍼 ====================
 
     _setEmptyStateVisibility(visible) {
-        const { emptyState, liveIndicator, collapseAllBtn } = this.elements;
+        const { emptyState, liveIndicator, collapseAllBtn, filterBar } = this.elements;
         if (emptyState) emptyState.style.display = visible ? 'flex' : 'none';
         if (liveIndicator) liveIndicator.style.display = visible ? 'none' : 'flex';
-        // 카드가 없으면 모두 접기 버튼 숨김
+        // 카드가 없으면 모두 접기 버튼/필터바 숨김
         if (collapseAllBtn) collapseAllBtn.classList.toggle('hidden', visible);
+        if (filterBar) filterBar.classList.toggle('hidden', visible);
+        // 카드가 보일 때 스타일 필터 옵션 채우기
+        if (!visible) this._populateStyleFilter();
     }
 
     // ==================== 모두 접기/펼치기 ====================
@@ -84,6 +94,122 @@ export class ReportManager {
         if (!loadMoreBtn) return;
 
         loadMoreBtn.addEventListener('click', () => this._loadMoreHistory());
+    }
+
+    // ==================== 검색 + 스타일 필터 ====================
+
+    _setupSearchAndFilter() {
+        const { searchInput, styleFilter } = this.elements;
+        if (!searchInput && !styleFilter) return;
+
+        // 검색 (300ms 디바운스)
+        let debounceTimer = null;
+        searchInput?.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => this._applyFilters(), 300);
+        });
+
+        // 스타일 필터
+        styleFilter?.addEventListener('change', () => this._applyFilters());
+    }
+
+    /**
+     * 스타일 필터 드롭다운에 옵션을 채웁니다
+     */
+    _populateStyleFilter() {
+        const { styleFilter } = this.elements;
+        if (!styleFilter || styleFilter.options.length > 1) return;
+
+        const cards = this.elements.reportStream.querySelectorAll('.result-card-group');
+        const styles = new Set();
+        cards.forEach(card => {
+            const badge = card.querySelector('.style-badge');
+            if (badge) styles.add(badge.textContent.trim());
+        });
+        styles.forEach(style => {
+            const option = document.createElement('option');
+            option.value = style;
+            option.textContent = style;
+            styleFilter.appendChild(option);
+        });
+    }
+
+    /**
+     * 검색 + 스타일 필터를 AND 조건으로 적용
+     */
+    _applyFilters() {
+        const { searchInput, styleFilter, reportStream } = this.elements;
+        const query = (searchInput?.value || '').trim().toLowerCase();
+        const selectedStyle = styleFilter?.value || '';
+
+        const cards = reportStream.querySelectorAll('.result-card-group');
+        cards.forEach(card => {
+            const title = (card.querySelector('.unified-title')?.textContent || '').toLowerCase();
+            const content = (card.querySelector('.report-content')?.textContent || '').toLowerCase();
+            const styleBadge = (card.querySelector('.style-badge')?.textContent || '').trim();
+
+            const matchesSearch = !query || title.includes(query) || content.includes(query);
+            const matchesStyle = !selectedStyle || styleBadge === selectedStyle;
+
+            card.style.display = (matchesSearch && matchesStyle) ? '' : 'none';
+
+            // 검색어 하이라이트
+            this._highlightText(card, query);
+        });
+    }
+
+    /**
+     * 카드 내 텍스트에 검색어 하이라이트 적용/제거
+     */
+    _highlightText(card, query) {
+        const contentEl = card.querySelector('.report-content');
+        const titleEl = card.querySelector('.unified-title');
+        if (!contentEl && !titleEl) return;
+
+        // 기존 하이라이트 제거
+        [contentEl, titleEl].filter(Boolean).forEach(el => {
+            el.querySelectorAll('mark.search-highlight').forEach(mark => {
+                const parent = mark.parentNode;
+                parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                parent.normalize();
+            });
+        });
+
+        if (!query) return;
+
+        // 새 하이라이트 적용
+        [titleEl, contentEl].filter(Boolean).forEach(el => {
+            this._highlightInElement(el, query);
+        });
+    }
+
+    /**
+     * 요소 내 텍스트 노드에서 검색어를 mark로 래핑
+     */
+    _highlightInElement(el, query) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+        textNodes.forEach(node => {
+            const idx = node.textContent.toLowerCase().indexOf(query);
+            if (idx === -1) return;
+
+            const before = node.textContent.substring(0, idx);
+            const match = node.textContent.substring(idx, idx + query.length);
+            const after = node.textContent.substring(idx + query.length);
+
+            const mark = document.createElement('mark');
+            mark.className = 'search-highlight';
+            mark.textContent = match;
+
+            const parent = node.parentNode;
+            const frag = document.createDocumentFragment();
+            if (before) frag.appendChild(document.createTextNode(before));
+            frag.appendChild(mark);
+            if (after) frag.appendChild(document.createTextNode(after));
+            parent.replaceChild(frag, node);
+        });
     }
 
     /**
@@ -265,6 +391,19 @@ export class ReportManager {
         this.eventHandler.setupDeleteButton(card);
     }
 
+    /**
+     * 재생성 트리거: URL 입력 필드에 URL을 채우고 스크롤
+     */
+    _triggerRegenerate(url) {
+        const urlInput = document.getElementById('url-input');
+        if (urlInput) {
+            urlInput.value = url;
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+            urlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            urlInput.focus();
+        }
+    }
+
     // ==================== Report Card Display ====================
 
     displayReportCard(data) {
@@ -283,7 +422,8 @@ export class ReportManager {
             time: ReportFormatter.getCurrentTimeStr(),
             timestamp: Date.now(),
             usage: data.usage || null,
-            elapsed_time: data.elapsed_time || null
+            elapsed_time: data.elapsed_time || null,
+            comment_summary_included: data.comment_summary_included ?? null
         };
 
         this.storage.addToHistory(historyData);

@@ -135,7 +135,7 @@ def _convert_error_message(error_msg, model=None):
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
 
-def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None):
+def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None):
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
     API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
@@ -145,7 +145,8 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         model: 모델 ID (예: 'gpt-4o', 'claude-sonnet-4-20250514')
         style_prompt: 스타일 프롬프트
         return_prompt: 사용된 프롬프트 반환 여부
-        modifiers: 세부 옵션 딕셔너리 (length, tone, language, emoji)
+        modifiers: 세부 옵션 딕셔너리 (length, writing_style)
+        style_id: 스타일 ID (temperature 매핑용)
 
     Returns:
         dict 또는 tuple: 생성 결과 (return_prompt=True면 (result, prompt) 튜플)
@@ -158,6 +159,14 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             "model": model,
             "messages": [{"role": "user", "content": prompt}]
         }
+
+        # 스타일별 temperature 적용
+        from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS
+        completion_kwargs["temperature"] = STYLE_TEMPERATURE.get(style_id, 0.7)
+
+        # 길이 모디파이어 기반 max_tokens 제한
+        length = (modifiers or {}).get('length', 'medium')
+        completion_kwargs["max_tokens"] = LENGTH_MAX_TOKENS.get(length, 4000)
 
         # Gemini 모델 (Flash Lite 제외) - reasoning_effort 사용
         if model.startswith("gemini/") and "lite" not in model.lower():

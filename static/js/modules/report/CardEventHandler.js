@@ -12,14 +12,16 @@ export class CardEventHandler {
      * @param {Function} onCardDelete - 카드 삭제 시 콜백 (empty state 체크용)
      * @param {Function} onCollapseChange - 카드 접기/펼치기 시 콜백 (버튼 상태 동기화용)
      * @param {Object} authManager - AuthManager (optional, 클라우드 삭제 동기화용)
+     * @param {Function} onRegenerate - 재생성 콜백 (url을 받아 생성 트리거)
      */
-    constructor(storage, uiManager, mindmapManager, onCardDelete, onCollapseChange = null, authManager = null) {
+    constructor(storage, uiManager, mindmapManager, onCardDelete, onCollapseChange = null, authManager = null, onRegenerate = null) {
         this.storage = storage;
         this.ui = uiManager;
         this.mindmapManager = mindmapManager;
         this.onCardDelete = onCardDelete;
         this.onCollapseChange = onCollapseChange;
         this.authManager = authManager;
+        this.onRegenerate = onRegenerate;
     }
 
     /**
@@ -40,6 +42,10 @@ export class CardEventHandler {
         const downloadBtn = card.querySelector('.download-btn');
         const deleteBtn = card.querySelector('.delete-btn');
         const collapseBtn = card.querySelector('.collapse-btn');
+        const htmlExportBtn = card.querySelector('.html-export-btn');
+        const copyRichBtn = card.querySelector('.copy-rich-btn');
+        const regenerateBtn = card.querySelector('.regenerate-btn');
+        const shareBtn = card.querySelector('.share-btn');
 
         // 개별 카드 복사 버튼들
         const copyTitleBtn = card.querySelector('.copy-title-btn');
@@ -93,6 +99,10 @@ export class CardEventHandler {
         }
 
         downloadBtn?.addEventListener('click', () => this._handleDownloadClick(data));
+        htmlExportBtn?.addEventListener('click', () => this._handleHtmlExportClick(data));
+        copyRichBtn?.addEventListener('click', () => this._handleRichCopyClick(copyRichBtn, data));
+        regenerateBtn?.addEventListener('click', () => this._handleRegenerateClick(data));
+        shareBtn?.addEventListener('click', () => this._handleShareClick(shareBtn, data));
         deleteBtn?.addEventListener('click', () => this._handleDeleteClick(card, data.id));
     }
 
@@ -222,6 +232,124 @@ export class CardEventHandler {
         a.download = `${data.title.substring(0, 30)}.md`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    /**
+     * HTML 내보내기 핸들러
+     */
+    _handleHtmlExportClick(data) {
+        const htmlContent = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${(data.title || 'AI 생성 결과').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<style>
+body { font-family: 'Pretendard', -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.8; color: #1f2937; }
+h1 { font-size: 1.75rem; font-weight: 700; margin: 1.5rem 0 0.75rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+h2 { font-size: 1.375rem; font-weight: 600; color: #0d7377; margin: 1.25rem 0 0.5rem; }
+h3 { font-size: 1.125rem; font-weight: 600; margin: 1rem 0 0.375rem; }
+p { margin: 0.625rem 0; }
+ul, ol { padding-left: 1.5rem; margin: 0.625rem 0; }
+li { margin: 0.375rem 0; }
+blockquote { margin: 1rem 0; padding: 1rem 1.25rem; background: #f3f4f6; border-left: 3px solid #0d7377; border-radius: 0 8px 8px 0; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
+th, td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
+th { font-weight: 600; background: #f9fafb; }
+code { background: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.85em; }
+pre { background: #f3f4f6; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+pre code { background: transparent; padding: 0; }
+strong { font-weight: 600; }
+a { color: #0d7377; }
+</style>
+</head>
+<body>
+${data.html || ''}
+</body>
+</html>`;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(data.title || 'content').substring(0, 30)}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * 서식 있는 복사 (Rich Copy) 핸들러
+     */
+    async _handleRichCopyClick(btn, data) {
+        try {
+            const htmlBlob = new Blob([data.html || ''], { type: 'text/html' });
+            const textBlob = new Blob([data.content || ''], { type: 'text/plain' });
+            const item = new ClipboardItem({
+                'text/html': htmlBlob,
+                'text/plain': textBlob
+            });
+            await navigator.clipboard.write([item]);
+
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const originalIcon = icon.textContent;
+            icon.textContent = 'check';
+            btn.title = '복사 완료!';
+            setTimeout(() => {
+                icon.textContent = originalIcon;
+                btn.title = '서식 복사';
+            }, 2000);
+        } catch {
+            // ClipboardItem 미지원 시 텍스트 복사로 폴백
+            try {
+                await navigator.clipboard.writeText(data.content || '');
+                this.ui.showAlert('서식 복사가 지원되지 않아 텍스트만 복사되었습니다.', 'warning');
+            } catch {
+                this.ui.showAlert('복사 실패', 'error');
+            }
+        }
+    }
+
+    /**
+     * 재생성 핸들러 - URL을 입력 필드에 채우고 생성 트리거
+     */
+    _handleRegenerateClick(data) {
+        if (!data.url) {
+            this.ui.showAlert('재생성할 URL 정보가 없습니다.', 'warning');
+            return;
+        }
+        if (this.onRegenerate) {
+            this.onRegenerate(data.url);
+        } else {
+            // 폴백: URL 입력 필드에 직접 채우기
+            const urlInput = document.getElementById('url-input');
+            if (urlInput) {
+                urlInput.value = data.url;
+                urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+                this.ui.showAlert('URL이 입력되었습니다. 생성 버튼을 클릭해주세요.', 'success');
+            }
+        }
+    }
+
+    /**
+     * 공유 핸들러 - 요약 텍스트를 클립보드에 복사
+     */
+    async _handleShareClick(btn, data) {
+        const title = data.title || 'AI 생성 결과';
+        const preview = (data.content || '').substring(0, 200);
+        const shareText = `${title}\n\n${preview}${(data.content || '').length > 200 ? '...' : ''}\n\n${data.url || ''}`;
+
+        try {
+            await navigator.clipboard.writeText(shareText);
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const label = btn.querySelector('span:last-child');
+            if (icon) icon.textContent = 'check';
+            if (label) label.textContent = '복사됨';
+            setTimeout(() => {
+                if (icon) icon.textContent = 'share';
+                if (label) label.textContent = '공유';
+            }, 2000);
+        } catch {
+            this.ui.showAlert('복사 실패', 'error');
+        }
     }
 
     /**
