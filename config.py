@@ -51,9 +51,9 @@ STYLE_TEMPERATURE: Dict[str, float] = {
     'comment_summary': 0.5,
 }
 
-# 길이 모디파이어 기반 max_tokens 제한 (한국어 2토큰/자 가정)
+# 길이 모디파이어 기반 max_tokens 제한 (한국어 2~3토큰/자 + 마크다운 서식 오버헤드 고려)
 LENGTH_MAX_TOKENS: Dict[str, int] = {
-    'short': 2000, 'medium': 4000, 'long': 8000,
+    'short': 4000, 'medium': 8000, 'long': 16000,
 }
 
 # 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
