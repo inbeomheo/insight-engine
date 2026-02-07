@@ -974,20 +974,21 @@
                                         <span class="collapse-all-label">모두 접기</span>
                                     </button>
                                 </div>
-                                <div class="card-filter-bar hidden" id="card-filter-bar">
-                                    <div class="search-container">
-                                        <span class="material-symbols-outlined">search</span>
-                                        <input id="card-search-input" type="text" placeholder="결과 내 검색..." aria-label="결과 카드 검색" />
-                                    </div>
-                                    <select id="style-filter" aria-label="스타일 필터">
-                                        <option value="">전체</option>
-                                    </select>
-                                </div>
                                 <div id="live-indicator" class="hidden flex items-center gap-2 text-xs text-primary" role="status" aria-live="polite">
                                     <span class="w-2 h-2 bg-primary rounded-full animate-pulse" aria-hidden="true"></span>
                                     <span>생성 중</span>
                                     <span class="sr-only">콘텐츠 생성이 진행 중입니다</span>
                                 </div>
+                            </div>
+                            <!-- 검색/필터 바 (카드가 있을 때만 표시) -->
+                            <div class="card-filter-bar hidden" id="card-filter-bar">
+                                <div class="search-container">
+                                    <span class="material-symbols-outlined">search</span>
+                                    <input id="card-search-input" type="text" placeholder="결과 내 검색..." aria-label="결과 카드 검색" />
+                                </div>
+                                <select id="style-filter" aria-label="스타일 필터">
+                                    <option value="">전체</option>
+                                </select>
                             </div>
                         </div>
                         <!-- 리포트 스트림 - US-016: feed는 콘텐츠 있을 때만 적용, 빈 상태에서는 region 사용 -->
