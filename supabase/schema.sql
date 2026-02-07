@@ -298,6 +298,30 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
+-- 8. RPC 함수: 만료 히스토리 자동 삭제 (7일 보존)
+-- =============================================
+
+CREATE OR REPLACE FUNCTION cleanup_expired_histories()
+RETURNS INT
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_count INT;
+BEGIN
+    DELETE FROM ie_histories
+    WHERE created_at < NOW() - INTERVAL '7 days';
+
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- pg_cron 스케줄 등록 (Supabase Dashboard > Database > Extensions에서 pg_cron 활성화 필요)
+-- 매일 새벽 3시(UTC)에 실행:
+-- SELECT cron.schedule('cleanup-expired-histories', '0 3 * * *', $$SELECT cleanup_expired_histories()$$);
+
+-- =============================================
 -- 완료!
 -- =============================================
 -- 이제 .env 파일에 Supabase 설정을 추가하세요:

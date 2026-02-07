@@ -44,7 +44,8 @@ export class ReportManager {
             uiManager,
             null, // mindmapManager는 나중에 설정
             () => this._checkEmptyState(),
-            () => this.syncCollapseAllButtonState() // 개별 카드 접기 시 버튼 상태 동기화
+            () => this.syncCollapseAllButtonState(), // 개별 카드 접기 시 버튼 상태 동기화
+            authManager // 클라우드 히스토리 삭제 동기화용
         );
     }
 

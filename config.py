@@ -40,6 +40,9 @@ MAX_TRANSCRIPT_TOKENS: int = 100000
 MAX_COMMENTS_TOKENS: int = 5000
 MAX_CONTENT_TOKENS: int = 100000  # 기본 fallback 값
 
+# 히스토리 보존 기간 (일)
+HISTORY_RETENTION_DAYS: int = 7
+
 # 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
 # Gemini가 기본 프로바이더 (첫 번째 위치)
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {

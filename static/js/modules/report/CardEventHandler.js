@@ -11,13 +11,15 @@ export class CardEventHandler {
      * @param {Object} mindmapManager - MindmapManager (optional)
      * @param {Function} onCardDelete - 카드 삭제 시 콜백 (empty state 체크용)
      * @param {Function} onCollapseChange - 카드 접기/펼치기 시 콜백 (버튼 상태 동기화용)
+     * @param {Object} authManager - AuthManager (optional, 클라우드 삭제 동기화용)
      */
-    constructor(storage, uiManager, mindmapManager, onCardDelete, onCollapseChange = null) {
+    constructor(storage, uiManager, mindmapManager, onCardDelete, onCollapseChange = null, authManager = null) {
         this.storage = storage;
         this.ui = uiManager;
         this.mindmapManager = mindmapManager;
         this.onCardDelete = onCardDelete;
         this.onCollapseChange = onCollapseChange;
+        this.authManager = authManager;
     }
 
     /**
@@ -214,15 +216,40 @@ export class CardEventHandler {
 
     /**
      * 카드 삭제 핸들러
+     * 로컬 스토리지 삭제 + 로그인 상태면 클라우드도 삭제
      */
     _handleDeleteClick(card, reportId) {
         this.storage.removeFromHistory(reportId);
-        card.style.animation = 'slideOut 0.3s ease forwards';
+        this._deleteFromCloud(reportId);
 
+        card.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => {
             card.remove();
             this.onCardDelete?.();
         }, 300);
+    }
+
+    /**
+     * 클라우드 히스토리 삭제 (로그인 상태일 때만)
+     * 실패해도 로컬 삭제는 유지 (UX 우선)
+     */
+    async _deleteFromCloud(reportId) {
+        if (!this.authManager?.isLoggedIn?.()) return;
+
+        try {
+            const token = this.authManager.getAccessToken?.();
+            if (!token) return;
+
+            const res = await fetch(`/api/user/history/${reportId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                console.warn(`클라우드 히스토리 삭제 실패: ${res.status}`);
+            }
+        } catch (e) {
+            console.warn('클라우드 히스토리 삭제 중 오류:', e);
+        }
     }
 
     /**
