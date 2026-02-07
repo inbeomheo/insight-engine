@@ -79,7 +79,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 3단계 폴백 로직 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
-| 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격 정의 |
+| 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격, 스타일별 temperature/max_tokens 정의 |
 | 프롬프트 | `prompts/` | 프롬프트 시스템 v3.1 (`build_full_prompt()`) |
 
 ### 프롬프트 구조
@@ -127,6 +127,16 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 | `AuthManager.js` | 인증 상태 관리, 사이드바/헤더 UI 업데이트 |
 | `report/` | ReportManager 분할 모듈 (CardHtmlBuilder, CardEventHandler, ReportFormatter) |
 
+### 결과 카드 기능 (`report/`)
+
+**카드 헤더 버튼**: 제목 복사, 전체 복사, 서식 복사 (Rich Copy: text/html + text/plain), 접기/펼치기
+
+**카드 메타 칩**: 토큰 수, 처리 시간, 글자수, 단어수, 댓글 요약 포함/미포함
+
+**더보기 메뉴 (⋯)**: 프롬프트 보기, 마인드맵, HTML 내보내기 (인라인 CSS 포함 독립 HTML), 다시 생성 (URL 재입력), 공유 (제목+미리보기+URL 클립보드 복사)
+
+**필터 바** (`#card-filter-bar`): 검색 (300ms 디바운스, `<mark>` 하이라이트) + 스타일 드롭다운 필터 (AND 조건)
+
 ### 테마 시스템
 
 3가지 테마: Dark (기본, `#1A1612`), Light (`#F9FAFB`), Minimal (`#FFFFFF`)
@@ -137,10 +147,17 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 - `tailwind.config.js`는 `_tokens.css` 변수를 참조 (`'bg-primary': 'var(--background-dark)'`)
 - 색상 하드코딩 금지 → 반드시 `var(--변수명)` 사용
 
+**CSS 빌드 파이프라인:**
+- 엔트리포인트: `static/css/main.css` → 18개 모듈 `@import`
+- 출력: `static/css/dist/main.css` (PostCSS + minify)
+- `dist/`는 `.gitignore`에 포함 → 커밋 불필요
+
 **CSS 수정 워크플로우:**
 1. CSS 파일 수정
 2. `npm run build:css:prod` 실행 (필수)
 3. 브라우저 새로고침 (캐시 무시: Ctrl+Shift+R)
+
+> **주의**: 새 CSS 파일 추가 시 반드시 `static/css/main.css`에 `@import` 추가. 누락 시 빌드에 포함되지 않음 (과거 `features/result-section.css` 누락 버그 경험).
 
 ### Usage Decorators
 
@@ -156,7 +173,7 @@ def generate_batch(): ...
 ## Key Patterns
 
 ### API 응답 형식
-- 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}}`
+- 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}, "comment_summary_included": true/false}`
 - 실패: `{"error": "메시지"}` (에러 접두사: `[인증 실패]`, `[사용량 초과]`, `[타임아웃]` 등)
 
 ### 8개 스타일 + 댓글 요약 (v3.1)
@@ -201,6 +218,20 @@ UI에 표시되는 8개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `ap
 | `writing_style` | conversational/explanatory/casual/expert | 문체 |
 
 기본값: `length: medium`, `writing_style: conversational`. 언어는 한국어 고정.
+
+### AI 생성 파라미터 튜닝 (`config.py`)
+
+**스타일별 temperature** (`STYLE_TEMPERATURE`):
+- 정밀형 0.5: `summary`, `tutorial`, `qna`, `comment_summary`
+- 균형형 0.7: `blog_seo`, `yozm_it`, `app_ideas`
+- 창의형 0.85: `brunch_essay`, `naver_popular`
+
+**길이별 max_tokens** (`LENGTH_MAX_TOKENS`, 한국어 2~3토큰/자 + 마크다운 오버헤드 ~40% 감안):
+- `short`: 4,000 (약 1,300~2,000자)
+- `medium`: 8,000 (약 2,600~4,000자)
+- `long`: 16,000 (약 5,300~8,000자)
+
+> **주의**: `ai_service.create_content()`에 `style_id` 파라미터를 반드시 전달해야 temperature가 적용됨. 누락 시 기본 0.7.
 
 ### 병렬 댓글 요약
 
