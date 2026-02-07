@@ -221,7 +221,7 @@ export class AuthManager {
         }
 
         if (ok) {
-            successHandler?.(data);
+            await successHandler?.(data);
             this.ui.showAlert(successMsg, 'success');
             return { success: true };
         }
@@ -284,15 +284,27 @@ export class AuthManager {
     // ==================== 계정관리 ====================
 
     async updateDisplayName(displayName) {
-        if (!this.supabaseClient) return { success: false, error: '인증 서비스 미초기화' };
+        if (!this.isLoggedIn()) return { success: false, error: '로그인 필요' };
 
         try {
-            const { data, error } = await this.supabaseClient.auth.updateUser({
-                data: { display_name: displayName }
+            const token = this.getAccessToken();
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ display_name: displayName })
             });
-            if (error) throw error;
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '닉네임 변경 실패');
 
-            this.user = data.user;
+            // 로컬 유저 정보 업데이트
+            if (data.user) {
+                this.user = { ...this.user, ...data.user };
+            }
+            if (!this.user.user_metadata) this.user.user_metadata = {};
+            this.user.user_metadata.display_name = displayName;
             this.updateAuthUI(true);
             return { success: true };
         } catch (e) {
@@ -302,13 +314,20 @@ export class AuthManager {
     }
 
     async changePassword(newPassword) {
-        if (!this.supabaseClient) return { success: false, error: '인증 서비스 미초기화' };
+        if (!this.isLoggedIn()) return { success: false, error: '로그인 필요' };
 
         try {
-            const { data, error } = await this.supabaseClient.auth.updateUser({
-                password: newPassword
+            const token = this.getAccessToken();
+            const res = await fetch('/api/user/password', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ new_password: newPassword })
             });
-            if (error) throw error;
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '비밀번호 변경 실패');
             return { success: true };
         } catch (e) {
             console.error('[AuthManager] 비밀번호 변경 실패:', e);
@@ -350,6 +369,29 @@ export class AuthManager {
         return this.user?.user_metadata?.display_name
             || this.user?.email?.split('@')[0]
             || '사용자';
+    }
+
+    _populateAccountModal(modal) {
+        if (!this.isLoggedIn()) return;
+
+        document.getElementById('account-email').value = this.user?.email || '';
+        document.getElementById('account-display-name').value = this.getDisplayName();
+
+        const isOAuth = !!this.isOAuthUser();
+        document.getElementById('account-password-section')?.classList.toggle('hidden', isOAuth);
+        document.getElementById('account-oauth-notice')?.classList.toggle('hidden', !isOAuth);
+
+        // 입력 필드 초기화
+        const pwField = document.getElementById('account-new-password');
+        const confirmField = document.getElementById('account-confirm-password');
+        const deleteField = document.getElementById('account-delete-confirm');
+        if (pwField) pwField.value = '';
+        if (confirmField) confirmField.value = '';
+        if (deleteField) deleteField.value = '';
+        const deleteBtn = document.getElementById('account-delete-btn');
+        if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
+
+        modal.classList.add('active');
     }
 
     async oauthLogin(provider) {
@@ -400,6 +442,9 @@ export class AuthManager {
             </div>
             <div id="auth-logged-in" class="hidden flex items-center gap-2">
                 <span id="user-email" class="text-xs text-text-muted truncate max-w-[120px]"></span>
+                <button id="header-account-btn" class="text-xs text-text-muted hover:text-primary transition-colors px-2 py-1" title="계정관리" aria-label="계정관리">
+                    <span class="material-symbols-outlined text-sm">manage_accounts</span>
+                </button>
                 <button id="logout-btn" class="text-xs text-text-muted hover:text-red-400 transition-colors px-2 py-1">
                     <span class="material-symbols-outlined text-sm">logout</span>
                 </button>
@@ -407,6 +452,10 @@ export class AuthManager {
         `;
 
         document.getElementById('login-btn')?.addEventListener('click', () => this.showAuthModal());
+        document.getElementById('header-account-btn')?.addEventListener('click', () => {
+            const modal = document.getElementById('account-modal');
+            if (modal) this._populateAccountModal(modal);
+        });
         document.getElementById('logout-btn')?.addEventListener('click', () => this.logout());
 
         // 모달 이벤트 미리 등록 (사이드바에서 직접 모달을 열 수 있으므로)

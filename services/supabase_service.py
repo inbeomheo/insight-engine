@@ -355,6 +355,44 @@ def delete_user_account(user_id: str) -> bool:
         logger.error(f"계정 삭제 실패: user_id={user_id}, error={e}")
         return False
 
+
+def update_user_profile(user_id: str, display_name: str) -> dict:
+    """사용자 프로필(닉네임) 업데이트 (admin API)"""
+    try:
+        admin = _get_admin_client()
+        if not admin:
+            return {'success': False, 'error': 'Admin client 미초기화'}
+
+        result = admin.auth.admin.update_user_by_id(
+            user_id,
+            {'user_metadata': {'display_name': display_name}}
+        )
+        logger.info(f"프로필 업데이트 완료: user_id={user_id}")
+        return {'success': True, 'user': {'id': result.user.id, 'email': result.user.email,
+                'user_metadata': result.user.user_metadata}}
+    except Exception as e:
+        logger.error(f"프로필 업데이트 실패: user_id={user_id}, error={e}")
+        return {'success': False, 'error': str(e)}
+
+
+def update_user_password(user_id: str, new_password: str) -> dict:
+    """사용자 비밀번호 변경 (admin API)"""
+    try:
+        admin = _get_admin_client()
+        if not admin:
+            return {'success': False, 'error': 'Admin client 미초기화'}
+
+        admin.auth.admin.update_user_by_id(
+            user_id,
+            {'password': new_password}
+        )
+        logger.info(f"비밀번호 변경 완료: user_id={user_id}")
+        return {'success': True}
+    except Exception as e:
+        logger.error(f"비밀번호 변경 실패: user_id={user_id}, error={e}")
+        return {'success': False, 'error': str(e)}
+
+
 # =============================================
 # API 키 관리
 # =============================================

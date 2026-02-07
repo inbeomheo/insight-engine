@@ -9,7 +9,8 @@ from services.supabase_service import (
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
     get_all_contents, get_content_detail,
-    get_histories, delete_history, delete_user_account
+    get_histories, delete_history, delete_user_account,
+    update_user_profile, update_user_password
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -417,6 +418,38 @@ def delete_user_history(report_id):
     if delete_history(g.user_id, report_id):
         return _success_response()
     return _error_response('삭제에 실패했습니다.', 500)
+
+
+@auth_bp.route('/api/user/profile', methods=['PUT'])
+@require_auth
+def update_profile():
+    """프로필(닉네임) 업데이트"""
+    data = _get_json_data()
+    display_name = data.get('display_name', '').strip()
+    if not display_name:
+        return _error_response('닉네임을 입력해주세요.')
+    if len(display_name) > 50:
+        return _error_response('닉네임은 50자 이내로 입력해주세요.')
+
+    result = update_user_profile(g.user_id, display_name)
+    if result['success']:
+        return _success_response({'user': result.get('user')})
+    return _error_response(result.get('error', '프로필 업데이트에 실패했습니다.'), 500)
+
+
+@auth_bp.route('/api/user/password', methods=['PUT'])
+@require_auth
+def change_password():
+    """비밀번호 변경"""
+    data = _get_json_data()
+    new_password = data.get('new_password', '')
+    if len(new_password) < 6:
+        return _error_response('비밀번호는 6자 이상이어야 합니다.')
+
+    result = update_user_password(g.user_id, new_password)
+    if result['success']:
+        return _success_response()
+    return _error_response(result.get('error', '비밀번호 변경에 실패했습니다.'), 500)
 
 
 @auth_bp.route('/api/user/account', methods=['DELETE'])
