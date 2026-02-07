@@ -281,6 +281,77 @@ export class AuthManager {
         );
     }
 
+    // ==================== 계정관리 ====================
+
+    async updateDisplayName(displayName) {
+        if (!this.supabaseClient) return { success: false, error: '인증 서비스 미초기화' };
+
+        try {
+            const { data, error } = await this.supabaseClient.auth.updateUser({
+                data: { display_name: displayName }
+            });
+            if (error) throw error;
+
+            this.user = data.user;
+            this.updateAuthUI(true);
+            return { success: true };
+        } catch (e) {
+            console.error('[AuthManager] 닉네임 변경 실패:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    async changePassword(newPassword) {
+        if (!this.supabaseClient) return { success: false, error: '인증 서비스 미초기화' };
+
+        try {
+            const { data, error } = await this.supabaseClient.auth.updateUser({
+                password: newPassword
+            });
+            if (error) throw error;
+            return { success: true };
+        } catch (e) {
+            console.error('[AuthManager] 비밀번호 변경 실패:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    async deleteAccount() {
+        if (!this.isLoggedIn()) return { success: false, error: '로그인 필요' };
+
+        try {
+            const token = this.getAccessToken();
+            const res = await fetch('/api/user/account', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '계정 삭제 실패');
+
+            // 로그아웃 + 세션 정리
+            if (this.supabaseClient) {
+                try { await this.supabaseClient.auth.signOut(); } catch (_) {}
+            }
+            this.clearSession();
+            localStorage.clear();
+            return { success: true };
+        } catch (e) {
+            console.error('[AuthManager] 계정 삭제 실패:', e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    isOAuthUser() {
+        const provider = this.user?.app_metadata?.provider;
+        return provider && provider !== 'email';
+    }
+
+    getDisplayName() {
+        return this.user?.user_metadata?.display_name
+            || this.user?.email?.split('@')[0]
+            || '사용자';
+    }
+
     async oauthLogin(provider) {
         // Supabase JS SDK를 사용한 OAuth 로그인 (PKCE 자동 처리)
         if (!this.supabaseClient) {
@@ -384,20 +455,20 @@ export class AuthManager {
         const container = document.getElementById('sidebar-auth-container');
         const icon = document.getElementById('sidebar-auth-icon');
         const label = document.getElementById('sidebar-auth-label');
+        const accountBtn = document.getElementById('sidebar-account-btn');
 
         if (!container || !icon || !label) return;
 
-        if (isLoggedIn) {
-            // 로그인 상태: 이메일 표시
-            const email = this.user?.email || '';
-            const displayName = email.split('@')[0]; // @ 앞부분만 표시
+        // 계정관리 버튼 표시/숨김
+        accountBtn?.classList.toggle('hidden', !isLoggedIn);
 
+        if (isLoggedIn) {
+            const displayName = this.getDisplayName();
             icon.textContent = 'account_circle';
-            label.textContent = displayName || '사용자';
-            container.title = email;
-            container.setAttribute('aria-label', `${email} - 클릭하여 로그아웃`);
+            label.textContent = displayName;
+            container.title = this.user?.email || '';
+            container.setAttribute('aria-label', `${this.user?.email} - 클릭하여 로그아웃`);
         } else {
-            // 로그아웃 상태: 로그인 버튼
             icon.textContent = 'person';
             label.textContent = '로그인';
             container.title = '로그인';

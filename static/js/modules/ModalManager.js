@@ -29,7 +29,7 @@ export class ModalManager {
 
     /**
      * 현재 열려있는 모달을 닫습니다
-     * 우선순위: prompt > custom-style > auth > settings > onboarding
+     * 우선순위: prompt > custom-style > account > auth > settings > onboarding
      * 참고: mindmap-modal은 MindmapManager에서 자체 ESC 핸들러로 처리
      */
     closeActiveModal() {
@@ -37,6 +37,7 @@ export class ModalManager {
         const modalPriority = [
             { id: 'prompt-modal', hide: () => this.hidePromptModal() },
             { id: 'custom-style-modal', hide: () => this.hideCustomStyleModal() },
+            { id: 'account-modal', hide: () => document.getElementById('account-modal')?.classList.remove('active') },
             { id: 'auth-modal', hide: () => this.hideAuthModal() },
             { id: 'settings-modal', hide: () => this.hideSettingsModal() },
             { id: 'onboarding-modal', hide: () => this.closeOnboarding() }

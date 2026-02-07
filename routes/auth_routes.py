@@ -9,7 +9,7 @@ from services.supabase_service import (
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
     get_all_contents, get_content_detail,
-    get_histories
+    get_histories, delete_history, delete_user_account
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -402,6 +402,33 @@ def get_user_history():
         'has_more': data.get('has_more', False),
         'is_admin': is_admin(g.user_id)
     })
+
+
+@auth_bp.route('/api/user/history/<report_id>', methods=['DELETE'])
+@require_auth
+def delete_user_history(report_id):
+    """사용자 히스토리 삭제 (클라우드)
+
+    RLS + user_id 매칭으로 본인 데이터만 삭제 가능.
+    """
+    if not report_id:
+        return _error_response('report_id가 필요합니다.')
+
+    if delete_history(g.user_id, report_id):
+        return _success_response()
+    return _error_response('삭제에 실패했습니다.', 500)
+
+
+@auth_bp.route('/api/user/account', methods=['DELETE'])
+@require_auth
+def delete_account():
+    """사용자 계정 완전 삭제
+
+    auth.users 삭제 → CASCADE로 모든 사용자 데이터 자동 정리.
+    """
+    if delete_user_account(g.user_id):
+        return _success_response({'message': '계정이 삭제되었습니다.'})
+    return _error_response('계정 삭제에 실패했습니다.', 500)
 
 
 # =============================================

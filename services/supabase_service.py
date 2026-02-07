@@ -18,6 +18,7 @@ from services.exceptions import (
 
 # Supabase 클라이언트 초기화
 _supabase_client: Client = None
+_supabase_admin: Client = None  # Admin 클라이언트 (service_role key)
 _fernet_instance: Fernet = None
 _encryption_enabled: bool = None  # 암호화 활성화 여부
 
@@ -41,6 +42,23 @@ def get_supabase() -> Client:
 def is_supabase_enabled() -> bool:
     """Supabase가 활성화되어 있는지 확인"""
     return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
+
+
+def _get_admin_client() -> Client:
+    """Supabase Admin 클라이언트 (service_role key - 계정 삭제 등)"""
+    global _supabase_admin
+
+    if _supabase_admin is None:
+        url = os.getenv('SUPABASE_URL')
+        service_role_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+
+        if not url or not service_role_key:
+            logger.warning("SUPABASE_SERVICE_ROLE_KEY 미설정 - admin 기능 비활성화")
+            return None
+
+        _supabase_admin = create_client(url, service_role_key)
+
+    return _supabase_admin
 
 
 def _is_encryption_enabled() -> bool:
@@ -317,6 +335,25 @@ def delete_history(user_id: str, report_id: str) -> bool:
         return True
 
     return _db_operation('History delete', False, operation)
+
+
+def delete_user_account(user_id: str) -> bool:
+    """사용자 계정 완전 삭제 (admin)
+
+    auth.users 삭제 → CASCADE로 ie_* 테이블 자동 정리.
+    """
+    try:
+        admin = _get_admin_client()
+        if not admin:
+            logger.error("Admin client 미초기화 - 계정 삭제 불가")
+            return False
+
+        admin.auth.admin.delete_user(user_id)
+        logger.info(f"계정 삭제 완료: user_id={user_id}")
+        return True
+    except Exception as e:
+        logger.error(f"계정 삭제 실패: user_id={user_id}, error={e}")
+        return False
 
 # =============================================
 # API 키 관리
