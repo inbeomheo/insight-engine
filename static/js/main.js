@@ -39,6 +39,10 @@ class ContentAnalysis {
         this.reportManager = new ReportManager(this.storage, this.styleManager, this.ui);
         this.authManager = new AuthManager(this.storage, this.ui);
         this.mindmapManager = new MindmapManager(this.storage, this.providerManager, this.ui, this.authManager);
+
+        // EventBus 초기화 (구독자보다 먼저 생성)
+        this.eventBus = getEventBus();
+
         this.generator = new ContentGenerator(
             this.storage,
             this.providerManager,
@@ -46,11 +50,11 @@ class ContentAnalysis {
             this.urlManager,
             this.reportManager,
             this.ui,
-            this.authManager
+            this.authManager,
+            this.eventBus
         );
 
         // 사용량 패널 매니저 (중앙 EventBus 사용)
-        this.eventBus = getEventBus();
         this.usagePanelManager = new UsagePanelManager(this.storage, this.eventBus, this.authManager);
 
         // 관리자 대시보드

@@ -82,6 +82,16 @@ export class CardEventHandler {
             mindmapBtn.addEventListener('click', () => this._handleMindmapClick(mindmapBtn, data));
         }
 
+        // 더보기 메뉴 aria-expanded 토글
+        const moreActionsBtn = card.querySelector('.more-actions-btn');
+        if (moreActionsBtn) {
+            const triggerBtn = moreActionsBtn.querySelector('button[aria-haspopup]');
+            if (triggerBtn) {
+                moreActionsBtn.addEventListener('mouseenter', () => triggerBtn.setAttribute('aria-expanded', 'true'));
+                moreActionsBtn.addEventListener('mouseleave', () => triggerBtn.setAttribute('aria-expanded', 'false'));
+            }
+        }
+
         downloadBtn?.addEventListener('click', () => this._handleDownloadClick(data));
         deleteBtn?.addEventListener('click', () => this._handleDeleteClick(card, data.id));
     }

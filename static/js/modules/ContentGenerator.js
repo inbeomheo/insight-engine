@@ -5,7 +5,7 @@
  * 로그인 필수, 하루 5회 제한 적용.
  */
 export class ContentGenerator {
-    constructor(storage, providerManager, styleManager, urlManager, reportManager, uiManager, authManager) {
+    constructor(storage, providerManager, styleManager, urlManager, reportManager, uiManager, authManager, eventBus = null) {
         this.storage = storage;
         this.providerManager = providerManager;
         this.styleManager = styleManager;
@@ -13,6 +13,7 @@ export class ContentGenerator {
         this.reportManager = reportManager;
         this.ui = uiManager;
         this.authManager = authManager;
+        this.eventBus = eventBus;
         this.originalContent = '';
         this.lastPrompt = '';
         this.onUsageUpdate = null; // 사용량 업데이트 콜백
@@ -165,8 +166,9 @@ export class ContentGenerator {
                     transcript: data.transcript
                 });
 
-                // 사용량 업데이트 콜백 호출
+                // 사용량 업데이트 콜백 호출 + EventBus 이벤트 발행
                 this.onUsageUpdate?.();
+                this.eventBus?.emit('usage:updated');
             } else {
                 // 에러 - 처리 중 카드를 에러 카드로 변환 (401은 로그인 필요)
                 const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
@@ -180,6 +182,7 @@ export class ContentGenerator {
                 // 401/429 에러 시 사용량 상태 업데이트
                 if (response.status === 401 || response.status === 429) {
                     this.onUsageUpdate?.();
+                    this.eventBus?.emit('usage:updated');
                 }
             }
         } catch (error) {
@@ -225,6 +228,7 @@ export class ContentGenerator {
             });
             this.ui.showAlert('분석이 완료되었습니다!', 'success');
             this.onUsageUpdate?.();
+            this.eventBus?.emit('usage:updated');
         } else {
             const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
                              response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
@@ -274,6 +278,7 @@ export class ContentGenerator {
 
             this.ui.showAlert(`${urls.length}개의 URL 분석이 완료되었습니다!`, 'success');
             this.onUsageUpdate?.();
+            this.eventBus?.emit('usage:updated');
         } else {
             const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
                              response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :

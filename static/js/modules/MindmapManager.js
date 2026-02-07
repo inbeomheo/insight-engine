@@ -99,7 +99,14 @@ export class MindmapManager {
 
         } catch (error) {
             console.error('Mindmap generation error:', error);
-            this.ui.showAlert(error.message || '마인드맵 생성 중 오류가 발생했습니다.', 'error');
+            const isPromptNotConfigured = error.message?.includes('프롬프트가 설정되지 않았습니다');
+            if (isPromptNotConfigured) {
+                this.ui.showAlert('마인드맵 프롬프트가 설정되지 않았습니다. 설정에서 마인드맵 프롬프트를 구성해주세요.', 'error');
+                const settingsModal = document.getElementById('settings-modal');
+                if (settingsModal) settingsModal.classList.add('active');
+            } else {
+                this.ui.showAlert(error.message || '마인드맵 생성 중 오류가 발생했습니다.', 'error');
+            }
             this.closeModal();
             return null;
         } finally {

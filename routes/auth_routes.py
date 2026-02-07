@@ -95,8 +95,10 @@ def signup():
         error_msg = str(e).lower()
         if 'already registered' in error_msg:
             return _error_response('이미 등록된 이메일입니다.')
+        if 'rate limit' in error_msg:
+            return _error_response('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.')
         if 'invalid' in error_msg and 'email' in error_msg:
-            return _error_response('유효하지 않은 이메일 형식입니다.')
+            return _error_response('유효하지 않은 이메일입니다. 실제 이메일 주소(예: gmail.com, naver.com)를 입력해주세요.')
         # 보안: 상세 에러 메시지는 로깅만 하고 일반 메시지 반환
         import logging
         logging.getLogger(__name__).error(f'회원가입 오류: {e}')

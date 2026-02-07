@@ -214,15 +214,15 @@ export class CardHtmlBuilder {
                             <span class="material-symbols-outlined">download</span>
                         </button>
                         <div class="more-actions-btn">
-                            <button class="action-btn" title="더보기">
+                            <button class="action-btn" title="더보기" aria-haspopup="menu" aria-expanded="false" aria-label="더보기 메뉴">
                                 <span class="material-symbols-outlined">more_horiz</span>
                             </button>
-                            <div class="more-actions-menu">
-                                <button class="action-btn prompt-btn">
+                            <div class="more-actions-menu" role="menu" aria-label="추가 작업">
+                                <button class="action-btn prompt-btn" role="menuitem">
                                     <span class="material-symbols-outlined">code</span>
                                     <span>프롬프트</span>
                                 </button>
-                                <button class="action-btn mindmap-btn">
+                                <button class="action-btn mindmap-btn" role="menuitem">
                                     <span class="material-symbols-outlined">account_tree</span>
                                     <span>마인드맵</span>
                                 </button>
