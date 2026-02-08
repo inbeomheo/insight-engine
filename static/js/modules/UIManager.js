@@ -11,14 +11,21 @@ export class UIManager {
     // ==================== Alerts ====================
 
     showAlert(message, type = 'info') {
-        const container = document.getElementById('alert-container');
-        if (!container) return;
+        // 토스트 컨테이너 확보 (상단 중앙 고정)
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+            document.body.appendChild(container);
+        }
 
-        container.innerHTML = '';
-
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`;
-
+        const colorMap = {
+            success: '#22c55e',
+            error: '#ef4444',
+            warning: '#f59e0b',
+            info: '#4F46E5'
+        };
         const iconMap = {
             success: 'check_circle',
             error: 'error',
@@ -26,25 +33,40 @@ export class UIManager {
             info: 'info'
         };
 
-        alert.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined">${iconMap[type] || iconMap.info}</span>
-                <span>${this.escapeHtml(message)}</span>
-            </div>
-            <button class="p-1 hover:bg-white/10 transition-colors" onclick="this.parentElement.remove()">
-                <span class="material-symbols-outlined text-sm">close</span>
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            pointer-events:auto;display:flex;align-items:center;gap:8px;
+            padding:10px 16px;background:#fff;border:1px solid #e5e7eb;
+            border-left:3px solid ${colorMap[type] || colorMap.info};
+            border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.08);
+            font-size:13px;color:#374151;max-width:420px;
+            opacity:0;transform:translateY(-8px);
+            transition:opacity 0.2s,transform 0.2s;
+        `;
+        toast.innerHTML = `
+            <span class="material-symbols-outlined" style="font-size:18px;color:${colorMap[type] || colorMap.info}">${iconMap[type] || iconMap.info}</span>
+            <span style="flex:1">${this.escapeHtml(message)}</span>
+            <button style="padding:2px;color:#9ca3af;cursor:pointer;background:none;border:none;" onclick="this.parentElement.remove()">
+                <span class="material-symbols-outlined" style="font-size:16px">close</span>
             </button>
         `;
 
-        container.appendChild(alert);
+        container.appendChild(toast);
 
+        // 등장 애니메이션
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+
+        // 3초 후 자동 사라짐
         setTimeout(() => {
-            if (alert.parentElement) {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-20px)';
-                setTimeout(() => alert.remove(), 300);
+            if (toast.parentElement) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-8px)';
+                setTimeout(() => toast.remove(), 200);
             }
-        }, 5000);
+        }, 3000);
     }
 
     // ==================== Loading States ====================

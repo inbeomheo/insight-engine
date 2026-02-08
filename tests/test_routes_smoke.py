@@ -93,12 +93,16 @@ class TestRoutesSmoke(unittest.TestCase):
 
     def test_user_history_api_no_auth_mode(self):
         """Supabase 비활성화 시 히스토리 API 동작"""
-        fake_histories = [
-            {'report_id': 'r1', 'url': 'http://test.com', 'title': 'Test', 'style': 'summary',
-             'html': '<p>test</p>', 'content': 'test', 'created_at': '2025-01-01T00:00:00'}
-        ]
+        fake_histories_response = {
+            'histories': [
+                {'report_id': 'r1', 'url': 'http://test.com', 'title': 'Test', 'style': 'summary',
+                 'html': '<p>test</p>', 'content': 'test', 'created_at': '2025-01-01T00:00:00'}
+            ],
+            'has_more': False,
+            'total_pages': 1
+        }
         with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
-             patch('routes.auth_routes.get_histories', return_value=fake_histories):
+             patch('routes.auth_routes.get_histories', return_value=fake_histories_response):
             res = self.client.get('/api/user/history')
             self.assertEqual(res.status_code, 200)
             data = res.get_json()

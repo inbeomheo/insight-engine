@@ -1,12 +1,10 @@
-/* ==================== Modal Styles - Enhanced Design ==================== */
+/* ==================== Modal Styles - Light Theme ==================== */
 
 .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.3);
     z-index: 100;
     align-items: center;
     justify-content: center;
@@ -20,17 +18,14 @@
 }
 
 .modal-content {
-    background: var(--surface-dark);
+    background: #FFFFFF;
     border: 1px solid var(--border-dark);
     border-radius: 16px;
     max-width: 520px;
     width: 90%;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow:
-        0 24px 64px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-        0 0 80px rgba(173, 43, 238, 0.1);
+    box-shadow: var(--shadow-xl);
     transform: scale(0.95) translateY(10px);
     opacity: 0;
     animation: modalSlideIn 0.25s ease-out forwards;
@@ -59,7 +54,7 @@
     }
 }
 
-/* Modal Close Button - Enhanced */
+/* Modal Close Button */
 .modal-close-btn {
     display: flex;
     align-items: center;
@@ -67,23 +62,22 @@
     width: 36px;
     height: 36px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #F3F4F6;
+    border: none;
     color: var(--text-muted);
     transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .modal-close-btn:hover {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     transform: rotate(90deg);
 }
 
 .modal-close-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(173, 43, 238, 0.3);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
 }
 
 /* Modal Header */
@@ -93,24 +87,23 @@
     justify-content: space-between;
     padding-bottom: 1rem;
     margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-dark);
 }
 
-/* 모달 텍스트 색상 - 라이트 모드 대응 */
+/* 모달 텍스트 색상 */
 .modal-content h2,
 .modal-content h3 {
     color: var(--text-primary) !important;
 }
 
-/* 모달 내 포커스 트랩 시각적 표시 */
+/* 모달 내 포커스 트랩 */
 .modal-overlay.active .modal-content:focus-within {
-    box-shadow: 0 0 0 2px rgba(15, 117, 138, 0.3),
-                0 24px 64px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2),
+                var(--shadow-xl);
 }
 
 /* ==================== Admin Dashboard Modal ==================== */
 
-/* 관리자 탭 스타일 */
 .admin-tab {
     color: var(--text-muted);
     background: transparent;
@@ -122,29 +115,29 @@
 
 .admin-tab:hover {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    background: #F3F4F6;
 }
 
 .admin-tab.active {
     color: var(--primary);
-    background: var(--primary-bg, rgba(212, 168, 122, 0.15));
+    background: var(--primary-light);
     border-bottom: 2px solid var(--primary);
 }
 
-/* 관리자 테이블 스타일 */
+/* 관리자 테이블 */
 #admin-modal table {
     border-collapse: collapse;
 }
 
 #admin-modal th {
-    background: var(--background-dark);
+    background: #F9FAFB;
 }
 
 #admin-modal tbody tr:hover {
-    background: var(--background-dark);
+    background: #F9FAFB;
 }
 
-/* 관리자 버튼 스타일 */
+/* 관리자 버튼 */
 .admin-reset-btn {
     border: none;
     cursor: pointer;

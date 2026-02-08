@@ -89,15 +89,12 @@ export class StyleManager {
         }
 
         container.innerHTML = styles.map(style => `
-            <label class="style-option custom-style-card" data-custom-id="${style.id}">
-                <input type="radio" name="style" value="${style.id}" class="hidden peer">
-                <div class="style-card peer-checked:border-primary peer-checked:bg-primary/10">
-                    <span class="material-symbols-outlined text-2xl mb-2">${this.ui.escapeHtml(style.icon || 'edit_note')}</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">${this.ui.escapeHtml(style.name)}</span>
-                    <button type="button" class="custom-style-edit-btn absolute top-2 right-2 text-text-subtle hover:text-primary p-1" data-edit-style="${style.id}">
-                        <span class="material-symbols-outlined text-sm">edit</span>
-                    </button>
-                </div>
+            <label class="popover-style-item custom-style-card" data-custom-id="${style.id}" style="position: relative;">
+                <input type="radio" name="style" value="${style.id}" class="peer sr-only">
+                <span class="popover-style-chip">${this.ui.escapeHtml(style.name)}</span>
+                <button type="button" class="custom-style-edit-btn" data-edit-style="${style.id}" style="position: absolute; top: -4px; right: -4px; padding: 2px; font-size: 10px; color: var(--text-muted); background: white; border-radius: 50%; border: 1px solid var(--border-dark);">
+                    <span class="material-symbols-outlined" style="font-size: 12px;">edit</span>
+                </button>
             </label>
         `).join('');
 

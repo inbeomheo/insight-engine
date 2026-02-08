@@ -15,30 +15,29 @@ export class CardHtmlBuilder {
      */
     buildPendingCardHtml(styleLabel, timeStr, url, shortUrl) {
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary/50 via-primary/30 to-transparent rounded-full animate-pulse"></div>
-            <div class="card-header p-6 md:p-8 border-b border-border-dark/30">
+            <div class="card-header p-5 md:p-6 border-b" style="border-color: var(--border-dark);">
                 <div class="space-y-3">
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <span class="bg-gradient-to-r from-primary/60 to-primary-glow/60 text-background-dark text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md">${styleLabel}</span>
-                        <span class="text-text-subtle/50 text-[10px] font-mono tracking-wide">${timeStr}</span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-medium animate-pulse">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <span class="font-medium text-indigo-600">${styleLabel}</span>
+                        <span>&middot;</span>
+                        <span>${timeStr}</span>
+                        <span>&middot;</span>
+                        <span class="inline-flex items-center gap-1 text-indigo-600 animate-pulse">
                             <span class="material-symbols-outlined text-xs loading-spinner">progress_activity</span>
-                            <span>분석 중</span>
+                            분석 중
                         </span>
                     </div>
-                    <!-- Skeleton Title -->
                     <div class="space-y-2">
                         <div class="skeleton skeleton-title"></div>
                         <div class="skeleton skeleton-text" style="width: 50%;"></div>
                     </div>
-                    <a class="inline-flex items-center gap-1.5 text-text-subtle/40 text-xs font-mono hover:text-text-subtle/60 transition-colors" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
+                    <a class="inline-flex items-center gap-1.5 text-gray-400 text-xs hover:text-gray-600 transition-colors" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
                         <span class="material-symbols-outlined text-sm">play_circle</span>
                         <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
                     </a>
                 </div>
             </div>
-            <!-- Skeleton Content Area -->
-            <div class="p-6 md:p-8">
+            <div class="p-5 md:p-6">
                 <div class="space-y-4">
                     <div class="skeleton skeleton-text" style="width: 100%;"></div>
                     <div class="skeleton skeleton-text" style="width: 95%;"></div>
@@ -46,13 +45,13 @@ export class CardHtmlBuilder {
                     <div class="skeleton skeleton-text" style="width: 92%;"></div>
                     <div class="skeleton skeleton-text" style="width: 75%;"></div>
                 </div>
-                <div class="flex items-center justify-center gap-3 mt-8 pt-6 border-t border-border-dark/20">
+                <div class="flex items-center justify-center gap-3 mt-6 pt-4 border-t" style="border-color: var(--border-dark);">
                     <div class="flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
-                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
-                        <span class="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                        <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                        <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
                     </div>
-                    <span class="text-[11px] text-text-subtle/50 font-medium">AI가 영상을 분석하고 있습니다</span>
+                    <span class="text-xs text-gray-400">AI가 영상을 분석하고 있습니다</span>
                 </div>
             </div>
         `;
@@ -63,24 +62,23 @@ export class CardHtmlBuilder {
      */
     buildSimpleErrorCardHtml(url, shortUrl, error) {
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1.5 bg-red-500 rounded-full"></div>
-            <div class="p-6 md:p-8 border-b border-border-dark flex flex-col gap-3">
-                <div class="flex items-center gap-3">
-                    <span class="bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">Error</span>
+            <div class="p-5 md:p-6 border-b flex flex-col gap-3" style="border-color: var(--border-dark);">
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-red-600 font-semibold">Error</span>
                 </div>
-                <h3 class="text-xl font-bold text-red-400 leading-tight">분석 실패</h3>
-                <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
+                <h3 class="text-lg font-semibold text-red-600 leading-tight">분석 실패</h3>
+                <a class="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
                     <span class="material-symbols-outlined text-sm">open_in_new</span> ${this.ui.escapeHtml(shortUrl)}
                 </a>
             </div>
-            <div class="p-6 md:p-8 text-gray-400 font-body">
-                <div class="flex items-center gap-2 text-red-400">
-                    <span class="material-symbols-outlined">warning</span>
+            <div class="p-5 md:p-6 text-gray-600 text-sm">
+                <div class="flex items-center gap-2 text-red-600">
+                    <span class="material-symbols-outlined text-base">warning</span>
                     <span>${this.ui.escapeHtml(error)}</span>
                 </div>
             </div>
-            <div class="card-footer bg-background-dark/60 border-t border-border-dark/30 px-4 py-3 flex justify-end">
-                <button class="delete-btn inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-red-400/70 hover:text-red-400 px-3 py-2 hover:bg-red-500/10 transition-all duration-200 rounded-lg">
+            <div class="border-t px-4 py-3 flex justify-end" style="border-color: var(--border-dark);">
+                <button class="delete-btn inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 px-3 py-2 hover:bg-red-50 transition-colors rounded-lg">
                     <span class="material-symbols-outlined text-sm">delete</span>
                     <span>삭제</span>
                 </button>
@@ -93,27 +91,27 @@ export class CardHtmlBuilder {
      */
     buildErrorCardHtml(reportId, timeStr, url, shortUrl, error) {
         return `
-            <div class="absolute -left-[1px] top-0 bottom-0 w-1 bg-red-500"></div>
-            <div class="p-6 md:p-8 border-b border-border-dark flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest px-2 py-1">Error</span>
-                        <span class="text-text-subtle text-xs font-mono">ID: ${reportId} • ${timeStr}</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-red-400 leading-tight">분석 실패</h3>
-                    <a class="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-sm font-mono uppercase tracking-wide" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
-                        <span class="material-symbols-outlined text-sm">open_in_new</span> ${this.ui.escapeHtml(shortUrl)}
-                    </a>
+            <div class="p-5 md:p-6 border-b flex flex-col gap-3" style="border-color: var(--border-dark);">
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                    <span class="text-red-600 font-semibold">Error</span>
+                    <span>&middot;</span>
+                    <span>ID: ${reportId}</span>
+                    <span>&middot;</span>
+                    <span>${timeStr}</span>
                 </div>
+                <h3 class="text-lg font-semibold text-red-600 leading-tight">분석 실패</h3>
+                <a class="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors text-xs" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
+                    <span class="material-symbols-outlined text-sm">open_in_new</span> ${this.ui.escapeHtml(shortUrl)}
+                </a>
             </div>
-            <div class="p-6 md:p-8 text-gray-400 font-body">
-                <div class="flex items-center gap-2 text-red-400">
-                    <span class="material-symbols-outlined">warning</span>
+            <div class="p-5 md:p-6 text-gray-600 text-sm">
+                <div class="flex items-center gap-2 text-red-600">
+                    <span class="material-symbols-outlined text-base">warning</span>
                     <span>${this.ui.escapeHtml(error)}</span>
                 </div>
             </div>
-            <div class="bg-surface-dark/50 border-t border-border-dark p-4 flex justify-end gap-3">
-                <button class="delete-btn text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-400 px-4 py-2 hover:bg-red-500/10 transition-colors">Delete</button>
+            <div class="border-t p-4 flex justify-end gap-3" style="border-color: var(--border-dark);">
+                <button class="delete-btn text-xs text-red-500 hover:text-red-600 px-4 py-2 hover:bg-red-50 transition-colors rounded-lg">삭제</button>
             </div>
         `;
     }
@@ -153,41 +151,39 @@ export class CardHtmlBuilder {
      */
     _buildSourceBadge(source) {
         const sourceLabels = {
-            'api': { label: 'API', icon: 'api', color: 'text-green-400' },
-            'watch': { label: 'Watch', icon: 'web', color: 'text-blue-400' },
-            'supadata': { label: 'Supadata', icon: 'cloud', color: 'text-purple-400' },
-            'cache': { label: 'Cache', icon: 'cached', color: 'text-yellow-400' }
+            'api': { label: 'API', icon: 'api', color: 'text-green-600' },
+            'watch': { label: 'Watch', icon: 'web', color: 'text-blue-600' },
+            'supadata': { label: 'Supadata', icon: 'cloud', color: 'text-purple-600' },
+            'cache': { label: 'Cache', icon: 'cached', color: 'text-yellow-600' }
         };
-        const info = sourceLabels[source] || { label: source || '?', icon: 'help', color: 'text-gray-400' };
+        const info = sourceLabels[source] || { label: source || '?', icon: 'help', color: 'text-gray-500' };
         return `<span class="source-badge ${info.color}" title="자막 소스: ${info.label}"><span class="material-symbols-outlined">${info.icon}</span></span>`;
     }
 
     /**
-     * 리포트 카드 HTML 생성 (통합 컴팩트 디자인)
+     * 리포트 카드 HTML 생성 (통합 미니멀 디자인)
      */
     buildReportCardHtml(data, styleLabel, shortUrl) {
-        // 메타 정보 빌드 (인라인 형태)
-        const metaChips = [];
+        // 메타 정보 빌드 (한 줄 텍스트, · 구분)
+        const metaParts = [];
         if (data.usage?.total_tokens) {
-            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">token</span>${data.usage.total_tokens.toLocaleString()}</span>`);
+            metaParts.push(`${data.usage.total_tokens.toLocaleString()} tokens`);
         }
         if (data.elapsed_time) {
-            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">schedule</span>${data.elapsed_time}초</span>`);
+            metaParts.push(`${data.elapsed_time}초`);
         }
-        // 글자수
         const charCount = (data.content || '').length;
         if (charCount > 0) {
-            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">edit_note</span>${charCount.toLocaleString()}자</span>`);
+            metaParts.push(`${charCount.toLocaleString()}자`);
         }
-        // 단어수
         const wordCount = (data.content || '').split(/\s+/).filter(w => w).length;
         if (wordCount > 0) {
-            metaChips.push(`<span class="meta-chip"><span class="material-symbols-outlined">description</span>${wordCount.toLocaleString()}단어</span>`);
+            metaParts.push(`${wordCount.toLocaleString()}단어`);
         }
-        // 댓글 요약 포함 여부
         if (data.comment_summary_included === false) {
-            metaChips.push(`<span class="meta-chip meta-chip--muted"><span class="material-symbols-outlined">chat_bubble</span>댓글 요약 미포함</span>`);
+            metaParts.push('댓글 미포함');
         }
+        const metaText = metaParts.join(' · ');
 
         // 자막 소스 뱃지
         const sourceBadge = data.transcript_source ? this._buildSourceBadge(data.transcript_source) : '';
@@ -230,11 +226,9 @@ export class CardHtmlBuilder {
                     ${this.ui.sanitizeHtml(data.html)}
                 </div>
 
-                <!-- 푸터: 메타 + 액션 (간소화) -->
+                <!-- 푸터: 메타 텍스트 + 아이콘 액션 -->
                 <div class="unified-footer">
-                    <div class="meta-chips">
-                        ${metaChips.join('')}
-                    </div>
+                    <div class="meta-text">${metaText}</div>
                     <div class="footer-actions">
                         <button class="action-btn download-btn" title="저장">
                             <span class="material-symbols-outlined">download</span>

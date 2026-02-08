@@ -1,20 +1,18 @@
-/* ==================== Base Tokens - Multi-Theme Design System ==================== */
+/* ==================== Base Tokens - Light Single Theme (Indigo Accent) ==================== */
+/* 레거시 변수명(--*-dark) 유지 - JS/Tailwind 참조 호환성 */
 
-/* ========== Dark Mode (기본 테마) ========== */
-/* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
-:root,
-[data-theme="dark"] {
+:root {
     /* ----------------------------------------
-       Primary Colors - 브랜드 색상
+       Primary Colors - 인디고 액센트
        ---------------------------------------- */
-    --primary: #D4A87A;           /* 테라코타 밝게 - 대비 6.2:1 vs #1A1612 */
-    --primary-hover: #E4B88A;
-    --primary-glow: #F5D4B8;
-    --primary-light: rgba(212, 168, 122, 0.1);
-    --primary-dark: #B8926A;
-    --secondary: #A08B70;         /* 테라코타 */
-    --accent: #F59E0B;            /* 오렌지 밝게 */
-    --accent-hover: #FBBF24;
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --primary-glow: #6366F1;
+    --primary-light: rgba(79, 70, 229, 0.08);
+    --primary-dark: #3730A3;
+    --secondary: #6B7280;
+    --accent: #4F46E5;
+    --accent-hover: #4338CA;
 
     /* Tailwind 호환 별칭 */
     --color-primary: var(--primary);
@@ -23,13 +21,13 @@
     --color-primary-dark: var(--primary-dark);
 
     /* ----------------------------------------
-       Background Colors - 배경 색상
+       Background Colors - 라이트 배경
        ---------------------------------------- */
-    --background-dark: #1A1612;   /* 따뜻한 다크 브라운 */
-    --surface-dark: #231E19;      /* 다크 서피스 */
-    --card-dark: #2D2620;
-    --bg-elevated: #3D342B;
-    --bg-overlay: rgba(0, 0, 0, 0.7);
+    --background-dark: #FFFFFF;
+    --surface-dark: #FFFFFF;
+    --card-dark: #FFFFFF;
+    --bg-elevated: #F9FAFB;
+    --bg-overlay: rgba(0, 0, 0, 0.3);
 
     /* Tailwind 호환 별칭 */
     --bg-primary: var(--background-dark);
@@ -38,53 +36,53 @@
     --bg-surface: var(--surface-dark);
 
     /* ----------------------------------------
-       Text Colors - 텍스트 색상
+       Text Colors - 어두운 텍스트
        ---------------------------------------- */
-    --text-primary: #FDFCFB;      /* 대비 15.8:1 vs #1A1612 */
-    --text-secondary: #D8CFC5;    /* 보조 텍스트 */
-    --text-tertiary: #B8AFA5;     /* 3차 텍스트 */
-    --text-muted: #D8CFC5;        /* 대비 9.2:1 vs #1A1612 */
-    --text-subtle: #E5C4A8;       /* 대비 7.8:1 vs #1A1612 */
-    --text-inverse: #1A1612;      /* 반전 텍스트 */
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --text-tertiary: #6B7280;
+    --text-muted: #6B7280;
+    --text-subtle: #9CA3AF;
+    --text-inverse: #FFFFFF;
 
     /* ----------------------------------------
-       Semantic Colors - 의미 기반 색상
+       Semantic Colors
        ---------------------------------------- */
-    --color-success: #10b981;     /* 성공 - 에메랄드 */
-    --color-warning: #f59e0b;     /* 경고 - 앰버 */
-    --color-error: #ef4444;       /* 에러 - 레드 */
-    --color-info: #3b82f6;        /* 정보 - 블루 */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-info: #3b82f6;
 
     /* ----------------------------------------
-       Border Colors - 테두리 색상
+       Border Colors
        ---------------------------------------- */
-    --border-dark: #4A3F35;       /* 다크 테두리 */
-    --card-border: #6B5A48;
-    --border-primary: rgba(74, 63, 53, 0.5);
-    --border-secondary: rgba(74, 63, 53, 0.3);
+    --border-dark: #E5E7EB;
+    --card-border: #D1D5DB;
+    --border-primary: rgba(229, 231, 235, 0.8);
+    --border-secondary: rgba(229, 231, 235, 0.5);
     --border-focus: var(--primary);
 
     /* ----------------------------------------
-       Shadows - 그림자
+       Shadows - 라이트 그림자
        ---------------------------------------- */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 20px var(--primary-glow);
-    --shadow-primary: 0 8px 32px rgba(212, 168, 122, 0.15);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    --shadow-glow: none;
+    --shadow-primary: 0 4px 14px rgba(79, 70, 229, 0.15);
 
     /* ----------------------------------------
-       Border Radius - 모서리 반경
+       Border Radius
        ---------------------------------------- */
     --radius-sm: 0.25rem;         /* 4px */
     --radius-md: 0.375rem;        /* 6px */
     --radius-lg: 0.5rem;          /* 8px */
     --radius-xl: 0.75rem;         /* 12px */
-    --radius-full: 9999px;        /* 완전 원형 */
+    --radius-full: 9999px;
 
     /* ----------------------------------------
-       Spacing - 간격
+       Spacing
        ---------------------------------------- */
     --spacing-xs: 0.25rem;   /* 4px */
     --spacing-sm: 0.5rem;    /* 8px */
@@ -93,34 +91,34 @@
     --spacing-xl: 1.25rem;   /* 20px */
 
     /* Tailwind 호환 별칭 */
-    --spacing-1: 0.25rem;    /* 4px */
-    --spacing-2: 0.5rem;     /* 8px */
-    --spacing-3: 0.75rem;    /* 12px */
-    --spacing-4: 1rem;       /* 16px */
-    --spacing-5: 1.25rem;    /* 20px */
-    --spacing-6: 1.5rem;     /* 24px */
-    --spacing-7: 1.75rem;    /* 28px */
-    --spacing-8: 2rem;       /* 32px */
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.25rem;
+    --spacing-6: 1.5rem;
+    --spacing-7: 1.75rem;
+    --spacing-8: 2rem;
 
     /* ----------------------------------------
-       Typography - US-017: 타이포그래피 스케일
+       Typography
        ---------------------------------------- */
-    --font-size-caption: 0.875rem;   /* 14px - 최소 크기 */
-    --font-size-body: 1rem;          /* 16px - 본문 */
-    --font-size-body-lg: 1.125rem;   /* 18px - 큰 본문 */
-    --font-size-h4: 1.25rem;         /* 20px - 소제목 */
-    --font-size-h3: 1.5rem;          /* 24px - 중제목 */
-    --font-size-h2: 1.875rem;        /* 30px - 대제목 */
-    --font-size-h1: 2.25rem;         /* 36px - 페이지 제목 */
+    --font-size-caption: 0.875rem;
+    --font-size-body: 1rem;
+    --font-size-body-lg: 1.125rem;
+    --font-size-h4: 1.25rem;
+    --font-size-h3: 1.5rem;
+    --font-size-h2: 1.875rem;
+    --font-size-h1: 2.25rem;
 
     /* Tailwind 호환 별칭 */
-    --font-size-xs: 0.875rem;        /* 14px */
-    --font-size-sm: 0.875rem;        /* 14px */
-    --font-size-base: 1rem;          /* 16px */
-    --font-size-lg: 1.125rem;        /* 18px */
-    --font-size-xl: 1.25rem;         /* 20px */
-    --font-size-2xl: 1.5rem;         /* 24px */
-    --font-size-3xl: 1.875rem;       /* 30px */
+    --font-size-xs: 0.875rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
 
     /* Line Heights */
     --line-height-tight: 1.25;
@@ -137,11 +135,11 @@
 
     /* Font Families */
     --font-family-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-family-display: "Space Grotesk", "Pretendard", -apple-system, sans-serif;
+    --font-family-display: "Pretendard", -apple-system, sans-serif;
     --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
     /* ----------------------------------------
-       Transitions - 트랜지션
+       Transitions
        ---------------------------------------- */
     --transition-fast: 150ms ease-in-out;
     --transition-normal: 200ms ease-in-out;
@@ -150,146 +148,6 @@
     /* ----------------------------------------
        텍스트 선택 색상
        ---------------------------------------- */
-    --selection-bg: rgba(212, 168, 122, 0.5);
-    --selection-text: #FDFCFB;
-}
-
-/* ========== Light Theme (크림 화이트) ========== */
-[data-theme="light"] {
-    /* Primary Colors - 브랜드 색상 (유지) */
-    --primary: #D4A87A;
-    --primary-hover: #C49A6C;
-    --primary-glow: #E8B88A;
-    --primary-light: rgba(212, 168, 122, 0.15);
-    --primary-dark: #B8926A;
-    --secondary: #A08B70;
-    --accent: #E8B88A;
-    --accent-hover: #D4A87A;
-
-    /* Tailwind 호환 별칭 */
-    --color-primary: var(--primary);
-    --color-primary-hover: var(--primary-hover);
-    --color-primary-light: var(--primary-light);
-    --color-primary-dark: var(--primary-dark);
-
-    /* Background Colors - 밝은 배경 */
-    --background-dark: #F9FAFB;
-    --surface-dark: #FFFFFF;
-    --card-dark: #FFFFFF;
-    --bg-elevated: #F3F4F6;
-    --bg-overlay: rgba(0, 0, 0, 0.5);
-
-    /* Tailwind 호환 별칭 */
-    --bg-primary: var(--background-dark);
-    --bg-secondary: var(--surface-dark);
-    --bg-tertiary: var(--card-dark);
-    --bg-surface: var(--surface-dark);
-
-    /* Text Colors - 어두운 텍스트 */
-    --text-primary: #1F2937;
-    --text-secondary: #4B5563;
-    --text-tertiary: #6B7280;
-    --text-muted: #6B7280;
-    --text-subtle: #9CA3AF;
-    --text-inverse: #FFFFFF;
-
-    /* Semantic Colors */
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-error: #ef4444;
-    --color-info: #3b82f6;
-
-    /* Border Colors - 밝은 테두리 */
-    --border-dark: #E5E7EB;
-    --card-border: #D1D5DB;
-    --border-primary: rgba(209, 213, 219, 0.8);
-    --border-secondary: rgba(209, 213, 219, 0.5);
-    --border-focus: var(--primary);
-
-    /* Shadows - 밝은 그림자 */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
-    --shadow-glow: 0 0 20px rgba(212, 168, 122, 0.3);
-    --shadow-primary: 0 8px 32px rgba(212, 168, 122, 0.2);
-
-    /* 그라데이션 */
-    --gradient-primary: linear-gradient(135deg, #D4A87A 0%, #E8B88A 100%);
-    --gradient-accent: linear-gradient(135deg, #E8B88A 0%, #D4A87A 100%);
-    --gradient-glow: radial-gradient(ellipse at center, rgba(212, 168, 122, 0.1) 0%, transparent 70%);
-
-    /* 텍스트 선택 색상 */
-    --selection-bg: rgba(212, 168, 122, 0.4);
-    --selection-text: #1F2937;
-}
-
-/* ========== Minimal Theme (흑백 미니멀) ========== */
-[data-theme="minimal"] {
-    /* Primary Colors - 모노톤 */
-    --primary: #171717;
-    --primary-hover: #404040;
-    --primary-glow: #525252;
-    --primary-light: rgba(23, 23, 23, 0.08);
-    --primary-dark: #0a0a0a;
-    --secondary: #525252;
-    --accent: #171717;
-    --accent-hover: #404040;
-
-    /* Tailwind 호환 별칭 */
-    --color-primary: var(--primary);
-    --color-primary-hover: var(--primary-hover);
-    --color-primary-light: var(--primary-light);
-    --color-primary-dark: var(--primary-dark);
-
-    /* Background Colors - 순백색 */
-    --background-dark: #FFFFFF;
-    --surface-dark: #FAFAFA;
-    --card-dark: #FFFFFF;
-    --bg-elevated: #F5F5F5;
-    --bg-overlay: rgba(0, 0, 0, 0.4);
-
-    /* Tailwind 호환 별칭 */
-    --bg-primary: var(--background-dark);
-    --bg-secondary: var(--surface-dark);
-    --bg-tertiary: var(--card-dark);
-    --bg-surface: var(--surface-dark);
-
-    /* Text Colors - 모노톤 */
-    --text-primary: #171717;
-    --text-secondary: #525252;
-    --text-tertiary: #737373;
-    --text-muted: #737373;
-    --text-subtle: #A3A3A3;
-    --text-inverse: #FFFFFF;
-
-    /* Semantic Colors */
-    --color-success: #22c55e;
-    --color-warning: #eab308;
-    --color-error: #ef4444;
-    --color-info: #3b82f6;
-
-    /* Border Colors - 미세한 테두리 */
-    --border-dark: #E5E5E5;
-    --card-border: #D4D4D4;
-    --border-primary: rgba(212, 212, 212, 0.8);
-    --border-secondary: rgba(212, 212, 212, 0.5);
-    --border-focus: var(--primary);
-
-    /* Shadows - 최소한의 그림자 */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06);
-    --shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.08);
-    --shadow-glow: none;
-    --shadow-primary: 0 4px 16px rgba(0, 0, 0, 0.08);
-
-    /* 그라데이션 (미니멀은 단색 선호) */
-    --gradient-primary: #171717;
-    --gradient-accent: #171717;
-    --gradient-glow: transparent;
-
-    /* 텍스트 선택 색상 */
-    --selection-bg: rgba(23, 23, 23, 0.2);
-    --selection-text: #171717;
+    --selection-bg: rgba(79, 70, 229, 0.2);
+    --selection-text: #111827;
 }

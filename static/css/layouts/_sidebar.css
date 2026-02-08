@@ -1,6 +1,167 @@
-/* ==================== Sidebar Navigation System - Warm Cream Theme ==================== */
+/* ==================== History Sidebar - Light Theme ==================== */
 
-/* Sidebar Header */
+/* Sidebar container */
+.sidebar-history {
+    background: #F9FAFB;
+    border-right: 1px solid var(--border-dark);
+}
+
+/* New Analysis Button */
+.sidebar-new-analysis {
+    padding: 12px;
+}
+
+.btn-new-analysis {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: white;
+    border: 1px solid var(--border-dark);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-new-analysis:hover {
+    background: #F3F4F6;
+    border-color: #D1D5DB;
+}
+
+.btn-new-analysis .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* Search */
+.sidebar-search {
+    padding: 0 12px 8px;
+}
+
+.sidebar-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid var(--border-dark);
+    border-radius: 8px;
+    transition: border-color 0.2s;
+}
+
+.sidebar-search-box:focus-within {
+    border-color: var(--primary);
+}
+
+.sidebar-search-box .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--text-muted);
+}
+
+.sidebar-search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--text-primary);
+    min-width: 0;
+}
+
+.sidebar-search-box input::placeholder {
+    color: var(--text-subtle);
+}
+
+/* History List */
+.sidebar-history-list {
+    padding: 0 8px;
+}
+
+.sidebar-empty-state {
+    padding: 24px 16px;
+    text-align: center;
+}
+
+.sidebar-empty-state p {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* History Group */
+.history-group {
+    margin-bottom: 8px;
+}
+
+.history-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 8px 12px 4px;
+}
+
+/* Sidebar Bottom */
+.sidebar-bottom {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-dark);
+}
+
+/* Navigation Buttons */
+.nav-icon-btn {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-size: 13px;
+}
+
+.nav-icon-btn:hover {
+    background: #F3F4F6;
+    color: var(--text-primary);
+}
+
+.nav-icon-btn .material-symbols-outlined {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.nav-icon-btn .nav-label {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sidebar Overlay (mobile) */
+#sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 90;
+}
+
+#sidebar-overlay.active {
+    display: block;
+}
+
+/* Sidebar Header (legacy compat) */
 .sidebar-header {
     display: flex;
     align-items: center;
@@ -19,124 +180,9 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Sidebar Toggle Button */
-.sidebar-toggle {
-    position: absolute;
-    top: 12px;
-    right: -12px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--surface-dark);
-    border: 1px solid var(--border-dark);
-    border-radius: 50%;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: all 0.2s ease;
-    z-index: 10;
-}
-
-.sidebar-toggle:hover {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: white;
-}
-
-/* Navigation Buttons - Enhanced Visual Design */
-.nav-icon-btn {
-    position: relative;
-    width: 100%;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0 1rem;
-    border-radius: 8px;
-    color: var(--text-muted);
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    text-align: left;
-}
-
-/* Hover state */
-.nav-icon-btn:hover {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-}
-
-/* Active state with left indicator */
-.nav-icon-btn.active {
-    background: rgba(139, 115, 85, 0.12);
-    color: var(--primary);
-}
-
-/* Active indicator bar */
-.nav-icon-btn.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 24px;
-    background: var(--primary);
-    border-radius: 0 3px 3px 0;
-}
-
-/* Focus state for keyboard navigation */
-.nav-icon-btn:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: -2px;
-}
-
-/* Icon styling */
-.nav-icon-btn .material-symbols-outlined {
-    font-size: 20px;
-    flex-shrink: 0;
-    transition: transform 0.2s ease;
-}
-
-.nav-icon-btn:hover .material-symbols-outlined {
-    transform: scale(1.05);
-}
-
-/* Label styling */
-.nav-icon-btn .nav-label {
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Navigation group divider */
-.nav-divider {
-    height: 1px;
-    margin: 0.5rem 0.75rem;
-    background: var(--border-dark);
-}
-
-/* Navigation section header */
-.nav-section-header {
-    padding: 0.5rem 1rem;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    opacity: 0.7;
-}
-
-/* Badge for menu items */
+/* Nav badge */
 .nav-badge {
     margin-left: auto;
     padding: 2px 6px;
@@ -147,102 +193,7 @@
     color: white;
 }
 
-/* Light mode adjustments */
-[data-theme="light"] .nav-icon-btn:hover {
-    background: var(--bg-elevated);
-}
-
-[data-theme="light"] .nav-icon-btn.active {
-    background: rgba(139, 115, 85, 0.08);
-}
-
-/* 다크 모드 네비게이션 버튼 */
-[data-theme="dark"] .nav-icon-btn:hover {
-    background: linear-gradient(135deg, rgba(196, 149, 106, 0.15) 0%, rgba(196, 149, 106, 0.05) 100%);
-}
-
-[data-theme="dark"] .nav-icon-btn.active {
-    background: linear-gradient(135deg, rgba(196, 149, 106, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%);
-    border-left: 2px solid var(--primary);
-}
-
-/* ==================== Sidebar Collapsed State ==================== */
-
-/* 접힌 상태 */
-#sidebar.collapsed {
-    width: 64px !important;
-    min-width: 64px;
-    max-width: 64px;
-}
-
-#sidebar.collapsed .sidebar-header {
-    justify-content: center;
-    padding: 1rem 0.5rem;
-}
-
-#sidebar.collapsed .sidebar-title {
+/* Sidebar toggle (legacy) */
+.sidebar-toggle {
     display: none;
-}
-
-#sidebar.collapsed .nav-label {
-    display: none;
-}
-
-#sidebar.collapsed .nav-section-header {
-    display: none;
-}
-
-#sidebar.collapsed .nav-icon-btn {
-    justify-content: center;
-    padding: 0;
-}
-
-#sidebar.collapsed .nav-badge {
-    display: none;
-}
-
-/* 접힌 상태 토글 버튼 회전 */
-#sidebar.collapsed .sidebar-toggle .material-symbols-outlined {
-    transform: rotate(180deg);
-}
-
-/* 접힌 상태 툴팁 */
-#sidebar.collapsed .nav-icon-btn::after {
-    content: attr(title);
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: 8px;
-    padding: 4px 8px;
-    background: var(--surface-dark);
-    border: 1px solid var(--border-dark);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--text-primary);
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.2s ease;
-    z-index: 100;
-    pointer-events: none;
-}
-
-#sidebar.collapsed .nav-icon-btn:hover::after {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Sidebar Overlay */
-#sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 90;
-    backdrop-filter: blur(2px);
-}
-
-#sidebar-overlay.active {
-    display: block;
 }

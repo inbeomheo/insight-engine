@@ -14,17 +14,13 @@ import { MindmapManager } from './modules/MindmapManager.js';
 import { AuthManager } from './modules/AuthManager.js';
 import { UsagePanelManager } from './modules/UsagePanelManager.js';
 import { AdminDashboard } from './modules/AdminDashboard.js';
-import { ThemeManager } from './modules/ThemeManager.js';
-import { PanelResizeManager } from './modules/PanelResizeManager.js';
 import { KeyboardNavigationManager } from './modules/KeyboardNavigationManager.js';
+import { SettingsPopover } from './modules/SettingsPopover.js';
+import { HistorySidebar } from './modules/HistorySidebar.js';
 import { getEventBus } from './core/EventBus.js';
 
 class ContentAnalysis {
     constructor() {
-        // 테마 매니저 초기화 (가장 먼저 실행)
-        this.themeManager = new ThemeManager();
-        this.themeManager.init();
-
         // 히스토리 로드 상태 추적 (중복 로드 방지)
         this._historyLoaded = false;
         this._currentUserId = null;
@@ -60,8 +56,11 @@ class ContentAnalysis {
         // 관리자 대시보드
         this.adminDashboard = new AdminDashboard(this.ui, this.authManager);
 
-        // 패널 리사이즈 매니저
-        this.panelResizeManager = new PanelResizeManager();
+        // 설정 팝오버
+        this.settingsPopover = new SettingsPopover();
+
+        // 히스토리 사이드바
+        this.historySidebar = new HistorySidebar(this.authManager, this.reportManager);
 
         // 키보드 네비게이션 매니저 (US-013)
         this.keyboardNavManager = new KeyboardNavigationManager();
@@ -99,6 +98,7 @@ class ContentAnalysis {
                 this._historyLoaded = false;  // 다른 계정이면 다시 로드 허용
                 this._clearReportStream();
                 await this.reportManager.loadHistory();
+                await this.historySidebar.loadHistory();
                 this._historyLoaded = true;
             }
         };
@@ -120,11 +120,15 @@ class ContentAnalysis {
         // 히스토리가 아직 로드되지 않았을 때만 로드 (중복 방지)
         if (!this._historyLoaded) {
             await this.reportManager.loadHistory();
+            await this.historySidebar.loadHistory();
             this._historyLoaded = true;
         }
 
-        // 패널 리사이즈 초기화
-        this.panelResizeManager.init();
+        // 설정 팝오버 초기화
+        this.settingsPopover.init();
+
+        // 히스토리 사이드바 초기화
+        this.historySidebar.init();
 
         // 키보드 네비게이션 접근성 속성 설정 (US-013)
         this.keyboardNavManager.setupAccessibilityAttributes();
@@ -522,35 +526,6 @@ document.head.appendChild(style);
 
 // DOM 로드 시 초기화
 window.addEventListener('DOMContentLoaded', () => {
-    // 섹션 레이아웃 수정 - 모든 섹션이 펼쳐진 상태로 표시되도록 함
-    ['url-section', 'ai-model-section', 'style-section', 'modifier-section'].forEach(id => {
-        const section = document.getElementById(id);
-        if (section) {
-            section.style.flex = '0 0 auto';
-        }
-    });
-
-    // AI 모델 섹션 그리드를 1열로 변경 (서비스, 모델이 위아래로)
-    const aiModelPanel = document.getElementById('ai-model-panel');
-    if (aiModelPanel) {
-        const grid = aiModelPanel.querySelector('.grid');
-        if (grid) {
-            grid.classList.remove('grid-cols-4', 'grid-cols-2', 'gap-1.5');
-            grid.classList.add('grid-cols-1', 'gap-2');
-        }
-
-        // AI 모델 섹션 기본적으로 접힌 상태로 설정 (!important 우선순위 적용)
-        aiModelPanel.style.setProperty('display', 'none', 'important');
-        const aiModelToggle = document.getElementById('ai-model-toggle');
-        const aiModelArrow = document.getElementById('ai-model-arrow');
-        if (aiModelToggle) {
-            aiModelToggle.setAttribute('aria-expanded', 'false');
-        }
-        if (aiModelArrow) {
-            aiModelArrow.textContent = 'expand_more';
-        }
-    }
-
     // 앱 인스턴스 생성 및 전역 노출 (인라인 스크립트에서 접근용)
     window.app = new ContentAnalysis();
 });

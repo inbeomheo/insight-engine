@@ -151,19 +151,14 @@ export class ProviderManager {
     }
 
     updateProviderLabel() {
-        const label = document.getElementById('current-provider-label');
         const summaryText = document.getElementById('ai-model-summary-text');
 
         const providerSelect = document.getElementById('provider');
         const providerId = providerSelect?.value;
         const provider = this.providers[providerId];
 
-        if (provider) {
-            if (label) label.textContent = provider.name;
-            if (summaryText) summaryText.textContent = provider.name;
-        } else {
-            if (label) label.textContent = '미설정';
-            if (summaryText) summaryText.textContent = '선택 필요';
+        if (summaryText) {
+            summaryText.textContent = provider ? provider.name : '선택 필요';
         }
     }
 

@@ -1,85 +1,19 @@
-/* ========== Dark Mode ========== */
-/* US-015: WCAG AA 색상 대비 기준 충족 (4.5:1 이상) */
-/* Warm Dark 테마: 따뜻한 다크 브라운 기반 */
-/* 가독성 개선: 텍스트 대비 강화 */
-[data-theme="dark"] {
-    --primary: #D4A87A;           /* 테라코타 밝게 - 대비 6.2:1 vs #1A1612 */
-    --primary-hover: #E4B88A;
-    --primary-glow: #F5D4B8;
-    /* 악센트 컬러 */
-    --secondary: #A08B70;
-    --accent: #F59E0B;            /* 오렌지 밝게 */
-    --accent-hover: #FBBF24;
-    --accent-glow: #FDE68A;
-    --accent-warm: #FCA5A5;
-    --accent-lime: #BEF264;
-    /* 배경 - 따뜻한 다크 브라운 */
-    --background-dark: #1A1612;
-    --surface-dark: #231E19;
-    --card-dark: #2D2620;
-    --bg-elevated: #3D342B;
-    --text-primary: #FDFCFB;      /* 대비 15.8:1 vs #1A1612 - 더 밝게 */
-    --text-muted: #D8CFC5;        /* 대비 9.2:1 vs #1A1612 - 대폭 강화 */
-    --text-subtle: #E5C4A8;       /* 대비 7.8:1 vs #1A1612 - 강화 */
-    --border-dark: #4A3F35;
-    --card-border: #6B5A48;
-    /* 그라데이션 */
-    --gradient-primary: linear-gradient(135deg, #A08B70 0%, #D4A87A 100%);
-    --gradient-accent: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
-    --gradient-glow: radial-gradient(ellipse at center, rgba(212, 168, 122, 0.18) 0%, transparent 70%);
+/* ==================== Theme - Light Single Theme ==================== */
+
+/* 앱 레이아웃 배경 */
+.app-layout {
+    background: var(--background-dark);
 }
 
-/* ==================== Creative Studio 배경 텍스처 ==================== */
-
-/* 미묘한 그리드 패턴 배경 */
-[data-theme="dark"] .app-layout {
-    background:
-        /* 미세 도트 패턴 */
-        radial-gradient(circle at center, rgba(196, 149, 106, 0.03) 1px, transparent 1px),
-        /* 그리드 라인 */
-        linear-gradient(rgba(196, 149, 106, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(196, 149, 106, 0.02) 1px, transparent 1px),
-        /* 베이스 컬러 */
-        var(--background-dark);
-    background-size:
-        24px 24px,
-        48px 48px,
-        48px 48px,
-        100% 100%;
+/* 사이드바 */
+#sidebar {
+    background: var(--surface-dark);
+    border-right: 1px solid var(--border-dark);
 }
 
-/* 글로우 오브 효과 (결과 패널) */
-[data-theme="dark"] #result-panel::before {
-    content: '';
-    position: absolute;
-    top: 20%;
-    right: 15%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(ellipse, rgba(196, 149, 106, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(40px);
-    animation: glowPulse 8s ease-in-out infinite;
-}
-
-[data-theme="dark"] #result-panel::after {
-    content: '';
-    position: absolute;
-    bottom: 30%;
-    left: 20%;
-    width: 250px;
-    height: 250px;
-    background: radial-gradient(ellipse, rgba(217, 119, 6, 0.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(50px);
-    animation: glowPulse 10s ease-in-out infinite reverse;
-}
-
+/* 결과 패널 */
 #result-panel {
     position: relative;
-    overflow: hidden;
 }
 
 #result-panel > * {
@@ -87,62 +21,19 @@
     z-index: 1;
 }
 
-/* 사이드바 그라데이션 보더 */
-[data-theme="dark"] #sidebar {
-    border-right: 1px solid transparent;
-    background:
-        linear-gradient(var(--background-dark), var(--background-dark)) padding-box,
-        linear-gradient(180deg, rgba(196, 149, 106, 0.3) 0%, rgba(217, 119, 6, 0.1) 50%, transparent 100%) border-box;
-}
-
-/* 입력 패널 상단 글로우 */
-[data-theme="dark"] #input-panel::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 150px;
-    background: linear-gradient(180deg, rgba(196, 149, 106, 0.05) 0%, transparent 100%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-#input-panel {
-    position: relative;
-}
-
-#input-panel > * {
-    position: relative;
-    z-index: 1;
-}
-
+/* Glass panel - 플랫 */
 .glass-panel {
-    background: #1a1d21;
-    border: 1px solid #2a2e33;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
 }
 
 /* Subtle shadow */
 .warm-glow {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .warm-glow:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* ========== 왼쪽 패널 디자인 개선 ========== */
-
-/* 패널 배경 - 다크모드 그라데이션 */
-[data-theme="dark"] #input-panel,
-.dark #input-panel {
-    background: linear-gradient(
-        180deg,
-        rgba(26, 22, 18, 1) 0%,
-        rgba(35, 30, 25, 0.98) 50%,
-        rgba(26, 22, 18, 1) 100%
-    ) !important;
-    border-right: 1px solid rgba(196, 149, 106, 0.2) !important;
+    box-shadow: var(--shadow-md);
 }
 
 /* 섹션 공통 스타일 */
@@ -151,67 +42,17 @@
 #style-section,
 #modifier-section {
     position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s ease;
     overflow: visible;
+    border-bottom: 1px solid var(--border-dark);
 }
 
-[data-theme="dark"] #url-section,
-[data-theme="dark"] #ai-model-section,
-[data-theme="dark"] #style-section,
-[data-theme="dark"] #modifier-section {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-/* 섹션 호버 효과 */
-[data-theme="dark"] #url-section:hover,
-[data-theme="dark"] #ai-model-section:hover,
-[data-theme="dark"] #style-section:hover,
-[data-theme="dark"] #modifier-section:hover {
-    background: rgba(255, 255, 255, 0.03) !important;
-}
-
-/* 섹션별 좌측 악센트 바 */
-#url-section::before,
-#ai-model-section::before,
-#style-section::before,
-#modifier-section::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 0;
-    border-radius: 0 4px 4px 0;
-    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
-}
-
-/* 호버 시 악센트 바 나타남 */
-#url-section:hover::before { height: 60%; }
-#ai-model-section:hover::before { height: 60%; }
-#style-section:hover::before { height: 60%; }
-#modifier-section:hover::before { height: 60%; }
-
-/* 섹션별 고유 악센트 컬러 */
-#url-section::before {
-    background: linear-gradient(180deg, #f472b6, #ec4899);
-    box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
-}
-
-#ai-model-section::before {
-    background: linear-gradient(180deg, #34d399, #10b981);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
-}
-
-#style-section::before {
-    background: linear-gradient(180deg, #a78bfa, #8b5cf6);
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
-}
-
-#modifier-section::before {
-    background: linear-gradient(180deg, #fbbf24, #f59e0b);
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+/* 섹션 호버 */
+#url-section:hover,
+#ai-model-section:hover,
+#style-section:hover,
+#modifier-section:hover {
+    background: rgba(0, 0, 0, 0.02);
 }
 
 /* 섹션 토글 버튼 스타일 */
@@ -223,7 +64,7 @@
     transition: all 0.2s ease;
 }
 
-/* 섹션 아이콘 스타일 - div > span 구조 대응 */
+/* 섹션 아이콘 */
 #url-section-toggle > div:first-child > .material-symbols-outlined:first-child,
 #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child,
 #style-section-toggle > div:first-child > .material-symbols-outlined:first-child,
@@ -231,28 +72,9 @@
     font-size: 1.125rem !important;
     padding: 0.375rem;
     border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-/* 섹션별 아이콘 배경색 */
-[data-theme="dark"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(236, 72, 153, 0.15) !important;
-    color: #f472b6 !important;
-}
-
-[data-theme="dark"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(16, 185, 129, 0.15) !important;
-    color: #34d399 !important;
-}
-
-[data-theme="dark"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(139, 92, 246, 0.15) !important;
-    color: #a78bfa !important;
-}
-
-[data-theme="dark"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(245, 158, 11, 0.15) !important;
-    color: #fbbf24 !important;
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary);
+    transition: all 0.2s ease;
 }
 
 /* 섹션 제목 타이포그래피 */
@@ -288,385 +110,77 @@
     transform: rotate(180deg);
 }
 
-/* 배지 스타일 개선 */
-[data-theme="dark"] #style-badge {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(168, 139, 250, 0.35)) !important;
-    color: #c4b5fd !important;
-    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+/* 배지 스타일 */
+#style-badge {
+    background: rgba(79, 70, 229, 0.1) !important;
+    color: var(--primary) !important;
+    border: 1px solid rgba(79, 70, 229, 0.2) !important;
     font-weight: 600 !important;
 }
 
-/* 콘텐츠 생성 버튼 개선 */
-[data-theme="dark"] #generate-btn-container {
+/* 생성 버튼 컨테이너 */
+#generate-btn-container {
     padding: 1rem !important;
-    background: linear-gradient(
-        180deg,
-        rgba(196, 149, 106, 0.08) 0%,
-        transparent 100%
-    ) !important;
-    border-top: 1px solid rgba(196, 149, 106, 0.15) !important;
+    background: var(--surface-dark) !important;
+    border-top: 1px solid var(--border-dark) !important;
 }
 
-[data-theme="dark"] #run-analysis-btn {
+/* 생성 버튼 - 플랫 인디고 */
+#run-analysis-btn {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #8B7355 0%, #7A6449 50%, #6B5740 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow:
-        0 4px 20px rgba(139, 115, 85, 0.5),
-        0 2px 4px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-[data-theme="dark"] #run-analysis-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.25),
-        transparent
-    );
-    transition: left 0.6s ease;
-}
-
-[data-theme="dark"] #run-analysis-btn:hover {
-    transform: translateY(-2px) !important;
-    box-shadow:
-        0 8px 30px rgba(139, 115, 85, 0.6),
-        0 4px 12px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-}
-
-[data-theme="dark"] #run-analysis-btn:hover::before {
-    left: 100%;
-}
-
-/* Custom 버튼 스타일 */
-[data-theme="dark"] #add-custom-style-btn {
-    background: rgba(139, 92, 246, 0.12) !important;
-    border-color: rgba(139, 92, 246, 0.4) !important;
+    background: var(--primary) !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: var(--shadow-primary) !important;
     transition: all 0.2s ease !important;
 }
 
-[data-theme="dark"] #add-custom-style-btn:hover {
-    background: rgba(139, 92, 246, 0.22) !important;
-    border-color: rgba(139, 92, 246, 0.6) !important;
-    transform: scale(1.02);
-}
-
-/* 패널 스크롤바 커스텀 */
-[data-theme="dark"] #input-panel::-webkit-scrollbar {
-    width: 4px;
-}
-
-[data-theme="dark"] #input-panel::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-[data-theme="dark"] #input-panel::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-        180deg,
-        rgba(196, 149, 106, 0.4),
-        rgba(217, 119, 6, 0.4)
-    );
-    border-radius: 4px;
-}
-
-/* ==================== Light Theme ==================== */
-
-/* Light 테마 배경 */
-[data-theme="light"] .app-layout {
-    background: var(--background-dark);
-}
-
-/* Light 테마 사이드바 */
-[data-theme="light"] #sidebar {
-    background: var(--surface-dark);
-    border-right: 1px solid var(--border-dark);
-}
-
-/* Light 테마 입력 패널 */
-[data-theme="light"] #input-panel {
-    background: var(--surface-dark) !important;
-    border-right: 1px solid var(--border-dark) !important;
-}
-
-[data-theme="light"] #input-panel::before {
-    display: none;
-}
-
-/* Light 테마 결과 패널 */
-[data-theme="light"] #result-panel::before,
-[data-theme="light"] #result-panel::after {
-    display: none;
-}
-
-/* Light 테마 섹션 스타일 */
-[data-theme="light"] #url-section,
-[data-theme="light"] #ai-model-section,
-[data-theme="light"] #style-section,
-[data-theme="light"] #modifier-section {
-    border-bottom: 1px solid var(--border-dark) !important;
-}
-
-[data-theme="light"] #url-section:hover,
-[data-theme="light"] #ai-model-section:hover,
-[data-theme="light"] #style-section:hover,
-[data-theme="light"] #modifier-section:hover {
-    background: rgba(0, 0, 0, 0.02) !important;
-}
-
-/* Light 테마 섹션 아이콘 배경색 */
-[data-theme="light"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(236, 72, 153, 0.1) !important;
-    color: #db2777 !important;
-}
-
-[data-theme="light"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(16, 185, 129, 0.1) !important;
-    color: #059669 !important;
-}
-
-[data-theme="light"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(139, 92, 246, 0.1) !important;
-    color: #7c3aed !important;
-}
-
-[data-theme="light"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(245, 158, 11, 0.1) !important;
-    color: #d97706 !important;
-}
-
-/* Light 테마 배지 */
-[data-theme="light"] #style-badge {
-    background: rgba(212, 168, 122, 0.2) !important;
-    color: #92400e !important;
-    border: 1px solid rgba(212, 168, 122, 0.4) !important;
-    font-weight: 600 !important;
-}
-
-/* Light 테마 생성 버튼 컨테이너 */
-[data-theme="light"] #generate-btn-container {
-    padding: 1rem !important;
-    background: var(--surface-dark) !important;
-    border-top: 1px solid var(--border-dark) !important;
-}
-
-/* Light 테마 생성 버튼 */
-[data-theme="light"] #run-analysis-btn {
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(135deg, #D4A87A 0%, #C49A6C 100%) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    color: white !important;
-    box-shadow:
-        0 4px 15px rgba(212, 168, 122, 0.35),
-        0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
-[data-theme="light"] #run-analysis-btn:hover {
-    transform: translateY(-2px) !important;
-    box-shadow:
-        0 8px 25px rgba(212, 168, 122, 0.45),
-        0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Light 테마 Custom 버튼 */
-[data-theme="light"] #add-custom-style-btn {
-    background: rgba(139, 92, 246, 0.08) !important;
-    border-color: rgba(139, 92, 246, 0.3) !important;
-}
-
-[data-theme="light"] #add-custom-style-btn:hover {
-    background: rgba(139, 92, 246, 0.15) !important;
-    border-color: rgba(139, 92, 246, 0.5) !important;
-}
-
-/* Light 테마 스크롤바 */
-[data-theme="light"] #input-panel::-webkit-scrollbar {
-    width: 6px;
-}
-
-[data-theme="light"] #input-panel::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-[data-theme="light"] #input-panel::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 3px;
-}
-
-/* Light 테마 glass-panel */
-[data-theme="light"] .glass-panel {
-    background: var(--surface-dark);
-    border: 1px solid var(--border-dark);
-}
-
-/* ==================== Minimal Theme ==================== */
-
-/* Minimal 테마 배경 */
-[data-theme="minimal"] .app-layout {
-    background: var(--background-dark);
-}
-
-/* Minimal 테마 사이드바 */
-[data-theme="minimal"] #sidebar {
-    background: var(--surface-dark);
-    border-right: 1px solid var(--border-dark);
-}
-
-/* Minimal 테마 입력 패널 */
-[data-theme="minimal"] #input-panel {
-    background: var(--surface-dark) !important;
-    border-right: 1px solid var(--border-dark) !important;
-}
-
-[data-theme="minimal"] #input-panel::before {
-    display: none;
-}
-
-/* Minimal 테마 결과 패널 - 효과 제거 */
-[data-theme="minimal"] #result-panel::before,
-[data-theme="minimal"] #result-panel::after {
-    display: none;
-}
-
-/* Minimal 테마 섹션 스타일 */
-[data-theme="minimal"] #url-section,
-[data-theme="minimal"] #ai-model-section,
-[data-theme="minimal"] #style-section,
-[data-theme="minimal"] #modifier-section {
-    border-bottom: 1px solid var(--border-dark) !important;
-}
-
-[data-theme="minimal"] #url-section:hover,
-[data-theme="minimal"] #ai-model-section:hover,
-[data-theme="minimal"] #style-section:hover,
-[data-theme="minimal"] #modifier-section:hover {
-    background: rgba(0, 0, 0, 0.02) !important;
-}
-
-/* Minimal 테마 - 악센트 바 숨김 */
-[data-theme="minimal"] #url-section::before,
-[data-theme="minimal"] #ai-model-section::before,
-[data-theme="minimal"] #style-section::before,
-[data-theme="minimal"] #modifier-section::before {
-    display: none;
-}
-
-/* Minimal 테마 섹션 아이콘 - 모노톤 */
-[data-theme="minimal"] #url-section-toggle > div:first-child > .material-symbols-outlined:first-child,
-[data-theme="minimal"] #ai-model-toggle > div:first-child > .material-symbols-outlined:first-child,
-[data-theme="minimal"] #style-section-toggle > div:first-child > .material-symbols-outlined:first-child,
-[data-theme="minimal"] #advanced-options-toggle > div:first-child > .material-symbols-outlined:first-child {
-    background: rgba(23, 23, 23, 0.06) !important;
-    color: #525252 !important;
-}
-
-/* Minimal 테마 배지 */
-[data-theme="minimal"] #style-badge {
-    background: rgba(23, 23, 23, 0.08) !important;
-    color: #171717 !important;
-    border: 1px solid rgba(23, 23, 23, 0.2) !important;
-    font-weight: 600 !important;
-}
-
-/* Minimal 테마 생성 버튼 컨테이너 */
-[data-theme="minimal"] #generate-btn-container {
-    padding: 1rem !important;
-    background: transparent !important;
-    border-top: 1px solid var(--border-dark) !important;
-}
-
-/* Minimal 테마 생성 버튼 */
-[data-theme="minimal"] #run-analysis-btn {
-    position: relative;
-    overflow: hidden;
-    background: #171717 !important;
-    border: none !important;
-    color: white !important;
-    box-shadow: none !important;
-}
-
-[data-theme="minimal"] #run-analysis-btn:hover {
+#run-analysis-btn:hover {
+    background: var(--primary-hover) !important;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.25) !important;
     transform: translateY(-1px) !important;
-    background: #404040 !important;
 }
 
-[data-theme="minimal"] #run-analysis-btn::before {
-    display: none;
-}
-
-/* Minimal 테마 Custom 버튼 */
-[data-theme="minimal"] #add-custom-style-btn {
+/* Custom 버튼 */
+#add-custom-style-btn {
     background: transparent !important;
     border-color: var(--border-dark) !important;
     color: var(--text-secondary) !important;
+    transition: all 0.2s ease !important;
 }
 
-[data-theme="minimal"] #add-custom-style-btn:hover {
-    background: rgba(0, 0, 0, 0.03) !important;
+#add-custom-style-btn:hover {
+    background: var(--primary-light) !important;
     border-color: var(--primary) !important;
+    color: var(--primary) !important;
 }
 
-/* Minimal 테마 스크롤바 */
-[data-theme="minimal"] #input-panel::-webkit-scrollbar {
-    width: 4px;
+/* 스크롤바 */
+::-webkit-scrollbar {
+    width: 6px;
 }
 
-[data-theme="minimal"] #input-panel::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     background: transparent;
 }
 
-[data-theme="minimal"] #input-panel::-webkit-scrollbar-thumb {
-    background: #e5e5e5;
-    border-radius: 2px;
+::-webkit-scrollbar-thumb {
+    background: #D1D5DB;
+    border-radius: 3px;
 }
 
-/* Minimal 테마 glass-panel */
-[data-theme="minimal"] .glass-panel {
-    background: var(--surface-dark);
-    border: 1px solid var(--border-dark);
+::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
 }
 
-/* ==================== 텍스트 선택(드래그) 스타일 ==================== */
-
-/* 기본 (Dark 테마) */
+/* 텍스트 선택 */
 ::selection {
     background: var(--selection-bg);
     color: var(--selection-text);
 }
 
 ::-moz-selection {
-    background: var(--selection-bg);
-    color: var(--selection-text);
-}
-
-/* Light 테마 선택 스타일 */
-[data-theme="light"] ::selection {
-    background: var(--selection-bg);
-    color: var(--selection-text);
-}
-
-[data-theme="light"] ::-moz-selection {
-    background: var(--selection-bg);
-    color: var(--selection-text);
-}
-
-/* Minimal 테마 선택 스타일 */
-[data-theme="minimal"] ::selection {
-    background: var(--selection-bg);
-    color: var(--selection-text);
-}
-
-[data-theme="minimal"] ::-moz-selection {
     background: var(--selection-bg);
     color: var(--selection-text);
 }

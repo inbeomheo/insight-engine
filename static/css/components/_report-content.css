@@ -147,8 +147,8 @@
     top: 0.1em;
     width: 1.5rem;
     height: 1.5rem;
-    background: linear-gradient(135deg, var(--primary) 0%, rgba(212, 168, 122, 0.8) 100%);
-    color: var(--background-dark);
+    background: var(--primary);
+    color: #FFFFFF;
     font-size: 0.75rem;
     font-weight: 700;
     display: flex;
@@ -184,7 +184,7 @@
 .report-content blockquote {
     margin: 1.75rem 0;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.1) 0%, rgba(212, 168, 122, 0.03) 100%);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(79, 70, 229, 0.03) 100%);
     border-left: 4px solid var(--primary);
     border-radius: 0 12px 12px 0;
     position: relative;
@@ -267,7 +267,7 @@
 /* 인라인 코드 */
 .report-content code {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    background: rgba(212, 168, 122, 0.15);
+    background: rgba(79, 70, 229, 0.15);
     color: var(--primary);
     padding: 0.2rem 0.5rem;
     font-size: 0.875em;
@@ -289,7 +289,7 @@
 }
 
 .report-content thead {
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.2) 0%, rgba(212, 168, 122, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%);
 }
 
 .report-content th {
@@ -312,7 +312,7 @@
 
 /* Zebra striping */
 .report-content tbody tr:nth-child(even) {
-    background: rgba(212, 168, 122, 0.03);
+    background: rgba(79, 70, 229, 0.03);
 }
 
 /* Hover 효과 */
@@ -321,7 +321,7 @@
 }
 
 .report-content tbody tr:hover {
-    background: rgba(212, 168, 122, 0.08);
+    background: rgba(79, 70, 229, 0.08);
 }
 
 /* 마지막 행 border 제거 */
@@ -358,12 +358,12 @@
 .report-content a {
     color: var(--primary);
     text-decoration: none;
-    background: linear-gradient(to bottom, transparent 60%, rgba(212, 168, 122, 0.3) 60%);
+    background: linear-gradient(to bottom, transparent 60%, rgba(79, 70, 229, 0.3) 60%);
     transition: background 0.2s ease;
 }
 
 .report-content a:hover {
-    background: linear-gradient(to bottom, transparent 0%, rgba(212, 168, 122, 0.3) 0%);
+    background: linear-gradient(to bottom, transparent 0%, rgba(79, 70, 229, 0.3) 0%);
 }
 
 /* ==================== Horizontal Rule ==================== */
@@ -388,8 +388,8 @@
 .report-content .key-point {
     margin: 1.75rem 0;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.08) 0%, rgba(212, 168, 122, 0.02) 100%);
-    border: 1px solid rgba(212, 168, 122, 0.2);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.02) 100%);
+    border: 1px solid rgba(79, 70, 229, 0.2);
     border-radius: 12px;
     position: relative;
 }
@@ -409,7 +409,7 @@
 .report-content .summary,
 .report-content .executive-summary {
     padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.12) 0%, rgba(212, 168, 122, 0.04) 100%);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(79, 70, 229, 0.04) 100%);
     border-left: 4px solid var(--primary);
     border-radius: 0 12px 12px 0;
     margin: 1.5rem 0;
@@ -428,7 +428,7 @@
 .report-content .keyword {
     display: inline-block;
     padding: 0.375rem 0.75rem;
-    background: rgba(212, 168, 122, 0.12);
+    background: rgba(79, 70, 229, 0.12);
     color: var(--primary);
     font-size: 0.75rem;
     font-weight: 600;
@@ -440,7 +440,7 @@
 
 .report-content .tag:hover,
 .report-content .keyword:hover {
-    background: rgba(212, 168, 122, 0.2);
+    background: rgba(79, 70, 229, 0.2);
     transform: translateY(-1px);
 }
 
@@ -512,51 +512,7 @@
     font-style: italic;
 }
 
-/* ==================== Light Theme Overrides ==================== */
-
-[data-theme="light"] .report-content {
-    color: var(--text-primary);
-}
-
-[data-theme="light"] .report-content pre {
-    background: #f8f9fa;
-    border-color: #e9ecef;
-}
-
-[data-theme="light"] .report-content code {
-    background: rgba(212, 168, 122, 0.12);
-}
-
-[data-theme="light"] .report-content blockquote {
-    background: linear-gradient(135deg, rgba(212, 168, 122, 0.08) 0%, rgba(212, 168, 122, 0.02) 100%);
-}
-
-[data-theme="light"] .report-content tbody tr:nth-child(even) {
-    background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .report-content tbody tr:hover {
-    background: rgba(212, 168, 122, 0.1);
-}
-
-/* ==================== Minimal Theme Overrides ==================== */
-
-[data-theme="minimal"] .report-content h2 {
-    border-left-color: #171717;
-}
-
-[data-theme="minimal"] .report-content h3::before {
-    background: #171717;
-}
-
-[data-theme="minimal"] .report-content blockquote {
-    border-left-color: #171717;
-    background: #f5f5f5;
-}
-
-[data-theme="minimal"] .report-content ol li::before {
-    background: #171717;
-}
+/* Theme overrides removed - Light only */
 
 /* ==================== Responsive ==================== */
 

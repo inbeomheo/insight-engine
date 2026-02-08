@@ -70,26 +70,37 @@ export class UrlManager {
         const container = document.getElementById('url-list-container');
         if (!container) return;
 
-        container.innerHTML = this.urlList.map((url, index) => `
-            <div class="url-card flex items-center bg-surface-dark border border-card-border p-2 group hover:border-primary/50 transition-colors"
-                 data-index="${index}" draggable="true">
-                <div class="url-drag-handle pl-2 pr-1 text-text-subtle cursor-grab hover:text-primary" title="드래그하여 순서 변경">
-                    <span class="material-symbols-outlined text-lg">drag_indicator</span>
-                </div>
-                <div class="pl-2 pr-3 text-text-subtle">
-                    <span class="material-symbols-outlined text-xl">link</span>
-                </div>
-                <div class="flex-1 truncate text-text-primary font-mono text-sm">
-                    ${this.ui.escapeHtml(url)}
-                </div>
-                <button class="url-remove-btn p-2 text-text-subtle hover:text-red-400 transition-colors" data-index="${index}" title="삭제">
-                    <span class="material-symbols-outlined text-lg">close</span>
-                </button>
-            </div>
-        `).join('');
+        if (this.urlList.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = this.urlList.map((url, index) => {
+            const shortUrl = this._formatShortUrl(url);
+            return `
+                <span class="url-chip inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-700 group"
+                      data-index="${index}" draggable="true" title="${this.ui.escapeHtml(url)}">
+                    <span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary);">play_circle</span>
+                    <span class="truncate max-w-[180px]">${this.ui.escapeHtml(shortUrl)}</span>
+                    <button class="url-remove-btn ml-1 text-gray-400 hover:text-red-500 transition-colors" data-index="${index}" title="삭제" aria-label="URL 삭제">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+                    </button>
+                </span>
+            `;
+        }).join('');
 
         this.setupRemoveButtons(container);
         this.setupDragEvents(container);
+    }
+
+    _formatShortUrl(url) {
+        try {
+            const u = new URL(url);
+            const videoId = u.searchParams.get('v') || u.pathname.split('/').pop();
+            return videoId ? `youtu.be/${videoId}` : url;
+        } catch {
+            return url.length > 30 ? url.substring(0, 30) + '...' : url;
+        }
     }
 
     setupRemoveButtons(container) {
@@ -102,7 +113,7 @@ export class UrlManager {
     }
 
     setupDragEvents(container) {
-        container.querySelectorAll('.url-card').forEach(card => {
+        container.querySelectorAll('.url-chip').forEach(card => {
             card.addEventListener('dragstart', (e) => {
                 this.draggedUrlIndex = parseInt(e.currentTarget.dataset.index);
                 e.currentTarget.classList.add('opacity-50');
