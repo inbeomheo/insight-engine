@@ -198,10 +198,9 @@ UI에 표시되는 8개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `ap
 | Gemini (기본) | `gemini/gemini-3-flash-preview` | `reasoning_effort="minimal"` |
 | Gemini | `gemini/gemini-2.5-flash-lite-preview-09-2025` | reasoning_effort 미지원 |
 | DeepSeek | `deepseek/deepseek-chat`, `deepseek/deepseek-reasoner` | |
-| Zhipu AI | `zhipuai/GLM-4.7`, `zhipuai/GLM-4.5-Air` | 글로벌 락, 3회 재시도 (15초 간격) |
+| Zhipu AI | `zhipuai/GLM-4.7`, `zhipuai/GLM-4.5-Air` | OpenAI 호환 API 사용 |
 
 - 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS`에 `price_input`, `price_output` 필수
-- GLM 모델은 `_glm_lock` + 순차 실행으로 동시성 제한
 
 ### 스타일 프롬프트 규칙 (`prompts/styles/`)
 

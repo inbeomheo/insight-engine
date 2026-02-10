@@ -3,9 +3,7 @@ AI 콘텐츠 생성 서비스
 LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
 import os
-import time
 import markdown
-import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import current_app
@@ -13,13 +11,6 @@ from litellm import completion
 
 # Zhipu AI (GLM) OpenAI 호환 API 설정
 ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
-
-# GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
-_glm_lock = threading.Lock()
-
-# GLM-4.7 재시도 설정
-GLM_RETRY_COUNT = 3
-GLM_RETRY_DELAY = 15  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
 
@@ -183,34 +174,7 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             completion_kwargs["api_base"] = ZHIPUAI_API_BASE
             completion_kwargs["api_key"] = zhipuai_key
 
-        # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
-        if is_glm:
-            with _glm_lock:
-                current_app.logger.info(f"GLM 락 획득: {model}")
-                last_error = None
-                for attempt in range(GLM_RETRY_COUNT):
-                    try:
-                        response = completion(**completion_kwargs)
-                        current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
-                        break
-                    except Exception as e:
-                        last_error = e
-                        error_str = str(e)
-                        # 1302 동시성 에러만 재시도
-                        if '1302' in error_str and attempt < GLM_RETRY_COUNT - 1:
-                            current_app.logger.warning(
-                                f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
-                                f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
-                            )
-                            time.sleep(GLM_RETRY_DELAY)
-                        else:
-                            raise
-                else:
-                    # 모든 재시도 실패
-                    raise last_error
-                current_app.logger.info(f"GLM 락 해제: {model}")
-        else:
-            response = completion(**completion_kwargs)
+        response = completion(**completion_kwargs)
 
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
