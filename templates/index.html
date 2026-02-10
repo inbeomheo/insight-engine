@@ -757,6 +757,33 @@
                             </div>
                         </div>
 
+                        <!-- 출력 언어 -->
+                        <div class="popover-section">
+                            <label class="popover-label">출력 언어</label>
+                            <select id="language-select" class="popover-select-full" aria-label="출력 언어 선택">
+                                <option value="ko" selected>한국어</option>
+                                <option value="en">English</option>
+                                <option value="ja">日本語</option>
+                            </select>
+                            <!-- 숨겨진 라디오 (JS 호환용) -->
+                            <div class="hidden">
+                                <input type="radio" name="language" value="ko" checked />
+                                <input type="radio" name="language" value="en" />
+                                <input type="radio" name="language" value="ja" />
+                            </div>
+                        </div>
+
+                        <!-- 프리셋 -->
+                        <div class="popover-section">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label class="popover-label" style="margin-bottom: 0;">프리셋</label>
+                                <button id="save-preset-btn" class="popover-link-btn" style="font-size: 11px; padding: 2px 6px;" title="현재 설정 저장">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">add</span> 저장
+                                </button>
+                            </div>
+                            <div id="preset-list" class="preset-list"></div>
+                        </div>
+
                         <!-- 생성 버튼 -->
                         <div class="popover-section popover-actions">
                             <button id="run-analysis-btn" class="popover-generate-btn" aria-describedby="pending-badge-desc" title="선택한 URL로 콘텐츠 생성">
@@ -765,9 +792,20 @@
                                 <span id="pending-badge" class="hidden bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5" role="status" aria-live="polite">0</span>
                                 <span id="pending-badge-desc" class="sr-only">대기 중인 URL 개수</span>
                             </button>
-                            <button id="ai-analyze-btn" class="popover-link-btn" aria-label="AI 자동 분석" title="제목을 분석하여 최적 세팅 후 바로 분석">
-                                <span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span> AI 자동 분석
-                            </button>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="ai-analyze-btn" class="popover-link-btn" aria-label="AI 자동 분석" title="제목을 분석하여 최적 세팅 후 바로 분석">
+                                    <span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span> AI 자동 분석
+                                </button>
+                                <button id="compare-mode-toggle" class="compare-toggle-btn" title="모델 비교 모드">
+                                    <span class="material-symbols-outlined">compare_arrows</span>
+                                    <span>비교</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- 비교 모드: 모델 선택 -->
+                        <div id="compare-model-section" class="popover-section hidden">
+                            <label class="popover-label">비교할 모델 선택 (2~3개)</label>
+                            <div id="compare-model-list" class="compare-model-list"></div>
                         </div>
                     </div>
 

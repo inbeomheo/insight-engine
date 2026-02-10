@@ -17,6 +17,10 @@ import { AdminDashboard } from './modules/AdminDashboard.js';
 import { KeyboardNavigationManager } from './modules/KeyboardNavigationManager.js';
 import { SettingsPopover } from './modules/SettingsPopover.js';
 import { HistorySidebar } from './modules/HistorySidebar.js';
+import { PresetManager } from './modules/PresetManager.js';
+import { InlineEditor } from './modules/report/InlineEditor.js';
+import { CompareManager } from './modules/CompareManager.js';
+import { VideoSelectionModal } from './modules/VideoSelectionModal.js';
 import { getEventBus } from './core/EventBus.js';
 
 class ContentAnalysis {
@@ -62,15 +66,31 @@ class ContentAnalysis {
         // 히스토리 사이드바
         this.historySidebar = new HistorySidebar(this.authManager, this.reportManager);
 
+        // 프리셋 매니저
+        this.presetManager = new PresetManager(this.storage, this.providerManager, this.styleManager, this.ui);
+
         // 키보드 네비게이션 매니저 (US-013)
         this.keyboardNavManager = new KeyboardNavigationManager();
 
         // 콘텐츠 생성 완료 후 사용량 업데이트 콜백
         this.generator.onUsageUpdate = () => this.updateGenerateButtonState();
 
-        // ReportManager에 MindmapManager 및 AuthManager 연결
+        // InlineEditor 초기화
+        this.inlineEditor = new InlineEditor(this.storage, this.ui, this.authManager);
+
+        // CompareManager 초기화
+        this.compareManager = new CompareManager(
+            this.providerManager, this.styleManager, this.urlManager,
+            this.reportManager, this.ui, this.authManager
+        );
+
+        // VideoSelectionModal 초기화 (플레이리스트/채널 영상 선택)
+        this.videoModal = new VideoSelectionModal(this.urlManager, this.ui, this.authManager);
+
+        // ReportManager에 MindmapManager, AuthManager, InlineEditor 연결
         this.reportManager.setMindmapManager(this.mindmapManager);
         this.reportManager.setAuthManager(this.authManager);
+        this.reportManager.setInlineEditor(this.inlineEditor);
 
         // 모달 매니저에 커스텀 스타일 변경 콜백 연결
         this.modalManager.onCustomStylesChange = () => this.styleManager.renderCustomStyles();
@@ -129,6 +149,9 @@ class ContentAnalysis {
 
         // 히스토리 사이드바 초기화
         this.historySidebar.init();
+
+        // 프리셋 매니저 초기화
+        this.presetManager.init();
 
         // 키보드 네비게이션 접근성 속성 설정 (US-013)
         this.keyboardNavManager.setupAccessibilityAttributes();
@@ -270,10 +293,16 @@ class ContentAnalysis {
             startBtn.addEventListener('click', () => this.generator.handleGenerate());
         }
 
-        // Run Analysis button
+        // Run Analysis button (비교 모드일 때 분기)
         const runBtn = document.getElementById('run-analysis-btn');
         if (runBtn) {
-            runBtn.addEventListener('click', () => this.generator.handleGenerate());
+            runBtn.addEventListener('click', () => {
+                if (this.compareManager.isCompareMode) {
+                    this.compareManager.handleCompare();
+                } else {
+                    this.generator.handleGenerate();
+                }
+            });
         }
 
         // AI Analyze button (세팅 + 분석 자동 실행)
@@ -296,6 +325,11 @@ class ContentAnalysis {
                     e.preventDefault();
                     const url = urlInput.value.trim();
                     if (url) {
+                        // 플레이리스트/채널 URL 감지
+                        if (this._handleSpecialUrl(url)) {
+                            urlInput.value = '';
+                            return;
+                        }
                         const added = this.urlManager.parseAndAddUrls(url);
                         if (added > 0) {
                             urlInput.value = '';
@@ -313,7 +347,12 @@ class ContentAnalysis {
             // Paste handler
             urlInput.addEventListener('paste', (e) => {
                 setTimeout(() => {
-                    const text = urlInput.value;
+                    const text = urlInput.value.trim();
+                    // 플레이리스트/채널 URL 감지
+                    if (this._handleSpecialUrl(text)) {
+                        urlInput.value = '';
+                        return;
+                    }
                     const added = this.urlManager.parseAndAddUrls(text);
                     if (added > 0) {
                         urlInput.value = '';
@@ -329,6 +368,32 @@ class ContentAnalysis {
                 this.generator.handleGenerate();
             }
         });
+    }
+
+    /**
+     * 플레이리스트/채널 URL 감지 → VideoSelectionModal 위임
+     * @returns {boolean} 특수 URL로 처리되었으면 true
+     */
+    _handleSpecialUrl(url) {
+        // 플레이리스트 감지 (list= 포함)
+        if (url.includes('list=') && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+            this.videoModal.loadPlaylist(url);
+            return true;
+        }
+
+        // 채널 감지 (@handle, /channel/, /c/, /user/)
+        const channelPatterns = [
+            /youtube\.com\/@[\w.-]+/,
+            /youtube\.com\/channel\/UC[\w-]+/,
+            /youtube\.com\/c\/[\w.-]+/,
+            /youtube\.com\/user\/[\w.-]+/
+        ];
+        if (channelPatterns.some(p => p.test(url))) {
+            this.videoModal.loadChannel(url);
+            return true;
+        }
+
+        return false;
     }
 
     getFirstUrl() {

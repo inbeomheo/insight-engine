@@ -67,6 +67,10 @@ export class ReportManager {
         this.eventHandler.setMindmapManager(mindmapManager);
     }
 
+    setInlineEditor(inlineEditor) {
+        this.eventHandler.setInlineEditor(inlineEditor);
+    }
+
     // ==================== 내부 헬퍼 ====================
 
     _setEmptyStateVisibility(visible) {

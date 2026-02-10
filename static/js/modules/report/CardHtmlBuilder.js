@@ -2,6 +2,8 @@
  * CardHtmlBuilder - 카드 HTML 템플릿 생성
  * 각종 카드 타입의 HTML 마크업 생성 담당
  */
+import { SeoAnalyzer } from '../../services/SeoAnalyzer.js';
+
 export class CardHtmlBuilder {
     /**
      * @param {Object} uiManager - UI 매니저 (escapeHtml, sanitizeUrl 등)
@@ -161,6 +163,17 @@ export class CardHtmlBuilder {
     }
 
     /**
+     * 키워드 태그 칩 HTML 생성
+     */
+    _buildKeywordChips(keywords) {
+        if (!keywords || !Array.isArray(keywords) || keywords.length === 0) return '';
+        const chips = keywords.map(kw =>
+            `<span class="keyword-chip" title="클릭하여 복사">${this.ui.escapeHtml(kw)}</span>`
+        ).join('');
+        return `<div class="keyword-chips">${chips}</div>`;
+    }
+
+    /**
      * 리포트 카드 HTML 생성 (통합 미니멀 디자인)
      */
     buildReportCardHtml(data, styleLabel, shortUrl) {
@@ -188,6 +201,9 @@ export class CardHtmlBuilder {
         // 자막 소스 뱃지
         const sourceBadge = data.transcript_source ? this._buildSourceBadge(data.transcript_source) : '';
 
+        // SEO 뱃지 (blog_seo 스타일만)
+        const seoBadgeHtml = this._buildSeoBadge(data);
+
         return `
             <!-- 통합 결과 카드 -->
             <div class="result-card result-card--unified">
@@ -200,6 +216,9 @@ export class CardHtmlBuilder {
                             ${sourceBadge}
                         </div>
                         <div class="header-actions">
+                            <button class="icon-btn favorite-btn${data.is_favorite ? ' active' : ''}" title="즐겨찾기" data-report-id="${data.id}">
+                                <span class="material-symbols-outlined">${data.is_favorite ? 'star' : 'star_border'}</span>
+                            </button>
                             <button class="icon-btn copy-title-btn" title="제목 복사" data-copy-type="title">
                                 <span class="material-symbols-outlined">content_copy</span>
                             </button>
@@ -221,6 +240,9 @@ export class CardHtmlBuilder {
                     </a>
                 </div>
 
+                <!-- 키워드 태그 -->
+                ${this._buildKeywordChips(data.keywords)}
+
                 <!-- 본문 -->
                 <div class="unified-body report-content">
                     ${this.ui.sanitizeHtml(data.html)}
@@ -228,7 +250,7 @@ export class CardHtmlBuilder {
 
                 <!-- 푸터: 메타 텍스트 + 아이콘 액션 -->
                 <div class="unified-footer">
-                    <div class="meta-text">${metaText}</div>
+                    <div class="meta-text">${metaText} ${seoBadgeHtml}</div>
                     <div class="footer-actions">
                         <button class="action-btn download-btn" title="저장">
                             <span class="material-symbols-outlined">download</span>
@@ -250,6 +272,14 @@ export class CardHtmlBuilder {
                                     <span class="material-symbols-outlined">html</span>
                                     <span>HTML</span>
                                 </button>
+                                <button class="action-btn docx-export-btn" role="menuitem">
+                                    <span class="material-symbols-outlined">description</span>
+                                    <span>Word</span>
+                                </button>
+                                <button class="action-btn edit-content-btn" role="menuitem">
+                                    <span class="material-symbols-outlined">edit</span>
+                                    <span>편집</span>
+                                </button>
                                 <button class="action-btn regenerate-btn" role="menuitem">
                                     <span class="material-symbols-outlined">refresh</span>
                                     <span>다시 생성</span>
@@ -267,5 +297,26 @@ export class CardHtmlBuilder {
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * SEO 뱃지 HTML 생성 (blog_seo 스타일만)
+     */
+    _buildSeoBadge(data) {
+        // blog_seo 스타일 + 제목에 [Blog SEO] 접두사가 있는 경우 포함
+        const isSeoStyle = (data.style === 'blog_seo') ||
+            (data.title && data.title.startsWith('[Blog SEO]'));
+        if (!isSeoStyle || !data.html) return '';
+
+        try {
+            const result = SeoAnalyzer.analyze(data.html, data.title, data.keywords);
+            const grade = SeoAnalyzer.getGrade(result.score);
+            return `<span class="seo-badge" style="background: ${grade.color}15; color: ${grade.color}; border-color: ${grade.color}30;" title="SEO 점수 상세 보기" data-seo-score="${result.score}" data-seo-items='${JSON.stringify(result.items)}'>
+                <span class="material-symbols-outlined" style="font-size: 12px;">query_stats</span>
+                SEO <span class="seo-grade">${grade.label}</span> ${result.score}점
+            </span>`;
+        } catch {
+            return '';
+        }
     }
 }

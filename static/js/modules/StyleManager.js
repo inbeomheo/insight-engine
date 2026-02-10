@@ -62,6 +62,12 @@ export class StyleManager {
             modifiers.writing_style = writingStyleChecked.value;
         }
 
+        // 출력 언어
+        const languageChecked = document.querySelector('input[name="language"]:checked');
+        if (languageChecked) {
+            modifiers.language = languageChecked.value;
+        }
+
         return modifiers;
     }
 

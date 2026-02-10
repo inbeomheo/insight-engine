@@ -23,6 +23,7 @@
 @import url('components/_skeleton.css');
 @import url('components/_report-content.css');
 @import url('components/_mindmap.css');
+@import url('components/_seo-score.css');
 
 /* ==================== Utilities ==================== */
 @import url('utilities/_animations.css');
@@ -32,6 +33,7 @@
 
 /* ==================== Features ==================== */
 @import url('features/result-section.css');
+@import url('features/compare-view.css');
 
 /* ==================== Responsive ==================== */
 @import url('responsive/_breakpoints.css');

@@ -242,6 +242,7 @@ def save_history(user_id: str, data: dict) -> dict:
             'transcript': data.get('transcript'),
             'transcript_source': data.get('transcript_source'),
             'mindmap_markdown': data.get('mindmapMarkdown'),
+            'keywords': data.get('keywords', []),
             'usage': data.get('usage'),
             'elapsed_time': data.get('elapsed_time')
         }).execute()
@@ -318,6 +319,38 @@ def update_history(user_id: str, report_id: str, updates: dict) -> bool:
         return True
 
     return _db_operation('History update', False, operation)
+
+
+def toggle_favorite(user_id: str, report_id: str) -> dict:
+    """히스토리 즐겨찾기 토글"""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return {'success': False, 'error': 'Not authenticated'}
+
+    def operation():
+        # 현재 상태 조회
+        result = supabase.table('ie_histories') \
+            .select('is_favorite') \
+            .eq('user_id', user_id) \
+            .eq('report_id', report_id) \
+            .limit(1) \
+            .execute()
+
+        if not result.data:
+            return {'success': False, 'error': 'History not found'}
+
+        current = result.data[0].get('is_favorite', False)
+        new_value = not current
+
+        supabase.table('ie_histories') \
+            .update({'is_favorite': new_value}) \
+            .eq('user_id', user_id) \
+            .eq('report_id', report_id) \
+            .execute()
+
+        return {'success': True, 'is_favorite': new_value}
+
+    return _db_operation('Toggle favorite', {'success': False}, operation)
 
 
 def delete_history(user_id: str, report_id: str) -> bool:

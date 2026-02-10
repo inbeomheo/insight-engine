@@ -103,11 +103,12 @@ def _validate_modifiers(modifiers):
     if not isinstance(modifiers, dict):
         return None, 'modifiers는 객체 형식이어야 합니다.'
 
-    # 허용된 키와 값 정의 (v3.0: 2개 모디파이어만 지원)
-    allowed_keys = {'length', 'writing_style'}
+    # 허용된 키와 값 정의 (v3.1: 3개 모디파이어 지원)
+    allowed_keys = {'length', 'writing_style', 'language'}
     allowed_values = {
         'length': {'short', 'medium', 'long'},
-        'writing_style': {'conversational', 'explanatory', 'casual', 'expert'}
+        'writing_style': {'conversational', 'explanatory', 'casual', 'expert'},
+        'language': {'ko', 'en', 'ja'}
     }
 
     validated = {}
@@ -622,6 +623,7 @@ def generate():
                 'style': params['style'],
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
+                'keywords': result.get('keywords', []),
                 'transcript': raw_transcript,
                 'transcript_source': transcript_source,
                 'usage': result.get('usage'),
@@ -953,3 +955,202 @@ def generate_mindmap():
     except Exception as e:
         current_app.logger.error(f"Mindmap generation failed: {e}")
         return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/render-markdown', methods=['POST'])
+def render_markdown():
+    """마크다운 텍스트를 HTML로 변환합니다. (인라인 편집용)"""
+    try:
+        import markdown as md_lib
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content:
+            return jsonify({'html': ''}), 200
+
+        html = md_lib.markdown(
+            content,
+            extensions=['tables', 'fenced_code', 'nl2br']
+        )
+        return jsonify({'html': html}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Markdown render failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@blog_bp.route('/api/export/docx', methods=['POST'])
+@require_auth
+def export_docx():
+    """마크다운 콘텐츠를 Word(DOCX) 파일로 변환하여 다운로드합니다."""
+    from flask import send_file
+    from services.export_service import markdown_to_docx
+
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', '콘텐츠')
+        content = data.get('content', '')
+
+        if not content:
+            return jsonify({'error': '내보낼 콘텐츠가 필요합니다.'}), 400
+
+        buffer = markdown_to_docx(title, content)
+
+        # 파일명 안전 처리
+        safe_title = ''.join(c for c in title[:30] if c.isalnum() or c in ' _-').strip() or 'document'
+
+        return send_file(
+            buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=f'{safe_title}.docx'
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"DOCX export failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@blog_bp.route('/api/compare', methods=['POST'])
+@require_auth
+@require_usage
+def compare_models():
+    """동일 URL을 여러 모델로 병렬 생성하여 비교합니다.
+    사용량 1회만 차감됩니다 (모델 수 무관).
+    """
+    try:
+        start_time = time.time()
+        data = request.get_json(silent=True) or {}
+        url = data.get('url', '')
+        models = data.get('models', [])
+        style = data.get('style', DEFAULT_STYLE)
+        modifiers = data.get('modifiers', {})
+        custom_prompt = data.get('customPrompt')
+
+        if not url or not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+
+        if not models or len(models) < 2:
+            return jsonify({'error': '비교할 모델을 2개 이상 선택해주세요.'}), 400
+
+        if len(models) > 3:
+            models = models[:3]
+
+        video_id = content_service.get_video_id(url)
+        if not video_id:
+            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+
+        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+
+        # 자막 1회만 추출 (공유)
+        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        if error:
+            return jsonify({'error': error}), 400
+
+        style_prompt = _get_style_prompt(style, custom_prompt)
+        main_content = f"[영상 자막]\n{transcript_text}"
+
+        # 모델별 병렬 AI 호출
+        app = current_app._get_current_object()
+        results = {}
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(models)) as executor:
+            futures = {}
+            for model_id in models:
+                max_tokens = get_model_max_tokens(model_id)
+                truncated = content_service.truncate_text(main_content, max_tokens)
+                future = executor.submit(
+                    _generate_main_content, app, truncated,
+                    model_id, style_prompt, modifiers,
+                    style_id=style
+                )
+                futures[future] = model_id
+
+            for future in concurrent.futures.as_completed(futures):
+                model_id = futures[future]
+                try:
+                    result, used_prompt = future.result()
+                    results[model_id] = {
+                        'title': result.get('title', youtube_title),
+                        'content': result.get('content', ''),
+                        'html': result.get('html', ''),
+                        'keywords': result.get('keywords', []),
+                        'usage': result.get('usage', {}),
+                    }
+                except Exception as e:
+                    results[model_id] = {
+                        'error': str(e)
+                    }
+
+        elapsed_time = round(time.time() - start_time, 2)
+
+        return jsonify({
+            'results': results,
+            'youtube_title': youtube_title,
+            'elapsed_time': elapsed_time,
+            'transcript_source': transcript_source,
+            'usage': get_usage_for_response()
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Compare failed: {e}")
+        return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/playlist', methods=['POST'])
+@require_auth
+def get_playlist():
+    """플레이리스트 URL에서 영상 목록을 조회합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        url = data.get('url', '')
+
+        if not content_service.is_playlist_url(url):
+            return jsonify({'error': '유효한 YouTube 플레이리스트 URL을 입력해주세요.'}), 400
+
+        playlist_id = content_service.get_playlist_id(url)
+        if not playlist_id:
+            return jsonify({'error': '플레이리스트 ID를 추출할 수 없습니다.'}), 400
+
+        result = content_service.get_playlist_videos(playlist_id)
+        if 'error' in result:
+            return jsonify(result), 400
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Playlist fetch failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@blog_bp.route('/api/channel/videos', methods=['POST'])
+@require_auth
+def get_channel_videos():
+    """채널 URL에서 최신 영상 목록을 조회합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        url = data.get('url', '')
+        max_results = min(data.get('max_results', 20), 50)
+
+        if not content_service.is_channel_url(url):
+            return jsonify({'error': '유효한 YouTube 채널 URL을 입력해주세요.'}), 400
+
+        identifier = content_service.parse_channel_identifier(url)
+        if identifier['type'] == 'unknown':
+            return jsonify({'error': '채널 URL을 해석할 수 없습니다.'}), 400
+
+        channel_id = content_service.resolve_channel_id(identifier)
+        if not channel_id:
+            return jsonify({'error': '채널을 찾을 수 없습니다.'}), 400
+
+        result = content_service.get_channel_videos(channel_id, max_results)
+        if 'error' in result:
+            return jsonify(result), 400
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Channel videos fetch failed: {e}")
+        return jsonify({'error': str(e)}), 500

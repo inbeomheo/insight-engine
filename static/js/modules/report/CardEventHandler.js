@@ -3,6 +3,7 @@
  * 복사, 프롬프트, 마인드맵, 다운로드, 삭제 이벤트 담당
  */
 import { ReportFormatter } from './ReportFormatter.js';
+import { getEventBus, EVENTS } from '../../core/EventBus.js';
 
 export class CardEventHandler {
     /**
@@ -32,6 +33,13 @@ export class CardEventHandler {
     }
 
     /**
+     * InlineEditor 설정 (지연 주입용)
+     */
+    setInlineEditor(inlineEditor) {
+        this.inlineEditor = inlineEditor;
+    }
+
+    /**
      * 카드에 이벤트 바인딩
      * @param {HTMLElement} card - 카드 요소
      * @param {Object} data - 리포트 데이터
@@ -46,11 +54,15 @@ export class CardEventHandler {
         const copyRichBtn = card.querySelector('.copy-rich-btn');
         const regenerateBtn = card.querySelector('.regenerate-btn');
         const shareBtn = card.querySelector('.share-btn');
+        const favoriteBtn = card.querySelector('.favorite-btn');
 
         // 개별 카드 복사 버튼들
         const copyTitleBtn = card.querySelector('.copy-title-btn');
         const copyContentBtn = card.querySelector('.copy-content-btn');
         const copyMetaBtn = card.querySelector('.copy-meta-btn');
+
+        // 즐겨찾기 토글 버튼
+        favoriteBtn?.addEventListener('click', () => this._handleFavoriteClick(favoriteBtn, data));
 
         // 접기/펼치기 버튼 이벤트
         collapseBtn?.addEventListener('click', () => this._handleCollapseClick(card));
@@ -97,6 +109,33 @@ export class CardEventHandler {
                 moreActionsBtn.addEventListener('mouseleave', () => triggerBtn.setAttribute('aria-expanded', 'false'));
             }
         }
+
+        // 키워드 칩 클릭 복사
+        card.querySelectorAll('.keyword-chip').forEach(chip => {
+            chip.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(chip.textContent);
+                    chip.classList.add('copied');
+                    setTimeout(() => chip.classList.remove('copied'), 1000);
+                } catch { /* ignore */ }
+            });
+        });
+
+        // 편집 버튼
+        const editContentBtn = card.querySelector('.edit-content-btn');
+        editContentBtn?.addEventListener('click', () => {
+            if (this.inlineEditor) {
+                this.inlineEditor.enterEditMode(card, data);
+            }
+        });
+
+        // SEO 뱃지 클릭 → 상세 모달
+        const seoBadge = card.querySelector('.seo-badge');
+        seoBadge?.addEventListener('click', () => this._showSeoModal(seoBadge));
+
+        // Word 내보내기 버튼
+        const docxExportBtn = card.querySelector('.docx-export-btn');
+        docxExportBtn?.addEventListener('click', () => this._handleDocxExportClick(docxExportBtn, data));
 
         downloadBtn?.addEventListener('click', () => this._handleDownloadClick(data));
         htmlExportBtn?.addEventListener('click', () => this._handleHtmlExportClick(data));
@@ -232,6 +271,58 @@ export class CardEventHandler {
         a.download = `${data.title.substring(0, 30)}.md`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Word(DOCX) 내보내기 핸들러
+     */
+    async _handleDocxExportClick(btn, data) {
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const label = btn.querySelector('span:last-child');
+        const origIcon = icon?.textContent;
+        const origLabel = label?.textContent;
+
+        try {
+            if (icon) icon.textContent = 'hourglass_top';
+            if (label) label.textContent = '변환 중...';
+            btn.disabled = true;
+
+            const token = this.authManager?.getAccessToken?.() || '';
+            const res = await fetch('/api/export/docx', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ title: data.title, content: data.content })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'DOCX 변환 실패');
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(data.title || 'document').substring(0, 30)}.docx`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            if (icon) icon.textContent = 'check';
+            if (label) label.textContent = '완료';
+            setTimeout(() => {
+                if (icon) icon.textContent = origIcon;
+                if (label) label.textContent = origLabel;
+            }, 2000);
+        } catch (e) {
+            this.ui.showAlert(e.message || 'Word 내보내기 실패', 'error');
+            if (icon) icon.textContent = origIcon;
+            if (label) label.textContent = origLabel;
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     /**
@@ -391,6 +482,47 @@ ${data.html || ''}
     }
 
     /**
+     * 즐겨찾기 토글 핸들러 (Optimistic UI)
+     */
+    async _handleFavoriteClick(btn, data) {
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const newState = !data.is_favorite;
+
+        // Optimistic UI 업데이트
+        data.is_favorite = newState;
+        icon.textContent = newState ? 'star' : 'star_border';
+        btn.classList.toggle('active', newState);
+
+        // 로컬 스토리지 업데이트
+        this.storage.updateHistoryItem(data.id, { is_favorite: newState });
+
+        // EventBus로 사이드바 갱신 알림
+        getEventBus().emit(EVENTS.FAVORITE_TOGGLE, { id: data.id, is_favorite: newState });
+
+        // 클라우드 동기화
+        if (this.authManager?.isLoggedIn?.()) {
+            try {
+                const token = this.authManager.getAccessToken?.();
+                if (!token) return;
+                const res = await fetch(`/api/user/history/${data.id}/favorite`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) {
+                    // 롤백
+                    data.is_favorite = !newState;
+                    icon.textContent = !newState ? 'star' : 'star_border';
+                    btn.classList.toggle('active', !newState);
+                    this.storage.updateHistoryItem(data.id, { is_favorite: !newState });
+                }
+            } catch {
+                // 네트워크 오류 시 로컬 상태 유지 (graceful)
+                console.warn('즐겨찾기 클라우드 동기화 실패');
+            }
+        }
+    }
+
+    /**
      * 카드 접기/펼치기 핸들러
      */
     _handleCollapseClick(card) {
@@ -406,5 +538,86 @@ ${data.html || ''}
 
         // 모두 접기 버튼 상태 동기화
         this.onCollapseChange?.();
+    }
+
+    /**
+     * SEO 상세 모달 표시
+     */
+    _showSeoModal(badge) {
+        const score = parseInt(badge.dataset.seoScore || '0');
+        let items = [];
+        try { items = JSON.parse(badge.dataset.seoItems || '[]'); } catch { /* ignore */ }
+
+        // 기존 모달 제거
+        document.querySelector('.seo-modal-overlay')?.remove();
+
+        const circumference = 2 * Math.PI * 42;
+        const offset = circumference - (score / 100) * circumference;
+
+        // 점수 색상
+        let color = '#ef4444';
+        if (score >= 80) color = '#10b981';
+        else if (score >= 60) color = '#3b82f6';
+        else if (score >= 50) color = '#f59e0b';
+
+        const itemsHtml = items.map(item => {
+            const pct = item.max > 0 ? (item.score / item.max) * 100 : 0;
+            let barColor = '#ef4444';
+            if (pct >= 80) barColor = '#10b981';
+            else if (pct >= 60) barColor = '#3b82f6';
+            else if (pct >= 40) barColor = '#f59e0b';
+
+            return `<div class="seo-item">
+                <div style="flex: 1;">
+                    <div class="seo-item-name">${item.name}</div>
+                    <div class="seo-item-detail">${item.detail}</div>
+                </div>
+                <div class="seo-item-score" style="color: ${barColor}">${item.score}/${item.max}</div>
+                <div class="seo-item-bar">
+                    <div class="seo-item-bar-fill" style="width: ${pct}%; background: ${barColor}"></div>
+                </div>
+            </div>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'seo-modal-overlay';
+        modal.innerHTML = `
+            <div class="seo-modal">
+                <div class="seo-modal-header">
+                    <h3>
+                        <span class="material-symbols-outlined" style="font-size: 20px; color: ${color};">query_stats</span>
+                        SEO 분석 결과
+                    </h3>
+                    <button class="seo-modal-close">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="seo-score-circle">
+                    <div class="seo-score-ring">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="ring-bg" cx="50" cy="50" r="42"/>
+                            <circle class="ring-fill" cx="50" cy="50" r="42"
+                                stroke="${color}"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${offset}"/>
+                        </svg>
+                        <div class="seo-score-value" style="color: ${color}">${score}</div>
+                    </div>
+                    <div class="seo-score-label">100점 만점</div>
+                </div>
+                <div class="seo-items">${itemsHtml}</div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        requestAnimationFrame(() => modal.classList.add('active'));
+
+        // 닫기 이벤트
+        const close = () => {
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 200);
+        };
+        modal.querySelector('.seo-modal-close').addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 }

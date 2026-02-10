@@ -322,6 +322,19 @@ $$ LANGUAGE plpgsql;
 -- SELECT cron.schedule('cleanup-expired-histories', '0 3 * * *', $$SELECT cleanup_expired_histories()$$);
 
 -- =============================================
+-- 9. 마이그레이션: 즐겨찾기 컬럼 추가
+-- =============================================
+
+ALTER TABLE ie_histories ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_ie_histories_favorite ON ie_histories(user_id, is_favorite) WHERE is_favorite = TRUE;
+
+-- =============================================
+-- 10. 마이그레이션: 키워드 컬럼 추가
+-- =============================================
+
+ALTER TABLE ie_histories ADD COLUMN IF NOT EXISTS keywords JSONB DEFAULT '[]'::jsonb;
+
+-- =============================================
 -- 완료!
 -- =============================================
 -- 이제 .env 파일에 Supabase 설정을 추가하세요:

@@ -3,6 +3,7 @@ AI 콘텐츠 생성 서비스
 LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
 import os
+import re
 import markdown
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -12,24 +13,23 @@ from litellm import completion
 # Zhipu AI (GLM) OpenAI 호환 API 설정
 ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
 
-DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
-
-
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
 
-    v3.0: 2개 모디파이어만 지원 (length, writing_style)
-    한국어 고정 (다국어 지원 제거)
+    v3.1: 3개 모디파이어 지원 (length, writing_style, language)
+    language 기본값 'ko' → 한국어 호환 유지
     """
     instructions = []
 
-    # 한국어 고정
-    instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
-
     if not modifiers:
-        return instructions
+        modifiers = {}
 
-    # v3.0: length, writing_style 2개만 지원
+    # language 모디파이어 (기본값: ko)
+    language = modifiers.get('language', 'ko')
+    lang_instruction = style_modifiers.get('language', {}).get(language, '결과는 반드시 한국어로 작성해주세요.')
+    instructions.append(lang_instruction)
+
+    # length, writing_style 모디파이어
     modifier_types = ['length', 'writing_style']
     for modifier_type in modifier_types:
         value = modifiers.get(modifier_type)
@@ -61,6 +61,23 @@ def _build_prompt(content, style_prompt, modifiers):
         prompt += "\n\n[추가 지시사항]\n" + "\n".join(modifier_instructions)
 
     return prompt
+
+
+def _extract_keywords(content):
+    """마크다운에서 <!-- KEYWORDS: ... --> 주석을 파싱하여 키워드 추출 후 본문에서 제거합니다.
+
+    Returns:
+        tuple: (cleaned_content, keywords_list)
+    """
+    pattern = r'<!--\s*KEYWORDS:\s*(.+?)\s*-->'
+    match = re.search(pattern, content)
+    if not match:
+        return content, []
+
+    raw = match.group(1)
+    keywords = [kw.strip()[:20] for kw in raw.split(',') if kw.strip()][:10]
+    cleaned = re.sub(pattern, '', content).strip()
+    return cleaned, keywords
 
 
 def _extract_title_and_content(markdown_content):
@@ -177,6 +194,10 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         response = completion(**completion_kwargs)
 
         markdown_content = response.choices[0].message.content
+
+        # 키워드 추출 (마크다운→HTML 변환 전)
+        markdown_content, keywords = _extract_keywords(markdown_content)
+
         title, body = _extract_title_and_content(markdown_content)
 
         # 토큰 사용량 정보 추출 (기본값 설정으로 None 방지)
@@ -200,7 +221,8 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             'title': title,
             'content': body,
             'html': html,
-            'usage': token_usage
+            'usage': token_usage,
+            'keywords': keywords
         }
 
         if return_prompt:

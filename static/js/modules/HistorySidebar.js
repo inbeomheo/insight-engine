@@ -61,6 +61,8 @@ export class HistorySidebar {
                     prompt: h.prompt ?? null,
                     usage: h.usage ?? null,
                     elapsed_time: h.elapsed_time ?? null,
+                    is_favorite: h.is_favorite ?? false,
+                    keywords: h.keywords ?? [],
                     createdAt: h.createdAt || h.timestamp || Date.now(),
                     timestamp: h.timestamp ?? h.createdAt ?? Date.now()
                 }));
@@ -111,36 +113,55 @@ export class HistorySidebar {
             return;
         }
 
-        // 날짜별 그룹핑
-        const groups = this._groupByDate(filtered);
         let html = '';
+
+        // 즐겨찾기 섹션 (날짜 그룹 상단)
+        const favorites = filtered.filter(item => item.is_favorite);
+        const nonFavorites = filtered.filter(item => !item.is_favorite);
+
+        if (favorites.length > 0) {
+            html += `<div class="history-group history-group--favorites" role="group" aria-label="즐겨찾기">`;
+            html += `<div class="history-group-title"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: -2px;">star</span> 즐겨찾기</div>`;
+            for (const item of favorites) {
+                html += this._buildHistoryItemHtml(item);
+            }
+            html += '</div>';
+        }
+
+        // 날짜별 그룹핑 (즐겨찾기 제외)
+        const groups = this._groupByDate(nonFavorites);
 
         for (const [label, items] of groups) {
             html += `<div class="history-group" role="group" aria-label="${label}">`;
             html += `<div class="history-group-title">${label}</div>`;
             for (const item of items) {
-                const safeTitle = this._escapeHtml(item.title);
-                html += `
-                    <div class="history-item" data-id="${item.id}" role="listitem" tabindex="0" title="${safeTitle}">
-                        <div style="display: flex; align-items: start; justify-content: space-between; gap: 4px;">
-                            <div class="history-item-title">${safeTitle}</div>
-                            <button class="history-delete-btn" data-id="${item.id}" title="삭제" aria-label="히스토리 삭제">
-                                <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
-                            </button>
-                        </div>
-                        <div class="history-item-meta">
-                            <span>${this._formatTime(item.createdAt)}</span>
-                            <span>·</span>
-                            <span>${this._getStyleLabel(item.style)}</span>
-                        </div>
-                    </div>
-                `;
+                html += this._buildHistoryItemHtml(item);
             }
             html += '</div>';
         }
 
         this.historyList.innerHTML = html;
         this._setupItemEvents();
+    }
+
+    _buildHistoryItemHtml(item) {
+        const safeTitle = this._escapeHtml(item.title);
+        const favIcon = item.is_favorite ? '<span class="material-symbols-outlined" style="font-size: 12px; color: var(--primary); flex-shrink: 0;">star</span>' : '';
+        return `
+            <div class="history-item${item.is_favorite ? ' history-item--favorite' : ''}" data-id="${item.id}" role="listitem" tabindex="0" title="${safeTitle}">
+                <div style="display: flex; align-items: start; justify-content: space-between; gap: 4px;">
+                    <div class="history-item-title" style="display: flex; align-items: center; gap: 4px;">${favIcon}${safeTitle}</div>
+                    <button class="history-delete-btn" data-id="${item.id}" title="삭제" aria-label="히스토리 삭제">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+                    </button>
+                </div>
+                <div class="history-item-meta">
+                    <span>${this._formatTime(item.createdAt)}</span>
+                    <span>·</span>
+                    <span>${this._getStyleLabel(item.style)}</span>
+                </div>
+            </div>
+        `;
     }
 
     _groupByDate(items) {
@@ -270,6 +291,16 @@ export class HistorySidebar {
         if (this.eventBus) {
             this.eventBus.on(EVENTS.GENERATE_COMPLETE, () => {
                 setTimeout(() => this.loadHistory(), 500);
+            });
+
+            // 즐겨찾기 토글 시 사이드바 갱신
+            this.eventBus.on(EVENTS.FAVORITE_TOGGLE, ({ id, is_favorite }) => {
+                const item = this._items.find(i => String(i.id) === String(id));
+                if (item) {
+                    item.is_favorite = is_favorite;
+                    const query = this.searchInput?.value || '';
+                    this._renderList(query);
+                }
             });
         }
     }

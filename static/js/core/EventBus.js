@@ -143,6 +143,17 @@ export const EVENTS = {
     URL_CLEAR: 'url:clear',
     URL_REORDER: 'url:reorder',
 
+    // 즐겨찾기
+    FAVORITE_TOGGLE: 'favorite:toggle',
+
+    // 비교 모드
+    COMPARE_START: 'compare:start',
+    COMPARE_COMPLETE: 'compare:complete',
+
+    // 플레이리스트/채널
+    PLAYLIST_LOADED: 'playlist:loaded',
+    CHANNEL_LOADED: 'channel:loaded',
+
     // 상태 변경
     STATE_CHANGE: 'state:change',
 };

@@ -8,6 +8,7 @@ export class SettingsPopover {
         this.popover = document.getElementById('settings-popover');
         this.toggleBtn = document.getElementById('settings-popover-btn');
         this.writingStyleSelect = document.getElementById('writing-style-select');
+        this.languageSelect = document.getElementById('language-select');
         this.isOpen = false;
     }
 
@@ -36,6 +37,9 @@ export class SettingsPopover {
 
         // writing-style select ↔ hidden radio 동기화
         this._setupWritingStyleSync();
+
+        // language select ↔ hidden radio 동기화
+        this._setupLanguageSync();
     }
 
     toggle() {
@@ -69,6 +73,19 @@ export class SettingsPopover {
         this.writingStyleSelect.addEventListener('change', () => {
             const value = this.writingStyleSelect.value;
             const radio = document.querySelector(`input[name="writing_style"][value="${value}"]`);
+            if (radio) {
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+
+    _setupLanguageSync() {
+        if (!this.languageSelect) return;
+
+        this.languageSelect.addEventListener('change', () => {
+            const value = this.languageSelect.value;
+            const radio = document.querySelector(`input[name="language"][value="${value}"]`);
             if (radio) {
                 radio.checked = true;
                 radio.dispatchEvent(new Event('change', { bubbles: true }));

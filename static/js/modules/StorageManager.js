@@ -120,6 +120,54 @@ export class StorageManager {
         }
     }
 
+    // ==================== Presets ====================
+
+    getPresets() {
+        try {
+            const raw = localStorage.getItem('cad_presets_v1');
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    savePresets(presets) {
+        try {
+            localStorage.setItem('cad_presets_v1', JSON.stringify(presets));
+        } catch (e) {
+            console.warn('프리셋 저장 실패:', e);
+        }
+    }
+
+    addPreset(preset) {
+        const presets = this.getPresets();
+        if (presets.length >= 10) {
+            return { success: false, message: '프리셋은 최대 10개까지 저장할 수 있습니다.' };
+        }
+        preset.id = 'preset_' + Date.now();
+        preset.createdAt = Date.now();
+        presets.push(preset);
+        this.savePresets(presets);
+        return { success: true, id: preset.id };
+    }
+
+    deletePreset(presetId) {
+        const presets = this.getPresets();
+        const filtered = presets.filter(p => p.id !== presetId);
+        this.savePresets(filtered);
+    }
+
+    // ==================== Favorites ====================
+
+    getFavorites() {
+        try {
+            const history = this.getHistory();
+            return history.filter(item => item.is_favorite === true);
+        } catch {
+            return [];
+        }
+    }
+
     // ==================== Custom Styles ====================
 
     getCustomStyles() {
