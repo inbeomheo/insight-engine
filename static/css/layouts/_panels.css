@@ -3,7 +3,7 @@
 /* ==================== URL Input Bar ==================== */
 
 .url-input-bar {
-    padding: 24px 0 16px;
+    padding: 16px 0 10px;
     flex-shrink: 0;
 }
 
@@ -322,7 +322,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 0 8px;
+    padding: 8px 0 4px;
     flex-shrink: 0;
 }
 
@@ -361,10 +361,10 @@
 
 .report-stream {
     flex: 1;
-    padding: 8px 0;
+    padding: 4px 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     overflow-y: auto;
 }
 
