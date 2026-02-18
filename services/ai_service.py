@@ -72,6 +72,23 @@ def _build_prompt(content, style_prompt, modifiers):
     return prompt
 
 
+def _extract_keywords(content):
+    """마크다운에서 <!-- KEYWORDS: ... --> 주석을 파싱하여 키워드 추출 후 본문에서 제거합니다.
+
+    Returns:
+        tuple: (cleaned_content, keywords_list)
+    """
+    pattern = r'<!--\s*KEYWORDS:\s*(.+?)\s*-->'
+    match = re.search(pattern, content)
+    if not match:
+        return content, []
+
+    raw = match.group(1)
+    keywords = [kw.strip()[:20] for kw in raw.split(',') if kw.strip()][:10]
+    cleaned = re.sub(pattern, '', content).strip()
+    return cleaned, keywords
+
+
 def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False):
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
     from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS

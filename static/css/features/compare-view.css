@@ -1,0 +1,262 @@
+/* ==================== Compare View ==================== */
+
+/* 비교 모드 토글 버튼 */
+.compare-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.compare-toggle-btn:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.compare-toggle-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.compare-toggle-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+/* 비교 모델 선택 영역 */
+.compare-model-section {
+    padding: 8px 0;
+}
+
+.compare-model-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.compare-model-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.compare-model-checkbox:has(input:checked) {
+    background: rgba(79, 70, 229, 0.08);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.compare-model-checkbox input {
+    accent-color: var(--primary);
+}
+
+/* 비교 컨테이너 */
+.compare-container {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-dark);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    animation: slideInUp 0.4s ease forwards;
+}
+
+.compare-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(79, 70, 229, 0.02));
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.compare-header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.compare-header-info .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--primary);
+}
+
+.compare-model-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--primary);
+    background: rgba(79, 70, 229, 0.08);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.compare-elapsed {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.compare-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.compare-close-btn:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+}
+
+/* 비교 그리드 */
+.compare-grid {
+    display: grid;
+    gap: 0;
+}
+
+.compare-column {
+    border-right: 1px solid var(--border-dark);
+    min-width: 0;
+}
+
+.compare-column:last-child {
+    border-right: none;
+}
+
+.compare-column-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    background: #F9FAFB;
+    border-bottom: 1px solid var(--border-dark);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.compare-column-body {
+    padding: 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* 비교 결과 */
+.compare-result {
+    padding: 12px;
+}
+
+.compare-result-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.compare-result-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 8px;
+}
+
+.compare-result-content {
+    font-size: 13px;
+    line-height: 1.6;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.compare-result-actions {
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-dark);
+    text-align: center;
+}
+
+.compare-select-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary);
+    background: rgba(79, 70, 229, 0.06);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.compare-select-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.compare-select-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+/* 비교 에러 */
+.compare-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: #ef4444;
+    font-size: 13px;
+}
+
+.compare-error-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 16px;
+    color: #ef4444;
+    font-size: 12px;
+}
+
+/* 모바일: 1컬럼 */
+@media (max-width: 768px) {
+    .compare-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .compare-column {
+        border-right: none;
+        border-bottom: 1px solid var(--border-dark);
+    }
+
+    .compare-column:last-child {
+        border-bottom: none;
+    }
+}

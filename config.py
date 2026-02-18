@@ -140,6 +140,11 @@ STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
         'explanatory': '설명체(~입니다, ~합니다)로 객관적으로 작성하세요.',
         'casual': '캐주얼체(~야, ~해)로 편하게 작성하세요.',
         'expert': '전문가 톤으로 업계 용어를 사용해 깊이 있게 작성하세요.'
+    },
+    'language': {
+        'ko': '결과는 반드시 한국어로 작성해주세요.',
+        'en': 'You MUST write the entire result in English.',
+        'ja': '結果は必ず日本語で書いてください。'
     }
 }
 

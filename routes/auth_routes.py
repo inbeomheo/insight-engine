@@ -9,7 +9,8 @@ from services.supabase_service import (
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
     get_all_contents, get_content_detail,
-    get_histories, delete_history, delete_user_account,
+    get_histories, delete_history, update_history, toggle_favorite,
+    delete_user_account,
     update_user_profile, update_user_password
 )
 
@@ -392,6 +393,8 @@ def get_user_history():
             'prompt': h.get('prompt'),
             'usage': h.get('usage'),
             'elapsed_time': h.get('elapsed_time'),
+            'is_favorite': h.get('is_favorite', False),
+            'keywords': h.get('keywords', []),
             'createdAt': h.get('created_at'),
             'timestamp': h.get('created_at')
         })
@@ -420,6 +423,38 @@ def delete_user_history(report_id):
     if delete_history(g.user_id, report_id):
         return _success_response()
     return _error_response('삭제에 실패했습니다.', 500)
+
+
+@auth_bp.route('/api/user/history/<report_id>/favorite', methods=['POST'])
+@require_auth
+def toggle_history_favorite(report_id):
+    """히스토리 즐겨찾기 토글"""
+    if not report_id:
+        return _error_response('report_id가 필요합니다.')
+
+    result = toggle_favorite(g.user_id, report_id)
+    if result.get('success'):
+        return jsonify({'is_favorite': result['is_favorite']})
+    return _error_response(result.get('error', '즐겨찾기 변경에 실패했습니다.'), 500)
+
+
+@auth_bp.route('/api/user/history/<report_id>', methods=['PUT'])
+@require_auth
+def update_user_history(report_id):
+    """히스토리 콘텐츠 업데이트 (인라인 편집용)"""
+    if not report_id:
+        return _error_response('report_id가 필요합니다.')
+
+    data = _get_json_data()
+    allowed_fields = {'content', 'html', 'title'}
+    updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if not updates:
+        return _error_response('업데이트할 필드가 없습니다.')
+
+    if update_history(g.user_id, report_id, updates):
+        return _success_response()
+    return _error_response('업데이트에 실패했습니다.', 500)
 
 
 @auth_bp.route('/api/user/profile', methods=['PUT'])

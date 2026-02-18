@@ -1,6 +1,6 @@
 """
-모디파이어 시스템 v3.0
-2개 카테고리: 길이(length), 문체(writing_style)
+모디파이어 시스템 v3.1
+3개 카테고리: 길이(length), 문체(writing_style), 언어(language)
 """
 
 from typing import Dict, Optional
@@ -57,13 +57,20 @@ MODIFIERS: Dict[str, Dict[str, str]] = {
 - 전문가 동료에게 설명하는 톤
 - 기초 설명은 생략해도 OK
 '''
+    },
+
+    'language': {
+        'ko': '결과는 반드시 한국어로 작성해주세요.',
+        'en': 'You MUST write the entire result in English.',
+        'ja': '結果は必ず日本語で書いてください。'
     }
 }
 
 # 모디파이어 기본값
 DEFAULT_MODIFIERS = {
     'length': 'medium',
-    'writing_style': 'conversational'
+    'writing_style': 'conversational',
+    'language': 'ko'
 }
 
 # UI 표시용 옵션 정보
@@ -83,6 +90,14 @@ MODIFIER_OPTIONS = {
             ('explanatory', '설명체'),
             ('casual', '캐주얼'),
             ('expert', '전문가')
+        ]
+    },
+    'language': {
+        'label': '출력 언어',
+        'options': [
+            ('ko', '한국어'),
+            ('en', 'English'),
+            ('ja', '日本語')
         ]
     }
 }
