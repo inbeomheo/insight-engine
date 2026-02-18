@@ -22,6 +22,7 @@ export class ProviderManager {
             this.providers = data.providers || {};
             this.styles = data.styles || [];
             this.supadataConfigured = data.supadataConfigured || false;
+            this.hasAutoFallback = data.hasAutoFallback || false;
             this.updateProviderOptions();
         } catch (error) {
             console.error('Failed to load providers:', error);
@@ -57,6 +58,14 @@ export class ProviderManager {
             return;
         }
 
+        // 자동 선택 옵션 추가 (폴백 체인)
+        if (this.hasAutoFallback) {
+            const autoOption = document.createElement('option');
+            autoOption.value = 'auto';
+            autoOption.textContent = '자동 선택 (가격 순 폴백)';
+            providerSelect.appendChild(autoOption);
+        }
+
         providerIds.forEach(providerId => {
             const provider = this.providers[providerId];
             if (provider) {
@@ -90,6 +99,12 @@ export class ProviderManager {
         const provider = this.providers[providerId];
 
         modelSelect.innerHTML = '';
+
+        // 자동 선택 모드
+        if (providerId === 'auto') {
+            this._applyAutoMode();
+            return;
+        }
 
         if (!provider || !provider.models) {
             modelSelect.innerHTML = '<option value="">서비스를 먼저 선택하세요</option>';
@@ -133,6 +148,11 @@ export class ProviderManager {
         const modelId = modelSelect?.value;
         const provider = this.providers[providerId];
 
+        if (providerId === 'auto') {
+            this._applyAutoMode();
+            return;
+        }
+
         if (provider && modelId) {
             const model = provider.models?.find(m => m.id === modelId);
             if (model) {
@@ -151,15 +171,40 @@ export class ProviderManager {
     }
 
     updateProviderLabel() {
-        const summaryText = document.getElementById('ai-model-summary-text');
-
         const providerSelect = document.getElementById('provider');
         const providerId = providerSelect?.value;
-        const provider = this.providers[providerId];
 
+        if (providerId === 'auto') {
+            this._applyAutoMode();
+            return;
+        }
+
+        const summaryText = document.getElementById('ai-model-summary-text');
+        const provider = this.providers[providerId];
         if (summaryText) {
             summaryText.textContent = provider ? provider.name : '선택 필요';
         }
+    }
+
+    // ==================== Auto Mode ====================
+
+    _applyAutoMode() {
+        const modelSelect = document.getElementById('model');
+        if (modelSelect) {
+            modelSelect.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = 'auto';
+            opt.textContent = '자동 (최저가부터 순차 시도)';
+            modelSelect.appendChild(opt);
+        }
+
+        const infoText = document.getElementById('selected-model-text');
+        const infoContainer = document.getElementById('selected-model-info');
+        if (infoText) infoText.textContent = '자동 선택 - 최저가 모델부터 순차 시도';
+        if (infoContainer) infoContainer.classList.remove('hidden');
+
+        const summaryText = document.getElementById('ai-model-summary-text');
+        if (summaryText) summaryText.textContent = '자동 선택';
     }
 
     // ==================== Provider Selection Events ====================

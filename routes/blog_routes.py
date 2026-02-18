@@ -6,7 +6,7 @@ import json
 import time
 from typing import Dict
 
-from flask import Blueprint, request, jsonify, current_app, render_template, g
+from flask import Blueprint, request, jsonify, current_app, render_template, g, Response, stream_with_context
 
 from config import get_model_max_tokens
 from services import ai_service, content_service
@@ -21,7 +21,7 @@ import uuid
 blog_bp = Blueprint('blog', __name__)
 _CLIENT_TRACKER: Dict[str, float] = {}
 
-DEFAULT_MODEL = 'gpt-4o'
+DEFAULT_MODEL = 'gemini/gemini-3-flash-preview'
 DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -283,7 +283,8 @@ def api_providers():
     return jsonify({
         'providers': providers,
         'styles': [{'id': s[0], 'name': s[1]} for s in styles],
-        'supadataConfigured': bool(SUPADATA_API_KEY)
+        'supadataConfigured': bool(SUPADATA_API_KEY),
+        'hasAutoFallback': True
     })
 
 
@@ -549,6 +550,170 @@ def _combine_results(main_result, main_prompt, comment_result):
     return combined_result, main_prompt
 
 
+def _handle_short_content_bypass(transcript_text, style, youtube_title,
+                                  raw_transcript, transcript_source, start_time):
+    """짧은 콘텐츠 바이패스 체크. 해당 시 Response 반환, 아니면 None."""
+    from config import SHORT_CONTENT_THRESHOLD, SHORT_CONTENT_BYPASS_STYLES
+    if len(transcript_text) >= SHORT_CONTENT_THRESHOLD or style not in SHORT_CONTENT_BYPASS_STYLES:
+        return None
+
+    import markdown as md_lib
+    g.skip_usage_decrement = True
+    bypass_html = md_lib.markdown(transcript_text, extensions=['tables', 'fenced_code', 'nl2br'])
+    elapsed_time = round(time.time() - start_time, 2)
+    return jsonify({
+        'title': youtube_title,
+        'content': transcript_text,
+        'html': bypass_html,
+        'id': str(uuid.uuid4()),
+        'prompt': '',
+        'elapsed_time': elapsed_time,
+        'youtube_title': youtube_title,
+        'transcript': raw_transcript,
+        'transcript_source': transcript_source,
+        'comment_summary_included': False,
+        'bypassed': True,
+        'bypass_reason': 'short_content',
+        'usage': get_usage_for_response()
+    })
+
+
+def _handle_cache_hit(cache_key, force, youtube_title,
+                       raw_transcript, transcript_source, start_time):
+    """캐시 히트 체크. 히트 시 Response 반환, 아니면 None."""
+    if force:
+        return None
+
+    cached = current_app.ai_cache.get(cache_key)
+    if not cached:
+        return None
+
+    g.skip_usage_decrement = True
+    elapsed_time = round(time.time() - start_time, 2)
+    return jsonify({
+        **cached,
+        'id': str(uuid.uuid4()),
+        'elapsed_time': elapsed_time,
+        'youtube_title': youtube_title,
+        'transcript': raw_transcript,
+        'transcript_source': transcript_source,
+        'cached': True,
+        'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
+        'usage': get_usage_for_response()
+    })
+
+
+def _call_ai_with_comments(truncated_content, model, style_prompt, params,
+                            comments, transcript_text, max_tokens):
+    """AI 호출 + 댓글 병렬 처리. (result, used_prompt, comment_result) 반환."""
+    is_auto = model == 'auto'
+
+    if is_auto:
+        from config import FALLBACK_CHAIN
+        comment_result = None
+        if comments:
+            combined_content = _build_combined_content(transcript_text, comments)
+            truncated_content = content_service.truncate_text(
+                f"[영상 자막]\n{combined_content}", max_tokens
+            )
+        result, used_prompt = ai_service.create_content_with_fallback(
+            truncated_content, FALLBACK_CHAIN, style_prompt,
+            return_prompt=True, modifiers=params['modifiers'],
+            style_id=params['style']
+        )
+        return result, used_prompt, comment_result
+
+    is_glm = model.startswith('zhipuai/')
+
+    if comments:
+        app = current_app._get_current_object()
+
+        if is_glm:
+            # GLM 모델: 순차 실행 (글로벌 락 충돌 방지)
+            result, used_prompt = ai_service.create_content(
+                truncated_content, model, style_prompt,
+                return_prompt=True, modifiers=params['modifiers'],
+                style_id=params['style']
+            )
+            comment_result = _generate_comment_summary(app, comments, model)
+        else:
+            # 병렬 실행
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                main_future = executor.submit(
+                    _generate_main_content, app, truncated_content,
+                    model, style_prompt, params['modifiers'],
+                    style_id=params['style']
+                )
+                comment_future = executor.submit(
+                    _generate_comment_summary, app, comments, model
+                )
+
+                result, used_prompt = main_future.result()
+                comment_result = comment_future.result()
+
+        result, used_prompt = _combine_results(result, used_prompt, comment_result)
+    else:
+        # 댓글 없음: 단일 AI 호출
+        comment_result = None
+        result, used_prompt = ai_service.create_content(
+            truncated_content, model, style_prompt,
+            return_prompt=True, modifiers=params['modifiers'],
+            style_id=params['style']
+        )
+
+    return result, used_prompt, comment_result
+
+
+def _save_and_respond(result, used_prompt, comment_result, cache_key,
+                       video_id, params, url, youtube_title,
+                       raw_transcript, transcript_source, comments, start_time):
+    """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
+    model = params['model']
+    modifiers = params['modifiers'] or {}
+
+    current_app.ai_cache.put(
+        cache_key, video_id, params['style'], model,
+        modifiers.get('length', 'medium'),
+        modifiers.get('writing_style', 'conversational'),
+        {
+            'title': result.get('title', ''),
+            'content': result.get('content', ''),
+            'html': result.get('html', ''),
+            'comment_summary_included': bool(comments and comment_result),
+            'prompt': used_prompt,
+        }
+    )
+
+    elapsed_time = round(time.time() - start_time, 2)
+
+    report_id = str(uuid.uuid4())
+    if g.user_id:
+        save_history(g.user_id, {
+            'id': report_id,
+            'url': url,
+            'title': result.get('title', youtube_title),
+            'style': params['style'],
+            'content': result.get('content', ''),
+            'html': result.get('html', ''),
+            'transcript': raw_transcript,
+            'transcript_source': transcript_source,
+            'usage': result.get('usage'),
+            'elapsed_time': elapsed_time
+        })
+
+    return jsonify({
+        **result,
+        "id": report_id,
+        "prompt": used_prompt,
+        "elapsed_time": elapsed_time,
+        "youtube_title": youtube_title,
+        "transcript": raw_transcript,
+        "transcript_source": transcript_source,
+        "comment_summary_included": bool(comments and comment_result),
+        "usage": get_usage_for_response()
+    })
+
+
 @blog_bp.route('/generate', methods=['POST'])
 @require_auth
 @require_usage
@@ -571,7 +736,6 @@ def generate():
         if not video_id:
             return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
 
-        # YouTube 원본 제목 가져오기
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
         transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
@@ -582,75 +746,43 @@ def generate():
         main_content = f"[영상 자막]\n{transcript_text}"
         truncated_content = content_service.truncate_text(main_content, max_tokens)
 
+        # 짧은 콘텐츠 바이패스
+        bypass_resp = _handle_short_content_bypass(
+            transcript_text, params['style'], youtube_title,
+            raw_transcript, transcript_source, start_time
+        )
+        if bypass_resp:
+            return bypass_resp
+
+        # 캐시 체크
+        from services.cache_service import AICacheService
+        force = (request.get_json(silent=True) or {}).get('force', False)
+        modifiers = params['modifiers'] or {}
+        cache_key = AICacheService.make_key(
+            video_id, params['style'], params['model'],
+            modifiers.get('length', 'medium'),
+            modifiers.get('writing_style', 'conversational')
+        )
+        cache_resp = _handle_cache_hit(
+            cache_key, force, youtube_title,
+            raw_transcript, transcript_source, start_time
+        )
+        if cache_resp:
+            return cache_resp
+
+        # AI 호출 (auto/GLM/병렬 분기)
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
-        model = params['model']
-        is_glm = model.startswith('zhipuai/')
+        result, used_prompt, comment_result = _call_ai_with_comments(
+            truncated_content, params['model'], style_prompt, params,
+            comments, transcript_text, max_tokens
+        )
 
-        if comments:
-            app = current_app._get_current_object()
-
-            if is_glm:
-                # GLM 모델: 순차 실행 (글로벌 락 충돌 방지)
-                result, used_prompt = ai_service.create_content(
-                    truncated_content, model, style_prompt,
-                    return_prompt=True, modifiers=params['modifiers'],
-                    style_id=params['style']
-                )
-                comment_result = _generate_comment_summary(app, comments, model)
-            else:
-                # 병렬 실행
-                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                    main_future = executor.submit(
-                        _generate_main_content, app, truncated_content,
-                        model, style_prompt, params['modifiers'],
-                        style_id=params['style']
-                    )
-                    comment_future = executor.submit(
-                        _generate_comment_summary, app, comments, model
-                    )
-
-                    result, used_prompt = main_future.result()
-                    comment_result = comment_future.result()
-
-            result, used_prompt = _combine_results(result, used_prompt, comment_result)
-        else:
-            # 댓글 없음: 기존과 동일하게 단일 AI 호출
-            comment_result = None
-            result, used_prompt = ai_service.create_content(
-                truncated_content, model, style_prompt,
-                return_prompt=True, modifiers=params['modifiers'],
-                style_id=params['style']
-            )
-
-        elapsed_time = round(time.time() - start_time, 2)
-
-        # 히스토리 저장 (클라우드)
-        report_id = str(uuid.uuid4())
-        if g.user_id:
-            save_history(g.user_id, {
-                'id': report_id,
-                'url': url,
-                'title': result.get('title', youtube_title),
-                'style': params['style'],
-                'content': result.get('content', ''),
-                'html': result.get('html', ''),
-                'transcript': raw_transcript,
-                'transcript_source': transcript_source,
-                'usage': result.get('usage'),
-                'elapsed_time': elapsed_time
-            })
-
-        return jsonify({
-            **result,
-            "id": report_id,
-            "prompt": used_prompt,
-            "elapsed_time": elapsed_time,
-            "youtube_title": youtube_title,
-            "transcript": raw_transcript,
-            "transcript_source": transcript_source,
-            "comment_summary_included": bool(comments and comment_result),
-            "usage": get_usage_for_response()
-        })
+        # 캐시 저장 + 히스토리 + 응답
+        return _save_and_respond(
+            result, used_prompt, comment_result, cache_key,
+            video_id, params, url, youtube_title,
+            raw_transcript, transcript_source, comments, start_time
+        )
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
@@ -986,4 +1118,147 @@ def generate_mindmap():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Mindmap generation failed: {e}")
+        return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/cache/stats', methods=['GET'])
+@require_auth
+def api_cache_stats():
+    """AI 결과 캐시 통계를 반환합니다."""
+    stats = current_app.ai_cache.get_stats()
+    return jsonify(stats)
+
+
+@blog_bp.route('/api/cache/ai', methods=['DELETE'])
+@require_auth
+def api_clear_ai_cache():
+    """AI 결과 캐시를 삭제합니다. videoId가 있으면 해당 영상만."""
+    data = request.get_json(silent=True) or {}
+    video_id = data.get('videoId')
+    deleted = current_app.ai_cache.clear(video_id)
+    return jsonify({'success': True, 'deleted': deleted})
+
+
+@blog_bp.route('/generate-stream', methods=['POST'])
+@require_auth
+def generate_stream():
+    """SSE 스트리밍으로 콘텐츠를 생성합니다.
+    @require_usage 데코레이터 사용 불가 (generator 응답) → 수동 사용량 관리.
+    GLM/auto 모델은 스트리밍 미지원 → 비스트리밍 /generate 사용 권장.
+    """
+    from services.usage.usage_service import UsageService
+    from services.supabase_service import is_supabase_enabled
+    import markdown as md_lib
+
+    try:
+        params = _get_request_data(request)
+        url = params['url']
+
+        if not url:
+            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+        if not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+
+        video_id = content_service.get_video_id(url)
+        if not video_id:
+            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+
+        # 사용량 체크 (수동)
+        user_id = getattr(g, 'user_id', None)
+        if is_supabase_enabled() and user_id:
+            can_use, usage = UsageService.check_can_use(user_id)
+            if not can_use:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다.',
+                    'code': 'USAGE_LIMIT_EXCEEDED',
+                    'usage': usage
+                }), 429
+
+        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        if error:
+            return jsonify({'error': error}), 400
+
+        max_tokens = get_model_max_tokens(params['model'])
+        main_content = f"[영상 자막]\n{transcript_text}"
+        if comments:
+            main_content = _build_combined_content(transcript_text, comments)
+        truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+        style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+        model = params['model']
+
+        app = current_app._get_current_object()
+
+        def generate_sse():
+            with app.app_context():
+                try:
+                    # meta 이벤트
+                    meta = json.dumps({
+                        'type': 'meta',
+                        'youtube_title': youtube_title,
+                        'transcript_source': transcript_source
+                    }, ensure_ascii=False)
+                    yield f"data: {meta}\n\n"
+
+                    # 토큰 스트리밍
+                    full_content = ''
+                    for token in ai_service.create_content_stream(
+                        truncated_content, model, style_prompt,
+                        modifiers=params['modifiers'], style_id=params['style']
+                    ):
+                        if token is None:
+                            break
+                        full_content += token
+                        token_event = json.dumps({
+                            'type': 'token',
+                            'content': token
+                        }, ensure_ascii=False)
+                        yield f"data: {token_event}\n\n"
+
+                    # 완료: 제목/본문 분리 + HTML 변환
+                    title = youtube_title
+                    body = full_content
+                    lines = full_content.split('\n')
+                    if lines and lines[0].startswith('#'):
+                        title = lines[0].lstrip('#').strip()
+                        body = '\n'.join(lines[1:]).strip()
+
+                    try:
+                        html = md_lib.markdown(body, extensions=['tables', 'fenced_code', 'nl2br'])
+                    except Exception:
+                        html = f"<pre>{body}</pre>"
+
+                    # 사용량 차감 (성공 시)
+                    if is_supabase_enabled() and user_id:
+                        UsageService.decrement(user_id)
+
+                    done_event = json.dumps({
+                        'type': 'done',
+                        'title': title,
+                        'content': body,
+                        'html': html,
+                        'youtube_title': youtube_title,
+                        'transcript_source': transcript_source,
+                    }, ensure_ascii=False)
+                    yield f"data: {done_event}\n\n"
+
+                except Exception as e:
+                    error_event = json.dumps({
+                        'type': 'error',
+                        'message': str(e)
+                    }, ensure_ascii=False)
+                    yield f"data: {error_event}\n\n"
+
+        return Response(
+            stream_with_context(generate_sse()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+            }
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Generate stream setup failed: {e}")
         return _handle_error_response(str(e))

@@ -3,13 +3,22 @@
 blog_routes.py의 중복 코드 제거
 """
 from functools import wraps
-from flask import g, jsonify
+from flask import g, jsonify, make_response
 
 from services.supabase_service import is_supabase_enabled
 from services.usage.usage_service import UsageService, ADMIN_USAGE
 from services.logging_config import ServiceLogger
 
 logger = ServiceLogger('UsageDecorator')
+
+
+def _is_success_response(result) -> bool:
+    """Return True when route output maps to HTTP 2xx/3xx."""
+    try:
+        response = make_response(result)
+        return 200 <= response.status_code < 400
+    except Exception:
+        return False
 
 
 def check_usage(f):
@@ -106,10 +115,14 @@ def require_usage(f):
         result = f(*args, **kwargs)
 
         # 성공 시 사용량 차감 (관리자 제외)
-        if not g.is_admin:
+        if g.is_admin:
+            g.updated_usage = ADMIN_USAGE
+        elif getattr(g, 'skip_usage_decrement', False):
+            g.updated_usage = usage  # 바이패스/캐시 히트 시 차감 안 함
+        elif _is_success_response(result):
             g.updated_usage = UsageService.decrement(user_id)
         else:
-            g.updated_usage = ADMIN_USAGE
+            g.updated_usage = usage
 
         return result
     return decorated

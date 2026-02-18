@@ -372,6 +372,64 @@ export class ReportManager {
         return pendingId;
     }
 
+    /**
+     * 스트리밍용 카드 생성 (실시간 텍스트 영역 포함)
+     */
+    createStreamingCard(url, style) {
+        const { reportStream } = this.elements;
+        this._setEmptyStateVisibility(false);
+
+        const pendingId = ReportFormatter.generatePendingId();
+        const styleLabel = this.styleManager.getStyleLabel(style);
+        const shortUrl = ReportFormatter.formatShortUrl(url);
+        const timeStr = ReportFormatter.getCurrentTimeStr();
+
+        const card = this._createCardElement(
+            'report-card bg-surface-dark border border-border-dark/50 relative rounded-xl overflow-hidden',
+            this.htmlBuilder.buildStreamingCardHtml(styleLabel, timeStr, url, shortUrl)
+        );
+        card.dataset.pendingId = pendingId;
+
+        reportStream.insertBefore(card, reportStream.firstChild);
+        return pendingId;
+    }
+
+    /**
+     * 스트리밍 카드에 meta 정보 업데이트
+     */
+    updateStreamingMeta(pendingId, meta) {
+        const card = document.querySelector(`[data-pending-id="${pendingId}"]`);
+        if (!card) return;
+        const metaEl = card.querySelector('.stream-meta');
+        if (metaEl && meta.youtube_title) {
+            metaEl.textContent = meta.youtube_title;
+        }
+    }
+
+    /**
+     * 스트리밍 카드에 토큰 추가
+     */
+    appendToStreamingCard(pendingId, token) {
+        const card = document.querySelector(`[data-pending-id="${pendingId}"]`);
+        if (!card) return;
+        const contentEl = card.querySelector('.stream-content');
+        if (contentEl) {
+            contentEl.textContent += token;
+            // 자동 스크롤
+            contentEl.scrollTop = contentEl.scrollHeight;
+        }
+    }
+
+    /**
+     * 스트리밍 카드를 완성 카드로 교체
+     */
+    finalizeStreamingCard(pendingId, data) {
+        const card = document.querySelector(`[data-pending-id="${pendingId}"]`);
+        if (!card) return;
+        card.remove();
+        this.displayReportCard(data);
+    }
+
     updatePendingCard(pendingId, data, isError = false) {
         const card = document.querySelector(`[data-pending-id="${pendingId}"]`);
         if (!card) return;

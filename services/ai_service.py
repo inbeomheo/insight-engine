@@ -72,6 +72,37 @@ def _build_prompt(content, style_prompt, modifiers):
     return prompt
 
 
+def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False):
+    """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
+    from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS
+
+    kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if stream:
+        kwargs["stream"] = True
+
+    kwargs["temperature"] = STYLE_TEMPERATURE.get(style_id, 0.7)
+
+    length = (modifiers or {}).get('length', 'medium')
+    kwargs["max_tokens"] = LENGTH_MAX_TOKENS.get(length, 4000)
+
+    if model.startswith("gemini/") and "lite" not in model.lower():
+        kwargs["reasoning_effort"] = "minimal"
+
+    # GLM → OpenAI 호환 API 변환
+    if model.startswith("zhipuai/"):
+        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
+        if not zhipuai_key:
+            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
+        kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
+        kwargs["api_base"] = ZHIPUAI_API_BASE
+        kwargs["api_key"] = zhipuai_key
+
+    return kwargs
+
+
 def _extract_title_and_content(markdown_content):
     """마크다운에서 제목과 본문을 분리합니다."""
     title = "AI 생성 결과"
@@ -153,35 +184,8 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
     """
     try:
         prompt = _build_prompt(content, style_prompt, modifiers)
-
-        # LiteLLM이 환경변수에서 자동으로 API 키 로드
-        completion_kwargs = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}]
-        }
-
-        # 스타일별 temperature 적용
-        from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS
-        completion_kwargs["temperature"] = STYLE_TEMPERATURE.get(style_id, 0.7)
-
-        # 길이 모디파이어 기반 max_tokens 제한
-        length = (modifiers or {}).get('length', 'medium')
-        completion_kwargs["max_tokens"] = LENGTH_MAX_TOKENS.get(length, 4000)
-
-        # Gemini 모델 (Flash Lite 제외) - reasoning_effort 사용
-        if model.startswith("gemini/") and "lite" not in model.lower():
-            completion_kwargs["reasoning_effort"] = "minimal"
-
-        # Zhipu AI (GLM) 모델은 OpenAI 호환 API 사용
+        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers)
         is_glm = model.startswith("zhipuai/")
-        if is_glm:
-            zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
-            if not zhipuai_key:
-                raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
-            actual_model = model.replace("zhipuai/", "")  # zhipuai/ 접두사 제거
-            completion_kwargs["model"] = f"openai/{actual_model}"
-            completion_kwargs["api_base"] = ZHIPUAI_API_BASE
-            completion_kwargs["api_key"] = zhipuai_key
 
         # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
         if is_glm:
@@ -248,7 +252,106 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
-def create_full_blog_post(content, model_name='gpt-4o', style_prompt=None, return_prompt=False):
+def create_content_stream(content, model, style_prompt=None, modifiers=None, style_id=None):
+    """
+    LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
+    각 토큰을 yield하고, 마지막에 None을 yield합니다.
+    GLM 모델은 스트리밍 미지원 → 일반 호출 후 전체 텍스트 한 번에 yield.
+
+    Yields:
+        str: 토큰 텍스트 또는 None(종료)
+    """
+    prompt = _build_prompt(content, style_prompt, modifiers)
+    is_glm = model.startswith("zhipuai/")
+
+    # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield
+    if is_glm:
+        result = create_content(content, model, style_prompt, modifiers=modifiers, style_id=style_id)
+        full_text = f"# {result.get('title', '')}\n\n{result.get('content', '')}"
+        yield full_text
+        yield None
+        return
+
+    try:
+        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True)
+        response = completion(**completion_kwargs)
+
+        for chunk in response:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if delta and delta.content:
+                yield delta.content
+
+        yield None  # 스트림 종료 신호
+
+    except Exception as e:
+        current_app.logger.error(f"Streaming failed: model={model}, error={e}")
+        raise Exception(_convert_error_message(str(e), model)) from e
+
+
+def create_content_with_fallback(content, models, style_prompt=None,
+                                 return_prompt=False, modifiers=None, style_id=None):
+    """
+    모델 리스트를 순차 시도하여 첫 성공 결과를 반환합니다.
+    API 키가 없는 모델은 자동 스킵합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+        models: 시도할 모델 ID 리스트 (폴백 순서)
+        style_prompt: 스타일 프롬프트
+        return_prompt: 사용된 프롬프트 반환 여부
+        modifiers: 세부 옵션
+        style_id: 스타일 ID
+
+    Returns:
+        dict 또는 tuple: 생성 결과 (return_prompt=True면 (result, prompt) 튜플)
+        결과에 'used_model' 키가 추가됨
+    """
+    from config import PROVIDER_API_KEYS, MAX_FALLBACK_ATTEMPTS
+
+    # API 키가 있는 모델만 필터링
+    available_models = []
+    for model_id in models:
+        provider = model_id.split('/')[0] if '/' in model_id else ''
+        api_key = PROVIDER_API_KEYS.get(provider, '')
+        if api_key:
+            available_models.append(model_id)
+
+    if not available_models:
+        raise Exception("[AI 오류] 사용 가능한 모델이 없습니다. API 키를 확인해주세요.")
+
+    # 최대 시도 횟수 제한
+    attempts = min(len(available_models), MAX_FALLBACK_ATTEMPTS)
+    errors = []
+
+    for model_id in available_models[:attempts]:
+        try:
+            current_app.logger.info(f"폴백 체인 시도: {model_id}")
+            result = create_content(
+                content, model_id, style_prompt,
+                return_prompt=return_prompt, modifiers=modifiers,
+                style_id=style_id
+            )
+
+            # 결과에 사용된 모델 정보 추가
+            if return_prompt:
+                result_dict, prompt = result
+                result_dict['used_model'] = model_id
+                return result_dict, prompt
+            else:
+                result['used_model'] = model_id
+                return result
+
+        except Exception as e:
+            errors.append(f"{model_id}: {str(e)}")
+            current_app.logger.warning(f"폴백 체인 실패 ({model_id}): {e}")
+            continue
+
+    # 모든 모델 실패
+    error_detail = '; '.join(errors)
+    raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
+
+
+def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.

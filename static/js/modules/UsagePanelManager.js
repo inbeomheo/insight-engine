@@ -62,13 +62,22 @@ export class UsagePanelManager {
                 return;
             }
 
-            const used = data.used || 0;
-            const limit = data.limit || 20;
-            const percent = Math.min(100, (used / limit) * 100);
+            const rawLimit = Number(data.max_usage ?? data.limit ?? 20);
+            const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 20;
+
+            const rawUsed = Number(data.used);
+            const rawRemaining = Number(data.usage_count);
+
+            const used = Number.isFinite(rawUsed)
+                ? rawUsed
+                : (Number.isFinite(rawRemaining) ? Math.max(0, limit - rawRemaining) : 0);
+
+            const clampedUsed = Math.max(0, Math.min(used, limit));
+            const percent = Math.min(100, (clampedUsed / limit) * 100);
 
             // 텍스트 업데이트
             if (this.elements.barText) {
-                this.elements.barText.textContent = `${used}/${limit}`;
+                this.elements.barText.textContent = `${clampedUsed}/${limit}`;
             }
 
             // 프로그레스 바 업데이트

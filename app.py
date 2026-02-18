@@ -47,6 +47,14 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
+    # AI 결과 캐시 초기화
+    from services.cache_service import AICacheService
+    app.ai_cache = AICacheService(
+        db_path=config_module.AI_CACHE_DB,
+        ttl_days=config_module.AI_CACHE_TTL_DAYS,
+        max_size_mb=config_module.AI_CACHE_MAX_SIZE_MB,
+    )
+
     # 보안 헤더 설정
     @app.after_request
     def add_security_headers(response):

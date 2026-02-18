@@ -20,10 +20,10 @@ from prompts import (
     get_available_styles,
 )
 
-# YouTube API Key
+# === API Keys ===
+
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
-# AI Provider API Keys (환경변수에서 로드)
 PROVIDER_API_KEYS: Dict[str, str] = {
     'openai': os.getenv('OPENAI_API_KEY', ''),
     'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
@@ -32,18 +32,38 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
 }
 
-# Supadata API Key (YouTube 자막 백업 서비스)
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 
-# Token Limits (기본값, 모델별 설정이 없을 때 사용)
+# === Content Limits ===
+
 MAX_TRANSCRIPT_TOKENS: int = 100000
 MAX_COMMENTS_TOKENS: int = 5000
 MAX_CONTENT_TOKENS: int = 100000  # 기본 fallback 값
+HISTORY_RETENTION_DAYS: int = 7  # 히스토리 보존 기간 (일)
 
-# 히스토리 보존 기간 (일)
-HISTORY_RETENTION_DAYS: int = 7
+# === Short Content Bypass ===
 
-# 스타일별 temperature 설정 (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
+SHORT_CONTENT_THRESHOLD: int = 500  # 자 미만이면 AI 호출 바이패스
+SHORT_CONTENT_BYPASS_STYLES = {'summary'}  # 바이패스 대상 스타일
+
+# === AI Cache ===
+
+AI_CACHE_DB = os.path.join(os.path.dirname(__file__), 'cache', 'ai_results.db')
+AI_CACHE_TTL_DAYS = 30
+AI_CACHE_MAX_SIZE_MB = 512
+
+# === AI Model & Fallback ===
+
+FALLBACK_CHAIN = [
+    'zhipuai/GLM-4.5-Air',
+    'gemini/gemini-2.5-flash-lite-preview-09-2025',
+    'deepseek/deepseek-chat',
+    'gemini/gemini-3-flash-preview',
+]
+MAX_FALLBACK_ATTEMPTS = 3
+
+# === Style Tuning ===
+# 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
     'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5,
     'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7,
@@ -51,13 +71,13 @@ STYLE_TEMPERATURE: Dict[str, float] = {
     'comment_summary': 0.5,
 }
 
-# 길이 모디파이어 기반 max_tokens 제한 (한국어 2~3토큰/자 + 마크다운 서식 오버헤드 고려)
+# 길이별 max_tokens (한국어 2~3토큰/자 + 마크다운 오버헤드 ~40% 감안)
 LENGTH_MAX_TOKENS: Dict[str, int] = {
     'short': 4000, 'medium': 8000, 'long': 16000,
 }
 
-# 지원 AI 서비스 정의 (max_input_tokens: 컨텍스트 윈도우의 ~75% 할당)
-# Gemini가 기본 프로바이더 (첫 번째 위치)
+# === Providers ===
+
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
     'gemini': {
         'name': 'Google Gemini',
@@ -108,9 +128,7 @@ def get_provider_from_model(model_id: str) -> str:
     return 'gemini'  # 기본값 (Gemini)
 
 
-# ============================================================
-# 스타일 옵션 v3.1 (8개 스타일)
-# ============================================================
+# === Styles & Modifiers ===
 
 STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('blog_seo', '🔍 블로그+SEO'),
@@ -124,11 +142,6 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
 ]
 
 
-# ============================================================
-# 모디파이어 v3.0 (2개)
-# ============================================================
-
-# 모디파이어 텍스트 버전 (간단한 설명용)
 STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
     'length': {
         'short': '총 분량은 약 500~800자로 핵심만 간결하게 작성하세요.',
@@ -143,10 +156,6 @@ STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
     }
 }
 
-
-# ============================================================
-# 유틸리티 함수
-# ============================================================
 
 def get_model_max_tokens(model_id: str) -> int:
     """모델 ID로 최대 입력 토큰 수를 반환합니다."""
@@ -177,10 +186,6 @@ def get_modifier_options() -> Dict[str, Dict[str, Any]]:
     return MODIFIER_OPTIONS
 
 
-# ============================================================
-# Export
-# ============================================================
-
 __all__ = [
     # API Keys
     'YOUTUBE_API_KEY',
@@ -191,6 +196,19 @@ __all__ = [
     'MAX_TRANSCRIPT_TOKENS',
     'MAX_COMMENTS_TOKENS',
     'MAX_CONTENT_TOKENS',
+
+    # Short Content Bypass
+    'SHORT_CONTENT_THRESHOLD',
+    'SHORT_CONTENT_BYPASS_STYLES',
+
+    # AI Cache
+    'AI_CACHE_DB',
+    'AI_CACHE_TTL_DAYS',
+    'AI_CACHE_MAX_SIZE_MB',
+
+    # Fallback Chain
+    'FALLBACK_CHAIN',
+    'MAX_FALLBACK_ATTEMPTS',
 
     # Style/Length Tuning
     'STYLE_TEMPERATURE',

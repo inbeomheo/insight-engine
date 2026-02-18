@@ -123,6 +123,98 @@ export class ContentGenerator {
 
     // 백그라운드에서 단일 URL 처리
     async processUrlInBackground(url, provider, model, style) {
+        // 스트리밍 지원 여부 판단: GLM/auto는 비스트리밍
+        const useStream = !model.startsWith('zhipuai/') && model !== 'auto';
+        if (useStream) {
+            return this.processUrlWithStream(url, provider, model, style);
+        }
+        return this.processUrlNonStream(url, provider, model, style);
+    }
+
+    // SSE 스트리밍으로 단일 URL 처리
+    async processUrlWithStream(url, provider, model, style) {
+        const pendingId = this.reportManager.createStreamingCard(url, style);
+        this.ui.incrementPending();
+
+        try {
+            const modifiers = this.styleManager.getModifiers();
+            const customPrompt = this.styleManager.getCustomPrompt();
+
+            const response = await fetch('/generate-stream', {
+                method: 'POST',
+                headers: this._getAuthHeaders(),
+                body: JSON.stringify({ url, model, style, modifiers, customPrompt })
+            });
+
+            if (!response.ok) {
+                const data = await this._safeParseJson(response);
+                const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
+                                 response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
+                                 data.error || '분석 중 오류가 발생했습니다.';
+                this.reportManager.updatePendingCard(pendingId, { url, error: errorMsg }, true);
+                if (response.status === 401 || response.status === 429) {
+                    this.onUsageUpdate?.();
+                    this.eventBus?.emit('usage:updated');
+                }
+                return;
+            }
+
+            // SSE 스트림 읽기
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // 미완성 라인 보존
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const event = JSON.parse(line.slice(6));
+
+                        if (event.type === 'meta') {
+                            this.reportManager.updateStreamingMeta(pendingId, event);
+                        } else if (event.type === 'token') {
+                            this.reportManager.appendToStreamingCard(pendingId, event.content);
+                        } else if (event.type === 'done') {
+                            this.originalContent = event.content;
+                            this.reportManager.finalizeStreamingCard(pendingId, {
+                                url,
+                                title: event.youtube_title || event.title || 'YouTube 영상 분석',
+                                style,
+                                html: event.html,
+                                content: event.content,
+                                transcript_source: event.transcript_source,
+                            });
+                            this.onUsageUpdate?.();
+                            this.eventBus?.emit('usage:updated');
+                        } else if (event.type === 'error') {
+                            this.reportManager.updatePendingCard(pendingId, {
+                                url, error: event.message
+                            }, true);
+                        }
+                    } catch (e) {
+                        // JSON 파싱 실패 무시
+                    }
+                }
+            }
+        } catch (error) {
+            this.reportManager.updatePendingCard(pendingId, {
+                url,
+                error: this.ui.getKoreanErrorMessage(error)
+            }, true);
+        } finally {
+            this.ui.decrementPending();
+        }
+    }
+
+    // 비스트리밍 방식으로 단일 URL 처리 (기존 로직)
+    async processUrlNonStream(url, provider, model, style) {
         // 1. 처리 중 카드 먼저 표시
         const pendingId = this.reportManager.createPendingCard(url, style);
         this.ui.incrementPending();
@@ -153,6 +245,11 @@ export class ContentGenerator {
                 this.originalContent = data.content;
                 this.lastPrompt = data.prompt || '';
 
+                // 캐시 히트 알림
+                if (data.cached) {
+                    this.ui.showAlert(data.duplicate_message || '캐시된 결과를 불러왔습니다.', 'info');
+                }
+
                 // 성공 - 처리 중 카드를 결과 카드로 교체
                 this.reportManager.updatePendingCard(pendingId, {
                     url,
@@ -163,7 +260,8 @@ export class ContentGenerator {
                     prompt: data.prompt,
                     usage: data.usage ?? null,  // P3 버그 #10
                     elapsed_time: data.elapsed_time,
-                    transcript: data.transcript
+                    transcript: data.transcript,
+                    cached: data.cached || false
                 });
 
                 // 사용량 업데이트 콜백 호출 + EventBus 이벤트 발행
@@ -193,47 +291,6 @@ export class ContentGenerator {
             }, true);
         } finally {
             this.ui.decrementPending();
-        }
-    }
-
-    // ==================== Single URL Processing ====================
-
-    async processSingleUrl(url, provider, model, style) {
-        const modifiers = this.styleManager.getModifiers();
-        const customPrompt = this.styleManager.getCustomPrompt();
-
-        const response = await this._fetchWithRetry(() =>
-            fetch('/generate', {
-                method: 'POST',
-                headers: this._getAuthHeaders(),
-                body: JSON.stringify({ url, model, style, modifiers, customPrompt })
-            })
-        );
-
-        const data = await this._safeParseJson(response);  // P2 버그 #5
-        if (data._parseError) throw new Error(data.error);
-
-        if (response.ok) {
-            this.originalContent = data.content;
-            this.lastPrompt = data.prompt || '';
-            this.reportManager.displayReportCard({
-                url,
-                title: data.youtube_title || data.title || 'YouTube 영상 분석',
-                style,
-                html: data.html,
-                content: data.content,
-                prompt: data.prompt,
-                usage: data.usage ?? null,  // P3 버그 #10
-                elapsed_time: data.elapsed_time
-            });
-            this.ui.showAlert('분석이 완료되었습니다!', 'success');
-            this.onUsageUpdate?.();
-            this.eventBus?.emit('usage:updated');
-        } else {
-            const errorMsg = response.status === 401 ? '로그인이 필요합니다.' :
-                             response.status === 429 ? data.error || '사용 횟수를 모두 소진했습니다.' :
-                             data.error || '분석 중 오류가 발생했습니다.';
-            throw new Error(errorMsg);
         }
     }
 

@@ -58,6 +58,40 @@ export class CardHtmlBuilder {
     }
 
     /**
+     * 스트리밍 카드 HTML 생성 (실시간 텍스트 표시)
+     */
+    buildStreamingCardHtml(styleLabel, timeStr, url, shortUrl) {
+        return `
+            <div class="card-header p-5 md:p-6 border-b" style="border-color: var(--border-dark);">
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <span class="font-medium text-indigo-600">${styleLabel}</span>
+                        <span>&middot;</span>
+                        <span>${timeStr}</span>
+                        <span>&middot;</span>
+                        <span class="inline-flex items-center gap-1 text-green-600">
+                            <span class="material-symbols-outlined text-xs animate-pulse">stream</span>
+                            스트리밍 중
+                        </span>
+                    </div>
+                    <div class="stream-meta text-sm font-medium text-primary/80"></div>
+                    <a class="inline-flex items-center gap-1.5 text-gray-400 text-xs hover:text-gray-600 transition-colors" href="${this.ui.sanitizeUrl(url)}" target="_blank" rel="noopener noreferrer">
+                        <span class="material-symbols-outlined text-sm">play_circle</span>
+                        <span class="truncate max-w-[200px]">${this.ui.escapeHtml(shortUrl)}</span>
+                    </a>
+                </div>
+            </div>
+            <div class="p-5 md:p-6">
+                <div class="stream-content text-sm text-primary/90 whitespace-pre-wrap max-h-96 overflow-y-auto" style="min-height: 100px;"></div>
+                <div class="flex items-center gap-2 mt-4 pt-3 border-t" style="border-color: var(--border-dark);">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <span class="text-xs text-gray-400">AI가 실시간으로 작성 중입니다</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * 에러 카드 HTML 생성 (간단 버전)
      */
     buildSimpleErrorCardHtml(url, shortUrl, error) {
@@ -182,6 +216,9 @@ export class CardHtmlBuilder {
         }
         if (data.comment_summary_included === false) {
             metaParts.push('댓글 미포함');
+        }
+        if (data.cached) {
+            metaParts.push('캐시');
         }
         const metaText = metaParts.join(' · ');
 

@@ -359,7 +359,7 @@ class ContentAnalysis {
         aiAnalyzeBtn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span><span class="hidden sm:inline">세팅중...</span>';
 
         try {
-            const model = this.providerManager.getSelectedModel() || 'gpt-4o';
+            const model = this.providerManager.getSelectedModel() || 'gemini/gemini-3-flash-preview';
             const response = await fetch('/api/recommend-style', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -441,7 +441,7 @@ class ContentAnalysis {
         generateBtn.innerHTML = '<span class="material-symbols-outlined text-base animate-spin">progress_activity</span><span class="hidden sm:inline">생성중...</span>';
 
         try {
-            const model = this.providerManager.getSelectedModel() || 'gpt-4o';
+            const model = this.providerManager.getSelectedModel() || 'gemini/gemini-3-flash-preview';
 
             const response = await fetch('/api/generate-style', {
                 method: 'POST',
