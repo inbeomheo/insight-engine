@@ -1,0 +1,84 @@
+'use client';
+
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Button } from '@/components/ui/button';
+import { Sparkles, Check } from 'lucide-react';
+import { useUIStore } from '@/stores/uiStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { setOnboardingDone } from '@/lib/storage';
+
+export default function OnboardingModal() {
+  const { onboardingOpen, setOnboardingOpen } = useUIStore();
+  const { providers, selectedProvider, setSelectedProvider, setSelectedModel } =
+    useSettingsStore();
+
+  const providerIds = Object.keys(providers);
+
+  function handleStart() {
+    setOnboardingDone();
+    setOnboardingOpen(false);
+  }
+
+  function selectProvider(id: string) {
+    setSelectedProvider(id);
+    const first = providers[id]?.models[0];
+    if (first) setSelectedModel(first.id);
+  }
+
+  return (
+    <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
+      <DialogContent className="max-w-sm p-8">
+        <VisuallyHidden>
+          <DialogTitle>환영합니다</DialogTitle>
+          <DialogDescription>AI 서비스를 선택하고 시작하세요</DialogDescription>
+        </VisuallyHidden>
+        <div className="text-center mb-8">
+          <div className="w-18 h-18 mx-auto mb-5 gradient-primary rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50" style={{width: '72px', height: '72px'}}>
+            <Sparkles className="h-8 w-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold mb-2 text-foreground">환영합니다!</h2>
+          <p className="text-sm text-muted-foreground/70 leading-relaxed">
+            YouTube 영상을 AI로 분석하여<br />
+            다양한 형식의 콘텐츠를 생성합니다
+          </p>
+        </div>
+
+        {providerIds.length > 0 ? (
+          <div className="space-y-2 mb-4">
+            {providerIds.map((id) => (
+              <button
+                key={id}
+                onClick={() => selectProvider(id)}
+                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                  selectedProvider === id
+                    ? 'border-primary bg-indigo-50/50 shadow-sm'
+                    : 'border-border/50 hover:border-primary/30 hover:bg-muted/30'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{providers[id].name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {providers[id].models.length}개 모델
+                  </div>
+                </div>
+                {selectedProvider === id && (
+                  <Check className="h-4 w-4 text-primary" />
+                )}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground text-center mb-4">
+            Flask 서버가 실행 중인지 확인하세요.
+          </p>
+        )}
+
+        <Button className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
+          <Check className="h-4 w-4 mr-2" />
+          시작하기
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}

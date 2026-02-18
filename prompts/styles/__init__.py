@@ -1,6 +1,7 @@
 """
-스타일 패키지 v3.1
-8개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular
+스타일 패키지 v3.2
+11개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular,
+             sns_post, newsletter, show_notes
 + 댓글 요약 전용 프롬프트 (UI 비노출)
 """
 
@@ -12,7 +13,11 @@ from .app_ideas import APP_IDEAS_PROMPT
 from .yozm_it import YOZM_IT_PROMPT
 from .brunch_essay import BRUNCH_ESSAY_PROMPT
 from .naver_popular import NAVER_POPULAR_PROMPT
+from .sns_post import SNS_POST_PROMPT
+from .newsletter import NEWSLETTER_PROMPT
+from .show_notes import SHOW_NOTES_PROMPT
 from .comment_summary import COMMENT_SUMMARY_PROMPT
+from .mindmap import MINDMAP_PROMPT
 
 # 스타일 프롬프트 매핑
 STYLE_PROMPTS = {
@@ -24,6 +29,11 @@ STYLE_PROMPTS = {
     'yozm_it': YOZM_IT_PROMPT,
     'brunch_essay': BRUNCH_ESSAY_PROMPT,
     'naver_popular': NAVER_POPULAR_PROMPT,
+    'sns_post': SNS_POST_PROMPT,
+    'newsletter': NEWSLETTER_PROMPT,
+    'show_notes': SHOW_NOTES_PROMPT,
+    # 내부 전용 (UI 비노출)
+    'mindmap': MINDMAP_PROMPT,
 }
 
 
@@ -51,5 +61,9 @@ __all__ = [
     'YOZM_IT_PROMPT',
     'BRUNCH_ESSAY_PROMPT',
     'NAVER_POPULAR_PROMPT',
+    'SNS_POST_PROMPT',
+    'NEWSLETTER_PROMPT',
+    'SHOW_NOTES_PROMPT',
     'COMMENT_SUMMARY_PROMPT',
+    'MINDMAP_PROMPT',
 ]

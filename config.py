@@ -56,18 +56,16 @@ AI_CACHE_MAX_SIZE_MB = 512
 
 FALLBACK_CHAIN = [
     'zhipuai/GLM-4.5-Air',
-    'gemini/gemini-2.5-flash-lite-preview-09-2025',
-    'deepseek/deepseek-chat',
-    'gemini/gemini-3-flash-preview',
+    'zhipuai/GLM-4.7',
 ]
 MAX_FALLBACK_ATTEMPTS = 3
 
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
-    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5,
-    'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7,
-    'brunch_essay': 0.85, 'naver_popular': 0.85,
+    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5, 'show_notes': 0.5,
+    'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7,
+    'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.5,
 }
 
@@ -79,20 +77,6 @@ LENGTH_MAX_TOKENS: Dict[str, int] = {
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'gemini': {
-        'name': 'Google Gemini',
-        'models': [
-            {'id': 'gemini/gemini-3-flash-preview', 'name': 'Gemini 3.0 Flash', 'max_input_tokens': 750000, 'price_input': 0.50, 'price_output': 3.00},
-            {'id': 'gemini/gemini-2.5-flash-lite-preview-09-2025', 'name': 'Gemini 2.5 Flash Lite', 'max_input_tokens': 750000, 'price_input': 0.10, 'price_output': 0.40},
-        ]
-    },
-    'deepseek': {
-        'name': 'DeepSeek',
-        'models': [
-            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek-V3 (채팅)', 'max_input_tokens': 96000, 'price_input': 0.27, 'price_output': 1.10},
-            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek-R1 (추론)', 'max_input_tokens': 96000, 'price_input': 0.55, 'price_output': 2.19}
-        ]
-    },
     'zhipuai': {
         'name': 'Zhipu AI (GLM)',
         'api_base': 'https://open.bigmodel.cn/api/paas/v4/',
@@ -139,6 +123,9 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('yozm_it', '💻 요즘IT'),
     ('brunch_essay', '✍️ 브런치'),
     ('naver_popular', '💚 네이버'),
+    ('sns_post', '📱 SNS 포스트'),
+    ('newsletter', '📧 뉴스레터'),
+    ('show_notes', '🎙️ 쇼노트'),
 ]
 
 

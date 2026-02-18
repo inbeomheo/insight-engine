@@ -19,24 +19,18 @@ def create_app(test_config=None):
     load_dotenv()
 
     base_dir = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-    templates_dir = os.path.join(base_dir, 'templates')
-    static_dir = os.path.join(base_dir, 'static')
 
     app = Flask(
         __name__,
         instance_relative_config=True,
-        template_folder=templates_dir,
-        static_folder=static_dir,
+        static_folder=None,  # 프론트엔드는 Next.js에서 제공
     )
 
     # 프록시 환경(Railway, Render 등)에서 올바른 host/scheme 인식
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     app.config.from_object('config')
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-    app.jinja_env.auto_reload = True
-    app.jinja_env.cache = None
 
     import config as config_module
     app.config['STYLE_PROMPTS'] = config_module.STYLE_PROMPTS

@@ -7,12 +7,12 @@ import unittest
 
 class TestStylePrompts(unittest.TestCase):
     def test_style_options_include_core_styles(self):
-        """8개 스타일이 STYLE_OPTIONS에 포함되어 있는지 확인"""
+        """11개 스타일이 STYLE_OPTIONS에 포함되어 있는지 확인"""
         import config
 
         style_keys = [k for k, _ in config.STYLE_OPTIONS]
 
-        # 8개 스타일 확인
+        # 11개 스타일 확인
         self.assertIn('blog_seo', style_keys)
         self.assertIn('summary', style_keys)
         self.assertIn('tutorial', style_keys)
@@ -21,8 +21,11 @@ class TestStylePrompts(unittest.TestCase):
         self.assertIn('yozm_it', style_keys)
         self.assertIn('brunch_essay', style_keys)
         self.assertIn('naver_popular', style_keys)
+        self.assertIn('sns_post', style_keys)
+        self.assertIn('newsletter', style_keys)
+        self.assertIn('show_notes', style_keys)
 
-        self.assertEqual(len(style_keys), 8)
+        self.assertEqual(len(style_keys), 11)
 
     def test_style_prompts_contain_all_styles(self):
         """STYLE_PROMPTS에 모든 스타일이 포함되어 있는지 확인"""

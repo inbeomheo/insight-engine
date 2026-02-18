@@ -17,9 +17,9 @@ ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
 # GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
 _glm_lock = threading.Lock()
 
-# GLM-4.7 재시도 설정
-GLM_RETRY_COUNT = 3
-GLM_RETRY_DELAY = 15  # 초
+# GLM 재시도 설정
+GLM_RETRY_COUNT = 5
+GLM_RETRY_DELAY = 10  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
 
@@ -79,6 +79,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
+        "timeout": 180,  # 3분 타임아웃 (GLM 느린 응답 대비)
     }
     if stream:
         kwargs["stream"] = True
@@ -349,6 +350,54 @@ def create_content_with_fallback(content, models, style_prompt=None,
     # 모든 모델 실패
     error_detail = '; '.join(errors)
     raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
+
+
+def extract_seo_metadata(content):
+    """blog_seo 스타일 콘텐츠에서 SEO 메타데이터를 정규식으로 추출합니다.
+
+    Args:
+        content: 마크다운 본문
+
+    Returns:
+        dict 또는 None: {meta_description, keywords, slug, tags}
+    """
+    import re
+
+    if not content:
+        return None
+
+    seo = {}
+
+    # 메타 설명
+    meta_match = re.search(r'\*\*메타 설명\*\*\s*\|?\s*(.+?)(?:\s*\||\n)', content)
+    if meta_match:
+        seo['meta_description'] = meta_match.group(1).strip()
+
+    # 타겟 키워드
+    kw_match = re.search(r'\*\*타겟 키워드\*\*\s*\|?\s*(.+?)(?:\s*\||\n)', content)
+    if kw_match:
+        raw = kw_match.group(1).strip()
+        # "메인: X, 연관: Y, Z" 또는 "X, Y, Z" 형식 파싱
+        raw = re.sub(r'메인\s*[:：]\s*', '', raw)
+        raw = re.sub(r'연관\s*[:：]\s*', '', raw)
+        keywords = [k.strip().strip('[]') for k in raw.split(',') if k.strip()]
+        seo['keywords'] = keywords
+
+    # 추천 URL 슬러그
+    slug_match = re.search(r'\*\*추천 URL\*\*\s*\|?\s*(/?.+?)(?:\s*\||\n)', content)
+    if slug_match:
+        seo['slug'] = slug_match.group(1).strip().strip('/')
+
+    # 태그 (#태그 형식)
+    tag_match = re.search(r'(?:\*\*태그\*\*|#태그|태그\s*[:：])\s*(.+?)(?:\n|$)', content)
+    if tag_match:
+        raw_tags = tag_match.group(1).strip()
+        tags = re.findall(r'#([\w가-힣]+)', raw_tags)
+        if tags:
+            seo['tags'] = tags
+
+    # 최소 1개 필드 파싱 성공 시 반환
+    return seo if seo else None
 
 
 def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):

@@ -707,6 +707,205 @@ def get_top_comments(video_id: str) -> List[str]:
         return []
 
 
+# ==================== Playlist / Channel ====================
+
+# URL 패턴
+PLAYLIST_URL_PATTERNS = [
+    re.compile(r'[?&]list=(PL[\w-]+)'),
+    re.compile(r'playlist\?list=(PL[\w-]+)'),
+]
+
+CHANNEL_URL_PATTERNS = [
+    re.compile(r'youtube\.com/@([\w.-]+)'),
+    re.compile(r'youtube\.com/channel/(UC[\w-]+)'),
+    re.compile(r'youtube\.com/c/([\w.-]+)'),
+]
+
+
+def is_playlist_url(url: str) -> bool:
+    """URL이 YouTube 재생목록 URL인지 확인합니다."""
+    if not url:
+        return False
+    return any(p.search(url) for p in PLAYLIST_URL_PATTERNS)
+
+
+def is_channel_url(url: str) -> bool:
+    """URL이 YouTube 채널 URL인지 확인합니다."""
+    if not url:
+        return False
+    return any(p.search(url) for p in CHANNEL_URL_PATTERNS)
+
+
+def _get_playlist_id(url: str) -> Optional[str]:
+    """URL에서 재생목록 ID를 추출합니다."""
+    for pattern in PLAYLIST_URL_PATTERNS:
+        match = pattern.search(url)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _get_channel_identifier(url: str) -> Optional[Dict[str, str]]:
+    """URL에서 채널 식별자를 추출합니다.
+
+    Returns:
+        {'type': 'handle'|'id'|'custom', 'value': '...'} 또는 None
+    """
+    # @handle
+    match = re.search(r'youtube\.com/@([\w.-]+)', url)
+    if match:
+        return {'type': 'handle', 'value': match.group(1)}
+
+    # /channel/UCxxxx
+    match = re.search(r'youtube\.com/channel/(UC[\w-]+)', url)
+    if match:
+        return {'type': 'id', 'value': match.group(1)}
+
+    # /c/CustomName
+    match = re.search(r'youtube\.com/c/([\w.-]+)', url)
+    if match:
+        return {'type': 'custom', 'value': match.group(1)}
+
+    return None
+
+
+def get_playlist_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
+    """재생목록에서 영상 목록을 가져옵니다.
+
+    Args:
+        url: YouTube 재생목록 URL
+        max_results: 최대 결과 수 (기본 10, 최대 50)
+
+    Returns:
+        {'videos': [{'videoId': '...', 'title': '...', 'thumbnail': '...'}], 'total': N}
+    """
+    api_key = os.getenv('YOUTUBE_API_KEY', '')
+    if not api_key:
+        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
+
+    playlist_id = _get_playlist_id(url)
+    if not playlist_id:
+        return {'error': '유효한 재생목록 URL이 아닙니다.'}
+
+    max_results = min(max_results, 50)
+
+    try:
+        youtube = build('youtube', 'v3', developerKey=api_key)
+        response = youtube.playlistItems().list(
+            part='snippet',
+            playlistId=playlist_id,
+            maxResults=max_results
+        ).execute()
+
+        videos = []
+        for item in response.get('items', []):
+            snippet = item.get('snippet', {})
+            vid = snippet.get('resourceId', {}).get('videoId')
+            if vid:
+                videos.append({
+                    'videoId': vid,
+                    'title': snippet.get('title', ''),
+                    'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
+                })
+
+        total = response.get('pageInfo', {}).get('totalResults', len(videos))
+        return {'videos': videos, 'total': total}
+
+    except HttpError as e:
+        _log_warning(f"Playlist API error: {e}")
+        return {'error': f'재생목록 조회 실패: {e.resp.status}'}
+    except Exception as e:
+        _log_warning(f"Playlist fetch error: {e}")
+        return {'error': '재생목록 영상 목록을 가져올 수 없습니다.'}
+
+
+def get_channel_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
+    """채널에서 최신 영상 목록을 가져옵니다.
+
+    Args:
+        url: YouTube 채널 URL
+        max_results: 최대 결과 수 (기본 10, 최대 50)
+
+    Returns:
+        {'videos': [{'videoId': '...', 'title': '...', 'thumbnail': '...'}], 'total': N}
+    """
+    api_key = os.getenv('YOUTUBE_API_KEY', '')
+    if not api_key:
+        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
+
+    identifier = _get_channel_identifier(url)
+    if not identifier:
+        return {'error': '유효한 채널 URL이 아닙니다.'}
+
+    max_results = min(max_results, 50)
+
+    try:
+        youtube = build('youtube', 'v3', developerKey=api_key)
+
+        # 채널 ID 조회
+        channel_id = None
+        if identifier['type'] == 'id':
+            channel_id = identifier['value']
+        else:
+            # handle 또는 custom name으로 채널 검색
+            if identifier['type'] == 'handle':
+                search_query = f"@{identifier['value']}"
+            else:
+                search_query = identifier['value']
+
+            search_resp = youtube.search().list(
+                part='snippet',
+                q=search_query,
+                type='channel',
+                maxResults=1
+            ).execute()
+            items = search_resp.get('items', [])
+            if items:
+                channel_id = items[0]['snippet']['channelId']
+
+        if not channel_id:
+            return {'error': '채널을 찾을 수 없습니다.'}
+
+        # 채널의 uploads 재생목록 ID 조회
+        channel_resp = youtube.channels().list(
+            part='contentDetails',
+            id=channel_id
+        ).execute()
+        channel_items = channel_resp.get('items', [])
+        if not channel_items:
+            return {'error': '채널 정보를 가져올 수 없습니다.'}
+
+        uploads_id = channel_items[0]['contentDetails']['relatedPlaylists']['uploads']
+
+        # uploads 재생목록에서 영상 목록 조회
+        playlist_resp = youtube.playlistItems().list(
+            part='snippet',
+            playlistId=uploads_id,
+            maxResults=max_results
+        ).execute()
+
+        videos = []
+        for item in playlist_resp.get('items', []):
+            snippet = item.get('snippet', {})
+            vid = snippet.get('resourceId', {}).get('videoId')
+            if vid:
+                videos.append({
+                    'videoId': vid,
+                    'title': snippet.get('title', ''),
+                    'thumbnail': snippet.get('thumbnails', {}).get('medium', {}).get('url', '')
+                })
+
+        total = playlist_resp.get('pageInfo', {}).get('totalResults', len(videos))
+        return {'videos': videos, 'total': total}
+
+    except HttpError as e:
+        _log_warning(f"Channel API error: {e}")
+        return {'error': f'채널 조회 실패: {e.resp.status}'}
+    except Exception as e:
+        _log_warning(f"Channel fetch error: {e}")
+        return {'error': '채널 영상 목록을 가져올 수 없습니다.'}
+
+
 # ==================== Utilities ====================
 
 def truncate_text(text: str, max_tokens: int) -> str:

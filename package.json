@@ -9,6 +9,7 @@
     "build:css:legacy": "tailwindcss -i ./static/css/tailwind.css -o ./static/css/tailwind.output.css"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "autoprefixer": "^10.4.23",
     "cross-env": "^10.1.0",
     "cssnano": "^7.1.2",

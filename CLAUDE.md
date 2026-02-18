@@ -73,7 +73,7 @@ JSON 응답 {title, content, html, usage}
 
 | 레이어 | 파일 | 역할 |
 |-------|------|-----|
-| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성 API (`/generate`, `/generate-batch`, `/regenerate`, `/api/mindmap`) |
+| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성 API (`/generate`, `/generate-batch`, `/regenerate`, `/api/mindmap`, `/api/generate-multi`, `/api/playlist-videos`, `/api/export/docx`) |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자 API |
 | 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다중 프로바이더 통합, GLM 재시도/락 |
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 3단계 폴백 로직 |
@@ -133,7 +133,7 @@ EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
 
 **카드 메타 칩**: 토큰 수, 처리 시간, 글자수, 단어수, 댓글 요약 포함/미포함
 
-**더보기 메뉴 (⋯)**: 프롬프트 보기, 마인드맵, HTML 내보내기 (인라인 CSS 포함 독립 HTML), 다시 생성 (URL 재입력), 공유 (제목+미리보기+URL 클립보드 복사)
+**더보기 메뉴 (⋯)**: 프롬프트 보기, 마인드맵, HTML 내보내기 (인라인 CSS 포함 독립 HTML), DOCX 내보내기 (python-docx), PDF 인쇄 (브라우저 네이티브), 다시 생성 (URL 재입력), 공유 (제목+미리보기+URL 클립보드 복사)
 
 **필터 바** (`#card-filter-bar`): 검색 (300ms 디바운스, `<mark>` 하이라이트) + 스타일 드롭다운 필터 (AND 조건)
 
@@ -178,11 +178,23 @@ def generate_batch(): ...
 
 ### 8개 스타일 + 댓글 요약 (v3.1)
 
-UI에 표시되는 8개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`
+UI에 표시되는 11개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`
 
 내부 전용: `comment_summary` (병렬 댓글 요약용, `prompts/styles/comment_summary.py`)
 
 > **주의**: `prompts/__init__.py`의 `get_available_styles()`는 초기 5개만 반환. 실제 전체 스타일은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict 참조.
+
+### 추가 기능 (Feature Scout v1)
+
+**다중 출력 포맷**: DOCX (`POST /api/export/docx`, python-docx), PDF (프론트엔드 `window.print()`)
+
+**SEO 메타데이터**: `blog_seo` 스타일 응답에 `seo` 필드 자동 포함 (`ai_service.extract_seo_metadata()`)
+
+**채널/재생목록 처리**: `POST /api/playlist-videos` — 채널/재생목록 URL → 영상 목록 추출 (YOUTUBE_API_KEY 필수)
+
+**멀티포맷 리퍼포징**: `POST /api/generate-multi` — 1 URL × N 스타일 동시 생성 (사용량 1회 차감)
+
+**콘텐츠 품질 스코어**: `ContentScorer.js` — 가독성(A~F), 구조(0~100), SEO(0~100, blog_seo만)
 
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
@@ -222,9 +234,9 @@ UI에 표시되는 8개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `ap
 ### AI 생성 파라미터 튜닝 (`config.py`)
 
 **스타일별 temperature** (`STYLE_TEMPERATURE`):
-- 정밀형 0.5: `summary`, `tutorial`, `qna`, `comment_summary`
-- 균형형 0.7: `blog_seo`, `yozm_it`, `app_ideas`
-- 창의형 0.85: `brunch_essay`, `naver_popular`
+- 정밀형 0.5: `summary`, `tutorial`, `qna`, `show_notes`, `comment_summary`
+- 균형형 0.7: `blog_seo`, `yozm_it`, `app_ideas`, `newsletter`
+- 창의형 0.8~0.85: `sns_post`(0.8), `brunch_essay`(0.85), `naver_popular`(0.85)
 
 **길이별 max_tokens** (`LENGTH_MAX_TOKENS`, 한국어 2~3토큰/자 + 마크다운 오버헤드 ~40% 감안):
 - `short`: 4,000 (약 1,300~2,000자)

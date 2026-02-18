@@ -2,11 +2,13 @@
 블로그 콘텐츠 생성 API 라우트
 """
 import concurrent.futures
+import io
 import json
+import re as re_module
 import time
 from typing import Dict
 
-from flask import Blueprint, request, jsonify, current_app, render_template, g, Response, stream_with_context
+from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context, send_file
 
 from config import get_model_max_tokens
 from services import ai_service, content_service
@@ -21,7 +23,7 @@ import uuid
 blog_bp = Blueprint('blog', __name__)
 _CLIENT_TRACKER: Dict[str, float] = {}
 
-DEFAULT_MODEL = 'gemini/gemini-3-flash-preview'
+DEFAULT_MODEL = 'zhipuai/GLM-4.5-Air'
 DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -246,8 +248,8 @@ def health():
 
 @blog_bp.route('/')
 def home():
-    """메인 페이지를 렌더링합니다."""
-    return render_template('index.html')
+    """API 서버 상태를 반환합니다. 프론트엔드는 Next.js에서 제공."""
+    return jsonify({'status': 'ok', 'message': 'Insight Engine API Server'})
 
 
 @blog_bp.route('/api/heartbeat', methods=['POST'])
@@ -701,6 +703,11 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
             'elapsed_time': elapsed_time
         })
 
+    # SEO 메타데이터 추출 (blog_seo 스타일만)
+    seo = None
+    if params['style'] == 'blog_seo':
+        seo = ai_service.extract_seo_metadata(result.get('content', ''))
+
     return jsonify({
         **result,
         "id": report_id,
@@ -710,6 +717,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "transcript": raw_transcript,
         "transcript_source": transcript_source,
         "comment_summary_included": bool(comments and comment_result),
+        "seo": seo,
         "usage": get_usage_for_response()
     })
 
@@ -1070,6 +1078,141 @@ def generate_batch():
         return _handle_error_response(f'배치 처리 중 오류: {str(e)}')
 
 
+MAX_MERGED_URLS = 5
+
+
+@blog_bp.route('/api/generate-merged', methods=['POST'])
+@require_auth
+@require_usage
+def generate_merged():
+    """여러 YouTube URL의 자막을 합쳐 하나의 통합 콘텐츠를 생성합니다.
+    2~5개 URL 지원, AI 호출 1회, 사용량 1회 차감.
+    """
+    try:
+        start_time = time.time()
+        params = _get_request_data(request)
+        urls = params['urls']
+
+        if len(urls) < 2:
+            return jsonify({'error': '합쳐서 생성은 최소 2개 URL이 필요합니다.'}), 400
+        if len(urls) > MAX_MERGED_URLS:
+            return jsonify({'error': f'최대 {MAX_MERGED_URLS}개 URL까지 합칠 수 있습니다.'}), 400
+
+        # URL 유효성 검사
+        for url in urls:
+            if not content_service.is_youtube_url(url):
+                return jsonify({'error': f'유효하지 않은 YouTube URL: {url}'}), 400
+
+        # 병렬로 자막+댓글 추출
+        app = current_app._get_current_object()
+        video_data = []  # (url, video_id, title, transcript, comments, source)
+
+        def _fetch_one(url):
+            with app.app_context():
+                vid = content_service.get_video_id(url)
+                if not vid:
+                    return {'url': url, 'error': '유효하지 않은 YouTube URL'}
+                title = content_service.get_content_title(url) or 'YouTube 영상'
+                transcript_text, comments, error, _, source = _fetch_youtube_content(vid)
+                if error:
+                    return {'url': url, 'error': error, 'title': title}
+                return {
+                    'url': url, 'video_id': vid, 'title': title,
+                    'transcript': transcript_text, 'comments': comments,
+                    'transcript_source': source,
+                }
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(MAX_MERGED_URLS, len(urls))) as executor:
+            futures = {executor.submit(_fetch_one, u): u for u in urls}
+            for future in concurrent.futures.as_completed(futures):
+                video_data.append(future.result())
+
+        # URL 순서 복원
+        url_order = {u: i for i, u in enumerate(urls)}
+        video_data.sort(key=lambda d: url_order.get(d['url'], 99))
+
+        # 실패 URL 확인
+        successes = [d for d in video_data if 'transcript' in d]
+        if len(successes) < 2:
+            errors = [f"{d['title']}: {d['error']}" for d in video_data if 'error' in d]
+            return jsonify({
+                'error': f'자막 추출 성공이 2개 미만입니다. 실패: {"; ".join(errors)}'
+            }), 400
+
+        # 토큰 예산 분배 후 합성
+        max_tokens = get_model_max_tokens(params['model'])
+        prompt_overhead = 4000
+        available_tokens = max_tokens - prompt_overhead
+        per_url_tokens = available_tokens // len(successes)
+
+        merged_parts = []
+        all_comments = []
+        source_videos = []
+
+        for d in successes:
+            truncated = content_service.truncate_text(d['transcript'], per_url_tokens)
+            merged_parts.append(f"[영상 {len(merged_parts) + 1}: {d['title']}]\n{truncated}")
+            if d['comments']:
+                all_comments.extend(d['comments'][:10])
+            source_videos.append({
+                'url': d['url'],
+                'title': d['title'],
+                'transcript_source': d['transcript_source'],
+            })
+
+        merged_content = '\n\n'.join(merged_parts)
+        if all_comments:
+            comments_text = '\n'.join(all_comments[:30])
+            merged_content += f"\n\n[시청자 댓글 (종합)]\n{comments_text}"
+
+        # AI 호출 1회
+        style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+        result, used_prompt = ai_service.create_content(
+            merged_content, params['model'], style_prompt,
+            return_prompt=True, modifiers=params['modifiers'],
+            style_id=params['style']
+        )
+
+        elapsed_time = round(time.time() - start_time, 2)
+        report_id = str(uuid.uuid4())
+
+        # 히스토리 저장 (첫 번째 URL 기준)
+        if g.user_id:
+            save_history(g.user_id, {
+                'id': report_id,
+                'url': urls[0],
+                'title': result.get('title', '통합 분석'),
+                'style': params['style'],
+                'content': result.get('content', ''),
+                'html': result.get('html', ''),
+                'transcript': None,
+                'usage': result.get('usage'),
+                'elapsed_time': elapsed_time,
+            })
+
+        # SEO 메타데이터
+        seo = None
+        if params['style'] == 'blog_seo':
+            seo = ai_service.extract_seo_metadata(result.get('content', ''))
+
+        return jsonify({
+            **result,
+            'id': report_id,
+            'prompt': used_prompt,
+            'elapsed_time': elapsed_time,
+            'source_videos': source_videos,
+            'merged': True,
+            'seo': seo,
+            'usage': get_usage_for_response(),
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Generate merged failed: {e}")
+        return _handle_error_response(str(e))
+
+
 @blog_bp.route('/api/mindmap', methods=['POST'])
 @require_auth
 @require_usage
@@ -1119,6 +1262,328 @@ def generate_mindmap():
     except Exception as e:
         current_app.logger.error(f"Mindmap generation failed: {e}")
         return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/generate-multi', methods=['POST'])
+@require_auth
+@require_usage
+def generate_multi():
+    """하나의 URL을 여러 스타일로 동시에 생성합니다.
+    사용량: 멀티 생성 전체 = 1회 차감.
+    """
+    try:
+        start_time = time.time()
+        data = request.get_json(silent=True) or {}
+        url = data.get('url')
+        model = data.get('model', DEFAULT_MODEL)
+        styles = data.get('styles', [])
+
+        if not url:
+            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+        if not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+        if not styles or not isinstance(styles, list) or len(styles) < 1:
+            return jsonify({'error': '최소 1개 이상의 스타일을 선택해주세요.'}), 400
+        if len(styles) > 5:
+            return jsonify({'error': '최대 5개 스타일까지 선택할 수 있습니다.'}), 400
+
+        video_id = content_service.get_video_id(url)
+        if not video_id:
+            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+
+        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+
+        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        if error:
+            return jsonify({'error': error}), 400
+
+        max_tokens = get_model_max_tokens(model)
+        main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
+        truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+        # 유효 스타일 필터링
+        style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
+        valid_styles = [s for s in styles if s in style_prompts_dict]
+        if not valid_styles:
+            return jsonify({'error': '유효한 스타일이 없습니다.'}), 400
+
+        # 병렬 생성
+        app = current_app._get_current_object()
+        results = []
+
+        def _gen_for_style(style_id):
+            with app.app_context():
+                try:
+                    sp = style_prompts_dict.get(style_id, '')
+                    result = ai_service.create_content(
+                        truncated_content, model, sp,
+                        style_id=style_id
+                    )
+                    result['style'] = style_id
+                    return result
+                except Exception as e:
+                    return {'style': style_id, 'error': str(e)}
+
+        is_glm = model.startswith('zhipuai/')
+        if is_glm:
+            # GLM: 순차 실행
+            for style_id in valid_styles:
+                results.append(_gen_for_style(style_id))
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(valid_styles))) as executor:
+                futures = {executor.submit(_gen_for_style, s): s for s in valid_styles}
+                for future in concurrent.futures.as_completed(futures):
+                    results.append(future.result())
+
+        # 스타일 순서 정렬
+        style_order = {s: i for i, s in enumerate(valid_styles)}
+        results.sort(key=lambda r: style_order.get(r.get('style', ''), 99))
+
+        elapsed_time = round(time.time() - start_time, 2)
+
+        return jsonify({
+            'success': True,
+            'results': results,
+            'youtube_title': youtube_title,
+            'transcript_source': transcript_source,
+            'elapsed_time': elapsed_time,
+            'usage': get_usage_for_response()
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Generate multi failed: {e}")
+        return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/playlist-videos', methods=['POST'])
+@require_auth
+def playlist_videos():
+    """채널 또는 재생목록 URL에서 영상 목록을 추출합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        url = data.get('url', '')
+        max_results = min(int(data.get('maxResults', 10)), 50)
+
+        if not url:
+            return jsonify({'error': 'URL이 필요합니다.'}), 400
+
+        if content_service.is_playlist_url(url):
+            result = content_service.get_playlist_videos(url, max_results)
+        elif content_service.is_channel_url(url):
+            result = content_service.get_channel_videos(url, max_results)
+        else:
+            return jsonify({'error': '유효한 채널 또는 재생목록 URL이 아닙니다.'}), 400
+
+        if 'error' in result:
+            return jsonify(result), 400
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Playlist videos failed: {e}")
+        return jsonify({'error': '영상 목록을 가져올 수 없습니다.'}), 500
+
+
+@blog_bp.route('/api/export/docx', methods=['POST'])
+@require_auth
+def export_docx():
+    """마크다운 콘텐츠를 DOCX 파일로 변환하여 반환합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', 'AI 생성 결과')
+        content = data.get('content', '')
+
+        if not content:
+            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+
+        from docx import Document
+        from docx.shared import Pt, Inches
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        doc = Document()
+
+        # 기본 스타일 설정
+        style = doc.styles['Normal']
+        style.font.name = 'Malgun Gothic'
+        style.font.size = Pt(11)
+        style.paragraph_format.line_spacing = 1.5
+
+        # 제목
+        heading = doc.add_heading(title, level=1)
+        heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # 마크다운 → docx 변환
+        _markdown_to_docx(doc, content)
+
+        # BytesIO에 저장
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
+        filename = f'{safe_title}.docx'
+
+        return send_file(
+            buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except ImportError:
+        return jsonify({'error': 'python-docx 패키지가 설치되지 않았습니다.'}), 500
+    except Exception as e:
+        current_app.logger.error(f"DOCX export failed: {e}")
+        return jsonify({'error': 'DOCX 변환 중 오류가 발생했습니다.'}), 500
+
+
+def _markdown_to_docx(doc, markdown_text):
+    """마크다운 텍스트를 docx Document에 변환하여 추가합니다."""
+    from docx.shared import Pt
+    from docx.oxml.ns import qn
+
+    lines = markdown_text.split('\n')
+    i = 0
+    in_list = False
+    in_table = False
+    table_rows = []
+
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+
+        # 빈 줄
+        if not stripped:
+            if in_table and table_rows:
+                _add_table_to_docx(doc, table_rows)
+                table_rows = []
+                in_table = False
+            i += 1
+            continue
+
+        # 테이블 행 (| ... | 형식)
+        if stripped.startswith('|') and stripped.endswith('|'):
+            # 구분선 행 (|---|---|) 건너뛰기
+            if re_module.match(r'^\|[\s\-:]+\|$', stripped):
+                i += 1
+                continue
+            in_table = True
+            cells = [c.strip() for c in stripped.split('|')[1:-1]]
+            table_rows.append(cells)
+            i += 1
+            continue
+
+        # 테이블 종료
+        if in_table and table_rows:
+            _add_table_to_docx(doc, table_rows)
+            table_rows = []
+            in_table = False
+
+        # 헤딩
+        if stripped.startswith('###'):
+            text = stripped.lstrip('#').strip()
+            doc.add_heading(_strip_markdown_formatting(text), level=3)
+        elif stripped.startswith('##'):
+            text = stripped.lstrip('#').strip()
+            doc.add_heading(_strip_markdown_formatting(text), level=2)
+        elif stripped.startswith('#'):
+            text = stripped.lstrip('#').strip()
+            doc.add_heading(_strip_markdown_formatting(text), level=2)
+
+        # 수평선
+        elif stripped in ('---', '***', '___'):
+            p = doc.add_paragraph()
+            p_format = p.paragraph_format
+            p_format.space_before = Pt(6)
+            p_format.space_after = Pt(6)
+
+        # 인용문
+        elif stripped.startswith('>'):
+            text = stripped.lstrip('>').strip()
+            p = doc.add_paragraph(style='Quote') if 'Quote' in [s.name for s in doc.styles] else doc.add_paragraph()
+            _add_formatted_text(p, text)
+
+        # 비순서 목록
+        elif stripped.startswith(('- ', '* ', '+ ')):
+            text = stripped[2:].strip()
+            p = doc.add_paragraph(style='List Bullet')
+            _add_formatted_text(p, text)
+
+        # 순서 목록
+        elif re_module.match(r'^\d+\.\s', stripped):
+            text = re_module.sub(r'^\d+\.\s', '', stripped).strip()
+            p = doc.add_paragraph(style='List Number')
+            _add_formatted_text(p, text)
+
+        # 일반 텍스트
+        else:
+            p = doc.add_paragraph()
+            _add_formatted_text(p, stripped)
+
+        i += 1
+
+    # 남은 테이블 처리
+    if in_table and table_rows:
+        _add_table_to_docx(doc, table_rows)
+
+
+def _strip_markdown_formatting(text):
+    """마크다운 인라인 서식을 제거합니다."""
+    text = re_module.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re_module.sub(r'\*(.+?)\*', r'\1', text)
+    text = re_module.sub(r'`(.+?)`', r'\1', text)
+    return text
+
+
+def _add_formatted_text(paragraph, text):
+    """마크다운 인라인 서식을 docx Run으로 변환하여 추가합니다."""
+    # 볼드, 이탤릭, 코드 패턴 분리
+    pattern = re_module.compile(r'(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)')
+    last_end = 0
+
+    for match in pattern.finditer(text):
+        # 매치 전 일반 텍스트
+        if match.start() > last_end:
+            paragraph.add_run(text[last_end:match.start()])
+
+        if match.group(2):  # 볼드
+            run = paragraph.add_run(match.group(2))
+            run.bold = True
+        elif match.group(3):  # 이탤릭
+            run = paragraph.add_run(match.group(3))
+            run.italic = True
+        elif match.group(4):  # 코드
+            run = paragraph.add_run(match.group(4))
+            run.font.name = 'Consolas'
+
+        last_end = match.end()
+
+    # 나머지 텍스트
+    if last_end < len(text):
+        paragraph.add_run(text[last_end:])
+
+
+def _add_table_to_docx(doc, rows):
+    """테이블 데이터를 docx Table로 추가합니다."""
+    if not rows:
+        return
+
+    num_cols = max(len(row) for row in rows)
+    table = doc.add_table(rows=len(rows), cols=num_cols)
+    table.style = 'Table Grid'
+
+    for i, row in enumerate(rows):
+        for j, cell_text in enumerate(row):
+            if j < num_cols:
+                cell = table.cell(i, j)
+                cell.text = _strip_markdown_formatting(cell_text)
+                # 첫 행(헤더) 볼드
+                if i == 0:
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.bold = True
 
 
 @blog_bp.route('/api/cache/stats', methods=['GET'])
