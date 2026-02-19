@@ -10,3 +10,5 @@ python-docx>=1.1.0
 gunicorn>=21.0.0
 cryptography>=41.0.0
 python-docx>=1.1.0
+trafilatura>=1.6.0
+duckduckgo-search>=4.0.0
