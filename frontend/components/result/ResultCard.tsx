@@ -27,6 +27,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { exportDocx } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import SeoSection from './SeoSection';
+import FusionSections from './FusionSections';
 
 interface ResultCardProps {
   report: Report;
@@ -145,6 +146,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 통합
               </Badge>
             )}
+            {report.isFusion && (
+              <Badge variant="outline" className="text-xs border-purple-400/40 text-purple-500">
+                퓨전
+              </Badge>
+            )}
             {report.cached && (
               <Badge variant="outline" className="text-xs">캐시</Badge>
             )}
@@ -259,6 +265,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 
           {/* SEO 섹션 */}
           {report.seo && <SeoSection seo={report.seo} />}
+
+          {/* 퓨전 섹션 */}
+          {report.isFusion && (
+            <FusionSections sections={report.sections} fusionMeta={report.fusionMeta} />
+          )}
         </CardContent>
       )}
 

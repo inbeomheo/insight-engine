@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { generate, generateStream, generateBatch, generateMerged } from '@/lib/api';
+import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import type { Report, StreamEvent } from '@/lib/types';
@@ -221,10 +221,64 @@ export function useGenerate() {
     [selectedModel, selectedStyle, modifiers, addReport]
   );
 
+  const generateFusionUrls = useCallback(
+    async (urls: string[]) => {
+      if (!selectedModel) {
+        setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
+        return;
+      }
+      if (urls.length < 2) {
+        setState((s) => ({ ...s, error: '퓨전 분석은 최소 2개 URL이 필요합니다.' }));
+        return;
+      }
+
+      setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
+
+      try {
+        const { enableWebResearch, enableDeepComments } = useSettingsStore.getState();
+        const result = await generateFusion({
+          urls,
+          style: selectedStyle,
+          model: selectedModel,
+          modifiers,
+          enable_web_research: enableWebResearch,
+          enable_deep_comments: enableDeepComments,
+        });
+
+        const report: Report = {
+          id: crypto.randomUUID(),
+          url: urls[0],
+          youtube_title: '',
+          title: result.title,
+          content: result.content,
+          html: result.html,
+          style: selectedStyle,
+          prompt: '',
+          usage: { total_tokens: result.usage.total_tokens },
+          elapsed_time: result.fusion_meta.processing_time,
+          transcript_source: '',
+          cached: false,
+          comment_summary_included: false,
+          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+          createdAt: Date.now(),
+          isFusion: true,
+          fusionMeta: result.fusion_meta,
+          sections: result.sections,
+        };
+        addReport(report);
+        setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '퓨전 분석 실패';
+        setState((s) => ({ ...s, isLoading: false, error: message }));
+      }
+    },
+    [selectedModel, selectedStyle, modifiers, addReport]
+  );
+
   const abort = useCallback(() => {
     abortRef.current?.abort();
     setState((s) => ({ ...s, isLoading: false }));
   }, []);
 
-  return { ...state, generateSingle, generateBatchUrls, generateMergedUrls, abort };
+  return { ...state, generateSingle, generateBatchUrls, generateMergedUrls, generateFusionUrls, abort };
 }

@@ -62,6 +62,21 @@ export interface SourceVideo {
   transcript_source: string;
 }
 
+export interface FusionMeta {
+  videos_analyzed: number;
+  comments_analyzed: number;
+  web_sources_found: number;
+  total_tokens: number;
+  processing_time: number;
+  failed_urls: string[];
+}
+
+export interface FusionSections {
+  faq: string;
+  fact_checks: string[];
+  sources_used: Array<{ type: string; title: string; url: string }>;
+}
+
 export interface Report {
   id: string;
   url: string;
@@ -84,7 +99,17 @@ export interface Report {
   merged?: boolean;
   /** 합쳐서 생성 시 원본 영상 목록 */
   source_videos?: SourceVideo[];
+  /** 퓨전 분석 여부 */
+  isFusion?: boolean;
+  /** 퓨전 분석 메타데이터 */
+  fusionMeta?: FusionMeta;
+  /** 퓨전 분석 섹션 (FAQ, 팩트체크, 소스) */
+  sections?: FusionSections;
 }
+
+// === 생성 모드 ===
+
+export type GenerationMode = 'individual' | 'combined' | 'fusion';
 
 // === 설정 ===
 

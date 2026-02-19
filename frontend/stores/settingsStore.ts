@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Modifiers, ProviderInfo, CustomStyle } from '@/lib/types';
+import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode } from '@/lib/types';
 import {
   loadSelectedProvider,
   saveSelectedProvider,
@@ -32,6 +32,14 @@ interface SettingsState {
   updateCustomStyle: (id: string, s: Partial<CustomStyle>) => void;
   deleteCustomStyle: (id: string) => void;
 
+  // 생성 모드 & 퓨전 옵션
+  generationMode: GenerationMode;
+  enableWebResearch: boolean;
+  enableDeepComments: boolean;
+  setGenerationMode: (mode: GenerationMode) => void;
+  setEnableWebResearch: (v: boolean) => void;
+  setEnableDeepComments: (v: boolean) => void;
+
   // 초기화
   hydrate: () => void;
 }
@@ -43,6 +51,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   selectedStyle: 'blog_seo',
   modifiers: { length: 'medium', writing_style: 'conversational' },
   customStyles: [],
+  generationMode: 'individual',
+  enableWebResearch: true,
+  enableDeepComments: true,
 
   setProviders: (p) => set({ providers: p }),
 
@@ -80,6 +91,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     saveCustomStyles(next);
     set({ customStyles: next });
   },
+
+  setGenerationMode: (mode) => set({ generationMode: mode }),
+  setEnableWebResearch: (v) => set({ enableWebResearch: v }),
+  setEnableDeepComments: (v) => set({ enableDeepComments: v }),
 
   hydrate: () => {
     set({

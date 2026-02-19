@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { Sparkles, Youtube, Layers } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
@@ -12,6 +12,9 @@ import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
+import FusionProgress from '@/components/result/FusionProgress';
+import GenerationModeSelector from '@/components/input/GenerationModeSelector';
+import FusionOptions from '@/components/input/FusionOptions';
 import PromptModal from '@/components/modals/PromptModal';
 import MindmapModal from '@/components/modals/MindmapModal';
 import OnboardingModal from '@/components/modals/OnboardingModal';
@@ -42,8 +45,9 @@ export default function Home() {
     });
   }, [reports, searchQuery, styleFilter]);
 
+  const { generationMode } = useSettingsStore();
   const { urls, addUrl, removeUrl, clearUrls } = useUrls();
-  const { isLoading, error, generateBatchUrls, generateMergedUrls } = useGenerate();
+  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
 
   // 프로바이더 로드
   useProviders();
@@ -73,6 +77,13 @@ export default function Home() {
     clearUrls();
   }
 
+  // 퓨전 분석 (2~5개 URL → 교차분석 + 웹리서치)
+  function handleGenerateFusion() {
+    if (urls.length < 2) return;
+    generateFusionUrls([...urls]);
+    clearUrls();
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* 사이드바 */}
@@ -97,25 +108,35 @@ export default function Home() {
                   onGenerate={handleGenerate}
                 />
                 <SettingsPopover />
+
+                {/* 생성 모드 선택 + 퓨전 옵션 */}
+                {urls.length >= 2 && (
+                  <div className="mt-3 animate-fade-in">
+                    <GenerationModeSelector />
+                    <FusionOptions />
+                  </div>
+                )}
               </div>
 
               {/* 생성 버튼 (URL이 있을 때) */}
               {urls.length > 0 && (
                 <div className="flex justify-center gap-3 mb-6 animate-fade-in">
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={isLoading}
-                    className="gap-2 gradient-primary hover:opacity-90 transition-opacity shadow-md px-6 h-11 rounded-xl text-sm font-medium"
-                    size="lg"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    {isLoading
-                      ? '생성 중...'
-                      : urls.length === 1
-                        ? '1개 URL 분석 시작'
-                        : `${urls.length}개 URL 각각 분석`}
-                  </Button>
-                  {urls.length >= 2 && (
+                  {generationMode === 'individual' && (
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={isLoading}
+                      className="gap-2 gradient-primary hover:opacity-90 transition-opacity shadow-md px-6 h-11 rounded-xl text-sm font-medium"
+                      size="lg"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isLoading
+                        ? '생성 중...'
+                        : urls.length === 1
+                          ? '1개 URL 분석 시작'
+                          : `${urls.length}개 URL 각각 분석`}
+                    </Button>
+                  )}
+                  {generationMode === 'combined' && urls.length >= 2 && (
                     <Button
                       onClick={handleGenerateMerged}
                       disabled={isLoading}
@@ -125,6 +146,30 @@ export default function Home() {
                     >
                       <Layers className="h-4 w-4" />
                       {isLoading ? '생성 중...' : `${urls.length}개 URL 합쳐서 분석`}
+                    </Button>
+                  )}
+                  {generationMode === 'fusion' && urls.length >= 2 && (
+                    <Button
+                      onClick={handleGenerateFusion}
+                      disabled={isLoading}
+                      variant="outline"
+                      className="gap-2 hover:bg-purple-500/10 border-purple-400/30 text-purple-500 shadow-sm px-6 h-11 rounded-xl text-sm font-medium"
+                      size="lg"
+                    >
+                      <Combine className="h-4 w-4" />
+                      {isLoading ? '퓨전 분석 중...' : `${urls.length}개 URL 퓨전 분석`}
+                    </Button>
+                  )}
+                  {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
+                  {urls.length === 1 && generationMode !== 'individual' && (
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={isLoading}
+                      className="gap-2 gradient-primary hover:opacity-90 transition-opacity shadow-md px-6 h-11 rounded-xl text-sm font-medium"
+                      size="lg"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {isLoading ? '생성 중...' : '1개 URL 분석 시작'}
                     </Button>
                   )}
                 </div>
@@ -142,6 +187,9 @@ export default function Home() {
 
               {/* 결과 카드 / 빈 상태 */}
               <div className="w-full space-y-4">
+                {isLoading && generationMode === 'fusion' && (
+                  <FusionProgress isLoading={isLoading} isFusion={true} />
+                )}
                 {isLoading && <LoadingSkeleton />}
 
                 {filteredReports.map((r) => (

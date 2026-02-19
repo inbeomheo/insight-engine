@@ -8,6 +8,8 @@ import type {
   StreamEvent,
   Modifiers,
   SourceVideo,
+  FusionMeta,
+  FusionSections,
 } from './types';
 
 const BASE = '';
@@ -161,6 +163,32 @@ export async function exportDocx(title: string, content: string): Promise<Blob> 
   });
   if (!res.ok) throw new Error('DOCX 내보내기 실패');
   return res.blob();
+}
+
+// 퓨전 분석
+export interface FusionRequest {
+  urls: string[];
+  style: string;
+  model: string;
+  modifiers?: Modifiers;
+  enable_web_research?: boolean;
+  enable_deep_comments?: boolean;
+}
+
+export interface FusionResponse {
+  title: string;
+  content: string;
+  html: string;
+  sections: FusionSections;
+  fusion_meta: FusionMeta;
+  usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+}
+
+export async function generateFusion(req: FusionRequest): Promise<FusionResponse> {
+  return request('/api/generate-fusion', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
 }
 
 // 캐시 삭제
