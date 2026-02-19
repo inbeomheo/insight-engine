@@ -109,5 +109,45 @@ class TestRoutesSmoke(unittest.TestCase):
             self.assertIn('histories', data)
 
 
+    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    def test_generate_fusion_smoke(self, mock_enabled):
+        """퓨전 생성 엔드포인트 스모크 테스트"""
+        fake_result = {
+            'title': '퓨전 제목',
+            'content': '퓨전 본문',
+            'html': '<p>퓨전 본문</p>',
+            'sections': {
+                'faq': '', 'fact_checks': [],
+                'sources_used': [{'type': 'youtube', 'title': 'v1', 'url': 'http://y.com'}]
+            },
+            'fusion_meta': {
+                'videos_analyzed': 2, 'comments_analyzed': 10,
+                'web_sources_found': 1, 'total_tokens': 500,
+                'processing_time': 5.0, 'failed_urls': []
+            },
+            'usage': {'total_tokens': 500}
+        }
+        with patch('routes.blog_routes.fusion_service.generate_fusion', return_value=fake_result):
+            res = self.client.post('/api/generate-fusion', json={
+                'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
+                'style': 'blog_seo',
+                'model': 'gemini/gemini-3-flash-preview',
+            })
+            self.assertEqual(res.status_code, 200)
+            data = res.get_json()
+            self.assertIn('fusion_meta', data)
+            self.assertEqual(data['fusion_meta']['videos_analyzed'], 2)
+
+    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    def test_generate_fusion_too_few_urls(self, mock_enabled):
+        """퓨전: URL 1개면 에러"""
+        res = self.client.post('/api/generate-fusion', json={
+            'urls': ['https://youtube.com/watch?v=a'],
+            'style': 'blog_seo',
+            'model': 'gemini/gemini-3-flash-preview',
+        })
+        self.assertEqual(res.status_code, 400)
+
+
 if __name__ == '__main__':
     unittest.main()

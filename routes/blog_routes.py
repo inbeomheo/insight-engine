@@ -11,12 +11,12 @@ from typing import Dict
 from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context, send_file
 
 from config import get_model_max_tokens
-from services import ai_service, content_service
+from services import ai_service, content_service, fusion_service
 from services.content_service import clear_cache
 from services.supabase_service import (
     require_auth, is_supabase_enabled, save_history
 )
-from services.usage import require_usage
+from services.usage import require_usage, check_usage
 from services.usage.usage_decorator import get_usage_for_response
 import uuid
 
@@ -1355,6 +1355,50 @@ def generate_multi():
     except Exception as e:
         current_app.logger.error(f"Generate multi failed: {e}")
         return _handle_error_response(str(e))
+
+
+@blog_bp.route('/api/generate-fusion', methods=['POST'])
+@require_auth
+@check_usage
+def generate_fusion():
+    """퓨전 생성: N개 URL → 융합 1편"""
+    data = request.get_json()
+    urls = data.get('urls', [])
+    style_id = data.get('style', 'blog_seo')
+    model = data.get('model', '')
+    modifiers = data.get('modifiers', {})
+    enable_web_research = data.get('enable_web_research', True)
+    enable_deep_comments = data.get('enable_deep_comments', True)
+
+    if not urls or len(urls) < 2:
+        return jsonify({'error': '[입력 오류] 퓨전 분석은 최소 2개 URL이 필요합니다'}), 400
+    if len(urls) > 5:
+        return jsonify({'error': '[입력 오류] 퓨전 분석은 최대 5개 URL까지 가능합니다'}), 400
+    if not model:
+        return jsonify({'error': '[입력 오류] 모델을 선택해주세요'}), 400
+
+    try:
+        result = fusion_service.generate_fusion(
+            urls=urls,
+            style_id=style_id,
+            model=model,
+            modifiers=modifiers,
+            enable_web_research=enable_web_research,
+            enable_deep_comments=enable_deep_comments
+        )
+
+        # 사용량 차감 (1회)
+        if hasattr(g, 'usage') and g.usage:
+            from services.usage import UsageService
+            UsageService.decrement(g.usage.get('user_id'))
+
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'error': f'[입력 오류] {str(e)}'}), 400
+    except Exception as e:
+        current_app.logger.error('퓨전 생성 실패: %s', e, exc_info=True)
+        return jsonify({'error': f'[생성 실패] {str(e)}'}), 500
 
 
 @blog_bp.route('/api/playlist-videos', methods=['POST'])
