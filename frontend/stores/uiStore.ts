@@ -15,6 +15,10 @@ interface UIState {
   activeMindmapReportId: string;
   editingCustomStyleId: string | null;
 
+  // 사이드바 히스토리에서 선택된 리포트
+  activeReportId: string | null;
+  setActiveReportId: (id: string | null) => void;
+
   toggleSidebar: () => void;
   setSidebarOpen: (v: boolean) => void;
   setSettingsPopoverOpen: (v: boolean) => void;
@@ -38,7 +42,9 @@ export const useUIStore = create<UIState>((set) => ({
   activePrompt: '',
   activeMindmapReportId: '',
   editingCustomStyleId: null,
+  activeReportId: null,
 
+  setActiveReportId: (id) => set({ activeReportId: id }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setSettingsPopoverOpen: (v) => set({ settingsPopoverOpen: v }),

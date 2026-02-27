@@ -23,6 +23,7 @@ import CustomStyleModal from '@/components/modals/CustomStyleModal';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
+import { cn } from '@/lib/utils';
 import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
@@ -31,7 +32,7 @@ import { isOnboardingDone } from '@/lib/storage';
 export default function Home() {
   const { hydrate: hydrateSettings } = useSettingsStore();
   const { hydrate: hydrateResults, reports, searchQuery, styleFilter } = useResultStore();
-  const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen } =
+  const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId } =
     useUIStore();
 
   const filteredReports = useMemo(() => {
@@ -193,7 +194,16 @@ export default function Home() {
                 {isLoading && <LoadingSkeleton />}
 
                 {filteredReports.map((r) => (
-                  <ResultCard key={r.id} report={r} searchQuery={searchQuery} />
+                  <div
+                    key={r.id}
+                    data-report-id={r.id}
+                    className={cn(
+                      'transition-all duration-300',
+                      activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl'
+                    )}
+                  >
+                    <ResultCard report={r} searchQuery={searchQuery} />
+                  </div>
                 ))}
 
                 {/* 빈 상태 */}

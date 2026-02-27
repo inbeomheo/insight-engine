@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Trash2, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUIStore } from '@/stores/uiStore';
 import { useResultStore } from '@/stores/resultStore';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -19,9 +20,41 @@ function getStyleEmoji(styleId: string) {
 }
 
 export default function Sidebar() {
-  const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId } = useUIStore();
   const { reports, removeReport } = useResultStore();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
+
+  const handleHistoryClick = useCallback((id: string) => {
+    setActiveReportId(id);
+
+    // 필터 초기화 (필터로 카드가 숨겨진 경우 대비)
+    const resultState = useResultStore.getState();
+    if (resultState.searchQuery || resultState.styleFilter) {
+      resultState.setSearchQuery('');
+      resultState.setStyleFilter('');
+    }
+
+    // DOM 업데이트 후 스크롤
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-report-id="${id}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }, 50);
+
+    if (isMobile) setSidebarOpen(false);
+  }, [setActiveReportId, isMobile, setSidebarOpen]);
+
+  const handleNewAnalysis = useCallback(() => {
+    setActiveReportId(null);
+
+    const urlInput = document.getElementById('url-input');
+    urlInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => urlInput?.focus(), 300);
+
+    if (isMobile) setSidebarOpen(false);
+  }, [setActiveReportId, isMobile, setSidebarOpen]);
 
   const filtered = useMemo(() => {
     if (!search) return reports;
@@ -65,7 +98,7 @@ export default function Sidebar() {
       >
         {/* 새 분석 */}
         <div className="p-3 pb-2">
-          <Button className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm">
+          <Button className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm" onClick={handleNewAnalysis}>
             <Plus className="h-4 w-4" />
             <span className="font-medium">새 분석</span>
           </Button>
@@ -105,7 +138,13 @@ export default function Sidebar() {
                   {items.map((r) => (
                     <div
                       key={r.id}
-                      className="group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg hover:bg-white hover:shadow-sm cursor-pointer text-xs transition-all duration-150"
+                      className={cn(
+                        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-150',
+                        activeReportId === r.id
+                          ? 'bg-primary/10 shadow-sm'
+                          : 'hover:bg-white hover:shadow-sm'
+                      )}
+                      onClick={() => handleHistoryClick(r.id)}
                     >
                       <span className="text-sm shrink-0 mt-0.5">{getStyleEmoji(r.style)}</span>
                       <div className="flex-1 min-w-0">
@@ -126,6 +165,7 @@ export default function Sidebar() {
                         onClick={(e) => {
                           e.stopPropagation();
                           removeReport(r.id);
+                          if (activeReportId === r.id) setActiveReportId(null);
                         }}
                       >
                         <Trash2 className="h-3 w-3 text-destructive/60" />

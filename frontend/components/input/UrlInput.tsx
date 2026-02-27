@@ -62,6 +62,7 @@ export default function UrlInput({
       `}>
         <Link2 className="h-4 w-4 text-muted-foreground/40 shrink-0" />
         <input
+          id="url-input"
           type="url"
           value={input}
           onChange={(e) => setInput(e.target.value)}
