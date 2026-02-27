@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import type { Report } from '@/lib/types';
 import { loadReports, saveReports } from '@/lib/storage';
 
@@ -27,7 +28,9 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   addReport: (r) => {
     const next = [r, ...get().reports];
-    saveReports(next);
+    if (!saveReports(next)) {
+      toast.warning('저장 공간이 부족합니다. 오래된 결과를 삭제해주세요.');
+    }
     set({ reports: next });
   },
 

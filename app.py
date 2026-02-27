@@ -93,6 +93,24 @@ def create_app(test_config=None):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
         return None
 
+    # 글로벌 에러 핸들러 — JSON 응답 통일
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify({'error': '요청한 페이지를 찾을 수 없습니다.'}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify({'error': '허용되지 않는 요청 메서드입니다.'}), 405
+
+    @app.errorhandler(413)
+    def payload_too_large(e):
+        return jsonify({'error': '요청 데이터가 너무 큽니다.'}), 413
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        app.logger.error(f'Unhandled 500: {e}')
+        return jsonify({'error': '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'}), 500
+
     from routes.blog_routes import blog_bp
     from routes.auth_routes import auth_bp
     app.register_blueprint(blog_bp)

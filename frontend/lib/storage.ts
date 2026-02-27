@@ -11,12 +11,13 @@ function safeGet<T>(key: string, fallback: T): T {
   }
 }
 
-function safeSet(key: string, value: unknown) {
-  if (typeof window === 'undefined') return;
+function safeSet(key: string, value: unknown): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // storage full 등 무시
+    return false;
   }
 }
 
@@ -25,8 +26,8 @@ export function loadReports(): Report[] {
   return safeGet<Report[]>(STORAGE_KEYS.REPORTS, []);
 }
 
-export function saveReports(reports: Report[]) {
-  safeSet(STORAGE_KEYS.REPORTS, reports);
+export function saveReports(reports: Report[]): boolean {
+  return safeSet(STORAGE_KEYS.REPORTS, reports);
 }
 
 // 프로바이더/모델 선택

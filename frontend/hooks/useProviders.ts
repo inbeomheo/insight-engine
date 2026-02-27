@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchProviders } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export function useProviders() {
   const { setProviders, selectedProvider, setSelectedProvider, setSelectedModel } =
@@ -30,6 +31,12 @@ export function useProviders() {
       }
     }
   }, [query.data, selectedProvider, setProviders, setSelectedProvider, setSelectedModel]);
+
+  useEffect(() => {
+    if (query.error) {
+      toast.error('AI 모델 목록을 불러올 수 없습니다');
+    }
+  }, [query.error]);
 
   return query;
 }

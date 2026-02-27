@@ -14,16 +14,48 @@ import type {
 
 const BASE = '';
 
+const TIMEOUT_MS: Record<string, number> = {
+  '/generate': 180_000,
+  '/generate-batch': 300_000,
+  '/api/generate-merged': 180_000,
+  '/api/generate-multi': 180_000,
+  '/api/generate-fusion': 300_000,
+  '/api/mindmap': 60_000,
+  '/api/export/docx': 30_000,
+  '/api/providers': 10_000,
+  '/api/playlist-videos': 30_000,
+};
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  // 외부 signal이 있으면 연동
+  if (init?.signal) {
+    init.signal.addEventListener('abort', () => controller.abort());
   }
-  return res.json();
+
+  try {
+    const res = await fetch(`${BASE}${url}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // 프로바이더/모델 목록
@@ -61,24 +93,31 @@ export async function generateStream(
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const event: StreamEvent = JSON.parse(line.slice(6));
-          onEvent(event);
-        } catch {
-          // JSON 파싱 실패 무시
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const event: StreamEvent = JSON.parse(line.slice(6));
+            onEvent(event);
+          } catch {
+            // JSON 파싱 실패 무시
+          }
         }
       }
     }
+  } catch (err) {
+    // 사용자가 직접 abort한 경우 (정상 종료)
+    if (signal?.aborted) return;
+    // 네트워크 끊김 등 비정상 종료
+    onEvent({ type: 'error', error: '네트워크 연결이 끊겼습니다. 다시 시도해주세요.' });
   }
 }
 

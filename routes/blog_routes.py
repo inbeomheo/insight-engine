@@ -182,26 +182,31 @@ def _handle_error_response(error_msg, log_detail=None):
     if 'API 키' in error_msg or 'authentication' in error_msg.lower():
         return jsonify({'error': error_msg}), 401
 
-    # 내부 에러 상세 정보는 숨김 - 허용된 메시지만 노출
+    safe_msg = _sanitize_error_for_client(error_msg)
+    return jsonify({'error': safe_msg}), 500
+
+
+def _sanitize_error_for_client(error_msg: str) -> str:
+    """에러 메시지에서 내부 정보를 제거하여 클라이언트에 안전한 메시지를 반환합니다."""
     ALLOWED_ERROR_PREFIXES = [
         '[인증 실패]', '[사용량 초과]', '[입력 오류]', '[자막 없음]',
+        '[생성 실패]', '[타임아웃]',
         '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL'
     ]
 
-    # 허용된 접두사로 시작하지 않거나 내부 정보 포함 시 일반 메시지로 대체
     is_safe = any(error_msg.startswith(prefix) for prefix in ALLOWED_ERROR_PREFIXES)
     has_internal_info = any(keyword in error_msg.lower() for keyword in [
         'traceback', 'exception', 'file "', 'line ', 'error:', 'failed:',
-        '/home/', '/usr/', 'supabase', 'postgres', 'connection'
+        '/home/', '/usr/', 'supabase', 'postgres', 'connection',
+        'api_key', 'token', 'secret', 'password', 'authorization', '.env',
+        'openai', 'litellm', 'httpx', 'requests.exceptions',
     ])
 
     if not is_safe or has_internal_info:
         current_app.logger.error(f'Internal error hidden from user: {error_msg}')
-        safe_msg = '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'
-    else:
-        safe_msg = error_msg
+        return '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'
 
-    return jsonify({'error': safe_msg}), 500
+    return error_msg
 
 
 def _fetch_youtube_content(video_id):
@@ -896,7 +901,7 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                 'success': False,
                 'url': url,
                 'title': '오류 발생',
-                'error': f'처리 중 오류 발생: {str(e)}'
+                'error': _sanitize_error_for_client(f'처리 중 오류 발생: {str(e)}')
             }
 
 
@@ -910,8 +915,8 @@ def generate_batch():
     from services.usage.usage_service import UsageService
 
     try:
-        # 사용량 체크
-        can_use, usage = UsageService.check_can_use(g.user_id)
+        # 원자적 사용량 체크 + 차감 (Race Condition 방지)
+        can_use, usage = UsageService.try_consume_atomic(g.user_id)
         if not can_use:
             return jsonify({
                 'error': '오늘 사용 가능 횟수를 모두 소진했습니다. 내일 다시 시도해주세요.',
@@ -964,7 +969,7 @@ def generate_batch():
                         'success': False,
                         'url': url,
                         'title': '오류 발생',
-                        'error': f'처리 중 예외 발생: {str(e)}'
+                        'error': _sanitize_error_for_client(str(e))
                     }
         else:
             current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
@@ -977,23 +982,43 @@ def generate_batch():
                     ): i for i, url in enumerate(urls)
                 }
 
-                for future in concurrent.futures.as_completed(future_to_index):
-                    index = future_to_index[future]
-                    try:
-                        result = future.result()
-                        results[index] = result
-                        current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
+                try:
+                    for future in concurrent.futures.as_completed(future_to_index, timeout=300):
+                        index = future_to_index[future]
+                        try:
+                            result = future.result(timeout=120)
+                            results[index] = result
+                            current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
 
-                        if result['success'] and isinstance(result.get('content', ''), str):
-                            combined_content.append(result['content'])
-                    except Exception as e:
-                        current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
-                        results[index] = {
-                            'success': False,
-                            'url': urls[index],
-                            'title': '오류 발생',
-                            'error': f'처리 중 예외 발생: {str(e)}'
-                        }
+                            if result['success'] and isinstance(result.get('content', ''), str):
+                                combined_content.append(result['content'])
+                        except concurrent.futures.TimeoutError:
+                            current_app.logger.error(f"Timeout for URL {index + 1}")
+                            results[index] = {
+                                'success': False,
+                                'url': urls[index],
+                                'title': '시간 초과',
+                                'error': '[타임아웃] 처리 시간이 초과되었습니다.'
+                            }
+                        except Exception as e:
+                            current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
+                            results[index] = {
+                                'success': False,
+                                'url': urls[index],
+                                'title': '오류 발생',
+                                'error': _sanitize_error_for_client(str(e))
+                            }
+                except concurrent.futures.TimeoutError:
+                    current_app.logger.error("Batch overall timeout (300s)")
+                    for future, index in future_to_index.items():
+                        if results[index] is None:
+                            future.cancel()
+                            results[index] = {
+                                'success': False,
+                                'url': urls[index],
+                                'title': '시간 초과',
+                                'error': '[타임아웃] 배치 전체 처리 시간이 초과되었습니다.'
+                            }
 
         url_to_result = {result['url']: result for result in results if result}
         ordered_results = [
@@ -1007,10 +1032,8 @@ def generate_batch():
 
         current_app.logger.info(f"Batch processing completed. Success: {success_count}, Failed: {fail_count}")
 
-        # 성공한 결과가 1개 이상이면 사용량 차감 (배치 전체가 1회로 계산)
+        # 사용량은 try_consume_atomic()으로 이미 차감됨
         updated_usage = usage
-        if success_count > 0:
-            updated_usage = UsageService.decrement(g.user_id)
 
         # P2 버그 #7 수정: 배치 히스토리 저장 (N+1 → 배치 INSERT)
         # 배치에서는 transcript, usage, elapsed_time이 None (P3 #13 문서화)
@@ -1398,7 +1421,7 @@ def generate_fusion():
         return jsonify({'error': f'[입력 오류] {str(e)}'}), 400
     except Exception as e:
         current_app.logger.error('퓨전 생성 실패: %s', e, exc_info=True)
-        return jsonify({'error': f'[생성 실패] {str(e)}'}), 500
+        return _handle_error_response(e)
 
 
 @blog_bp.route('/api/playlist-videos', methods=['POST'])

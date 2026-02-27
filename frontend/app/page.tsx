@@ -64,24 +64,24 @@ export default function Home() {
   }, [hydrateSettings, hydrateResults, setOnboardingOpen]);
 
   // 생성 시작 (1개면 단일, 여러 개면 배치)
-  function handleGenerate() {
+  async function handleGenerate() {
     if (urls.length === 0) return;
-    generateBatchUrls([...urls]);
-    clearUrls();
+    const ok = await generateBatchUrls([...urls]);
+    if (ok) clearUrls();
   }
 
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
-  function handleGenerateMerged() {
+  async function handleGenerateMerged() {
     if (urls.length < 2) return;
-    generateMergedUrls([...urls]);
-    clearUrls();
+    const ok = await generateMergedUrls([...urls]);
+    if (ok) clearUrls();
   }
 
   // 퓨전 분석 (2~5개 URL → 교차분석 + 웹리서치)
-  function handleGenerateFusion() {
+  async function handleGenerateFusion() {
     if (urls.length < 2) return;
-    generateFusionUrls([...urls]);
-    clearUrls();
+    const ok = await generateFusionUrls([...urls]);
+    if (ok) clearUrls();
   }
 
   return (

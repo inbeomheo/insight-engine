@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
+import { toast } from 'sonner';
 import type { Report, StreamEvent } from '@/lib/types';
 
 interface GenerateState {
@@ -127,16 +128,17 @@ export function useGenerate() {
   );
 
   const generateBatchUrls = useCallback(
-    async (urls: string[]) => {
+    async (urls: string[]): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
-      if (urls.length === 0) return;
+      if (urls.length === 0) return false;
 
       // 단일 URL이면 일반 생성
       if (urls.length === 1) {
-        return generateSingle(urls[0], false);
+        await generateSingle(urls[0], false);
+        return true;
       }
 
       setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
@@ -144,6 +146,8 @@ export function useGenerate() {
       try {
         const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers);
         let ts = Date.now();
+        const failedUrls: string[] = [];
+
         for (const item of res.results) {
           if (item.success) {
             const report: Report = {
@@ -165,26 +169,40 @@ export function useGenerate() {
               createdAt: ts++,
             };
             addReport(report);
+          } else {
+            failedUrls.push(item.url);
           }
         }
+
+        if (failedUrls.length > 0 && failedUrls.length < urls.length) {
+          toast.warning(`${failedUrls.length}개 URL 처리 실패`, {
+            description: failedUrls.map((u) => u.slice(0, 60)).join('\n'),
+          });
+        } else if (failedUrls.length === urls.length) {
+          setState((s) => ({ ...s, isLoading: false, error: '모든 URL 처리에 실패했습니다.' }));
+          return false;
+        }
+
         setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '배치 생성 실패';
         setState((s) => ({ ...s, isLoading: false, error: message }));
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, addReport, generateSingle]
   );
 
   const generateMergedUrls = useCallback(
-    async (urls: string[]) => {
+    async (urls: string[]): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
       if (urls.length < 2) {
         setState((s) => ({ ...s, error: '합쳐서 생성은 최소 2개 URL이 필요합니다.' }));
-        return;
+        return false;
       }
 
       setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
@@ -213,23 +231,25 @@ export function useGenerate() {
         };
         addReport(report);
         setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '합쳐서 생성 실패';
         setState((s) => ({ ...s, isLoading: false, error: message }));
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, addReport]
   );
 
   const generateFusionUrls = useCallback(
-    async (urls: string[]) => {
+    async (urls: string[]): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
       if (urls.length < 2) {
         setState((s) => ({ ...s, error: '퓨전 분석은 최소 2개 URL이 필요합니다.' }));
-        return;
+        return false;
       }
 
       setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
@@ -267,9 +287,11 @@ export function useGenerate() {
         };
         addReport(report);
         setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '퓨전 분석 실패';
         setState((s) => ({ ...s, isLoading: false, error: message }));
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, addReport]
