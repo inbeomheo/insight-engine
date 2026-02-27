@@ -100,34 +100,47 @@
   }
 }
 
-/* 마크다운 콘텐츠 스타일 */
-.prose h1 { @apply text-2xl font-bold mt-8 mb-4 text-foreground; }
-.prose h2 { @apply text-xl font-bold mt-7 mb-3 text-foreground; }
-.prose h3 { @apply text-lg font-semibold mt-6 mb-2 text-foreground; }
-.prose p { @apply my-3 leading-[1.8] text-foreground/90; }
-.prose ul { @apply list-disc pl-6 my-3 space-y-1.5; }
-.prose ol { @apply list-decimal pl-6 my-3 space-y-1.5; }
-.prose li { @apply text-foreground/90 leading-[1.7]; }
+/* 마크다운 콘텐츠 스타일 (Notion/Linear 스타일) */
+.prose h1 { @apply text-[1.625rem] font-bold mt-10 mb-5 tracking-tight text-foreground; }
+.prose h2 { @apply text-[1.3rem] font-semibold mt-9 mb-4 tracking-tight text-foreground; }
+.prose h3 { @apply text-[1.1rem] font-semibold mt-7 mb-3 text-foreground; }
+.prose p { @apply my-4 leading-[1.7] text-foreground/85; }
+.prose ul { @apply list-disc pl-5 my-4 space-y-2; }
+.prose ol { @apply list-decimal pl-5 my-4 space-y-2; }
+.prose li { @apply text-foreground/85 leading-[1.65]; }
 .prose blockquote {
-  @apply border-l-4 border-primary/30 pl-4 my-4 italic text-muted-foreground;
+  @apply border-l-[3px] border-foreground/15 pl-5 my-5 text-foreground/70 not-italic bg-muted/30 py-3 rounded-r-lg;
 }
 .prose code {
-  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply bg-muted/70 px-1.5 py-0.5 rounded text-[13px] font-mono text-foreground/80 border border-border/40;
 }
 .prose pre {
-  @apply bg-muted p-4 rounded-lg overflow-x-auto my-4;
+  @apply rounded-xl overflow-x-auto my-5 p-5;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: 1px solid rgba(205, 214, 244, 0.1);
 }
 .prose pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 border-0 text-[13.5px] leading-[1.7];
+  color: inherit;
 }
 .prose table {
-  @apply w-full border-collapse my-4;
+  @apply w-full my-5 border-separate border-spacing-0 rounded-lg border border-border/40 overflow-hidden;
 }
 .prose th {
-  @apply border border-border bg-muted px-3 py-2 text-left font-semibold text-sm;
+  @apply border-b-2 border-border/50 bg-muted/50 px-4 py-2.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground;
 }
 .prose td {
-  @apply border border-border px-3 py-2 text-sm;
+  @apply border-b border-border/30 px-4 py-2.5 text-sm;
+}
+.prose tr:nth-child(even) td {
+  @apply bg-muted/20;
+}
+.prose tbody tr:hover td {
+  @apply bg-muted/40 transition-colors;
+}
+.prose tr:last-child td {
+  @apply border-b-0;
 }
 .prose a {
   @apply text-primary underline hover:text-primary/80;
@@ -136,7 +149,7 @@
   @apply font-semibold text-foreground;
 }
 .prose hr {
-  @apply border-border my-6;
+  @apply border-0 border-t border-border/60 my-8;
 }
 
 /* 스크롤바 */

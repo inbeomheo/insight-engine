@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
-  FileText, Code, Brain, Download, Share2, RefreshCw, Printer,
-  Clock, Zap, Type, Hash, MessageSquare, ExternalLink, Layers,
+  FileText, Code, Brain, Download, Share2, Printer,
+  Zap, Type, MessageSquare, ExternalLink, Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import { STYLE_OPTIONS } from '@/lib/constants';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { exportDocx } from '@/lib/api';
-import { cn } from '@/lib/utils';
+
 import SeoSection from './SeoSection';
 import FusionSections from './FusionSections';
 
@@ -45,7 +45,6 @@ export default function ResultCard({ report, searchQuery }: ResultCardProps) {
   const { setPromptModalOpen, setMindmapModalOpen } = useUIStore();
 
   const charCount = report.content.length;
-  const wordCount = report.content.split(/\s+/).filter(Boolean).length;
 
   async function copyText(text: string, field: string) {
     await navigator.clipboard.writeText(text);
@@ -130,18 +129,18 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
   }, [report.content, searchQuery]);
 
   return (
-    <Card className="overflow-hidden shadow-sm">
+    <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow">
       {/* 헤더 */}
-      <div className="px-5 pt-5 pb-2">
+      <div className="px-6 pt-6 pb-3">
         {/* 뱃지 + 액션 */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
+            <span className="text-xs text-muted-foreground/70 font-medium">
               {getStyleLabel(report.style)}
-            </Badge>
+            </span>
             <span className="text-xs text-muted-foreground">{report.time}</span>
             {report.merged && (
-              <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
                 <Layers className="h-3 w-3 mr-1" />
                 통합
               </Badge>
@@ -154,42 +153,14 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
             {report.cached && (
               <Badge variant="outline" className="text-xs">캐시</Badge>
             )}
+            {report.comment_summary_included && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/60">
+                <MessageSquare className="h-3 w-3" />
+                댓글
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => copyText(report.title, 'title')}
-                >
-                  {copiedField === 'title' ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>제목 복사</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => copyText(report.content, 'content')}
-                >
-                  {copiedField === 'content' ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>전체 복사</TooltipContent>
-            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -223,7 +194,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
         </div>
 
         {/* 제목 */}
-        <h3 className="font-semibold text-lg leading-snug">{report.title}</h3>
+        <h3 className="font-semibold text-xl leading-snug tracking-tight">{report.title}</h3>
 
         {/* 소스 링크 */}
         {report.merged && report.source_videos ? (
@@ -256,8 +227,8 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 
       {/* 본문 */}
       {!collapsed && (
-        <CardContent className="px-5 pb-4 pt-0">
-          <div className="prose max-w-none text-[15px] leading-relaxed">
+        <CardContent className="px-6 pb-5 pt-4 border-t border-border/50">
+          <div className="prose max-w-none text-[15.5px] leading-relaxed">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {highlightedContent || report.content}
             </ReactMarkdown>
@@ -274,28 +245,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
       )}
 
       {/* 푸터 */}
-      <div className="px-5 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="inline-flex items-center gap-1">
-            <Zap className="h-3.5 w-3.5" />
-            {(report.usage?.total_tokens ?? 0).toLocaleString()} tokens
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            {(report.elapsed_time ?? 0).toFixed(1)}s
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Hash className="h-3.5 w-3.5" />
-            {charCount.toLocaleString()}자
-          </span>
-          <span>{wordCount.toLocaleString()}단어</span>
-          {report.comment_summary_included && (
-            <span className="inline-flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5" />
-              댓글 포함
-            </span>
-          )}
-        </div>
+      <div className="px-6 py-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <Zap className="h-3 w-3" />
+          {(report.usage?.total_tokens ?? 0).toLocaleString()} tokens · {(report.elapsed_time ?? 0).toFixed(1)}초 · {charCount.toLocaleString()}자
+        </span>
 
         <div className="flex items-center gap-0.5">
           {/* 더보기 메뉴 */}
@@ -306,6 +260,15 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => copyText(report.title, 'title')}>
+                <Copy className="h-3.5 w-3.5 mr-2" />
+                제목 복사
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => copyText(report.content, 'content')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                전체 복사
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setPromptModalOpen(true, report.prompt)}>
                 <Code className="h-3.5 w-3.5 mr-2" />
                 프롬프트 보기
