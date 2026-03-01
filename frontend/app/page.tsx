@@ -20,6 +20,8 @@ import MindmapModal from '@/components/modals/MindmapModal';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import CustomStyleModal from '@/components/modals/CustomStyleModal';
 import WorkspaceSettingsModal from '@/components/modals/WorkspaceSettingsModal';
+import ContentCalendar from '@/components/schedule/ContentCalendar';
+import ScheduleModal from '@/components/modals/ScheduleModal';
 
 import { YOUTUBE_URL_REGEX } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -29,12 +31,13 @@ import { cn } from '@/lib/utils';
 import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
+import { useSchedule } from '@/hooks/useSchedule';
 import { isOnboardingDone } from '@/lib/storage';
 
 export default function Home() {
   const { hydrate: hydrateSettings } = useSettingsStore();
   const { hydrate: hydrateResults, reports, searchQuery, styleFilter } = useResultStore();
-  const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId } =
+  const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId, activeView } =
     useUIStore();
 
   const filteredReports = useMemo(() => {
@@ -51,6 +54,7 @@ export default function Home() {
   const { generationMode } = useSettingsStore();
   const { urls, addUrl, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+  const { schedules, removeSchedule } = useSchedule();
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -162,6 +166,17 @@ export default function Home() {
         <main className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="px-8 lg:px-12 py-6">
+
+              {/* 캘린더 뷰 */}
+              {activeView === 'calendar' && (
+                <div className="max-w-3xl mx-auto">
+                  <h2 className="text-xl font-semibold mb-6">예약 캘린더</h2>
+                  <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
+                </div>
+              )}
+
+              {/* 메인 뷰 (콘텐츠 생성) */}
+              {activeView === 'main' && <>
               {/* URL 입력 영역 */}
               <div className="relative mb-10">
                 <UrlInput
@@ -284,6 +299,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
+              </>}
             </div>
           </ScrollArea>
         </main>

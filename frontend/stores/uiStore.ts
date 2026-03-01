@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+type ActiveView = 'main' | 'calendar';
+
 interface UIState {
   sidebarOpen: boolean;
   settingsPopoverOpen: boolean;
@@ -10,6 +12,10 @@ interface UIState {
   promptModalOpen: boolean;
   playlistModalOpen: boolean;
   workspaceSettingsOpen: boolean;
+
+  // 메인 뷰 전환 (콘텐츠 생성 / 캘린더)
+  activeView: ActiveView;
+  setActiveView: (v: ActiveView) => void;
 
   // 현재 모달에 표시 중인 데이터
   activePrompt: string;
@@ -42,11 +48,13 @@ export const useUIStore = create<UIState>((set) => ({
   promptModalOpen: false,
   playlistModalOpen: false,
   workspaceSettingsOpen: false,
+  activeView: 'main',
   activePrompt: '',
   activeMindmapReportId: '',
   editingCustomStyleId: null,
   activeReportId: null,
 
+  setActiveView: (v) => set({ activeView: v }),
   setActiveReportId: (id) => set({ activeReportId: id }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Search, Trash2, Clock, Sparkles } from 'lucide-react';
+import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,7 +21,7 @@ function getStyleEmoji(styleId: string) {
 }
 
 export default function Sidebar() {
-  const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId, activeView, setActiveView } = useUIStore();
   const { reports, removeReport } = useResultStore();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
@@ -181,6 +181,21 @@ export default function Sidebar() {
             </div>
           )}
         </ScrollArea>
+
+        {/* 캘린더 바로가기 */}
+        <div className="px-3 pb-2">
+          <Button
+            variant={activeView === 'calendar' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-2 h-9 text-xs"
+            onClick={() => {
+              setActiveView(activeView === 'calendar' ? 'main' : 'calendar');
+              if (isMobile) setSidebarOpen(false);
+            }}
+          >
+            <CalendarDays className="h-4 w-4" />
+            예약 캘린더
+          </Button>
+        </div>
 
         {/* 하단 브랜딩 */}
         <div className="p-3 border-t border-border/40">

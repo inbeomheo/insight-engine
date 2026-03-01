@@ -12,27 +12,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM)을 활용해 고품질 한국어 블로그 포스트를 자동 생성하는 Flask 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더.
+**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, MCP 플러그인 발행, 예약 캘린더, 팀 워크스페이스 지원.
 
 ## Commands
 
 ```bash
 # 의존성 설치
 pip install -r requirements.txt
-npm install  # Tailwind CSS 빌드용
+cd frontend && npm install && cd ..
 
-# 앱 실행 (개발 모드) → http://localhost:5001
-python app.py
-
-# Tailwind CSS 빌드
-npm run build:css              # 개발용
-npm run build:css:prod         # 프로덕션 (minify)
-npm run watch:css              # 파일 변경 감지
+# 앱 실행 (개발 모드 — 두 서버 모두 필요)
+python app.py                    # Flask 백엔드 → http://localhost:5001
+cd frontend && npm run dev       # Next.js 프론트엔드 → http://localhost:3000
 
 # 단위 테스트
-pytest tests/ -v
-pytest tests/ -v --ignore=tests/test_ui_comprehensive.py  # UI 테스트 제외
-pytest tests/test_routes_smoke.py::TestRoutesSmoke::test_generate_web_smoke -v  # 단일 함수
+python -m pytest tests/ -v
+python -m pytest tests/test_rag_service.py -v  # 특정 파일
+
+# 프론트엔드 타입 체크 + 빌드
+cd frontend && npx tsc --noEmit
+cd frontend && npx next build
 
 # E2E 테스트 (Playwright)
 cd tests/e2e && npm install
@@ -41,7 +40,7 @@ npx playwright test --ui               # UI 모드
 npx playwright test main-page/         # 특정 폴더만
 
 # 커버리지
-pytest tests/ --cov=. --cov-report=html
+python -m pytest tests/ --cov=. --cov-report=html
 ```
 
 ## Architecture
@@ -53,7 +52,7 @@ pytest tests/ --cov=. --cov-report=html
     ↓
 [@require_auth] → [@require_usage] 인증 + 사용량 체크/차감
     ↓
-[content_service] YouTube 자막 추출 (3단계 폴백: youtube-transcript-api → watch 페이지 파싱 → Supadata API)
+[content_service] YouTube 자막 추출 (4단계 폴백: youtube-transcript-api → watch 페이지 파싱 → Supadata API → Whisper 로컬 음성인식)
     ↓
 [content_service] 댓글 수집 (YOUTUBE_API_KEY 필요)
     ↓
@@ -73,14 +72,22 @@ JSON 응답 {title, content, html, usage}
 
 | 레이어 | 파일 | 역할 |
 |-------|------|-----|
-| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성 API (`/generate`, `/generate-batch`, `/regenerate`, `/api/mindmap`, `/api/generate-multi`, `/api/playlist-videos`, `/api/export/docx`) |
-| 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자 API |
-| 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다중 프로바이더 통합, GLM 재시도/락 |
-| 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 3단계 폴백 로직 |
+| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 예약, 지식 업로드, Ollama 헬스체크 |
+| 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스 API |
+| 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
+| 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 4단계 폴백 (Whisper 포함) |
+| 서비스 | `services/whisper_service.py` | faster-whisper 로컬 음성인식 (yt-dlp 오디오 다운로드) |
+| 서비스 | `services/pipeline_service.py` | 파이프라인 자동화 엔진 (SSE 이벤트 스트리밍) |
+| 서비스 | `services/webhook_service.py` | 웹훅 알림 (fire-and-forget, 1회 재시도) |
+| 서비스 | `services/schedule_service.py` | 예약 발행 CRUD |
+| 서비스 | `services/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
+| 서비스 | `services/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 |
+| 서비스 | `services/mcp/` | MCP 플러그인 시스템 (인터페이스 + 레지스트리 + Naver Blog/WordPress) |
+| 서비스 | `services/rag/` | RAG: ChromaDB 벡터 스토어, 텍스트 청킹, 컨텍스트 빌더 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
-| 설정 | `config.py` | 토큰 제한, 지원 프로바이더/모델/가격, 스타일별 temperature/max_tokens 정의 |
-| 프롬프트 | `prompts/` | 프롬프트 시스템 v3.1 (`build_full_prompt()`) |
+| 설정 | `config.py` | 토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens, RAG 설정 |
+| 프롬프트 | `prompts/` | 프롬프트 시스템 v3.1 + GEO/Shorts 스타일 |
 
 ### 프롬프트 구조
 
@@ -178,23 +185,41 @@ def generate_batch(): ...
 
 ### 8개 스타일 + 댓글 요약 (v3.1)
 
-UI에 표시되는 11개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`
+UI에 표시되는 13개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`
 
 내부 전용: `comment_summary` (병렬 댓글 요약용, `prompts/styles/comment_summary.py`)
 
 > **주의**: `prompts/__init__.py`의 `get_available_styles()`는 초기 5개만 반환. 실제 전체 스타일은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict 참조.
 
-### 추가 기능 (Feature Scout v1)
+### 추가 기능
 
 **다중 출력 포맷**: DOCX (`POST /api/export/docx`, python-docx), PDF (프론트엔드 `window.print()`)
 
 **SEO 메타데이터**: `blog_seo` 스타일 응답에 `seo` 필드 자동 포함 (`ai_service.extract_seo_metadata()`)
 
+**GEO 메타데이터**: `geo_seo` 스타일 — AI 검색엔진 최적화 (citations, entity_tags, structured_data, key_facts)
+
+**Shorts 클립**: `shorts_script` 스타일 — 60초 클립 3-5개 추출 (hook_text, script, timestamp)
+
+**Ollama 로컬 LLM**: `OLLAMA_BASE_URL` 설정으로 API 키 없이 로컬 모델 사용
+
+**Whisper 자막 폴백**: `WHISPER_ENABLED=true` 시 faster-whisper로 로컬 음성인식 (4번째 폴백)
+
+**파이프라인 자동화**: `POST /api/pipeline` — 자막→생성→SEO 자동 진행 (SSE 실시간 진행률)
+
+**MCP 플러그인**: `services/mcp/` — Naver Blog, WordPress 자동 발행 (추상 인터페이스 + 레지스트리)
+
+**예약 발행**: `POST /api/schedule` — APScheduler 기반 예약 + ContentCalendar UI
+
+**팀 워크스페이스**: `services/workspace_service.py` — 워크스페이스 생성/초대/역할 관리 (Owner/Editor/Viewer)
+
+**RAG 지식 참조**: `services/rag/` — ChromaDB 벡터 스토어, 파일 업로드 → 콘텐츠 생성 시 자동 주입
+
+**웹훅 알림**: `services/webhook_service.py` — 생성 완료 시 POST (fire-and-forget, 1회 재시도)
+
 **채널/재생목록 처리**: `POST /api/playlist-videos` — 채널/재생목록 URL → 영상 목록 추출 (YOUTUBE_API_KEY 필수)
 
 **멀티포맷 리퍼포징**: `POST /api/generate-multi` — 1 URL × N 스타일 동시 생성 (사용량 1회 차감)
-
-**콘텐츠 품질 스코어**: `ContentScorer.js` — 가독성(A~F), 구조(0~100), SEO(0~100, blog_seo만)
 
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
@@ -211,6 +236,7 @@ UI에 표시되는 11개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 | Gemini | `gemini/gemini-2.5-flash-lite-preview-09-2025` | reasoning_effort 미지원 |
 | DeepSeek | `deepseek/deepseek-chat`, `deepseek/deepseek-reasoner` | |
 | Zhipu AI | `zhipuai/GLM-4.7`, `zhipuai/GLM-4.5-Air` | OpenAI 호환 API 사용 |
+| Ollama (로컬) | `ollama_chat/llama3.2`, `ollama_chat/mistral`, `ollama_chat/gemma2` | API 키 불필요, OLLAMA_BASE_URL 설정 |
 
 - 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS`에 `price_input`, `price_output` 필수
 
@@ -221,14 +247,15 @@ UI에 표시되는 11개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 - **댓글 활용**: `[댓글]` 섹션이 입력에 없으면 시청자 반응 절대 언급 금지
 - **원칙**: 자막에 있는 정보만 사용 (창작/추측 절대 금지)
 
-### 모디파이어 (2개만 지원)
+### 모디파이어 (3개 지원)
 
 | 모디파이어 | 값 | 설명 |
 |-----------|-----|------|
 | `length` | short/medium/long | 글 길이 (500-800 / 1000-1500 / 2000-3000자) |
 | `writing_style` | conversational/explanatory/casual/expert | 문체 |
+| `language` | ko/en/ja | 출력 언어 (한국어/영어/일본어) |
 
-기본값: `length: medium`, `writing_style: conversational`. 언어는 한국어 고정.
+기본값: `length: medium`, `writing_style: conversational`, `language: ko`.
 
 ### AI 생성 파라미터 튜닝 (`config.py`)
 
