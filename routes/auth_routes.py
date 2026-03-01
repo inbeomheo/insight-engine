@@ -13,6 +13,7 @@ from services.supabase_service import (
     delete_user_account,
     update_user_profile, update_user_password
 )
+from services.workspace_service import workspace_service
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -590,3 +591,111 @@ def get_admin_content_detail(report_id):
     if not content:
         return _error_response('콘텐츠를 찾을 수 없습니다.', 404)
     return jsonify(content)
+
+
+# =============================================
+# 워크스페이스 API
+# =============================================
+
+@auth_bp.route('/api/workspaces', methods=['POST'])
+@require_auth
+def create_workspace():
+    """워크스페이스 생성"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    name = _get_json_data().get('name', '').strip()
+    if not name:
+        return _error_response('워크스페이스 이름을 입력해주세요.')
+
+    result = workspace_service.create_workspace(name, g.user_id)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'], 500)
+    return jsonify(result), 201
+
+
+@auth_bp.route('/api/workspaces', methods=['GET'])
+@require_auth
+def list_workspaces():
+    """사용자 워크스페이스 목록"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    workspaces = workspace_service.list_workspaces(g.user_id)
+    return jsonify({'workspaces': workspaces})
+
+
+@auth_bp.route('/api/workspaces/<workspace_id>/members', methods=['GET'])
+@require_auth
+def get_workspace_members(workspace_id):
+    """워크스페이스 멤버 목록"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    members = workspace_service.get_members(workspace_id)
+    return jsonify({'members': members})
+
+
+@auth_bp.route('/api/workspaces/<workspace_id>/invite', methods=['POST'])
+@require_auth
+def invite_workspace_member(workspace_id):
+    """워크스페이스 멤버 초대 (이메일로)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    data = _get_json_data()
+    user_email = data.get('user_email', '').strip()
+    role = data.get('role', 'editor')
+
+    if not user_email:
+        return _error_response('이메일을 입력해주세요.')
+
+    # owner 권한 확인
+    ws = workspace_service.get_workspace(workspace_id)
+    if not ws or ws.get('owner_id') != g.user_id:
+        return _error_response('워크스페이스 소유자만 초대할 수 있습니다.', 403)
+
+    # 이메일로 사용자 ID 조회
+    target_user_id = workspace_service.find_user_by_email(user_email)
+    if not target_user_id:
+        return _error_response(f'등록되지 않은 이메일입니다: {user_email}', 404)
+
+    result = workspace_service.invite_member(workspace_id, target_user_id, role)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return _success_response({'member': result})
+
+
+@auth_bp.route('/api/workspaces/<workspace_id>/members/<user_id>', methods=['DELETE'])
+@require_auth
+def remove_workspace_member(workspace_id, user_id):
+    """워크스페이스 멤버 제거"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    # owner 권한 확인
+    ws = workspace_service.get_workspace(workspace_id)
+    if not ws or ws.get('owner_id') != g.user_id:
+        return _error_response('워크스페이스 소유자만 멤버를 제거할 수 있습니다.', 403)
+
+    if workspace_service.remove_member(workspace_id, user_id):
+        return _success_response()
+    return _error_response('멤버 제거에 실패했습니다.', 500)
+
+
+@auth_bp.route('/api/workspaces/<workspace_id>', methods=['DELETE'])
+@require_auth
+def delete_workspace(workspace_id):
+    """워크스페이스 삭제 (owner만)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    if workspace_service.delete_workspace(workspace_id, g.user_id):
+        return _success_response()
+    return _error_response('삭제에 실패했습니다. 소유자만 삭제할 수 있습니다.', 403)

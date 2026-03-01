@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Youtube, Layers, Combine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,7 +19,9 @@ import PromptModal from '@/components/modals/PromptModal';
 import MindmapModal from '@/components/modals/MindmapModal';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import CustomStyleModal from '@/components/modals/CustomStyleModal';
+import WorkspaceSettingsModal from '@/components/modals/WorkspaceSettingsModal';
 
+import { YOUTUBE_URL_REGEX } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -49,6 +51,52 @@ export default function Home() {
   const { generationMode } = useSettingsStore();
   const { urls, addUrl, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+
+  // 전체 페이지 드래그앤드롭
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current++;
+    if (dragCounter.current === 1) setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setIsDragOver(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      setIsDragOver(false);
+
+      const text =
+        e.dataTransfer.getData('text/uri-list') ||
+        e.dataTransfer.getData('text/plain') ||
+        '';
+
+      // 텍스트에서 YouTube URL 모두 추출
+      const urlPattern =
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+[^\s]*/g;
+      const matches = text.match(urlPattern);
+      if (!matches) return;
+
+      for (const url of matches) {
+        const trimmed = url.trim();
+        if (YOUTUBE_URL_REGEX.test(trimmed)) addUrl(trimmed);
+      }
+    },
+    [addUrl],
+  );
 
   // 프로바이더 로드
   useProviders();
@@ -86,7 +134,23 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div
+      className="flex h-screen overflow-hidden relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* 드래그 오버레이 */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/40 rounded-lg pointer-events-none animate-fade-in">
+          <div className="flex flex-col items-center gap-3 text-primary">
+            <Youtube className="h-12 w-12 opacity-60" />
+            <p className="text-lg font-medium">YouTube URL을 여기에 놓으세요</p>
+          </div>
+        </div>
+      )}
+
       {/* 사이드바 */}
       <Sidebar />
 
@@ -231,6 +295,7 @@ export default function Home() {
       <MindmapModal />
       <OnboardingModal />
       <CustomStyleModal />
+      <WorkspaceSettingsModal />
     </div>
   );
 }

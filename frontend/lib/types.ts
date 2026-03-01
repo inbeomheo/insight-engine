@@ -261,3 +261,37 @@ export interface McpPublishResponse {
   message: string;
   url?: string;
 }
+
+// === 예약 발행 ===
+
+export interface ScheduledPost {
+  id: string;
+  title: string;
+  content: string;
+  html?: string;
+  target_plugin: string;
+  scheduled_at: string;
+  status: 'pending' | 'published' | 'failed' | 'cancelled';
+  error_message?: string;
+  published_url?: string;
+  created_at: string;
+}
+
+// === 워크스페이스 ===
+
+export type WorkspaceRole = 'owner' | 'editor' | 'viewer';
+
+export interface Workspace {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at: string;
+  my_role?: WorkspaceRole;
+}
+
+export interface WorkspaceMember {
+  user_id: string;
+  email?: string;
+  role: WorkspaceRole;
+  joined_at: string;
+}

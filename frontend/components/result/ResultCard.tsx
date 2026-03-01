@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,8 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { exportDocx, getMcpPlugins, publishToMcp } from '@/lib/api';
 import type { McpPlugin } from '@/lib/types';
+import { useSchedule } from '@/hooks/useSchedule';
+import ScheduleModal from '@/components/modals/ScheduleModal';
 
 import SeoSection from './SeoSection';
 import GeoSection from './GeoSection';
@@ -45,8 +47,10 @@ export default function ResultCard({ report, searchQuery }: ResultCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [mcpPlugins, setMcpPlugins] = useState<McpPlugin[]>([]);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const { removeReport } = useResultStore();
   const { setPromptModalOpen, setMindmapModalOpen } = useUIStore();
+  const { addSchedule, isLoading: scheduleLoading } = useSchedule();
 
   // MCP 플러그인 목록 로드 (한 번만)
   useEffect(() => {
@@ -344,6 +348,10 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 </>
               )}
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setScheduleModalOpen(true)}>
+                <Calendar className="h-3.5 w-3.5 mr-2" />
+                예약 발행
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShare}>
                 <Share2 className="h-3.5 w-3.5 mr-2" />
                 공유
@@ -360,6 +368,25 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
           </DropdownMenu>
         </div>
       </div>
+
+      {/* 예약 발행 모달 */}
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        title={report.title}
+        content={report.content}
+        html={report.html}
+        isLoading={scheduleLoading}
+        onSchedule={async (data) => {
+          const ok = await addSchedule({
+            title: report.title,
+            content: report.content,
+            html: report.html,
+            ...data,
+          });
+          if (ok) setScheduleModalOpen(false);
+        }}
+      />
     </Card>
   );
 }

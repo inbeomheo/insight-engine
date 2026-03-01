@@ -10,6 +10,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import WorkspaceSelector from './WorkspaceSelector';
 
 function getStyleLabel(styleId: string) {
   return STYLE_OPTIONS.find((s) => s.id === styleId)?.label || styleId;
@@ -103,6 +104,9 @@ export default function Sidebar() {
             <span className="font-medium">새 분석</span>
           </Button>
         </div>
+
+        {/* 워크스페이스 */}
+        <WorkspaceSelector />
 
         {/* 검색 */}
         <div className="px-3 pb-3">

@@ -9,6 +9,7 @@ interface UIState {
   mindmapModalOpen: boolean;
   promptModalOpen: boolean;
   playlistModalOpen: boolean;
+  workspaceSettingsOpen: boolean;
 
   // 현재 모달에 표시 중인 데이터
   activePrompt: string;
@@ -28,6 +29,7 @@ interface UIState {
   setMindmapModalOpen: (v: boolean, reportId?: string) => void;
   setPromptModalOpen: (v: boolean, prompt?: string) => void;
   setPlaylistModalOpen: (v: boolean) => void;
+  setWorkspaceSettingsOpen: (v: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -39,6 +41,7 @@ export const useUIStore = create<UIState>((set) => ({
   mindmapModalOpen: false,
   promptModalOpen: false,
   playlistModalOpen: false,
+  workspaceSettingsOpen: false,
   activePrompt: '',
   activeMindmapReportId: '',
   editingCustomStyleId: null,
@@ -57,4 +60,5 @@ export const useUIStore = create<UIState>((set) => ({
   setPromptModalOpen: (v, prompt = '') =>
     set({ promptModalOpen: v, activePrompt: prompt }),
   setPlaylistModalOpen: (v) => set({ playlistModalOpen: v }),
+  setWorkspaceSettingsOpen: (v) => set({ workspaceSettingsOpen: v }),
 }));

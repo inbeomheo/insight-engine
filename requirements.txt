@@ -14,3 +14,4 @@ trafilatura>=1.6.0
 duckduckgo-search>=4.0.0
 faster-whisper>=1.0.0
 yt-dlp>=2024.1.0
+APScheduler>=3.10.0

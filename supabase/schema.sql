@@ -335,6 +335,93 @@ CREATE INDEX IF NOT EXISTS idx_ie_histories_favorite ON ie_histories(user_id, is
 ALTER TABLE ie_histories ADD COLUMN IF NOT EXISTS keywords JSONB DEFAULT '[]'::jsonb;
 
 -- =============================================
+-- 11. 예약 발행 테이블
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS ie_scheduled_posts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    html TEXT,
+    target_plugin TEXT NOT NULL,
+    scheduled_at TIMESTAMPTZ NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'published', 'failed', 'cancelled')),
+    error_message TEXT,
+    published_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_user ON ie_scheduled_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_status ON ie_scheduled_posts(status, scheduled_at);
+
+-- RLS
+ALTER TABLE ie_scheduled_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own scheduled_posts"
+    ON ie_scheduled_posts FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own scheduled_posts"
+    ON ie_scheduled_posts FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own scheduled_posts"
+    ON ie_scheduled_posts FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own scheduled_posts"
+    ON ie_scheduled_posts FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- =============================================
+-- 12. 워크스페이스 테이블
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS ie_workspaces (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    owner_id UUID NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 워크스페이스 멤버
+CREATE TABLE IF NOT EXISTS ie_workspace_members (
+    workspace_id UUID REFERENCES ie_workspaces(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (workspace_id, user_id)
+);
+
+-- ie_histories에 workspace_id 추가 (기존 데이터 호환)
+ALTER TABLE ie_histories ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES ie_workspaces(id);
+CREATE INDEX IF NOT EXISTS idx_histories_workspace ON ie_histories(workspace_id);
+
+-- =============================================
+-- 13. 워크스페이스 RLS
+-- =============================================
+
+ALTER TABLE ie_workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ie_workspace_members ENABLE ROW LEVEL SECURITY;
+
+-- 워크스페이스: 멤버만 읽기 가능
+CREATE POLICY workspace_member_read ON ie_workspaces FOR SELECT
+    USING (id IN (SELECT workspace_id FROM ie_workspace_members WHERE user_id = auth.uid()));
+
+-- 워크스페이스: owner만 쓰기 가능
+CREATE POLICY workspace_owner_write ON ie_workspaces FOR ALL
+    USING (owner_id = auth.uid());
+
+-- 멤버: 같은 워크스페이스 멤버만 읽기 가능
+CREATE POLICY member_read ON ie_workspace_members FOR SELECT
+    USING (workspace_id IN (SELECT workspace_id FROM ie_workspace_members WHERE user_id = auth.uid()));
+
+-- 멤버: owner만 관리 가능
+CREATE POLICY member_manage ON ie_workspace_members FOR ALL
+    USING (workspace_id IN (SELECT id FROM ie_workspaces WHERE owner_id = auth.uid()));
+
+-- =============================================
 -- 완료!
 -- =============================================
 -- 이제 .env 파일에 Supabase 설정을 추가하세요:

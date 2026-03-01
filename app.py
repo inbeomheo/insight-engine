@@ -116,6 +116,10 @@ def create_app(test_config=None):
     app.register_blueprint(blog_bp)
     app.register_blueprint(auth_bp)
 
+    # 예약 발행 스케줄러 시작
+    from services.scheduler_worker import start_scheduler
+    start_scheduler(app)
+
     return app
 
 

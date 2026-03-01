@@ -15,6 +15,9 @@ import type {
   McpPublishResponse,
   PipelineRequest,
   PipelineEvent,
+  ScheduledPost,
+  Workspace,
+  WorkspaceMember,
 } from './types';
 
 const BASE = '';
@@ -261,6 +264,28 @@ export async function publishToMcp(req: McpPublishRequest): Promise<McpPublishRe
   });
 }
 
+// 예약 발행 CRUD
+export async function createSchedule(data: {
+  title: string;
+  content: string;
+  html?: string;
+  target_plugin: string;
+  scheduled_at: string;
+}): Promise<ScheduledPost> {
+  return request('/api/schedule', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSchedules(): Promise<{ schedules: ScheduledPost[] }> {
+  return request('/api/schedule');
+}
+
+export async function deleteSchedule(postId: string): Promise<{ success: boolean }> {
+  return request(`/api/schedule/${postId}`, { method: 'DELETE' });
+}
+
 // 파이프라인 실행 (SSE)
 export async function runPipeline(
   req: PipelineRequest,
@@ -307,4 +332,53 @@ export async function runPipeline(
     if (signal?.aborted) return;
     onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 });
   }
+}
+
+// =============================================
+// 워크스페이스
+// =============================================
+
+export async function getWorkspaces(): Promise<{ workspaces: Workspace[] }> {
+  return request('/api/workspaces');
+}
+
+export async function createWorkspace(name: string): Promise<Workspace> {
+  return request('/api/workspaces', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function getWorkspaceMembers(
+  workspaceId: string
+): Promise<{ members: WorkspaceMember[] }> {
+  return request(`/api/workspaces/${workspaceId}/members`);
+}
+
+export async function inviteMember(
+  workspaceId: string,
+  userEmail: string,
+  role: string = 'editor'
+): Promise<{ success: boolean; member?: WorkspaceMember }> {
+  return request(`/api/workspaces/${workspaceId}/invite`, {
+    method: 'POST',
+    body: JSON.stringify({ user_email: userEmail, role }),
+  });
+}
+
+export async function removeMember(
+  workspaceId: string,
+  userId: string
+): Promise<{ success: boolean }> {
+  return request(`/api/workspaces/${workspaceId}/members/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function deleteWorkspace(
+  workspaceId: string
+): Promise<{ success: boolean }> {
+  return request(`/api/workspaces/${workspaceId}`, {
+    method: 'DELETE',
+  });
 }
