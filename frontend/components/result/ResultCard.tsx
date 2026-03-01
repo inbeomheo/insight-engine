@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,8 @@ import type { Report } from '@/lib/types';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
-import { exportDocx } from '@/lib/api';
+import { exportDocx, getMcpPlugins, publishToMcp } from '@/lib/api';
+import type { McpPlugin } from '@/lib/types';
 
 import SeoSection from './SeoSection';
 import GeoSection from './GeoSection';
@@ -43,8 +44,16 @@ function getStyleLabel(id: string) {
 export default function ResultCard({ report, searchQuery }: ResultCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [mcpPlugins, setMcpPlugins] = useState<McpPlugin[]>([]);
   const { removeReport } = useResultStore();
   const { setPromptModalOpen, setMindmapModalOpen } = useUIStore();
+
+  // MCP 플러그인 목록 로드 (한 번만)
+  useEffect(() => {
+    getMcpPlugins()
+      .then((res) => setMcpPlugins(res.plugins))
+      .catch(() => {});
+  }, []);
 
   const charCount = report.content.length;
 
@@ -124,6 +133,23 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     toast.success('공유 텍스트 복사 완료');
   }
 
+  async function handlePublish(pluginId: string) {
+    try {
+      const res = await publishToMcp({
+        plugin_id: pluginId,
+        title: report.title,
+        content: report.content,
+      });
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } catch {
+      toast.error('발행 중 오류가 발생했습니다.');
+    }
+  }
+
   // 검색어 하이라이트
   const highlightedContent = useMemo(() => {
     if (!searchQuery) return null;
@@ -154,6 +180,12 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
             )}
             {report.cached && (
               <Badge variant="outline" className="text-xs">캐시</Badge>
+            )}
+            {report.transcript_source === 'whisper' && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/60">
+                <Mic className="h-3 w-3" />
+                음성인식
+              </span>
             )}
             {report.comment_summary_included && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/60">
@@ -300,6 +332,17 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 <Printer className="h-3.5 w-3.5 mr-2" />
                 PDF 인쇄
               </DropdownMenuItem>
+              {mcpPlugins.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  {mcpPlugins.map((plugin) => (
+                    <DropdownMenuItem key={plugin.id} onClick={() => handlePublish(plugin.id)}>
+                      <Send className="h-3.5 w-3.5 mr-2" />
+                      {plugin.name} 발행
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleShare}>
                 <Share2 className="h-3.5 w-3.5 mr-2" />

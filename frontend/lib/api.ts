@@ -10,6 +10,11 @@ import type {
   SourceVideo,
   FusionMeta,
   FusionSections,
+  McpPlugin,
+  McpPublishRequest,
+  McpPublishResponse,
+  PipelineRequest,
+  PipelineEvent,
 } from './types';
 
 const BASE = '';
@@ -241,4 +246,65 @@ export async function testWebhook(url: string): Promise<{ success: boolean; erro
     method: 'POST',
     body: JSON.stringify({ url }),
   });
+}
+
+// MCP 플러그인 목록
+export async function getMcpPlugins(): Promise<{ plugins: McpPlugin[] }> {
+  return request('/api/mcp/plugins');
+}
+
+// MCP 플러그인 발행
+export async function publishToMcp(req: McpPublishRequest): Promise<McpPublishResponse> {
+  return request('/api/mcp/publish', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+// 파이프라인 실행 (SSE)
+export async function runPipeline(
+  req: PipelineRequest,
+  onEvent: (event: PipelineEvent) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/pipeline`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+    signal,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const event: PipelineEvent = JSON.parse(line.slice(6));
+            onEvent(event);
+          } catch {
+            // JSON 파싱 실패 무시
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (signal?.aborted) return;
+    onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 });
+  }
 }

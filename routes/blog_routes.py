@@ -1856,3 +1856,118 @@ def generate_stream():
     except Exception as e:
         current_app.logger.error(f"Generate stream setup failed: {e}")
         return _handle_error_response(str(e))
+
+
+# ── 파이프라인 엔드포인트 ──────────────────────────────────────
+
+
+@blog_bp.route('/api/pipeline', methods=['POST'])
+@require_auth
+def run_pipeline():
+    """파이프라인 실행 SSE 엔드포인트.
+
+    요청: { pipeline_id, url, model, style, modifiers }
+    응답: text/event-stream (각 스텝 진행률 이벤트)
+    """
+    from services.pipeline_service import PipelineEngine, PIPELINE_PRESETS
+    from services.usage.usage_service import UsageService
+    from services.supabase_service import is_supabase_enabled
+
+    try:
+        params = _get_request_data(request)
+        data = request.get_json(silent=True) or {}
+        pipeline_id = data.get('pipeline_id', 'blog_automation')
+
+        if pipeline_id not in PIPELINE_PRESETS:
+            return jsonify({'error': f'알 수 없는 파이프라인: {pipeline_id}'}), 400
+
+        url = params['url']
+        if not url:
+            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+        if not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+
+        # 사용량 체크
+        user_id = getattr(g, 'user_id', None)
+        if is_supabase_enabled() and user_id:
+            can_use, usage = UsageService.check_can_use(user_id)
+            if not can_use:
+                return jsonify({
+                    'error': '오늘 사용 가능 횟수를 모두 소진했습니다.',
+                    'code': 'USAGE_LIMIT_EXCEEDED',
+                    'usage': usage
+                }), 429
+
+        config = PIPELINE_PRESETS[pipeline_id]
+        context = {
+            'url': url,
+            'model': params['model'],
+            'style': params['style'],
+            'modifiers': params['modifiers'],
+            'custom_prompt': params['custom_prompt'],
+        }
+
+        app = current_app._get_current_object()
+
+        def pipeline_sse():
+            with app.app_context():
+                engine = PipelineEngine(config)
+                for event in engine.execute(context):
+                    # pipeline_complete 이벤트에서 사용량 차감
+                    if event.get('type') == 'pipeline_complete':
+                        if is_supabase_enabled() and user_id:
+                            UsageService.decrement(user_id)
+                        # result에서 불필요한 대용량 필드 제거 (SSE 전송용)
+                        result = event.get('result', {})
+                        event['result'] = {
+                            k: result[k] for k in
+                            ('title', 'content', 'html', 'usage', 'prompt',
+                             'youtube_title', 'transcript_source', 'seo', 'geo')
+                            if k in result
+                        }
+                    line = json.dumps(event, ensure_ascii=False)
+                    yield f"data: {line}\n\n"
+
+        return Response(
+            stream_with_context(pipeline_sse()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+            }
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Pipeline setup failed: {e}")
+        return _handle_error_response(str(e))
+
+
+# ── MCP 플러그인 엔드포인트 ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/plugins', methods=['GET'])
+def mcp_list_plugins():
+    """등록된 MCP 플러그인 목록을 반환합니다."""
+    from services.mcp import plugin_registry
+    return jsonify({"plugins": plugin_registry.list_plugins()})
+
+
+@blog_bp.route('/api/mcp/publish', methods=['POST'])
+def mcp_publish():
+    """지정된 플러그인으로 콘텐츠를 발행합니다."""
+    from services.mcp import plugin_registry
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "요청 데이터가 없습니다."}), 400
+
+    plugin_id = data.get('plugin_id')
+    title = data.get('title')
+    content = data.get('content')
+
+    if not plugin_id or not title or not content:
+        return jsonify({"error": "plugin_id, title, content는 필수입니다."}), 400
+
+    result = plugin_registry.execute(plugin_id, content, title)
+    status_code = 200 if result.get("success") else 404
+    return jsonify(result), status_code

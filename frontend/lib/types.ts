@@ -203,3 +203,61 @@ export interface MultiStyleResponse {
   youtube_title: string;
   transcript_source: string;
 }
+
+// === 파이프라인 ===
+
+export interface PipelineStep {
+  id: string;
+  name: string;
+  description: string;
+  progress: number;
+  status: 'pending' | 'running' | 'done' | 'error';
+  elapsed?: number;
+  error?: string;
+}
+
+export type PipelineEventType =
+  | 'step_start'
+  | 'step_complete'
+  | 'step_error'
+  | 'pipeline_complete';
+
+export interface PipelineEvent {
+  type: PipelineEventType;
+  step?: string;
+  name?: string;
+  description?: string;
+  progress: number;
+  elapsed?: number;
+  error?: string;
+  result?: GenerateResponse;
+}
+
+export interface PipelineRequest {
+  pipeline_id: string;
+  url: string;
+  model: string;
+  style: string;
+  modifiers: Modifiers;
+  customPrompt?: string;
+}
+
+// === MCP 플러그인 ===
+
+export interface McpPlugin {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface McpPublishRequest {
+  plugin_id: string;
+  title: string;
+  content: string;
+}
+
+export interface McpPublishResponse {
+  success: boolean;
+  message: string;
+  url?: string;
+}

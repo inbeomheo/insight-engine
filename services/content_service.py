@@ -614,6 +614,23 @@ def get_transcript(video_id: str) -> TranscriptResult:
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
             return supadata_result
 
+    # 4순위: Whisper 음성 인식 (WHISPER_ENABLED=True일 때만)
+    whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
+    if whisper_enabled:
+        _log_info(f"Trying Whisper fallback for video_id={video_id}")
+        try:
+            from services.whisper_service import extract_transcript_whisper
+            whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            whisper_text = extract_transcript_whisper(video_url, whisper_model)
+            if whisper_text and whisper_text.strip():
+                _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
+                result = {'text': whisper_text, 'source': 'whisper'}
+                _save_cache(video_id, 'transcript', result)
+                return result
+        except Exception as e:
+            _log_warning(f"Whisper fallback failed for video_id={video_id}: {str(e)}")
+
     # 모든 방법 실패
     if last_error:
         if '429' in last_error or 'Too Many Requests' in last_error:

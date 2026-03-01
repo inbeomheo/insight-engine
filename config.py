@@ -35,6 +35,11 @@ PROVIDER_API_KEYS: Dict[str, str] = {
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 
+# === Whisper (음성 인식 자막 폴백) ===
+
+WHISPER_ENABLED: bool = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
+WHISPER_MODEL_SIZE: str = os.getenv('WHISPER_MODEL_SIZE', 'base')
+
 # === Webhook ===
 
 WEBHOOK_URL: str = os.getenv('WEBHOOK_URL', '')
