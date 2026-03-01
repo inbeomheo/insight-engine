@@ -27,7 +27,9 @@ import { useUIStore } from '@/stores/uiStore';
 import { exportDocx } from '@/lib/api';
 
 import SeoSection from './SeoSection';
+import GeoSection from './GeoSection';
 import FusionSections from './FusionSections';
+import ShortsClipList from './ShortsClipList';
 
 interface ResultCardProps {
   report: Report;
@@ -236,6 +238,14 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 
           {/* SEO 섹션 */}
           {report.seo && <SeoSection seo={report.seo} />}
+
+          {/* GEO 섹션 */}
+          {report.geo && <GeoSection geo={report.geo} />}
+
+          {/* Shorts 클립 섹션 */}
+          {report.style === 'shorts_script' && report.shorts_clips && (
+            <ShortsClipList clips={report.shorts_clips} />
+          )}
 
           {/* 퓨전 섹션 */}
           {report.isFusion && (

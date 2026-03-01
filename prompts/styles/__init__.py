@@ -18,6 +18,8 @@ from .newsletter import NEWSLETTER_PROMPT
 from .show_notes import SHOW_NOTES_PROMPT
 from .comment_summary import COMMENT_SUMMARY_PROMPT
 from .mindmap import MINDMAP_PROMPT
+from .shorts_script import SHORTS_SCRIPT_PROMPT
+from .geo_seo import GEO_SEO_PROMPT
 
 # 스타일 프롬프트 매핑
 STYLE_PROMPTS = {
@@ -32,6 +34,8 @@ STYLE_PROMPTS = {
     'sns_post': SNS_POST_PROMPT,
     'newsletter': NEWSLETTER_PROMPT,
     'show_notes': SHOW_NOTES_PROMPT,
+    'shorts_script': SHORTS_SCRIPT_PROMPT,
+    'geo_seo': GEO_SEO_PROMPT,
     # 내부 전용 (UI 비노출)
     'mindmap': MINDMAP_PROMPT,
 }
@@ -66,4 +70,6 @@ __all__ = [
     'SHOW_NOTES_PROMPT',
     'COMMENT_SUMMARY_PROMPT',
     'MINDMAP_PROMPT',
+    'SHORTS_SCRIPT_PROMPT',
+    'GEO_SEO_PROMPT',
 ]

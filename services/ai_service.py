@@ -27,18 +27,24 @@ DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
 
-    v3.0: 2개 모디파이어만 지원 (length, writing_style)
-    한국어 고정 (다국어 지원 제거)
+    v3.1: 3개 모디파이어 지원 (length, writing_style, language)
+    language 미지정 시 기본 한국어
     """
     instructions = []
 
-    # 한국어 고정
-    instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
-
     if not modifiers:
+        instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
         return instructions
 
-    # v3.0: length, writing_style 2개만 지원
+    # language 모디파이어 처리 (미지정 시 기본 한국어)
+    lang = modifiers.get('language', 'ko')
+    lang_options = style_modifiers.get('language', {})
+    if lang in lang_options:
+        instructions.append(lang_options[lang])
+    else:
+        instructions.append(DEFAULT_LANGUAGE_INSTRUCTION)
+
+    # length, writing_style 모디파이어
     modifier_types = ['length', 'writing_style']
     for modifier_type in modifier_types:
         value = modifiers.get(modifier_type)
@@ -96,7 +102,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "timeout": 180,  # 3분 타임아웃 (GLM 느린 응답 대비)
+        "timeout": 300,  # 5분 타임아웃 (GLM 느린 응답 대비)
     }
     if stream:
         kwargs["stream"] = True
@@ -117,6 +123,10 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
         kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
         kwargs["api_base"] = ZHIPUAI_API_BASE
         kwargs["api_key"] = zhipuai_key
+
+    # Ollama → api_base 설정 (API 키 불필요)
+    if model.startswith("ollama_chat/") or model.startswith("ollama/"):
+        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     return kwargs
 
@@ -415,6 +425,75 @@ def extract_seo_metadata(content):
 
     # 최소 1개 필드 파싱 성공 시 반환
     return seo if seo else None
+
+
+def extract_geo_metadata(content):
+    """geo_seo 스타일 콘텐츠에서 GEO 메타데이터를 정규식으로 추출합니다.
+
+    Args:
+        content: 마크다운 본문
+
+    Returns:
+        dict 또는 None: {citations, structured_data, entity_tags, key_facts}
+    """
+    import re
+
+    if not content:
+        return None
+
+    geo = {}
+
+    # 주요 팩트 (✓ 로 시작하는 줄)
+    facts = re.findall(r'[-•✓]\s*✓?\s*(.+?)(?:\n|$)', content)
+    if facts:
+        geo['key_facts'] = [f.strip() for f in facts if f.strip()]
+
+    # 구조화 데이터 (마크다운 테이블에서 추출 — "구조화 데이터" 섹션)
+    table_section = re.search(
+        r'###\s*구조화\s*데이터\s*\n((?:\|.+\|\n?)+)',
+        content
+    )
+    if table_section:
+        rows = table_section.group(1).strip().split('\n')
+        structured = {}
+        for row in rows:
+            cells = [c.strip().strip('*') for c in row.split('|') if c.strip()]
+            if len(cells) >= 2 and '---' not in cells[0]:
+                key = cells[0].strip()
+                val = cells[1].strip()
+                if key and val and key != '항목' and key != '내용':
+                    structured[key] = val
+        if structured:
+            geo['structured_data'] = structured
+
+    # 엔티티 태그 (백틱으로 감싼 태그들 — "엔티티 태그" 섹션)
+    tag_section = re.search(r'###\s*엔티티\s*태그\s*\n(.+?)(?:\n\n|\n---|\n###|$)', content, re.DOTALL)
+    if tag_section:
+        raw_tags = tag_section.group(1).strip()
+        tags = re.findall(r'`([^`]+)`', raw_tags)
+        if tags:
+            geo['entity_tags'] = [t.strip() for t in tags]
+
+    # 인용문 (핵심 요약 + Q&A 답변에서 추출 — 첫 문장들)
+    citations = []
+
+    # 한 줄 정의
+    definition = re.search(r'###\s*한 줄 정의\s*\n>\s*(.+?)(?:\n|$)', content)
+    if definition:
+        citations.append(definition.group(1).strip())
+
+    # Q&A 답변의 첫 문장
+    qa_answers = re.findall(r'A\.\s*(.+?)(?:\n|$)', content)
+    for ans in qa_answers:
+        text = ans.strip()
+        if text and len(text) > 10:
+            citations.append(text)
+
+    if citations:
+        geo['citations'] = citations
+
+    # 최소 1개 필드 파싱 성공 시 반환
+    return geo if geo else None
 
 
 def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):

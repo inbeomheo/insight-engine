@@ -56,6 +56,24 @@ export function saveCustomStyles(styles: CustomStyle[]) {
   safeSet(STORAGE_KEYS.CUSTOM_STYLES, styles);
 }
 
+// Ollama Base URL
+export function loadOllamaBaseUrl(): string {
+  return safeGet<string>(STORAGE_KEYS.OLLAMA_BASE_URL, '');
+}
+
+export function saveOllamaBaseUrl(url: string) {
+  safeSet(STORAGE_KEYS.OLLAMA_BASE_URL, url);
+}
+
+// 웹훅 URL
+export function loadWebhookUrl(): string {
+  return safeGet<string>(STORAGE_KEYS.WEBHOOK_URL, '');
+}
+
+export function saveWebhookUrl(url: string) {
+  safeSet(STORAGE_KEYS.WEBHOOK_URL, url);
+}
+
 // 온보딩
 export function isOnboardingDone(): boolean {
   return safeGet<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);

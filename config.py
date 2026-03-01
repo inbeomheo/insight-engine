@@ -30,9 +30,15 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'gemini': os.getenv('GEMINI_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
     'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
+    'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
 }
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
+
+# === Webhook ===
+
+WEBHOOK_URL: str = os.getenv('WEBHOOK_URL', '')
+WEBHOOK_ENABLED: bool = os.getenv('WEBHOOK_ENABLED', 'false').lower() == 'true'
 
 # === Content Limits ===
 
@@ -63,8 +69,8 @@ MAX_FALLBACK_ATTEMPTS = 3
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
-    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5, 'show_notes': 0.5,
-    'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7,
+    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5, 'show_notes': 0.5, 'geo_seo': 0.5,
+    'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7, 'shorts_script': 0.7,
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.5,
 }
@@ -84,12 +90,30 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7 (최신)', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
             {'id': 'zhipuai/GLM-4.5-Air', 'name': 'GLM-4.5 Air (경량)', 'max_input_tokens': 128000, 'price_input': 0.10, 'price_output': 0.10},
         ]
-    }
+    },
+    'deepseek': {
+        'name': 'DeepSeek',
+        'models': [
+            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek Chat (V3)', 'max_input_tokens': 64000, 'price_input': 0.27, 'price_output': 1.10},
+            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek Reasoner (R1)', 'max_input_tokens': 64000, 'price_input': 0.55, 'price_output': 2.19},
+        ]
+    },
+    'ollama': {
+        'name': 'Ollama (로컬)',
+        'api_base': os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434'),
+        'models': [
+            {'id': 'ollama_chat/llama3.2', 'name': 'Llama 3.2 (8B)', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'ollama_chat/mistral', 'name': 'Mistral 7B', 'max_input_tokens': 32000, 'price_input': 0, 'price_output': 0},
+            {'id': 'ollama_chat/gemma2', 'name': 'Gemma 2 (9B)', 'max_input_tokens': 8192, 'price_input': 0, 'price_output': 0},
+        ]
+    },
 }
 
 
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
-    """API 키가 설정된 프로바이더만 반환합니다."""
+    """API 키가 설정된 프로바이더만 반환합니다.
+    Ollama는 API 키 불필요 — OLLAMA_BASE_URL이 설정되어 있으면 활성화.
+    """
     available = {}
     for provider_id, api_key in PROVIDER_API_KEYS.items():
         if api_key and provider_id in SUPPORTED_PROVIDERS:
@@ -109,6 +133,8 @@ def get_provider_from_model(model_id: str) -> str:
         return 'deepseek'
     elif model_id.startswith('zhipuai/'):
         return 'zhipuai'
+    elif model_id.startswith('ollama_chat/') or model_id.startswith('ollama/'):
+        return 'ollama'
     return 'gemini'  # 기본값 (Gemini)
 
 
@@ -126,6 +152,8 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('sns_post', '📱 SNS 포스트'),
     ('newsletter', '📧 뉴스레터'),
     ('show_notes', '🎙️ 쇼노트'),
+    ('shorts_script', '🎬 Shorts 클립'),
+    ('geo_seo', '🤖 GEO (AI검색)'),
 ]
 
 
@@ -183,6 +211,10 @@ __all__ = [
     'YOUTUBE_API_KEY',
     'PROVIDER_API_KEYS',
     'SUPADATA_API_KEY',
+
+    # Webhook
+    'WEBHOOK_URL',
+    'WEBHOOK_ENABLED',
 
     # Token Limits
     'MAX_TRANSCRIPT_TOKENS',

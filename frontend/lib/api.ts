@@ -15,10 +15,10 @@ import type {
 const BASE = '';
 
 const TIMEOUT_MS: Record<string, number> = {
-  '/generate': 180_000,
+  '/generate': 300_000,
   '/generate-batch': 300_000,
-  '/api/generate-merged': 180_000,
-  '/api/generate-multi': 180_000,
+  '/api/generate-merged': 300_000,
+  '/api/generate-multi': 300_000,
   '/api/generate-fusion': 300_000,
   '/api/mindmap': 60_000,
   '/api/export/docx': 30_000,
@@ -233,4 +233,12 @@ export async function generateFusion(req: FusionRequest): Promise<FusionResponse
 // 캐시 삭제
 export async function clearCache(): Promise<void> {
   await request('/api/cache/clear', { method: 'POST' });
+}
+
+// 웹훅 테스트
+export async function testWebhook(url: string): Promise<{ success: boolean; error?: string }> {
+  return request('/api/webhook/test', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
 }

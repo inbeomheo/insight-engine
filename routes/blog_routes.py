@@ -4,6 +4,7 @@
 import concurrent.futures
 import io
 import json
+import os
 import re as re_module
 import time
 from typing import Dict
@@ -18,9 +19,14 @@ from services.supabase_service import (
 )
 from services.usage import require_usage, check_usage
 from services.usage.usage_decorator import get_usage_for_response
+from services.webhook_service import WebhookService
+from config import WEBHOOK_URL, WEBHOOK_ENABLED
 import uuid
 
 blog_bp = Blueprint('blog', __name__)
+
+# 웹훅 서비스 인스턴스 (fire-and-forget)
+_webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 _CLIENT_TRACKER: Dict[str, float] = {}
 
 DEFAULT_MODEL = 'zhipuai/GLM-4.5-Air'
@@ -293,6 +299,22 @@ def api_providers():
         'supadataConfigured': bool(SUPADATA_API_KEY),
         'hasAutoFallback': True
     })
+
+
+@blog_bp.route('/api/ollama/health', methods=['GET'])
+def api_ollama_health():
+    """Ollama 서버 연결 상태를 확인합니다."""
+    import requests as http_requests
+
+    base_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+    try:
+        resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        models = [m.get('name', '') for m in data.get('models', [])]
+        return jsonify({'ok': True, 'models': models, 'base_url': base_url})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e), 'base_url': base_url}), 503
 
 
 @blog_bp.route('/api/cache', methods=['DELETE'])
@@ -713,6 +735,24 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     if params['style'] == 'blog_seo':
         seo = ai_service.extract_seo_metadata(result.get('content', ''))
 
+    # GEO 메타데이터 추출 (geo_seo 스타일만)
+    geo = None
+    if params['style'] == 'geo_seo':
+        geo = ai_service.extract_geo_metadata(result.get('content', ''))
+
+    # 웹훅 전송 (fire-and-forget — 실패해도 응답에 영향 없음)
+    try:
+        content_text = result.get('content', '')
+        _webhook.send('content.generated', {
+            'title': result.get('title', ''),
+            'url': url,
+            'style': params['style'],
+            'model': model,
+            'word_count': len(content_text.split()) if content_text else 0,
+        })
+    except Exception:
+        pass  # 웹훅 실패가 응답을 블로킹하면 안 됨
+
     return jsonify({
         **result,
         "id": report_id,
@@ -723,6 +763,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "transcript_source": transcript_source,
         "comment_summary_included": bool(comments and comment_result),
         "seo": seo,
+        "geo": geo,
         "usage": get_usage_for_response()
     })
 
@@ -1218,6 +1259,11 @@ def generate_merged():
         if params['style'] == 'blog_seo':
             seo = ai_service.extract_seo_metadata(result.get('content', ''))
 
+        # GEO 메타데이터
+        geo = None
+        if params['style'] == 'geo_seo':
+            geo = ai_service.extract_geo_metadata(result.get('content', ''))
+
         return jsonify({
             **result,
             'id': report_id,
@@ -1226,6 +1272,7 @@ def generate_merged():
             'source_videos': source_videos,
             'merged': True,
             'seo': seo,
+            'geo': geo,
             'usage': get_usage_for_response(),
         })
 
@@ -1422,6 +1469,21 @@ def generate_fusion():
     except Exception as e:
         current_app.logger.error('퓨전 생성 실패: %s', e, exc_info=True)
         return _handle_error_response(e)
+
+
+@blog_bp.route('/api/webhook/test', methods=['POST'])
+@require_auth
+def webhook_test():
+    """웹훅 URL로 테스트 페이로드를 전송합니다."""
+    data = request.get_json(silent=True) or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({'success': False, 'error': '웹훅 URL이 필요합니다.'}), 400
+
+    test_svc = WebhookService(url=url, enabled=True)
+    result = test_svc.test()
+    status = 200 if result.get('success') else 400
+    return jsonify(result), status
 
 
 @blog_bp.route('/api/playlist-videos', methods=['POST'])

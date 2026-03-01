@@ -27,12 +27,20 @@ export const WRITING_STYLE_OPTIONS = [
   { value: 'expert' as const, label: '전문가' },
 ];
 
+export const LANGUAGE_OPTIONS = [
+  { value: 'ko' as const, label: '한국어' },
+  { value: 'en' as const, label: 'English' },
+  { value: 'ja' as const, label: '日本語' },
+];
+
 export const STORAGE_KEYS = {
   REPORTS: 'insight-engine-reports',
   PROVIDER: 'insight-engine-selected-provider',
   MODEL: 'insight-engine-selected-model',
   CUSTOM_STYLES: 'insight-engine-custom-styles',
   ONBOARDING_DONE: 'insight-engine-onboarding-done',
+  OLLAMA_BASE_URL: 'insight-engine-ollama-base-url',
+  WEBHOOK_URL: 'insight-engine-webhook-url',
 } as const;
 
 export const YOUTUBE_URL_REGEX =

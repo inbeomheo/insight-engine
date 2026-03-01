@@ -19,6 +19,7 @@ export interface GenerateResponse {
   cached: boolean;
   comment_summary_included: boolean;
   seo?: SeoMetadata;
+  geo?: GeoMetadata;
   youtube_title?: string;
 }
 
@@ -33,6 +34,13 @@ export interface SeoMetadata {
   keywords: string[];
   slug: string;
   tags: string[];
+}
+
+export interface GeoMetadata {
+  citations: string[];         // AI 검색에서 인용 가능한 핵심 팩트
+  structured_data: Record<string, string>;  // 구조화된 데이터 (key-value)
+  entity_tags: string[];       // 핵심 엔티티/개념 태그
+  key_facts: string[];         // 검증 가능한 핵심 사실
 }
 
 // === 스트리밍 이벤트 ===
@@ -51,6 +59,7 @@ export interface StreamEvent {
   cached?: boolean;
   comment_summary_included?: boolean;
   seo?: SeoMetadata;
+  geo?: GeoMetadata;
   error?: string;
 }
 
@@ -92,6 +101,7 @@ export interface Report {
   cached: boolean;
   comment_summary_included: boolean;
   seo?: SeoMetadata;
+  geo?: GeoMetadata;
   time: string;
   createdAt: number;
   mindmapMarkdown?: string;
@@ -105,6 +115,19 @@ export interface Report {
   fusionMeta?: FusionMeta;
   /** 퓨전 분석 섹션 (FAQ, 팩트체크, 소스) */
   sections?: FusionSections;
+  /** Shorts 클립 추출 결과 */
+  shorts_clips?: ShortsClip[];
+}
+
+// === Shorts 클립 ===
+
+export interface ShortsClip {
+  title: string;
+  hook_text: string;
+  script: string;
+  timestamp_start?: string;
+  timestamp_end?: string;
+  duration_seconds?: number;
 }
 
 // === 생성 모드 ===
@@ -116,6 +139,7 @@ export type GenerationMode = 'individual' | 'combined' | 'fusion';
 export interface Modifiers {
   length: 'short' | 'medium' | 'long';
   writing_style: 'conversational' | 'explanatory' | 'casual' | 'expert';
+  language?: 'ko' | 'en' | 'ja';
 }
 
 export interface StyleOption {

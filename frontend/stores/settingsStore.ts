@@ -7,6 +7,10 @@ import {
   saveSelectedModel,
   loadCustomStyles,
   saveCustomStyles,
+  loadOllamaBaseUrl,
+  saveOllamaBaseUrl,
+  loadWebhookUrl,
+  saveWebhookUrl,
 } from '@/lib/storage';
 
 interface SettingsState {
@@ -32,6 +36,14 @@ interface SettingsState {
   updateCustomStyle: (id: string, s: Partial<CustomStyle>) => void;
   deleteCustomStyle: (id: string) => void;
 
+  // Ollama
+  ollamaBaseUrl: string;
+  setOllamaBaseUrl: (url: string) => void;
+
+  // 웹훅
+  webhookUrl: string;
+  setWebhookUrl: (url: string) => void;
+
   // 생성 모드 & 퓨전 옵션
   generationMode: GenerationMode;
   enableWebResearch: boolean;
@@ -49,8 +61,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   selectedProvider: '',
   selectedModel: '',
   selectedStyle: 'blog_seo',
-  modifiers: { length: 'medium', writing_style: 'conversational' },
+  modifiers: { length: 'medium', writing_style: 'conversational', language: 'ko' },
   customStyles: [],
+  ollamaBaseUrl: '',
+  webhookUrl: '',
   generationMode: 'individual',
   enableWebResearch: true,
   enableDeepComments: true,
@@ -92,6 +106,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ customStyles: next });
   },
 
+  setOllamaBaseUrl: (url) => {
+    saveOllamaBaseUrl(url);
+    set({ ollamaBaseUrl: url });
+  },
+
+  setWebhookUrl: (url) => {
+    saveWebhookUrl(url);
+    set({ webhookUrl: url });
+  },
+
   setGenerationMode: (mode) => set({ generationMode: mode }),
   setEnableWebResearch: (v) => set({ enableWebResearch: v }),
   setEnableDeepComments: (v) => set({ enableDeepComments: v }),
@@ -101,6 +125,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       selectedProvider: loadSelectedProvider(),
       selectedModel: loadSelectedModel(),
       customStyles: loadCustomStyles(),
+      ollamaBaseUrl: loadOllamaBaseUrl(),
+      webhookUrl: loadWebhookUrl(),
     });
   },
 }));
