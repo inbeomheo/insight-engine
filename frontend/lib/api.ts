@@ -18,6 +18,7 @@ import type {
   ScheduledPost,
   Workspace,
   WorkspaceMember,
+  KnowledgeItem,
 } from './types';
 
 const BASE = '';
@@ -381,4 +382,31 @@ export async function deleteWorkspace(
   return request(`/api/workspaces/${workspaceId}`, {
     method: 'DELETE',
   });
+}
+
+// =============================================
+// 지식 베이스 (RAG)
+// =============================================
+
+export async function uploadKnowledge(file: File): Promise<KnowledgeItem> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${BASE}/api/knowledge/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function getKnowledgeList(): Promise<{ documents: KnowledgeItem[] }> {
+  return request('/api/knowledge/list');
+}
+
+export async function deleteKnowledge(docId: string): Promise<{ success: boolean }> {
+  return request(`/api/knowledge/${docId}`, { method: 'DELETE' });
 }

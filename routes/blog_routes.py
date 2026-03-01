@@ -635,6 +635,8 @@ def _handle_cache_hit(cache_key, force, youtube_title,
 def _call_ai_with_comments(truncated_content, model, style_prompt, params,
                             comments, transcript_text, max_tokens):
     """AI 호출 + 댓글 병렬 처리. (result, used_prompt, comment_result) 반환."""
+    # RAG 컨텍스트를 위한 user_id (없으면 None → RAG 스킵)
+    user_id = getattr(g, 'user_id', None)
     is_auto = model == 'auto'
 
     if is_auto:
@@ -648,7 +650,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
         result, used_prompt = ai_service.create_content_with_fallback(
             truncated_content, FALLBACK_CHAIN, style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
-            style_id=params['style']
+            style_id=params['style'], user_id=user_id
         )
         return result, used_prompt, comment_result
 
@@ -662,7 +664,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
             result, used_prompt = ai_service.create_content(
                 truncated_content, model, style_prompt,
                 return_prompt=True, modifiers=params['modifiers'],
-                style_id=params['style']
+                style_id=params['style'], user_id=user_id
             )
             comment_result = _generate_comment_summary(app, comments, model)
         else:
@@ -687,7 +689,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
         result, used_prompt = ai_service.create_content(
             truncated_content, model, style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
-            style_id=params['style']
+            style_id=params['style'], user_id=user_id
         )
 
     return result, used_prompt, comment_result
@@ -2031,3 +2033,99 @@ def schedule_delete(post_id):
         return jsonify({'error': '삭제할 예약을 찾을 수 없습니다.'}), 404
 
     return jsonify({'success': True})
+
+
+# =============================================
+# 지식 베이스 (RAG)
+# =============================================
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@blog_bp.route('/api/knowledge/upload', methods=['POST'])
+@require_auth
+def knowledge_upload():
+    """참고 문서 업로드 → 벡터 DB에 저장"""
+    from config import RAG_ENABLED
+    if not RAG_ENABLED:
+        return jsonify({'error': 'RAG 기능이 비활성화되어 있습니다. RAG_ENABLED=true로 설정해주세요.'}), 400
+
+    if 'file' not in request.files:
+        return jsonify({'error': '파일이 필요합니다.'}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': '파일명이 비어 있습니다.'}), 400
+
+    # 확장자 검증
+    allowed_exts = {'txt', 'md', 'pdf'}
+    ext = file.filename.lower().rsplit('.', 1)[-1] if '.' in file.filename else ''
+    if ext not in allowed_exts:
+        return jsonify({'error': f'지원하지 않는 파일 형식입니다. ({", ".join(allowed_exts)}만 가능)'}), 400
+
+    file_bytes = file.read()
+    if len(file_bytes) > MAX_UPLOAD_SIZE:
+        return jsonify({'error': f'파일 크기가 제한을 초과합니다. (최대 {MAX_UPLOAD_SIZE // (1024*1024)}MB)'}), 400
+
+    try:
+        from services.rag.chunker import extract_text_from_file, chunk_text
+        from services.rag import vector_store
+        from datetime import datetime
+
+        text = extract_text_from_file(file_bytes, file.filename)
+        if not text.strip():
+            return jsonify({'error': '파일에서 텍스트를 추출할 수 없습니다.'}), 400
+
+        chunks = chunk_text(text)
+        doc_id = str(uuid.uuid4())
+        metadata = {
+            'filename': file.filename,
+            'uploaded_at': datetime.utcnow().isoformat(),
+        }
+        vector_store.add_document(g.user_id, doc_id, chunks, metadata)
+
+        return jsonify({
+            'id': doc_id,
+            'filename': file.filename,
+            'chunk_count': len(chunks),
+        }), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Knowledge upload failed: {e}")
+        return jsonify({'error': '문서 업로드 중 오류가 발생했습니다.'}), 500
+
+
+@blog_bp.route('/api/knowledge/list', methods=['GET'])
+@require_auth
+def knowledge_list():
+    """업로드된 문서 목록 조회"""
+    from config import RAG_ENABLED
+    if not RAG_ENABLED:
+        return jsonify({'documents': []})
+
+    try:
+        from services.rag import vector_store
+        docs = vector_store.list_documents(g.user_id)
+        return jsonify({'documents': docs})
+    except Exception as e:
+        current_app.logger.error(f"Knowledge list failed: {e}")
+        return jsonify({'documents': []})
+
+
+@blog_bp.route('/api/knowledge/<doc_id>', methods=['DELETE'])
+@require_auth
+def knowledge_delete(doc_id):
+    """문서 삭제"""
+    from config import RAG_ENABLED
+    if not RAG_ENABLED:
+        return jsonify({'error': 'RAG 기능이 비활성화되어 있습니다.'}), 400
+
+    try:
+        from services.rag import vector_store
+        vector_store.delete_document(g.user_id, doc_id)
+        return jsonify({'success': True})
+    except Exception as e:
+        current_app.logger.error(f"Knowledge delete failed: {e}")
+        return jsonify({'error': '문서 삭제 중 오류가 발생했습니다.'}), 500

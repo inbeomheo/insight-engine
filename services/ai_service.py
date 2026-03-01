@@ -61,13 +61,17 @@ def _get_korean_datetime():
     return now.strftime("%Y년 %m월 %d일 %H시 %M분")
 
 
-def _build_prompt(content, style_prompt, modifiers):
+def _build_prompt(content, style_prompt, modifiers, rag_context=None):
     """프롬프트를 구성합니다."""
     # 현재 한국 시간 추가
     current_time = _get_korean_datetime()
     time_context = f"[현재 시간: {current_time} (한국 표준시)]"
 
     prompt = f"{time_context}\n\n{content}\n\n{style_prompt}" if style_prompt else f"{time_context}\n\n{content}"
+
+    # RAG 참고자료 삽입
+    if rag_context:
+        prompt += f"\n\n[참고자료]\n다음은 사용자가 제공한 참고 문서에서 검색된 관련 내용입니다. 콘텐츠 작성 시 참고하되, 자막 내용이 우선입니다.\n\n{rag_context}"
 
     style_modifiers = current_app.config.get('STYLE_MODIFIERS', {})
     modifier_instructions = _build_modifier_instructions(modifiers, style_modifiers)
@@ -194,7 +198,7 @@ def _convert_error_message(error_msg, model=None):
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
 
-def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None):
+def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None, user_id=None):
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
     API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
@@ -206,12 +210,23 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         return_prompt: 사용된 프롬프트 반환 여부
         modifiers: 세부 옵션 딕셔너리 (length, writing_style)
         style_id: 스타일 ID (temperature 매핑용)
+        user_id: 사용자 ID (RAG 컨텍스트 검색용)
 
     Returns:
         dict 또는 tuple: 생성 결과 (return_prompt=True면 (result, prompt) 튜플)
     """
     try:
-        prompt = _build_prompt(content, style_prompt, modifiers)
+        # RAG 컨텍스트 빌드 (RAG_ENABLED=True이고 user_id가 있을 때)
+        rag_context = None
+        from config import RAG_ENABLED, RAG_TOP_K
+        if RAG_ENABLED and user_id:
+            try:
+                from services.rag import context_builder
+                rag_context = context_builder.build_context(user_id, content[:500], top_k=RAG_TOP_K)
+            except Exception as rag_err:
+                current_app.logger.warning(f"RAG 컨텍스트 빌드 실패 (무시): {rag_err}")
+
+        prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers)
         is_glm = model.startswith("zhipuai/")
 
@@ -317,7 +332,7 @@ def create_content_stream(content, model, style_prompt=None, modifiers=None, sty
 
 
 def create_content_with_fallback(content, models, style_prompt=None,
-                                 return_prompt=False, modifiers=None, style_id=None):
+                                 return_prompt=False, modifiers=None, style_id=None, user_id=None):
     """
     모델 리스트를 순차 시도하여 첫 성공 결과를 반환합니다.
     API 키가 없는 모델은 자동 스킵합니다.
@@ -357,7 +372,7 @@ def create_content_with_fallback(content, models, style_prompt=None,
             result = create_content(
                 content, model_id, style_prompt,
                 return_prompt=return_prompt, modifiers=modifiers,
-                style_id=style_id
+                style_id=style_id, user_id=user_id
             )
 
             # 결과에 사용된 모델 정보 추가

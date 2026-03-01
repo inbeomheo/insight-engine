@@ -277,6 +277,15 @@ export interface ScheduledPost {
   created_at: string;
 }
 
+// === 지식 베이스 (RAG) ===
+
+export interface KnowledgeItem {
+  id: string;
+  filename: string;
+  uploaded_at: string;
+  chunk_count: number;
+}
+
 // === 워크스페이스 ===
 
 export type WorkspaceRole = 'owner' | 'editor' | 'viewer';

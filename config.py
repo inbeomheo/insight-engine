@@ -35,6 +35,12 @@ PROVIDER_API_KEYS: Dict[str, str] = {
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 
+# === RAG (지식 참조) ===
+
+RAG_ENABLED: bool = os.environ.get('RAG_ENABLED', 'false').lower() == 'true'
+CHROMA_DB_PATH: str = os.environ.get('CHROMA_DB_PATH', './data/chroma_db')
+RAG_TOP_K: int = int(os.environ.get('RAG_TOP_K', '5'))
+
 # === Whisper (음성 인식 자막 폴백) ===
 
 WHISPER_ENABLED: bool = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
@@ -262,4 +268,9 @@ __all__ = [
 
     # Prompt Builder
     'build_full_prompt',
+
+    # RAG
+    'RAG_ENABLED',
+    'CHROMA_DB_PATH',
+    'RAG_TOP_K',
 ]

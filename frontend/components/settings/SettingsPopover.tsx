@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { testWebhook } from '@/lib/api';
+import KnowledgeManager from './KnowledgeManager';
 
 export default function SettingsPopover() {
   const { settingsPopoverOpen, setSettingsPopoverOpen } = useUIStore();
@@ -214,6 +215,9 @@ export default function SettingsPopover() {
 
       {/* 웹훅 연동 */}
       <WebhookSection webhookUrl={webhookUrl} setWebhookUrl={setWebhookUrl} />
+
+      {/* 지식 베이스 */}
+      <KnowledgeManager />
     </div>
   );
 }
