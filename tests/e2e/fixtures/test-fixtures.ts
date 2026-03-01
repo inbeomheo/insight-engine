@@ -1,65 +1,46 @@
-import { test as base, expect, Page, BrowserContext } from '@playwright/test';
-
-/**
- * 테스트 격리를 위한 공통 Fixtures
- *
- * 병렬 테스트 원칙:
- * 1. 각 테스트는 독립적으로 실행 가능
- * 2. 테스트 간 상태 공유 없음
- * 3. 각 테스트가 자체 데이터를 생성하고 정리
- */
+import { test as base, expect, Page } from '@playwright/test';
 
 // ============================================
-// 테스트 데이터 (격리된 샘플 데이터)
+// 테스트 데이터
 // ============================================
 export const TEST_DATA = {
-  // 테스트용 YouTube URL (실제 존재하는 공개 영상)
+  // 짧은 영상 (비용 최소화)
+  SHORT_VIDEO: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', // Me at the zoo (19초)
+
   VALID_URLS: [
-    'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Rick Astley
-    'https://www.youtube.com/watch?v=jNQXAC9IVRw', // Me at the zoo
-    'https://www.youtube.com/watch?v=9bZkp7q19f0', // PSY - Gangnam Style
-    'https://youtu.be/kJQP7kiw5Fk', // Luis Fonsi - Despacito
-    'https://www.youtube.com/watch?v=JGwWNGJdvx8', // Ed Sheeran
+    'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    'https://www.youtube.com/watch?v=9bZkp7q19f0',
+    'https://youtu.be/kJQP7kiw5Fk',
+    'https://www.youtube.com/watch?v=JGwWNGJdvx8',
   ],
 
-  // 잘못된 URL
   INVALID_URLS: [
     'not-a-url',
     'https://google.com',
     'https://vimeo.com/123456',
-    'youtube.com/watch',
   ],
 
-  // 스타일 옵션
-  STYLES: [
-    '상세 요약',
-    '핵심 요약',
-    '블로그 포스트',
-    'Q&A 형식',
-    '뉴스 기사',
-    '교육 콘텐츠',
-  ],
-
-  // 프로바이더 (환경에 따라 다름)
-  PROVIDERS: ['Gemini', 'DeepSeek', 'OpenAI', 'Claude'],
+  // 저비용 프리셋 (API 테스트용)
+  CHEAP_PRESET: {
+    provider: 'zhipuai',
+    model: 'zhipuai/GLM-4.5-Air',
+    style: 'summary',
+    length: 'short' as const,
+  },
 } as const;
 
 // ============================================
 // 커스텀 Fixtures 타입
 // ============================================
 type TestFixtures = {
-  // 메인 페이지 헬퍼
   mainPage: MainPageHelper;
-  // URL 입력 헬퍼
   urlInput: UrlInputHelper;
-  // 콘텐츠 생성 헬퍼
   contentGenerator: ContentGeneratorHelper;
-  // 인증 헬퍼
-  auth: AuthHelper;
 };
 
 // ============================================
-// 메인 페이지 헬퍼 클래스
+// 메인 페이지 헬퍼
 // ============================================
 class MainPageHelper {
   constructor(private page: Page) {}
@@ -67,282 +48,204 @@ class MainPageHelper {
   async goto() {
     await this.page.goto('/');
     await this.page.waitForLoadState('networkidle');
-
-    // 환영 모달이 있으면 닫기
-    await this.dismissWelcomeModal();
+    await this.dismissOnboarding();
   }
 
-  async dismissWelcomeModal() {
-    // 온보딩 모달이 활성화되어 있는지 확인
-    const onboardingModal = this.page.locator('#onboarding-modal.active, #onboarding-modal:visible');
-    const isModalVisible = await onboardingModal.isVisible().catch(() => false);
-
-    if (isModalVisible) {
-      // "시작하기" 버튼 (#onboarding-save) 클릭
-      const saveButton = this.page.locator('#onboarding-save');
-      if (await saveButton.isVisible().catch(() => false)) {
-        await saveButton.click();
-        await this.page.waitForTimeout(500);
-        return;
-      }
-
-      // 또는 "먼저 둘러보기" 버튼 (#onboarding-skip) 클릭
-      const skipButton = this.page.locator('#onboarding-skip');
-      if (await skipButton.isVisible().catch(() => false)) {
-        await skipButton.click();
-        await this.page.waitForTimeout(500);
-        return;
-      }
-    }
-
-    // 일반 시작하기 버튼 (fallback)
-    const startButton = this.page.locator('button:has-text("시작하기")');
-    if (await startButton.isVisible().catch(() => false)) {
-      await startButton.click();
-      await this.page.waitForTimeout(500);
+  /** 온보딩 모달이 보이면 "시작하기" 클릭 */
+  async dismissOnboarding() {
+    const startBtn = this.page.getByRole('button', { name: '시작하기' });
+    // 온보딩 모달 표시까지 잠시 대기
+    const visible = await startBtn.isVisible().catch(() => false);
+    if (visible) {
+      await startBtn.click();
+      // 모달 닫힘 대기
+      await startBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
     }
   }
 
+  /** URL 입력 필드가 준비될 때까지 대기 */
   async waitForReady() {
-    // 환영 모달 먼저 닫기
-    await this.dismissWelcomeModal();
-
-    // 주요 UI 요소가 로드될 때까지 대기
-    await this.page.waitForSelector('#url-input', {
-      timeout: 10_000,
-    });
-  }
-
-  async getProviderOptions(): Promise<string[]> {
-    const options = await this.page.locator('#provider option').allTextContents();
-    return options.filter(Boolean);
-  }
-
-  async getStyleOptions(): Promise<string[]> {
-    // 스타일은 카드 형태로 되어 있음
-    const cards = await this.page.locator('.style-card, [data-style]').allTextContents();
-    return cards.filter(Boolean);
-  }
-
-  async toggleTheme() {
-    await this.page.click('#theme-toggle-btn');
-  }
-
-  async getCurrentTheme(): Promise<'dark' | 'light'> {
-    const html = this.page.locator('html');
-    const classList = await html.getAttribute('class');
-    return classList?.includes('dark') ? 'dark' : 'light';
+    await this.dismissOnboarding();
+    await this.page.locator('#url-input').waitFor({ state: 'visible', timeout: 10_000 });
   }
 }
 
 // ============================================
-// URL 입력 헬퍼 클래스
+// URL 입력 헬퍼
 // ============================================
 class UrlInputHelper {
   constructor(private page: Page) {}
 
+  /** URL 추가 (입력 후 Enter) */
   async addUrl(url: string) {
     const input = this.page.locator('#url-input');
-    // 입력 필드 클릭하여 포커스
     await input.click();
-    await this.page.waitForTimeout(100);
-    // URL 입력
     await input.fill(url);
-    await this.page.waitForTimeout(100);
-    // Enter 키로 URL 추가
     await input.press('Enter');
-    // URL 카드가 추가될 때까지 대기
-    await this.page.waitForTimeout(1000);
+    // URL 칩 표시 대기
+    await this.page.waitForTimeout(500);
   }
 
+  /** 여러 URL 순차 추가 */
   async addMultipleUrls(urls: string[]) {
     for (const url of urls) {
       await this.addUrl(url);
     }
   }
 
-  async getUrlCount(): Promise<number> {
-    // url-list-container 내의 URL 항목 수 (.url-card 클래스)
-    const cards = this.page.locator('#url-list-container .url-card');
-    return cards.count();
+  /** 현재 URL 칩 개수 */
+  async getUrlChipCount(): Promise<number> {
+    // Badge (칩) 컴포넌트 안의 X 버튼 개수로 판단
+    return this.page.locator('[aria-label$="제거"]').count();
   }
 
-  async removeUrl(index: number) {
-    // JavaScript를 통해 삭제 버튼 클릭 (이벤트 리스너 직접 호출)
-    const removed = await this.page.evaluate((idx) => {
-      const cards = document.querySelectorAll('#url-list-container .url-card');
-      if (cards.length > idx) {
-        const deleteBtn = cards[idx].querySelector('.url-remove-btn') as HTMLElement;
-        if (deleteBtn) {
-          deleteBtn.click();
-          return true;
-        }
-      }
-      return false;
-    }, index);
-
-    if (removed) {
-      await this.page.waitForTimeout(500);
+  /** 특정 URL 칩 삭제 (인덱스 기반) */
+  async removeUrlByIndex(index: number) {
+    const removeButtons = this.page.locator('[aria-label$="제거"]');
+    const count = await removeButtons.count();
+    if (index < count) {
+      await removeButtons.nth(index).click();
+      await this.page.waitForTimeout(300);
     }
-  }
-
-  async clearAllUrls() {
-    let count = await this.getUrlCount();
-    while (count > 0) {
-      await this.removeUrl(0);
-      count = await this.getUrlCount();
-    }
-  }
-
-  async getErrorMessage(): Promise<string | null> {
-    const error = this.page.locator('.toast-error, .error-message, [role="alert"]');
-    if (await error.isVisible().catch(() => false)) {
-      return error.textContent();
-    }
-    return null;
   }
 }
 
 // ============================================
-// 콘텐츠 생성 헬퍼 클래스
+// 콘텐츠 생성 헬퍼
 // ============================================
 class ContentGeneratorHelper {
   constructor(private page: Page) {}
 
-  async selectProvider(provider: string) {
-    await this.page.selectOption('#provider', { label: provider });
+  /** 설정 팝오버 열기 */
+  async openSettings() {
+    const settingsBtn = this.page.getByRole('button', { name: '생성 설정 열기' });
+    await settingsBtn.click();
+    // 팝오버 렌더링 대기
+    await this.page.getByText('AI 모델').waitFor({ state: 'visible', timeout: 3000 });
   }
 
-  async selectModel(model: string) {
-    await this.page.selectOption('#model', { label: model });
+  /** 설정 팝오버 닫기 (외부 클릭) */
+  async closeSettings() {
+    await this.page.locator('body').click({ position: { x: 10, y: 10 } });
+    await this.page.waitForTimeout(200);
   }
 
-  async selectStyle(styleName: string) {
-    // 스타일 카드 클릭
-    const styleCard = this.page.locator(`.style-card:has-text("${styleName}"), [data-style="${styleName}"]`);
-    if (await styleCard.isVisible().catch(() => false)) {
-      await styleCard.click();
+  /** 저비용 프리셋 적용 (zhipuai/GLM-4.5-Air, 요약, 짧게) */
+  async applyCheapPreset() {
+    await this.openSettings();
+
+    // 프로바이더 선택
+    const providerTrigger = this.page.locator('[role="combobox"]').first();
+    await providerTrigger.click();
+    const zhipuaiOption = this.page.getByRole('option', { name: /zhipu|GLM/i });
+    if (await zhipuaiOption.isVisible().catch(() => false)) {
+      await zhipuaiOption.click();
     }
+
+    // 스타일: 요약
+    const summaryBtn = this.page.locator('button').filter({ hasText: '요약' });
+    await summaryBtn.first().click();
+
+    // 길이: 짧게
+    const shortBtn = this.page.locator('button').filter({ hasText: '짧게' });
+    await shortBtn.click();
+
+    await this.closeSettings();
   }
 
+  /** 분석 시작 버튼 클릭 (모드에 따라 다른 텍스트) */
   async clickGenerate() {
-    await this.page.click('#run-analysis-btn');
+    const btn = this.page.getByRole('button', { name: /분석 시작|각각 분석|합쳐서 분석|퓨전 분석/ });
+    await btn.click();
   }
 
-  async waitForGenerationComplete(timeout = 60_000) {
-    // 로딩이 끝나고 결과가 표시될 때까지 대기
-    await this.page.waitForSelector('.result-card, #results-container .card', {
-      timeout,
+  /** 특정 모드의 분석 버튼 클릭 */
+  async clickGenerateByMode(mode: 'individual' | 'combined' | 'fusion') {
+    const patterns: Record<string, RegExp> = {
+      individual: /분석 시작|각각 분석/,
+      combined: /합쳐서 분석/,
+      fusion: /퓨전 분석/,
+    };
+    const btn = this.page.getByRole('button', { name: patterns[mode] });
+    await btn.click();
+  }
+
+  /** 생성 완료 대기 (결과 카드 표시) */
+  async waitForResult(timeout = 180_000): Promise<void> {
+    await this.page.locator('[data-report-id]').first().waitFor({
       state: 'visible',
+      timeout,
     });
   }
 
+  /** 결과 카드 개수 */
+  async getResultCount(): Promise<number> {
+    return this.page.locator('[data-report-id]').count();
+  }
+
+  /** 로딩 중인지 확인 */
   async isLoading(): Promise<boolean> {
-    const loader = this.page.locator('.loading, .spinner, .animate-spin, [aria-busy="true"]');
-    return loader.isVisible().catch(() => false);
+    const loadingBtn = this.page.getByRole('button', { name: /생성 중/ });
+    return loadingBtn.isVisible().catch(() => false);
   }
 
-  async cancelGeneration() {
-    const cancelBtn = this.page.locator('button:has-text("취소"), button:has-text("중지")');
-    if (await cancelBtn.isVisible().catch(() => false)) {
-      await cancelBtn.click();
-    }
-  }
-
-  async getGeneratedContent(): Promise<{ title: string; content: string } | null> {
-    const resultCard = this.page.locator('.result-card, #results-container .card').first();
-    if (await resultCard.isVisible().catch(() => false)) {
-      const title = await resultCard.locator('h2, .title, .card-title').first().textContent().catch(() => '');
-      const content = await resultCard.locator('.content, .body, p').first().textContent().catch(() => '');
-      return { title: title || '', content: content || '' };
-    }
-    return null;
-  }
-
-  async getErrorMessage(): Promise<string | null> {
-    const error = this.page.locator('.toast-error, .error-message, [role="alert"]');
-    if (await error.isVisible().catch(() => false)) {
-      return error.textContent();
-    }
-    return null;
+  /** 생성 모드 선택 (개별/합쳐서/퓨전) */
+  async selectMode(mode: 'individual' | 'combined' | 'fusion') {
+    const labels: Record<string, string> = {
+      individual: '개별 분석',
+      combined: '합쳐서 분석',
+      fusion: '퓨전 분석',
+    };
+    await this.page.getByRole('button', { name: labels[mode] }).click();
   }
 }
 
 // ============================================
-// 인증 헬퍼 클래스
-// ============================================
-class AuthHelper {
-  constructor(private page: Page) {}
-
-  async login(email: string, password: string) {
-    await this.page.goto('/login');
-    await this.page.fill('[data-testid="email-input"], input[type="email"]', email);
-    await this.page.fill('[data-testid="password-input"], input[type="password"]', password);
-    await this.page.click('[data-testid="login-button"], button:has-text("로그인")');
-    await this.page.waitForURL('/', { timeout: 10_000 });
-  }
-
-  async logout() {
-    await this.page.click('[data-testid="user-menu"], .user-menu');
-    await this.page.click('[data-testid="logout-button"], button:has-text("로그아웃")');
-  }
-
-  async isLoggedIn(): Promise<boolean> {
-    const userMenu = this.page.locator('[data-testid="user-menu"], .user-menu');
-    return userMenu.isVisible();
-  }
-
-  async saveStorageState(path: string) {
-    const context = this.page.context();
-    await context.storageState({ path });
-  }
-}
-
-// ============================================
-// Extended Test with Custom Fixtures
+// Fixtures 확장
 // ============================================
 export const test = base.extend<TestFixtures>({
   mainPage: async ({ page }, use) => {
-    const helper = new MainPageHelper(page);
-    await use(helper);
+    await use(new MainPageHelper(page));
   },
-
   urlInput: async ({ page }, use) => {
-    const helper = new UrlInputHelper(page);
-    await use(helper);
+    await use(new UrlInputHelper(page));
   },
-
   contentGenerator: async ({ page }, use) => {
-    const helper = new ContentGeneratorHelper(page);
-    await use(helper);
-  },
-
-  auth: async ({ page }, use) => {
-    const helper = new AuthHelper(page);
-    await use(helper);
+    await use(new ContentGeneratorHelper(page));
   },
 });
 
 export { expect };
 
 // ============================================
-// 유틸리티 함수
+// 유틸리티: localStorage에 mock Report 주입
 // ============================================
-export function getRandomUrl(): string {
-  const urls = TEST_DATA.VALID_URLS;
-  return urls[Math.floor(Math.random() * urls.length)];
+export function makeMockReport(overrides: Record<string, unknown> = {}) {
+  return {
+    id: `test-${Date.now()}`,
+    url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+    youtube_title: 'Test Video',
+    title: '테스트 제목',
+    content: '테스트 본문 내용입니다.',
+    html: '<p>테스트 본문 내용입니다.</p>',
+    style: 'summary',
+    prompt: 'test prompt',
+    usage: { total_tokens: 100 },
+    elapsed_time: 1.5,
+    transcript_source: 'youtube_api',
+    cached: false,
+    comment_summary_included: false,
+    time: new Date().toLocaleString('ko-KR'),
+    createdAt: Date.now(),
+    ...overrides,
+  };
 }
 
-export function getUniqueUrls(count: number): string[] {
-  const urls = [...TEST_DATA.VALID_URLS];
-  const result: string[] = [];
-  for (let i = 0; i < Math.min(count, urls.length); i++) {
-    const randomIndex = Math.floor(Math.random() * urls.length);
-    result.push(urls.splice(randomIndex, 1)[0]);
-  }
-  return result;
-}
-
-export async function waitForNetworkIdle(page: Page, timeout = 5000) {
-  await page.waitForLoadState('networkidle', { timeout });
+/** 테스트 전에 localStorage에 mock 리포트 주입 */
+export async function injectReports(page: Page, reports: Record<string, unknown>[]) {
+  await page.addInitScript((data) => {
+    localStorage.setItem('insight-engine-reports', JSON.stringify(data));
+    // 온보딩 완료 처리
+    localStorage.setItem('insight-engine-onboarding-done', 'true');
+  }, reports);
 }

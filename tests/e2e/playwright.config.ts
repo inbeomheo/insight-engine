@@ -33,7 +33,7 @@ export default defineConfig({
 
   /* 전역 설정 */
   use: {
-    baseURL: 'http://localhost:5001',
+    baseURL: 'http://localhost:3000',
 
     /* 추적 및 디버깅 */
     trace: 'on-first-retry',
@@ -64,6 +64,8 @@ export default defineConfig({
         '**/responsive/**/*.spec.ts',
         '**/settings-modals/**/*.spec.ts',
         '**/history-usage/**/*.spec.ts',
+        '**/core-flow/**/*.spec.ts',
+        '**/result-card/**/*.spec.ts',
         '**/auth/login.spec.ts', // 로그인 테스트는 인증 없이 실행
       ],
       use: {

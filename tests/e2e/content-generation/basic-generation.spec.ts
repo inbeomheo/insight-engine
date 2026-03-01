@@ -1,84 +1,79 @@
 /**
  * 기본 콘텐츠 생성 테스트
  *
- * 병렬 실행: ✅ (상태 공유 없음, 완전 독립적)
- * 인증 필요: ❌
- * 주의: AI API 호출이 필요하므로 실제 실행 시간이 길 수 있음
+ * - 단일 URL 생성 → 결과 카드 표시 (API)
+ * - URL 없이 생성 버튼 미표시 (UI)
+ * - 생성 중 로딩 상태 표시 (API)
  */
 import { test, expect, TEST_DATA } from '../fixtures/test-fixtures';
 
-test.describe('기본 콘텐츠 생성 @parallel', () => {
-  // 콘텐츠 생성은 시간이 걸림
-  test.setTimeout(120_000);
+test.describe('기본 콘텐츠 생성', () => {
+  // API 테스트는 시간이 오래 걸림 — 기본 타임아웃 3배
+  test.describe.configure({ timeout: 180_000 });
 
-  test.beforeEach(async ({ mainPage, page }) => {
+  test.beforeEach(async ({ mainPage }) => {
     await mainPage.goto();
-
-    // 로그인 필요 여부 확인
-    const startBtn = page.locator('#start-btn');
-    const isDisabled = await startBtn.isDisabled().catch(() => false);
-    const title = await startBtn.getAttribute('title');
-
-    if (isDisabled && title?.includes('로그인')) {
-      test.skip(true, '로그인이 필요한 기능입니다');
-    }
   });
 
-  test('단일 URL로 콘텐츠 생성 (Happy Path)', async ({ urlInput, contentGenerator, page }) => {
+  test('단일 URL 생성 → 결과 카드 표시', async ({
+    page,
+    urlInput,
+    contentGenerator,
+  }) => {
     // 1. URL 추가
-    await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
-    expect(await urlInput.getUrlCount()).toBe(1);
+    await urlInput.addUrl(TEST_DATA.SHORT_VIDEO);
+    await expect(page.locator('[aria-label$="제거"]')).toHaveCount(1);
 
-    // 2. 생성 버튼 클릭
-    await contentGenerator.clickGenerate();
+    // 2. "1개 URL 분석 시작" 버튼 클릭
+    const generateBtn = page.getByRole('button', { name: /1개 URL 분석 시작/ });
+    await expect(generateBtn).toBeVisible();
+    await generateBtn.click();
 
-    // 3. 로딩 상태 확인
-    await page.waitForTimeout(1000);
+    // 3. 결과 카드 대기
+    await contentGenerator.waitForResult(160_000);
 
-    // 4. 결과 대기 (최대 90초)
-    try {
-      await contentGenerator.waitForGenerationComplete(90_000);
+    // 4. 결과 카드 검증
+    const card = page.locator('[data-report-id]').first();
+    await expect(card).toBeVisible();
 
-      // 5. 결과 확인
-      const result = await contentGenerator.getGeneratedContent();
-      if (result) {
-        expect(result.title.length).toBeGreaterThan(0);
-        expect(result.content.length).toBeGreaterThan(0);
-      }
-    } catch (error) {
-      // 에러가 발생했다면 에러 메시지 확인
-      const errorMsg = await contentGenerator.getErrorMessage();
-      console.log('Generation error:', errorMsg);
-      // 에러가 있더라도 UI가 올바르게 동작하면 OK
-    }
+    // 제목이 존재 (카드 헤더 영역의 첫 h3)
+    const title = card.locator('h3').first();
+    await expect(title).not.toBeEmpty();
+
+    // 본문이 존재 (prose 영역)
+    const body = card.locator('.prose');
+    await expect(body).toBeVisible();
   });
 
-  test('생성 버튼이 URL 없이는 비활성화됨', async ({ page }) => {
-    const generateBtn = page.locator('button:has-text("생성"), [data-testid="generate-button"]');
-
-    // URL 없이 버튼 클릭
-    const isDisabled = await generateBtn.isDisabled().catch(() => false);
-    const hasDisabledClass = await generateBtn.evaluate((el) =>
-      el.classList.contains('disabled') || el.hasAttribute('disabled')
-    ).catch(() => false);
-
-    // 비활성화되어 있거나 클릭해도 동작하지 않아야 함
-    expect(isDisabled || hasDisabledClass || true).toBeTruthy();
+  test('URL 없이 생성 버튼이 표시되지 않음', async ({ page }) => {
+    // URL이 없을 때 분석 버튼이 없어야 함
+    const generateBtn = page.getByRole('button', {
+      name: /분석 시작|각각 분석|합쳐서 분석|퓨전 분석/,
+    });
+    await expect(generateBtn).toHaveCount(0);
   });
 
-  test('생성 중 로딩 인디케이터 표시', async ({ urlInput, contentGenerator, page }) => {
-    await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
-    await contentGenerator.clickGenerate();
+  test('생성 중 로딩 상태 표시', async ({
+    page,
+    urlInput,
+    contentGenerator,
+  }) => {
+    await urlInput.addUrl(TEST_DATA.SHORT_VIDEO);
 
-    // 로딩 상태 확인 (짧은 시간 내)
-    await page.waitForTimeout(500);
+    const generateBtn = page.getByRole('button', { name: /1개 URL 분석 시작/ });
+    await generateBtn.click();
 
-    const hasLoading = await page
-      .locator('.loading, .spinner, [data-loading="true"], .animate-spin')
-      .isVisible()
-      .catch(() => false);
+    // 버튼 텍스트가 "생성 중..."으로 변경됨
+    const loadingBtn = page.getByRole('button', { name: /생성 중/ });
+    await expect(loadingBtn).toBeVisible({ timeout: 5_000 });
 
-    // 로딩 인디케이터가 있거나 이미 완료됨
-    expect(hasLoading || true).toBeTruthy();
+    // 로딩 스켈레톤도 표시됨
+    const skeleton = page.locator('[class*="animate-pulse"], [class*="skeleton"]');
+    const skeletonVisible = await skeleton.first().isVisible().catch(() => false);
+    // 스켈레톤은 선택적 — 최소한 로딩 버튼은 확인
+    expect(skeletonVisible || await loadingBtn.isVisible()).toBeTruthy();
+
+    // 완료 대기 (다음 테스트 방해 방지)
+    await contentGenerator.waitForResult(160_000);
   });
 });
