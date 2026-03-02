@@ -269,7 +269,13 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
           {report.seo && <SeoSection seo={report.seo} />}
 
           {/* GEO 섹션 */}
-          {report.geo && <GeoSection geo={report.geo} />}
+          {report.geo && (
+            <GeoSection
+              geo={report.geo}
+              cta={report.cta}
+              json_ld_schemas={report.json_ld_schemas}
+            />
+          )}
 
           {/* FAQ + CTA 섹션 (blog_seo, geo_seo 스타일) */}
           {(report.faq_schema || report.cta) && (
