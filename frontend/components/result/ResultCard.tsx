@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, RefreshCw,
 } from 'lucide-react';
 import VideoChatPanel from '@/components/chat/VideoChatPanel';
 import { Button } from '@/components/ui/button';
@@ -21,12 +21,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
-import type { Report, McpPlugin, QualityScore, NlpAnalysis } from '@/lib/types';
+import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import AudioPlayer from './AudioPlayer';
@@ -39,12 +39,19 @@ import AnalysisDashboard from './AnalysisDashboard';
 import WebSourcesSection from './WebSourcesSection';
 import InsertedLinksSection from './InsertedLinksSection';
 import EventTimeline from './EventTimeline';
+import TranscriptPanel from './TranscriptPanel';
+import ChapterTimeline from './ChapterTimeline';
+import PlatformRewriteModal from './PlatformRewriteModal';
+import QaGateBadge from './QaGateBadge';
 
 interface ResultCardProps {
   report: Report;
   searchQuery?: string;
   mcpPlugins: McpPlugin[];
   onSchedule: (report: Report) => void;
+  viewMode?: ViewMode;
+  /** compact 모드에서 카드 클릭 시 full 전환 콜백 */
+  onExpandToFull?: () => void;
 }
 
 const remarkPlugins = [remarkGfm];
@@ -57,10 +64,11 @@ const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string
   D: { badge: 'border-red-500/50 text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400', label: 'D등급' },
 };
 
-const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule }: ResultCardProps) {
+const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [ttsLoading, setTtsLoading] = useState(false);
 
@@ -69,6 +77,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [eventLoading, setEventLoading] = useState(false);
   const [extractedEvents, setExtractedEvents] = useState<VideoEvent[] | null>(null);
   const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
+
+  // 플랫폼 리라이트 모달
+  const [rewriteOpen, setRewriteOpen] = useState(false);
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
@@ -152,6 +163,22 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     const text = `${report.title}\n\n${report.content.slice(0, 200)}...\n\n${report.url}`;
     navigator.clipboard.writeText(text);
     toast.success(t('result.shareCopied'));
+  }
+
+  async function handleExportFormat(format: 'markdown' | 'txt' | 'zip') {
+    try {
+      const blob = await exportFormat(format, report.title, report.content);
+      const ext = format === 'markdown' ? 'md' : format;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.title.slice(0, 50)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${ext.toUpperCase()} 내보내기 완료`);
+    } catch {
+      toast.error('내보내기에 실패했습니다.');
+    }
   }
 
   async function handleTts() {
@@ -239,6 +266,33 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     [processedContent],
   );
 
+  // --- Compact 모드: 요약 카드 ---
+  if (viewMode === 'compact') {
+    const preview = report.content.slice(0, 100) + (report.content.length > 100 ? '…' : '');
+    return (
+      <Card
+        className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow cursor-pointer"
+        onClick={onExpandToFull}
+      >
+        <div className="px-4 py-3">
+          {/* 메타 칩 + 제목 */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs text-muted-foreground/70 font-medium">
+              {getStyleLabel(report.style)}
+            </span>
+            <span className="text-xs text-muted-foreground">{report.time}</span>
+            <span className="ml-auto text-[11px] text-muted-foreground inline-flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              {(report.usage?.total_tokens ?? 0).toLocaleString()} · {(report.elapsed_time ?? 0).toFixed(1)}초
+            </span>
+          </div>
+          <h3 className="font-semibold text-sm leading-snug tracking-tight truncate">{report.title}</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview}</p>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <>
     {chatOpen && report.url && (
@@ -248,6 +302,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
         onClose={() => setChatOpen(false)}
       />
     )}
+    <PlatformRewriteModal
+      open={rewriteOpen}
+      onOpenChange={setRewriteOpen}
+      content={report.content}
+    />
     <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow">
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
@@ -311,8 +370,24 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 </TooltipContent>
               </Tooltip>
             )}
+            <QaGateBadge content={report.content} />
           </div>
           <div className="flex items-center gap-1">
+            {report.transcript_segments && report.transcript_segments.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setShowTranscript((v) => !v)}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{showTranscript ? '요약 보기' : '자막 보기'}</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -380,9 +455,64 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
       {/* 본문 */}
       {!collapsed && (
         <CardContent className="px-6 pb-5 pt-4 border-t border-border/50">
-          <div className="prose max-w-none text-[15.5px] leading-relaxed">
-            {markdownBody}
-          </div>
+          {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
+          {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
+            <>
+              <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
+              <div className="mt-5 space-y-4">
+                {report.chapters.map((ch, i) => (
+                  <div key={i} className="border-l-2 border-primary/30 pl-4">
+                    <h4 className="text-sm font-semibold mb-1">{ch.title}</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{ch.summary}</p>
+                  </div>
+                ))}
+              </div>
+              {/* 타임라인 모드에서도 전체 콘텐츠 접기 가능하도록 표시 */}
+              <details className="mt-5">
+                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                  전체 콘텐츠 보기
+                </summary>
+                <div className="prose max-w-none text-[15.5px] leading-relaxed mt-3">
+                  {markdownBody}
+                </div>
+              </details>
+            </>
+          ) : viewMode === 'timeline' ? (
+            <>
+              {/* 챕터 데이터 없음 — Full 모드로 폴백 */}
+              <div className="text-xs text-muted-foreground mb-3 px-3 py-2 bg-muted/30 rounded-md">
+                이 콘텐츠에는 챕터 데이터가 없어 전체 보기로 표시합니다.
+              </div>
+              {showTranscript && report.transcript_segments && report.transcript_segments.length > 0 ? (
+                <TranscriptPanel
+                  segments={report.transcript_segments}
+                  videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
+                />
+              ) : (
+                <div className="prose max-w-none text-[15.5px] leading-relaxed">
+                  {markdownBody}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {showTranscript && report.transcript_segments && report.transcript_segments.length > 0 ? (
+                <TranscriptPanel
+                  segments={report.transcript_segments}
+                  videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
+                />
+              ) : (
+                <div className="prose max-w-none text-[15.5px] leading-relaxed">
+                  {markdownBody}
+                </div>
+              )}
+
+              {/* 챕터 타임라인 (full 모드에서만 기존 위치에 표시) */}
+              {report.chapters && report.chapters.length > 0 && (
+                <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
+              )}
+            </>
+          )}
 
           {/* SEO 섹션 */}
           {report.seo && <SeoSection seo={report.seo} />}
@@ -500,6 +630,10 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 <Brain className="h-3.5 w-3.5 mr-2" />
                 {t('result.mindmap')}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setRewriteOpen(true)}>
+                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                플랫폼 변환
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleTts} disabled={ttsLoading}>
                 <Headphones className="h-3.5 w-3.5 mr-2" />
                 {ttsLoading ? '변환 중...' : '팟캐스트로 변환'}
@@ -524,6 +658,18 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
               <DropdownMenuItem onClick={handleExportDocx}>
                 <Download className="h-3.5 w-3.5 mr-2" />
                 {t('result.exportDocx')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportFormat('markdown')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                마크다운 (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportFormat('txt')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                텍스트 (.txt)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportFormat('zip')}>
+                <Download className="h-3.5 w-3.5 mr-2" />
+                패키지 (.zip)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handlePrint}>
                 <Printer className="h-3.5 w-3.5 mr-2" />

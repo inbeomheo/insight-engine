@@ -73,7 +73,10 @@ JSON 응답 {title, content, html, usage}
 | 레이어 | 파일 | 역할 |
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 예약, 지식 업로드, Ollama 헬스체크 |
-| 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스 API |
+| 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
+| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA, 캠페인 |
+| 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
+| 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증, 스키마 |
 | 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
 | 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 4단계 폴백 (Whisper 포함) |
 | 서비스 | `services/whisper_service.py` | faster-whisper 로컬 음성인식 (yt-dlp 오디오 다운로드) |
@@ -81,13 +84,20 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/webhook_service.py` | 웹훅 알림 (fire-and-forget, 1회 재시도) |
 | 서비스 | `services/schedule_service.py` | 예약 발행 CRUD |
 | 서비스 | `services/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
-| 서비스 | `services/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 |
+| 서비스 | `services/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
+| 서비스 | `services/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
+| 서비스 | `services/rewrite_service.py` | 플랫폼별 카피 리라이트 (Twitter/LinkedIn/Instagram/Threads) |
+| 서비스 | `services/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
+| 서비스 | `services/qa_gate_service.py` | 발행 전 QA 게이트 (금칙어/구조/중복/링크 검증) |
+| 서비스 | `services/transcript_workspace_service.py` | 자막 문장 분리 + 편집 적용 |
+| 서비스 | `services/publish_queue_service.py` | 발행 큐 + 재시도 정책 (3회, 지수 백오프) |
+| 서비스 | `services/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
 | 서비스 | `services/mcp/` | MCP 플러그인 시스템 (인터페이스 + 레지스트리 + Naver Blog/WordPress) |
 | 서비스 | `services/rag/` | RAG: ChromaDB 벡터 스토어, 텍스트 청킹, 컨텍스트 빌더 |
 | 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
 | 설정 | `config.py` | 토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens, RAG 설정 |
-| 프롬프트 | `prompts/` | 프롬프트 시스템 v3.1 + GEO/Shorts 스타일 |
+| 프롬프트 | `prompts/` | 프롬프트 시스템 v3.4 + GEO/Shorts/Course/Citation 스타일 |
 
 ### 프롬프트 구조
 
@@ -183,11 +193,11 @@ def generate_batch(): ...
 - 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}, "comment_summary_included": true/false}`
 - 실패: `{"error": "메시지"}` (에러 접두사: `[인증 실패]`, `[사용량 초과]`, `[타임아웃]` 등)
 
-### 8개 스타일 + 댓글 요약 (v3.1)
+### 스타일 시스템 (v3.4)
 
-UI에 표시되는 13개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`
+UI에 표시되는 14개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`, `course`
 
-내부 전용: `comment_summary` (병렬 댓글 요약용, `prompts/styles/comment_summary.py`)
+내부 전용: `comment_summary` (병렬 댓글 요약용), `cited_summary` (타임스탬프 인용 모드, `enable_citations=true` 시), `chapter_split` (챕터 분할 전용), `mindmap` (마인드맵 변환)
 
 > **주의**: `prompts/__init__.py`의 `get_available_styles()`는 초기 5개만 반환. 실제 전체 스타일은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict 참조.
 
@@ -220,6 +230,36 @@ UI에 표시되는 13개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **채널/재생목록 처리**: `POST /api/playlist-videos` — 채널/재생목록 URL → 영상 목록 추출 (YOUTUBE_API_KEY 필수)
 
 **멀티포맷 리퍼포징**: `POST /api/generate-multi` — 1 URL × N 스타일 동시 생성 (사용량 1회 차감)
+
+**상세도 프리셋**: `detail_level` 파라미터 (brief/standard/deep) — temperature 오프셋 + max_tokens 배율 적용 (`config.DETAIL_PRESETS`)
+
+**챕터 자동 분할**: `/generate` 응답의 `chapters[]` 필드 — AI가 자막을 주제별 챕터로 분할 (`chapter_service.py`)
+
+**플랫폼 리라이트**: `POST /api/rewrite` — 콘텐츠를 Twitter/LinkedIn/Instagram/Threads 형식으로 변환 (`rewrite_service.py`)
+
+**인라인 AI 편집**: `POST /api/inline-edit` — 텍스트 선택 영역만 부분 재생성 (축약/확장/톤변경/번역)
+
+**QA 게이트**: `POST /api/qa-check` — 발행 전 품질 검증 (금칙어, 섹션 구조, 중복, 링크 검증)
+
+**운영 대시보드**: `GET /api/admin/dashboard` — 7일 집계 (생성 수, 성공률, 스타일 분포, 일별 사용량)
+
+**다중 내보내기 포맷**: `POST /api/export/markdown`, `/api/export/txt`, `/api/export/zip` (DOCX+MD+TXT+meta.json 패키지)
+
+**자막 워크스페이스**: `GET /api/transcript/<video_id>` — 문장 단위 분리 + 편집 → 수정된 자막으로 재생성
+
+**콘텐츠 승인 플로우**: `ContentApprovalService` — 상태 머신 (draft→review→approved→published/rejected)
+
+**자막 소스 품질 메타**: `source_meta` (source_type, quality_score, is_auto) — 4단계 폴백별 품질 정보
+
+**3단 뷰 모드**: ViewModeSelector — Compact(100자 미리보기)/Full(기존)/Timeline(챕터 연동)
+
+**발행 큐**: `POST/GET /api/publish-queue` — 인메모리 큐 + 재시도 정책 (3회, 지수 백오프 1m/5m/30m)
+
+**프로바이더 검증**: `POST /api/providers/validate` — API 키 소량 토큰 호출 유효성 테스트
+
+**소스 인용 모드**: `enable_citations=true` → 모든 주장에 [MM:SS] 타임스탬프 인용 + YouTube 링크 변환
+
+**캠페인 팩**: `POST /api/generate-campaign` — 1 URL × N 스타일 팩 (full/blog_focused/social), 사용량 1회 차감
 
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)

@@ -34,6 +34,9 @@ export interface GenerateResponse {
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
   inserted_links?: InsertedLink[];
+  transcript_segments?: Array<{ start: number; text: string }>;
+  chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
+  citations?: Citation[];
 }
 
 export interface TokenUsage {
@@ -169,6 +172,21 @@ export interface Report {
   inserted_links?: InsertedLink[];
   /** 원본 자막 텍스트 (이벤트 추출 등에 사용) */
   transcript?: string;
+  /** 타임스탬프 포함 자막 세그먼트 (듀얼 모드 토글용) */
+  transcript_segments?: Array<{ start: number; text: string }>;
+  /** 챕터 자동 분할 결과 */
+  chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
+  /** 타임스탬프 인용 목록 (enable_citations: true 시) */
+  citations?: Citation[];
+}
+
+// === 인용 (Citation) ===
+
+export interface Citation {
+  marker: string;    // "[03:25]"
+  seconds: number;   // 205
+  context: string;   // 주변 텍스트
+  valid?: boolean;   // 자막 범위 내 검증 결과
 }
 
 // === Shorts 클립 ===
@@ -382,6 +400,32 @@ export interface InsertedLink {
   domain?: string;
 }
 
+// === 자막 소스 품질 메타 (F15) ===
+
+export type TranscriptSourceType = 'youtube_api' | 'watch_page' | 'supadata' | 'whisper';
+
+export interface TranscriptSourceMeta {
+  source_type: TranscriptSourceType;
+  quality_score: number;
+  is_auto: boolean;
+  language: string;
+}
+
+// === 자막 워크스페이스 (F13) ===
+
+export interface TranscriptSentence {
+  index: number;
+  text: string;
+  start_time: number | null;
+}
+
+export interface StructuredTranscript {
+  sentences: TranscriptSentence[];
+  video_id: string;
+  source: string;
+  source_meta?: TranscriptSourceMeta;
+}
+
 // === 지식 베이스 (RAG) ===
 
 export interface KnowledgeItem {
@@ -409,6 +453,94 @@ export interface WorkspaceMember {
   role: WorkspaceRole;
   joined_at: string;
 }
+
+// === 워크스페이스 콘텐츠 승인 ===
+
+export type ContentStatus = 'draft' | 'review' | 'approved' | 'published' | 'rejected';
+
+export interface WorkspaceContent {
+  id: string;
+  workspace_id: string;
+  content_id: string;
+  title: string;
+  status: ContentStatus;
+  author_id: string;
+  reviewer_id?: string;
+  review_note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// =============================================
+// 플랫폼 리라이트
+// =============================================
+
+export interface RewriteResponse {
+  platform: string;
+  text: string;
+  char_count: number;
+  max_chars: number;
+}
+
+// =============================================
+// QA 게이트
+// =============================================
+
+export interface QaIssue {
+  type: string;
+  message: string;
+  severity: 'error' | 'warning';
+  words?: string[];
+}
+
+export interface QaCheckResponse {
+  passed: boolean;
+  issues: QaIssue[];
+  score: number;
+}
+
+// === 발행 큐 ===
+
+export interface PublishQueueItem {
+  id: string;
+  content_id: string;
+  title: string;
+  plugin_id: string;
+  status: 'queued' | 'publishing' | 'success' | 'failed';
+  retry_count: number;
+  published_url?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// === 캠페인 팩 ===
+
+export interface CampaignPack {
+  id: string;
+  name: string;
+  description: string;
+  styles: string[];
+}
+
+export interface CampaignResult {
+  pack_id: string;
+  pack_name: string;
+  results: GenerateResponse[];
+  total_usage: TokenUsage;
+}
+
+// === 프로바이더 유효성 검사 ===
+
+export interface ProviderValidateResponse {
+  valid: boolean;
+  model_tested?: string;
+  error?: string;
+}
+
+// === 결과 카드 뷰 모드 ===
+
+export type ViewMode = 'compact' | 'full' | 'timeline';
 
 // =============================================
 // 이벤트 추출

@@ -21,6 +21,11 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
+  RewriteResponse,
+  QaCheckResponse,
+  CampaignPack,
+  CampaignResult,
+  ProviderValidateResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
 
@@ -189,6 +194,17 @@ export async function exportDocx(title: string, content: string): Promise<Blob> 
     body: JSON.stringify({ title, content }),
   });
   if (!res.ok) throw new Error('DOCX 내보내기 실패');
+  return res.blob();
+}
+
+// 포맷별 내보내기 (MD, TXT, ZIP)
+export async function exportFormat(format: 'markdown' | 'txt' | 'zip', title: string, content: string): Promise<Blob> {
+  const res = await fetch(`${BASE}/api/export/${format}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content }),
+  });
+  if (!res.ok) throw new Error('내보내기 실패');
   return res.blob();
 }
 
@@ -548,6 +564,61 @@ export interface ExtractEventsResponse {
 
 export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractEventsResponse> {
   return request('/api/extract-events', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+// === 플랫폼 리라이트 ===
+
+export async function rewriteForPlatform(
+  content: string,
+  platform: string,
+  model?: string,
+): Promise<RewriteResponse> {
+  return request('/api/rewrite', {
+    method: 'POST',
+    body: JSON.stringify({ content, platform, model }),
+  });
+}
+
+// === QA 게이트 ===
+
+export async function qaCheck(
+  content: string,
+  rules?: { forbidden_words?: string[] },
+): Promise<QaCheckResponse> {
+  return request('/api/qa-check', {
+    method: 'POST',
+    body: JSON.stringify({ content, rules }),
+  });
+}
+
+// === 프로바이더 유효성 검사 (F18) ===
+
+export async function validateProvider(
+  providerId: string,
+  apiKey: string,
+): Promise<ProviderValidateResponse> {
+  return request('/api/providers/validate', {
+    method: 'POST',
+    body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
+  });
+}
+
+// === 캠페인 팩 (F20) ===
+
+export async function fetchCampaignPacks(): Promise<{ packs: Record<string, CampaignPack> }> {
+  return request('/api/providers/campaign-packs');
+}
+
+export async function generateCampaign(req: {
+  url: string;
+  model: string;
+  pack_id: string;
+  modifiers?: Modifiers;
+}): Promise<CampaignResult> {
+  return request('/api/generate-campaign', {
     method: 'POST',
     body: JSON.stringify(req),
   });

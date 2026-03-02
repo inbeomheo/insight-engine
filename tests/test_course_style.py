@@ -76,7 +76,7 @@ class TestCourseStyleGeneration(unittest.TestCase):
         fake_transcript = {'text': '파이썬 기초를 배워봅시다', 'source': 'api'}
 
         def fake_create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None,
-                                style_id=None, user_id=None, segments=None, web_search=False):
+                                style_id=None, user_id=None, segments=None, web_search=False, **kwargs):
             if return_prompt:
                 return fake_result, 'COURSE_PROMPT_TEXT'
             return fake_result

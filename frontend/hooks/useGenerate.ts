@@ -24,7 +24,7 @@ export function useGenerate() {
     error: null,
   });
   const abortRef = useRef<AbortController | null>(null);
-  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode } = useSettingsStore();
+  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore();
   const { addReport, updateReport } = useResultStore();
 
   const generateSingle = useCallback(
@@ -36,7 +36,7 @@ export function useGenerate() {
 
       setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
 
-      const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode };
+      const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode, detail_level: detailLevel };
 
       try {
         if (useStreaming) {
@@ -97,7 +97,7 @@ export function useGenerate() {
         setState((s) => ({ ...s, isLoading: false, error: message }));
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport, updateReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, addReport, updateReport]
   );
 
   const generateBatchUrls = useCallback(

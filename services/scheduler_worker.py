@@ -1,7 +1,8 @@
 """
-예약 발행 백그라운드 워커
+예약 발행 + 채널 모니터링 백그라운드 워커
 
 APScheduler로 매분 예약된 포스트를 확인하고 MCP 플러그인으로 발행합니다.
+채널 모니터링은 30분 간격으로 신규 업로드를 감지합니다.
 """
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -48,6 +49,40 @@ def check_and_publish():
             logger.error(f"발행 예외: {post_id} - {e}")
 
 
+def _check_channel_monitors():
+    """30분 간격: 채널 모니터링 → 신규 영상 감지 시 로깅"""
+    from services.supabase_service import get_supabase, is_supabase_enabled
+    from services.channel_monitor_service import check_monitors
+
+    if not is_supabase_enabled():
+        return
+
+    try:
+        client = get_supabase()
+        new_videos = check_monitors(client)
+        if new_videos:
+            logger.info(f"채널 모니터링: 신규 영상 {len(new_videos)}건 감지")
+            for video in new_videos:
+                logger.info(
+                    f"  - 채널 {video['channel_id']}: "
+                    f"{video['title']} (video_id={video['video_id']})"
+                )
+    except Exception as e:
+        logger.error(f"채널 모니터링 실패: {e}")
+
+
+def _process_publish_queue():
+    """2분 간격: 발행 큐 대기 항목 처리"""
+    from services.publish_queue_service import publish_queue_service
+
+    try:
+        results = publish_queue_service.process_queue()
+        if results:
+            logger.info(f"발행 큐 처리 완료: {len(results)}건")
+    except Exception as e:
+        logger.error(f"발행 큐 처리 실패: {e}")
+
+
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     if scheduler.running:
@@ -60,8 +95,22 @@ def start_scheduler(app):
         id='publish_checker',
         replace_existing=True,
     )
+    scheduler.add_job(
+        _check_channel_monitors,
+        'interval',
+        minutes=30,
+        id='channel_monitor_checker',
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _process_publish_queue,
+        'interval',
+        minutes=2,
+        id='publish_queue_processor',
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("예약 발행 스케줄러 시작됨 (매 1분 간격)")
+    logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분)")
 
 
 def stop_scheduler():

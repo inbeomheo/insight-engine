@@ -83,7 +83,7 @@ def format_transcript_with_timestamps(segments: list) -> str:
         return ""
 
 
-def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None):
+def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None, detail_level=None):
     """프롬프트를 구성합니다."""
     # 현재 한국 시간 추가
     current_time = _get_korean_datetime()
@@ -116,6 +116,14 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
     if modifier_instructions:
         prompt += "\n\n[추가 지시사항]\n" + "\n".join(modifier_instructions)
 
+    # 상세도 프리셋 suffix 추가
+    if detail_level:
+        from config import DETAIL_PRESETS
+        detail = DETAIL_PRESETS.get(detail_level, DETAIL_PRESETS['standard'])
+        suffix = detail.get('prompt_suffix', '')
+        if suffix:
+            prompt += f"\n\n[상세도 지시]\n{suffix}"
+
     return prompt
 
 
@@ -136,9 +144,9 @@ def _extract_keywords(content):
     return cleaned, keywords
 
 
-def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False):
+def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False, detail_level=None):
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
-    from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS
+    from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS
 
     kwargs = {
         "model": model,
@@ -148,10 +156,13 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     if stream:
         kwargs["stream"] = True
 
-    kwargs["temperature"] = STYLE_TEMPERATURE.get(style_id, 0.7)
+    detail = DETAIL_PRESETS.get(detail_level, DETAIL_PRESETS['standard'])
+    base_temp = STYLE_TEMPERATURE.get(style_id, 0.7)
+    kwargs["temperature"] = max(0.0, min(1.0, base_temp + detail['temperature_offset']))
 
     length = (modifiers or {}).get('length', 'medium')
-    kwargs["max_tokens"] = LENGTH_MAX_TOKENS.get(length, 4000)
+    base_tokens = LENGTH_MAX_TOKENS.get(length, 4000)
+    kwargs["max_tokens"] = int(base_tokens * detail['max_tokens_multiplier'])
 
     if model.startswith("gemini/") and "lite" not in model.lower():
         kwargs["reasoning_effort"] = "minimal"
@@ -244,7 +255,7 @@ def _convert_error_message(error_msg, model=None):
 
 
 def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None,
-                   user_id=None, segments=None, web_search=False):
+                   user_id=None, segments=None, web_search=False, detail_level=None):
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
     API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
@@ -301,8 +312,10 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
 
         prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context,
                                segments=segments, web_context=web_context,
-                               style_memory_context=style_memory_context)
-        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers)
+                               style_memory_context=style_memory_context,
+                               detail_level=detail_level)
+        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers,
+                                                     detail_level=detail_level)
         is_glm = model.startswith("zhipuai/")
 
         # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
@@ -374,7 +387,7 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
-def create_content_stream(content, model, style_prompt=None, modifiers=None, style_id=None):
+def create_content_stream(content, model, style_prompt=None, modifiers=None, style_id=None, detail_level=None):
     """
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 토큰을 yield하고, 마지막에 None을 yield합니다.
@@ -383,19 +396,19 @@ def create_content_stream(content, model, style_prompt=None, modifiers=None, sty
     Yields:
         str: 토큰 텍스트 또는 None(종료)
     """
-    prompt = _build_prompt(content, style_prompt, modifiers)
+    prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level)
     is_glm = model.startswith("zhipuai/")
 
     # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield
     if is_glm:
-        result = create_content(content, model, style_prompt, modifiers=modifiers, style_id=style_id)
+        result = create_content(content, model, style_prompt, modifiers=modifiers, style_id=style_id, detail_level=detail_level)
         full_text = f"# {result.get('title', '')}\n\n{result.get('content', '')}"
         yield full_text
         yield None
         return
 
     try:
-        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True)
+        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True, detail_level=detail_level)
         response = completion(**completion_kwargs)
 
         for chunk in response:
@@ -671,6 +684,45 @@ def extract_cta(content):
         cta['secondary'] = secondary_match.group(1).strip()
 
     return cta if cta else None
+
+
+def inline_edit(content: str, selection: str, instruction: str, model: str, context: str = '') -> dict:
+    """선택 영역을 AI로 부분 편집합니다.
+
+    Args:
+        content: 전체 콘텐츠
+        selection: 선택된 텍스트
+        instruction: 편집 지시 (축약/확장/톤변경/번역)
+        model: AI 모델 ID
+        context: 주변 맥락 (선택)
+
+    Returns:
+        {'original': str, 'edited': str, 'full_content': str}
+    """
+    prompt = f"""다음 텍스트의 선택된 부분만 수정해주세요.
+
+## 전체 텍스트 (맥락 참고용)
+{content[:2000]}
+
+## 선택된 부분
+{selection}
+
+## 수정 지시
+{instruction}
+
+## 규칙
+- 선택된 부분만 수정하고 나머지는 그대로 유지
+- 수정된 텍스트만 출력 (다른 설명 없이)
+"""
+    result = create_content(prompt, model, style_prompt='', style_id='summary')
+    edited = result.get('content', '').strip()
+    full_content = content.replace(selection, edited, 1)
+
+    return {
+        'original': selection,
+        'edited': edited,
+        'full_content': full_content,
+    }
 
 
 def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):

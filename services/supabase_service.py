@@ -834,3 +834,59 @@ def get_content_detail(report_id: str) -> dict:
         return result.data or {}
 
     return _db_operation('Content detail', {}, operation)
+
+# =============================================
+# 스니펫 라이브러리
+# =============================================
+
+def get_user_snippets(user_id: str) -> list:
+    """사용자의 스니펫 목록을 반환합니다."""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return []
+
+    def operation():
+        result = supabase.table('ie_snippets') \
+            .select('*') \
+            .eq('user_id', user_id) \
+            .order('created_at', desc=True) \
+            .execute()
+        return result.data or []
+
+    return _db_operation('Snippets fetch', [], operation)
+
+
+def create_snippet(user_id: str, data: dict) -> dict:
+    """새 스니펫을 생성합니다."""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return {'error': 'Supabase 미연결'}
+
+    def operation():
+        row = {
+            'user_id': user_id,
+            'category': (data.get('category') or 'general')[:50],
+            'label': (data.get('label') or '제목 없음')[:100],
+            'content': (data.get('content') or '')[:5000],
+        }
+        result = supabase.table('ie_snippets').insert(row).execute()
+        return (result.data or [{}])[0]
+
+    return _db_operation('Snippet create', {'error': '스니펫 생성 실패'}, operation)
+
+
+def delete_snippet(user_id: str, snippet_id: str) -> bool:
+    """스니펫을 삭제합니다."""
+    supabase = get_supabase()
+    if not supabase or not user_id:
+        return False
+
+    def operation():
+        supabase.table('ie_snippets') \
+            .delete() \
+            .eq('id', snippet_id) \
+            .eq('user_id', user_id) \
+            .execute()
+        return True
+
+    return _db_operation('Snippet delete', False, operation)

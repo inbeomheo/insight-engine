@@ -12,9 +12,10 @@ from services.supabase_service import (
     get_all_contents, get_content_detail,
     get_histories, delete_history, update_history, toggle_favorite,
     delete_user_account,
-    update_user_profile, update_user_password
+    update_user_profile, update_user_password,
+    get_user_snippets, create_snippet, delete_snippet
 )
-from services.workspace_service import workspace_service
+from services.workspace_service import workspace_service, content_approval_service
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -726,6 +727,41 @@ def reset_style_memory():
     return _success_response({'message': '스타일 메모리가 초기화되었습니다.'})
 
 
+# =============================================
+# 스니펫 라이브러리 API
+# =============================================
+
+@auth_bp.route('/api/user/snippets', methods=['GET'])
+@require_auth
+def get_snippets():
+    """사용자 스니펫 목록을 반환합니다."""
+    snippets = get_user_snippets(g.user_id)
+    return jsonify({'snippets': snippets})
+
+
+@auth_bp.route('/api/user/snippets', methods=['POST'])
+@require_auth
+def create_snippet_route():
+    """새 스니펫을 생성합니다."""
+    data = _get_json_data()
+    if not data.get('content'):
+        return _error_response('스니펫 내용이 필요합니다.')
+    result = create_snippet(g.user_id, data)
+    if isinstance(result, dict) and result.get('error'):
+        return _error_response(result['error'], 500)
+    return jsonify(result), 201
+
+
+@auth_bp.route('/api/user/snippets/<snippet_id>', methods=['DELETE'])
+@require_auth
+def delete_snippet_route(snippet_id):
+    """스니펫을 삭제합니다."""
+    success = delete_snippet(g.user_id, snippet_id)
+    if not success:
+        return _error_response('삭제 실패', 500)
+    return jsonify({'ok': True})
+
+
 @auth_bp.route('/api/workspaces/<workspace_id>', methods=['DELETE'])
 @require_auth
 def delete_workspace(workspace_id):
@@ -737,3 +773,263 @@ def delete_workspace(workspace_id):
     if workspace_service.delete_workspace(workspace_id, g.user_id):
         return _success_response()
     return _error_response('삭제에 실패했습니다. 소유자만 삭제할 수 있습니다.', 403)
+
+
+# =============================================
+# 채널 모니터링 API
+# =============================================
+
+@auth_bp.route('/api/admin/dashboard', methods=['GET'])
+@require_auth
+def admin_dashboard():
+    """운영 대시보드 집계 데이터를 반환합니다."""
+    error = _require_admin()
+    if error:
+        return error
+
+    if not is_supabase_enabled():
+        return jsonify({'error': 'Supabase 미연결'}), 503
+
+    supabase = get_supabase()
+    if not supabase:
+        return jsonify({'error': 'Supabase 연결 실패'}), 503
+
+    try:
+        from datetime import datetime, timedelta, timezone
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+        # 히스토리 통계
+        histories = supabase.table('ie_histories') \
+            .select('created_at,style,elapsed_time,success') \
+            .gte('created_at', week_ago) \
+            .execute()
+
+        items = histories.data or []
+        total = len(items)
+        success_count = sum(1 for i in items if i.get('success', True))
+
+        # 스타일 분포
+        style_dist = {}
+        total_time = 0
+        for item in items:
+            s = item.get('style', 'unknown')
+            style_dist[s] = style_dist.get(s, 0) + 1
+            total_time += float(item.get('elapsed_time', 0) or 0)
+
+        avg_time = round(total_time / total, 2) if total > 0 else 0
+
+        # 사용량 통계
+        usage_data = supabase.table('ie_usage') \
+            .select('date,used_count') \
+            .gte('date', week_ago[:10]) \
+            .order('date', desc=True) \
+            .execute()
+
+        daily_usage = [
+            {'date': u['date'], 'count': u.get('used_count', 0)}
+            for u in (usage_data.data or [])
+        ]
+
+        return jsonify({
+            'period': '7d',
+            'total_generations': total,
+            'success_rate': round(success_count / total * 100, 1) if total > 0 else 0,
+            'avg_time': avg_time,
+            'style_distribution': style_dist,
+            'daily_usage': daily_usage,
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Dashboard data failed: {e}")
+        return jsonify({'error': '데이터 조회 실패'}), 500
+
+
+@auth_bp.route('/api/channel-monitors', methods=['GET'])
+@require_auth
+def get_channel_monitors():
+    """사용자 채널 모니터 목록 조회"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    try:
+        client = get_supabase()
+        result = client.table('ie_channel_monitors') \
+            .select('*') \
+            .eq('user_id', g.user_id) \
+            .order('created_at', desc=True) \
+            .execute()
+        return jsonify({'monitors': result.data or []})
+    except Exception as e:
+        return _error_response(f'모니터 조회 실패: {e}', 500)
+
+
+@auth_bp.route('/api/channel-monitors', methods=['POST'])
+@require_auth
+def create_channel_monitor():
+    """채널 모니터 등록"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    data = _get_json_data()
+    channel_id = data.get('channel_id', '').strip()
+    if not channel_id:
+        return _error_response('채널 ID가 필요합니다.')
+
+    try:
+        client = get_supabase()
+        row = {
+            'user_id': g.user_id,
+            'channel_id': channel_id,
+            'channel_title': data.get('channel_title', ''),
+            'style_id': data.get('style_id', 'blog_seo'),
+            'modifiers': data.get('modifiers', {
+                'length': 'medium',
+                'writing_style': 'conversational',
+                'language': 'ko',
+            }),
+            'interval_minutes': data.get('interval_minutes', 30),
+            'is_active': True,
+        }
+        result = client.table('ie_channel_monitors').insert(row).execute()
+        return jsonify(result.data[0] if result.data else {}), 201
+    except Exception as e:
+        return _error_response(f'모니터 등록 실패: {e}', 500)
+
+
+@auth_bp.route('/api/channel-monitors/<monitor_id>', methods=['DELETE'])
+@require_auth
+def delete_channel_monitor(monitor_id):
+    """채널 모니터 삭제"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    try:
+        client = get_supabase()
+        client.table('ie_channel_monitors') \
+            .delete() \
+            .eq('id', monitor_id) \
+            .eq('user_id', g.user_id) \
+            .execute()
+        return _success_response()
+    except Exception as e:
+        return _error_response(f'모니터 삭제 실패: {e}', 500)
+
+
+# =============================================
+# 워크스페이스 콘텐츠 승인 API
+# =============================================
+
+@auth_bp.route('/api/workspace/<workspace_id>/contents', methods=['POST'])
+@require_auth
+def add_workspace_content(workspace_id):
+    """워크스페이스에 콘텐츠 추가 (draft 상태)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    data = _get_json_data()
+    content_id = data.get('content_id', '').strip()
+    title = data.get('title', '').strip()
+
+    if not content_id or not title:
+        return _error_response('content_id와 title이 필요합니다.')
+
+    result = content_approval_service.add_content(workspace_id, g.user_id, content_id, title)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result), 201
+
+
+@auth_bp.route('/api/workspace/<workspace_id>/contents', methods=['GET'])
+@require_auth
+def get_workspace_contents(workspace_id):
+    """워크스페이스 콘텐츠 목록 (상태 필터 선택)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    # 멤버 확인
+    if not workspace_service.is_member(workspace_id, g.user_id):
+        return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
+
+    status = request.args.get('status', None, type=str)
+    contents = content_approval_service.get_workspace_contents(workspace_id, status)
+    return jsonify({'contents': contents})
+
+
+@auth_bp.route('/api/workspace/contents/<content_id>/submit-review', methods=['POST'])
+@require_auth
+def submit_content_review(content_id):
+    """draft → review 상태 전환"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    result = content_approval_service.submit_for_review(content_id, g.user_id)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result)
+
+
+@auth_bp.route('/api/workspace/contents/<content_id>/approve', methods=['POST'])
+@require_auth
+def approve_content(content_id):
+    """review → approved 상태 전환 (owner만)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    result = content_approval_service.approve_content(content_id, g.user_id)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result)
+
+
+@auth_bp.route('/api/workspace/contents/<content_id>/reject', methods=['POST'])
+@require_auth
+def reject_content(content_id):
+    """review → rejected 상태 전환 (owner만)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    data = _get_json_data()
+    reason = data.get('reason', '').strip()
+    if not reason:
+        return _error_response('반려 사유를 입력해주세요.')
+
+    result = content_approval_service.reject_content(content_id, g.user_id, reason)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result)
+
+
+@auth_bp.route('/api/workspace/contents/<content_id>/publish', methods=['POST'])
+@require_auth
+def publish_content(content_id):
+    """approved → published 상태 전환 (owner만)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    result = content_approval_service.publish_content(content_id, g.user_id)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result)
+
+
+@auth_bp.route('/api/workspace/contents/<content_id>/revert-draft', methods=['POST'])
+@require_auth
+def revert_content_to_draft(content_id):
+    """approved/rejected → draft 상태 전환 (editor 이상)"""
+    error = _check_supabase()
+    if error:
+        return error
+
+    result = content_approval_service.revert_to_draft(content_id, g.user_id)
+    if isinstance(result, dict) and 'error' in result:
+        return _error_response(result['error'])
+    return jsonify(result)

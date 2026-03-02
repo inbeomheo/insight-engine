@@ -59,6 +59,7 @@ export function responseToReport(
     cta: res.cta,
     json_ld_schemas: res.json_ld_schemas,
     web_sources: res.web_sources,
+    transcript_segments: res.transcript_segments,
     ...overrides,
   });
 }

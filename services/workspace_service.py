@@ -294,5 +294,161 @@ class WorkspaceService:
             return None
 
 
+# =============================================
+# 콘텐츠 승인 흐름
+# =============================================
+
+# 콘텐츠 상태 전이 규칙
+CONTENT_STATES = ['draft', 'review', 'approved', 'published', 'rejected']
+VALID_TRANSITIONS = {
+    'draft': ['review'],
+    'review': ['approved', 'rejected'],
+    'approved': ['published', 'draft'],  # draft로 되돌리기 가능
+    'rejected': ['draft'],  # 작성자가 재편집 가능
+    'published': [],
+}
+
+
+class ContentApprovalService:
+    """워크스페이스 콘텐츠 승인 흐름 관리"""
+
+    def _get_content(self, content_id: str) -> dict | None:
+        """콘텐츠 단건 조회"""
+        supabase = get_supabase()
+        if not supabase:
+            return None
+
+        result = supabase.table('ie_workspace_contents') \
+            .select('*') \
+            .eq('id', content_id) \
+            .limit(1) \
+            .execute()
+        return result.data[0] if result.data else None
+
+    def _get_member_role(self, workspace_id: str, user_id: str) -> str | None:
+        """워크스페이스에서 사용자의 역할 조회"""
+        supabase = get_supabase()
+        if not supabase:
+            return None
+
+        result = supabase.table('ie_workspace_members') \
+            .select('role') \
+            .eq('workspace_id', workspace_id) \
+            .eq('user_id', user_id) \
+            .limit(1) \
+            .execute()
+        return result.data[0]['role'] if result.data else None
+
+    def _transition(self, content_id: str, user_id: str, target_status: str,
+                    required_roles: list[str], extra_fields: dict | None = None) -> dict:
+        """상태 전이 공통 로직"""
+        if not is_supabase_enabled():
+            return {'error': 'Supabase 연결이 필요합니다.'}
+
+        content = self._get_content(content_id)
+        if not content:
+            return {'error': '콘텐츠를 찾을 수 없습니다.'}
+
+        current = content['status']
+        if target_status not in VALID_TRANSITIONS.get(current, []):
+            return {'error': f"'{current}' 상태에서 '{target_status}'(으)로 전환할 수 없습니다."}
+
+        # 역할 검증
+        role = self._get_member_role(content['workspace_id'], user_id)
+        if not role or role not in required_roles:
+            return {'error': '이 작업을 수행할 권한이 없습니다.'}
+
+        supabase = get_supabase()
+        update_data = {'status': target_status, 'updated_at': 'now()'}
+        if extra_fields:
+            update_data.update(extra_fields)
+
+        def operation():
+            result = supabase.table('ie_workspace_contents') \
+                .update(update_data) \
+                .eq('id', content_id) \
+                .execute()
+            return result.data[0] if result.data else {'error': '상태 변경에 실패했습니다.'}
+
+        return _db_operation('Content transition', {'error': '상태 변경 중 오류'}, operation)
+
+    def add_content(self, workspace_id: str, user_id: str, content_id: str, title: str) -> dict:
+        """워크스페이스에 콘텐츠 추가 (draft 상태)"""
+        if not is_supabase_enabled():
+            return {'error': 'Supabase 연결이 필요합니다.'}
+
+        role = self._get_member_role(workspace_id, user_id)
+        if not role or role not in ('owner', 'editor'):
+            return {'error': '콘텐츠를 추가할 권한이 없습니다.'}
+
+        supabase = get_supabase()
+        if not supabase:
+            return {'error': 'Supabase 클라이언트 초기화 실패'}
+
+        def operation():
+            result = supabase.table('ie_workspace_contents').insert({
+                'workspace_id': workspace_id,
+                'content_id': content_id,
+                'title': title,
+                'status': 'draft',
+                'author_id': user_id,
+            }).execute()
+            return result.data[0] if result.data else {'error': '콘텐츠 추가 실패'}
+
+        return _db_operation('Content add', {'error': '콘텐츠 추가 중 오류'}, operation)
+
+    def submit_for_review(self, content_id: str, user_id: str) -> dict:
+        """draft → review (editor 이상)"""
+        return self._transition(content_id, user_id, 'review',
+                                required_roles=['owner', 'editor'])
+
+    def approve_content(self, content_id: str, reviewer_id: str) -> dict:
+        """review → approved (owner만)"""
+        return self._transition(content_id, reviewer_id, 'approved',
+                                required_roles=['owner'],
+                                extra_fields={'reviewer_id': reviewer_id})
+
+    def reject_content(self, content_id: str, reviewer_id: str, reason: str) -> dict:
+        """review → rejected (owner만)"""
+        return self._transition(content_id, reviewer_id, 'rejected',
+                                required_roles=['owner'],
+                                extra_fields={'reviewer_id': reviewer_id, 'review_note': reason})
+
+    def publish_content(self, content_id: str, user_id: str) -> dict:
+        """approved → published (owner만)"""
+        return self._transition(content_id, user_id, 'published',
+                                required_roles=['owner'])
+
+    def revert_to_draft(self, content_id: str, user_id: str) -> dict:
+        """approved/rejected → draft (editor 이상)"""
+        return self._transition(content_id, user_id, 'draft',
+                                required_roles=['owner', 'editor'],
+                                extra_fields={'reviewer_id': None, 'review_note': None})
+
+    def get_workspace_contents(self, workspace_id: str, status: str = None) -> list:
+        """워크스페이스 콘텐츠 목록 (상태 필터 선택)"""
+        if not is_supabase_enabled():
+            return []
+
+        supabase = get_supabase()
+        if not supabase:
+            return []
+
+        def operation():
+            query = supabase.table('ie_workspace_contents') \
+                .select('*') \
+                .eq('workspace_id', workspace_id) \
+                .order('updated_at', desc=True)
+
+            if status and status in CONTENT_STATES:
+                query = query.eq('status', status)
+
+            result = query.execute()
+            return result.data or []
+
+        return _db_operation('Contents list', [], operation)
+
+
 # 싱글톤 인스턴스
 workspace_service = WorkspaceService()
+content_approval_service = ContentApprovalService()

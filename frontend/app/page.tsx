@@ -10,6 +10,7 @@ import UrlInput from '@/components/input/UrlInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
+import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
@@ -36,7 +37,7 @@ import { useSchedule } from '@/hooks/useSchedule';
 import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
-import type { Report } from '@/lib/types';
+import type { Report, ViewMode } from '@/lib/types';
 
 export default function Home() {
   const { hydrate: hydrateSettings } = useSettingsStore();
@@ -56,6 +57,19 @@ export default function Home() {
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
   const mcpPlugins = useMcpPlugins();
   const { t } = useTranslation();
+
+  // 뷰 모드 — localStorage 연동
+  const [viewMode, setViewMode] = useState<ViewMode>('full');
+  useEffect(() => {
+    const saved = localStorage.getItem('ie_view_mode') as ViewMode | null;
+    if (saved && ['compact', 'full', 'timeline'].includes(saved)) {
+      setViewMode(saved);
+    }
+  }, []);
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('ie_view_mode', mode);
+  }, []);
 
   // 예약 발행 모달 — 페이지 레벨 1개 (카드마다 마운트 X)
   const [scheduleTarget, setScheduleTarget] = useState<Report | null>(null);
@@ -301,8 +315,13 @@ export default function Home() {
                 </div>
               )}
 
-              {/* 필터 */}
-              <FilterBar />
+              {/* 필터 + 뷰 모드 선택 */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <FilterBar />
+                {reports.length > 0 && (
+                  <ViewModeSelector mode={viewMode} onChange={handleViewModeChange} />
+                )}
+              </div>
 
               {/* 결과 카드 / 빈 상태 */}
               <div className="w-full space-y-4">
@@ -325,6 +344,8 @@ export default function Home() {
                       searchQuery={searchQuery}
                       mcpPlugins={mcpPlugins}
                       onSchedule={handleScheduleOpen}
+                      viewMode={viewMode}
+                      onExpandToFull={() => handleViewModeChange('full')}
                     />
                   </div>
                 ))}

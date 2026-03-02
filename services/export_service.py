@@ -174,3 +174,57 @@ def _add_formatted_text(paragraph, text):
     if last_end < len(text):
         run = paragraph.add_run(text[last_end:])
         run.font.name = DEFAULT_FONT
+
+
+def export_markdown(title: str, content: str) -> io.BytesIO:
+    """마크다운 파일을 BytesIO로 반환합니다."""
+    text = f"# {title}\n\n{content}"
+    buffer = io.BytesIO(text.encode('utf-8'))
+    return buffer
+
+
+def export_txt(title: str, content: str) -> io.BytesIO:
+    """순수 텍스트 파일을 BytesIO로 반환합니다. 마크다운 서식을 제거합니다."""
+    text = re.sub(r'#{1,6}\s+', '', content)
+    text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
+    text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    full = f"{title}\n{'=' * len(title)}\n\n{text}"
+    buffer = io.BytesIO(full.encode('utf-8'))
+    return buffer
+
+
+def export_zip(title: str, content: str) -> io.BytesIO:
+    """DOCX + MD + TXT + meta.json을 ZIP으로 묶어 반환합니다."""
+    import zipfile
+    import json
+    from datetime import datetime, timezone
+
+    zip_buffer = io.BytesIO()
+    safe_name = re.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Markdown
+        md_buf = export_markdown(title, content)
+        zf.writestr(f'{safe_name}.md', md_buf.getvalue())
+
+        # TXT
+        txt_buf = export_txt(title, content)
+        zf.writestr(f'{safe_name}.txt', txt_buf.getvalue())
+
+        # DOCX
+        docx_buf = markdown_to_docx(title, content)
+        zf.writestr(f'{safe_name}.docx', docx_buf.getvalue())
+
+        # meta.json
+        meta = {
+            'title': title,
+            'char_count': len(content),
+            'exported_at': datetime.now(timezone.utc).isoformat(),
+            'formats': ['md', 'txt', 'docx'],
+        }
+        zf.writestr('meta.json', json.dumps(meta, ensure_ascii=False, indent=2))
+
+    zip_buffer.seek(0)
+    return zip_buffer

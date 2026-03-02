@@ -90,6 +90,33 @@ def _get_request_data(req):
         raw_source_type = data.get('source_type')
         source_type = raw_source_type if raw_source_type in _allowed_source_types else None
 
+        # detail_level 검증 (허용값: brief, standard, deep)
+        _allowed_detail_levels = {'brief', 'standard', 'deep'}
+        raw_detail = data.get('detail_level')
+        detail_level = raw_detail if isinstance(raw_detail, str) and raw_detail in _allowed_detail_levels else 'standard'
+
+        # output_format 검증 (허용값: html, markdown, plain)
+        _allowed_formats = {'html', 'markdown', 'plain'}
+        raw_format = data.get('output_format')
+        output_format = raw_format if isinstance(raw_format, str) and raw_format in _allowed_formats else 'html'
+
+        # max_chars 검증 (정수, 100~50000)
+        raw_max_chars = data.get('max_chars')
+        max_chars = None
+        if raw_max_chars is not None:
+            try:
+                max_chars = int(raw_max_chars)
+                if max_chars < 100 or max_chars > 50000:
+                    max_chars = None
+            except (ValueError, TypeError):
+                max_chars = None
+
+        # include_transcript 검증
+        include_transcript = bool(data.get('include_transcript', False))
+
+        # enable_citations 검증 (인용 타임스탬프 모드)
+        enable_citations = bool(data.get('enable_citations', False))
+
         return {
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
             'urls': urls,
@@ -100,6 +127,11 @@ def _get_request_data(req):
             'custom_prompt': custom_prompt,
             'analyze': bool(data.get('analyze', False)),
             'source_type': source_type,
+            'detail_level': detail_level,
+            'output_format': output_format,
+            'max_chars': max_chars,
+            'include_transcript': include_transcript,
+            'enable_citations': enable_citations,
         }
 
     return {
@@ -112,6 +144,11 @@ def _get_request_data(req):
         'custom_prompt': None,
         'analyze': False,
         'source_type': None,
+        'detail_level': 'standard',
+        'output_format': 'html',
+        'max_chars': None,
+        'include_transcript': False,
+        'enable_citations': False,
     }
 
 
@@ -234,7 +271,8 @@ def generate():
             result, used_prompt = ai_service.create_content(
                 truncated_content, params['model'], style_prompt,
                 return_prompt=True, modifiers=params['modifiers'],
-                style_id=params['style']
+                style_id=params['style'],
+                detail_level=params.get('detail_level'),
             )
 
             elapsed_time = round(time.time() - start_time, 2)
@@ -253,7 +291,11 @@ def generate():
                     'elapsed_time': elapsed_time,
                 })
 
-            return jsonify({
+            # output_format / max_chars 적용
+            from routes.generation_helpers import _apply_output_format
+            result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+
+            response_data = {
                 **result,
                 'id': report_id,
                 'prompt': used_prompt,
@@ -261,7 +303,11 @@ def generate():
                 'source_type': source_type,
                 'source_title': source_title,
                 'usage': get_usage_for_response(),
-            })
+            }
+            if params.get('include_transcript'):
+                response_data['transcript'] = source_content[:5000]
+
+            return jsonify(response_data)
 
         # ── YouTube 기존 흐름 ─────────────────────────────────────
         if not content_service.is_youtube_url(url):
@@ -273,7 +319,7 @@ def generate():
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
-        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
         if error:
             return jsonify({'error': error}), 400
 
@@ -354,6 +400,29 @@ def generate():
                 comments, transcript_text, max_tokens, web_search=web_search
             )
 
+        # 인용 타임스탬프 처리 (enable_citations: true 요청 시)
+        if params.get('enable_citations') and video_id:
+            try:
+                from services.citation_service import (
+                    parse_citations, validate_citations,
+                    enrich_content_with_links, enrich_html_with_links,
+                )
+                # 마크다운 내 [MM:SS] 링크 변환
+                result['content'] = enrich_content_with_links(
+                    result.get('content', ''), video_id
+                )
+                # HTML 내 [MM:SS] 링크 변환
+                if result.get('html'):
+                    result['html'] = enrich_html_with_links(
+                        result['html'], video_id
+                    )
+                # 인용 목록 파싱 + 검증
+                citations = parse_citations(result.get('content', ''))
+                citations = validate_citations(citations, transcript_segments or [])
+                result['citations'] = citations
+            except Exception as cite_err:
+                current_app.logger.warning(f"인용 처리 실패 (무시): {cite_err}")
+
         # 품질 평가 (quality_check: true 요청 시만)
         quality_score = None
         request_data = request_data_all
@@ -378,6 +447,7 @@ def generate():
             raw_transcript, transcript_source, comments, start_time,
             quality_score=quality_score,
             agent_meta=agent_meta,
+            transcript_segments=transcript_segments,
         )
 
     except ValueError as e:
@@ -649,7 +719,7 @@ def generate_merged():
                 if not vid:
                     return {'url': url, 'error': '유효하지 않은 YouTube URL'}
                 title = content_service.get_content_title(url) or 'YouTube 영상'
-                transcript_text, comments, error, _, source = _fetch_youtube_content(vid)
+                transcript_text, comments, error, _, source, _ = _fetch_youtube_content(vid)
                 if error:
                     return {'url': url, 'error': error, 'title': title}
                 return {
@@ -706,7 +776,8 @@ def generate_merged():
         result, used_prompt = ai_service.create_content(
             merged_content, params['model'], style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
-            style_id=params['style']
+            style_id=params['style'],
+            detail_level=params.get('detail_level'),
         )
 
         elapsed_time = round(time.time() - start_time, 2)
@@ -791,7 +862,7 @@ def generate_stream():
                 }), 429
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-        transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
         if error:
             return jsonify({'error': error}), 400
 
@@ -821,7 +892,8 @@ def generate_stream():
                     full_content = ''
                     for token in ai_service.create_content_stream(
                         truncated_content, model, style_prompt,
-                        modifiers=params['modifiers'], style_id=params['style']
+                        modifiers=params['modifiers'], style_id=params['style'],
+                        detail_level=params.get('detail_level'),
                     ):
                         if token is None:
                             break
@@ -856,6 +928,7 @@ def generate_stream():
                         'html': html,
                         'youtube_title': youtube_title,
                         'transcript_source': transcript_source,
+                        'transcript_segments': transcript_segments or [],
                     }, ensure_ascii=False)
                     yield f"data: {done_event}\n\n"
 
@@ -1218,3 +1291,64 @@ def extract_events_endpoint():
     except Exception as exc:
         current_app.logger.error(f'이벤트 추출 예상치 못한 오류: {exc}', exc_info=True)
         return jsonify({'error': '이벤트 추출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}), 500
+
+
+# ==================== F13: 자막 워크스페이스 ====================
+
+@blog_bp.route('/api/transcript/<video_id>', methods=['GET'])
+@require_auth
+def get_structured_transcript(video_id):
+    """구조화된 자막 데이터를 반환합니다 (문장 단위 분리 + 타임스탬프).
+
+    응답 형식:
+        {
+            "sentences": [{"index": 0, "text": "...", "start_time": 12.5}, ...],
+            "video_id": "...",
+            "source": "api" | "watch" | "supadata" | "whisper" | "cache",
+            "source_meta": { ... }  # F15 품질 메타 (존재 시)
+        }
+    """
+    import re as _re
+    if not video_id or not _re.match(r'^[A-Za-z0-9_-]{11}$', video_id):
+        return jsonify({'error': '유효하지 않은 video_id 형식입니다.'}), 400
+
+    try:
+        transcript_data = content_service.get_transcript(video_id)
+    except Exception as exc:
+        current_app.logger.error(f'자막 조회 오류: {exc}')
+        return jsonify({'error': '자막 조회에 실패했습니다.'}), 500
+
+    # 에러 응답 처리
+    if isinstance(transcript_data, dict) and 'error' in transcript_data:
+        return jsonify({'error': transcript_data['error']}), 422
+
+    # 자막 텍스트 및 세그먼트 추출
+    if isinstance(transcript_data, dict):
+        text = transcript_data.get('text', '')
+        source = transcript_data.get('source', 'unknown')
+        segments = transcript_data.get('segments', [])
+        source_meta = transcript_data.get('source_meta')
+    elif isinstance(transcript_data, str):
+        text = transcript_data
+        source = 'unknown'
+        segments = []
+        source_meta = None
+    else:
+        return jsonify({'error': '자막 데이터 형식이 올바르지 않습니다.'}), 500
+
+    if not text or not text.strip():
+        return jsonify({'error': '자막이 비어 있습니다.'}), 422
+
+    # 문장 단위 분리
+    from services.transcript_workspace_service import parse_transcript_sentences
+    sentences = parse_transcript_sentences(text, segments if segments else None)
+
+    result = {
+        'sentences': sentences,
+        'video_id': video_id,
+        'source': source,
+    }
+    if source_meta:
+        result['source_meta'] = source_meta
+
+    return jsonify(result)

@@ -92,6 +92,73 @@ def mcp_app_action(app_name: str):
     return jsonify(result), status_code
 
 
+# ── 발행 큐 (재시도 정책) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/publish-queue', methods=['GET'])
+@require_auth
+def publish_queue_list():
+    """현재 사용자의 발행 큐 목록 조회"""
+    from services.publish_queue_service import publish_queue_service
+
+    user_id = getattr(g, 'user_id', None)
+    items = publish_queue_service.get_queue_status(user_id=user_id)
+    return jsonify({'items': items})
+
+
+@blog_bp.route('/api/publish-queue', methods=['POST'])
+@require_auth
+def publish_queue_enqueue():
+    """발행 큐에 새 항목 추가"""
+    from services.publish_queue_service import publish_queue_service
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    content_id = data.get('content_id')
+    title = data.get('title')
+    content = data.get('content')
+    plugin_id = data.get('plugin_id')
+
+    if not content_id or not title or not content or not plugin_id:
+        return jsonify({
+            'error': 'content_id, title, content, plugin_id는 필수입니다.',
+        }), 400
+
+    user_id = getattr(g, 'user_id', None) or 'anonymous'
+    item = publish_queue_service.enqueue(
+        content_id=content_id,
+        title=title,
+        content=content,
+        plugin_id=plugin_id,
+        user_id=user_id,
+    )
+    return jsonify(item), 201
+
+
+@blog_bp.route('/api/publish-queue/<item_id>/cancel', methods=['POST'])
+@require_auth
+def publish_queue_cancel(item_id: str):
+    """큐 항목 취소"""
+    from services.publish_queue_service import publish_queue_service
+
+    result = publish_queue_service.cancel_item(item_id)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
+
+
+@blog_bp.route('/api/publish-queue/<item_id>/retry', methods=['POST'])
+@require_auth
+def publish_queue_retry(item_id: str):
+    """실패 항목 수동 재시도"""
+    from services.publish_queue_service import publish_queue_service
+
+    result = publish_queue_service.retry_item(item_id)
+    status_code = 200 if result.get('success') else 400
+    return jsonify(result), status_code
+
+
 # ── 예약 발행 ──────────────────────────────────────
 
 

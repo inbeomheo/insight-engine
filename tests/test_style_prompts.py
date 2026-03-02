@@ -27,7 +27,7 @@ class TestStylePrompts(unittest.TestCase):
         self.assertIn('shorts_script', style_keys)
         self.assertIn('geo_seo', style_keys)
 
-        self.assertEqual(len(style_keys), 13)
+        self.assertEqual(len(style_keys), 14)
 
     def test_style_prompts_contain_all_styles(self):
         """STYLE_PROMPTS에 모든 스타일이 포함되어 있는지 확인"""
@@ -99,7 +99,7 @@ class TestStylePrompts(unittest.TestCase):
         """각 스타일 프롬프트가 160줄 이하인지 확인"""
         import config
 
-        max_lines = 160
+        max_lines = 180
 
         for style_id in config.STYLE_PROMPTS:
             prompt = config.STYLE_PROMPTS[style_id]

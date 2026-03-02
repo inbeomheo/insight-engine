@@ -567,6 +567,34 @@ def _log_warning(message: str) -> None:
         pass
 
 
+def _detect_auto_caption(ytt_api: YouTubeTranscriptApi, video_id: str) -> bool:
+    """현재 가져온 자막이 자동 생성(ASR)인지 판별합니다."""
+    try:
+        if hasattr(ytt_api, 'list'):
+            transcript_list = ytt_api.list(video_id)
+            for track in transcript_list:
+                if getattr(track, 'is_generated', False):
+                    return True
+    except Exception:
+        pass
+    return False
+
+
+def _detect_language_from_text(text: str) -> str:
+    """텍스트 첫 200자를 분석하여 간단한 언어 감지를 수행합니다."""
+    if not text:
+        return 'unknown'
+    sample = text[:200]
+    # 한국어 유니코드 범위 체크
+    ko_count = sum(1 for c in sample if '\uac00' <= c <= '\ud7a3')
+    ja_count = sum(1 for c in sample if '\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9fff')
+    if ko_count > len(sample) * 0.1:
+        return 'ko'
+    if ja_count > len(sample) * 0.1:
+        return 'ja'
+    return 'en'
+
+
 def get_transcript(video_id: str) -> TranscriptResult:
     """
     YouTube 자막을 가져옵니다.
@@ -612,7 +640,15 @@ def get_transcript(video_id: str) -> TranscriptResult:
             text = _extract_text_from_transcript(fetched)
             if text:
                 segments = _extract_segments_from_transcript(fetched)
-                result = {'text': text, 'source': 'api', 'segments': segments}
+                # F15: source_meta 추가 — 자막 품질 메타데이터
+                is_auto = _detect_auto_caption(ytt_api, video_id)
+                source_meta = {
+                    'source_type': 'youtube_api',
+                    'quality_score': 0.95 if not is_auto else 0.85,
+                    'is_auto': is_auto,
+                    'language': _detect_language_from_text(text),
+                }
+                result = {'text': text, 'source': 'api', 'segments': segments, 'source_meta': source_meta}
                 _save_cache(video_id, 'transcript', result)
                 return result
 
@@ -643,7 +679,13 @@ def get_transcript(video_id: str) -> TranscriptResult:
     watch_result = _get_transcript_from_watch_page(video_id)
     if isinstance(watch_result, str) and watch_result.strip():
         _log_info(f"Transcript fallback succeeded from watch page for video_id={video_id}")
-        result = {'text': watch_result, 'source': 'watch'}
+        source_meta = {
+            'source_type': 'watch_page',
+            'quality_score': 0.85,
+            'is_auto': False,
+            'language': _detect_language_from_text(watch_result),
+        }
+        result = {'text': watch_result, 'source': 'watch', 'source_meta': source_meta}
         _save_cache(video_id, 'transcript', result)
         return result
 
@@ -653,7 +695,13 @@ def get_transcript(video_id: str) -> TranscriptResult:
         supadata_result = get_transcript_via_supadata(video_id, supadata_api_key)
         if isinstance(supadata_result, str) and supadata_result.strip():
             _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
-            result = {'text': supadata_result, 'source': 'supadata'}
+            source_meta = {
+                'source_type': 'supadata',
+                'quality_score': 0.8,
+                'is_auto': False,
+                'language': _detect_language_from_text(supadata_result),
+            }
+            result = {'text': supadata_result, 'source': 'supadata', 'source_meta': source_meta}
             _save_cache(video_id, 'transcript', result)
             return result
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
@@ -670,7 +718,13 @@ def get_transcript(video_id: str) -> TranscriptResult:
             whisper_text = extract_transcript_whisper(video_url, whisper_model)
             if whisper_text and whisper_text.strip():
                 _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
-                result = {'text': whisper_text, 'source': 'whisper'}
+                source_meta = {
+                    'source_type': 'whisper',
+                    'quality_score': 0.6,
+                    'is_auto': True,
+                    'language': _detect_language_from_text(whisper_text),
+                }
+                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta}
                 _save_cache(video_id, 'transcript', result)
                 return result
         except Exception as e:

@@ -262,7 +262,7 @@ class TestGenerateEndpointAnalysis(unittest.TestCase):
     @patch('services.content_service.get_video_id', return_value='dQw4w9WgXcQ')
     @patch('services.content_service.get_content_title', return_value='테스트 영상')
     @patch('routes.generation_helpers._fetch_youtube_content',
-           return_value=('테스트 자막 텍스트', [], None, '테스트 자막 텍스트', 'api'))
+           return_value=('테스트 자막 텍스트', [], None, '테스트 자막 텍스트', 'api', []))
     @patch('routes.generation_helpers._handle_short_content_bypass', return_value=None)
     @patch('routes.generation_helpers._handle_cache_hit', return_value=None)
     @patch('routes.generation_helpers._call_ai_with_comments',

@@ -118,6 +118,64 @@ LENGTH_MAX_TOKENS: Dict[str, int] = {
     'short': 4000, 'medium': 8000, 'long': 16000,
 }
 
+# 요약 상세도 프리셋 (brief/standard/deep)
+DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
+    'brief': {
+        'temperature_offset': -0.1,
+        'max_tokens_multiplier': 0.5,
+        'prompt_suffix': '핵심 내용만 간결하게 3-5개 포인트로 요약하세요. 부연 설명은 최소화하세요.',
+    },
+    'standard': {
+        'temperature_offset': 0.0,
+        'max_tokens_multiplier': 1.0,
+        'prompt_suffix': '',
+    },
+    'deep': {
+        'temperature_offset': 0.1,
+        'max_tokens_multiplier': 2.0,
+        'prompt_suffix': '가능한 한 상세하게 작성하세요. 각 포인트에 대해 배경 설명, 구체적 예시, 관련 맥락을 풍부하게 포함하세요.',
+    },
+}
+
+# === 플랫폼별 카피 리라이트 프리셋 ===
+
+PLATFORM_PRESETS: Dict[str, Dict[str, Any]] = {
+    'twitter': {'max_chars': 280, 'tone': 'casual', 'format': 'one-liner + hashtags'},
+    'linkedin': {'max_chars': 3000, 'tone': 'professional', 'format': 'thought leadership'},
+    'instagram': {'max_chars': 2200, 'tone': 'friendly', 'format': 'story + hashtags'},
+    'threads': {'max_chars': 500, 'tone': 'conversational', 'format': 'short opinion'},
+}
+
+# === QA 게이트 (발행 전 품질 검증) ===
+
+QA_FORBIDDEN_WORDS: List[str] = [
+    '놀라운', '혁신적', '획기적', '최고의', '게임체인저',
+    '압도적', '경이로운', '드디어', '탁월한', '인상적', '뛰어난', '강력한',
+]
+
+QA_MIN_SECTIONS: int = 2
+QA_MIN_CHARS: int = 200
+
+# === 캠페인 팩 (1 URL × N 스타일 원클릭 세트) ===
+
+CAMPAIGN_PACKS: Dict[str, Dict[str, Any]] = {
+    'full': {
+        'name': '풀 캠페인',
+        'description': '블로그 + 뉴스레터 + 숏츠 + SNS 4종 세트',
+        'styles': ['blog_seo', 'newsletter', 'shorts_script', 'sns_post'],
+    },
+    'blog_focused': {
+        'name': '블로그 집중',
+        'description': '블로그 SEO + 요약 + 튜토리얼 3종',
+        'styles': ['blog_seo', 'summary', 'tutorial'],
+    },
+    'social': {
+        'name': '소셜 미디어',
+        'description': 'SNS + 숏츠 + 뉴스레터 3종',
+        'styles': ['sns_post', 'shorts_script', 'newsletter'],
+    },
+}
+
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
@@ -288,6 +346,16 @@ __all__ = [
     # Style/Length Tuning
     'STYLE_TEMPERATURE',
     'LENGTH_MAX_TOKENS',
+    'DETAIL_PRESETS',
+    'PLATFORM_PRESETS',
+
+    # QA Gate
+    'QA_FORBIDDEN_WORDS',
+    'QA_MIN_SECTIONS',
+    'QA_MIN_CHARS',
+
+    # Campaign Packs
+    'CAMPAIGN_PACKS',
 
     # Providers
     'SUPPORTED_PROVIDERS',

@@ -18,26 +18,48 @@ from utils.responses import sanitize_error_for_client
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 
 
+def _apply_output_format(result: dict, output_format: str, max_chars: int = None) -> dict:
+    """output_format에 따라 결과를 변환합니다."""
+    import re
+    if output_format == 'plain':
+        text = result.get('content', '')
+        text = re.sub(r'#{1,6}\s+', '', text)  # headers
+        text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)  # bold/italic
+        text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)  # links
+        text = re.sub(r'`(.+?)`', r'\1', text)  # inline code
+        text = re.sub(r'\n{3,}', '\n\n', text)  # excessive newlines
+        result = {**result, 'content': text, 'html': ''}
+    elif output_format == 'markdown':
+        result = {**result, 'html': ''}  # HTML 제거, markdown만
+
+    if max_chars and result.get('content'):
+        result = {**result, 'content': result['content'][:max_chars]}
+
+    return result
+
+
 def _fetch_youtube_content(video_id):
     """YouTube 영상의 자막과 댓글을 분리하여 가져옵니다.
     Supadata API 키는 환경변수에서 자동으로 로드됩니다.
 
     Returns:
-        tuple: (transcript_text, comments_list, error, raw_transcript, transcript_source)
+        tuple: (transcript_text, comments_list, error, raw_transcript, transcript_source, transcript_segments)
         - comments_list: 댓글 문자열 리스트 (전체) 또는 빈 리스트
         - transcript_source: 'api' | 'watch' | 'supadata' | 'cache'
+        - transcript_segments: 타임스탬프 포함 세그먼트 목록 [{'start': float, 'text': str}, ...]
     """
     transcript_result = content_service.get_transcript(video_id)
     if isinstance(transcript_result, dict) and transcript_result.get('error'):
-        return None, [], transcript_result['error'], None, None
+        return None, [], transcript_result['error'], None, None, []
 
-    # 새 형식: {'text': '...', 'source': '...'}
+    # 새 형식: {'text': '...', 'source': '...', 'segments': [...]}
     transcript_text = transcript_result.get('text', '')
     transcript_source = transcript_result.get('source', 'unknown')
+    transcript_segments = transcript_result.get('segments', [])
 
     comments = content_service.get_top_comments(video_id) or []
 
-    return transcript_text, comments, None, transcript_text, transcript_source
+    return transcript_text, comments, None, transcript_text, transcript_source, transcript_segments
 
 
 def _build_combined_content(transcript_text, comments):
@@ -197,7 +219,7 @@ def _handle_cache_hit(cache_key, force, youtube_title,
     })
 
 
-def _generate_main_content_with_web_search(app, content, model, style_prompt, modifiers, style_id=None, web_search=False):
+def _generate_main_content_with_web_search(app, content, model, style_prompt, modifiers, style_id=None, web_search=False, detail_level=None):
     """스레드에서 메인 콘텐츠를 생성합니다 (웹 검색 지원).
 
     Returns:
@@ -207,7 +229,8 @@ def _generate_main_content_with_web_search(app, content, model, style_prompt, mo
         return ai_service.create_content(
             content, model, style_prompt,
             return_prompt=True, modifiers=modifiers,
-            style_id=style_id, web_search=web_search
+            style_id=style_id, web_search=web_search,
+            detail_level=detail_level,
         )
 
 
@@ -216,6 +239,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
     """AI 호출 + 댓글 병렬 처리. (result, used_prompt, comment_result) 반환."""
     # RAG 컨텍스트를 위한 user_id (없으면 None → RAG 스킵)
     user_id = getattr(g, 'user_id', None)
+    detail_level = params.get('detail_level')
     is_auto = model == 'auto'
 
     if is_auto:
@@ -244,7 +268,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
                 truncated_content, model, style_prompt,
                 return_prompt=True, modifiers=params['modifiers'],
                 style_id=params['style'], user_id=user_id,
-                web_search=web_search
+                web_search=web_search,
+                detail_level=detail_level,
             )
             comment_result = _generate_comment_summary(app, comments, model)
         else:
@@ -253,7 +278,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
                 main_future = executor.submit(
                     _generate_main_content_with_web_search, app, truncated_content,
                     model, style_prompt, params['modifiers'],
-                    style_id=params['style'], web_search=web_search
+                    style_id=params['style'], web_search=web_search,
+                    detail_level=detail_level,
                 )
                 comment_future = executor.submit(
                     _generate_comment_summary, app, comments, model
@@ -270,7 +296,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
             truncated_content, model, style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
             style_id=params['style'], user_id=user_id,
-            web_search=web_search
+            web_search=web_search,
+            detail_level=detail_level,
         )
 
     return result, used_prompt, comment_result
@@ -279,7 +306,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
 def _save_and_respond(result, used_prompt, comment_result, cache_key,
                        video_id, params, url, youtube_title,
                        raw_transcript, transcript_source, comments, start_time,
-                       quality_score=None, agent_meta=None):
+                       quality_score=None, agent_meta=None,
+                       transcript_segments=None):
     """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
     model = params['model']
     modifiers = params['modifiers'] or {}
@@ -393,8 +421,24 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         except Exception:
             pass  # 스타일 메모리 업데이트 실패는 응답에 영향 없음
 
+    # 챕터 분할 (타임스탬프 세그먼트가 있을 때만)
+    chapters = []
+    if transcript_segments:
+        try:
+            from services.chapter_service import split_chapters
+            chapters = split_chapters(raw_transcript, model, transcript_segments)
+        except Exception as ch_err:
+            current_app.logger.warning(f"챕터 분할 실패 (무시): {ch_err}")
+
     # 웹 검색 출처 정보 (result에 포함되어 있으면 응답에 포함)
     web_sources = result.pop('web_sources', None)
+
+    # output_format / max_chars 적용
+    result = _apply_output_format(
+        result,
+        params.get('output_format', 'html'),
+        params.get('max_chars'),
+    )
 
     return jsonify({
         **result,
@@ -413,6 +457,8 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "quality_score": quality_score,
         "web_sources": web_sources,
         "analysis": analysis,
+        "transcript_segments": transcript_segments or [],
+        "chapters": chapters,
         "usage": get_usage_for_response(),
         **(agent_meta or {}),
     })
@@ -448,7 +494,7 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
             title = content_service.get_content_title(url) or 'YouTube 영상'
             current_app.logger.info(f"Content title: {title}")
 
-            transcript_text, comments, error, raw_transcript, transcript_source = _fetch_youtube_content(video_id)
+            transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
             if error:
                 return {
                     'success': False,
