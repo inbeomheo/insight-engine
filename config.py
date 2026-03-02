@@ -55,6 +55,12 @@ GRAPH_STORE_PATH: str = os.environ.get('GRAPH_STORE_PATH', './data/graph_store')
 RERANKER_ENABLED: bool = os.environ.get('RERANKER_ENABLED', 'false').lower() == 'true'
 RERANKER_TOP_K: int = int(os.environ.get('RERANKER_TOP_K', '5'))
 
+# === Corrective RAG (CRAG) ===
+# 주의: 품질 미달 시 LLM 추가 호출 발생 (비용 +1~2회/요청)
+
+CRAG_ENABLED: bool = os.environ.get('CRAG_ENABLED', 'false').lower() == 'true'
+CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '0.7'))
+
 # === Whisper (음성 인식 자막 폴백) ===
 
 WHISPER_ENABLED: bool = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'

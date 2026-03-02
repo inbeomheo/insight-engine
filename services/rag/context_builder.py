@@ -5,6 +5,13 @@ GraphRAG 모드:
   2. 지식 그래프 검색 (networkx BFS)
   3. 결합 후 LLM 리랭킹
   4. 상위 K개 컨텍스트 반환
+
+CRAG 모드 (CRAG_ENABLED=true):
+  위 1~4 완료 후:
+  5. 검색 품질 LLM 평가
+  6. correct → 그대로 사용
+     ambiguous → 쿼리 재구성 후 재검색
+     incorrect → 웹 검색 폴백
 """
 import logging
 import os
@@ -16,64 +23,101 @@ _GRAPH_RAG_ENABLED = os.environ.get("GRAPH_RAG_ENABLED", "false").lower() == "tr
 _RERANKER_ENABLED = os.environ.get("RERANKER_ENABLED", "false").lower() == "true"
 _RERANKER_TOP_K = int(os.environ.get("RERANKER_TOP_K", "5"))
 
+# CRAG (Corrective RAG) 설정
+_CRAG_ENABLED = os.environ.get("CRAG_ENABLED", "false").lower() == "true"
+
 
 class RAGContextBuilder:
-    def __init__(self, vector_store, graph_store=None, graph_rag_enabled: bool = False, reranker_enabled: bool = False):
+    def __init__(
+        self,
+        vector_store,
+        graph_store=None,
+        graph_rag_enabled: bool = False,
+        reranker_enabled: bool = False,
+        crag_enabled: bool = False,
+    ):
         self.vector_store = vector_store
         self.graph_store = graph_store
         # 생성자 인자 또는 환경변수 중 하나라도 활성화되면 사용
         self._graph_rag_enabled = graph_rag_enabled or _GRAPH_RAG_ENABLED
         self._reranker_enabled = reranker_enabled or _RERANKER_ENABLED
+        self._crag_enabled = crag_enabled or _CRAG_ENABLED
 
     def build_context(self, user_id: str, query: str, top_k: int = 5) -> str:
         """쿼리로 관련 문서 검색 후 프롬프트 삽입용 텍스트 반환.
 
-        GraphRAG가 활성화된 경우:
-          - 벡터 검색 + 그래프 검색 결합
-          - LLM 리랭킹 적용
+        처리 순서:
+          1. 벡터 검색 (+ GraphRAG, 리랭킹)
+          2. CRAG 활성화 시 품질 평가 → 재검색 또는 웹 폴백
         """
         if self._graph_rag_enabled and self.graph_store is not None:
-            return self._build_graph_rag_context(user_id, query, top_k)
-        return self._build_vector_context(user_id, query, top_k)
+            chunks = self._retrieve_graph_rag_chunks(user_id, query, top_k)
+        else:
+            chunks = self._retrieve_vector_chunks(user_id, query, top_k)
 
-    def _build_vector_context(self, user_id: str, query: str, top_k: int) -> str:
-        """기존 벡터 검색 기반 컨텍스트 빌드."""
+        # CRAG: 검색 품질 교정 루프 (활성화 시)
+        if self._crag_enabled and chunks:
+            chunks = self._apply_crag(query, chunks, user_id, top_k)
+
+        return self._format_context(chunks)
+
+    # ------------------------------------------------------------------
+    # 내부 검색 메서드 (청크 리스트 반환)
+    # ------------------------------------------------------------------
+
+    def _retrieve_vector_chunks(self, user_id: str, query: str, top_k: int) -> list[dict]:
+        """벡터 검색 결과를 청크 리스트로 반환합니다."""
         results = self.vector_store.search(user_id, query, top_k)
         if not results:
-            return ""
-
+            return []
         if self._reranker_enabled:
             results = self._apply_reranker(query, results, top_k)
+        return results
 
-        return self._format_context(results)
-
-    def _build_graph_rag_context(self, user_id: str, query: str, top_k: int) -> str:
-        """GraphRAG: 벡터 검색 + 그래프 검색 결합 후 리랭킹."""
-        # 1. 벡터 검색 (top_k * 2개 후보 확보)
+    def _retrieve_graph_rag_chunks(self, user_id: str, query: str, top_k: int) -> list[dict]:
+        """GraphRAG 검색 결과를 청크 리스트로 반환합니다."""
         vector_results = self.vector_store.search(user_id, query, top_k * 2)
-
-        # 2. 그래프 검색: 쿼리에서 키워드 추출 후 BFS
         graph_context = self._search_graph(user_id, query)
 
-        # 3. 그래프 컨텍스트를 청크 형태로 변환하여 결합
         combined = list(vector_results)
         if graph_context:
             combined.append({
                 "text": graph_context,
                 "metadata": {"filename": "지식그래프", "source": "graph"},
-                "distance": 0.1,  # 그래프 결과는 관련도 높게 설정
+                "distance": 0.1,
             })
 
         if not combined:
-            return ""
+            return []
 
-        # 4. 리랭킹 적용
         if self._reranker_enabled:
             combined = self._apply_reranker(query, combined, top_k)
         else:
             combined = combined[:top_k]
 
-        return self._format_context(combined)
+        return combined
+
+    def _apply_crag(
+        self,
+        query: str,
+        chunks: list[dict],
+        user_id: str,
+        top_k: int,
+    ) -> list[dict]:
+        """CRAG 루프: 품질 평가 → 교정 검색."""
+        try:
+            from .corrective_rag import corrective_search
+            return corrective_search(
+                query=query,
+                chunks=chunks,
+                vector_store=self.vector_store,
+                user_id=user_id,
+                top_k=top_k,
+                max_retries=1,
+            )
+        except Exception as e:
+            logger.warning(f"CRAG 적용 실패, 원본 청크 사용: {e}")
+            return chunks
 
     def _search_graph(self, user_id: str, query: str) -> str:
         """지식 그래프에서 쿼리 관련 엔티티를 탐색하고 텍스트로 변환합니다."""
