@@ -92,10 +92,12 @@ class TestPipelineEngine(unittest.TestCase):
             "step_start", "step_error",
         ])
 
-        # 에러 이벤트 내용
+        # 에러 이벤트 내용 (클라이언트에는 일반화된 메시지 전달)
         error_event = events[-1]
         self.assertEqual(error_event["step"], "fail")
-        self.assertIn("의도된 에러", error_event["error"])
+        self.assertIn("처리 중 오류가 발생했습니다", error_event["error"])
+        # Fix 9: step_error에 progress 필드 포함
+        self.assertIn("progress", error_event)
 
         # step_after는 실행되지 않음
         self.assertNotIn("after", call_log)

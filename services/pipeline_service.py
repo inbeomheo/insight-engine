@@ -80,7 +80,8 @@ class PipelineEngine:
                 yield {
                     "type": "step_error",
                     "step": step.id,
-                    "error": str(e),
+                    "error": f"'{step.name}' 처리 중 오류가 발생했습니다.",
+                    "progress": (i + 1) / total,
                 }
                 return
 

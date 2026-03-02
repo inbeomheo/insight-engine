@@ -2,7 +2,9 @@
 AI 콘텐츠 생성 서비스
 LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
+import html as html_lib
 import os
+import re
 import time
 import markdown
 import threading
@@ -277,7 +279,7 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             html = markdown.markdown(body, extensions=['tables', 'fenced_code', 'nl2br'])
         except Exception as md_err:
             current_app.logger.warning(f"마크다운 변환 실패: {md_err}")
-            html = f"<pre>{body}</pre>"
+            html = f"<pre>{html_lib.escape(body)}</pre>"
 
         result = {
             'title': title,

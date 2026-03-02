@@ -109,6 +109,26 @@ class WorkspaceService:
 
         return _db_operation('Workspace get', None, operation)
 
+    def is_member(self, workspace_id: str, user_id: str) -> bool:
+        """사용자가 해당 워크스페이스의 멤버인지 확인"""
+        if not is_supabase_enabled():
+            return False
+
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            result = supabase.table('ie_workspace_members') \
+                .select('user_id') \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
+            return bool(result.data)
+
+        return _db_operation('Membership check', False, operation)
+
     def get_members(self, workspace_id: str) -> list:
         """워크스페이스 멤버 목록 (이메일 포함)"""
         if not is_supabase_enabled():

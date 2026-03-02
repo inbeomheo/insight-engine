@@ -25,6 +25,7 @@ def download_audio(video_url: str) -> str | None:
         logger.error("yt-dlp가 설치되어 있지 않습니다: pip install yt-dlp")
         return None
 
+    tmp_path = None
     try:
         # 임시 파일 생성 (wav 확장자)
         fd, tmp_path = tempfile.mkstemp(suffix='.wav')

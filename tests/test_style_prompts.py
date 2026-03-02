@@ -1,18 +1,18 @@
 """
-스타일 프롬프트 테스트 v3.1
-8개 스타일, 2개 모디파이어 검증
+스타일 프롬프트 테스트 v3.2
+13개 스타일, 3개 모디파이어 검증
 """
 import unittest
 
 
 class TestStylePrompts(unittest.TestCase):
     def test_style_options_include_core_styles(self):
-        """11개 스타일이 STYLE_OPTIONS에 포함되어 있는지 확인"""
+        """13개 스타일이 STYLE_OPTIONS에 포함되어 있는지 확인"""
         import config
 
         style_keys = [k for k, _ in config.STYLE_OPTIONS]
 
-        # 11개 스타일 확인
+        # 13개 스타일 확인
         self.assertIn('blog_seo', style_keys)
         self.assertIn('summary', style_keys)
         self.assertIn('tutorial', style_keys)
@@ -24,8 +24,10 @@ class TestStylePrompts(unittest.TestCase):
         self.assertIn('sns_post', style_keys)
         self.assertIn('newsletter', style_keys)
         self.assertIn('show_notes', style_keys)
+        self.assertIn('shorts_script', style_keys)
+        self.assertIn('geo_seo', style_keys)
 
-        self.assertEqual(len(style_keys), 11)
+        self.assertEqual(len(style_keys), 13)
 
     def test_style_prompts_contain_all_styles(self):
         """STYLE_PROMPTS에 모든 스타일이 포함되어 있는지 확인"""
@@ -34,15 +36,16 @@ class TestStylePrompts(unittest.TestCase):
         for style_id, _ in config.STYLE_OPTIONS:
             self.assertIn(style_id, config.STYLE_PROMPTS)
 
-    def test_modifiers_have_only_two_categories(self):
-        """모디파이어가 2개 카테고리만 있는지 확인"""
+    def test_modifiers_have_three_categories(self):
+        """모디파이어가 3개 카테고리(length, writing_style, language)인지 확인"""
         import config
 
         modifier_keys = list(config.MODIFIER_OPTIONS.keys())
 
         self.assertIn('length', modifier_keys)
         self.assertIn('writing_style', modifier_keys)
-        self.assertEqual(len(modifier_keys), 2)
+        self.assertIn('language', modifier_keys)
+        self.assertEqual(len(modifier_keys), 3)
 
     def test_default_modifiers(self):
         """기본 모디파이어 값 확인"""
@@ -118,8 +121,8 @@ class TestStylePrompts(unittest.TestCase):
         for key in config_keys:
             config_values[key] = {opt[0] for opt in config.MODIFIER_OPTIONS[key]['options']}
 
-        # 검증: length와 writing_style만 있어야 함
-        self.assertEqual(config_keys, {'length', 'writing_style'})
+        # 검증: length, writing_style, language가 있어야 함
+        self.assertEqual(config_keys, {'length', 'writing_style', 'language'})
 
         # 검증: length 값
         self.assertEqual(config_values['length'], {'short', 'medium', 'long'})

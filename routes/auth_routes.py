@@ -3,6 +3,7 @@
 회원가입, 로그인, 로그아웃, 사용자 정보 조회
 """
 from flask import Blueprint, request, jsonify, g
+from utils.responses import success_response, error_response
 from services.supabase_service import (
     get_supabase, is_supabase_enabled, require_auth,
     save_api_keys, get_api_keys,
@@ -30,17 +31,8 @@ def _check_supabase():
     return None
 
 
-def _success_response(data=None):
-    """성공 응답 생성"""
-    response = {'success': True}
-    if data:
-        response.update(data)
-    return jsonify(response)
-
-
-def _error_response(message, status_code=400):
-    """에러 응답 생성"""
-    return jsonify({'error': message}), status_code
+_success_response = success_response
+_error_response = error_response
 
 
 @auth_bp.route('/api/auth/status', methods=['GET'])
@@ -120,17 +112,15 @@ def reset_password():
 
     try:
         get_supabase().auth.reset_password_email(email)
-        return _success_response({
-            'message': '비밀번호 재설정 이메일을 발송했습니다. 이메일을 확인해주세요.'
-        })
     except Exception as e:
-        error_msg = str(e).lower()
-        if 'not found' in error_msg:
-            return _error_response('등록되지 않은 이메일입니다.')
-        # 보안: 상세 에러 메시지는 로깅만 하고 일반 메시지 반환
+        # 보안: 상세 에러 메시지는 로깅만 (계정 열거 방지 — 성공/실패 동일 응답)
         import logging
         logging.getLogger(__name__).error(f'비밀번호 재설정 오류: {e}')
-        return _error_response('이메일 발송 중 오류가 발생했습니다.')
+
+    # 계정 열거 방지: 등록 여부와 무관하게 동일 메시지 반환
+    return _success_response({
+        'message': '이메일을 확인해주세요. 등록된 이메일이라면 재설정 링크가 발송됩니다.'
+    })
 
 
 @auth_bp.route('/api/auth/oauth/<provider>', methods=['GET'])
@@ -146,7 +136,11 @@ def oauth_login(provider):
 
     try:
         # 현재 요청의 호스트에서 redirect URL 생성
-        redirect_url = request.args.get('redirect_url', request.host_url.rstrip('/'))
+        default_redirect = request.host_url.rstrip('/')
+        redirect_url = request.args.get('redirect_url', default_redirect)
+        # 오픈 리디렉트 방지: 동일 호스트만 허용
+        if not redirect_url.startswith(request.host_url):
+            redirect_url = default_redirect
 
         result = get_supabase().auth.sign_in_with_oauth({
             'provider': provider,
@@ -157,7 +151,9 @@ def oauth_login(provider):
 
         return jsonify({'url': result.url})
     except Exception as e:
-        return _error_response(f'OAuth 오류: {str(e)}')
+        import logging
+        logging.getLogger(__name__).error(f'OAuth 로그인 오류: {e}')
+        return _error_response('OAuth 로그인 처리 중 오류가 발생했습니다.')
 
 
 @auth_bp.route('/api/auth/oauth/callback', methods=['POST'])
@@ -634,6 +630,10 @@ def get_workspace_members(workspace_id):
     error = _check_supabase()
     if error:
         return error
+
+    # IDOR 방지: 요청자가 해당 워크스페이스 멤버인지 확인
+    if not workspace_service.is_member(workspace_id, g.user_id):
+        return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
 
     members = workspace_service.get_members(workspace_id)
     return jsonify({'members': members})

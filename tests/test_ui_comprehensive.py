@@ -9,8 +9,14 @@ import time
 BASE_URL = "http://127.0.0.1:5001"
 TEST_YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-class TestResults:
-    """테스트 결과를 수집하는 클래스"""
+
+@pytest.fixture
+def results():
+    """테스트 결과 수집 fixture"""
+    return UITestResults()
+
+class UITestResults:
+    """테스트 결과를 수집하는 클래스 (Test 접두사 아님 — pytest 수집 방지)"""
     def __init__(self):
         self.passed = []
         self.failed = []
@@ -41,7 +47,7 @@ class TestResults:
 
 def run_all_tests():
     """모든 UI 테스트 실행"""
-    results = TestResults()
+    results = UITestResults()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=100)
