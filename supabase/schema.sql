@@ -422,6 +422,70 @@ CREATE POLICY member_manage ON ie_workspace_members FOR ALL
     USING (workspace_id IN (SELECT id FROM ie_workspaces WHERE owner_id = auth.uid()));
 
 -- =============================================
+-- 14. 프롬프트 템플릿 갤러리 테이블
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS ie_prompt_templates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    prompt_text TEXT NOT NULL,
+    style_base TEXT DEFAULT 'blog_seo',  -- 기반 스타일
+    is_public BOOLEAN DEFAULT false,     -- 공개 여부 (true면 전체 사용자에게 노출)
+    usage_count INTEGER DEFAULT 0,       -- 사용 횟수
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_user_id ON ie_prompt_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_public ON ie_prompt_templates(is_public) WHERE is_public = TRUE;
+CREATE INDEX IF NOT EXISTS idx_prompt_templates_created_at ON ie_prompt_templates(created_at DESC);
+
+-- RLS
+ALTER TABLE ie_prompt_templates ENABLE ROW LEVEL SECURITY;
+
+-- 공개 템플릿은 모든 사용자가 읽기 가능, 본인 템플릿도 읽기 가능
+CREATE POLICY "Users can view public or own templates"
+    ON ie_prompt_templates FOR SELECT
+    USING (is_public = TRUE OR auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own templates"
+    ON ie_prompt_templates FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own templates"
+    ON ie_prompt_templates FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own templates"
+    ON ie_prompt_templates FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- updated_at 트리거
+DROP TRIGGER IF EXISTS ie_prompt_templates_updated_at ON ie_prompt_templates;
+CREATE TRIGGER ie_prompt_templates_updated_at
+    BEFORE UPDATE ON ie_prompt_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- 사용 횟수 증가 RPC 함수
+CREATE OR REPLACE FUNCTION increment_template_usage(p_template_id UUID)
+RETURNS VOID
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    UPDATE ie_prompt_templates
+    SET usage_count = usage_count + 1,
+        updated_at = NOW()
+    WHERE id = p_template_id;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION increment_template_usage(UUID) TO authenticated;
+
+-- =============================================
 -- 완료!
 -- =============================================
 -- 이제 .env 파일에 Supabase 설정을 추가하세요:

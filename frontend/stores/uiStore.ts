@@ -2,25 +2,33 @@ import { create } from 'zustand';
 
 type ActiveView = 'main' | 'calendar';
 
+/** 동시에 하나만 열리는 모달 종류 */
+type ModalType =
+  | 'settings'
+  | 'onboarding'
+  | 'customStyle'
+  | 'mindmap'
+  | 'prompt'
+  | 'playlist'
+  | 'workspaceSettings'
+  | 'templateGallery'
+  | null;
+
 interface UIState {
   sidebarOpen: boolean;
   settingsPopoverOpen: boolean;
-  settingsModalOpen: boolean;
-  onboardingOpen: boolean;
-  customStyleModalOpen: boolean;
-  mindmapModalOpen: boolean;
-  promptModalOpen: boolean;
-  playlistModalOpen: boolean;
-  workspaceSettingsOpen: boolean;
 
-  // 메인 뷰 전환 (콘텐츠 생성 / 캘린더)
-  activeView: ActiveView;
-  setActiveView: (v: ActiveView) => void;
+  /** 현재 열린 모달 (동시에 1개만) */
+  activeModal: ModalType;
 
-  // 현재 모달에 표시 중인 데이터
+  // 모달에 연결된 데이터
   activePrompt: string;
   activeMindmapReportId: string;
   editingCustomStyleId: string | null;
+
+  // 메인 뷰 전환
+  activeView: ActiveView;
+  setActiveView: (v: ActiveView) => void;
 
   // 사이드바 히스토리에서 선택된 리포트
   activeReportId: string | null;
@@ -36,18 +44,13 @@ interface UIState {
   setPromptModalOpen: (v: boolean, prompt?: string) => void;
   setPlaylistModalOpen: (v: boolean) => void;
   setWorkspaceSettingsOpen: (v: boolean) => void;
+  setTemplateGalleryOpen: (v: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
   settingsPopoverOpen: false,
-  settingsModalOpen: false,
-  onboardingOpen: false,
-  customStyleModalOpen: false,
-  mindmapModalOpen: false,
-  promptModalOpen: false,
-  playlistModalOpen: false,
-  workspaceSettingsOpen: false,
+  activeModal: null,
   activeView: 'main',
   activePrompt: '',
   activeMindmapReportId: '',
@@ -59,14 +62,21 @@ export const useUIStore = create<UIState>((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setSettingsPopoverOpen: (v) => set({ settingsPopoverOpen: v }),
-  setSettingsModalOpen: (v) => set({ settingsModalOpen: v }),
-  setOnboardingOpen: (v) => set({ onboardingOpen: v }),
+
+  setSettingsModalOpen: (v) =>
+    set({ activeModal: v ? 'settings' : null }),
+  setOnboardingOpen: (v) =>
+    set({ activeModal: v ? 'onboarding' : null }),
   setCustomStyleModalOpen: (v, editId = null) =>
-    set({ customStyleModalOpen: v, editingCustomStyleId: editId }),
+    set({ activeModal: v ? 'customStyle' : null, editingCustomStyleId: editId }),
   setMindmapModalOpen: (v, reportId = '') =>
-    set({ mindmapModalOpen: v, activeMindmapReportId: reportId }),
+    set({ activeModal: v ? 'mindmap' : null, activeMindmapReportId: reportId }),
   setPromptModalOpen: (v, prompt = '') =>
-    set({ promptModalOpen: v, activePrompt: prompt }),
-  setPlaylistModalOpen: (v) => set({ playlistModalOpen: v }),
-  setWorkspaceSettingsOpen: (v) => set({ workspaceSettingsOpen: v }),
+    set({ activeModal: v ? 'prompt' : null, activePrompt: prompt }),
+  setPlaylistModalOpen: (v) =>
+    set({ activeModal: v ? 'playlist' : null }),
+  setWorkspaceSettingsOpen: (v) =>
+    set({ activeModal: v ? 'workspaceSettings' : null }),
+  setTemplateGalleryOpen: (v) =>
+    set({ activeModal: v ? 'templateGallery' : null }),
 }));

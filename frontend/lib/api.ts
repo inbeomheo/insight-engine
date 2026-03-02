@@ -20,12 +20,13 @@ import type {
   WorkspaceMember,
   KnowledgeItem,
 } from './types';
+import { parseSSEStream } from './sse-parser';
 
 const BASE = '';
 
 const TIMEOUT_MS: Record<string, number> = {
   '/generate': 300_000,
-  '/generate-batch': 300_000,
+  '/generate-batch': 660_000,
   '/api/generate-merged': 300_000,
   '/api/generate-multi': 300_000,
   '/api/generate-fusion': 300_000,
@@ -98,36 +99,12 @@ export async function generateStream(
     throw new Error(body.error || `HTTP ${res.status}`);
   }
 
-  const reader = res.body!.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const event: StreamEvent = JSON.parse(line.slice(6));
-            onEvent(event);
-          } catch {
-            // JSON 파싱 실패 무시
-          }
-        }
-      }
-    }
-  } catch (err) {
-    // 사용자가 직접 abort한 경우 (정상 종료)
-    if (signal?.aborted) return;
-    // 네트워크 끊김 등 비정상 종료
-    onEvent({ type: 'error', error: '네트워크 연결이 끊겼습니다. 다시 시도해주세요.' });
-  }
+  await parseSSEStream<StreamEvent>(
+    res.body!.getReader(),
+    onEvent,
+    signal,
+    () => onEvent({ type: 'error', error: '네트워크 연결이 끊겼습니다. 다시 시도해주세요.' })
+  );
 }
 
 // 배치 생성
@@ -305,34 +282,12 @@ export async function runPipeline(
     throw new Error(body.error || `HTTP ${res.status}`);
   }
 
-  const reader = res.body!.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const event: PipelineEvent = JSON.parse(line.slice(6));
-            onEvent(event);
-          } catch {
-            // JSON 파싱 실패 무시
-          }
-        }
-      }
-    }
-  } catch (err) {
-    if (signal?.aborted) return;
-    onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 });
-  }
+  await parseSSEStream<PipelineEvent>(
+    res.body!.getReader(),
+    onEvent,
+    signal,
+    () => onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 })
+  );
 }
 
 // =============================================
@@ -409,4 +364,75 @@ export async function getKnowledgeList(): Promise<{ documents: KnowledgeItem[] }
 
 export async function deleteKnowledge(docId: string): Promise<{ success: boolean }> {
   return request(`/api/knowledge/${docId}`, { method: 'DELETE' });
+}
+
+// =============================================
+// 프롬프트 템플릿 갤러리
+// =============================================
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  description: string;
+  prompt_text: string;
+  style_base: string;
+  is_public: boolean;
+  usage_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+  is_owner: boolean;
+}
+
+export interface TemplatesResponse {
+  templates: PromptTemplate[];
+  total: number;
+  page: number;
+  per_page: number;
+  has_more: boolean;
+}
+
+export async function getTemplates(
+  page = 1,
+  search = ''
+): Promise<TemplatesResponse> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (search) params.set('search', search);
+  return request(`/api/templates?${params}`);
+}
+
+export async function createTemplate(data: {
+  name: string;
+  description?: string;
+  prompt_text: string;
+  style_base?: string;
+  is_public?: boolean;
+}): Promise<PromptTemplate> {
+  return request('/api/templates', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTemplate(
+  id: string,
+  data: Partial<{
+    name: string;
+    description: string;
+    prompt_text: string;
+    style_base: string;
+    is_public: boolean;
+  }>
+): Promise<PromptTemplate> {
+  return request(`/api/templates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTemplate(id: string): Promise<{ success: boolean }> {
+  return request(`/api/templates/${id}`, { method: 'DELETE' });
+}
+
+export async function useTemplate(id: string): Promise<PromptTemplate> {
+  return request(`/api/templates/${id}/use`, { method: 'POST' });
 }

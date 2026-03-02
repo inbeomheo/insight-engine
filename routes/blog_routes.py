@@ -334,11 +334,11 @@ def generate_batch():
         results = [None] * len(urls)
         combined_content = []
 
-        # GLM-4.7은 동시성 제한으로 순차 처리 필요
-        is_sequential_model = model == 'zhipuai/GLM-4.7'
+        # zhipuai/ 모델은 _glm_lock으로 직렬화되므로 순차 처리 (concurrent 경로는 락 대기만 하다 타임아웃)
+        is_sequential_model = model.startswith('zhipuai/')
 
         if is_sequential_model:
-            current_app.logger.info(f"Starting to process {len(urls)} URLs sequentially (GLM-4.7)")
+            current_app.logger.info(f"Starting to process {len(urls)} URLs sequentially ({model})")
             for i, url in enumerate(urls):
                 try:
                     result = _process_single_url(app, url, model, style, modifiers, custom_prompt)
@@ -367,10 +367,10 @@ def generate_batch():
                 }
 
                 try:
-                    for future in concurrent.futures.as_completed(future_to_index, timeout=300):
+                    for future in concurrent.futures.as_completed(future_to_index, timeout=600):
                         index = future_to_index[future]
                         try:
-                            result = future.result(timeout=120)
+                            result = future.result(timeout=300)
                             results[index] = result
                             current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
 
@@ -393,7 +393,7 @@ def generate_batch():
                                 'error': _sanitize_error_for_client(str(e))
                             }
                 except concurrent.futures.TimeoutError:
-                    current_app.logger.error("Batch overall timeout (300s)")
+                    current_app.logger.error("Batch overall timeout (600s)")
                     for future, index in future_to_index.items():
                         if results[index] is None:
                             future.cancel()
@@ -747,3 +747,144 @@ def generate_stream():
     except Exception as e:
         current_app.logger.error(f"Generate stream setup failed: {e}")
         return _handle_error_response(str(e))
+
+
+# =============================================
+# 프롬프트 템플릿 갤러리 API
+# =============================================
+
+@blog_bp.route('/api/templates', methods=['GET'])
+@require_auth
+def list_templates():
+    """템플릿 목록 조회 (공개 + 본인 소유)
+
+    Query params:
+        page: 페이지 번호 (기본 1)
+        search: 이름/설명 검색어
+    """
+    from services.prompt_template_service import get_templates
+
+    user_id = getattr(g, 'user_id', None)
+    page = max(1, int(request.args.get('page', 1)))
+    search = request.args.get('search', '').strip()
+
+    result = get_templates(user_id=user_id, page=page, search=search)
+    return jsonify(result)
+
+
+@blog_bp.route('/api/templates', methods=['POST'])
+@require_auth
+def create_template():
+    """새 템플릿 생성"""
+    from services.prompt_template_service import create_template as svc_create
+
+    user_id = getattr(g, 'user_id', None)
+    data = request.get_json(silent=True) or {}
+
+    # 필수 필드 검증
+    name = (data.get('name') or '').strip()
+    prompt_text = (data.get('prompt_text') or '').strip()
+
+    if not name:
+        return jsonify({'error': '템플릿 이름을 입력하세요.'}), 400
+    if not prompt_text:
+        return jsonify({'error': '프롬프트를 입력하세요.'}), 400
+    if len(name) > 50:
+        return jsonify({'error': '이름은 50자 이내로 입력하세요.'}), 400
+    if len(prompt_text) > 5000:
+        return jsonify({'error': '프롬프트는 5000자 이내로 입력하세요.'}), 400
+
+    try:
+        template = svc_create(user_id=user_id, data={
+            'name': name,
+            'description': (data.get('description') or '').strip()[:200],
+            'prompt_text': prompt_text,
+            'style_base': data.get('style_base', 'blog_seo'),
+            'is_public': bool(data.get('is_public', False)),
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if template is None:
+        return jsonify({'error': '템플릿 저장에 실패했습니다.'}), 500
+
+    return jsonify(template), 201
+
+
+@blog_bp.route('/api/templates/<template_id>', methods=['PUT'])
+@require_auth
+def update_template(template_id: str):
+    """템플릿 수정 (소유자만)"""
+    from services.prompt_template_service import update_template as svc_update
+
+    user_id = getattr(g, 'user_id', None)
+    data = request.get_json(silent=True) or {}
+
+    # 수정 가능한 필드 검증
+    update_data = {}
+    if 'name' in data:
+        name = (data['name'] or '').strip()
+        if not name:
+            return jsonify({'error': '이름을 입력하세요.'}), 400
+        if len(name) > 50:
+            return jsonify({'error': '이름은 50자 이내로 입력하세요.'}), 400
+        update_data['name'] = name
+
+    if 'description' in data:
+        update_data['description'] = (data.get('description') or '').strip()[:200]
+
+    if 'prompt_text' in data:
+        prompt_text = (data['prompt_text'] or '').strip()
+        if not prompt_text:
+            return jsonify({'error': '프롬프트를 입력하세요.'}), 400
+        if len(prompt_text) > 5000:
+            return jsonify({'error': '프롬프트는 5000자 이내로 입력하세요.'}), 400
+        update_data['prompt_text'] = prompt_text
+
+    if 'style_base' in data:
+        update_data['style_base'] = data['style_base']
+
+    if 'is_public' in data:
+        update_data['is_public'] = bool(data['is_public'])
+
+    result = svc_update(template_id=template_id, user_id=user_id, data=update_data)
+    if result is None:
+        return jsonify({'error': '템플릿을 찾을 수 없거나 수정 권한이 없습니다.'}), 404
+
+    return jsonify(result)
+
+
+@blog_bp.route('/api/templates/<template_id>', methods=['DELETE'])
+@require_auth
+def delete_template(template_id: str):
+    """템플릿 삭제 (소유자만)"""
+    from services.prompt_template_service import delete_template as svc_delete
+
+    user_id = getattr(g, 'user_id', None)
+    success = svc_delete(template_id=template_id, user_id=user_id)
+
+    if not success:
+        return jsonify({'error': '템플릿을 찾을 수 없거나 삭제 권한이 없습니다.'}), 404
+
+    return jsonify({'success': True})
+
+
+@blog_bp.route('/api/templates/<template_id>/use', methods=['POST'])
+@require_auth
+def use_template(template_id: str):
+    """템플릿 사용 (사용 횟수 증가 + 내용 반환)"""
+    from services.prompt_template_service import get_template_by_id, increment_usage
+
+    user_id = getattr(g, 'user_id', None)
+    template = get_template_by_id(template_id=template_id, user_id=user_id)
+
+    if template is None:
+        return jsonify({'error': '템플릿을 찾을 수 없습니다.'}), 404
+
+    # 비동기적으로 사용 횟수 증가 (실패해도 무방)
+    try:
+        increment_usage(template_id)
+    except Exception:
+        pass
+
+    return jsonify(template)

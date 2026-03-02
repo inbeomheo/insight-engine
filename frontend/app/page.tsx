@@ -20,6 +20,7 @@ import MindmapModal from '@/components/modals/MindmapModal';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import CustomStyleModal from '@/components/modals/CustomStyleModal';
 import WorkspaceSettingsModal from '@/components/modals/WorkspaceSettingsModal';
+import TemplateGalleryModal from '@/components/modals/TemplateGalleryModal';
 import ContentCalendar from '@/components/schedule/ContentCalendar';
 import ScheduleModal from '@/components/modals/ScheduleModal';
 
@@ -32,15 +33,36 @@ import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
 import { useSchedule } from '@/hooks/useSchedule';
+import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 import { isOnboardingDone } from '@/lib/storage';
+import type { Report } from '@/lib/types';
 
 export default function Home() {
   const { hydrate: hydrateSettings } = useSettingsStore();
-  const { hydrate: hydrateResults, reports, searchQuery, styleFilter } = useResultStore();
+  const hydrateResults = useResultStore((s) => s.hydrate);
+  const reports = useResultStore((s) => s.reports);
+  const searchQuery = useResultStore((s) => s.searchQuery);
+  const styleFilter = useResultStore((s) => s.styleFilter);
+
   const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId, activeView } =
     useUIStore();
 
-  const filteredReports = useMemo(() => {
+  const { generationMode } = useSettingsStore();
+  const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
+  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule();
+
+  // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
+  const mcpPlugins = useMcpPlugins();
+
+  // 예약 발행 모달 — 페이지 레벨 1개 (카드마다 마운트 X)
+  const [scheduleTarget, setScheduleTarget] = useState<Report | null>(null);
+  const handleScheduleOpen = useCallback((report: Report) => {
+    setScheduleTarget(report);
+  }, []);
+
+  // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
+  const filtered = useMemo(() => {
     return reports.filter((r) => {
       const matchStyle = !styleFilter || r.style === styleFilter;
       const matchSearch =
@@ -50,11 +72,6 @@ export default function Home() {
       return matchStyle && matchSearch;
     });
   }, [reports, searchQuery, styleFilter]);
-
-  const { generationMode } = useSettingsStore();
-  const { urls, addUrl, removeUrl, clearUrls } = useUrls();
-  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
-  const { schedules, removeSchedule } = useSchedule();
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -182,6 +199,7 @@ export default function Home() {
                 <UrlInput
                   urls={urls}
                   onAddUrl={addUrl}
+                  onAddUrls={addUrls}
                   onRemoveUrl={removeUrl}
                   onToggleSettings={() => setSettingsPopoverOpen(!settingsPopoverOpen)}
                   isLoading={isLoading}
@@ -272,7 +290,7 @@ export default function Home() {
                 )}
                 {isLoading && <LoadingSkeleton />}
 
-                {filteredReports.map((r) => (
+                {filtered.map((r) => (
                   <div
                     key={r.id}
                     data-report-id={r.id}
@@ -281,7 +299,12 @@ export default function Home() {
                       activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl'
                     )}
                   >
-                    <ResultCard report={r} searchQuery={searchQuery} />
+                    <ResultCard
+                      report={r}
+                      searchQuery={searchQuery}
+                      mcpPlugins={mcpPlugins}
+                      onSchedule={handleScheduleOpen}
+                    />
                   </div>
                 ))}
 
@@ -312,6 +335,27 @@ export default function Home() {
       <OnboardingModal />
       <CustomStyleModal />
       <WorkspaceSettingsModal />
+      <TemplateGalleryModal />
+
+      {/* 예약 발행 모달 — 페이지 레벨 1개 */}
+      <ScheduleModal
+        open={!!scheduleTarget}
+        onOpenChange={(open) => { if (!open) setScheduleTarget(null); }}
+        title={scheduleTarget?.title || ''}
+        content={scheduleTarget?.content || ''}
+        html={scheduleTarget?.html}
+        isLoading={scheduleLoading}
+        onSchedule={async (data) => {
+          if (!scheduleTarget) return;
+          const ok = await addSchedule({
+            title: scheduleTarget.title,
+            content: scheduleTarget.content,
+            html: scheduleTarget.html,
+            ...data,
+          });
+          if (ok) setScheduleTarget(null);
+        }}
+      />
     </div>
   );
 }

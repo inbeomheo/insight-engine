@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, BookTemplate } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { toast } from 'sonner';
+import { createTemplate } from '@/lib/api';
 
 const ICON_OPTIONS = ['edit_note', 'star', 'bookmark', 'psychology', 'rocket_launch'];
 const ICON_EMOJIS: Record<string, string> = {
@@ -20,7 +21,8 @@ const ICON_EMOJIS: Record<string, string> = {
 };
 
 export default function CustomStyleModal() {
-  const { customStyleModalOpen, editingCustomStyleId, setCustomStyleModalOpen } = useUIStore();
+  const { activeModal, editingCustomStyleId, setCustomStyleModalOpen } = useUIStore();
+  const customStyleModalOpen = activeModal === 'customStyle';
   const { customStyles, addCustomStyle, updateCustomStyle, deleteCustomStyle } =
     useSettingsStore();
 
@@ -69,6 +71,24 @@ export default function CustomStyleModal() {
     deleteCustomStyle(editing.id);
     toast.success('스타일이 삭제되었습니다.');
     setCustomStyleModalOpen(false);
+  }
+
+  async function handleSaveAsTemplate() {
+    if (!name.trim()) return toast.error('스타일 이름을 입력하세요.');
+    if (!prompt.trim()) return toast.error('프롬프트를 입력하세요.');
+
+    try {
+      await createTemplate({
+        name: name.trim(),
+        prompt_text: prompt.trim(),
+        description: `커스텀 스타일에서 저장된 템플릿`,
+        style_base: 'blog_seo',
+        is_public: false,
+      });
+      toast.success('템플릿 갤러리에 저장되었습니다.');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '템플릿 저장에 실패했습니다.');
+    }
   }
 
   return (
@@ -146,6 +166,10 @@ export default function CustomStyleModal() {
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => setCustomStyleModalOpen(false)}>
               취소
+            </Button>
+            <Button variant="outline" onClick={handleSaveAsTemplate} title="템플릿 갤러리에 저장">
+              <BookTemplate className="h-4 w-4 mr-1" />
+              템플릿으로 저장
             </Button>
             <Button onClick={handleSave}>저장</Button>
           </div>
