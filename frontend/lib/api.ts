@@ -436,3 +436,71 @@ export async function deleteTemplate(id: string): Promise<{ success: boolean }> 
 export async function useTemplate(id: string): Promise<PromptTemplate> {
   return request(`/api/templates/${id}/use`, { method: 'POST' });
 }
+
+// =============================================
+// 스타일 메모리
+// =============================================
+
+export interface StyleProfile {
+  preferred_styles: Array<{ style_id: string; count: number }>;
+  preferred_length: 'short' | 'medium' | 'long';
+  preferred_writing_style: 'conversational' | 'explanatory' | 'casual' | 'expert';
+  tone_keywords: string[];
+  avoid_keywords: string[];
+  custom_instructions: string;
+  style_memory_enabled: boolean;
+  generation_count: number;
+}
+
+export async function getStyleMemory(): Promise<{ profile: StyleProfile }> {
+  return request('/api/user/style-memory');
+}
+
+export async function updateStyleMemory(prefs: {
+  avoid_keywords?: string[];
+  custom_instructions?: string;
+  style_memory_enabled?: boolean;
+}): Promise<{ success: boolean }> {
+  return request('/api/user/style-memory', {
+    method: 'PUT',
+    body: JSON.stringify(prefs),
+  });
+}
+
+export async function resetStyleMemory(): Promise<{ success: boolean }> {
+  return request('/api/user/style-memory/reset', { method: 'POST' });
+}
+
+// === Video Q&A ===
+
+export interface VideoQaMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface VideoQaSource {
+  text: string;
+  relevance: number;
+}
+
+export interface VideoQaResponse {
+  answer: string;
+  sources: VideoQaSource[];
+}
+
+export async function askVideoQuestion(
+  videoUrl: string,
+  question: string,
+  history: VideoQaMessage[] = [],
+  model?: string,
+): Promise<VideoQaResponse> {
+  return request('/api/video-qa', {
+    method: 'POST',
+    body: JSON.stringify({
+      video_url: videoUrl,
+      question,
+      history,
+      model,
+    }),
+  });
+}

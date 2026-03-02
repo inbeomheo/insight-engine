@@ -25,6 +25,7 @@ import type { Report, McpPlugin, QualityScore, NlpAnalysis } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { exportDocx, publishToMcp } from '@/lib/api';
 
 import SeoSection from './SeoSection';
