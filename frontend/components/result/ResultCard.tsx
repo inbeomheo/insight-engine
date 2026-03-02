@@ -62,13 +62,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const removeReport = useResultStore((s) => s.removeReport);
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
   const setMindmapModalOpen = useUIStore((s) => s.setMindmapModalOpen);
+  const { t } = useTranslation();
 
   const charCount = report.content.length;
 
   async function copyText(text: string, field: string) {
     await navigator.clipboard.writeText(text);
     setCopiedField(field);
-    toast.success('복사되었습니다');
+    toast.success(t('result.copied'));
     setTimeout(() => setCopiedField(null), 2000);
   }
 
@@ -84,7 +85,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
         }),
       ]);
       setCopiedField('rich');
-      toast.success('서식 포함 복사 완료');
+      toast.success(t('result.richCopied'));
       setTimeout(() => setCopiedField(null), 2000);
     } catch {
       await copyText(report.content, 'content');
@@ -100,9 +101,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
       a.download = `${report.title.slice(0, 50)}.docx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('DOCX 다운로드 완료');
+      toast.success(t('result.docxSuccess'));
     } catch {
-      toast.error('DOCX 내보내기 실패');
+      toast.error(t('result.docxError'));
     }
   }
 
@@ -120,7 +121,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     a.download = `${report.title.slice(0, 50)}.html`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('HTML 다운로드 완료');
+    toast.success(t('result.htmlSuccess'));
   }
 
   function handlePrint() {
@@ -138,7 +139,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
   function handleShare() {
     const text = `${report.title}\n\n${report.content.slice(0, 200)}...\n\n${report.url}`;
     navigator.clipboard.writeText(text);
-    toast.success('공유 텍스트 복사 완료');
+    toast.success(t('result.shareCopied'));
   }
 
   async function handlePublish(pluginId: string) {
@@ -154,7 +155,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
         toast.error(res.message);
       }
     } catch {
-      toast.error('발행 중 오류가 발생했습니다.');
+      toast.error(t('result.publishError'));
     }
   }
 
@@ -277,7 +278,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>서식 복사</TooltipContent>
+              <TooltipContent>{t('result.richCopy')}</TooltipContent>
             </Tooltip>
             <Button
               variant="ghost"
@@ -309,7 +310,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">영상 {i + 1}: {sv.title}</span>
+                <span className="truncate">{t('result.sourceVideo', { index: i + 1 })}: {sv.title}</span>
               </a>
             ))}
           </div>
@@ -321,7 +322,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
             className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline mt-1.5"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            {report.youtube_title || '원본 영상'}
+            {report.youtube_title || t('result.originalVideo')}
           </a>
         ) : null}
       </div>
@@ -388,20 +389,20 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 mr-2" />
-                제목 복사
+                {t('result.copyTitle')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => copyText(report.content, 'content')}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
-                전체 복사
+                {t('result.copyAll')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setPromptModalOpen(true, report.prompt)}>
                 <Code className="h-3.5 w-3.5 mr-2" />
-                프롬프트 보기
+                {t('result.promptView')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setMindmapModalOpen(true, report.id)}>
                 <Brain className="h-3.5 w-3.5 mr-2" />
-                마인드맵
+                {t('result.mindmap')}
               </DropdownMenuItem>
               {report.url && (
                 <DropdownMenuItem onClick={() => setChatOpen(true)}>
@@ -412,15 +413,15 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleExportHtml}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
-                HTML 내보내기
+                {t('result.exportHtml')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportDocx}>
                 <Download className="h-3.5 w-3.5 mr-2" />
-                DOCX 내보내기
+                {t('result.exportDocx')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handlePrint}>
                 <Printer className="h-3.5 w-3.5 mr-2" />
-                PDF 인쇄
+                {t('result.printPdf')}
               </DropdownMenuItem>
               {mcpPlugins.length > 0 && (
                 <>
@@ -428,7 +429,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                   {mcpPlugins.map((plugin) => (
                     <DropdownMenuItem key={plugin.id} onClick={() => handlePublish(plugin.id)}>
                       <Send className="h-3.5 w-3.5 mr-2" />
-                      {plugin.name} 발행
+                      {t('result.publish', { name: plugin.name })}
                     </DropdownMenuItem>
                   ))}
                 </>
@@ -436,11 +437,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onSchedule(report)}>
                 <Calendar className="h-3.5 w-3.5 mr-2" />
-                예약 발행
+                {t('result.schedule')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShare}>
                 <Share2 className="h-3.5 w-3.5 mr-2" />
-                공유
+                {t('result.share')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -448,7 +449,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 onClick={() => removeReport(report.id)}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-2" />
-                삭제
+                {t('result.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

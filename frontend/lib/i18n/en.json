@@ -1,0 +1,124 @@
+{
+  "common": {
+    "generate": "Generate",
+    "copy": "Copy",
+    "close": "Close",
+    "save": "Save",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "search": "Search",
+    "noResults": "No results found",
+    "select": "Select",
+    "start": "Get Started"
+  },
+  "sidebar": {
+    "newAnalysis": "New Analysis",
+    "historySearch": "Search history...",
+    "noHistory": "No analysis history",
+    "noSearchResults": "No results found",
+    "calendar": "Content Calendar",
+    "poweredBy": "Powered by AI"
+  },
+  "urlInput": {
+    "placeholder": "Enter or paste a YouTube URL",
+    "dragDrop": "Drop YouTube URL here"
+  },
+  "generateButton": {
+    "loading": "Generating...",
+    "fusionLoading": "Fusion analyzing...",
+    "singleUrl": "Analyze 1 URL",
+    "multipleUrls": "Analyze {count} URLs individually",
+    "combined": "Analyze {count} URLs combined",
+    "fusion": "Fusion analyze {count} URLs"
+  },
+  "emptyState": {
+    "title": "Analyze a YouTube video",
+    "description": "Paste a URL and AI will automatically generate\nblog posts, summaries, tutorials and more"
+  },
+  "calendar": {
+    "title": "Content Calendar"
+  },
+  "styles": {
+    "blog_seo": "Blog+SEO",
+    "summary": "Summary",
+    "tutorial": "Tutorial",
+    "qna": "Q&A",
+    "app_ideas": "App Ideas",
+    "yozm_it": "Tech Article",
+    "brunch_essay": "Essay",
+    "naver_popular": "Popular Post",
+    "sns_post": "SNS Post",
+    "newsletter": "Newsletter",
+    "show_notes": "Show Notes",
+    "shorts_script": "Shorts Script",
+    "geo_seo": "GEO+SEO",
+    "comment_summary": "Comment Summary"
+  },
+  "result": {
+    "copyTitle": "Copy title",
+    "copyAll": "Copy all",
+    "richCopy": "Rich copy",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "regenerate": "Regenerate",
+    "exportHtml": "Export HTML",
+    "exportDocx": "Export DOCX",
+    "printPdf": "Print PDF",
+    "share": "Share",
+    "promptView": "View prompt",
+    "mindmap": "Mindmap",
+    "schedule": "Schedule",
+    "publish": "Publish to {name}",
+    "delete": "Delete",
+    "merged": "Merged",
+    "fusion": "Fusion",
+    "cached": "Cached",
+    "whisper": "Whisper",
+    "comment": "Comments",
+    "sourceVideo": "Video {index}",
+    "originalVideo": "Original video",
+    "copied": "Copied",
+    "richCopied": "Rich copy complete",
+    "shareCopied": "Share text copied",
+    "docxSuccess": "DOCX downloaded",
+    "docxError": "DOCX export failed",
+    "htmlSuccess": "HTML downloaded",
+    "publishError": "An error occurred while publishing."
+  },
+  "settings": {
+    "title": "Settings",
+    "aiService": "AI Service",
+    "aiServiceDescription": "Manage AI services and cache",
+    "provider": "AI Provider",
+    "model": "Model",
+    "selectProvider": "Select service",
+    "selectModel": "Select model",
+    "noProviders": "No AI services available. Run Flask server and set API keys.",
+    "cacheManagement": "Cache Management",
+    "cacheDescription": "Delete saved transcript/comment cache.",
+    "clearCache": "Clear all cache",
+    "cacheCleared": "Cache cleared.",
+    "cacheClearFailed": "Failed to clear cache."
+  },
+  "onboarding": {
+    "title": "Welcome!",
+    "description": "Analyze YouTube videos with AI\nand generate content in various formats",
+    "noServer": "Please check if the Flask server is running.",
+    "modelCount": "{count} models",
+    "start": "Get Started"
+  },
+  "language": {
+    "label": "Language",
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  },
+  "errors": {
+    "noUrl": "Please enter a URL",
+    "invalidUrl": "Invalid URL",
+    "generationFailed": "Generation failed"
+  }
+}

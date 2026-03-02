@@ -1,0 +1,124 @@
+{
+  "common": {
+    "generate": "생성하기",
+    "copy": "복사",
+    "close": "닫기",
+    "save": "저장",
+    "delete": "삭제",
+    "cancel": "취소",
+    "confirm": "확인",
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다",
+    "search": "검색",
+    "noResults": "검색 결과가 없습니다",
+    "select": "선택",
+    "start": "시작하기"
+  },
+  "sidebar": {
+    "newAnalysis": "새 분석",
+    "historySearch": "히스토리 검색...",
+    "noHistory": "분석 히스토리가 없습니다",
+    "noSearchResults": "검색 결과가 없습니다",
+    "calendar": "예약 캘린더",
+    "poweredBy": "Powered by AI"
+  },
+  "urlInput": {
+    "placeholder": "YouTube URL을 입력하거나 붙여넣으세요",
+    "dragDrop": "YouTube URL을 여기에 놓으세요"
+  },
+  "generateButton": {
+    "loading": "생성 중...",
+    "fusionLoading": "퓨전 분석 중...",
+    "singleUrl": "1개 URL 분석 시작",
+    "multipleUrls": "{count}개 URL 각각 분석",
+    "combined": "{count}개 URL 합쳐서 분석",
+    "fusion": "{count}개 URL 퓨전 분석"
+  },
+  "emptyState": {
+    "title": "YouTube 영상을 분석해보세요",
+    "description": "URL을 붙여넣으면 AI가 블로그, 요약, 튜토리얼 등\n다양한 형식의 콘텐츠를 자동 생성합니다"
+  },
+  "calendar": {
+    "title": "예약 캘린더"
+  },
+  "styles": {
+    "blog_seo": "블로그+SEO",
+    "summary": "요약",
+    "tutorial": "튜토리얼",
+    "qna": "Q&A",
+    "app_ideas": "앱 아이디어",
+    "yozm_it": "요즘IT",
+    "brunch_essay": "브런치 에세이",
+    "naver_popular": "네이버 인기글",
+    "sns_post": "SNS 포스트",
+    "newsletter": "뉴스레터",
+    "show_notes": "쇼노트",
+    "shorts_script": "Shorts 스크립트",
+    "geo_seo": "GEO+SEO",
+    "comment_summary": "댓글 요약"
+  },
+  "result": {
+    "copyTitle": "제목 복사",
+    "copyAll": "전체 복사",
+    "richCopy": "서식 복사",
+    "collapse": "접기",
+    "expand": "펼치기",
+    "regenerate": "다시 생성",
+    "exportHtml": "HTML 내보내기",
+    "exportDocx": "DOCX 내보내기",
+    "printPdf": "PDF 인쇄",
+    "share": "공유",
+    "promptView": "프롬프트 보기",
+    "mindmap": "마인드맵",
+    "schedule": "예약 발행",
+    "publish": "{name} 발행",
+    "delete": "삭제",
+    "merged": "통합",
+    "fusion": "퓨전",
+    "cached": "캐시",
+    "whisper": "음성인식",
+    "comment": "댓글",
+    "sourceVideo": "영상 {index}",
+    "originalVideo": "원본 영상",
+    "copied": "복사되었습니다",
+    "richCopied": "서식 포함 복사 완료",
+    "shareCopied": "공유 텍스트 복사 완료",
+    "docxSuccess": "DOCX 다운로드 완료",
+    "docxError": "DOCX 내보내기 실패",
+    "htmlSuccess": "HTML 다운로드 완료",
+    "publishError": "발행 중 오류가 발생했습니다."
+  },
+  "settings": {
+    "title": "설정",
+    "aiService": "AI 서비스",
+    "aiServiceDescription": "AI 서비스와 캐시를 관리합니다",
+    "provider": "AI 프로바이더",
+    "model": "모델",
+    "selectProvider": "서비스 선택",
+    "selectModel": "모델 선택",
+    "noProviders": "사용 가능한 AI 서비스가 없습니다. Flask 서버를 실행하고 API 키를 설정하세요.",
+    "cacheManagement": "캐시 관리",
+    "cacheDescription": "저장된 자막/댓글 캐시를 삭제합니다.",
+    "clearCache": "전체 캐시 삭제",
+    "cacheCleared": "캐시가 삭제되었습니다.",
+    "cacheClearFailed": "캐시 삭제에 실패했습니다."
+  },
+  "onboarding": {
+    "title": "환영합니다!",
+    "description": "YouTube 영상을 AI로 분석하여\n다양한 형식의 콘텐츠를 생성합니다",
+    "noServer": "Flask 서버가 실행 중인지 확인하세요.",
+    "modelCount": "{count}개 모델",
+    "start": "시작하기"
+  },
+  "language": {
+    "label": "언어",
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  },
+  "errors": {
+    "noUrl": "URL을 입력하세요",
+    "invalidUrl": "유효하지 않은 URL입니다",
+    "generationFailed": "생성에 실패했습니다"
+  }
+}

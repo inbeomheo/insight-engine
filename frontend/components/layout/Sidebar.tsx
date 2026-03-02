@@ -8,23 +8,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUIStore } from '@/stores/uiStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
+import { useTranslation } from '@/hooks/useTranslation';
 import WorkspaceSelector from './WorkspaceSelector';
-
-function getStyleLabel(styleId: string) {
-  return STYLE_OPTIONS.find((s) => s.id === styleId)?.label || styleId;
-}
-
-function getStyleEmoji(styleId: string) {
-  return STYLE_OPTIONS.find((s) => s.id === styleId)?.emoji || '📄';
-}
 
 export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId, activeView, setActiveView } = useUIStore();
-  const { reports, removeReport } = useResultStore();
+  const reports = useResultStore((s) => s.reports);
+  const removeReport = useResultStore((s) => s.removeReport);
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
+  const { t } = useTranslation();
 
   const handleHistoryClick = useCallback((id: string) => {
     setActiveReportId(id);
@@ -101,7 +96,7 @@ export default function Sidebar() {
         <div className="p-3 pb-2">
           <Button className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm" onClick={handleNewAnalysis}>
             <Plus className="h-4 w-4" />
-            <span className="font-medium">새 분석</span>
+            <span className="font-medium">{t('sidebar.newAnalysis')}</span>
           </Button>
         </div>
 
@@ -115,7 +110,7 @@ export default function Sidebar() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="히스토리 검색..."
+              placeholder={t('sidebar.historySearch')}
               className="pl-8 h-8 text-xs bg-white/70 border-border/50 focus:bg-white transition-colors"
             />
           </div>
@@ -129,7 +124,7 @@ export default function Sidebar() {
                 <Sparkles className="h-5 w-5 text-primary/40" />
               </div>
               <p className="text-xs text-muted-foreground/60">
-                {reports.length === 0 ? '분석 히스토리가 없습니다' : '검색 결과가 없습니다'}
+                {reports.length === 0 ? t('sidebar.noHistory') : t('sidebar.noSearchResults')}
               </p>
             </div>
           ) : (
@@ -193,14 +188,14 @@ export default function Sidebar() {
             }}
           >
             <CalendarDays className="h-4 w-4" />
-            예약 캘린더
+            {t('sidebar.calendar')}
           </Button>
         </div>
 
         {/* 하단 브랜딩 */}
         <div className="p-3 border-t border-border/40">
           <p className="text-[10px] text-muted-foreground/30 text-center">
-            Powered by AI
+            {t('sidebar.poweredBy')}
           </p>
         </div>
       </aside>

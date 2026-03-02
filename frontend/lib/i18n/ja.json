@@ -1,0 +1,124 @@
+{
+  "common": {
+    "generate": "生成する",
+    "copy": "コピー",
+    "close": "閉じる",
+    "save": "保存",
+    "delete": "削除",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "search": "検索",
+    "noResults": "結果が見つかりません",
+    "select": "選択",
+    "start": "始める"
+  },
+  "sidebar": {
+    "newAnalysis": "新しい分析",
+    "historySearch": "履歴を検索...",
+    "noHistory": "分析履歴がありません",
+    "noSearchResults": "検索結果がありません",
+    "calendar": "予約カレンダー",
+    "poweredBy": "Powered by AI"
+  },
+  "urlInput": {
+    "placeholder": "YouTube URLを入力または貼り付けてください",
+    "dragDrop": "YouTube URLをここにドロップ"
+  },
+  "generateButton": {
+    "loading": "生成中...",
+    "fusionLoading": "フュージョン分析中...",
+    "singleUrl": "1件のURLを分析",
+    "multipleUrls": "{count}件のURLをそれぞれ分析",
+    "combined": "{count}件のURLをまとめて分析",
+    "fusion": "{count}件のURLをフュージョン分析"
+  },
+  "emptyState": {
+    "title": "YouTubeの動画を分析しましょう",
+    "description": "URLを貼り付けると、AIがブログ、要約、チュートリアルなど\nさまざまな形式のコンテンツを自動生成します"
+  },
+  "calendar": {
+    "title": "予約カレンダー"
+  },
+  "styles": {
+    "blog_seo": "ブログ+SEO",
+    "summary": "要約",
+    "tutorial": "チュートリアル",
+    "qna": "Q&A",
+    "app_ideas": "アプリアイデア",
+    "yozm_it": "IT記事",
+    "brunch_essay": "エッセイ",
+    "naver_popular": "人気記事",
+    "sns_post": "SNS投稿",
+    "newsletter": "ニュースレター",
+    "show_notes": "ショーノート",
+    "shorts_script": "ショートスクリプト",
+    "geo_seo": "GEO+SEO",
+    "comment_summary": "コメント要約"
+  },
+  "result": {
+    "copyTitle": "タイトルをコピー",
+    "copyAll": "全てコピー",
+    "richCopy": "書式付きコピー",
+    "collapse": "折りたたむ",
+    "expand": "展開する",
+    "regenerate": "再生成",
+    "exportHtml": "HTMLエクスポート",
+    "exportDocx": "DOCXエクスポート",
+    "printPdf": "PDF印刷",
+    "share": "共有",
+    "promptView": "プロンプトを見る",
+    "mindmap": "マインドマップ",
+    "schedule": "予約投稿",
+    "publish": "{name}に投稿",
+    "delete": "削除",
+    "merged": "統合",
+    "fusion": "フュージョン",
+    "cached": "キャッシュ",
+    "whisper": "音声認識",
+    "comment": "コメント",
+    "sourceVideo": "動画{index}",
+    "originalVideo": "元の動画",
+    "copied": "コピーしました",
+    "richCopied": "書式付きコピー完了",
+    "shareCopied": "共有テキストをコピーしました",
+    "docxSuccess": "DOCXをダウンロードしました",
+    "docxError": "DOCXのエクスポートに失敗しました",
+    "htmlSuccess": "HTMLをダウンロードしました",
+    "publishError": "投稿中にエラーが発生しました。"
+  },
+  "settings": {
+    "title": "設定",
+    "aiService": "AIサービス",
+    "aiServiceDescription": "AIサービスとキャッシュを管理します",
+    "provider": "AIプロバイダー",
+    "model": "モデル",
+    "selectProvider": "サービスを選択",
+    "selectModel": "モデルを選択",
+    "noProviders": "利用可能なAIサービスがありません。Flaskサーバーを実行してAPIキーを設定してください。",
+    "cacheManagement": "キャッシュ管理",
+    "cacheDescription": "保存された字幕/コメントキャッシュを削除します。",
+    "clearCache": "全キャッシュを削除",
+    "cacheCleared": "キャッシュを削除しました。",
+    "cacheClearFailed": "キャッシュの削除に失敗しました。"
+  },
+  "onboarding": {
+    "title": "ようこそ！",
+    "description": "YouTubeの動画をAIで分析して\nさまざまな形式のコンテンツを生成します",
+    "noServer": "Flaskサーバーが実行中か確認してください。",
+    "modelCount": "{count}モデル",
+    "start": "始める"
+  },
+  "language": {
+    "label": "言語",
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  },
+  "errors": {
+    "noUrl": "URLを入力してください",
+    "invalidUrl": "無効なURLです",
+    "generationFailed": "生成に失敗しました"
+  }
+}

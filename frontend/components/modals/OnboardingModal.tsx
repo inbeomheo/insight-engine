@@ -6,14 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Check } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { setOnboardingDone } from '@/lib/storage';
 
 export default function OnboardingModal() {
-  const { onboardingOpen, setOnboardingOpen } = useUIStore();
+  const { activeModal, setOnboardingOpen } = useUIStore();
+  const onboardingOpen = activeModal === 'onboarding';
   const { providers, selectedProvider, setSelectedProvider, setSelectedModel } =
     useSettingsStore();
 
   const providerIds = Object.keys(providers);
+  const { t } = useTranslation();
 
   function handleStart() {
     setOnboardingDone();
@@ -30,17 +33,18 @@ export default function OnboardingModal() {
     <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
       <DialogContent className="max-w-sm p-8">
         <VisuallyHidden>
-          <DialogTitle>환영합니다</DialogTitle>
-          <DialogDescription>AI 서비스를 선택하고 시작하세요</DialogDescription>
+          <DialogTitle>{t('onboarding.title')}</DialogTitle>
+          <DialogDescription>{t('onboarding.description')}</DialogDescription>
         </VisuallyHidden>
         <div className="text-center mb-8">
           <div className="w-18 h-18 mx-auto mb-5 gradient-primary rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50" style={{width: '72px', height: '72px'}}>
             <Sparkles className="h-8 w-8 text-white" />
           </div>
-          <h2 className="text-xl font-bold mb-2 text-foreground">환영합니다!</h2>
+          <h2 className="text-xl font-bold mb-2 text-foreground">{t('onboarding.title')}</h2>
           <p className="text-sm text-muted-foreground/70 leading-relaxed">
-            YouTube 영상을 AI로 분석하여<br />
-            다양한 형식의 콘텐츠를 생성합니다
+            {t('onboarding.description').split('\n').map((line, i) => (
+              <span key={i}>{line}{i === 0 && <br />}</span>
+            ))}
           </p>
         </div>
 
@@ -59,7 +63,7 @@ export default function OnboardingModal() {
                 <div className="flex-1">
                   <div className="text-sm font-medium">{providers[id].name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {providers[id].models.length}개 모델
+                    {t('onboarding.modelCount', { count: providers[id].models.length })}
                   </div>
                 </div>
                 {selectedProvider === id && (
@@ -70,13 +74,13 @@ export default function OnboardingModal() {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground text-center mb-4">
-            Flask 서버가 실행 중인지 확인하세요.
+            {t('onboarding.noServer')}
           </p>
         )}
 
         <Button className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
           <Check className="h-4 w-4 mr-2" />
-          시작하기
+          {t('onboarding.start')}
         </Button>
       </DialogContent>
     </Dialog>

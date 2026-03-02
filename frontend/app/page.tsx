@@ -34,6 +34,7 @@ import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
 import { useSchedule } from '@/hooks/useSchedule';
 import { useMcpPlugins } from '@/hooks/useMcpPlugins';
+import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import type { Report } from '@/lib/types';
 
@@ -54,6 +55,7 @@ export default function Home() {
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
   const mcpPlugins = useMcpPlugins();
+  const { t } = useTranslation();
 
   // 예약 발행 모달 — 페이지 레벨 1개 (카드마다 마운트 X)
   const [scheduleTarget, setScheduleTarget] = useState<Report | null>(null);
@@ -167,7 +169,7 @@ export default function Home() {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/40 rounded-lg pointer-events-none animate-fade-in">
           <div className="flex flex-col items-center gap-3 text-primary">
             <Youtube className="h-12 w-12 opacity-60" />
-            <p className="text-lg font-medium">YouTube URL을 여기에 놓으세요</p>
+            <p className="text-lg font-medium">{t('urlInput.dragDrop')}</p>
           </div>
         </div>
       )}
@@ -187,7 +189,7 @@ export default function Home() {
               {/* 캘린더 뷰 */}
               {activeView === 'calendar' && (
                 <div className="max-w-3xl mx-auto">
-                  <h2 className="text-xl font-semibold mb-6">예약 캘린더</h2>
+                  <h2 className="text-xl font-semibold mb-6">{t('calendar.title')}</h2>
                   <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
                 </div>
               )}
@@ -228,10 +230,10 @@ export default function Home() {
                     >
                       <Sparkles className="h-4 w-4" />
                       {isLoading
-                        ? '생성 중...'
+                        ? t('generateButton.loading')
                         : urls.length === 1
-                          ? '1개 URL 분석 시작'
-                          : `${urls.length}개 URL 각각 분석`}
+                          ? t('generateButton.singleUrl')
+                          : t('generateButton.multipleUrls', { count: urls.length })}
                     </Button>
                   )}
                   {generationMode === 'combined' && urls.length >= 2 && (
@@ -243,7 +245,7 @@ export default function Home() {
                       size="lg"
                     >
                       <Layers className="h-4 w-4" />
-                      {isLoading ? '생성 중...' : `${urls.length}개 URL 합쳐서 분석`}
+                      {isLoading ? t('generateButton.loading') : t('generateButton.combined', { count: urls.length })}
                     </Button>
                   )}
                   {generationMode === 'fusion' && urls.length >= 2 && (
@@ -255,7 +257,7 @@ export default function Home() {
                       size="lg"
                     >
                       <Combine className="h-4 w-4" />
-                      {isLoading ? '퓨전 분석 중...' : `${urls.length}개 URL 퓨전 분석`}
+                      {isLoading ? t('generateButton.fusionLoading') : t('generateButton.fusion', { count: urls.length })}
                     </Button>
                   )}
                   {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
@@ -267,7 +269,7 @@ export default function Home() {
                       size="lg"
                     >
                       <Sparkles className="h-4 w-4" />
-                      {isLoading ? '생성 중...' : '1개 URL 분석 시작'}
+                      {isLoading ? t('generateButton.loading') : t('generateButton.singleUrl')}
                     </Button>
                   )}
                 </div>
@@ -314,10 +316,11 @@ export default function Home() {
                     <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center rounded-3xl border border-indigo-100/50">
                       <Youtube className="h-9 w-9 text-indigo-300" />
                     </div>
-                    <h3 className="font-semibold text-lg text-foreground/80 mb-2">YouTube 영상을 분석해보세요</h3>
+                    <h3 className="font-semibold text-lg text-foreground/80 mb-2">{t('emptyState.title')}</h3>
                     <p className="text-sm text-muted-foreground/60 leading-relaxed">
-                      URL을 붙여넣으면 AI가 블로그, 요약, 튜토리얼 등<br />
-                      다양한 형식의 콘텐츠를 자동 생성합니다
+                      {t('emptyState.description').split('\n').map((line, i) => (
+                        <span key={i}>{line}{i === 0 && <br />}</span>
+                      ))}
                     </p>
                   </div>
                 )}
