@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles, Youtube, Layers, Combine } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
@@ -48,7 +48,7 @@ export default function Home() {
   const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId, activeView } =
     useUIStore();
 
-  const { generationMode } = useSettingsStore();
+  const { generationMode, enableAgentMode, setEnableAgentMode } = useSettingsStore();
   const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule();
@@ -272,6 +272,25 @@ export default function Home() {
                       {isLoading ? t('generateButton.loading') : t('generateButton.singleUrl')}
                     </Button>
                   )}
+                </div>
+              )}
+
+              {/* 에이전트 모드 토글 */}
+              {urls.length > 0 && generationMode === 'individual' && (
+                <div className="flex justify-center mb-2 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => setEnableAgentMode(!enableAgentMode)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                      enableAgentMode
+                        ? 'bg-violet-500/10 border-violet-400/40 text-violet-500'
+                        : 'bg-muted/40 border-border/40 text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <Bot className="h-3.5 w-3.5" />
+                    에이전트 모드 {enableAgentMode ? 'ON' : 'OFF'}
+                  </button>
                 </div>
               )}
 

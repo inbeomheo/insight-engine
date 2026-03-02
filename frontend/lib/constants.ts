@@ -57,3 +57,42 @@ export function extractVideoId(url: string): string | null {
   }
   return null;
 }
+
+// 지원하는 소스 타입
+export type SourceType = 'youtube' | 'arxiv' | 'rss' | 'webpage';
+
+// 소스 타입별 배지 레이블
+export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
+  youtube: 'YouTube',
+  arxiv: 'arXiv',
+  rss: 'RSS',
+  webpage: 'Web',
+};
+
+const _RSS_PATTERN =
+  /\/feed\/?$|\/rss\/?$|\/atom\/?$|\.rss$|\.atom$|\.xml$|\/feed\.xml$|type=rss|format=rss|feed=rss/i;
+
+const _ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}(v\d+)?$|^[a-z-]+(\.[A-Z]{2})?\/\d{7}$/i;
+
+/**
+ * URL을 분석하여 소스 타입을 자동 감지합니다.
+ */
+export function detectSourceType(url: string): SourceType {
+  const trimmed = url.trim();
+
+  // YouTube
+  if (/youtube\.com|youtu\.be/i.test(trimmed)) return 'youtube';
+
+  // arXiv
+  if (/arxiv\.org\/(abs|pdf|html)\//i.test(trimmed)) return 'arxiv';
+
+  // 순수 arXiv ID
+  const bare = trimmed.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  if (_ARXIV_ID_PATTERN.test(bare)) return 'arxiv';
+
+  // RSS
+  if (_RSS_PATTERN.test(trimmed)) return 'rss';
+
+  // 기본: 웹페이지
+  return 'webpage';
+}

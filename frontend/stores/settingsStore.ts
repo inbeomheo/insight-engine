@@ -56,6 +56,10 @@ interface SettingsState {
   enableWebSearch: boolean;
   setEnableWebSearch: (v: boolean) => void;
 
+  // 멀티에이전트 파이프라인 모드
+  enableAgentMode: boolean;
+  setEnableAgentMode: (v: boolean) => void;
+
   // 초기화
   hydrate: () => void;
 }
@@ -73,6 +77,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   enableWebResearch: true,
   enableDeepComments: true,
   enableWebSearch: false,
+  enableAgentMode: false,
 
   setProviders: (p) => set({ providers: p }),
 
@@ -125,6 +130,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setEnableWebResearch: (v) => set({ enableWebResearch: v }),
   setEnableDeepComments: (v) => set({ enableDeepComments: v }),
   setEnableWebSearch: (v) => set({ enableWebSearch: v }),
+  setEnableAgentMode: (v) => set({ enableAgentMode: v }),
 
   hydrate: () => {
     set({

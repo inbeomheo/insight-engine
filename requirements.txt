@@ -1,4 +1,5 @@
 flask==3.0.0
+Flask-Limiter>=3.0.0
 python-dotenv==1.0.1
 youtube_transcript_api>=1.1.0
 beautifulsoup4==4.12.3
@@ -9,10 +10,11 @@ supabase>=2.0.0
 python-docx>=1.1.0
 gunicorn>=21.0.0
 cryptography>=41.0.0
-trafilatura>=1.6.0
-duckduckgo-search>=4.0.0
 faster-whisper>=1.0.0
 yt-dlp>=2024.1.0
 APScheduler>=3.10.0
 chromadb>=0.4.0
 PyPDF2>=3.0.0
+networkx>=3.0
+edge-tts>=6.1.0
+feedparser>=6.0.0

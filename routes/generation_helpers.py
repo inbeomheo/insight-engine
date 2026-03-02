@@ -279,7 +279,7 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
 def _save_and_respond(result, used_prompt, comment_result, cache_key,
                        video_id, params, url, youtube_title,
                        raw_transcript, transcript_source, comments, start_time,
-                       quality_score=None):
+                       quality_score=None, agent_meta=None):
     """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
     model = params['model']
     modifiers = params['modifiers'] or {}
@@ -413,7 +413,8 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "quality_score": quality_score,
         "web_sources": web_sources,
         "analysis": analysis,
-        "usage": get_usage_for_response()
+        "usage": get_usage_for_response(),
+        **(agent_meta or {}),
     })
 
 

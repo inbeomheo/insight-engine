@@ -32,6 +32,10 @@ def create_app(test_config=None):
     app.config.from_object('config')
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+    # Rate Limiter 초기화
+    from extensions import limiter
+    limiter.init_app(app)
+
     import config as config_module
     app.config['STYLE_PROMPTS'] = config_module.STYLE_PROMPTS
     app.config['STYLE_OPTIONS'] = config_module.STYLE_OPTIONS
@@ -113,6 +117,11 @@ def create_app(test_config=None):
 
     from routes.blog_routes import blog_bp
     from routes.auth_routes import auth_bp
+    # 분리된 라우트 모듈 import → blog_bp에 라우트 등록
+    import routes.utility_routes      # noqa: F401
+    import routes.advanced_routes     # noqa: F401
+    import routes.export_routes       # noqa: F401
+    import routes.integration_routes  # noqa: F401
     app.register_blueprint(blog_bp)
     app.register_blueprint(auth_bp)
 
@@ -126,6 +135,6 @@ def create_app(test_config=None):
 app = create_app()
 
 if __name__ == '__main__':
-    debug_mode = os.getenv('FLASK_DEBUG', 'true').lower() in ('true', '1', 'yes')  # Temporarily enabled
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
     port = int(os.getenv('PORT', 5001))
     app.run(debug=debug_mode, port=port)

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { ArrowUp, SlidersHorizontal, X, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { extractVideoId } from '@/lib/constants';
+import { extractVideoId, detectSourceType, SOURCE_TYPE_LABELS } from '@/lib/constants';
 
 interface UrlInputProps {
   urls: string[];
   onAddUrl: (url: string) => string | null;
+  onAddUrls: (urls: string[]) => { added: number; errors: string[] };
   onRemoveUrl: (url: string) => void;
   onToggleSettings: () => void;
   isLoading: boolean;
@@ -18,6 +19,7 @@ interface UrlInputProps {
 export default function UrlInput({
   urls,
   onAddUrl,
+  onAddUrls,
   onRemoveUrl,
   onToggleSettings,
   isLoading,
@@ -49,6 +51,20 @@ export default function UrlInput({
     }
   }
 
+  function handlePaste(e: ClipboardEvent) {
+    const text = e.clipboardData.getData('text');
+    const lines = text.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length <= 1) return; // 단일 URL은 기본 동작으로 처리
+
+    e.preventDefault();
+    const { added, errors } = onAddUrls(lines);
+    setInput('');
+    if (errors.length > 0) {
+      setError(`${added}개 추가됨, ${errors.length}개 유효하지 않은 URL 무시`);
+      setTimeout(() => setError(''), 3000);
+    }
+  }
+
   return (
     <div className="w-full w-full">
       {/* 입력 바 */}
@@ -67,6 +83,7 @@ export default function UrlInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="YouTube URL을 붙여넣고 Enter"
@@ -99,7 +116,7 @@ export default function UrlInput({
         <p className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
       ) : (
         <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
-          youtube.com · youtu.be · 최대 10개
+          YouTube · 웹페이지 · RSS · arXiv · 최대 10개
         </p>
       )}
 
@@ -108,19 +125,35 @@ export default function UrlInput({
         <div className="flex flex-wrap gap-1.5 mt-3 animate-fade-in">
           {urls.map((url) => {
             const videoId = extractVideoId(url);
+            const srcType = detectSourceType(url);
+            const srcLabel = SOURCE_TYPE_LABELS[srcType];
+            // 칩에 표시할 짧은 레이블: YouTube는 videoId, 나머지는 도메인
+            let chipLabel: string;
+            if (videoId) {
+              chipLabel = videoId;
+            } else {
+              try {
+                chipLabel = new URL(url).hostname.replace(/^www\./, '');
+              } catch {
+                chipLabel = url.slice(0, 30);
+              }
+            }
             return (
               <Badge
                 key={url}
                 variant="secondary"
                 className="gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent transition-colors"
               >
-                <span className="max-w-[180px] truncate text-foreground/70">
-                  {videoId || url}
+                <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0">
+                  {srcLabel}
+                </span>
+                <span className="max-w-[160px] truncate text-foreground/70">
+                  {chipLabel}
                 </span>
                 <button
                   onClick={() => onRemoveUrl(url)}
                   className="hover:text-destructive rounded-full p-0.5 transition-colors"
-                  aria-label={`${videoId} 제거`}
+                  aria-label={`${chipLabel} 제거`}
                 >
                   <X className="h-3 w-3" />
                 </button>

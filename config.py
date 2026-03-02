@@ -48,10 +48,24 @@ RAG_ENABLED: bool = os.environ.get('RAG_ENABLED', 'false').lower() == 'true'
 CHROMA_DB_PATH: str = os.environ.get('CHROMA_DB_PATH', './data/chroma_db')
 RAG_TOP_K: int = int(os.environ.get('RAG_TOP_K', '5'))
 
+# === GraphRAG (지식 그래프 + 리랭킹) ===
+
+GRAPH_RAG_ENABLED: bool = os.environ.get('GRAPH_RAG_ENABLED', 'false').lower() == 'true'
+GRAPH_STORE_PATH: str = os.environ.get('GRAPH_STORE_PATH', './data/graph_store')
+RERANKER_ENABLED: bool = os.environ.get('RERANKER_ENABLED', 'false').lower() == 'true'
+RERANKER_TOP_K: int = int(os.environ.get('RERANKER_TOP_K', '5'))
+
 # === Whisper (음성 인식 자막 폴백) ===
 
 WHISPER_ENABLED: bool = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
 WHISPER_MODEL_SIZE: str = os.getenv('WHISPER_MODEL_SIZE', 'base')
+
+# === TTS (텍스트 → 오디오 변환) ===
+
+TTS_ENABLED: bool = os.getenv('TTS_ENABLED', 'false').lower() == 'true'
+TTS_BACKEND: str = os.getenv('TTS_BACKEND', 'auto')   # 'openai', 'edge', 'auto'
+TTS_DEFAULT_VOICE: str = os.getenv('TTS_DEFAULT_VOICE', 'alloy')
+TTS_MAX_CHARS: int = 5000
 
 # === Webhook ===
 
@@ -298,4 +312,16 @@ __all__ = [
     'RAG_ENABLED',
     'CHROMA_DB_PATH',
     'RAG_TOP_K',
+
+    # GraphRAG
+    'GRAPH_RAG_ENABLED',
+    'GRAPH_STORE_PATH',
+    'RERANKER_ENABLED',
+    'RERANKER_TOP_K',
+
+    # TTS
+    'TTS_ENABLED',
+    'TTS_BACKEND',
+    'TTS_DEFAULT_VOICE',
+    'TTS_MAX_CHARS',
 ]

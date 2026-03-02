@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insight Engine</title>
+  <style>
+    :root {
+      --bg: #0f0e17;
+      --surface: #1a1828;
+      --border: #2d2b45;
+      --text: #e8e6f0;
+      --text-muted: #8b89a0;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #22c55e;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 340px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .header-logo {
+      font-size: 20px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .status-dot.connected { background: var(--success); }
+    .status-dot.error { background: var(--error); }
+    .status-dot.checking {
+      background: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex: 1;
+    }
+
+    .style-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .style-chip {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .style-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .style-chip.selected {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .open-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .save-msg {
+      font-size: 11px;
+      color: var(--success);
+      display: none;
+    }
+
+    .save-msg.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-logo">✨</span>
+    <div>
+      <div class="header-title">Insight Engine</div>
+      <div class="header-subtitle">YouTube AI 콘텐츠 생성기</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 서버 연결 설정 -->
+    <div>
+      <div class="section-label">서버 설정</div>
+      <div class="input-group">
+        <input type="text" id="server-url" placeholder="http://localhost:5001" />
+        <button class="btn btn-secondary" id="test-btn">테스트</button>
+      </div>
+      <div style="margin-top: 8px;">
+        <div class="status-row">
+          <div class="status-dot" id="status-dot"></div>
+          <span class="status-text" id="status-text">연결 상태를 확인하려면 테스트를 누르세요</span>
+        </div>
+      </div>
+      <div style="margin-top: 6px; display: flex; justify-content: flex-end; gap: 8px; align-items: center;">
+        <span class="save-msg" id="save-msg">저장됨 ✓</span>
+        <button class="btn btn-primary" id="save-btn" style="padding: 6px 12px; font-size: 11px;">저장</button>
+      </div>
+    </div>
+
+    <!-- 기본 스타일 선택 -->
+    <div>
+      <div class="section-label">기본 스타일</div>
+      <div class="style-grid" id="style-grid">
+        <div class="style-chip" data-style="blog_seo">📝 SEO 블로그</div>
+        <div class="style-chip" data-style="summary">📋 요약</div>
+        <div class="style-chip" data-style="tutorial">🎓 튜토리얼</div>
+        <div class="style-chip" data-style="qna">❓ Q&A</div>
+        <div class="style-chip" data-style="newsletter">📰 뉴스레터</div>
+        <div class="style-chip" data-style="sns_post">📱 SNS</div>
+      </div>
+    </div>
+
+    <!-- 사이드패널 열기 -->
+    <button class="btn btn-primary open-btn" id="open-panel-btn">
+      <span>✨</span>
+      <span>사이드패널 열기</span>
+    </button>
+  </div>
+
+  <div class="footer">YouTube 영상 페이지에서 버튼을 클릭하세요</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
