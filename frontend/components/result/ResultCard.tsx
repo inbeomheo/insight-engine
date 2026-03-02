@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -20,44 +20,35 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
-import type { Report } from '@/lib/types';
-import { STYLE_OPTIONS } from '@/lib/constants';
+import type { Report, McpPlugin } from '@/lib/types';
+import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
-import { exportDocx, getMcpPlugins, publishToMcp } from '@/lib/api';
-import type { McpPlugin } from '@/lib/types';
-import { useSchedule } from '@/hooks/useSchedule';
-import ScheduleModal from '@/components/modals/ScheduleModal';
+import { exportDocx, publishToMcp } from '@/lib/api';
 
 import SeoSection from './SeoSection';
 import GeoSection from './GeoSection';
+import FaqCtaSection from './FaqCtaSection';
 import FusionSections from './FusionSections';
 import ShortsClipList from './ShortsClipList';
 
 interface ResultCardProps {
   report: Report;
   searchQuery?: string;
+  mcpPlugins: McpPlugin[];
+  onSchedule: (report: Report) => void;
 }
 
-function getStyleLabel(id: string) {
-  return STYLE_OPTIONS.find((s) => s.id === id)?.label || id;
-}
+const remarkPlugins = [remarkGfm];
 
-export default function ResultCard({ report, searchQuery }: ResultCardProps) {
+const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule }: ResultCardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [mcpPlugins, setMcpPlugins] = useState<McpPlugin[]>([]);
-  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-  const { removeReport } = useResultStore();
-  const { setPromptModalOpen, setMindmapModalOpen } = useUIStore();
-  const { addSchedule, isLoading: scheduleLoading } = useSchedule();
 
-  // MCP 플러그인 목록 로드 (한 번만)
-  useEffect(() => {
-    getMcpPlugins()
-      .then((res) => setMcpPlugins(res.plugins))
-      .catch(() => {});
-  }, []);
+  // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
+  const removeReport = useResultStore((s) => s.removeReport);
+  const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
+  const setMindmapModalOpen = useUIStore((s) => s.setMindmapModalOpen);
 
   const charCount = report.content.length;
 
@@ -154,11 +145,15 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     }
   }
 
-  // 검색어 하이라이트
-  const highlightedContent = useMemo(() => {
-    if (!searchQuery) return null;
-    return report.content;
-  }, [report.content, searchQuery]);
+  // ReactMarkdown은 비싸므로 content가 바뀔 때만 재렌더
+  const markdownBody = useMemo(
+    () => (
+      <ReactMarkdown remarkPlugins={remarkPlugins}>
+        {report.content}
+      </ReactMarkdown>
+    ),
+    [report.content],
+  );
 
   return (
     <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow">
@@ -267,9 +262,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
       {!collapsed && (
         <CardContent className="px-6 pb-5 pt-4 border-t border-border/50">
           <div className="prose max-w-none text-[15.5px] leading-relaxed">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {highlightedContent || report.content}
-            </ReactMarkdown>
+            {markdownBody}
           </div>
 
           {/* SEO 섹션 */}
@@ -277,6 +270,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 
           {/* GEO 섹션 */}
           {report.geo && <GeoSection geo={report.geo} />}
+
+          {/* FAQ + CTA 섹션 (blog_seo, geo_seo 스타일) */}
+          {(report.faq_schema || report.cta) && (
+            <FaqCtaSection faqSchema={report.faq_schema} cta={report.cta} />
+          )}
 
           {/* Shorts 클립 섹션 */}
           {report.style === 'shorts_script' && report.shorts_clips && (
@@ -348,7 +346,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 </>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setScheduleModalOpen(true)}>
+              <DropdownMenuItem onClick={() => onSchedule(report)}>
                 <Calendar className="h-3.5 w-3.5 mr-2" />
                 예약 발행
               </DropdownMenuItem>
@@ -368,25 +366,8 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
           </DropdownMenu>
         </div>
       </div>
-
-      {/* 예약 발행 모달 */}
-      <ScheduleModal
-        open={scheduleModalOpen}
-        onOpenChange={setScheduleModalOpen}
-        title={report.title}
-        content={report.content}
-        html={report.html}
-        isLoading={scheduleLoading}
-        onSchedule={async (data) => {
-          const ok = await addSchedule({
-            title: report.title,
-            content: report.content,
-            html: report.html,
-            ...data,
-          });
-          if (ok) setScheduleModalOpen(false);
-        }}
-      />
     </Card>
   );
-}
+});
+
+export default ResultCard;

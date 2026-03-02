@@ -134,6 +134,14 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     if model.startswith("ollama_chat/") or model.startswith("ollama/"):
         kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
+    # OpenRouter → api_base + API 키 설정
+    if model.startswith("openrouter/"):
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        if not openrouter_key:
+            raise ValueError("OPENROUTER_API_KEY 환경변수가 설정되지 않았습니다.")
+        kwargs["api_base"] = "https://openrouter.ai/api/v1"
+        kwargs["api_key"] = openrouter_key
+
     return kwargs
 
 
@@ -511,6 +519,89 @@ def extract_geo_metadata(content):
 
     # 최소 1개 필드 파싱 성공 시 반환
     return geo if geo else None
+
+
+def extract_faq_schema(content):
+    """마크다운 본문에서 FAQ Q&A를 파싱하여 JSON-LD FAQPage 스키마를 반환합니다.
+
+    "### 자주 묻는 질문" 섹션의 **Q. ...?** / A. ... 패턴을 인식합니다.
+
+    Args:
+        content: 마크다운 본문 문자열
+
+    Returns:
+        dict 또는 None: JSON-LD FAQPage 스키마 dict, Q&A가 없으면 None
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {"@type": "Question", "name": "질문", "acceptedAnswer": {"@type": "Answer", "text": "답변"}},
+                ...
+            ]
+        }
+    """
+    if not content:
+        return None
+
+    # Q&A 패턴 추출: **Q. 질문?** 다음 줄에 A. 답변
+    qa_pattern = re.compile(
+        r'\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*(.+?)(?=\n\s*\*\*Q\.|\n---|\n##|\Z)',
+        re.DOTALL
+    )
+    matches = qa_pattern.findall(content)
+
+    if not matches:
+        return None
+
+    entities = []
+    for question, answer in matches:
+        q_text = question.strip()
+        a_text = ' '.join(answer.strip().split())  # 줄바꿈 정규화
+        if q_text and a_text:
+            entities.append({
+                "@type": "Question",
+                "name": q_text,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": a_text
+                }
+            })
+
+    if not entities:
+        return None
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": entities
+    }
+
+
+def extract_cta(content):
+    """geo_seo 스타일 콘텐츠에서 CTA 문구를 추출합니다.
+
+    **CTA_PRIMARY**: ... / **CTA_SECONDARY**: ... 패턴을 인식합니다.
+
+    Args:
+        content: 마크다운 본문 문자열
+
+    Returns:
+        dict 또는 None: {"primary": "...", "secondary": "..."} 또는 None
+    """
+    if not content:
+        return None
+
+    cta = {}
+
+    primary_match = re.search(r'\*\*CTA_PRIMARY\*\*\s*[:：]\s*(.+?)(?:\n|$)', content)
+    if primary_match:
+        cta['primary'] = primary_match.group(1).strip()
+
+    secondary_match = re.search(r'\*\*CTA_SECONDARY\*\*\s*[:：]\s*(.+?)(?:\n|$)', content)
+    if secondary_match:
+        cta['secondary'] = secondary_match.group(1).strip()
+
+    return cta if cta else None
 
 
 def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):

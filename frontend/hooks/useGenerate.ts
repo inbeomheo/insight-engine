@@ -6,6 +6,8 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import { toast } from 'sonner';
 import type { Report, StreamEvent } from '@/lib/types';
+import { createReport, responseToReport } from '@/lib/report-factory';
+import { formatTime } from '@/lib/helpers';
 
 interface GenerateState {
   isLoading: boolean;
@@ -40,23 +42,9 @@ export function useGenerate() {
         if (useStreaming) {
           // 스트리밍 모드
           const tempId = crypto.randomUUID();
-          const tempReport: Report = {
-            id: tempId,
-            url,
-            youtube_title: '',
-            title: '생성 중...',
-            content: '',
-            html: '',
-            style: selectedStyle,
-            prompt: '',
-            usage: { total_tokens: 0 },
-            elapsed_time: 0,
-            transcript_source: '',
-            cached: false,
-            comment_summary_included: false,
-            time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-            createdAt: Date.now(),
-          };
+          const tempReport: Report = createReport({
+            id: tempId, url, title: '생성 중...', content: '', html: '', style: selectedStyle,
+          });
           addReport(tempReport);
           setState((s) => ({ ...s, streamingReportId: tempId }));
 
@@ -87,6 +75,8 @@ export function useGenerate() {
                   cached: event.cached || false,
                   comment_summary_included: event.comment_summary_included || false,
                   seo: event.seo,
+                  faq_schema: event.faq_schema,
+                  cta: event.cta,
                 });
                 setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
               } else if (event.type === 'error') {
@@ -98,24 +88,7 @@ export function useGenerate() {
         } else {
           // 비스트리밍 모드
           const res = await generate(req);
-          const report: Report = {
-            id: crypto.randomUUID(),
-            url,
-            youtube_title: res.youtube_title || '',
-            title: res.title,
-            content: res.content,
-            html: res.html,
-            style: selectedStyle,
-            prompt: res.prompt,
-            usage: res.usage,
-            elapsed_time: res.elapsed_time,
-            transcript_source: res.transcript_source,
-            cached: res.cached,
-            comment_summary_included: res.comment_summary_included,
-            seo: res.seo,
-            time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-            createdAt: Date.now(),
-          };
+          const report = responseToReport(res, url, selectedStyle);
           addReport(report);
           setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
         }
@@ -150,24 +123,7 @@ export function useGenerate() {
 
         for (const item of res.results) {
           if (item.success) {
-            const report: Report = {
-              id: crypto.randomUUID(),
-              url: item.url,
-              youtube_title: item.youtube_title || '',
-              title: item.title,
-              content: item.content,
-              html: item.html,
-              style: selectedStyle,
-              prompt: item.prompt || '',
-              usage: item.usage || { total_tokens: 0 },
-              elapsed_time: item.elapsed_time || 0,
-              transcript_source: item.transcript_source || '',
-              cached: item.cached || false,
-              comment_summary_included: item.comment_summary_included || false,
-              seo: item.seo,
-              time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-              createdAt: ts++,
-            };
+            const report = responseToReport(item, item.url, selectedStyle, { createdAt: ts++ });
             addReport(report);
           } else {
             failedUrls.push(item.url);
@@ -209,26 +165,13 @@ export function useGenerate() {
 
       try {
         const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers);
-        const report: Report = {
+        const report = responseToReport(res, urls[0], selectedStyle, {
           id: res.id || crypto.randomUUID(),
-          url: urls[0],
           youtube_title: res.source_videos?.[0]?.title || '',
-          title: res.title,
-          content: res.content,
-          html: res.html,
-          style: selectedStyle,
-          prompt: res.prompt || '',
-          usage: res.usage || { total_tokens: 0 },
-          elapsed_time: res.elapsed_time || 0,
           transcript_source: res.source_videos?.[0]?.transcript_source || '',
-          cached: false,
-          comment_summary_included: res.comment_summary_included || false,
-          seo: res.seo,
-          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-          createdAt: Date.now(),
           merged: true,
           source_videos: res.source_videos,
-        };
+        });
         addReport(report);
         setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
         return true;
@@ -265,26 +208,18 @@ export function useGenerate() {
           enable_deep_comments: enableDeepComments,
         });
 
-        const report: Report = {
-          id: crypto.randomUUID(),
+        const report = createReport({
           url: urls[0],
-          youtube_title: '',
           title: result.title,
           content: result.content,
           html: result.html,
           style: selectedStyle,
-          prompt: '',
           usage: { total_tokens: result.usage.total_tokens },
           elapsed_time: result.fusion_meta.processing_time,
-          transcript_source: '',
-          cached: false,
-          comment_summary_included: false,
-          time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-          createdAt: Date.now(),
           isFusion: true,
           fusionMeta: result.fusion_meta,
           sections: result.sections,
-        };
+        });
         addReport(report);
         setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
         return true;

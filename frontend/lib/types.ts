@@ -20,6 +20,9 @@ export interface GenerateResponse {
   comment_summary_included: boolean;
   seo?: SeoMetadata;
   geo?: GeoMetadata;
+  faq_schema?: FaqSchema;
+  cta?: CtaData;
+  json_ld_schemas?: JsonLdSchema[];
   youtube_title?: string;
 }
 
@@ -43,6 +46,30 @@ export interface GeoMetadata {
   key_facts: string[];         // 검증 가능한 핵심 사실
 }
 
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface FaqSchema {
+  '@context': string;
+  '@type': string;
+  mainEntity: Array<{
+    '@type': string;
+    name: string;
+    acceptedAnswer: { '@type': string; text: string };
+  }>;
+}
+
+export interface CtaData {
+  primary?: string;
+  secondary?: string;
+}
+
+// JSON-LD 구조화 데이터 스키마 (VideoObject | FAQPage | Article)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type JsonLdSchema = Record<string, any>;
+
 // === 스트리밍 이벤트 ===
 
 export type StreamEventType = 'meta' | 'token' | 'done' | 'error';
@@ -60,6 +87,8 @@ export interface StreamEvent {
   comment_summary_included?: boolean;
   seo?: SeoMetadata;
   geo?: GeoMetadata;
+  faq_schema?: FaqSchema;
+  cta?: CtaData;
   error?: string;
 }
 
@@ -102,6 +131,9 @@ export interface Report {
   comment_summary_included: boolean;
   seo?: SeoMetadata;
   geo?: GeoMetadata;
+  faq_schema?: FaqSchema;
+  cta?: CtaData;
+  json_ld_schemas?: JsonLdSchema[];
   time: string;
   createdAt: number;
   mindmapMarkdown?: string;
