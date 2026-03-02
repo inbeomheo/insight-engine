@@ -167,6 +167,8 @@ export interface Report {
   web_sources?: WebSource[];
   /** SEO 자동 삽입 링크 목록 */
   inserted_links?: InsertedLink[];
+  /** 원본 자막 텍스트 (이벤트 추출 등에 사용) */
+  transcript?: string;
 }
 
 // === Shorts 클립 ===
@@ -406,4 +408,50 @@ export interface WorkspaceMember {
   email?: string;
   role: WorkspaceRole;
   joined_at: string;
+}
+
+// =============================================
+// 이벤트 추출
+// =============================================
+
+export type VideoEventType = 'action_item' | 'key_point' | 'decision' | 'question';
+
+interface BaseVideoEvent {
+  type: VideoEventType;
+  content: string;
+  timestamp: string;
+  context: string;
+}
+
+export interface ActionItemEvent extends BaseVideoEvent {
+  type: 'action_item';
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface KeyPointEvent extends BaseVideoEvent {
+  type: 'key_point';
+  importance: number;
+}
+
+export interface DecisionEvent extends BaseVideoEvent {
+  type: 'decision';
+  stakeholders: string[];
+}
+
+export interface QuestionEvent extends BaseVideoEvent {
+  type: 'question';
+  status: 'open' | 'resolved';
+}
+
+export type VideoEvent = ActionItemEvent | KeyPointEvent | DecisionEvent | QuestionEvent;
+
+export interface EventSummary {
+  total: number;
+  by_type: Record<VideoEventType, number>;
+  type_labels: Record<VideoEventType, string>;
+  highlights: {
+    high_priority_actions: ActionItemEvent[];
+    important_key_points: KeyPointEvent[];
+    open_questions: QuestionEvent[];
+  };
 }

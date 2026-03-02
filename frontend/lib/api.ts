@@ -19,6 +19,8 @@ import type {
   Workspace,
   WorkspaceMember,
   KnowledgeItem,
+  VideoEvent,
+  EventSummary,
 } from './types';
 import { parseSSEStream } from './sse-parser';
 
@@ -502,5 +504,51 @@ export async function askVideoQuestion(
       history,
       model,
     }),
+  });
+}
+
+// === TTS (팟캐스트 변환) ===
+
+/**
+ * 텍스트를 TTS로 변환해 오디오 Blob을 반환합니다.
+ * @param text 변환할 텍스트 (마크다운 포함 가능)
+ * @param voice 목소리 식별자
+ * @param speed 재생 속도 (0.5~2.0)
+ */
+export async function synthesizeTts(
+  text: string,
+  voice = 'alloy',
+  speed = 1.0,
+): Promise<Blob> {
+  const res = await fetch(`${BASE}/api/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice, speed }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `TTS 오류: HTTP ${res.status}`);
+  }
+  return res.blob();
+}
+
+// === 이벤트 추출 ===
+
+export interface ExtractEventsRequest {
+  url?: string;
+  transcript?: string;
+  model?: string;
+}
+
+export interface ExtractEventsResponse {
+  events: VideoEvent[];
+  categorized: Record<string, VideoEvent[]>;
+  summary: EventSummary;
+}
+
+export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractEventsResponse> {
+  return request('/api/extract-events', {
+    method: 'POST',
+    body: JSON.stringify(req),
   });
 }

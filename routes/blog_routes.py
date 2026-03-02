@@ -85,6 +85,11 @@ def _get_request_data(req):
             urls = []
         urls = [u for u in urls if isinstance(u, str)][:MAX_BATCH_URLS]
 
+        # source_type 검증 (허용값: youtube, webpage, rss, arxiv)
+        _allowed_source_types = {'youtube', 'webpage', 'rss', 'arxiv'}
+        raw_source_type = data.get('source_type')
+        source_type = raw_source_type if raw_source_type in _allowed_source_types else None
+
         return {
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
             'urls': urls,
@@ -94,6 +99,7 @@ def _get_request_data(req):
             'modifiers': modifiers,
             'custom_prompt': custom_prompt,
             'analyze': bool(data.get('analyze', False)),
+            'source_type': source_type,
         }
 
     return {
@@ -105,6 +111,7 @@ def _get_request_data(req):
         'modifiers': None,
         'custom_prompt': None,
         'analyze': False,
+        'source_type': None,
     }
 
 
@@ -185,17 +192,78 @@ from routes.generation_helpers import (
 @require_auth
 @require_usage
 def generate():
-    """단일 YouTube URL에서 콘텐츠를 생성합니다.
+    """단일 URL에서 콘텐츠를 생성합니다 (YouTube, 웹페이지, RSS, arXiv 지원).
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
+    from services.multi_source_collector import detect_source_type, collect_content, SOURCE_YOUTUBE
+
     try:
         start_time = time.time()
         params = _get_request_data(request)
         url = params['url']
 
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return jsonify({'error': 'URL이 필요합니다.'}), 400
+
+        # 소스 타입 결정 (명시 > 자동 감지)
+        source_type = params.get('source_type') or detect_source_type(url)
+
+        # ── 비YouTube 소스 처리 (웹페이지 / RSS / arXiv) ─────────────
+        if source_type != SOURCE_YOUTUBE:
+            try:
+                collected = collect_content(url, source_type=source_type)
+            except ValueError as e:
+                return jsonify({'error': str(e)}), 400
+
+            source_title = collected.get('title') or url
+            source_content = collected.get('content', '')
+            if not source_content.strip():
+                return jsonify({'error': '콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.'}), 400
+
+            max_tokens = get_model_max_tokens(params['model'])
+            content_label = {
+                'webpage': '웹페이지 본문',
+                'rss': 'RSS 피드 내용',
+                'arxiv': 'arXiv 논문 초록',
+            }.get(source_type, '본문')
+            main_content = f"[{content_label}]\n{source_content}"
+            truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+            style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+            result, used_prompt = ai_service.create_content(
+                truncated_content, params['model'], style_prompt,
+                return_prompt=True, modifiers=params['modifiers'],
+                style_id=params['style']
+            )
+
+            elapsed_time = round(time.time() - start_time, 2)
+            report_id = str(uuid.uuid4())
+
+            if g.user_id:
+                save_history(g.user_id, {
+                    'id': report_id,
+                    'url': url,
+                    'title': result.get('title') or source_title,
+                    'style': params['style'],
+                    'content': result.get('content', ''),
+                    'html': result.get('html', ''),
+                    'transcript': source_content[:5000],
+                    'usage': result.get('usage'),
+                    'elapsed_time': elapsed_time,
+                })
+
+            return jsonify({
+                **result,
+                'id': report_id,
+                'prompt': used_prompt,
+                'elapsed_time': elapsed_time,
+                'source_type': source_type,
+                'source_title': source_title,
+                'usage': get_usage_for_response(),
+            })
+
+        # ── YouTube 기존 흐름 ─────────────────────────────────────
         if not content_service.is_youtube_url(url):
             return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
 
@@ -237,17 +305,58 @@ def generate():
         if cache_resp:
             return cache_resp
 
-        # AI 호출 (auto/GLM/병렬 분기)
+        # 에이전트 모드 여부 확인
+        request_data_all = request.get_json(silent=True) or {}
+        agent_mode = bool(request_data_all.get('agent_mode', False))
+
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
-        web_search = bool((request.get_json(silent=True) or {}).get('web_search', False))
-        result, used_prompt, comment_result = _call_ai_with_comments(
-            truncated_content, params['model'], style_prompt, params,
-            comments, transcript_text, max_tokens, web_search=web_search
-        )
+        agent_meta = None
+
+        if agent_mode:
+            # 멀티에이전트 파이프라인 실행
+            try:
+                from services.agents import Orchestrator
+                user_id = getattr(g, 'user_id', None)
+                orchestrator = Orchestrator(model=params['model'])
+                agent_output = orchestrator.run(
+                    transcript=transcript_text,
+                    style=params['style'],
+                    style_prompt=style_prompt,
+                    url=url,
+                    modifiers=params['modifiers'] or {},
+                    user_id=user_id,
+                )
+                result = {
+                    'title': agent_output['title'],
+                    'content': agent_output['content'],
+                    'html': agent_output['html'],
+                    'usage': agent_output['usage'],
+                }
+                used_prompt = f'[에이전트 모드] {params["style"]}'
+                comment_result = None
+                agent_meta = {
+                    'agent_mode': True,
+                    'quality': agent_output.get('quality'),
+                    'seo': agent_output.get('seo'),
+                    'elapsed_time': agent_output.get('elapsed_time', 0),
+                }
+            except Exception as ae:
+                current_app.logger.error(f'에이전트 모드 실패, 일반 모드로 폴백: {ae}')
+                web_search = bool(request_data_all.get('web_search', False))
+                result, used_prompt, comment_result = _call_ai_with_comments(
+                    truncated_content, params['model'], style_prompt, params,
+                    comments, transcript_text, max_tokens, web_search=web_search
+                )
+        else:
+            web_search = bool(request_data_all.get('web_search', False))
+            result, used_prompt, comment_result = _call_ai_with_comments(
+                truncated_content, params['model'], style_prompt, params,
+                comments, transcript_text, max_tokens, web_search=web_search
+            )
 
         # 품질 평가 (quality_check: true 요청 시만)
         quality_score = None
-        request_data = request.get_json(silent=True) or {}
+        request_data = request_data_all
         if request_data.get('quality_check'):
             try:
                 from services.quality_service import evaluate_quality
@@ -267,7 +376,8 @@ def generate():
             result, used_prompt, comment_result, cache_key,
             video_id, params, url, youtube_title,
             raw_transcript, transcript_source, comments, start_time,
-            quality_score=quality_score
+            quality_score=quality_score,
+            agent_meta=agent_meta,
         )
 
     except ValueError as e:
@@ -976,3 +1086,135 @@ def video_qa():
     )
 
     return jsonify(result)
+
+
+@blog_bp.route('/api/tts', methods=['POST'])
+@limiter.limit("20/minute")
+@require_auth
+def text_to_speech():
+    """텍스트를 TTS(Text-to-Speech)로 변환해 MP3 오디오 파일을 반환합니다.
+
+    요청 형식:
+        {"text": str, "voice": str (optional), "speed": float (optional)}
+
+    응답:
+        audio/mpeg 파일 스트림
+    """
+    from config import TTS_ENABLED, TTS_DEFAULT_VOICE, TTS_MAX_CHARS
+    from services.tts_service import TTSService
+
+    data = request.get_json(silent=True) or {}
+
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': '변환할 텍스트를 입력하세요.'}), 400
+
+    if len(text) > TTS_MAX_CHARS:
+        return jsonify({
+            'error': f'텍스트가 너무 깁니다. 최대 {TTS_MAX_CHARS}자까지 지원합니다.'
+        }), 400
+
+    voice = data.get('voice') or TTS_DEFAULT_VOICE
+    if not isinstance(voice, str):
+        voice = TTS_DEFAULT_VOICE
+
+    speed = data.get('speed', 1.0)
+    try:
+        speed = float(speed)
+        speed = max(0.5, min(2.0, speed))
+    except (TypeError, ValueError):
+        speed = 1.0
+
+    try:
+        audio_bytes = TTSService.synthesize(text, voice=voice, speed=speed, preprocess=True)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except RuntimeError as exc:
+        current_app.logger.error(f'TTS 합성 오류: {exc}')
+        return jsonify({'error': f'오디오 생성에 실패했습니다: {exc}'}), 500
+
+    return Response(
+        audio_bytes,
+        mimetype='audio/mpeg',
+        headers={
+            'Content-Disposition': 'inline; filename="podcast.mp3"',
+            'Content-Length': str(len(audio_bytes)),
+            'Cache-Control': 'no-cache',
+        },
+    )
+
+
+# =============================================
+# 이벤트 추출
+# =============================================
+
+@blog_bp.route('/api/extract-events', methods=['POST'])
+def extract_events_endpoint():
+    """YouTube 영상 자막에서 구조화된 이벤트를 추출합니다.
+
+    요청 형식:
+        {"url": "https://youtube.com/..."} — URL 제공 시 자막 자동 추출
+        {"transcript": "자막 텍스트"} — 자막 직접 제공
+        {"model": "zhipuai/GLM-4.5-Air"} — 선택적 모델 지정
+
+    응답 형식:
+        {"events": [...], "summary": {...}, "categorized": {...}}
+    """
+    data = request.get_json(silent=True) or {}
+
+    url = (data.get('url') or '').strip()
+    transcript_text = (data.get('transcript') or '').strip()
+    model = (data.get('model') or '').strip() or None
+
+    # 자막 획득: transcript 직접 제공 또는 URL에서 추출
+    if not transcript_text:
+        if not url:
+            return jsonify({'error': 'url 또는 transcript 중 하나를 제공해야 합니다.'}), 400
+
+        if not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL이 아닙니다.'}), 400
+
+        video_id = content_service.get_video_id(url)
+        if not video_id:
+            return jsonify({'error': 'YouTube 비디오 ID를 추출할 수 없습니다.'}), 400
+
+        try:
+            transcript_data = content_service.get_transcript(video_id)
+            if not transcript_data or not transcript_data.get('transcript'):
+                return jsonify({'error': '영상 자막을 추출할 수 없습니다. 자막이 없는 영상이거나 접근 불가합니다.'}), 422
+
+            # 자막 세그먼트 → 타임스탬프 포함 텍스트 변환 (이벤트 추출 품질 향상)
+            segments = transcript_data.get('segments', [])
+            if segments:
+                from services.ai_service import format_transcript_with_timestamps
+                transcript_text = format_transcript_with_timestamps(segments)
+            else:
+                transcript_text = transcript_data.get('transcript', '')
+
+        except Exception as exc:
+            current_app.logger.error(f'자막 추출 오류: {exc}')
+            return jsonify({'error': f'자막 추출에 실패했습니다: {str(exc)}'}), 500
+
+    # 이벤트 추출
+    try:
+        from services.event_extraction_service import (
+            extract_events, categorize_events, get_event_summary
+        )
+        events = extract_events(transcript_text, model=model)
+        categorized = categorize_events(events)
+        summary = get_event_summary(events)
+
+        return jsonify({
+            'events': events,
+            'categorized': categorized,
+            'summary': summary,
+        })
+
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except RuntimeError as exc:
+        current_app.logger.error(f'이벤트 추출 오류: {exc}')
+        return jsonify({'error': str(exc)}), 500
+    except Exception as exc:
+        current_app.logger.error(f'이벤트 추출 예상치 못한 오류: {exc}', exc_info=True)
+        return jsonify({'error': '이벤트 추출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}), 500

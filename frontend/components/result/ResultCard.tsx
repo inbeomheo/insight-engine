@@ -1,10 +1,10 @@
 'use client';
 
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, useCallback } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks,
 } from 'lucide-react';
 import VideoChatPanel from '@/components/chat/VideoChatPanel';
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,10 @@ import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, publishToMcp } from '@/lib/api';
+import { exportDocx, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
+import type { VideoEvent, EventSummary } from '@/lib/types';
 
+import AudioPlayer from './AudioPlayer';
 import SeoSection from './SeoSection';
 import GeoSection from './GeoSection';
 import FaqCtaSection from './FaqCtaSection';
@@ -36,6 +38,7 @@ import ShortsClipList from './ShortsClipList';
 import AnalysisDashboard from './AnalysisDashboard';
 import WebSourcesSection from './WebSourcesSection';
 import InsertedLinksSection from './InsertedLinksSection';
+import EventTimeline from './EventTimeline';
 
 interface ResultCardProps {
   report: Report;
@@ -58,6 +61,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [collapsed, setCollapsed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+
+  // 이벤트 추출 상태
+  const [eventOpen, setEventOpen] = useState(false);
+  const [eventLoading, setEventLoading] = useState(false);
+  const [extractedEvents, setExtractedEvents] = useState<VideoEvent[] | null>(null);
+  const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
@@ -143,6 +154,19 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     toast.success(t('result.shareCopied'));
   }
 
+  async function handleTts() {
+    if (ttsLoading) return;
+    setTtsLoading(true);
+    try {
+      const blob = await synthesizeTts(report.content);
+      setAudioBlob(blob);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '오디오 생성에 실패했습니다.');
+    } finally {
+      setTtsLoading(false);
+    }
+  }
+
   async function handlePublish(pluginId: string) {
     try {
       const res = await publishToMcp({
@@ -157,6 +181,31 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
       }
     } catch {
       toast.error(t('result.publishError'));
+    }
+  }
+
+  async function handleExtractEvents() {
+    // 이미 추출된 경우 패널 토글만
+    if (extractedEvents !== null) {
+      setEventOpen((v) => !v);
+      return;
+    }
+
+    setEventLoading(true);
+    setEventOpen(true);
+
+    try {
+      const res = await extractEvents({
+        url: report.url,
+        transcript: report.transcript,
+      });
+      setExtractedEvents(res.events);
+      setEventSummary(res.summary);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '이벤트 추출에 실패했습니다.');
+      setEventOpen(false);
+    } finally {
+      setEventLoading(false);
     }
   }
 
@@ -374,6 +423,47 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
           {report.inserted_links && report.inserted_links.length > 0 && (
             <InsertedLinksSection links={report.inserted_links} />
           )}
+
+          {/* 팟캐스트 오디오 플레이어 */}
+          {audioBlob && (
+            <AudioPlayer
+              audioBlob={audioBlob}
+              title={report.title}
+              onClose={() => setAudioBlob(null)}
+            />
+          )}
+
+          {/* 이벤트 타임라인 */}
+          {eventOpen && (
+            <div className="mt-5 border border-border/50 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/30">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <ListChecks className="h-4 w-4" />
+                  이벤트 추출
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEventOpen(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+              <div className="p-4">
+                {eventLoading ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    이벤트를 분석 중입니다...
+                  </p>
+                ) : extractedEvents ? (
+                  <EventTimeline
+                    events={extractedEvents}
+                    summary={eventSummary ?? undefined}
+                    videoUrl={report.url}
+                  />
+                ) : null}
+              </div>
+            </div>
+          )}
         </CardContent>
       )}
 
@@ -410,6 +500,16 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
                 <Brain className="h-3.5 w-3.5 mr-2" />
                 {t('result.mindmap')}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleTts} disabled={ttsLoading}>
+                <Headphones className="h-3.5 w-3.5 mr-2" />
+                {ttsLoading ? '변환 중...' : '팟캐스트로 변환'}
+              </DropdownMenuItem>
+              {(report.url || report.transcript) && (
+                <DropdownMenuItem onClick={handleExtractEvents} disabled={eventLoading}>
+                  <ListChecks className="h-3.5 w-3.5 mr-2" />
+                  {eventLoading ? '추출 중...' : '이벤트 추출'}
+                </DropdownMenuItem>
+              )}
               {report.url && (
                 <DropdownMenuItem onClick={() => setChatOpen(true)}>
                   <Bot className="h-3.5 w-3.5 mr-2" />
