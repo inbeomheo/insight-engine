@@ -31,9 +31,16 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
     'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
     'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
+    'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
 }
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
+
+# === 웹 검색 보강 (Grounded Generation) ===
+
+TAVILY_API_KEY: str = os.getenv('TAVILY_API_KEY', '')
+WEB_SEARCH_ENABLED: bool = os.getenv('WEB_SEARCH_ENABLED', 'false').lower() == 'true'
+WEB_SEARCH_MAX_RESULTS: int = int(os.getenv('WEB_SEARCH_MAX_RESULTS', '5'))
 
 # === RAG (지식 참조) ===
 
@@ -80,7 +87,7 @@ MAX_FALLBACK_ATTEMPTS = 3
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
-    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5, 'show_notes': 0.5, 'geo_seo': 0.5,
+    'summary': 0.5, 'tutorial': 0.5, 'qna': 0.5, 'show_notes': 0.5, 'geo_seo': 0.5, 'course': 0.5,
     'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7, 'shorts_script': 0.7,
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.5,
@@ -118,6 +125,16 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'ollama_chat/gemma2', 'name': 'Gemma 2 (9B)', 'max_input_tokens': 8192, 'price_input': 0, 'price_output': 0},
         ]
     },
+    'openrouter': {
+        'name': 'OpenRouter (2600+ 모델)',
+        'api_base': 'https://openrouter.ai/api/v1',
+        'models': [
+            {'id': 'openrouter/anthropic/claude-sonnet-4', 'name': 'Claude Sonnet 4 (Anthropic)', 'max_input_tokens': 200000, 'price_input': 3.00, 'price_output': 15.00},
+            {'id': 'openrouter/google/gemini-2.5-flash', 'name': 'Gemini 2.5 Flash (Google)', 'max_input_tokens': 1048576, 'price_input': 0.15, 'price_output': 0.60},
+            {'id': 'openrouter/meta-llama/llama-4-scout', 'name': 'Llama 4 Scout (Meta)', 'max_input_tokens': 131072, 'price_input': 0.08, 'price_output': 0.30},
+            {'id': 'openrouter/mistralai/mistral-large-2', 'name': 'Mistral Large 2 (Mistral)', 'max_input_tokens': 131072, 'price_input': 2.00, 'price_output': 6.00},
+        ]
+    },
 }
 
 
@@ -146,6 +163,8 @@ def get_provider_from_model(model_id: str) -> str:
         return 'zhipuai'
     elif model_id.startswith('ollama_chat/') or model_id.startswith('ollama/'):
         return 'ollama'
+    elif model_id.startswith('openrouter/'):
+        return 'openrouter'
     return 'gemini'  # 기본값 (Gemini)
 
 
@@ -165,6 +184,7 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('show_notes', '🎙️ 쇼노트'),
     ('shorts_script', '🎬 Shorts 클립'),
     ('geo_seo', '🤖 GEO (AI검색)'),
+    ('course', '🎓 AI 코스'),
 ]
 
 
@@ -268,6 +288,11 @@ __all__ = [
 
     # Prompt Builder
     'build_full_prompt',
+
+    # 웹 검색 보강
+    'TAVILY_API_KEY',
+    'WEB_SEARCH_ENABLED',
+    'WEB_SEARCH_MAX_RESULTS',
 
     # RAG
     'RAG_ENABLED',

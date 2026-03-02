@@ -1,7 +1,7 @@
 """
-스타일 패키지 v3.2
-11개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular,
-             sns_post, newsletter, show_notes
+스타일 패키지 v3.3
+12개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular,
+             sns_post, newsletter, show_notes, course
 + 댓글 요약 전용 프롬프트 (UI 비노출)
 """
 
@@ -20,6 +20,7 @@ from .comment_summary import COMMENT_SUMMARY_PROMPT
 from .mindmap import MINDMAP_PROMPT
 from .shorts_script import SHORTS_SCRIPT_PROMPT
 from .geo_seo import GEO_SEO_PROMPT
+from .course import COURSE_PROMPT
 
 # 스타일 프롬프트 매핑
 STYLE_PROMPTS = {
@@ -36,6 +37,7 @@ STYLE_PROMPTS = {
     'show_notes': SHOW_NOTES_PROMPT,
     'shorts_script': SHORTS_SCRIPT_PROMPT,
     'geo_seo': GEO_SEO_PROMPT,
+    'course': COURSE_PROMPT,
     # 내부 전용 (UI 비노출)
     'mindmap': MINDMAP_PROMPT,
 }
@@ -72,4 +74,5 @@ __all__ = [
     'MINDMAP_PROMPT',
     'SHORTS_SCRIPT_PROMPT',
     'GEO_SEO_PROMPT',
+    'COURSE_PROMPT',
 ]
