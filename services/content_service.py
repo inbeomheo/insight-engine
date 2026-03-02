@@ -341,6 +341,50 @@ def _extract_text_from_transcript(fetched: Any) -> Optional[str]:
     return " ".join(texts) if texts else None
 
 
+def _extract_segments_from_transcript(fetched: Any) -> List[Dict[str, Any]]:
+    """자막 객체에서 타임스탬프가 포함된 세그먼트 목록을 추출합니다.
+
+    Args:
+        fetched: youtube-transcript-api가 반환한 자막 객체
+
+    Returns:
+        세그먼트 목록 [{'start': float, 'text': str, 'duration': float}, ...]
+        타임스탬프 정보가 없으면 빈 리스트
+    """
+    segments: List[Dict[str, Any]] = []
+    try:
+        for snippet in fetched:
+            # FetchedTranscript snippet 또는 dict
+            start = getattr(snippet, 'start', None)
+            text = getattr(snippet, 'text', None)
+            duration = getattr(snippet, 'duration', None)
+
+            if start is None and isinstance(snippet, dict):
+                start = snippet.get('start')
+                text = snippet.get('text')
+                duration = snippet.get('duration', 0)
+
+            if start is not None and text:
+                segments.append({
+                    'start': float(start),
+                    'text': text.strip(),
+                    'duration': float(duration) if duration is not None else 0.0,
+                })
+    except TypeError:
+        if hasattr(fetched, 'to_raw_data'):
+            for item in fetched.to_raw_data():
+                start = item.get('start')
+                text = item.get('text')
+                if start is not None and text:
+                    segments.append({
+                        'start': float(start),
+                        'text': text.strip(),
+                        'duration': float(item.get('duration', 0)),
+                    })
+
+    return segments
+
+
 # ==================== Watch Page Fallback ====================
 
 def _extract_yt_initial_player_response(html_text: str) -> Optional[Dict[str, Any]]:
@@ -567,7 +611,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
         if fetched:
             text = _extract_text_from_transcript(fetched)
             if text:
-                result = {'text': text, 'source': 'api'}
+                segments = _extract_segments_from_transcript(fetched)
+                result = {'text': text, 'source': 'api', 'segments': segments}
                 _save_cache(video_id, 'transcript', result)
                 return result
 
@@ -935,210 +980,3 @@ def truncate_text(text: str, max_tokens: int) -> str:
         return " ".join(tokens[:max_tokens]) + "..."
     return text
 
-
-# ==================== Playlist Functions ====================
-
-def is_playlist_url(url: str) -> bool:
-    """URL이 YouTube 플레이리스트인지 확인합니다."""
-    return 'list=' in url and ('youtube.com' in url or 'youtu.be' in url)
-
-
-def get_playlist_id(url: str) -> Optional[str]:
-    """URL에서 플레이리스트 ID를 추출합니다."""
-    match = re.search(r'[?&]list=([a-zA-Z0-9_-]+)', url)
-    return match.group(1) if match else None
-
-
-def get_playlist_videos(playlist_id: str, max_results: int = 50) -> dict:
-    """플레이리스트의 영상 목록을 가져옵니다."""
-    api_key = current_app.config.get('YOUTUBE_API_KEY')
-    if not api_key:
-        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
-
-    try:
-        youtube = build('youtube', 'v3', developerKey=api_key)
-
-        # 플레이리스트 제목 가져오기
-        pl_res = youtube.playlists().list(part="snippet", id=playlist_id).execute()
-        pl_items = pl_res.get('items', [])
-        playlist_title = pl_items[0]['snippet']['title'] if pl_items else '플레이리스트'
-
-        # 영상 목록 가져오기
-        videos = []
-        next_page = None
-        while len(videos) < max_results:
-            res = youtube.playlistItems().list(
-                part="snippet,contentDetails",
-                playlistId=playlist_id,
-                maxResults=min(50, max_results - len(videos)),
-                pageToken=next_page
-            ).execute()
-
-            for item in res.get('items', []):
-                snippet = item['snippet']
-                videos.append({
-                    'video_id': snippet.get('resourceId', {}).get('videoId', ''),
-                    'title': snippet.get('title', ''),
-                    'thumbnail': snippet.get('thumbnails', {}).get('default', {}).get('url', ''),
-                })
-            next_page = res.get('nextPageToken')
-            if not next_page:
-                break
-
-        # 비공개/삭제된 영상 필터링
-        videos = [v for v in videos if v['video_id'] and v['title'] != 'Private video' and v['title'] != 'Deleted video']
-
-        return {
-            'playlist_title': playlist_title,
-            'videos': videos,
-            'total': len(videos)
-        }
-
-    except HttpError as e:
-        if e.resp.status == 404:
-            return {'error': '플레이리스트를 찾을 수 없습니다.'}
-        elif e.resp.status == 403:
-            return {'error': 'YouTube API 할당량을 초과했거나 접근이 거부되었습니다.'}
-        return {'error': f'YouTube API 오류: {e}'}
-    except Exception as e:
-        return {'error': f'플레이리스트 조회 실패: {e}'}
-
-
-# ==================== Channel Functions ====================
-
-def is_channel_url(url: str) -> bool:
-    """URL이 YouTube 채널인지 확인합니다."""
-    patterns = [
-        r'youtube\.com/@[\w.-]+',
-        r'youtube\.com/channel/UC[\w-]+',
-        r'youtube\.com/c/[\w.-]+',
-        r'youtube\.com/user/[\w.-]+'
-    ]
-    return any(re.search(p, url) for p in patterns)
-
-
-def parse_channel_identifier(url: str) -> dict:
-    """채널 URL에서 식별자를 파싱합니다."""
-    # @handle
-    match = re.search(r'youtube\.com/@([\w.-]+)', url)
-    if match:
-        return {'type': 'handle', 'value': match.group(1)}
-
-    # /channel/UCxxx
-    match = re.search(r'youtube\.com/channel/(UC[\w-]+)', url)
-    if match:
-        return {'type': 'id', 'value': match.group(1)}
-
-    # /c/name
-    match = re.search(r'youtube\.com/c/([\w.-]+)', url)
-    if match:
-        return {'type': 'custom', 'value': match.group(1)}
-
-    # /user/name
-    match = re.search(r'youtube\.com/user/([\w.-]+)', url)
-    if match:
-        return {'type': 'user', 'value': match.group(1)}
-
-    return {'type': 'unknown', 'value': ''}
-
-
-def resolve_channel_id(identifier: dict) -> Optional[str]:
-    """채널 식별자를 채널 ID로 변환합니다."""
-    api_key = current_app.config.get('YOUTUBE_API_KEY')
-    if not api_key:
-        return None
-
-    youtube = build('youtube', 'v3', developerKey=api_key)
-    id_type = identifier.get('type')
-    value = identifier.get('value', '')
-
-    try:
-        if id_type == 'id':
-            return value
-
-        if id_type == 'handle':
-            res = youtube.channels().list(part="id", forHandle=value).execute()
-        elif id_type == 'user':
-            res = youtube.channels().list(part="id", forUsername=value).execute()
-        else:
-            # custom URL → search fallback
-            res = youtube.search().list(part="id", q=value, type="channel", maxResults=1).execute()
-            items = res.get('items', [])
-            if items:
-                return items[0]['id'].get('channelId')
-            return None
-
-        items = res.get('items', [])
-        return items[0]['id'] if items else None
-
-    except Exception as e:
-        _log_warning(f"채널 ID 해석 실패: {e}")
-        return None
-
-
-def get_channel_videos(channel_id: str, max_results: int = 20) -> dict:
-    """채널의 최신 영상 목록을 가져옵니다."""
-    api_key = current_app.config.get('YOUTUBE_API_KEY')
-    if not api_key:
-        return {'error': 'YouTube API 키가 설정되지 않았습니다.'}
-
-    try:
-        youtube = build('youtube', 'v3', developerKey=api_key)
-
-        # 채널 정보 + uploads 플레이리스트 ID
-        ch_res = youtube.channels().list(
-            part="snippet,contentDetails",
-            id=channel_id
-        ).execute()
-
-        ch_items = ch_res.get('items', [])
-        if not ch_items:
-            return {'error': '채널을 찾을 수 없습니다.'}
-
-        uploads_id = ch_items[0]['contentDetails']['relatedPlaylists']['uploads']
-
-        # 최신 영상 가져오기
-        pl_res = youtube.playlistItems().list(
-            part="snippet,contentDetails",
-            playlistId=uploads_id,
-            maxResults=min(max_results, 50)
-        ).execute()
-
-        video_ids = []
-        video_map = {}
-        for item in pl_res.get('items', []):
-            vid = item['snippet'].get('resourceId', {}).get('videoId', '')
-            if vid:
-                video_ids.append(vid)
-                video_map[vid] = {
-                    'video_id': vid,
-                    'title': item['snippet'].get('title', ''),
-                    'thumbnail': item['snippet'].get('thumbnails', {}).get('medium', {}).get('url', ''),
-                    'published_at': item['snippet'].get('publishedAt', ''),
-                }
-
-        # 조회수 가져오기
-        if video_ids:
-            stats_res = youtube.videos().list(
-                part="statistics",
-                id=','.join(video_ids[:50])
-            ).execute()
-            for item in stats_res.get('items', []):
-                vid = item['id']
-                if vid in video_map:
-                    video_map[vid]['view_count'] = int(item['statistics'].get('viewCount', 0))
-
-        videos = [video_map[vid] for vid in video_ids if vid in video_map]
-
-        return {
-            'channel_id': channel_id,
-            'videos': videos,
-            'total': len(videos)
-        }
-
-    except HttpError as e:
-        if e.resp.status == 403:
-            return {'error': 'YouTube API 할당량을 초과했습니다.'}
-        return {'error': f'YouTube API 오류: {e}'}
-    except Exception as e:
-        return {'error': f'채널 영상 조회 실패: {e}'}

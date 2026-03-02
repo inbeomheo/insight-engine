@@ -52,6 +52,10 @@ interface SettingsState {
   setEnableWebResearch: (v: boolean) => void;
   setEnableDeepComments: (v: boolean) => void;
 
+  // 웹 검색 보강 (Grounded Generation)
+  enableWebSearch: boolean;
+  setEnableWebSearch: (v: boolean) => void;
+
   // 초기화
   hydrate: () => void;
 }
@@ -68,6 +72,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   generationMode: 'individual',
   enableWebResearch: true,
   enableDeepComments: true,
+  enableWebSearch: false,
 
   setProviders: (p) => set({ providers: p }),
 
@@ -119,6 +124,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setGenerationMode: (mode) => set({ generationMode: mode }),
   setEnableWebResearch: (v) => set({ enableWebResearch: v }),
   setEnableDeepComments: (v) => set({ enableDeepComments: v }),
+  setEnableWebSearch: (v) => set({ enableWebSearch: v }),
 
   hydrate: () => {
     set({

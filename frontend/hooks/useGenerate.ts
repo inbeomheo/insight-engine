@@ -24,7 +24,7 @@ export function useGenerate() {
     error: null,
   });
   const abortRef = useRef<AbortController | null>(null);
-  const { selectedModel, selectedStyle, modifiers } = useSettingsStore();
+  const { selectedModel, selectedStyle, modifiers, enableWebSearch } = useSettingsStore();
   const { addReport, updateReport } = useResultStore();
 
   const generateSingle = useCallback(
@@ -36,7 +36,7 @@ export function useGenerate() {
 
       setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
 
-      const req = { url, model: selectedModel, style: selectedStyle, modifiers };
+      const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch };
 
       try {
         if (useStreaming) {

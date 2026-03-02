@@ -58,6 +58,7 @@ export function responseToReport(
     faq_schema: res.faq_schema,
     cta: res.cta,
     json_ld_schemas: res.json_ld_schemas,
+    web_sources: res.web_sources,
     ...overrides,
   });
 }

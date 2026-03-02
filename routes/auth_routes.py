@@ -688,6 +688,44 @@ def remove_workspace_member(workspace_id, user_id):
     return _error_response('멤버 제거에 실패했습니다.', 500)
 
 
+# =============================================
+# 스타일 메모리 API
+# =============================================
+
+@auth_bp.route('/api/user/style-memory', methods=['GET'])
+@require_auth
+def get_style_memory():
+    """사용자 스타일 메모리 프로필 조회"""
+    from services.style_memory_service import get_profile
+    profile = get_profile(g.user_id)
+    return jsonify({'profile': profile})
+
+
+@auth_bp.route('/api/user/style-memory', methods=['PUT'])
+@require_auth
+def update_style_memory():
+    """사용자 스타일 메모리 선호도 저장
+
+    Body: {avoid_keywords?, custom_instructions?, style_memory_enabled?}
+    """
+    from services.style_memory_service import save_user_preferences
+    data = _get_json_data()
+    ok = save_user_preferences(g.user_id, data)
+    if ok:
+        return _success_response()
+    # Supabase 비활성화 시에도 성공으로 처리 (로컬 모드 graceful)
+    return _success_response()
+
+
+@auth_bp.route('/api/user/style-memory/reset', methods=['POST'])
+@require_auth
+def reset_style_memory():
+    """사용자 스타일 메모리 초기화"""
+    from services.style_memory_service import reset_profile
+    reset_profile(g.user_id)
+    return _success_response({'message': '스타일 메모리가 초기화되었습니다.'})
+
+
 @auth_bp.route('/api/workspaces/<workspace_id>', methods=['DELETE'])
 @require_auth
 def delete_workspace(workspace_id):

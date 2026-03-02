@@ -486,6 +486,42 @@ $$ LANGUAGE plpgsql;
 GRANT EXECUTE ON FUNCTION increment_template_usage(UUID) TO authenticated;
 
 -- =============================================
+-- 15. 개인 스타일 메모리 테이블
+-- =============================================
+
+CREATE TABLE IF NOT EXISTS ie_style_profiles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    preferred_styles JSONB DEFAULT '[]',                      -- 자주 사용하는 스타일 목록 [{style_id, count}]
+    preferred_length TEXT DEFAULT 'medium',                    -- 선호 길이 (short/medium/long)
+    preferred_writing_style TEXT DEFAULT 'conversational',     -- 선호 문체
+    tone_keywords JSONB DEFAULT '[]',                          -- 선호 톤 키워드 (자동 추출)
+    avoid_keywords JSONB DEFAULT '[]',                         -- 피하고 싶은 표현 (사용자 지정)
+    custom_instructions TEXT DEFAULT '',                        -- 사용자 커스텀 지시사항
+    style_memory_enabled BOOLEAN DEFAULT TRUE,                 -- 스타일 메모리 활성화 여부
+    generation_count INT DEFAULT 0,                            -- 총 생성 횟수
+    last_updated TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- 인덱스
+CREATE INDEX IF NOT EXISTS idx_style_profiles_user_id ON ie_style_profiles(user_id);
+
+-- RLS
+ALTER TABLE ie_style_profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own style profiles"
+    ON ie_style_profiles FOR ALL
+    USING (auth.uid() = user_id);
+
+-- updated_at 트리거
+DROP TRIGGER IF EXISTS ie_style_profiles_updated_at ON ie_style_profiles;
+CREATE TRIGGER ie_style_profiles_updated_at
+    BEFORE UPDATE ON ie_style_profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =============================================
 -- 완료!
 -- =============================================
 -- 이제 .env 파일에 Supabase 설정을 추가하세요:

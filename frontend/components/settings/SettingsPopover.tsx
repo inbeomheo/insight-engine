@@ -26,12 +26,14 @@ export default function SettingsPopover() {
     customStyles,
     ollamaBaseUrl,
     webhookUrl,
+    enableWebSearch,
     setSelectedProvider,
     setSelectedModel,
     setSelectedStyle,
     setModifiers,
     setOllamaBaseUrl,
     setWebhookUrl,
+    setEnableWebSearch,
   } = useSettingsStore();
 
   const ref = useRef<HTMLDivElement>(null);
@@ -212,6 +214,36 @@ export default function SettingsPopover() {
           </p>
         </div>
       )}
+
+      {/* 웹 검색 보강 */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-2 block">생성 옵션</label>
+        <button
+          onClick={() => setEnableWebSearch(!enableWebSearch)}
+          className={cn(
+            'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm border transition-all',
+            enableWebSearch
+              ? 'bg-primary/10 text-primary border-primary/40'
+              : 'bg-background text-foreground border-border hover:border-primary/50'
+          )}
+        >
+          <span>웹 검색 보강 (Grounded Generation)</span>
+          <span className={cn(
+            'w-9 h-5 rounded-full transition-colors relative shrink-0',
+            enableWebSearch ? 'bg-primary' : 'bg-muted'
+          )}>
+            <span className={cn(
+              'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform',
+              enableWebSearch ? 'translate-x-4' : 'translate-x-0'
+            )} />
+          </span>
+        </button>
+        {enableWebSearch && (
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Tavily API로 웹 검색 결과를 AI 프롬프트에 주입합니다. TAVILY_API_KEY 설정 필요.
+          </p>
+        )}
+      </div>
 
       {/* 웹훅 연동 */}
       <WebhookSection webhookUrl={webhookUrl} setWebhookUrl={setWebhookUrl} />

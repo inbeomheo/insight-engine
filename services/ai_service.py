@@ -63,17 +63,52 @@ def _get_korean_datetime():
     return now.strftime("%Y년 %m월 %d일 %H시 %M분")
 
 
-def _build_prompt(content, style_prompt, modifiers, rag_context=None):
+def format_transcript_with_timestamps(segments: list) -> str:
+    """자막 세그먼트 배열을 '[HH:MM:SS] 텍스트' 형식으로 변환하여 반환합니다.
+
+    AI 프롬프트에 타임스탬프 컨텍스트를 주입하기 위해 사용됩니다.
+
+    Args:
+        segments: 자막 세그먼트 목록 [{'start': float, 'text': str}, ...]
+
+    Returns:
+        '[HH:MM:SS] 텍스트\\n...' 형식 문자열, 세그먼트가 없으면 빈 문자열
+    """
+    if not segments:
+        return ""
+    try:
+        from utils.timestamp_utils import format_segments_for_prompt
+        return format_segments_for_prompt(segments)
+    except Exception:
+        return ""
+
+
+def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None):
     """프롬프트를 구성합니다."""
     # 현재 한국 시간 추가
     current_time = _get_korean_datetime()
     time_context = f"[현재 시간: {current_time} (한국 표준시)]"
 
+    # 타임스탬프 세그먼트가 있으면 타임코드 형식으로 자막 교체
+    if segments:
+        timestamp_text = format_transcript_with_timestamps(segments)
+        if timestamp_text:
+            # 기존 content에서 자막 부분을 타임코드 버전으로 대체
+            content = content + f"\n\n[타임스탬프 자막]\n{timestamp_text}"
+
     prompt = f"{time_context}\n\n{content}\n\n{style_prompt}" if style_prompt else f"{time_context}\n\n{content}"
+
+    # 개인 스타일 메모리 컨텍스트 주입 (RAG/웹 앞에 삽입)
+    if style_memory_context:
+        prompt += f"\n\n{style_memory_context}"
 
     # RAG 참고자료 삽입
     if rag_context:
         prompt += f"\n\n[참고자료]\n다음은 사용자가 제공한 참고 문서에서 검색된 관련 내용입니다. 콘텐츠 작성 시 참고하되, 자막 내용이 우선입니다.\n\n{rag_context}"
+
+    # 웹 검색 보강 컨텍스트 삽입
+    if web_context:
+        prompt += f"\n\n[웹 참고 자료]\n다음은 자막 주제와 관련된 최신 웹 검색 결과입니다. 콘텐츠 작성 시 사실 보강에 활용하되, 자막 내용이 우선이며 무비판적 수용 금지.\n\n{web_context}"
 
     style_modifiers = current_app.config.get('STYLE_MODIFIERS', {})
     modifier_instructions = _build_modifier_instructions(modifiers, style_modifiers)
@@ -208,7 +243,8 @@ def _convert_error_message(error_msg, model=None):
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
 
-def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None, user_id=None):
+def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None,
+                   user_id=None, segments=None, web_search=False):
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
     API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
@@ -221,14 +257,17 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         modifiers: 세부 옵션 딕셔너리 (length, writing_style)
         style_id: 스타일 ID (temperature 매핑용)
         user_id: 사용자 ID (RAG 컨텍스트 검색용)
+        segments: 자막 세그먼트 목록 [{'start': float, 'text': str}, ...] (타임스탬프 주입용)
+        web_search: 웹 검색 보강 활성화 여부
 
     Returns:
         dict 또는 tuple: 생성 결과 (return_prompt=True면 (result, prompt) 튜플)
+        결과에 'web_sources'가 포함될 수 있음 (웹 검색 활성화 시)
     """
     try:
         # RAG 컨텍스트 빌드 (RAG_ENABLED=True이고 user_id가 있을 때)
         rag_context = None
-        from config import RAG_ENABLED, RAG_TOP_K
+        from config import RAG_ENABLED, RAG_TOP_K, WEB_SEARCH_ENABLED
         if RAG_ENABLED and user_id:
             try:
                 from services.rag import context_builder
@@ -236,7 +275,33 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             except Exception as rag_err:
                 current_app.logger.warning(f"RAG 컨텍스트 빌드 실패 (무시): {rag_err}")
 
-        prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context)
+        # 웹 검색 보강 컨텍스트 빌드
+        web_context = None
+        web_sources = []
+        if web_search or WEB_SEARCH_ENABLED:
+            try:
+                from services.web_search_service import extract_grounding_context
+                grounding = extract_grounding_context(content[:300])
+                if grounding['enabled']:
+                    web_context = grounding['context_text']
+                    web_sources = grounding['results']
+                    current_app.logger.info(f"웹 검색 보강: {len(web_sources)}개 결과 주입")
+            except Exception as ws_err:
+                current_app.logger.warning(f"웹 검색 보강 실패 (무시): {ws_err}")
+
+        # 개인 스타일 메모리 컨텍스트 빌드 (user_id가 있을 때)
+        style_memory_context = None
+        if user_id:
+            try:
+                from services.style_memory_service import get_profile, build_style_context
+                profile = get_profile(user_id)
+                style_memory_context = build_style_context(profile) or None
+            except Exception as sm_err:
+                current_app.logger.warning(f"스타일 메모리 컨텍스트 빌드 실패 (무시): {sm_err}")
+
+        prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context,
+                               segments=segments, web_context=web_context,
+                               style_memory_context=style_memory_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers)
         is_glm = model.startswith("zhipuai/")
 
@@ -295,6 +360,10 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             'html': html,
             'usage': token_usage
         }
+
+        # 웹 검색 출처 정보 포함
+        if web_sources:
+            result['web_sources'] = web_sources
 
         if return_prompt:
             return result, prompt
