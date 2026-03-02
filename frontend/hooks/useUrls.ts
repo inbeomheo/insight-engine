@@ -18,6 +18,25 @@ export function useUrls() {
     return null;
   }, [urls]);
 
+  const addUrls = useCallback((newUrls: string[]): { added: number; errors: string[] } => {
+    const errors: string[] = [];
+    let added = 0;
+    setUrls((prev) => {
+      const result = [...prev];
+      for (const url of newUrls) {
+        const trimmed = url.trim();
+        if (!trimmed) continue;
+        if (!YOUTUBE_URL_REGEX.test(trimmed)) { errors.push(trimmed); continue; }
+        if (result.includes(trimmed)) continue;
+        if (result.length >= MAX_URLS) break;
+        result.push(trimmed);
+        added++;
+      }
+      return result;
+    });
+    return { added, errors };
+  }, []);
+
   const removeUrl = useCallback((url: string) => {
     setUrls((prev) => prev.filter((u) => u !== url));
   }, []);
@@ -35,5 +54,5 @@ export function useUrls() {
     });
   }, []);
 
-  return { urls, addUrl, removeUrl, clearUrls, reorderUrls };
+  return { urls, addUrl, addUrls, removeUrl, clearUrls, reorderUrls };
 }

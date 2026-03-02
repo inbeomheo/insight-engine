@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  experimental: {
+    proxyTimeout: 600_000,
+  },
   async rewrites() {
     return [
       { source: '/api/:path*', destination: 'http://localhost:5001/api/:path*' },

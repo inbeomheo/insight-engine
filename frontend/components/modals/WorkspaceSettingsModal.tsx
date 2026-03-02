@@ -29,7 +29,8 @@ const ROLE_LABELS: Record<WorkspaceRole, { label: string; icon: typeof Crown }> 
 };
 
 export default function WorkspaceSettingsModal() {
-  const { workspaceSettingsOpen, setWorkspaceSettingsOpen } = useUIStore();
+  const { activeModal, setWorkspaceSettingsOpen } = useUIStore();
+  const workspaceSettingsOpen = activeModal === 'workspaceSettings';
   const {
     activeWorkspace,
     members,

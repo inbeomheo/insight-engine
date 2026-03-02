@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Send } from 'lucide-react';
-import { getMcpPlugins } from '@/lib/api';
-import type { McpPlugin } from '@/lib/types';
+import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 
 interface ScheduleModalProps {
   open: boolean;
@@ -26,28 +25,24 @@ export default function ScheduleModal({
   onSchedule,
   isLoading,
 }: ScheduleModalProps) {
-  const [plugins, setPlugins] = useState<McpPlugin[]>([]);
+  const plugins = useMcpPlugins(open);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
 
+  // 플러그인 로드 후 기본 선택
   useEffect(() => {
-    if (!open) return;
-    getMcpPlugins()
-      .then((res) => {
-        setPlugins(res.plugins);
-        if (res.plugins.length > 0 && !selectedPlugin) {
-          setSelectedPlugin(res.plugins[0].id);
-        }
-      })
-      .catch(() => {});
-
-    // 기본값: 내일 오전 9시
-    if (!scheduledAt) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(9, 0, 0, 0);
-      setScheduledAt(formatLocalDatetime(tomorrow));
+    if (plugins.length > 0 && !selectedPlugin) {
+      setSelectedPlugin(plugins[0].id);
     }
+  }, [plugins, selectedPlugin]);
+
+  // 기본값: 내일 오전 9시
+  useEffect(() => {
+    if (!open || scheduledAt) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    setScheduledAt(formatLocalDatetime(tomorrow));
   }, [open]);
 
   function formatLocalDatetime(date: Date) {

@@ -4,7 +4,8 @@ import { useState, useCallback, useRef } from 'react';
 import { runPipeline } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
-import type { PipelineStep, PipelineEvent, Report } from '@/lib/types';
+import type { PipelineStep, PipelineEvent } from '@/lib/types';
+import { responseToReport } from '@/lib/report-factory';
 
 /** 블로그 자동화 파이프라인의 초기 스텝 */
 const INITIAL_STEPS: PipelineStep[] = [
@@ -97,26 +98,7 @@ export function usePipeline() {
               if (event.type === 'pipeline_complete') {
                 const result = event.result;
                 if (result) {
-                  const report: Report = {
-                    id: crypto.randomUUID(),
-                    url,
-                    youtube_title: result.youtube_title || '',
-                    title: result.title || '',
-                    content: result.content || '',
-                    html: result.html || '',
-                    style: selectedStyle,
-                    prompt: result.prompt || '',
-                    usage: result.usage || { total_tokens: 0 },
-                    elapsed_time: result.elapsed_time || 0,
-                    transcript_source: result.transcript_source || '',
-                    cached: false,
-                    comment_summary_included: false,
-                    seo: result.seo,
-                    geo: result.geo,
-                    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-                    createdAt: Date.now(),
-                  };
-                  addReport(report);
+                  addReport(responseToReport(result, url, selectedStyle));
                 }
                 return { ...prev, steps, progress: 1, isRunning: false, error: null };
               }

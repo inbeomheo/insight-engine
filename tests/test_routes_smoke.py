@@ -127,7 +127,7 @@ class TestRoutesSmoke(unittest.TestCase):
             },
             'usage': {'total_tokens': 500}
         }
-        with patch('routes.blog_routes.fusion_service.generate_fusion', return_value=fake_result):
+        with patch('routes.advanced_routes.fusion_service.generate_fusion', return_value=fake_result):
             res = self.client.post('/api/generate-fusion', json={
                 'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
                 'style': 'blog_seo',

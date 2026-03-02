@@ -14,25 +14,25 @@ class TestAppLifecycleSmoke(unittest.TestCase):
         self.client = self.app.test_client()
 
         # tracker globals reset
-        import routes.blog_routes as blog_routes
-        blog_routes._CLIENT_TRACKER.clear()
+        import routes.utility_routes as utility_routes
+        utility_routes._CLIENT_TRACKER.clear()
 
     def test_heartbeat_registers_client(self):
-        import routes.blog_routes as blog_routes
+        import routes.utility_routes as utility_routes
 
         res = self.client.post('/api/heartbeat', json={'clientId': 'c1'})
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.get_json().get('ok'))
-        self.assertIn('c1', blog_routes._CLIENT_TRACKER)
+        self.assertIn('c1', utility_routes._CLIENT_TRACKER)
 
     def test_close_removes_client(self):
-        import routes.blog_routes as blog_routes
+        import routes.utility_routes as utility_routes
 
         self.client.post('/api/heartbeat', json={'clientId': 'c1'})
         res = self.client.post('/api/close', json={'clientId': 'c1'})
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.get_json().get('ok'))
-        self.assertNotIn('c1', blog_routes._CLIENT_TRACKER)
+        self.assertNotIn('c1', utility_routes._CLIENT_TRACKER)
 
 
 if __name__ == '__main__':

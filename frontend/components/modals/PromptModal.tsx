@@ -8,7 +8,8 @@ import { useUIStore } from '@/stores/uiStore';
 import { toast } from 'sonner';
 
 export default function PromptModal() {
-  const { promptModalOpen, activePrompt, setPromptModalOpen } = useUIStore();
+  const { activeModal, activePrompt, setPromptModalOpen } = useUIStore();
+  const promptModalOpen = activeModal === 'prompt';
 
   function handleCopy() {
     navigator.clipboard.writeText(activePrompt);

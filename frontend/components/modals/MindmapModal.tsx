@@ -13,7 +13,8 @@ import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
 export default function MindmapModal() {
-  const { mindmapModalOpen, activeMindmapReportId, setMindmapModalOpen } = useUIStore();
+  const { activeModal, activeMindmapReportId, setMindmapModalOpen } = useUIStore();
+  const mindmapModalOpen = activeModal === 'mindmap';
   const { reports, updateReport } = useResultStore();
   const { selectedModel } = useSettingsStore();
   const [loading, setLoading] = useState(false);
