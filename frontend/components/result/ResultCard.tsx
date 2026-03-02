@@ -35,6 +35,7 @@ import FusionSections from './FusionSections';
 import ShortsClipList from './ShortsClipList';
 import AnalysisDashboard from './AnalysisDashboard';
 import WebSourcesSection from './WebSourcesSection';
+import InsertedLinksSection from './InsertedLinksSection';
 
 interface ResultCardProps {
   report: Report;
@@ -367,6 +368,11 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
           {/* 웹 검색 출처 섹션 */}
           {report.web_sources && report.web_sources.length > 0 && (
             <WebSourcesSection sources={report.web_sources} />
+          )}
+
+          {/* SEO 자동 삽입 링크 섹션 */}
+          {report.inserted_links && report.inserted_links.length > 0 && (
+            <InsertedLinksSection links={report.inserted_links} />
           )}
         </CardContent>
       )}

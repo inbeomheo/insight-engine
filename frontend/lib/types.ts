@@ -33,6 +33,7 @@ export interface GenerateResponse {
   youtube_title?: string;
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
+  inserted_links?: InsertedLink[];
 }
 
 export interface TokenUsage {
@@ -164,6 +165,8 @@ export interface Report {
   analysis?: NlpAnalysis;
   /** 웹 검색 보강 출처 */
   web_sources?: WebSource[];
+  /** SEO 자동 삽입 링크 목록 */
+  inserted_links?: InsertedLink[];
 }
 
 // === Shorts 클립 ===
@@ -365,6 +368,16 @@ export interface NlpAnalysis {
   keywords: NlpKeyword[];
   sentiment: NlpSentiment;
   topics: NlpTopic[];
+}
+
+// === SEO 자동 삽입 링크 ===
+
+export interface InsertedLink {
+  title: string;
+  url: string;
+  anchor_text?: string;
+  type: 'internal' | 'external';
+  domain?: string;
 }
 
 // === 지식 베이스 (RAG) ===
