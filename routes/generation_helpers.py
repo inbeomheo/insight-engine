@@ -197,8 +197,22 @@ def _handle_cache_hit(cache_key, force, youtube_title,
     })
 
 
+def _generate_main_content_with_web_search(app, content, model, style_prompt, modifiers, style_id=None, web_search=False):
+    """스레드에서 메인 콘텐츠를 생성합니다 (웹 검색 지원).
+
+    Returns:
+        tuple: (result_dict, used_prompt)
+    """
+    with app.app_context():
+        return ai_service.create_content(
+            content, model, style_prompt,
+            return_prompt=True, modifiers=modifiers,
+            style_id=style_id, web_search=web_search
+        )
+
+
 def _call_ai_with_comments(truncated_content, model, style_prompt, params,
-                            comments, transcript_text, max_tokens):
+                            comments, transcript_text, max_tokens, web_search=False):
     """AI 호출 + 댓글 병렬 처리. (result, used_prompt, comment_result) 반환."""
     # RAG 컨텍스트를 위한 user_id (없으면 None → RAG 스킵)
     user_id = getattr(g, 'user_id', None)
@@ -229,16 +243,17 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
             result, used_prompt = ai_service.create_content(
                 truncated_content, model, style_prompt,
                 return_prompt=True, modifiers=params['modifiers'],
-                style_id=params['style'], user_id=user_id
+                style_id=params['style'], user_id=user_id,
+                web_search=web_search
             )
             comment_result = _generate_comment_summary(app, comments, model)
         else:
             # 병렬 실행
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                 main_future = executor.submit(
-                    _generate_main_content, app, truncated_content,
+                    _generate_main_content_with_web_search, app, truncated_content,
                     model, style_prompt, params['modifiers'],
-                    style_id=params['style']
+                    style_id=params['style'], web_search=web_search
                 )
                 comment_future = executor.submit(
                     _generate_comment_summary, app, comments, model
@@ -254,7 +269,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
         result, used_prompt = ai_service.create_content(
             truncated_content, model, style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
-            style_id=params['style'], user_id=user_id
+            style_id=params['style'], user_id=user_id,
+            web_search=web_search
         )
 
     return result, used_prompt, comment_result
@@ -262,7 +278,8 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
 
 def _save_and_respond(result, used_prompt, comment_result, cache_key,
                        video_id, params, url, youtube_title,
-                       raw_transcript, transcript_source, comments, start_time):
+                       raw_transcript, transcript_source, comments, start_time,
+                       quality_score=None):
     """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
     model = params['model']
     modifiers = params['modifiers'] or {}
@@ -341,6 +358,15 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         except Exception as schema_err:
             current_app.logger.warning(f"JSON-LD 스키마 생성 실패 (무시): {schema_err}")
 
+    # NLP 분석 (analyze=true 파라미터가 있을 때만 실행, 비용 절감)
+    analysis = None
+    if params.get('analyze'):
+        try:
+            from services.nlp_analysis_service import analyze_content
+            analysis = analyze_content(result.get('content', ''))
+        except Exception as analysis_err:
+            current_app.logger.warning(f"NLP 분석 실패 (무시): {analysis_err}")
+
     # 웹훅 전송 (fire-and-forget — 실패해도 응답에 영향 없음)
     try:
         content_text = result.get('content', '')
@@ -353,6 +379,22 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         })
     except Exception:
         pass  # 웹훅 실패가 응답을 블로킹하면 안 됨
+
+    # 스타일 메모리 프로필 업데이트 (fire-and-forget — 응답 블로킹 금지)
+    if g.user_id:
+        try:
+            import threading
+            from services.style_memory_service import update_profile as _update_style_profile
+            threading.Thread(
+                target=_update_style_profile,
+                args=(g.user_id, {'style': params['style'], 'modifiers': params.get('modifiers')}),
+                daemon=True
+            ).start()
+        except Exception:
+            pass  # 스타일 메모리 업데이트 실패는 응답에 영향 없음
+
+    # 웹 검색 출처 정보 (result에 포함되어 있으면 응답에 포함)
+    web_sources = result.pop('web_sources', None)
 
     return jsonify({
         **result,
@@ -368,6 +410,9 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "faq_schema": faq_schema,
         "cta": cta,
         "json_ld_schemas": json_ld_schemas,
+        "quality_score": quality_score,
+        "web_sources": web_sources,
+        "analysis": analysis,
         "usage": get_usage_for_response()
     })
 

@@ -93,6 +93,7 @@ def _get_request_data(req):
             'style': data.get('style', DEFAULT_STYLE) if isinstance(data.get('style'), str) else DEFAULT_STYLE,
             'modifiers': modifiers,
             'custom_prompt': custom_prompt,
+            'analyze': bool(data.get('analyze', False)),
         }
 
     return {
@@ -103,6 +104,7 @@ def _get_request_data(req):
         'style': req.form.get('style', DEFAULT_STYLE),
         'modifiers': None,
         'custom_prompt': None,
+        'analyze': False,
     }
 
 
@@ -237,16 +239,35 @@ def generate():
 
         # AI 호출 (auto/GLM/병렬 분기)
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+        web_search = bool((request.get_json(silent=True) or {}).get('web_search', False))
         result, used_prompt, comment_result = _call_ai_with_comments(
             truncated_content, params['model'], style_prompt, params,
-            comments, transcript_text, max_tokens
+            comments, transcript_text, max_tokens, web_search=web_search
         )
+
+        # 품질 평가 (quality_check: true 요청 시만)
+        quality_score = None
+        request_data = request.get_json(silent=True) or {}
+        if request_data.get('quality_check'):
+            try:
+                from services.quality_service import evaluate_quality
+                quality_score = evaluate_quality(
+                    content=result.get('content', ''),
+                    source_summary=transcript_text[:500],
+                )
+                current_app.logger.info(
+                    f"품질 평가 완료: grade={quality_score.get('grade')}, "
+                    f"overall={quality_score.get('overall')}"
+                )
+            except Exception as qe:
+                current_app.logger.warning(f"품질 평가 실패 (무시): {qe}")
 
         # 캐시 저장 + 히스토리 + 응답
         return _save_and_respond(
             result, used_prompt, comment_result, cache_key,
             video_id, params, url, youtube_title,
-            raw_transcript, transcript_source, comments, start_time
+            raw_transcript, transcript_source, comments, start_time,
+            quality_score=quality_score
         )
 
     except ValueError as e:
@@ -888,3 +909,70 @@ def use_template(template_id: str):
         pass
 
     return jsonify(template)
+
+
+@blog_bp.route('/api/video-qa', methods=['POST'])
+@require_auth
+def video_qa():
+    """YouTube 영상 자막 기반 Q&A 챗봇 엔드포인트.
+
+    요청 형식:
+        {"video_url": str, "question": str, "history": [{"role": str, "content": str}], "model": str}
+
+    응답 형식:
+        {"answer": str, "sources": [{"text": str, "relevance": float}]}
+    """
+    from services.video_qa_service import (
+        is_video_indexed,
+        index_video_transcript,
+        answer_question,
+    )
+
+    data = request.get_json(silent=True) or {}
+    video_url = data.get('video_url', '').strip()
+    question = data.get('question', '').strip()
+    history = data.get('history', [])
+    model = data.get('model') or None
+
+    # 입력값 검증
+    if not video_url:
+        return jsonify({'error': 'video_url이 필요합니다.'}), 400
+    if not content_service.is_youtube_url(video_url):
+        return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+    if not question:
+        return jsonify({'error': '질문을 입력해주세요.'}), 400
+    if len(question) > 500:
+        return jsonify({'error': '질문은 500자 이내로 입력해주세요.'}), 400
+
+    video_id = content_service.get_video_id(video_url)
+    if not video_id:
+        return jsonify({'error': '영상 ID를 추출할 수 없습니다.'}), 400
+
+    # 아직 인덱싱이 안 됐으면 자막을 가져와 인덱싱
+    if not is_video_indexed(video_id):
+        transcript_result = content_service.get_transcript(video_id)
+
+        # get_transcript 반환값은 str 또는 dict
+        if isinstance(transcript_result, dict):
+            transcript_text = transcript_result.get('text', '')
+        elif isinstance(transcript_result, str):
+            transcript_text = transcript_result
+        else:
+            transcript_text = ''
+
+        if not transcript_text:
+            return jsonify({'error': '영상 자막을 가져올 수 없습니다.'}), 400
+
+        ok = index_video_transcript(video_id, transcript_text)
+        if not ok:
+            return jsonify({'error': '영상 자막 인덱싱에 실패했습니다.'}), 500
+
+    # Q&A 답변 생성
+    result = answer_question(
+        video_id=video_id,
+        question=question,
+        history=history if isinstance(history, list) else [],
+        model=model,
+    )
+
+    return jsonify(result)

@@ -8,6 +8,13 @@ export interface GenerateRequest {
   customPrompt?: string;
 }
 
+export interface WebSource {
+  title: string;
+  url: string;
+  content: string;
+  score: number;
+}
+
 export interface GenerateResponse {
   title: string;
   content: string;
@@ -24,6 +31,8 @@ export interface GenerateResponse {
   cta?: CtaData;
   json_ld_schemas?: JsonLdSchema[];
   youtube_title?: string;
+  web_sources?: WebSource[];
+  analysis?: NlpAnalysis;
 }
 
 export interface TokenUsage {
@@ -149,6 +158,12 @@ export interface Report {
   sections?: FusionSections;
   /** Shorts 클립 추출 결과 */
   shorts_clips?: ShortsClip[];
+  /** 품질 자동 평가 결과 (quality_check: true 요청 시만 포함) */
+  quality_score?: QualityScore;
+  /** NLP 분석 결과 (analyze: true 요청 시만 포함) */
+  analysis?: NlpAnalysis;
+  /** 웹 검색 보강 출처 */
+  web_sources?: WebSource[];
 }
 
 // === Shorts 클립 ===
@@ -307,6 +322,49 @@ export interface ScheduledPost {
   error_message?: string;
   published_url?: string;
   created_at: string;
+}
+
+// === 품질 평가 ===
+
+export interface QualityScore {
+  accuracy: number;
+  coherence: number;
+  readability: number;
+  usefulness: number;
+  overall: number;
+  grade: 'A' | 'B' | 'C' | 'D';
+  feedback: string;
+  eval_model?: string;
+}
+
+// === NLP 분석 ===
+
+export interface NlpKeyword {
+  word: string;
+  relevance: number;
+}
+
+export interface NlpAspect {
+  aspect: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  score: number;
+}
+
+export interface NlpSentiment {
+  overall: 'positive' | 'neutral' | 'negative';
+  score: number;
+  aspects: NlpAspect[];
+}
+
+export interface NlpTopic {
+  topic: string;
+  confidence: number;
+}
+
+export interface NlpAnalysis {
+  keywords: NlpKeyword[];
+  sentiment: NlpSentiment;
+  topics: NlpTopic[];
 }
 
 // === 지식 베이스 (RAG) ===
