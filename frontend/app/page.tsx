@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Sparkles, Youtube, Layers, Combine, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,16 +17,18 @@ import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
 import GenerationModeSelector from '@/components/input/GenerationModeSelector';
 import FusionOptions from '@/components/input/FusionOptions';
-import PromptModal from '@/components/modals/PromptModal';
-import MindmapModal from '@/components/modals/MindmapModal';
-import OnboardingModal from '@/components/modals/OnboardingModal';
-import CustomStyleModal from '@/components/modals/CustomStyleModal';
-import WorkspaceSettingsModal from '@/components/modals/WorkspaceSettingsModal';
-import TemplateGalleryModal from '@/components/modals/TemplateGalleryModal';
-import ContentCalendar from '@/components/schedule/ContentCalendar';
-import ScheduleModal from '@/components/modals/ScheduleModal';
 
-import { YOUTUBE_URL_REGEX } from '@/lib/constants';
+// Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
+const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
+const MindmapModal = dynamic(() => import('@/components/modals/MindmapModal'), { ssr: false });
+const OnboardingModal = dynamic(() => import('@/components/modals/OnboardingModal'), { ssr: false });
+const CustomStyleModal = dynamic(() => import('@/components/modals/CustomStyleModal'), { ssr: false });
+const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/WorkspaceSettingsModal'), { ssr: false });
+const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
+const ScheduleModal = dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false });
+const ContentCalendar = dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false });
+
+
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -52,7 +55,7 @@ export default function Home() {
   const { generationMode, enableAgentMode, setEnableAgentMode } = useSettingsStore();
   const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
-  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule();
+  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
   const mcpPlugins = useMcpPlugins();
@@ -121,15 +124,13 @@ export default function Home() {
         e.dataTransfer.getData('text/plain') ||
         '';
 
-      // 텍스트에서 YouTube URL 모두 추출
-      const urlPattern =
-        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]+[^\s]*/g;
+      // 텍스트에서 URL 모두 추출 (YouTube, 웹페이지, RSS, arXiv)
+      const urlPattern = /https?:\/\/[^\s]+/g;
       const matches = text.match(urlPattern);
       if (!matches) return;
 
       for (const url of matches) {
-        const trimmed = url.trim();
-        if (YOUTUBE_URL_REGEX.test(trimmed)) addUrl(trimmed);
+        addUrl(url.trim());
       }
     },
     [addUrl],

@@ -1,130 +1,97 @@
 """
 웹페이지 스크래핑 서비스
 
-BeautifulSoup으로 웹페이지 본문 텍스트를 추출합니다.
-- robots.txt 기본 준수 (크롤링 허용 여부 체크)
-- User-Agent: InsightEngine/1.0
-- 타임아웃: 10초
+1차: trafilatura (빠르고 정확, 정적 HTML)
+2차: Scrapling Fetcher (JS 렌더링 필요 시 폴백)
 """
-from __future__ import annotations
-
-import re
-import urllib.robotparser
+import logging
 from typing import Dict
-from urllib.parse import urlparse, urljoin
 
-import requests
-from bs4 import BeautifulSoup
+import trafilatura
 
-# 요청 헤더
-_HEADERS = {
-    "User-Agent": "InsightEngine/1.0",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ko,en;q=0.9",
-}
+logger = logging.getLogger(__name__)
 
-# 제거할 태그 목록 (본문과 무관한 요소)
-_REMOVE_TAGS = [
-    "script", "style", "noscript", "nav", "header", "footer",
-    "aside", "form", "button", "select", "option", "svg",
-    "figure", "iframe", "embed", "object",
-]
-
-# 본문 후보 태그 (우선순위 순)
-_ARTICLE_SELECTORS = [
-    "article",
-    "[role='main']",
-    "main",
-    ".content",
-    ".post-content",
-    ".entry-content",
-    ".article-body",
-    "#content",
-    "#main",
-]
-
-_REQUEST_TIMEOUT = 10  # 초
-
-
-def _is_crawl_allowed(url: str) -> bool:
-    """robots.txt를 확인해 크롤링 허용 여부를 반환합니다.
-
-    요청 실패 시 허용으로 간주합니다 (비파괴적 기본값).
-    """
-    try:
-        parsed = urlparse(url)
-        robots_url = urljoin(f"{parsed.scheme}://{parsed.netloc}", "/robots.txt")
-        rp = urllib.robotparser.RobotFileParser()
-        rp.set_url(robots_url)
-        rp.read()
-        return rp.can_fetch("InsightEngine/1.0", url)
-    except Exception:
-        return True  # 파싱 실패 시 허용으로 간주
-
-
-def _extract_main_content(soup: BeautifulSoup) -> str:
-    """HTML에서 본문 텍스트를 추출합니다."""
-    # 불필요한 태그 제거
-    for tag in soup(_REMOVE_TAGS):
-        tag.decompose()
-
-    # 본문 후보 요소 탐색
-    content_el = None
-    for selector in _ARTICLE_SELECTORS:
-        content_el = soup.select_one(selector)
-        if content_el and len(content_el.get_text(strip=True)) > 100:
-            break
-
-    target = content_el if content_el else soup.find("body") or soup
-
-    # 연속 공백/줄바꿈 정리
-    text = target.get_text(separator="\n", strip=True)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    return text.strip()
+_REQUEST_TIMEOUT = 15  # 초
 
 
 def scrape_webpage(url: str) -> Dict:
     """웹페이지를 스크래핑하여 본문 텍스트를 반환합니다.
 
-    Args:
-        url: 스크래핑할 웹페이지 URL
+    1차: trafilatura로 빠른 본문 추출 시도
+    2차: 실패 시 Scrapling Fetcher로 JS 렌더링 후 재시도
 
     Returns:
-        {
-            "title": str,
-            "content": str,
-            "url": str,
-            "source_type": "webpage"
-        }
+        {"title": str, "content": str, "url": str, "source_type": "webpage"}
 
     Raises:
-        ValueError: robots.txt가 크롤링을 금지한 경우
-        requests.RequestException: 네트워크 오류
+        ValueError: 본문을 추출할 수 없는 경우
     """
-    if not _is_crawl_allowed(url):
-        raise ValueError(f"robots.txt가 해당 URL의 크롤링을 금지합니다: {url}")
+    # 1차: trafilatura
+    title, content = _extract_with_trafilatura(url)
+    if content and len(content.strip()) > 50:
+        return {"title": title or url, "content": content, "url": url, "source_type": "webpage"}
 
-    resp = requests.get(url, headers=_HEADERS, timeout=_REQUEST_TIMEOUT)
-    resp.raise_for_status()
+    # 2차: Scrapling (JS 렌더링 폴백)
+    logger.info("trafilatura 추출 실패, Scrapling 폴백: %s", url)
+    title, content = _extract_with_scrapling(url)
+    if content and len(content.strip()) > 50:
+        return {"title": title or url, "content": content, "url": url, "source_type": "webpage"}
 
-    # 인코딩 자동 감지
-    resp.encoding = resp.apparent_encoding or "utf-8"
-    soup = BeautifulSoup(resp.text, "html.parser")
+    raise ValueError(f"웹페이지에서 본문을 추출할 수 없습니다: {url}")
 
-    # 제목 추출
-    title = ""
-    og_title = soup.find("meta", property="og:title")
-    if og_title and og_title.get("content"):
-        title = og_title["content"].strip()
-    elif soup.title:
-        title = soup.title.get_text(strip=True)
 
-    content = _extract_main_content(soup)
+def _extract_with_trafilatura(url: str) -> tuple:
+    """trafilatura로 본문 + 제목 추출."""
+    try:
+        html = trafilatura.fetch_url(url)
+        if not html:
+            return "", ""
 
-    return {
-        "title": title,
-        "content": content,
-        "url": url,
-        "source_type": "webpage",
-    }
+        content = trafilatura.extract(html, include_tables=True, include_links=False) or ""
+
+        # 메타데이터에서 제목 추출
+        meta = trafilatura.metadata.extract_metadata(html, default_url=url)
+        title = meta.title if meta and meta.title else ""
+
+        return title, content
+    except Exception as e:
+        logger.warning("trafilatura 실패: %s — %s", url, e)
+        return "", ""
+
+
+def _extract_with_scrapling(url: str) -> tuple:
+    """Scrapling Fetcher로 HTML 가져온 뒤 trafilatura로 본문 추출."""
+    try:
+        from scrapling.fetchers import Fetcher
+
+        page = Fetcher.get(url, timeout=_REQUEST_TIMEOUT)
+
+        # 제목 추출
+        title = ""
+        og = page.css('meta[property="og:title"]')
+        if og:
+            title = og.attrib.get("content", "")
+        if not title:
+            t = page.css("title")
+            if t:
+                title = t.text or ""
+
+        # 본문 추출: trafilatura에 HTML을 넘겨서 정확도 유지
+        html_text = page.html_content if hasattr(page, "html_content") else str(page)
+        content = trafilatura.extract(html_text, include_tables=True, include_links=False) or ""
+
+        # trafilatura도 실패하면 직접 텍스트 추출
+        if not content or len(content.strip()) < 50:
+            for selector in ["article", "main", "[role='main']", ".content", "#content"]:
+                el = page.css(selector)
+                if el and len(el.text.strip()) > 100:
+                    content = el.text.strip()
+                    break
+            else:
+                body = page.css("body")
+                content = body.text.strip() if body else ""
+
+        return title, content
+    except Exception as e:
+        logger.warning("Scrapling 폴백 실패: %s — %s", url, e)
+        return "", ""

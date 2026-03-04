@@ -86,9 +86,9 @@ export default function UrlInput({
           onPaste={handlePaste}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="YouTube URL을 붙여넣고 Enter"
+          placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv)"
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
-          aria-label="YouTube 영상 URL 입력"
+          aria-label="URL 입력"
           disabled={isLoading}
         />
         <Button

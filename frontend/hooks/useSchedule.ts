@@ -5,7 +5,7 @@ import { createSchedule, getSchedules, deleteSchedule } from '@/lib/api';
 import { toast } from 'sonner';
 import type { ScheduledPost } from '@/lib/types';
 
-export function useSchedule() {
+export function useSchedule(enabled = true) {
   const [schedules, setSchedules] = useState<ScheduledPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -53,10 +53,10 @@ export function useSchedule() {
     }
   }, []);
 
-  // 초기 로드
+  // Phase 5: 캘린더 뷰일 때만 fetch
   useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+    if (enabled) fetchSchedules();
+  }, [fetchSchedules, enabled]);
 
   return { schedules, isLoading, addSchedule, removeSchedule, refetch: fetchSchedules };
 }

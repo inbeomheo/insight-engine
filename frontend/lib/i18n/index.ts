@@ -1,17 +1,32 @@
 // i18n 시스템 코어 — 외부 라이브러리 없이 React Context 기반 경량 구현
 import koTranslations from './ko.json';
-import enTranslations from './en.json';
-import jaTranslations from './ja.json';
 
 export type Locale = 'ko' | 'en' | 'ja';
 
 export type TranslationDict = Record<string, unknown>;
 
+// Phase 7: en/ja는 동적 import — 기본 로케일(ko)만 번들에 포함
+const localeLoaders: Record<string, () => Promise<TranslationDict>> = {
+  en: () => import('./en.json').then(m => m.default as TranslationDict),
+  ja: () => import('./ja.json').then(m => m.default as TranslationDict),
+};
+
 const translations: Record<Locale, TranslationDict> = {
   ko: koTranslations as TranslationDict,
-  en: enTranslations as TranslationDict,
-  ja: jaTranslations as TranslationDict,
+  en: {} as TranslationDict,
+  ja: {} as TranslationDict,
 };
+
+/** 로케일 데이터를 동적으로 로드합니다 (ko 이외) */
+export async function loadLocale(locale: Locale): Promise<void> {
+  if (locale === 'ko') return;
+  // 이미 로드됨
+  if (Object.keys(translations[locale]).length > 0) return;
+  const loader = localeLoaders[locale];
+  if (loader) {
+    translations[locale] = await loader();
+  }
+}
 
 const LOCALE_STORAGE_KEY = 'insight-engine-locale';
 

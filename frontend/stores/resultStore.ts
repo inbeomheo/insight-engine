@@ -3,6 +3,17 @@ import { toast } from 'sonner';
 import type { Report } from '@/lib/types';
 import { loadReports, saveReports } from '@/lib/storage';
 
+// localStorage 저장을 디바운스 — 빠른 연속 호출 시 마지막 1회만 실제 write
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSave(reports: Report[]): boolean {
+  if (saveTimer) clearTimeout(saveTimer);
+  let result = true;
+  saveTimer = setTimeout(() => {
+    result = saveReports(reports);
+  }, 300);
+  return result;
+}
+
 interface ResultState {
   reports: Report[];
   searchQuery: string;
@@ -28,7 +39,7 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   addReport: (r) => {
     const next = [r, ...get().reports];
-    if (!saveReports(next)) {
+    if (!debouncedSave(next)) {
       toast.warning('저장 공간이 부족합니다. 오래된 결과를 삭제해주세요.');
     }
     set({ reports: next });
@@ -36,12 +47,12 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   removeReport: (id) => {
     const next = get().reports.filter((r) => r.id !== id);
-    saveReports(next);
+    saveReports(next); // 삭제는 즉시 저장
     set({ reports: next });
   },
 
   clearReports: () => {
-    saveReports([]);
+    saveReports([]); // 전체 삭제도 즉시 저장
     set({ reports: [] });
   },
 
@@ -49,7 +60,7 @@ export const useResultStore = create<ResultState>((set, get) => ({
     const next = get().reports.map((r) =>
       r.id === id ? { ...r, ...partial } : r
     );
-    saveReports(next);
+    debouncedSave(next);
     set({ reports: next });
   },
 
@@ -69,6 +80,12 @@ export const useResultStore = create<ResultState>((set, get) => ({
   },
 
   hydrate: () => {
-    set({ reports: loadReports() });
+    // Phase 4: 메인 스레드 블로킹 방지 — idle 시점에 JSON.parse 수행
+    const load = () => set({ reports: loadReports() });
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(load);
+    } else {
+      setTimeout(load, 0);
+    }
   },
 }));

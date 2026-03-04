@@ -236,7 +236,7 @@ export async function generateFusion(req: FusionRequest): Promise<FusionResponse
 
 // 캐시 삭제
 export async function clearCache(): Promise<void> {
-  await request('/api/cache/clear', { method: 'POST' });
+  await request('/api/cache', { method: 'DELETE' });
 }
 
 // 웹훅 테스트

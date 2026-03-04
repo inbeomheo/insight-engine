@@ -57,35 +57,12 @@ class TestDetectSourceType(unittest.TestCase):
 # ──────────────────────────────────────────────────────────────
 
 class TestWebScraperService(unittest.TestCase):
-    """scrape_webpage() 웹페이지 스크래핑 검증"""
+    """scrape_webpage() 웹페이지 스크래핑 검증 (trafilatura 기반)"""
 
-    def _make_mock_response(self, html: str, encoding: str = 'utf-8'):
-        """requests.get 반환값 Mock 생성 헬퍼"""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = html
-        mock_resp.apparent_encoding = encoding
-        mock_resp.raise_for_status = MagicMock()
-        return mock_resp
-
-    @patch('services.web_scraper_service._is_crawl_allowed', return_value=True)
-    @patch('services.web_scraper_service.requests.get')
-    def test_scrape_extracts_article_content(self, mock_get, _mock_robots):
-        """article 태그 본문이 올바르게 추출되는지 검증"""
-        html = """
-        <html>
-          <head><title>테스트 페이지</title></head>
-          <body>
-            <nav>네비게이션</nav>
-            <article>
-              <h1>본문 제목</h1>
-              <p>이것은 테스트 본문입니다. 충분히 긴 내용을 위해 추가합니다.</p>
-            </article>
-            <footer>푸터</footer>
-          </body>
-        </html>
-        """
-        mock_get.return_value = self._make_mock_response(html)
+    @patch('services.web_scraper_service._extract_with_trafilatura')
+    def test_scrape_extracts_article_content(self, mock_traf):
+        """trafilatura로 본문이 올바르게 추출되는지 검증"""
+        mock_traf.return_value = ("테스트 페이지", "본문 제목\n테스트 본문입니다. 충분히 긴 내용을 위해 추가합니다. 웹페이지 스크래핑 서비스 검증을 위한 충분한 길이의 더미 텍스트입니다.")
 
         from services.web_scraper_service import scrape_webpage
         result = scrape_webpage('https://example.com/article')
@@ -94,35 +71,24 @@ class TestWebScraperService(unittest.TestCase):
         self.assertEqual(result['url'], 'https://example.com/article')
         self.assertIn('본문 제목', result['content'])
         self.assertIn('테스트 본문', result['content'])
-        # 네비게이션/푸터가 제거되었는지 확인
-        self.assertNotIn('네비게이션', result['content'])
 
-    @patch('services.web_scraper_service._is_crawl_allowed', return_value=True)
-    @patch('services.web_scraper_service.requests.get')
-    def test_og_title_preferred_over_title_tag(self, mock_get, _mock_robots):
-        """OG title이 <title> 태그보다 우선되는지 검증"""
-        html = """
-        <html>
-          <head>
-            <title>사이트명 - 기사 제목</title>
-            <meta property="og:title" content="OG 제목" />
-          </head>
-          <body><article><p>긴 본문 내용입니다.</p></article></body>
-        </html>
-        """
-        mock_get.return_value = self._make_mock_response(html)
+    @patch('services.web_scraper_service._extract_with_trafilatura')
+    def test_og_title_preferred_over_title_tag(self, mock_traf):
+        """메타데이터에서 제목이 추출되는지 검증"""
+        mock_traf.return_value = ("OG 제목", "긴 본문 내용입니다. 충분히 길어야 50자를 넘깁니다. 추가 내용을 더 넣어서 확실하게 기준을 넘기겠습니다. 더 넣겠습니다.")
 
         from services.web_scraper_service import scrape_webpage
         result = scrape_webpage('https://example.com')
 
         self.assertEqual(result['title'], 'OG 제목')
 
-    @patch('services.web_scraper_service._is_crawl_allowed', return_value=False)
-    def test_robots_txt_blocked_raises_value_error(self, _mock_robots):
-        """robots.txt에서 차단된 URL은 ValueError 발생"""
+    @patch('services.web_scraper_service._extract_with_scrapling', return_value=("", ""))
+    @patch('services.web_scraper_service._extract_with_trafilatura', return_value=("", ""))
+    def test_no_content_raises_value_error(self, _mock_traf, _mock_scrapling):
+        """본문 추출 실패 시 ValueError 발생"""
         from services.web_scraper_service import scrape_webpage
         with self.assertRaises(ValueError):
-            scrape_webpage('https://blocked.example.com/page')
+            scrape_webpage('https://empty.example.com/page')
 
 
 # ──────────────────────────────────────────────────────────────

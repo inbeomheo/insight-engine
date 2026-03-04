@@ -1,0 +1,230 @@
+// Insight Engine - Architecture Model
+// 전체 시스템 요소와 관계 정의
+
+model {
+
+  // ─── Actors ───
+  user = actor 'User' {
+    description 'YouTube 영상 URL을 입력하여 AI 블로그 콘텐츠를 생성하는 사용자'
+  }
+
+  admin = actor 'Admin' {
+    description '사용량 모니터링, 사용자 관리를 수행하는 관리자'
+  }
+
+  // ─── Insight Engine System ───
+  insightEngine = system 'Insight Engine' {
+    description 'YouTube 영상을 분석하여 다양한 스타일의 한국어 블로그 포스트를 AI로 자동 생성하는 웹 애플리케이션'
+
+    // ── Frontend ──
+    frontend = webapp 'Frontend (SPA)' {
+      description 'Jinja2 템플릿 + Vanilla JS 모듈 + Tailwind CSS'
+      technology 'HTML/JS/CSS'
+
+      eventBus = module 'EventBus' {
+        description 'Pub/Sub 패턴 모듈 간 통신 (GENERATION_COMPLETE, STYLE_CHANGED, URL_ADDED, AUTH_STATE_CHANGED)'
+        technology 'static/js/core/EventBus.js'
+      }
+
+      urlManager = module 'UrlManager' {
+        description 'YouTube URL 입력, 삭제, 드래그 정렬'
+        technology 'static/js/modules/UrlManager.js'
+      }
+
+      providerManager = module 'ProviderManager' {
+        description 'AI 프로바이더/모델 선택 (#provider, #model)'
+        technology 'static/js/modules/ProviderManager.js'
+      }
+
+      styleManager = module 'StyleManager' {
+        description '8개 콘텐츠 스타일 카드 선택'
+        technology 'static/js/modules/StyleManager.js'
+      }
+
+      contentGenerator = module 'ContentGenerator' {
+        description '/generate API 호출, 재시도 로직 (지수 백오프)'
+        technology 'static/js/modules/ContentGenerator.js'
+      }
+
+      reportManager = module 'ReportManager' {
+        description '''
+          결과 카드 렌더링 + 필터/검색
+          - CardHtmlBuilder: 카드 HTML 구성
+          - CardEventHandler: 카드 이벤트 처리
+          - ReportFormatter: 마크다운→HTML 변환
+        '''
+        technology 'static/js/modules/report/'
+      }
+
+      authManager = module 'AuthManager' {
+        description '인증 상태 관리, 사이드바/헤더 UI, OAuth 로그인'
+        technology 'static/js/modules/AuthManager.js'
+      }
+
+      themeManager = module 'ThemeManager' {
+        description '3가지 테마 전환 (Dark/Light/Minimal)'
+        technology 'static/js/modules/ThemeManager.js'
+      }
+    }
+
+    // ── Backend (Flask) ──
+    backend = server 'Backend (Flask)' {
+      description 'Python Flask 웹 서버, app.py 엔트리포인트'
+      technology 'Flask / Python'
+
+      blogRoutes = route 'Blog Routes' {
+        description '/generate, /generate-batch, /regenerate, /api/mindmap'
+        technology 'routes/blog_routes.py'
+      }
+
+      authRoutes = route 'Auth Routes' {
+        description '인증, API 키, 사용량, 관리자 API'
+        technology 'routes/auth_routes.py'
+      }
+
+      aiService = service 'AI Service' {
+        description 'LiteLLM 래퍼, 다중 AI 프로바이더 통합, GLM 재시도/락, 스타일별 temperature 적용'
+        technology 'services/ai_service.py'
+      }
+
+      contentService = service 'Content Service' {
+        description '''
+          YouTube 자막 추출 (3단계 폴백):
+          1. youtube-transcript-api
+          2. watch 페이지 파싱
+          3. Supadata API (유료)
+          + 댓글 수집 (YouTube Data API)
+        '''
+        technology 'services/content_service.py'
+      }
+
+      supabaseService = service 'Supabase Service' {
+        description 'Supabase 인증, CRUD, 관리자 조회'
+        technology 'services/supabase_service.py'
+      }
+
+      usageService = service 'Usage Service' {
+        description '사용량 체크/차감 패키지 (require_usage 데코레이터)'
+        technology 'services/usage/'
+      }
+
+      promptSystem = service 'Prompt System v3.1' {
+        description '''
+          build_full_prompt(style_id, modifiers)
+          BASE_PROMPT + STYLE_PROMPT + MODIFIER + SELF_CHECK
+          8개 스타일 + 댓글 요약 전용 프롬프트
+        '''
+        technology 'prompts/'
+      }
+
+      config = service 'Config' {
+        description '토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens'
+        technology 'config.py'
+      }
+    }
+  }
+
+  // ─── External Systems ───
+  youtube = external 'YouTube' {
+    description 'YouTube 동영상 플랫폼 (자막, 댓글 데이터 소스)'
+
+    youtubeTranscript = provider 'youtube-transcript-api' {
+      #primary
+      description '자막 추출 1순위'
+    }
+
+    youtubeDataApi = provider 'YouTube Data API v3' {
+      #optional
+      description '댓글 수집 (YOUTUBE_API_KEY 필요)'
+    }
+  }
+
+  supadata = external 'Supadata API' {
+    #fallback
+    description '자막 추출 3순위 폴백 (유료, SUPADATA_API_KEY 필요)'
+  }
+
+  // ─── AI Providers ───
+  aiProviders = external 'AI Providers' {
+    description 'LiteLLM을 통해 통합 관리되는 다중 AI 프로바이더'
+
+    gemini = provider 'Google Gemini' {
+      #primary
+      description 'gemini-3-flash-preview (기본), gemini-2.5-flash-lite (reasoning_effort 미지원)'
+    }
+
+    deepseek = provider 'DeepSeek' {
+      description 'deepseek-chat, deepseek-reasoner'
+    }
+
+    zhipu = provider 'Zhipu AI (GLM)' {
+      description 'GLM-4.7, GLM-4.5-Air (글로벌 락, 3회 재시도, 15초 간격)'
+    }
+  }
+
+  litellm = external 'LiteLLM' {
+    description '다중 AI 프로바이더 통합 프록시 라이브러리'
+  }
+
+  // ─── Supabase ───
+  supabase = external 'Supabase' {
+    description '클라우드 백엔드 (인증 + 데이터베이스)'
+
+    supabaseAuth = provider 'Supabase Auth' {
+      description 'OAuth 로그인, 세션 관리'
+    }
+
+    supabaseDb = database 'Supabase PostgreSQL' {
+      description '''
+        ie_usage (일일 사용량)
+        ie_histories (분석 히스토리)
+        ie_api_keys (사용자별 API 키)
+        ie_custom_styles (커스텀 프롬프트)
+        ie_admins (관리자 목록)
+      '''
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // 관계 (Relationships)
+  // ═══════════════════════════════════════
+
+  // Actor → Frontend
+  user -> insightEngine.frontend 'YouTube URL 입력 및 결과 확인'
+  admin -> insightEngine.backend.authRoutes '관리자 API 호출'
+
+  // Frontend 내부 통신 (EventBus)
+  insightEngine.frontend.urlManager -> insightEngine.frontend.eventBus 'URL_ADDED 이벤트 발행'
+  insightEngine.frontend.styleManager -> insightEngine.frontend.eventBus 'STYLE_CHANGED 이벤트 발행'
+  insightEngine.frontend.contentGenerator -> insightEngine.frontend.eventBus 'GENERATION_COMPLETE 발행'
+  insightEngine.frontend.reportManager -> insightEngine.frontend.eventBus 'GENERATION_COMPLETE 구독'
+  insightEngine.frontend.authManager -> insightEngine.frontend.eventBus 'AUTH_STATE_CHANGED 발행'
+
+  // Frontend → Backend
+  insightEngine.frontend.contentGenerator -> insightEngine.backend.blogRoutes 'POST /generate, /generate-batch'
+  insightEngine.frontend.authManager -> insightEngine.backend.authRoutes '인증 API 호출'
+  insightEngine.frontend.authManager -> supabase.supabaseAuth 'OAuth 로그인'
+
+  // Backend 내부
+  insightEngine.backend.blogRoutes -> insightEngine.backend.contentService '자막/댓글 추출 요청'
+  insightEngine.backend.blogRoutes -> insightEngine.backend.aiService 'AI 콘텐츠 생성 요청'
+  insightEngine.backend.blogRoutes -> insightEngine.backend.promptSystem '프롬프트 빌드'
+  insightEngine.backend.blogRoutes -> insightEngine.backend.usageService '@require_usage 데코레이터'
+  insightEngine.backend.authRoutes -> insightEngine.backend.supabaseService 'Supabase CRUD'
+  insightEngine.backend.authRoutes -> insightEngine.backend.usageService '사용량 체크'
+  insightEngine.backend.aiService -> insightEngine.backend.config 'temperature, max_tokens 조회'
+  insightEngine.backend.promptSystem -> insightEngine.backend.config '스타일 메타데이터 참조'
+
+  // Backend → External
+  insightEngine.backend.contentService -> youtube.youtubeTranscript '자막 추출 (1순위)'
+  insightEngine.backend.contentService -> youtube.youtubeDataApi '댓글 수집'
+  insightEngine.backend.contentService -> supadata '자막 추출 (3순위 폴백)'
+  insightEngine.backend.aiService -> litellm 'AI 호출 통합 인터페이스'
+  insightEngine.backend.supabaseService -> supabase.supabaseDb '사용량/히스토리 CRUD'
+  insightEngine.backend.supabaseService -> supabase.supabaseAuth '토큰 검증'
+
+  // LiteLLM → AI Providers
+  litellm -> aiProviders.gemini 'gemini/* 모델 라우팅'
+  litellm -> aiProviders.deepseek 'deepseek/* 모델 라우팅'
+  litellm -> aiProviders.zhipu 'zhipuai/* 모델 라우팅'
+}

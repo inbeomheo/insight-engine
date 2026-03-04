@@ -6,7 +6,7 @@ import {
   FileText, Code, Brain, Download, Share2, Printer,
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, RefreshCw,
 } from 'lucide-react';
-import VideoChatPanel from '@/components/chat/VideoChatPanel';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,14 +35,26 @@ import GeoSection from './GeoSection';
 import FaqCtaSection from './FaqCtaSection';
 import FusionSections from './FusionSections';
 import ShortsClipList from './ShortsClipList';
-import AnalysisDashboard from './AnalysisDashboard';
 import WebSourcesSection from './WebSourcesSection';
 import InsertedLinksSection from './InsertedLinksSection';
 import EventTimeline from './EventTimeline';
-import TranscriptPanel from './TranscriptPanel';
-import ChapterTimeline from './ChapterTimeline';
-import PlatformRewriteModal from './PlatformRewriteModal';
 import QaGateBadge from './QaGateBadge';
+
+// Phase 2: 무거운 서브컴포넌트 dynamic import (조건부 렌더링)
+const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
+const PlatformRewriteModal = dynamic(() => import('./PlatformRewriteModal'), { ssr: false });
+const AnalysisDashboard = dynamic(() => import('./AnalysisDashboard'), { ssr: false });
+const TranscriptPanel = dynamic(() => import('./TranscriptPanel'), { ssr: false });
+const ChapterTimeline = dynamic(() => import('./ChapterTimeline'), { ssr: false });
+
+/** script 태그 및 이벤트 핸들러 속성 제거 */
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>/gi, '')
+    .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\s+on\w+\s*=\s*\S+/gi, '');
+}
 
 interface ResultCardProps {
   report: Report;
@@ -136,7 +148,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
 <style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#111827}
 h1,h2,h3{margin-top:1.5rem}a{color:#4F46E5}blockquote{border-left:3px solid #4F46E5;padding-left:1rem;color:#6B7280}
 table{border-collapse:collapse;width:100%}th,td{border:1px solid #E5E7EB;padding:8px;text-align:left}
-th{background:#F9FAFB}</style></head><body>${report.html || report.content}</body></html>`;
+th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -154,7 +166,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 <html><head><title>${report.title}</title>
 <style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;line-height:1.6;color:#111}
 @media print{body{margin:0}}</style></head>
-<body>${report.html || report.content}</body></html>`);
+<body>${sanitizeHtml(report.html || report.content)}</body></html>`);
     w.document.close();
     w.print();
   }
@@ -251,19 +263,24 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
     });
   }
 
-  // ReactMarkdown은 비싸므로 content가 바뀔 때만 재렌더
+  // html이 비어있고 content가 있으면 스트리밍 진행 중
+  const isStreaming = !report.html && report.content.length > 0;
+
+  // ReactMarkdown은 비싸므로 스트리밍 완료 후에만 렌더링
   const processedContent = useMemo(
-    () => injectTimestampLinks(report.content, report.url),
-    [report.content, report.url],
+    () => isStreaming ? report.content : injectTimestampLinks(report.content, report.url),
+    [isStreaming, report.content, report.url],
   );
 
   const markdownBody = useMemo(
-    () => (
+    () => isStreaming ? (
+      <div className="whitespace-pre-wrap">{processedContent}</div>
+    ) : (
       <ReactMarkdown remarkPlugins={remarkPlugins}>
         {processedContent}
       </ReactMarkdown>
     ),
-    [processedContent],
+    [isStreaming, processedContent],
   );
 
   // --- Compact 모드: 요약 카드 ---

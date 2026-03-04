@@ -1,8 +1,8 @@
 'use client';
 
 // I18nProvider — 전역 로케일 상태를 React Context로 관리
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { type Locale, getStoredLocale, storeLocale, translate } from './index';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { type Locale, getStoredLocale, storeLocale, translate, loadLocale } from './index';
 
 interface I18nContextValue {
   locale: Locale;
@@ -15,10 +15,16 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
 
-  const setLocale = useCallback((newLocale: Locale) => {
+  const setLocale = useCallback(async (newLocale: Locale) => {
+    await loadLocale(newLocale);
     setLocaleState(newLocale);
     storeLocale(newLocale);
   }, []);
+
+  // 초기 로케일이 ko가 아닌 경우 동적 로드
+  useEffect(() => {
+    if (locale !== 'ko') loadLocale(locale).then(() => setLocaleState(l => l));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) =>

@@ -1,0 +1,101 @@
+// Insight Engine - Specification
+// 요소 종류, 관계 종류, 태그, 색상 정의
+
+specification {
+
+  // 커스텀 색상
+  color flask #111111
+
+  element actor {
+    style {
+      shape person
+      color green
+    }
+  }
+
+  element system {
+    style {
+      shape rectangle
+      color indigo
+    }
+  }
+
+  element webapp {
+    style {
+      shape browser
+      color sky
+    }
+  }
+
+  element server {
+    style {
+      shape rectangle
+      color slate
+    }
+  }
+
+  element service {
+    style {
+      shape rectangle
+      color blue
+    }
+  }
+
+  element route {
+    style {
+      shape rectangle
+      color amber
+    }
+  }
+
+  element module {
+    style {
+      shape rectangle
+      color sky
+    }
+  }
+
+  element database {
+    style {
+      shape storage
+      color muted
+    }
+  }
+
+  element queue {
+    style {
+      shape queue
+      color amber
+    }
+  }
+
+  element external {
+    style {
+      shape rectangle
+      color red
+    }
+  }
+
+  element provider {
+    style {
+      shape rectangle
+      color secondary
+    }
+  }
+
+  // 관계 종류 (스타일은 직접 속성으로 지정)
+  relationship async {
+    line dashed
+    color amber
+  }
+
+  relationship sync {
+    line solid
+  }
+
+  // 태그
+  tag primary
+  tag fallback
+  tag optional
+  tag concurrent
+}

@@ -11,19 +11,16 @@ import { formatTime } from '@/lib/helpers';
 
 interface GenerateState {
   isLoading: boolean;
-  streamingReportId: string | null;
-  streamContent: string;
   error: string | null;
 }
 
 export function useGenerate() {
   const [state, setState] = useState<GenerateState>({
     isLoading: false,
-    streamingReportId: null,
-    streamContent: '',
     error: null,
   });
   const abortRef = useRef<AbortController | null>(null);
+  const rafRef = useRef(false);
   const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore();
   const { addReport, updateReport } = useResultStore();
 
@@ -34,7 +31,7 @@ export function useGenerate() {
         return;
       }
 
-      setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
+      setState({ isLoading: true, error: null });
 
       const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode, detail_level: detailLevel };
 
@@ -46,7 +43,6 @@ export function useGenerate() {
             id: tempId, url, title: '생성 중...', content: '', html: '', style: selectedStyle,
           });
           addReport(tempReport);
-          setState((s) => ({ ...s, streamingReportId: tempId }));
 
           let content = '';
           const controller = new AbortController();
@@ -63,9 +59,17 @@ export function useGenerate() {
                 });
               } else if (event.type === 'token') {
                 content += event.data || '';
-                setState((s) => ({ ...s, streamContent: content }));
-                updateReport(tempId, { content });
+                // rAF throttle: 프레임당 1회만 store 업데이트 (메인 스레드 블로킹 방지)
+                if (!rafRef.current) {
+                  rafRef.current = true;
+                  requestAnimationFrame(() => {
+                    updateReport(tempId, { content });
+                    rafRef.current = false;
+                  });
+                }
               } else if (event.type === 'done') {
+                // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
+                rafRef.current = false;
                 updateReport(tempId, {
                   content,
                   html: event.data || '',
@@ -78,8 +82,9 @@ export function useGenerate() {
                   faq_schema: event.faq_schema,
                   cta: event.cta,
                 });
-                setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+                setState({ isLoading: false, error: null });
               } else if (event.type === 'error') {
+                rafRef.current = false;
                 setState((s) => ({ ...s, isLoading: false, error: event.error || '생성 실패' }));
               }
             },
@@ -90,7 +95,7 @@ export function useGenerate() {
           const res = await generate(req);
           const report = responseToReport(res, url, selectedStyle);
           addReport(report);
-          setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+          setState({ isLoading: false, error: null });
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
@@ -114,7 +119,7 @@ export function useGenerate() {
         return true;
       }
 
-      setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
+      setState({ isLoading: true, error: null });
 
       try {
         const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers);
@@ -139,7 +144,7 @@ export function useGenerate() {
           return false;
         }
 
-        setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        setState({ isLoading: false, error: null });
         return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '배치 생성 실패';
@@ -161,7 +166,7 @@ export function useGenerate() {
         return false;
       }
 
-      setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
+      setState({ isLoading: true, error: null });
 
       try {
         const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers);
@@ -173,7 +178,7 @@ export function useGenerate() {
           source_videos: res.source_videos,
         });
         addReport(report);
-        setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        setState({ isLoading: false, error: null });
         return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '합쳐서 생성 실패';
@@ -195,7 +200,7 @@ export function useGenerate() {
         return false;
       }
 
-      setState({ isLoading: true, streamingReportId: null, streamContent: '', error: null });
+      setState({ isLoading: true, error: null });
 
       try {
         const { enableWebResearch, enableDeepComments } = useSettingsStore.getState();
@@ -221,7 +226,7 @@ export function useGenerate() {
           sections: result.sections,
         });
         addReport(report);
-        setState({ isLoading: false, streamingReportId: null, streamContent: '', error: null });
+        setState({ isLoading: false, error: null });
         return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '퓨전 분석 실패';

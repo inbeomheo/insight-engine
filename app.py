@@ -137,4 +137,4 @@ app = create_app()
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() in ('true', '1', 'yes')
     port = int(os.getenv('PORT', 5001))
-    app.run(debug=debug_mode, port=port)
+    app.run(debug=debug_mode, port=port, threaded=True)

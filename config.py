@@ -179,6 +179,12 @@ CAMPAIGN_PACKS: Dict[str, Dict[str, Any]] = {
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
+    'gemini': {
+        'name': 'Google Gemini',
+        'models': [
+            {'id': 'gemini/gemini-3.1-flash-lite-preview', 'name': 'Gemini 3.1 Flash Lite (최신)', 'max_input_tokens': 1048576, 'price_input': 0.075, 'price_output': 0.30},
+        ]
+    },
     'zhipuai': {
         'name': 'Zhipu AI (GLM)',
         'api_base': 'https://open.bigmodel.cn/api/paas/v4/',

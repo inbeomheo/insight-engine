@@ -5,6 +5,15 @@ import { exportDocx } from '@/lib/api';
 import { toast } from 'sonner';
 import type { Report } from '@/lib/types';
 
+/** script 태그 및 이벤트 핸들러 속성 제거 */
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[^>]*>/gi, '')
+    .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\s+on\w+\s*=\s*\S+/gi, '');
+}
+
 export function useExport() {
   const downloadDocx = useCallback(async (report: Report) => {
     try {
@@ -28,7 +37,7 @@ export function useExport() {
 <style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#111827}
 h1,h2,h3{margin-top:1.5rem}a{color:#4F46E5}blockquote{border-left:3px solid #4F46E5;padding-left:1rem;color:#6B7280}
 table{border-collapse:collapse;width:100%}th,td{border:1px solid #E5E7EB;padding:8px;text-align:left}
-th{background:#F9FAFB}</style></head><body>${report.html || report.content}</body></html>`;
+th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -67,7 +76,7 @@ th{background:#F9FAFB}</style></head><body>${report.html || report.content}</bod
 <html><head><title>${report.title}</title>
 <style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;line-height:1.6;color:#111}
 @media print{body{margin:0}}</style></head>
-<body>${report.html || report.content}</body></html>`);
+<body>${sanitizeHtml(report.html || report.content)}</body></html>`);
     w.document.close();
     w.print();
   }, []);

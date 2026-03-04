@@ -318,12 +318,11 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
                                                      detail_level=detail_level)
         is_glm = model.startswith("zhipuai/")
 
-        # GLM 모델은 동시성 제한으로 순차 처리 (락 + 재시도)
+        # GLM 모델은 동시성 제한으로 순차 처리 (락은 호출 시만, sleep은 밖에서)
         if is_glm:
-            with _glm_lock:
-                current_app.logger.info(f"GLM 락 획득: {model}")
-                last_error = None
-                for attempt in range(GLM_RETRY_COUNT):
+            last_error = None
+            for attempt in range(GLM_RETRY_COUNT):
+                with _glm_lock:
                     try:
                         response = completion(**completion_kwargs)
                         current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
@@ -331,19 +330,16 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
                     except Exception as e:
                         last_error = e
                         error_str = str(e)
-                        # 1302 동시성 에러만 재시도
-                        if '1302' in error_str and attempt < GLM_RETRY_COUNT - 1:
-                            current_app.logger.warning(
-                                f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
-                                f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
-                            )
-                            time.sleep(GLM_RETRY_DELAY)
-                        else:
+                        if '1302' not in error_str or attempt >= GLM_RETRY_COUNT - 1:
                             raise
-                else:
-                    # 모든 재시도 실패
-                    raise last_error
-                current_app.logger.info(f"GLM 락 해제: {model}")
+                        current_app.logger.warning(
+                            f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
+                            f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
+                        )
+                # sleep은 락 밖에서 (다른 요청 블로킹 방지)
+                time.sleep(GLM_RETRY_DELAY)
+            else:
+                raise last_error
         else:
             response = completion(**completion_kwargs)
 
