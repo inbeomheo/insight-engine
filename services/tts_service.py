@@ -188,6 +188,57 @@ def _synthesize_edge(text: str, voice: str, speed: float) -> bytes:
     return audio_bytes
 
 
+def _split_text(text: str, max_chars: int) -> list[str]:
+    """텍스트를 문장 경계에서 분할합니다.
+
+    마침표/물음표/느낌표 뒤 공백을 기준으로 분할하여
+    문장이 중간에 잘리지 않도록 합니다.
+    """
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks = []
+    remaining = text
+
+    while remaining:
+        if len(remaining) <= max_chars:
+            chunks.append(remaining)
+            break
+
+        # max_chars 이내에서 마지막 문장 경계 찾기
+        split_pos = -1
+        for sep in ['. ', '? ', '! ', '。', '\n\n', '\n']:
+            pos = remaining.rfind(sep, 0, max_chars)
+            if pos > split_pos:
+                split_pos = pos + len(sep)
+
+        # 문장 경계를 못 찾으면 공백에서 분할
+        if split_pos <= 0:
+            split_pos = remaining.rfind(' ', 0, max_chars)
+        # 공백도 없으면 강제 분할
+        if split_pos <= 0:
+            split_pos = max_chars
+
+        chunks.append(remaining[:split_pos].rstrip())
+        remaining = remaining[split_pos:].lstrip()
+
+    return [c for c in chunks if c.strip()]
+
+
+def _synthesize_with_fallback(backend: str, text: str, voice: str, speed: float) -> bytes:
+    """TTS 합성을 시도하고 OpenAI 실패 시 Edge로 폴백합니다."""
+    try:
+        if backend == 'openai':
+            return _synthesize_openai(text, voice, speed)
+        return _synthesize_edge(text, voice, speed)
+    except Exception as exc:
+        logger.error('TTS 합성 실패 (backend=%s): %s', backend, exc)
+        if backend == 'openai':
+            logger.info('OpenAI TTS 실패 → Edge TTS로 폴백')
+            return _synthesize_edge(text, EDGE_VOICE_KO, speed)
+        raise
+
+
 class TTSService:
     """TTS 합성 서비스.
 
@@ -225,23 +276,18 @@ class TTSService:
         if not text.strip():
             raise ValueError('전처리 후 텍스트가 비어 있습니다.')
 
-        if len(text) > TTS_MAX_CHARS:
-            raise ValueError(
-                f'텍스트가 너무 깁니다. 최대 {TTS_MAX_CHARS}자까지 지원합니다. '
-                f'(현재 {len(text)}자)'
-            )
-
         backend = _select_backend()
-        logger.info('TTS 합성 시작: backend=%s, chars=%d, voice=%s', backend, len(text), voice)
 
-        try:
-            if backend == 'openai':
-                return _synthesize_openai(text, voice, speed)
-            return _synthesize_edge(text, voice, speed)
-        except Exception as exc:
-            logger.error('TTS 합성 실패 (backend=%s): %s', backend, exc)
-            # OpenAI가 실패하면 Edge로 폴백
-            if backend == 'openai':
-                logger.info('OpenAI TTS 실패 → Edge TTS로 폴백')
-                return _synthesize_edge(text, EDGE_VOICE_KO, speed)
-            raise
+        # 장문 분할 처리: TTS_MAX_CHARS 초과 시 청크로 나눠 합성 후 합치기
+        if len(text) > TTS_MAX_CHARS:
+            logger.info('TTS 장문 분할: %d자 → %d자 단위 청크', len(text), TTS_MAX_CHARS)
+            chunks = _split_text(text, TTS_MAX_CHARS)
+            audio_parts = []
+            for idx, chunk in enumerate(chunks):
+                logger.info('TTS 청크 %d/%d 합성 중 (%d자)', idx + 1, len(chunks), len(chunk))
+                part = _synthesize_with_fallback(backend, chunk, voice, speed)
+                audio_parts.append(part)
+            return b''.join(audio_parts)
+
+        logger.info('TTS 합성 시작: backend=%s, chars=%d, voice=%s', backend, len(text), voice)
+        return _synthesize_with_fallback(backend, text, voice, speed)

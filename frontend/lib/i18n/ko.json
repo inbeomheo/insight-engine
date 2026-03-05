@@ -12,7 +12,15 @@
     "search": "검색",
     "noResults": "검색 결과가 없습니다",
     "select": "선택",
-    "start": "시작하기"
+    "start": "시작하기",
+    "retry": "다시 시도",
+    "undo": "되돌리기",
+    "view": "보기",
+    "back": "뒤로",
+    "next": "다음",
+    "previous": "이전",
+    "skip": "건너뛰기",
+    "done": "완료"
   },
   "sidebar": {
     "newAnalysis": "새 분석",
@@ -20,7 +28,8 @@
     "noHistory": "분석 히스토리가 없습니다",
     "noSearchResults": "검색 결과가 없습니다",
     "calendar": "예약 캘린더",
-    "poweredBy": "Powered by AI"
+    "poweredBy": "Powered by AI",
+    "help": "도움말"
   },
   "urlInput": {
     "placeholder": "YouTube URL을 입력하거나 붙여넣으세요",
@@ -55,7 +64,8 @@
     "show_notes": "쇼노트",
     "shorts_script": "Shorts 스크립트",
     "geo_seo": "GEO+SEO",
-    "comment_summary": "댓글 요약"
+    "comment_summary": "댓글 요약",
+    "course": "강의 노트"
   },
   "result": {
     "copyTitle": "제목 복사",
@@ -66,6 +76,8 @@
     "regenerate": "다시 생성",
     "exportHtml": "HTML 내보내기",
     "exportDocx": "DOCX 내보내기",
+    "exportMarkdown": "Markdown 내보내기",
+    "exportEpub": "EPUB 내보내기",
     "printPdf": "PDF 인쇄",
     "share": "공유",
     "promptView": "프롬프트 보기",
@@ -86,7 +98,13 @@
     "docxSuccess": "DOCX 다운로드 완료",
     "docxError": "DOCX 내보내기 실패",
     "htmlSuccess": "HTML 다운로드 완료",
-    "publishError": "발행 중 오류가 발생했습니다."
+    "publishError": "발행 중 오류가 발생했습니다.",
+    "rewrite": "플랫폼 리라이트",
+    "tts": "음성 변환",
+    "factCheck": "팩트체크",
+    "qaCheck": "품질 검사",
+    "chapters": "챕터",
+    "transcript": "자막"
   },
   "settings": {
     "title": "설정",
@@ -101,7 +119,10 @@
     "cacheDescription": "저장된 자막/댓글 캐시를 삭제합니다.",
     "clearCache": "전체 캐시 삭제",
     "cacheCleared": "캐시가 삭제되었습니다.",
-    "cacheClearFailed": "캐시 삭제에 실패했습니다."
+    "cacheClearFailed": "캐시 삭제에 실패했습니다.",
+    "language": "언어 설정",
+    "theme": "테마",
+    "notifications": "알림 설정"
   },
   "onboarding": {
     "title": "환영합니다!",
@@ -109,6 +130,56 @@
     "noServer": "Flask 서버가 실행 중인지 확인하세요.",
     "modelCount": "{count}개 모델",
     "start": "시작하기"
+  },
+  "tour": {
+    "step1Title": "URL 입력",
+    "step1Desc": "분석할 YouTube URL이나 웹페이지 주소를 입력하세요.",
+    "step2Title": "스타일 선택",
+    "step2Desc": "블로그, 요약, 튜토리얼 등 원하는 콘텐츠 스타일을 선택하세요.",
+    "step3Title": "생성 시작",
+    "step3Desc": "생성 버튼을 클릭하면 AI가 콘텐츠를 자동 생성합니다.",
+    "step4Title": "결과 활용",
+    "step4Desc": "생성된 콘텐츠를 복사, 내보내기, 발행할 수 있습니다."
+  },
+  "help": {
+    "title": "도움말",
+    "gettingStarted": "시작하기",
+    "gettingStartedDesc": "URL을 입력하고 스타일을 선택한 후 생성 버튼을 클릭하세요.",
+    "supportedSources": "지원 소스",
+    "supportedSourcesDesc": "YouTube, 웹페이지, RSS, arXiv, Podcast를 지원합니다.",
+    "shortcuts": "키보드 단축키",
+    "shortcutsDesc": "Enter키로 URL 추가 및 생성을 시작할 수 있습니다.",
+    "faq": "자주 묻는 질문",
+    "faqApiKey": "API 키는 어디서 설정하나요?",
+    "faqApiKeyAnswer": "설정 > AI 서비스에서 프로바이더와 모델을 선택할 수 있습니다.",
+    "faqOffline": "오프라인에서도 사용할 수 있나요?",
+    "faqOfflineAnswer": "이전에 생성한 콘텐츠는 오프라인에서도 볼 수 있지만, 새 콘텐츠 생성에는 인터넷 연결이 필요합니다."
+  },
+  "profile": {
+    "title": "프로필",
+    "avatar": "프로필 이미지",
+    "displayName": "표시 이름",
+    "email": "이메일",
+    "plan": "구독 플랜",
+    "usage": "이번 달 사용량",
+    "usageOf": "{used} / {total}회",
+    "memberSince": "가입일",
+    "editProfile": "프로필 수정"
+  },
+  "activity": {
+    "title": "팀 활동",
+    "generated": "콘텐츠를 생성했습니다",
+    "published": "콘텐츠를 발행했습니다",
+    "commented": "댓글을 남겼습니다",
+    "approved": "콘텐츠를 승인했습니다",
+    "noActivity": "아직 활동이 없습니다"
+  },
+  "contextMenu": {
+    "copyText": "텍스트 복사",
+    "copyHtml": "HTML 복사",
+    "rewriteSelection": "선택 영역 리라이트",
+    "translateSelection": "선택 영역 번역",
+    "summarizeSelection": "선택 영역 요약"
   },
   "language": {
     "label": "언어",
@@ -119,6 +190,17 @@
   "errors": {
     "noUrl": "URL을 입력하세요",
     "invalidUrl": "유효하지 않은 URL입니다",
-    "generationFailed": "생성에 실패했습니다"
+    "generationFailed": "생성에 실패했습니다",
+    "networkError": "네트워크 연결을 확인하세요",
+    "serverError": "서버 오류가 발생했습니다",
+    "componentError": "이 영역에서 문제가 발생했습니다",
+    "componentErrorDesc": "오류 정보가 개발팀에 전달되었습니다.",
+    "tryAgain": "다시 시도"
+  },
+  "errorBoundary": {
+    "title": "문제가 발생했습니다",
+    "description": "이 영역을 표시하는 중 오류가 발생했습니다.",
+    "reset": "복구하기",
+    "reload": "페이지 새로고침"
   }
 }

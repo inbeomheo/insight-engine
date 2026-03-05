@@ -49,7 +49,7 @@ class TestDetectSourceType(unittest.TestCase):
         self.assertEqual(self._detect('https://example.com/blog/post'), 'webpage')
 
     def test_webpage_news(self):
-        self.assertEqual(self._detect('https://news.ycombinator.com/item?id=12345'), 'webpage')
+        self.assertEqual(self._detect('https://news.ycombinator.com/item?id=12345'), 'hackernews')
 
 
 # ──────────────────────────────────────────────────────────────

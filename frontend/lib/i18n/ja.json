@@ -12,7 +12,15 @@
     "search": "検索",
     "noResults": "結果が見つかりません",
     "select": "選択",
-    "start": "始める"
+    "start": "始める",
+    "retry": "再試行",
+    "undo": "元に戻す",
+    "view": "表示",
+    "back": "戻る",
+    "next": "次へ",
+    "previous": "前へ",
+    "skip": "スキップ",
+    "done": "完了"
   },
   "sidebar": {
     "newAnalysis": "新しい分析",
@@ -20,7 +28,8 @@
     "noHistory": "分析履歴がありません",
     "noSearchResults": "検索結果がありません",
     "calendar": "予約カレンダー",
-    "poweredBy": "Powered by AI"
+    "poweredBy": "Powered by AI",
+    "help": "ヘルプ"
   },
   "urlInput": {
     "placeholder": "YouTube URLを入力または貼り付けてください",
@@ -55,7 +64,8 @@
     "show_notes": "ショーノート",
     "shorts_script": "ショートスクリプト",
     "geo_seo": "GEO+SEO",
-    "comment_summary": "コメント要約"
+    "comment_summary": "コメント要約",
+    "course": "講義ノート"
   },
   "result": {
     "copyTitle": "タイトルをコピー",
@@ -66,6 +76,8 @@
     "regenerate": "再生成",
     "exportHtml": "HTMLエクスポート",
     "exportDocx": "DOCXエクスポート",
+    "exportMarkdown": "Markdownエクスポート",
+    "exportEpub": "EPUBエクスポート",
     "printPdf": "PDF印刷",
     "share": "共有",
     "promptView": "プロンプトを見る",
@@ -86,7 +98,13 @@
     "docxSuccess": "DOCXをダウンロードしました",
     "docxError": "DOCXのエクスポートに失敗しました",
     "htmlSuccess": "HTMLをダウンロードしました",
-    "publishError": "投稿中にエラーが発生しました。"
+    "publishError": "投稿中にエラーが発生しました。",
+    "rewrite": "プラットフォームリライト",
+    "tts": "テキスト読み上げ",
+    "factCheck": "ファクトチェック",
+    "qaCheck": "品質チェック",
+    "chapters": "チャプター",
+    "transcript": "字幕"
   },
   "settings": {
     "title": "設定",
@@ -101,7 +119,10 @@
     "cacheDescription": "保存された字幕/コメントキャッシュを削除します。",
     "clearCache": "全キャッシュを削除",
     "cacheCleared": "キャッシュを削除しました。",
-    "cacheClearFailed": "キャッシュの削除に失敗しました。"
+    "cacheClearFailed": "キャッシュの削除に失敗しました。",
+    "language": "言語設定",
+    "theme": "テーマ",
+    "notifications": "通知設定"
   },
   "onboarding": {
     "title": "ようこそ！",
@@ -109,6 +130,56 @@
     "noServer": "Flaskサーバーが実行中か確認してください。",
     "modelCount": "{count}モデル",
     "start": "始める"
+  },
+  "tour": {
+    "step1Title": "URL入力",
+    "step1Desc": "分析したいYouTube URLやWebページのアドレスを入力してください。",
+    "step2Title": "スタイル選択",
+    "step2Desc": "ブログ、要約、チュートリアルなど、お好みのスタイルを選択してください。",
+    "step3Title": "生成開始",
+    "step3Desc": "生成ボタンをクリックすると、AIがコンテンツを自動生成します。",
+    "step4Title": "結果の活用",
+    "step4Desc": "生成されたコンテンツをコピー、エクスポート、投稿できます。"
+  },
+  "help": {
+    "title": "ヘルプ",
+    "gettingStarted": "始め方",
+    "gettingStartedDesc": "URLを入力し、スタイルを選択して生成ボタンをクリックしてください。",
+    "supportedSources": "対応ソース",
+    "supportedSourcesDesc": "YouTube、Webページ、RSS、arXiv、ポッドキャストに対応しています。",
+    "shortcuts": "キーボードショートカット",
+    "shortcutsDesc": "Enterキーを押してURLを追加または生成を開始できます。",
+    "faq": "よくある質問",
+    "faqApiKey": "APIキーはどこで設定しますか？",
+    "faqApiKeyAnswer": "設定 > AIサービスからプロバイダーとモデルを選択できます。",
+    "faqOffline": "オフラインでも使えますか？",
+    "faqOfflineAnswer": "以前に生成したコンテンツはオフラインでも閲覧できますが、新しいコンテンツの生成にはインターネット接続が必要です。"
+  },
+  "profile": {
+    "title": "プロフィール",
+    "avatar": "プロフィール画像",
+    "displayName": "表示名",
+    "email": "メールアドレス",
+    "plan": "サブスクリプション",
+    "usage": "今月の使用量",
+    "usageOf": "{used} / {total}回",
+    "memberSince": "登録日",
+    "editProfile": "プロフィール編集"
+  },
+  "activity": {
+    "title": "チーム活動",
+    "generated": "コンテンツを生成しました",
+    "published": "コンテンツを投稿しました",
+    "commented": "コメントを残しました",
+    "approved": "コンテンツを承認しました",
+    "noActivity": "まだ活動がありません"
+  },
+  "contextMenu": {
+    "copyText": "テキストをコピー",
+    "copyHtml": "HTMLをコピー",
+    "rewriteSelection": "選択範囲をリライト",
+    "translateSelection": "選択範囲を翻訳",
+    "summarizeSelection": "選択範囲を要約"
   },
   "language": {
     "label": "言語",
@@ -119,6 +190,17 @@
   "errors": {
     "noUrl": "URLを入力してください",
     "invalidUrl": "無効なURLです",
-    "generationFailed": "生成に失敗しました"
+    "generationFailed": "生成に失敗しました",
+    "networkError": "ネットワーク接続を確認してください",
+    "serverError": "サーバーエラーが発生しました",
+    "componentError": "この領域で問題が発生しました",
+    "componentErrorDesc": "エラー情報が開発チームに送信されました。",
+    "tryAgain": "再試行"
+  },
+  "errorBoundary": {
+    "title": "問題が発生しました",
+    "description": "この領域の表示中にエラーが発生しました。",
+    "reset": "復旧する",
+    "reload": "ページを再読み込み"
   }
 }

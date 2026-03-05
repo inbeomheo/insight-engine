@@ -83,6 +83,21 @@ def _process_publish_queue():
         logger.error(f"발행 큐 처리 실패: {e}")
 
 
+def _check_rss_subscriptions():
+    """30분 간격: RSS 구독 피드 새 글 감지"""
+    from services.rss_subscription_service import check_all_subscriptions
+
+    try:
+        results = check_all_subscriptions()
+        if results:
+            for r in results:
+                feed_title = r['subscription'].get('title', '알 수 없음')
+                count = len(r['new_entries'])
+                logger.info(f"RSS 새 글 감지: {feed_title} — {count}건 (user={r['user_id']})")
+    except Exception as e:
+        logger.error(f"RSS 구독 확인 실패: {e}")
+
+
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     if scheduler.running:
@@ -109,8 +124,15 @@ def start_scheduler(app):
         id='publish_queue_processor',
         replace_existing=True,
     )
+    scheduler.add_job(
+        _check_rss_subscriptions,
+        'interval',
+        minutes=30,
+        id='rss_subscription_checker',
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분)")
+    logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)")
 
 
 def stop_scheduler():

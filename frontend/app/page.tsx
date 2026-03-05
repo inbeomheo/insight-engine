@@ -27,6 +27,8 @@ const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/Workspa
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
 const ScheduleModal = dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false });
 const ContentCalendar = dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false });
+const GuidedTour = dynamic(() => import('@/components/onboarding/GuidedTour'), { ssr: false });
+const HelpPanel = dynamic(() => import('@/components/help/HelpPanel'), { ssr: false });
 
 
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -91,6 +93,10 @@ export default function Home() {
       return matchStyle && matchSearch;
     });
   }, [reports, searchQuery, styleFilter]);
+
+  // 도움말 패널 + 가이드 투어
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourActive, setTourActive] = useState(false);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -179,6 +185,13 @@ export default function Home() {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
+      {/* 스킵 내비게이션 (접근성) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm"
+      >
+        본문으로 건너뛰기
+      </a>
       {/* 드래그 오버레이 */}
       {isDragOver && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/40 rounded-lg pointer-events-none animate-fade-in">
@@ -197,9 +210,9 @@ export default function Home() {
         <Header />
 
         {/* 콘텐츠 */}
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden" id="main-content" role="main">
           <ScrollArea className="h-full">
-            <div className="px-8 lg:px-12 py-6">
+            <div className="px-4 sm:px-8 lg:px-12 py-4 sm:py-6">
 
               {/* 캘린더 뷰 */}
               {activeView === 'calendar' && (
@@ -235,7 +248,7 @@ export default function Home() {
 
               {/* 생성 버튼 (URL이 있을 때) */}
               {urls.length > 0 && (
-                <div className="flex justify-center gap-3 mb-6 animate-fade-in">
+                <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in">
                   {generationMode === 'individual' && (
                     <Button
                       onClick={handleGenerate}
@@ -353,7 +366,7 @@ export default function Home() {
 
                 {/* 빈 상태 */}
                 {!isLoading && reports.length === 0 && (
-                  <div className="text-center py-24">
+                  <div className="text-center py-12 sm:py-24">
                     <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center rounded-3xl border border-indigo-100/50">
                       <Youtube className="h-9 w-9 text-indigo-300" />
                     </div>
@@ -380,6 +393,12 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
+
+      {/* 도움말 패널 */}
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* 가이드 투어 */}
+      <GuidedTour forceStart={tourActive} onClose={() => setTourActive(false)} />
 
       {/* 예약 발행 모달 — 페이지 레벨 1개 */}
       <ScheduleModal

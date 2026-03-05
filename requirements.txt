@@ -20,3 +20,4 @@ edge-tts>=6.1.0
 feedparser>=6.0.0
 trafilatura>=2.0.0
 scrapling
+python-pptx>=1.0.0

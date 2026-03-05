@@ -5,6 +5,7 @@
 2차: Scrapling Fetcher (JS 렌더링 필요 시 폴백)
 """
 import logging
+import re
 from typing import Dict
 
 import trafilatura
@@ -12,6 +13,19 @@ import trafilatura
 logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT = 15  # 초
+
+# Wikipedia URL 패턴
+_WIKIPEDIA_RE = re.compile(r"wikipedia\.org", re.IGNORECASE)
+# Wikipedia 제목 접미사 정리 패턴
+_WIKI_TITLE_SUFFIX_RE = re.compile(
+    r"\s*[-–—]\s*(위키백과|Wikipedia|ウィキペディア|维基百科).*$",
+    re.IGNORECASE,
+)
+
+
+def _clean_wikipedia_title(title: str) -> str:
+    """Wikipedia 제목에서 불필요한 접미사를 제거합니다."""
+    return _WIKI_TITLE_SUFFIX_RE.sub("", title).strip()
 
 
 def scrape_webpage(url: str) -> Dict:
@@ -26,15 +40,21 @@ def scrape_webpage(url: str) -> Dict:
     Raises:
         ValueError: 본문을 추출할 수 없는 경우
     """
+    is_wikipedia = bool(_WIKIPEDIA_RE.search(url))
+
     # 1차: trafilatura
     title, content = _extract_with_trafilatura(url)
     if content and len(content.strip()) > 50:
+        if is_wikipedia and title:
+            title = _clean_wikipedia_title(title)
         return {"title": title or url, "content": content, "url": url, "source_type": "webpage"}
 
     # 2차: Scrapling (JS 렌더링 폴백)
     logger.info("trafilatura 추출 실패, Scrapling 폴백: %s", url)
     title, content = _extract_with_scrapling(url)
     if content and len(content.strip()) > 50:
+        if is_wikipedia and title:
+            title = _clean_wikipedia_title(title)
         return {"title": title or url, "content": content, "url": url, "source_type": "webpage"}
 
     raise ValueError(f"웹페이지에서 본문을 추출할 수 없습니다: {url}")

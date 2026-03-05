@@ -264,3 +264,148 @@ def analyze_content(content: str, model: str = None) -> dict:
     except Exception as e:
         logger.warning(f"NLP 분석 실패 (무시): {e}")
         return dict(_EMPTY_ANALYSIS)
+
+
+# ─── 문단별 감정 흐름 분석 (F3-11) ──────────────────────────────────────────
+
+_SENTIMENT_FLOW_PROMPT = """다음 텍스트를 문단별로 감정 흐름을 분석하세요.
+각 문단의 감정 극성과 강도를 측정합니다.
+
+[텍스트]
+{content}
+
+JSON만 반환하세요 (설명 없이):
+{{
+  "flow": [
+    {{"paragraph_index": 0, "text_preview": "첫 20자...", "sentiment": "positive", "score": 0.7, "emotion": "기대"}},
+    {{"paragraph_index": 1, "text_preview": "첫 20자...", "sentiment": "neutral", "score": 0.1, "emotion": "설명"}}
+  ],
+  "overall_arc": "ascending" | "descending" | "stable" | "fluctuating",
+  "dominant_emotion": "기대" | "신뢰" | "분노" | "슬픔" | "놀람" | "공포" | "기쁨" | "설명"
+}}
+
+규칙:
+- 각 문단(빈 줄로 구분)마다 하나의 항목
+- sentiment: "positive" | "neutral" | "negative"
+- score: -1.0(매우 부정) ~ 1.0(매우 긍정)
+- emotion: 해당 문단의 주된 감정 (한국어)
+- overall_arc: 전체 감정 흐름 방향"""
+
+
+def analyze_sentiment_flow(content: str, model: str = None) -> dict:
+    """문단별 감정 흐름을 분석합니다.
+
+    Args:
+        content: 분석할 텍스트
+        model: 사용할 모델 ID (None이면 자동 선택)
+
+    Returns:
+        {
+            "flow": [{"paragraph_index": int, "text_preview": str, "sentiment": str, "score": float, "emotion": str}],
+            "overall_arc": str,
+            "dominant_emotion": str,
+        }
+    """
+    empty_flow = {'flow': [], 'overall_arc': 'stable', 'dominant_emotion': '설명'}
+
+    if not content or not content.strip():
+        return empty_flow
+
+    if model is None:
+        model = _get_analysis_model()
+
+    # 최대 3000자
+    truncated = content[:3000]
+    prompt = _SENTIMENT_FLOW_PROMPT.format(content=truncated)
+
+    try:
+        from litellm import completion
+
+        kwargs = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 1500,
+            "temperature": 0.3,
+        }
+
+        if model.startswith('zhipuai/'):
+            from services.ai_service import ZHIPUAI_API_BASE
+            kwargs["api_base"] = ZHIPUAI_API_BASE
+            api_key = os.getenv('ZHIPUAI_API_KEY', '')
+            if api_key:
+                kwargs["api_key"] = api_key
+
+        if model.startswith('ollama_chat/') or model.startswith('ollama/'):
+            kwargs["api_base"] = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+
+        response = completion(**kwargs)
+        raw = response.choices[0].message.content or ''
+        return _parse_sentiment_flow(raw)
+    except Exception as e:
+        logger.warning(f"감정 흐름 분석 실패 (무시): {e}")
+        return empty_flow
+
+
+def _parse_sentiment_flow(raw: str) -> dict:
+    """감정 흐름 JSON을 파싱합니다."""
+    empty = {'flow': [], 'overall_arc': 'stable', 'dominant_emotion': '설명'}
+
+    if not raw:
+        return empty
+
+    import json as json_mod
+    import re
+
+    text = raw.strip()
+    if text.startswith('```'):
+        lines = text.split('\n')
+        text = '\n'.join(lines[1:-1]) if len(lines) > 2 else ''
+        text = text.strip()
+
+    try:
+        parsed = json_mod.loads(text)
+    except json_mod.JSONDecodeError:
+        start = text.find('{')
+        end = text.rfind('}')
+        if start != -1 and end != -1:
+            try:
+                parsed = json_mod.loads(text[start:end + 1])
+            except json_mod.JSONDecodeError:
+                return empty
+        else:
+            return empty
+
+    # 검증
+    flow = parsed.get('flow', [])
+    if not isinstance(flow, list):
+        flow = []
+
+    validated_flow = []
+    for item in flow[:30]:  # 최대 30 문단
+        if not isinstance(item, dict):
+            continue
+        sentiment = item.get('sentiment', 'neutral')
+        if sentiment not in ('positive', 'neutral', 'negative'):
+            sentiment = 'neutral'
+        try:
+            score = max(-1.0, min(1.0, float(item.get('score', 0.0))))
+        except (TypeError, ValueError):
+            score = 0.0
+
+        validated_flow.append({
+            'paragraph_index': int(item.get('paragraph_index', len(validated_flow))),
+            'text_preview': str(item.get('text_preview', ''))[:50],
+            'sentiment': sentiment,
+            'score': score,
+            'emotion': str(item.get('emotion', ''))[:20],
+        })
+
+    arc = parsed.get('overall_arc', 'stable')
+    if arc not in ('ascending', 'descending', 'stable', 'fluctuating'):
+        arc = 'stable'
+
+    return {
+        'flow': validated_flow,
+        'overall_arc': arc,
+        'dominant_emotion': str(parsed.get('dominant_emotion', '설명'))[:20],
+    }

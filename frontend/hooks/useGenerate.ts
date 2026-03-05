@@ -237,10 +237,38 @@ export function useGenerate() {
     [selectedModel, selectedStyle, modifiers, addReport]
   );
 
+  const generateFromText = useCallback(
+    async (text: string) => {
+      if (!selectedModel) {
+        setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
+        return;
+      }
+
+      setState({ isLoading: true, error: null });
+
+      try {
+        const res = await generate({
+          url: '',
+          model: selectedModel,
+          style: selectedStyle,
+          modifiers,
+          content: text,
+        });
+        const report = responseToReport(res, '', selectedStyle);
+        addReport(report);
+        setState({ isLoading: false, error: null });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '알 수 없는 오류';
+        setState((s) => ({ ...s, isLoading: false, error: message }));
+      }
+    },
+    [selectedModel, selectedStyle, modifiers, addReport],
+  );
+
   const abort = useCallback(() => {
     abortRef.current?.abort();
     setState((s) => ({ ...s, isLoading: false }));
   }, []);
 
-  return { ...state, generateSingle, generateBatchUrls, generateMergedUrls, generateFusionUrls, abort };
+  return { ...state, generateSingle, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls, abort };
 }

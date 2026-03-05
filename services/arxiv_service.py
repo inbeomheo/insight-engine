@@ -64,6 +64,13 @@ def _parse_entry(entry: ElementTree.Element) -> Dict:
     cat_el = entry.find(f"{{{_ARXIV_NS}}}primary_category")
     primary_category = cat_el.get("term", "") if cat_el is not None else ""
 
+    # 모든 카테고리 수집
+    all_categories = [
+        c.get("term", "")
+        for c in entry.findall(_ns("category"))
+        if c.get("term")
+    ]
+
     # 콘텐츠: 제목 + 초록 (AI 생성 입력용)
     content = f"제목: {title}\n\n초록:\n{abstract}"
     if authors:
@@ -72,6 +79,8 @@ def _parse_entry(entry: ElementTree.Element) -> Dict:
         content += f"\n\n발행일: {published[:10]}"
     if primary_category:
         content += f"\n분야: {primary_category}"
+    if all_categories:
+        content += f"\n카테고리: {', '.join(all_categories)}"
 
     return {
         "title": title,
@@ -83,6 +92,7 @@ def _parse_entry(entry: ElementTree.Element) -> Dict:
         "arxiv_id": arxiv_id,
         "published": published[:10] if published else "",
         "category": primary_category,
+        "categories": all_categories,
         "source_type": "arxiv",
     }
 
@@ -127,6 +137,70 @@ def fetch_paper(arxiv_id: str) -> Dict:
 
     # 첫 번째 엔트리 반환
     return _parse_entry(entries[0])
+
+
+def fetch_paper_fulltext(arxiv_id: str) -> Dict:
+    """논문 메타데이터 + PDF 전문 텍스트를 가져옵니다.
+
+    PDF에서 전문 텍스트 추출을 시도하고, 실패 시 초록만 반환합니다.
+
+    Args:
+        arxiv_id: arXiv 논문 ID
+
+    Returns:
+        fetch_paper() 결과 + fulltext 필드 (추출 성공 시)
+    """
+    paper = fetch_paper(arxiv_id)
+
+    if not paper.get('pdf_url'):
+        return paper
+
+    try:
+        pdf_resp = requests.get(paper['pdf_url'], timeout=30)
+        pdf_resp.raise_for_status()
+
+        import io
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(stream=pdf_resp.content, filetype="pdf")
+            pages_text = []
+            for page in doc:
+                pages_text.append(page.get_text())
+            doc.close()
+            fulltext = "\n\n".join(pages_text).strip()
+        except ImportError:
+            # PyMuPDF 없으면 pdfplumber 시도
+            try:
+                import pdfplumber
+                pdf_file = io.BytesIO(pdf_resp.content)
+                with pdfplumber.open(pdf_file) as pdf:
+                    pages_text = [p.extract_text() or "" for p in pdf.pages]
+                fulltext = "\n\n".join(pages_text).strip()
+            except ImportError:
+                # PDF 라이브러리 없음 — 초록만 사용
+                return paper
+
+        if fulltext and len(fulltext) > len(paper['abstract']):
+            # 전문이 초록보다 길면 콘텐츠에 포함
+            paper['fulltext'] = fulltext
+            # content 필드를 전문 기반으로 업데이트 (너무 길면 앞부분만)
+            max_chars = 15000
+            trimmed = fulltext[:max_chars]
+            if len(fulltext) > max_chars:
+                trimmed += f"\n\n... (총 {len(fulltext):,}자 중 앞부분만 포함)"
+            paper['content'] = (
+                f"저자: {', '.join(paper['authors'])}\n"
+                f"제목: {paper['title']}\n"
+                f"발행일: {paper['published']}\n"
+                f"분야: {paper['category']}\n\n"
+                f"전문:\n{trimmed}"
+            )
+
+    except Exception:
+        # PDF 다운로드/파싱 실패 — 초록만 사용
+        pass
+
+    return paper
 
 
 def search_papers(query: str, max_results: int = 5) -> List[Dict]:

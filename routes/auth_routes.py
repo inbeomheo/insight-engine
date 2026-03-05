@@ -1033,3 +1033,48 @@ def revert_content_to_draft(content_id):
     if isinstance(result, dict) and 'error' in result:
         return _error_response(result['error'])
     return jsonify(result)
+
+
+# =============================================
+# 감사 로그 API (F4-25)
+# =============================================
+
+@auth_bp.route('/api/admin/audit-logs', methods=['GET'])
+@require_auth
+def get_audit_logs():
+    """감사 로그 조회 (관리자 전용)"""
+    from services.audit_log_service import audit_log_service
+    from services.supabase_service import is_admin
+
+    if not is_admin(g.user_id):
+        return _error_response('관리자 권한이 필요합니다.', 403)
+
+    user_id = request.args.get('user_id')
+    action = request.args.get('action')
+    limit = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
+
+    logs = audit_log_service.query(
+        user_id=user_id,
+        action=action,
+        limit=limit,
+        offset=offset,
+    )
+    return jsonify({'logs': logs})
+
+
+# =============================================
+# 활동 피드 API (F5-24)
+# =============================================
+
+@auth_bp.route('/api/workspaces/<workspace_id>/activity', methods=['GET'])
+@require_auth
+def get_workspace_activity(workspace_id):
+    """워크스페이스 활동 피드 조회"""
+    from services.activity_feed_service import activity_feed_service
+
+    limit = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
+
+    items = activity_feed_service.get_feed(workspace_id, limit=limit, offset=offset)
+    return jsonify({'items': items})

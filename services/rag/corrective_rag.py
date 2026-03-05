@@ -283,16 +283,46 @@ def web_search_fallback(
     return chunks
 
 
+def _filter_relevant_chunks(
+    chunks: List[Dict[str, Any]],
+    eval_result: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """평가 결과에서 관련 청크만 필터링합니다.
+
+    ambiguous 판정 시 관련 청크만 남기고 비관련 청크를 제거하여
+    최종 품질을 개선합니다.
+
+    Args:
+        chunks: 원본 청크 리스트
+        eval_result: evaluate_retrieval_quality()의 결과
+
+    Returns:
+        관련 청크만 포함된 리스트 (비어있으면 원본 반환)
+    """
+    relevant_indices = eval_result.get("relevant_chunks", [])
+    if not relevant_indices:
+        return chunks
+
+    filtered = [chunks[i] for i in relevant_indices if i < len(chunks)]
+    return filtered if filtered else chunks
+
+
 def corrective_search(
     query: str,
     chunks: List[Dict[str, Any]],
     vector_store: Any,
     user_id: str,
     top_k: int = 5,
-    max_retries: int = 1,
+    max_retries: int = 2,
     model: str = None,
 ) -> List[Dict[str, Any]]:
-    """CRAG 루프: 품질 평가 → 재검색 또는 웹 폴백.
+    """CRAG 강화 루프: 품질 평가 → 관련 청크 필터링 → 재검색 → 웹 폴백.
+
+    v2 개선사항:
+    - max_retries 기본값 1 → 2 (재시도 기회 증가)
+    - ambiguous 시 관련 청크 필터링 적용
+    - incorrect 시 웹 폴백 + 쿼리 재구성 후 재검색 순차 시도
+    - 재검색 루프에서 correct 도달 시 관련 청크만 반환
 
     Args:
         query: 원본 쿼리
@@ -300,43 +330,63 @@ def corrective_search(
         vector_store: ChromaDB 벡터 스토어 인스턴스
         user_id: 사용자 ID (벡터 스토어 검색에 필요)
         top_k: 최종 반환할 청크 수
-        max_retries: 최대 재검색 횟수 (비용 폭증 방지, 기본 1)
+        max_retries: 최대 재검색 횟수 (비용 폭증 방지, 기본 2)
         model: 품질 평가/쿼리 재구성에 사용할 LLM
 
     Returns:
-        최종 청크 목록 (correct이면 원본, ambiguous이면 재검색 결과,
-        incorrect이면 웹 검색 결과. 모두 실패하면 원본 반환).
+        최종 청크 목록 (correct이면 원본, ambiguous이면 필터링+재검색 결과,
+        incorrect이면 웹 검색+재검색 결과. 모두 실패하면 원본 반환).
     """
     eval_result = evaluate_retrieval_quality(query, chunks, model=model)
     decision = eval_result["decision"]
 
     if decision == "correct":
-        # 품질 양호 — 그대로 사용
         logger.info("CRAG: 품질 correct, 원본 청크 사용")
         return chunks
 
     if decision == "incorrect":
-        # 품질 불량 — 웹 검색으로 폴백
         logger.info("CRAG: 품질 incorrect, 웹 검색 폴백 시도")
+
+        # 1차: 웹 검색 폴백
         web_chunks = web_search_fallback(query, max_results=top_k)
         if web_chunks:
             return web_chunks
-        logger.warning("CRAG: 웹 검색도 결과 없음, 원본 청크 반환")
+
+        # 2차: 쿼리 재구성 후 웹 검색 재시도
+        feedback = eval_result.get("feedback", "")
+        new_query = reformulate_query(query, feedback, model=model)
+        if new_query != query:
+            logger.info(f"CRAG: 재구성 쿼리로 웹 검색 재시도: '{new_query}'")
+            web_chunks2 = web_search_fallback(new_query, max_results=top_k)
+            if web_chunks2:
+                return web_chunks2
+
+            # 3차: 재구성 쿼리로 벡터 스토어 재검색
+            try:
+                new_chunks = vector_store.search(user_id, new_query, top_k)
+                if new_chunks:
+                    re_eval = evaluate_retrieval_quality(new_query, new_chunks, model=model)
+                    if re_eval["decision"] != "incorrect":
+                        return _filter_relevant_chunks(new_chunks, re_eval)
+            except Exception as e:
+                logger.warning(f"CRAG incorrect 재검색 실패: {e}")
+
+        logger.warning("CRAG: 모든 폴백 실패, 원본 청크 반환")
         return chunks
 
-    # decision == "ambiguous": 쿼리 재구성 후 재검색
+    # decision == "ambiguous": 관련 청크 필터링 + 쿼리 재구성 후 재검색
     retry_count = 0
-    current_chunks = chunks
+    current_chunks = _filter_relevant_chunks(chunks, eval_result)
     current_query = query
     feedback = eval_result.get("feedback", "")
+    best_chunks = current_chunks
+    best_score = eval_result.get("overall_score", 0.0)
 
     while retry_count < max_retries and decision == "ambiguous":
         logger.info(f"CRAG: 품질 ambiguous, 쿼리 재구성 후 재검색 (시도 {retry_count + 1}/{max_retries})")
 
-        # 쿼리 재구성
         new_query = reformulate_query(current_query, feedback, model=model)
 
-        # 재검색
         try:
             new_chunks = vector_store.search(user_id, new_query, top_k)
         except Exception as e:
@@ -350,13 +400,22 @@ def corrective_search(
                 return web_chunks
             break
 
-        # 재검색 결과 품질 재평가
         re_eval = evaluate_retrieval_quality(new_query, new_chunks, model=model)
-        current_chunks = new_chunks
         decision = re_eval["decision"]
+        score = re_eval.get("overall_score", 0.0)
+
+        # 더 좋은 결과가 나왔으면 업데이트
+        if score > best_score:
+            best_chunks = _filter_relevant_chunks(new_chunks, re_eval)
+            best_score = score
+
+        if decision == "correct":
+            return _filter_relevant_chunks(new_chunks, re_eval)
+
+        current_chunks = new_chunks
         feedback = re_eval.get("feedback", "")
         current_query = new_query
         retry_count += 1
 
-    # ambiguous 상태로 루프 종료 — 재검색 결과 반환 (원본보다 낫거나 같음)
-    return current_chunks
+    # 루프 종료 — 가장 좋은 결과 반환
+    return best_chunks

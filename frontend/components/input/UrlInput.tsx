@@ -1,16 +1,31 @@
 'use client';
 
-import { useState, type KeyboardEvent, type ClipboardEvent } from 'react';
-import { ArrowUp, SlidersHorizontal, X, Link2 } from 'lucide-react';
+import { useState, useRef, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
+import { ArrowUp, SlidersHorizontal, X, Link2, Youtube, Globe, BookOpen, Rss, FileText, Headphones, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { extractVideoId, detectSourceType, SOURCE_TYPE_LABELS } from '@/lib/constants';
+import { extractVideoId, detectSourceType, SOURCE_TYPE_LABELS, type SourceType } from '@/lib/constants';
+
+// 소스 타입별 아이콘 + 색상 매핑
+const SOURCE_TYPE_ICONS: Record<SourceType, { icon: typeof Globe; colorClass: string }> = {
+  youtube: { icon: Youtube,     colorClass: 'text-red-500' },
+  arxiv:   { icon: FileText,    colorClass: 'text-purple-500' },
+  rss:     { icon: Rss,         colorClass: 'text-orange-500' },
+  webpage: { icon: Globe,       colorClass: 'text-blue-500' },
+  podcast: { icon: Headphones,  colorClass: 'text-green-500' },
+};
+
+// Wikipedia URL 감지
+function isWikipediaUrl(url: string): boolean {
+  return /wikipedia\.org/i.test(url);
+}
 
 interface UrlInputProps {
   urls: string[];
   onAddUrl: (url: string) => string | null;
   onAddUrls: (urls: string[]) => { added: number; errors: string[] };
   onRemoveUrl: (url: string) => void;
+  onReorderUrl?: (from: number, to: number) => void;
   onToggleSettings: () => void;
   isLoading: boolean;
   onGenerate: () => void;
@@ -21,6 +36,7 @@ export default function UrlInput({
   onAddUrl,
   onAddUrls,
   onRemoveUrl,
+  onReorderUrl,
   onToggleSettings,
   isLoading,
   onGenerate,
@@ -28,6 +44,22 @@ export default function UrlInput({
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [focused, setFocused] = useState(false);
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // 입력 중 URL 소스 타입 감지 (비어있으면 null)
+  const inputSourceType = input.trim() ? detectSourceType(input.trim()) : null;
+  const inputIsWiki = input.trim() ? isWikipediaUrl(input.trim()) : false;
+  const InputIcon = inputIsWiki
+    ? BookOpen
+    : inputSourceType
+      ? SOURCE_TYPE_ICONS[inputSourceType].icon
+      : Link2;
+  const inputIconClass = inputIsWiki
+    ? 'text-green-600'
+    : inputSourceType
+      ? SOURCE_TYPE_ICONS[inputSourceType].colorClass
+      : 'text-muted-foreground/40';
 
   function handleSubmit() {
     const err = onAddUrl(input);
@@ -76,7 +108,7 @@ export default function UrlInput({
           ? 'border-primary/40 shadow-[0_0_0_3px_rgba(79,70,229,0.08)] ring-0'
           : 'border-border/60 hover:border-border'}
       `}>
-        <Link2 className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+        <InputIcon className={`h-4 w-4 shrink-0 transition-colors duration-150 ${inputIconClass}`} />
         <input
           id="url-input"
           type="url"
@@ -86,7 +118,7 @@ export default function UrlInput({
           onPaste={handlePaste}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv)"
+          placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv, Podcast)"
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
           aria-label="URL 입력"
           disabled={isLoading}
@@ -116,17 +148,22 @@ export default function UrlInput({
         <p className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
       ) : (
         <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
-          YouTube · 웹페이지 · RSS · arXiv · 최대 10개
+          YouTube · 웹페이지 · RSS · arXiv · Podcast · 최대 10개
         </p>
       )}
 
-      {/* URL 칩 */}
+      {/* URL 칩 (F5-10: 드래그 정렬 지원) */}
       {urls.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3 animate-fade-in">
-          {urls.map((url) => {
+          {urls.map((url, urlIndex) => {
             const videoId = extractVideoId(url);
             const srcType = detectSourceType(url);
-            const srcLabel = SOURCE_TYPE_LABELS[srcType];
+            const isWiki = isWikipediaUrl(url);
+            const srcLabel = isWiki ? 'Wikipedia' : SOURCE_TYPE_LABELS[srcType];
+            const chipIconEntry = isWiki
+              ? { icon: BookOpen, colorClass: 'text-green-600' }
+              : SOURCE_TYPE_ICONS[srcType];
+            const ChipIcon = chipIconEntry.icon;
             // 칩에 표시할 짧은 레이블: YouTube는 videoId, 나머지는 도메인
             let chipLabel: string;
             if (videoId) {
@@ -142,8 +179,25 @@ export default function UrlInput({
               <Badge
                 key={url}
                 variant="secondary"
-                className="gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent transition-colors"
+                className={`gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent transition-colors cursor-grab active:cursor-grabbing ${
+                  dragOverIndex === urlIndex ? 'ring-2 ring-primary/30' : ''
+                }`}
+                draggable={urls.length > 1}
+                onDragStart={() => { dragIndexRef.current = urlIndex; }}
+                onDragOver={(e: DragEvent) => { e.preventDefault(); setDragOverIndex(urlIndex); }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={(e: DragEvent) => {
+                  e.preventDefault();
+                  setDragOverIndex(null);
+                  if (dragIndexRef.current !== null && dragIndexRef.current !== urlIndex) {
+                    onReorderUrl?.(dragIndexRef.current, urlIndex);
+                  }
+                  dragIndexRef.current = null;
+                }}
+                onDragEnd={() => { dragIndexRef.current = null; setDragOverIndex(null); }}
               >
+                <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/30" />
+                <ChipIcon className={`h-3 w-3 shrink-0 ${chipIconEntry.colorClass}`} />
                 <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0">
                   {srcLabel}
                 </span>

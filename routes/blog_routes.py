@@ -85,8 +85,8 @@ def _get_request_data(req):
             urls = []
         urls = [u for u in urls if isinstance(u, str)][:MAX_BATCH_URLS]
 
-        # source_type 검증 (허용값: youtube, webpage, rss, arxiv)
-        _allowed_source_types = {'youtube', 'webpage', 'rss', 'arxiv'}
+        # source_type 검증
+        _allowed_source_types = {'youtube', 'webpage', 'rss', 'arxiv', 'twitter', 'reddit', 'github', 'hackernews', 'podcast'}
         raw_source_type = data.get('source_type')
         source_type = raw_source_type if raw_source_type in _allowed_source_types else None
 
@@ -134,18 +134,29 @@ def _get_request_data(req):
             'enable_citations': enable_citations,
         }
 
+    # form 데이터에서 modifiers JSON 파싱 (파일 업로드 시 FormData로 전송)
+    form_modifiers = None
+    raw_modifiers = req.form.get('modifiers')
+    if raw_modifiers:
+        try:
+            parsed = json.loads(raw_modifiers)
+            if isinstance(parsed, dict):
+                form_modifiers, _ = _validate_modifiers(parsed)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
     return {
         'url': req.form.get('url'),
         'urls': [],
         'content': req.form.get('content'),
         'model': req.form.get('model', DEFAULT_MODEL),
         'style': req.form.get('style', DEFAULT_STYLE),
-        'modifiers': None,
-        'custom_prompt': None,
+        'modifiers': form_modifiers,
+        'custom_prompt': req.form.get('customPrompt'),
         'analyze': False,
         'source_type': None,
-        'detail_level': 'standard',
-        'output_format': 'html',
+        'detail_level': req.form.get('detail_level', 'standard'),
+        'output_format': req.form.get('output_format', 'html'),
         'max_chars': None,
         'include_transcript': False,
         'enable_citations': False,
@@ -239,6 +250,139 @@ def generate():
         start_time = time.time()
         params = _get_request_data(request)
         url = params['url']
+        direct_content = params.get('content')
+
+        # 직접 텍스트 입력 모드: URL 없이 content만 전달된 경우
+        if not url and direct_content and len(direct_content.strip()) >= 50:
+            max_tokens = get_model_max_tokens(params['model'])
+            main_content = f"[사용자 입력 텍스트]\n{direct_content}"
+            truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+            style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+            result, used_prompt = ai_service.create_content(
+                truncated_content, params['model'], style_prompt,
+                return_prompt=True, modifiers=params['modifiers'],
+                style_id=params['style'],
+                detail_level=params.get('detail_level'),
+            )
+
+            elapsed_time = round(time.time() - start_time, 2)
+            report_id = str(uuid.uuid4())
+            return jsonify({
+                'id': report_id,
+                **result,
+                'elapsed_time': elapsed_time,
+                'prompt': used_prompt,
+                'transcript_source': 'direct_input',
+                'cached': False,
+                'comment_summary_included': False,
+                'usage': get_usage_for_response(),
+            })
+
+        # ── 파일 업로드 모드: PDF/DOCX 문서 또는 오디오 파일에서 콘텐츠 생성 ──
+        uploaded_file = request.files.get('file')
+        if uploaded_file and not url:
+            filename = (uploaded_file.filename or '').lower()
+            _audio_extensions = ('.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm', '.weba')
+
+            # 오디오 파일 → Whisper 전사
+            if filename.endswith(_audio_extensions) or (uploaded_file.content_type or '').startswith('audio/'):
+                import os
+                import tempfile
+                from services.whisper_service import transcribe_audio, _cleanup_file
+
+                whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
+                if not whisper_enabled:
+                    return jsonify({'error': '음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.'}), 400
+
+                # 임시 파일에 저장
+                audio_path = None
+                try:
+                    suffix = os.path.splitext(filename)[1] or '.wav'
+                    fd, audio_path = tempfile.mkstemp(suffix=suffix)
+                    os.close(fd)
+                    uploaded_file.save(audio_path)
+
+                    whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
+                    transcript_text = transcribe_audio(audio_path, whisper_model)
+                    if not transcript_text or not transcript_text.strip():
+                        return jsonify({'error': '음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.'}), 400
+                finally:
+                    if audio_path:
+                        _cleanup_file(audio_path)
+
+                source_title = uploaded_file.filename or '음성 메모'
+                max_tokens = get_model_max_tokens(params['model'])
+                main_content = f"[음성 전사]\n{transcript_text}"
+                truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+                style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+                result, used_prompt = ai_service.create_content(
+                    truncated_content, params['model'], style_prompt,
+                    return_prompt=True, modifiers=params['modifiers'],
+                    style_id=params['style'],
+                    detail_level=params.get('detail_level'),
+                )
+
+                elapsed_time = round(time.time() - start_time, 2)
+                report_id = str(uuid.uuid4())
+
+                from routes.generation_helpers import _apply_output_format
+                result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+
+                return jsonify({
+                    'id': report_id,
+                    **result,
+                    'elapsed_time': elapsed_time,
+                    'prompt': used_prompt,
+                    'source_type': 'voice',
+                    'source_title': source_title,
+                    'cached': False,
+                    'comment_summary_included': False,
+                    'usage': get_usage_for_response(),
+                })
+
+            # PDF/DOCX 문서
+            from services.document_ingest_service import extract_from_upload
+
+            try:
+                doc = extract_from_upload(uploaded_file)
+            except ValueError as e:
+                return jsonify({'error': str(e)}), 400
+
+            source_title = doc.get('title') or uploaded_file.filename or '업로드 문서'
+            source_content = doc['content']
+
+            max_tokens = get_model_max_tokens(params['model'])
+            main_content = f"[문서 본문]\n{source_content}"
+            truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+            style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
+            result, used_prompt = ai_service.create_content(
+                truncated_content, params['model'], style_prompt,
+                return_prompt=True, modifiers=params['modifiers'],
+                style_id=params['style'],
+                detail_level=params.get('detail_level'),
+            )
+
+            elapsed_time = round(time.time() - start_time, 2)
+            report_id = str(uuid.uuid4())
+
+            from routes.generation_helpers import _apply_output_format
+            result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+
+            return jsonify({
+                'id': report_id,
+                **result,
+                'elapsed_time': elapsed_time,
+                'prompt': used_prompt,
+                'source_type': 'document',
+                'source_title': source_title,
+                'page_count': doc.get('page_count', 0),
+                'cached': False,
+                'comment_summary_included': False,
+                'usage': get_usage_for_response(),
+            })
 
         if not url:
             return jsonify({'error': 'URL이 필요합니다.'}), 400
@@ -263,6 +407,11 @@ def generate():
                 'webpage': '웹페이지 본문',
                 'rss': 'RSS 피드 내용',
                 'arxiv': 'arXiv 논문 초록',
+                'twitter': 'Twitter 게시물',
+                'reddit': 'Reddit 포스트',
+                'github': 'GitHub README',
+                'hackernews': 'Hacker News 게시물',
+                'podcast': '팟캐스트 전사',
             }.get(source_type, '본문')
             main_content = f"[{content_label}]\n{source_content}"
             truncated_content = content_service.truncate_text(main_content, max_tokens)

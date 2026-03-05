@@ -1,0 +1,151 @@
+"""
+GraphRAG 엔진 — 엔티티/관계 자동 추출 + 글로벌/로컬 검색
+graph_store(저장소)와 graph_builder(추출기)를 활용하여
+텍스트에서 지식 그래프를 자동 구축하고 검색합니다.
+"""
+import logging
+from typing import Any, Dict, List, Optional
+
+from services.rag.graph_store import graph_store, GraphStore
+from services.rag.graph_builder import extract_graph
+
+logger = logging.getLogger(__name__)
+
+
+class GraphRAGEngine:
+    """GraphRAG 엔진 — 자동 엔티티 추출 + 글로벌/로컬 검색.
+
+    - ingest: 텍스트 → LLM으로 엔티티/관계 추출 → 그래프 저장
+    - local_search: 특정 엔티티 중심 BFS 탐색
+    - global_search: 전체 그래프 요약 (주요 노드 기반)
+    """
+
+    def __init__(self, store: Optional[GraphStore] = None, model: str = None):
+        self.store = store or graph_store
+        self.model = model  # LLM 모델 ID (None이면 graph_builder 기본 모델 사용)
+
+    def ingest(self, user_id: str, text: str) -> Dict[str, int]:
+        """텍스트에서 엔티티/관계를 자동 추출하여 그래프에 추가합니다.
+
+        Args:
+            user_id: 사용자 ID
+            text: 분석할 텍스트
+
+        Returns:
+            {"entities_added": int, "relations_added": int}
+        """
+        kwargs = {}
+        if self.model:
+            kwargs["model"] = self.model
+
+        result = extract_graph(text, **kwargs)
+        entities = result.get("entities", [])
+        relations = result.get("relations", [])
+
+        if entities:
+            self.store.add_entities(user_id, entities)
+        if relations:
+            self.store.add_relations(user_id, relations)
+
+        logger.info(f"GraphRAG 인제스트: user={user_id}, 엔티티={len(entities)}, 관계={len(relations)}")
+        return {"entities_added": len(entities), "relations_added": len(relations)}
+
+    def local_search(
+        self,
+        user_id: str,
+        query_entities: List[str],
+        max_depth: int = 2,
+        max_results: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """엔티티 중심 로컬 검색 (BFS 탐색).
+
+        Args:
+            user_id: 사용자 ID
+            query_entities: 탐색 시작 엔티티 이름 목록
+            max_depth: BFS 최대 깊이
+            max_results: 최대 반환 수
+
+        Returns:
+            관련 노드 리스트 (name, type, description, depth, relations)
+        """
+        return self.store.search_related(
+            user_id, query_entities, max_depth=max_depth, max_results=max_results
+        )
+
+    def global_search(self, user_id: str, top_n: int = 10) -> Dict[str, Any]:
+        """전체 그래프 요약 — 연결이 많은 상위 노드를 반환합니다.
+
+        Args:
+            user_id: 사용자 ID
+            top_n: 상위 노드 수
+
+        Returns:
+            {"nodes": [...], "stats": {...}}
+        """
+        g = self.store._load_graph(user_id)
+        if g.number_of_nodes() == 0:
+            return {"nodes": [], "stats": self.store.get_stats(user_id)}
+
+        # 연결 수(degree) 기준 상위 노드
+        degree_list = sorted(g.degree(), key=lambda x: x[1], reverse=True)
+        top_nodes = []
+        for name, degree in degree_list[:top_n]:
+            attrs = g.nodes[name]
+            top_nodes.append({
+                "name": name,
+                "type": attrs.get("type", "concept"),
+                "description": attrs.get("description", ""),
+                "degree": degree,
+            })
+
+        return {
+            "nodes": top_nodes,
+            "stats": self.store.get_stats(user_id),
+        }
+
+    def build_context(
+        self,
+        user_id: str,
+        query_entities: List[str],
+        max_depth: int = 2,
+        max_results: int = 10,
+    ) -> str:
+        """검색 결과를 프롬프트 삽입용 텍스트로 변환합니다.
+
+        Args:
+            user_id: 사용자 ID
+            query_entities: 탐색 엔티티 목록
+
+        Returns:
+            프롬프트에 삽입할 지식 그래프 컨텍스트 문자열
+        """
+        results = self.local_search(
+            user_id, query_entities, max_depth=max_depth, max_results=max_results
+        )
+        if not results:
+            return ""
+
+        lines = []
+        for node in results:
+            name = node["name"]
+            node_type = node.get("type", "concept")
+            desc = node.get("description", "")
+            relations = node.get("relations", [])
+
+            line = f"- {name} ({node_type})"
+            if desc:
+                line += f": {desc}"
+
+            rel_strs = []
+            for rel in relations[:3]:  # 관계는 최대 3개만 표시
+                if rel.get("direction") == "outgoing":
+                    rel_strs.append(f"{name} → {rel.get('target', '')} [{rel.get('relation', '')}]")
+                else:
+                    rel_strs.append(f"{rel.get('source', '')} → {name} [{rel.get('relation', '')}]")
+
+            if rel_strs:
+                line += "\n  관계: " + "; ".join(rel_strs)
+
+            lines.append(line)
+
+        return "\n".join(lines)

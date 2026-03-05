@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Insight Engine</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    header h1 { font-size: 16px; font-weight: 700; color: #fff; }
+    #url-display {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 12px;
+      word-break: break-all;
+      color: #a0a0c0;
+      margin-bottom: 12px;
+      min-height: 40px;
+    }
+    label { font-size: 12px; color: #a0a0c0; display: block; margin-bottom: 4px; }
+    select, input {
+      width: 100%;
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      padding: 8px;
+      color: #e0e0e0;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    button {
+      width: 100%;
+      background: #e94560;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #c73652; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    #status {
+      margin-top: 10px;
+      font-size: 12px;
+      text-align: center;
+      min-height: 20px;
+      color: #a0ffa0;
+    }
+    #status.error { color: #ffa0a0; }
+    .settings-link {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 11px;
+      color: #666;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span>🎬</span>
+    <h1>Insight Engine</h1>
+  </header>
+
+  <div id="url-display">현재 페이지 URL을 감지 중...</div>
+
+  <label for="style-select">콘텐츠 스타일</label>
+  <select id="style-select">
+    <option value="blog_seo">블로그 SEO</option>
+    <option value="summary">요약</option>
+    <option value="tutorial">튜토리얼</option>
+    <option value="qna">Q&A</option>
+    <option value="sns_post">SNS 포스트</option>
+    <option value="newsletter">뉴스레터</option>
+    <option value="brunch_essay">브런치 에세이</option>
+  </select>
+
+  <label for="server-url">서버 URL</label>
+  <input type="text" id="server-url" placeholder="http://localhost:3000" />
+
+  <button id="generate-btn">콘텐츠 생성하기</button>
+  <div id="status"></div>
+  <div class="settings-link" id="open-settings">설정 저장</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -447,6 +447,216 @@ def run_pipeline():
         return handle_error(str(e))
 
 
+@blog_bp.route('/api/channel-analysis', methods=['POST'])
+@require_auth
+def channel_analysis():
+    """YouTube 채널 전체 분석 (영상 목록, 주제 클러스터, 통계)"""
+    try:
+        data = request.get_json(silent=True) or {}
+        channel_url = data.get('url', '').strip()
+
+        if not channel_url:
+            return jsonify({'error': '채널 URL이 필요합니다.'}), 400
+
+        from services.channel_analysis_service import analyze_channel
+        result = analyze_channel(channel_url)
+        return jsonify({'success': True, **result})
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Channel analysis failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/generate-thumbnail', methods=['POST'])
+@require_auth
+def generate_thumbnail():
+    """제목+키워드로 AI 썸네일 이미지를 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', '')
+        keywords = data.get('keywords', [])
+        size = data.get('size', '1792x1024')
+
+        if not title:
+            return jsonify({'error': '제목이 필요합니다.'}), 400
+
+        from services.thumbnail_service import generate_thumbnail as _gen_thumb
+        result = _gen_thumb(title, keywords, size)
+
+        if not result.get('success'):
+            return jsonify({'error': result.get('error', '썸네일 생성 실패')}), 400
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Thumbnail generation failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/generate-clips', methods=['POST'])
+@limiter.limit("3/minute")
+@require_auth
+@require_usage
+def generate_clips():
+    """YouTube 영상에서 Shorts 클립을 추출합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        video_url = data.get('url', '')
+        clips = data.get('clips', [])
+
+        if not video_url:
+            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+        if not clips:
+            return jsonify({'error': '추출할 클립 목록이 필요합니다.'}), 400
+
+        from services.video_clip_service import extract_clips
+        clip_paths = extract_clips(video_url, clips)
+
+        import base64
+        results = []
+        for i, path in enumerate(clip_paths):
+            with open(path, 'rb') as f:
+                video_b64 = base64.b64encode(f.read()).decode('ascii')
+            results.append({
+                'index': i,
+                'video_base64': video_b64,
+                'start': clips[i].get('start', ''),
+                'end': clips[i].get('end', ''),
+            })
+
+        from services.video_clip_service import cleanup_clips
+        cleanup_clips(clip_paths)
+
+        return jsonify({
+            'success': True,
+            'clips': results,
+            'usage': get_usage_for_response(),
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Clip extraction failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/generate-podcast', methods=['POST'])
+@limiter.limit("3/minute")
+@require_auth
+@require_usage
+def generate_podcast():
+    """콘텐츠로 팟캐스트 에피소드를 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        title = data.get('title', '팟캐스트 에피소드')
+        model = data.get('model', DEFAULT_MODEL)
+
+        if not content:
+            return jsonify({'error': '팟캐스트로 변환할 콘텐츠가 필요합니다.'}), 400
+
+        from services.podcast_service import generate_podcast_episode
+        result = generate_podcast_episode(content, title, model)
+
+        return jsonify({
+            'success': True,
+            **result,
+            'usage': get_usage_for_response(),
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Podcast generation failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/generate-multilang', methods=['POST'])
+@limiter.limit("5/minute")
+@require_auth
+@require_usage
+def generate_multilang():
+    """한/영/일 3개 언어로 동시 생성합니다."""
+    try:
+        start_time = time.time()
+        data = request.get_json(silent=True) or {}
+        url = data.get('url')
+        model = data.get('model', DEFAULT_MODEL)
+        style = data.get('style', 'blog_seo')
+        languages = data.get('languages', ['ko', 'en', 'ja'])
+
+        if not url:
+            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+        if not content_service.is_youtube_url(url):
+            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+
+        video_id = content_service.get_video_id(url)
+        if not video_id:
+            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+
+        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+
+        transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
+        if error:
+            return jsonify({'error': error}), 400
+
+        max_tokens = get_model_max_tokens(model)
+        main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
+        truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+        style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
+        sp = style_prompts_dict.get(style, '')
+        if not sp:
+            return jsonify({'error': f'유효하지 않은 스타일: {style}'}), 400
+
+        app = current_app._get_current_object()
+        results = {}
+
+        def _gen_for_lang(lang):
+            with app.app_context():
+                try:
+                    modifiers = {'language': lang}
+                    result = ai_service.create_content(
+                        truncated_content, model, sp,
+                        style_id=style, modifiers=modifiers,
+                    )
+                    result['language'] = lang
+                    return lang, result
+                except Exception as e:
+                    return lang, {'language': lang, 'error': str(e)}
+
+        is_glm = model.startswith('zhipuai/')
+        if is_glm:
+            for lang in languages:
+                l, r = _gen_for_lang(lang)
+                results[l] = r
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                futures = {executor.submit(_gen_for_lang, lang): lang for lang in languages}
+                for future in concurrent.futures.as_completed(futures):
+                    lang, result = future.result()
+                    results[lang] = result
+
+        elapsed_time = round(time.time() - start_time, 2)
+
+        return jsonify({
+            'success': True,
+            'results': results,
+            'youtube_title': youtube_title,
+            'transcript_source': transcript_source,
+            'elapsed_time': elapsed_time,
+            'usage': get_usage_for_response(),
+        })
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Multilang generation failed: {e}")
+        return handle_error(str(e))
+
+
 @blog_bp.route('/api/inline-edit', methods=['POST'])
 @require_auth
 @require_usage
@@ -471,4 +681,358 @@ def inline_edit_content():
         })
     except Exception as e:
         current_app.logger.error(f"Inline edit failed: {e}")
+        return handle_error(str(e))
+
+
+# === 에이전트 API ===
+
+@blog_bp.route('/api/agent/research', methods=['POST'])
+@require_auth
+@require_usage
+def agent_research():
+    """리서치 에이전트를 실행합니다 (SSE 스트리밍).
+
+    Request body:
+        topic (str): 리서치 주제
+        model (str): AI 모델 ID
+        max_sources (int): 최대 소스 수 (기본 5)
+
+    Returns:
+        SSE 이벤트 스트림 (진행 상황 + 최종 결과)
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '').strip()
+        model = data.get('model', DEFAULT_MODEL)
+        max_sources = min(int(data.get('max_sources', 5)), 10)
+
+        if not topic:
+            return jsonify({'error': '리서치 주제가 필요합니다.'}), 400
+
+        from services.agent.research_agent import ResearchAgent
+
+        def generate_events():
+            agent = ResearchAgent(model=model, max_sources=max_sources)
+            events = []
+
+            def on_event(event):
+                events.append(event)
+
+            agent.on_event(on_event)
+
+            # SSE 스트리밍
+            import queue
+            import threading
+            event_queue = queue.Queue()
+
+            def event_listener(event):
+                event_queue.put(event)
+
+            agent.on_event(event_listener)
+
+            def run_agent():
+                try:
+                    result = agent.run(topic)
+                    event_queue.put(('result', result))
+                except Exception as e:
+                    event_queue.put(('error', str(e)))
+
+            thread = threading.Thread(target=run_agent, daemon=True)
+            thread.start()
+
+            while True:
+                try:
+                    item = event_queue.get(timeout=300)
+                    if isinstance(item, tuple):
+                        event_type, data = item
+                        if event_type == 'result':
+                            yield f"data: {json.dumps({'type': 'result', 'data': data}, ensure_ascii=False)}\n\n"
+                            break
+                        elif event_type == 'error':
+                            yield f"data: {json.dumps({'type': 'error', 'message': data}, ensure_ascii=False)}\n\n"
+                            break
+                    else:
+                        yield f"data: {json.dumps({'type': 'progress', 'event': item.to_dict()}, ensure_ascii=False)}\n\n"
+                except Exception:
+                    break
+
+        return Response(
+            stream_with_context(generate_events()),
+            mimetype='text/event-stream',
+            headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
+        )
+    except Exception as e:
+        current_app.logger.error(f"Agent research failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/agent/pipeline', methods=['POST'])
+@require_auth
+@require_usage
+def agent_pipeline():
+    """멀티에이전트 파이프라인을 실행합니다.
+
+    Request body:
+        topic (str): 콘텐츠 주제
+        model (str): AI 모델 ID
+        style_id (str): 출력 스타일 (기본 blog_seo)
+        skip_research (bool): 리서치 단계 건너뛰기
+
+    Returns:
+        파이프라인 실행 결과 (순차 응답)
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '').strip()
+        model = data.get('model', DEFAULT_MODEL)
+        style_id = data.get('style_id', 'blog_seo')
+        skip_research = data.get('skip_research', False)
+
+        if not topic:
+            return jsonify({'error': '콘텐츠 주제가 필요합니다.'}), 400
+
+        from services.agent.research_agent import ResearchAgent
+        from services.agent.content_pipeline_agent import WriterAgent, EditorAgent, SeoAgent
+        from services.agent.agent_orchestrator import AgentOrchestrator
+
+        # 에이전트 체인 구성
+        agents = []
+        initial_context = {}
+
+        if not skip_research:
+            agents.append(ResearchAgent(model=model, max_sources=5))
+
+        agents.extend([
+            WriterAgent(model=model, style_id=style_id),
+            EditorAgent(model=model),
+            SeoAgent(model=model),
+        ])
+
+        orchestrator = AgentOrchestrator()
+        result = orchestrator.run_pipeline(agents, topic, initial_context=initial_context)
+
+        return jsonify({
+            'pipeline_results': result.get('pipeline_results', []),
+            'final': {
+                'title': result.get('final', {}).get('title', ''),
+                'content': result.get('final', {}).get('edited', result.get('final', {}).get('draft', '')),
+                'seo': result.get('final', {}).get('seo', {}),
+                'sources': result.get('final', {}).get('sources', []),
+            },
+            'elapsed_seconds': result.get('elapsed_seconds', 0),
+            'agent_count': result.get('agent_count', 0),
+            'usage': get_usage_for_response(),
+        })
+    except Exception as e:
+        current_app.logger.error(f"Agent pipeline failed: {e}")
+        return handle_error(str(e))
+
+
+# === 메모리 API ===
+
+@blog_bp.route('/api/memory', methods=['GET'])
+@require_auth
+def get_user_memory():
+    """사용자 메모리를 조회합니다."""
+    try:
+        from services.memory_service import memory_service
+        user_id = g.user_id
+        memory = memory_service.get_memory(user_id)
+        return jsonify({'memory': memory})
+    except Exception as e:
+        current_app.logger.error(f"Get memory failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/memory', methods=['PUT'])
+@require_auth
+def update_user_memory():
+    """사용자 메모리를 업데이트합니다."""
+    try:
+        from services.memory_service import memory_service
+        user_id = g.user_id
+        data = request.get_json(silent=True) or {}
+        key = data.get('key', '').strip()
+        value = data.get('value')
+
+        if not key:
+            return jsonify({'error': '메모리 키가 필요합니다.'}), 400
+
+        memory_service.update_memory(user_id, key, value)
+        return jsonify({'success': True, 'memory': memory_service.get_memory(user_id)})
+    except Exception as e:
+        current_app.logger.error(f"Update memory failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/memory', methods=['DELETE'])
+@require_auth
+def clear_user_memory():
+    """사용자 메모리를 초기화합니다."""
+    try:
+        from services.memory_service import memory_service
+        user_id = g.user_id
+        memory_service.clear(user_id)
+        return jsonify({'success': True})
+    except Exception as e:
+        current_app.logger.error(f"Clear memory failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-20: 자동 태깅
+# =============================================
+
+@blog_bp.route('/api/auto-tags', methods=['POST'])
+@require_auth
+def auto_tags():
+    """콘텐츠에서 자동으로 태그와 카테고리를 추출합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content:
+            return jsonify({'error': '태그를 추출할 콘텐츠가 필요합니다.'}), 400
+
+        from services.auto_tag_service import generate_tags
+        result = generate_tags(content)
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Auto-tag failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-21: 콘텐츠 브리프 생성
+# =============================================
+
+@blog_bp.route('/api/content-brief', methods=['POST'])
+@require_auth
+@require_usage
+def content_brief():
+    """주제에 대한 콘텐츠 브리프를 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '')
+        keywords = data.get('keywords')
+
+        if not topic:
+            return jsonify({'error': '주제를 입력해주세요.'}), 400
+
+        from services.brief_service import generate_brief
+        result = generate_brief(topic, keywords)
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Content brief failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-22: 경쟁 콘텐츠 분석
+# =============================================
+
+@blog_bp.route('/api/competitor-analysis', methods=['POST'])
+@require_auth
+def competitor_analysis():
+    """키워드로 경쟁 콘텐츠를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        keyword = data.get('keyword', '')
+        my_content = data.get('my_content')
+
+        if not keyword:
+            return jsonify({'error': '분석할 키워드를 입력해주세요.'}), 400
+
+        from services.competitor_analysis_service import analyze_competitors
+        result = analyze_competitors(keyword, my_content)
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Competitor analysis failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-23: 콘텐츠 점수 카드
+# =============================================
+
+@blog_bp.route('/api/content-score', methods=['POST'])
+@require_auth
+def content_score():
+    """콘텐츠 종합 점수를 계산합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content:
+            return jsonify({'error': '점수를 계산할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality_service import calculate_comprehensive_score
+        result = calculate_comprehensive_score(content)
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Content score failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-24: AI 코멘터리
+# =============================================
+
+@blog_bp.route('/api/commentary', methods=['POST'])
+@require_auth
+@require_usage
+def add_commentary():
+    """콘텐츠에 AI 해설 주석을 추가합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        model = data.get('model')
+
+        if not content:
+            return jsonify({'error': '해설을 추가할 콘텐츠가 필요합니다.'}), 400
+
+        from services.commentary_service import add_commentary as _add_commentary
+        result = _add_commentary(content, model)
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Commentary failed: {e}")
+        return handle_error(str(e))
+
+
+# =============================================
+# F3-25: 스마트 요약
+# =============================================
+
+@blog_bp.route('/api/progressive-summary', methods=['POST'])
+@require_auth
+@require_usage
+def progressive_summary():
+    """콘텐츠를 3단계 요약으로 변환합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        model = data.get('model')
+
+        if not content:
+            return jsonify({'error': '요약할 콘텐츠가 필요합니다.'}), 400
+
+        from services.progressive_summary_service import generate_progressive_summary
+        result = generate_progressive_summary(content, model)
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Progressive summary failed: {e}")
         return handle_error(str(e))

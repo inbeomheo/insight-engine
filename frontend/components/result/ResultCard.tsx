@@ -20,6 +20,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { toast } from 'sonner';
 import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
@@ -66,7 +69,8 @@ interface ResultCardProps {
   onExpandToFull?: () => void;
 }
 
-const remarkPlugins = [remarkGfm];
+const remarkPlugins = [remarkGfm, remarkMath];
+const rehypePlugins = [rehypeKatex];
 
 // 품질 등급별 스타일 정의
 const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string }> = {
@@ -276,7 +280,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     () => isStreaming ? (
       <div className="whitespace-pre-wrap">{processedContent}</div>
     ) : (
-      <ReactMarkdown remarkPlugins={remarkPlugins}>
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
         {processedContent}
       </ReactMarkdown>
     ),

@@ -183,3 +183,52 @@ def extract_graph(text: str, model: str = _DEFAULT_MODEL) -> dict[str, list]:
 
     logger.info(f"그래프 추출 완료: 엔티티 {len(entities)}개, 관계 {len(relations)}개")
     return {"entities": entities, "relations": relations}
+
+
+def extract_graph_from_chunks(
+    chunks: list[str],
+    model: str = _DEFAULT_MODEL,
+) -> dict[str, list]:
+    """여러 청크에서 엔티티/관계를 추출하고 병합합니다.
+
+    긴 텍스트를 청크로 나눠서 각각 추출 후,
+    동일 이름 엔티티는 병합하고 관계는 합산합니다.
+
+    Args:
+        chunks: 텍스트 청크 리스트
+        model: 사용할 LLM 모델 ID
+
+    Returns:
+        {"entities": [...], "relations": [...]}
+    """
+    all_entities: dict[str, dict] = {}  # name -> entity dict
+    all_relations: list[dict] = []
+    seen_relations: set[tuple[str, str, str]] = set()
+
+    for chunk in chunks:
+        if not chunk or not chunk.strip():
+            continue
+
+        result = extract_graph(chunk, model=model)
+
+        # 엔티티 병합 (같은 이름이면 description 보강)
+        for ent in result.get("entities", []):
+            name = ent["name"]
+            if name in all_entities:
+                existing = all_entities[name]
+                # description이 더 긴 쪽으로 갱신
+                if len(ent.get("description", "")) > len(existing.get("description", "")):
+                    existing["description"] = ent["description"]
+            else:
+                all_entities[name] = dict(ent)
+
+        # 관계 중복 제거 (source, target, relation 동일하면 스킵)
+        for rel in result.get("relations", []):
+            key = (rel["source"], rel["target"], rel["relation"])
+            if key not in seen_relations:
+                seen_relations.add(key)
+                all_relations.append(rel)
+
+    entities = list(all_entities.values())
+    logger.info(f"청크 {len(chunks)}개에서 병합 추출: 엔티티 {len(entities)}개, 관계 {len(all_relations)}개")
+    return {"entities": entities, "relations": all_relations}

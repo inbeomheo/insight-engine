@@ -12,7 +12,15 @@
     "search": "Search",
     "noResults": "No results found",
     "select": "Select",
-    "start": "Get Started"
+    "start": "Get Started",
+    "retry": "Retry",
+    "undo": "Undo",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "skip": "Skip",
+    "done": "Done"
   },
   "sidebar": {
     "newAnalysis": "New Analysis",
@@ -20,7 +28,8 @@
     "noHistory": "No analysis history",
     "noSearchResults": "No results found",
     "calendar": "Content Calendar",
-    "poweredBy": "Powered by AI"
+    "poweredBy": "Powered by AI",
+    "help": "Help"
   },
   "urlInput": {
     "placeholder": "Enter or paste a YouTube URL",
@@ -55,7 +64,8 @@
     "show_notes": "Show Notes",
     "shorts_script": "Shorts Script",
     "geo_seo": "GEO+SEO",
-    "comment_summary": "Comment Summary"
+    "comment_summary": "Comment Summary",
+    "course": "Course Notes"
   },
   "result": {
     "copyTitle": "Copy title",
@@ -66,6 +76,8 @@
     "regenerate": "Regenerate",
     "exportHtml": "Export HTML",
     "exportDocx": "Export DOCX",
+    "exportMarkdown": "Export Markdown",
+    "exportEpub": "Export EPUB",
     "printPdf": "Print PDF",
     "share": "Share",
     "promptView": "View prompt",
@@ -86,7 +98,13 @@
     "docxSuccess": "DOCX downloaded",
     "docxError": "DOCX export failed",
     "htmlSuccess": "HTML downloaded",
-    "publishError": "An error occurred while publishing."
+    "publishError": "An error occurred while publishing.",
+    "rewrite": "Platform rewrite",
+    "tts": "Text to speech",
+    "factCheck": "Fact check",
+    "qaCheck": "Quality check",
+    "chapters": "Chapters",
+    "transcript": "Transcript"
   },
   "settings": {
     "title": "Settings",
@@ -101,7 +119,10 @@
     "cacheDescription": "Delete saved transcript/comment cache.",
     "clearCache": "Clear all cache",
     "cacheCleared": "Cache cleared.",
-    "cacheClearFailed": "Failed to clear cache."
+    "cacheClearFailed": "Failed to clear cache.",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications"
   },
   "onboarding": {
     "title": "Welcome!",
@@ -109,6 +130,56 @@
     "noServer": "Please check if the Flask server is running.",
     "modelCount": "{count} models",
     "start": "Get Started"
+  },
+  "tour": {
+    "step1Title": "Enter URL",
+    "step1Desc": "Enter a YouTube URL or web page address to analyze.",
+    "step2Title": "Choose Style",
+    "step2Desc": "Select your desired content style: blog, summary, tutorial, etc.",
+    "step3Title": "Start Generation",
+    "step3Desc": "Click the generate button and AI will create your content.",
+    "step4Title": "Use Results",
+    "step4Desc": "Copy, export, or publish your generated content."
+  },
+  "help": {
+    "title": "Help",
+    "gettingStarted": "Getting Started",
+    "gettingStartedDesc": "Enter a URL, select a style, and click the generate button.",
+    "supportedSources": "Supported Sources",
+    "supportedSourcesDesc": "YouTube, web pages, RSS, arXiv, and podcasts are supported.",
+    "shortcuts": "Keyboard Shortcuts",
+    "shortcutsDesc": "Press Enter to add a URL or start generation.",
+    "faq": "FAQ",
+    "faqApiKey": "Where do I set my API key?",
+    "faqApiKeyAnswer": "Go to Settings > AI Service to select your provider and model.",
+    "faqOffline": "Can I use it offline?",
+    "faqOfflineAnswer": "Previously generated content is available offline, but new generation requires an internet connection."
+  },
+  "profile": {
+    "title": "Profile",
+    "avatar": "Profile Image",
+    "displayName": "Display Name",
+    "email": "Email",
+    "plan": "Subscription Plan",
+    "usage": "This Month's Usage",
+    "usageOf": "{used} / {total} times",
+    "memberSince": "Member Since",
+    "editProfile": "Edit Profile"
+  },
+  "activity": {
+    "title": "Team Activity",
+    "generated": "generated content",
+    "published": "published content",
+    "commented": "left a comment",
+    "approved": "approved content",
+    "noActivity": "No activity yet"
+  },
+  "contextMenu": {
+    "copyText": "Copy text",
+    "copyHtml": "Copy HTML",
+    "rewriteSelection": "Rewrite selection",
+    "translateSelection": "Translate selection",
+    "summarizeSelection": "Summarize selection"
   },
   "language": {
     "label": "Language",
@@ -119,6 +190,17 @@
   "errors": {
     "noUrl": "Please enter a URL",
     "invalidUrl": "Invalid URL",
-    "generationFailed": "Generation failed"
+    "generationFailed": "Generation failed",
+    "networkError": "Please check your network connection",
+    "serverError": "A server error occurred",
+    "componentError": "Something went wrong in this area",
+    "componentErrorDesc": "Error details have been reported.",
+    "tryAgain": "Try again"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An error occurred while loading this area.",
+    "reset": "Recover",
+    "reload": "Reload page"
   }
 }

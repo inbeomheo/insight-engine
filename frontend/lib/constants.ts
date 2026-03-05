@@ -59,7 +59,7 @@ export function extractVideoId(url: string): string | null {
 }
 
 // 지원하는 소스 타입
-export type SourceType = 'youtube' | 'arxiv' | 'rss' | 'webpage';
+export type SourceType = 'youtube' | 'arxiv' | 'rss' | 'webpage' | 'podcast';
 
 // 소스 타입별 배지 레이블
 export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
@@ -67,6 +67,7 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   arxiv: 'arXiv',
   rss: 'RSS',
   webpage: 'Web',
+  podcast: 'Podcast',
 };
 
 const _RSS_PATTERN =
@@ -79,6 +80,12 @@ const _ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}(v\d+)?$|^[a-z-]+(\.[A-Z]{2})?\/\d{7}$
  */
 export function detectSourceType(url: string): SourceType {
   const trimmed = url.trim();
+
+  // 팟캐스트 (Spotify 에피소드, Apple Podcasts, 일반 오디오)
+  if (/open\.spotify\.com\/episode\//i.test(trimmed)) return 'podcast';
+  if (/podcasts\.apple\.com\/.+\/podcast\//i.test(trimmed)) return 'podcast';
+  if (/\.(mp3|m4a|ogg|wav|flac|aac)(\?|$)/i.test(trimmed)) return 'podcast';
+  if (/anchor\.fm|podbean\.com|soundcloud\.com/i.test(trimmed)) return 'podcast';
 
   // YouTube
   if (/youtube\.com|youtu\.be/i.test(trimmed)) return 'youtube';

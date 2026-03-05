@@ -42,6 +42,10 @@ TAVILY_API_KEY: str = os.getenv('TAVILY_API_KEY', '')
 WEB_SEARCH_ENABLED: bool = os.getenv('WEB_SEARCH_ENABLED', 'false').lower() == 'true'
 WEB_SEARCH_MAX_RESULTS: int = int(os.getenv('WEB_SEARCH_MAX_RESULTS', '5'))
 
+# === 외부 소스 연동 ===
+
+NOTION_API_KEY: str = os.getenv('NOTION_API_KEY', '')
+
 # === RAG (지식 참조) ===
 
 RAG_ENABLED: bool = os.environ.get('RAG_ENABLED', 'false').lower() == 'true'
@@ -61,6 +65,12 @@ RERANKER_TOP_K: int = int(os.environ.get('RERANKER_TOP_K', '5'))
 CRAG_ENABLED: bool = os.environ.get('CRAG_ENABLED', 'false').lower() == 'true'
 CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '0.7'))
 
+# === 에이전트 모드 ===
+
+AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
+AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
+AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'gemini/gemini-3.1-flash-lite-preview')
+
 # === Whisper (음성 인식 자막 폴백) ===
 
 WHISPER_ENABLED: bool = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
@@ -72,6 +82,36 @@ TTS_ENABLED: bool = os.getenv('TTS_ENABLED', 'false').lower() == 'true'
 TTS_BACKEND: str = os.getenv('TTS_BACKEND', 'auto')   # 'openai', 'edge', 'auto'
 TTS_DEFAULT_VOICE: str = os.getenv('TTS_DEFAULT_VOICE', 'alloy')
 TTS_MAX_CHARS: int = 5000
+
+# === 이미지 생성 ===
+
+IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')
+IMAGE_GEN_API_KEY: str = os.getenv('IMAGE_GEN_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
+
+# === Stripe 결제 ===
+
+STRIPE_SECRET_KEY: str = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET: str = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# === 화이트라벨 (F4-15) ===
+
+WHITELABEL_ENABLED: bool = os.getenv('WHITELABEL_ENABLED', 'false').lower() == 'true'
+WHITELABEL_CONFIG: Dict[str, str] = {
+    'default_app_name': os.getenv('WHITELABEL_APP_NAME', 'Insight Engine'),
+    'default_primary_color': os.getenv('WHITELABEL_PRIMARY_COLOR', '#6366f1'),
+}
+
+# === 플랜별 기능 제한 (F4-18) ===
+
+PLAN_FEATURES: Dict[str, List[str]] = {
+    'free': ['generate', 'history', 'export_markdown'],
+    'starter': ['generate', 'history', 'export_markdown', 'export_docx', 'multi_style', 'custom_style', 'rag'],
+    'pro': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+            'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel', 'api_access'],
+    'enterprise': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+                   'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel',
+                   'api_access', 'sso', 'audit_log', 'team_billing', 'custom_model'],
+}
 
 # === Webhook ===
 
@@ -404,4 +444,88 @@ __all__ = [
     'TTS_BACKEND',
     'TTS_DEFAULT_VOICE',
     'TTS_MAX_CHARS',
+
+    # Phase 9: 인프라 & 성능
+    'REDIS_URL',
+    'ENCRYPTION_KEY',
+    'SENTRY_DSN',
+    'PROMPT_VERSION_STORE',
+    'THUMBNAIL_AB_STORE',
+
+    # Phase 10: 고급 AI & 미래 기술
+    'ELEVENLABS_API_KEY',
+    'RUNWAY_API_KEY',
+    'PIKA_API_KEY',
+    'DEEPL_API_KEY',
+    'COPILOT_MODEL',
+    'REPURPOSE_MODEL',
+    'TRANSLATION_MODEL',
+    'NEWSLETTER_MODEL',
+    'FINETUNE_OUTPUT_DIR',
+    'EMBEDDING_MODEL',
 ]
+
+# === Phase 9: 인프라 & 성능 설정 ===
+
+# Redis 캐싱 (옵셔널)
+REDIS_URL: str = os.getenv('REDIS_URL', '')
+REDIS_TTL_SECONDS: int = int(os.getenv('REDIS_TTL_SECONDS', '3600'))
+
+# 암호화
+ENCRYPTION_KEY: str = os.getenv('ENCRYPTION_KEY', '')
+
+# Sentry 오류 추적
+SENTRY_DSN: str = os.getenv('SENTRY_DSN', '')
+
+# 환경별 설정
+class Config:
+    """기본 설정"""
+    DEBUG = False
+    TESTING = False
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    LOG_LEVEL = 'DEBUG'
+
+class ProductionConfig(Config):
+    LOG_LEVEL = 'INFO'
+    PREFERRED_URL_SCHEME = 'https'
+
+class TestingConfig(Config):
+    TESTING = True
+    LOG_LEVEL = 'WARNING'
+
+ENV_CONFIGS = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+}
+
+ACTIVE_CONFIG = ENV_CONFIGS.get(
+    os.getenv('FLASK_ENV', 'development'), DevelopmentConfig
+)
+
+# === Phase 10: 고급 AI 설정 ===
+
+# ElevenLabs 음성 복제
+ELEVENLABS_API_KEY: str = os.getenv('ELEVENLABS_API_KEY', '')
+
+# 비디오 생성
+RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
+
+# 번역
+DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
+TRANSLATION_MODEL: str = os.getenv(
+    'TRANSLATION_MODEL',
+    'gemini/gemini-2.5-flash-lite-preview-09-2025'
+)
+
+# 임베딩 모델 (RAG)
+EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
+
+# 파인튜닝
+FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR', './data/finetune')
+FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE', '0.6'))
+
+# 모델 라우터 기본 모드
+MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balanced')

@@ -524,5 +524,151 @@ class TestGraphRAGConfig(unittest.TestCase):
                 os.environ['RERANKER_TOP_K'] = original
 
 
+# ─────────────────────────────────────────────
+# 6. GraphRAG Engine 테스트
+# ─────────────────────────────────────────────
+
+class TestGraphRAGEngine(unittest.TestCase):
+    """graph_rag_engine.py — ingest / local_search / global_search"""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        from services.rag.graph_store import GraphStore
+        self.store = GraphStore(store_path=self.tmpdir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    @patch('services.rag.graph_rag_engine.extract_graph')
+    def test_ingest_adds_entities_and_relations(self, mock_extract):
+        """ingest()가 그래프에 엔티티/관계를 추가하는지 확인"""
+        mock_extract.return_value = {
+            "entities": [
+                {"name": "Python", "type": "technology", "description": "언어"},
+                {"name": "AI", "type": "concept", "description": "인공지능"},
+            ],
+            "relations": [
+                {"source": "Python", "target": "AI", "relation": "사용됨", "weight": 0.8},
+            ],
+        }
+        from services.rag.graph_rag_engine import GraphRAGEngine
+        engine = GraphRAGEngine(store=self.store)
+        result = engine.ingest("user1", "Python은 AI에 사용됩니다.")
+
+        self.assertEqual(result["entities_added"], 2)
+        self.assertEqual(result["relations_added"], 1)
+        self.assertEqual(self.store.get_stats("user1")["node_count"], 2)
+
+    def test_local_search_returns_results(self):
+        """로컬 검색이 관련 노드를 반환"""
+        self.store.add_entities("user1", [
+            {"name": "A", "type": "concept", "description": "설명A"},
+            {"name": "B", "type": "concept", "description": "설명B"},
+        ])
+        self.store.add_relations("user1", [
+            {"source": "A", "target": "B", "relation": "연결", "weight": 0.9},
+        ])
+
+        from services.rag.graph_rag_engine import GraphRAGEngine
+        engine = GraphRAGEngine(store=self.store)
+        results = engine.local_search("user1", ["A"])
+        names = [r["name"] for r in results]
+        self.assertIn("A", names)
+        self.assertIn("B", names)
+
+    def test_global_search_top_nodes(self):
+        """글로벌 검색이 연결 수 기준 상위 노드 반환"""
+        self.store.add_entities("user1", [
+            {"name": "Hub", "type": "concept", "description": ""},
+            {"name": "Leaf1", "type": "concept", "description": ""},
+            {"name": "Leaf2", "type": "concept", "description": ""},
+        ])
+        self.store.add_relations("user1", [
+            {"source": "Hub", "target": "Leaf1", "relation": "연결", "weight": 0.5},
+            {"source": "Hub", "target": "Leaf2", "relation": "연결", "weight": 0.5},
+        ])
+
+        from services.rag.graph_rag_engine import GraphRAGEngine
+        engine = GraphRAGEngine(store=self.store)
+        result = engine.global_search("user1", top_n=1)
+        self.assertEqual(len(result["nodes"]), 1)
+        self.assertEqual(result["nodes"][0]["name"], "Hub")
+
+    def test_build_context_returns_text(self):
+        """build_context가 프롬프트용 텍스트 반환"""
+        self.store.add_entities("user1", [
+            {"name": "Node", "type": "technology", "description": "테스트 노드"},
+        ])
+        from services.rag.graph_rag_engine import GraphRAGEngine
+        engine = GraphRAGEngine(store=self.store)
+        context = engine.build_context("user1", ["Node"])
+        self.assertIn("Node", context)
+        self.assertIn("technology", context)
+
+    def test_empty_graph_search(self):
+        """빈 그래프에서 검색 시 빈 결과"""
+        from services.rag.graph_rag_engine import GraphRAGEngine
+        engine = GraphRAGEngine(store=self.store)
+        self.assertEqual(engine.local_search("nobody", ["x"]), [])
+        self.assertEqual(engine.build_context("nobody", ["x"]), "")
+
+
+# ─────────────────────────────────────────────
+# 7. GraphBuilder 청크 병합 추출 테스트
+# ─────────────────────────────────────────────
+
+class TestGraphBuilderChunks(unittest.TestCase):
+    """graph_builder.extract_graph_from_chunks 테스트"""
+
+    @patch('services.rag.graph_builder._call_llm')
+    def test_merge_entities_from_chunks(self, mock_llm):
+        """여러 청크에서 같은 이름 엔티티를 병합"""
+        mock_llm.side_effect = [
+            {
+                "entities": [{"name": "A", "type": "concept", "description": "짧음"}],
+                "relations": [],
+            },
+            {
+                "entities": [{"name": "A", "type": "concept", "description": "더 긴 설명입니다"}],
+                "relations": [],
+            },
+        ]
+        from services.rag.graph_builder import extract_graph_from_chunks
+        result = extract_graph_from_chunks(["chunk1", "chunk2"])
+        self.assertEqual(len(result["entities"]), 1)
+        self.assertEqual(result["entities"][0]["description"], "더 긴 설명입니다")
+
+    @patch('services.rag.graph_builder._call_llm')
+    def test_deduplicate_relations(self, mock_llm):
+        """중복 관계 제거 검증 — 양쪽 청크에 동일 엔티티+관계가 있을 때"""
+        mock_llm.side_effect = [
+            {
+                "entities": [
+                    {"name": "A", "type": "concept", "description": ""},
+                    {"name": "B", "type": "concept", "description": ""},
+                ],
+                "relations": [{"source": "A", "target": "B", "relation": "관련", "weight": 0.5}],
+            },
+            {
+                "entities": [
+                    {"name": "A", "type": "concept", "description": ""},
+                    {"name": "B", "type": "concept", "description": ""},
+                ],
+                "relations": [{"source": "A", "target": "B", "relation": "관련", "weight": 0.5}],
+            },
+        ]
+        from services.rag.graph_builder import extract_graph_from_chunks
+        result = extract_graph_from_chunks(["c1", "c2"])
+        self.assertEqual(len(result["relations"]), 1)
+
+    @patch('services.rag.graph_builder._call_llm')
+    def test_empty_chunks_no_llm_call(self, mock_llm):
+        """빈 청크 리스트는 LLM 호출 없음"""
+        from services.rag.graph_builder import extract_graph_from_chunks
+        result = extract_graph_from_chunks([])
+        mock_llm.assert_not_called()
+        self.assertEqual(result["entities"], [])
+
+
 if __name__ == '__main__':
     unittest.main()

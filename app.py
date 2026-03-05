@@ -122,8 +122,24 @@ def create_app(test_config=None):
     import routes.advanced_routes     # noqa: F401
     import routes.export_routes       # noqa: F401
     import routes.integration_routes  # noqa: F401
+    import routes.payment_routes      # noqa: F401
     app.register_blueprint(blog_bp)
     app.register_blueprint(auth_bp)
+
+    from routes.marketplace_routes import marketplace_bp
+    app.register_blueprint(marketplace_bp)
+
+    # Phase 8: 콘텐츠 관리 & 라이브러리 라우트
+    from routes.content_mgmt_routes import content_mgmt_bp
+    app.register_blueprint(content_mgmt_bp)
+
+    # Phase 7: GraphQL API (F7-09)
+    from routes.graphql_routes import graphql_bp
+    app.register_blueprint(graphql_bp)
+
+    # Phase 6: 분석 & 인사이트 라우트 (F6-01 ~ F6-25)
+    from routes.analytics_routes import analytics_bp
+    app.register_blueprint(analytics_bp)
 
     # 예약 발행 스케줄러 시작
     from services.scheduler_worker import start_scheduler

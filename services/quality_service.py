@@ -192,6 +192,119 @@ def should_regenerate(quality_result: Dict, threshold: str = "C") -> bool:
     return grade_order < threshold_order
 
 
+def calculate_comprehensive_score(content: str) -> Dict:
+    """콘텐츠 종합 점수를 로컬에서 계산합니다.
+
+    AI 호출 없이 규칙 기반으로 SEO, 가독성, 독창성, 구조 점수를 산출합니다.
+
+    Args:
+        content: 평가할 콘텐츠 텍스트
+
+    Returns:
+        dict: {
+            total_score: int (0~100),
+            seo: int (0~100),
+            readability: int (0~100),
+            originality: int (0~100),
+            structure: int (0~100),
+            details: dict (항목별 세부 정보)
+        }
+    """
+    if not content or not content.strip():
+        return {
+            "total_score": 0,
+            "seo": 0, "readability": 0, "originality": 0, "structure": 0,
+            "details": {"error": "콘텐츠가 비어있습니다."},
+        }
+
+    lines = content.split('\n')
+    text_lines = [l for l in lines if l.strip()]
+    char_count = len(content)
+    word_count = len(content.split())
+
+    # --- SEO 점수 (0~100) ---
+    seo = 50  # 기본 50점
+    headings = [l for l in text_lines if l.strip().startswith('#')]
+    if headings:
+        seo += min(20, len(headings) * 5)  # 소제목 있으면 가산
+    if char_count >= 500:
+        seo += 10
+    if char_count >= 1500:
+        seo += 10
+    # 링크 포함 여부
+    if re.search(r'\[.+?\]\(.+?\)', content) or re.search(r'https?://', content):
+        seo += 10
+    seo = min(100, seo)
+
+    # --- 가독성 점수 (0~100) ---
+    readability = 50
+    # 평균 문단 길이 (짧을수록 좋음)
+    paragraphs = [l for l in text_lines if not l.strip().startswith('#')]
+    if paragraphs:
+        avg_para_len = sum(len(p) for p in paragraphs) / len(paragraphs)
+        if avg_para_len < 200:
+            readability += 20
+        elif avg_para_len < 400:
+            readability += 10
+    # 리스트 아이템 사용
+    list_items = len([l for l in text_lines if re.match(r'^\s*[-*•\d]+[.)]\s', l.strip())])
+    if list_items > 0:
+        readability += min(15, list_items * 3)
+    # 소제목으로 구조화
+    if len(headings) >= 2:
+        readability += 15
+    readability = min(100, readability)
+
+    # --- 독창성 점수 (0~100) ---
+    # 규칙 기반 근사: 다양한 어휘 사용도 측정
+    originality = 50
+    words = re.findall(r'[가-힣]{2,}|[a-zA-Z]{3,}', content.lower())
+    if words:
+        unique_ratio = len(set(words)) / len(words)
+        if unique_ratio > 0.6:
+            originality += 25
+        elif unique_ratio > 0.4:
+            originality += 15
+        elif unique_ratio > 0.3:
+            originality += 5
+    # 금지 표현 감점
+    _CLICHE_WORDS = ['놀라운', '혁신적', '획기적', '최고의', '게임체인저', '압도적', '경이로운']
+    cliche_count = sum(1 for w in _CLICHE_WORDS if w in content)
+    originality -= cliche_count * 5
+    originality = max(0, min(100, originality))
+
+    # --- 구조 점수 (0~100) ---
+    structure = 40  # 기본
+    if len(headings) >= 1:
+        structure += 15
+    if len(headings) >= 3:
+        structure += 10
+    if list_items >= 2:
+        structure += 10
+    if char_count >= 300:
+        structure += 10
+    # 서론-본론-결론 패턴 (소제목 3개 이상)
+    if len(headings) >= 3:
+        structure += 15
+    structure = min(100, structure)
+
+    total = round((seo + readability + originality + structure) / 4)
+
+    return {
+        "total_score": total,
+        "seo": seo,
+        "readability": readability,
+        "originality": originality,
+        "structure": structure,
+        "details": {
+            "char_count": char_count,
+            "word_count": word_count,
+            "heading_count": len(headings),
+            "list_items": list_items,
+        },
+    }
+
+
 def auto_regenerate(
     content_fn,
     source_summary: str,

@@ -88,6 +88,82 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
   });
 }
 
+// 파일 업로드 생성 (PDF/DOCX)
+export async function generateFromFile(
+  file: File,
+  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+): Promise<GenerateResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('model', opts.model);
+  formData.append('style', opts.style);
+  if (opts.modifiers) formData.append('modifiers', JSON.stringify(opts.modifiers));
+  if (opts.customPrompt) formData.append('customPrompt', opts.customPrompt);
+  if (opts.detail_level) formData.append('detail_level', opts.detail_level);
+
+  const timeoutMs = TIMEOUT_MS['/generate'] ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${BASE}/generate`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 오디오 파일 업로드 생성 (음성 메모, 팟캐스트 녹음)
+export async function generateFromAudio(
+  file: File,
+  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+): Promise<GenerateResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('model', opts.model);
+  formData.append('style', opts.style);
+  if (opts.modifiers) formData.append('modifiers', JSON.stringify(opts.modifiers));
+  if (opts.customPrompt) formData.append('customPrompt', opts.customPrompt);
+  if (opts.detail_level) formData.append('detail_level', opts.detail_level);
+
+  const timeoutMs = TIMEOUT_MS['/generate'] ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${BASE}/generate`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // 스트리밍 생성
 export async function generateStream(
   req: GenerateRequest,
@@ -621,5 +697,81 @@ export async function generateCampaign(req: {
   return request('/api/generate-campaign', {
     method: 'POST',
     body: JSON.stringify(req),
+  });
+}
+
+export interface RecommendedSource {
+  url: string;
+  title: string;
+  source_type: string;
+  relevance_score: number;
+}
+
+export async function recommendSources(topic: string): Promise<{ sources: RecommendedSource[] }> {
+  return request('/api/recommend-sources', {
+    method: 'POST',
+    body: JSON.stringify({ topic }),
+  });
+}
+
+// === 피드백 (F3-06) ===
+
+export async function submitFeedback(
+  styleId: string,
+  contentId: string,
+  rating: 'like' | 'dislike',
+  comment?: string,
+): Promise<{ ok: boolean; feedback_id: string }> {
+  return request('/api/feedback', {
+    method: 'POST',
+    body: JSON.stringify({ style_id: styleId, content_id: contentId, rating, comment }),
+  });
+}
+
+// === 팩트체크 (F3-07) ===
+
+export async function factCheck(content: string): Promise<FactCheckResponse> {
+  return request('/api/fact-check', {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+// === SEO 최적화 (F3-08) ===
+
+export async function seoOptimize(
+  content: string,
+  keywords?: string[],
+): Promise<SeoOptimizeResponse> {
+  return request('/api/seo-optimize', {
+    method: 'POST',
+    body: JSON.stringify({ content, keywords }),
+  });
+}
+
+// === 표절 감지 (F3-09) ===
+
+export async function plagiarismCheck(content: string): Promise<PlagiarismResponse> {
+  return request('/api/plagiarism-check', {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+// === 가독성 분석 (F3-10) ===
+
+export async function readabilityAnalysis(text: string): Promise<ReadabilityResponse> {
+  return request('/api/readability', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
+
+// === 감정 흐름 (F3-11) ===
+
+export async function sentimentFlow(content: string): Promise<SentimentFlowResponse> {
+  return request('/api/sentiment-flow', {
+    method: 'POST',
+    body: JSON.stringify({ content }),
   });
 }

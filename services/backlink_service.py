@@ -345,6 +345,62 @@ def _is_already_linked(content: str, start: int, end: int) -> bool:
     return False
 
 
+def recommend_internal_links(
+    content: str,
+    existing_contents: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """기존 콘텐츠 목록에서 현재 콘텐츠와 관련된 내부 링크를 추천합니다.
+
+    Supabase 없이 메모리 내 콘텐츠 목록으로 동작합니다.
+
+    Args:
+        content: 현재 콘텐츠 텍스트
+        existing_contents: [{"id": str, "title": str, "url": str}, ...] 형태의 기존 콘텐츠 목록
+
+    Returns:
+        [{"title": str, "url": str, "relevance": float, "anchor_text": str}] 형태.
+        관련도 내림차순, 최대 MAX_INTERNAL_LINKS개.
+    """
+    if not content or not existing_contents:
+        return []
+
+    content_words = set(
+        w.lower() for w in re.findall(r'[가-힣a-zA-Z]{2,}', content)
+    )
+    if not content_words:
+        return []
+
+    scored = []
+    for item in existing_contents:
+        title = item.get('title', '')
+        url = item.get('url', '')
+        if not title or not url:
+            continue
+
+        title_words = set(
+            w.lower() for w in re.findall(r'[가-힣a-zA-Z]{2,}', title)
+        )
+        if not title_words:
+            continue
+
+        # 자카드 유사도
+        intersection = content_words & title_words
+        union = content_words | title_words
+        relevance = len(intersection) / len(union) if union else 0.0
+
+        if relevance > 0.05:
+            anchor = _extract_key_phrase(title)
+            scored.append({
+                'title': title,
+                'url': url,
+                'relevance': round(relevance, 3),
+                'anchor_text': anchor,
+            })
+
+    scored.sort(key=lambda x: x['relevance'], reverse=True)
+    return scored[:MAX_INTERNAL_LINKS]
+
+
 def _extract_key_phrase(title: str) -> str:
     """제목에서 핵심 키워드 구(2단어 이하)를 추출합니다."""
     if not title:

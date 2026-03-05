@@ -6,6 +6,10 @@
 from ..registry import plugin_registry
 from .naver_blog import NaverBlogPlugin
 from .wordpress import WordPressPlugin
+from .medium import MediumPlugin
+from .substack import SubstackPlugin
 
 plugin_registry.register('naver_blog', NaverBlogPlugin())
 plugin_registry.register('wordpress', WordPressPlugin())
+plugin_registry.register('medium', MediumPlugin())
+plugin_registry.register('substack', SubstackPlugin())

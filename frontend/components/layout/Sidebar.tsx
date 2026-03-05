@@ -91,6 +91,8 @@ export default function Sidebar() {
           'fixed lg:relative',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-full lg:w-0 lg:border-0 lg:overflow-hidden'
         )}
+        role="navigation"
+        aria-label="사이드바 내비게이션"
       >
         {/* 새 분석 */}
         <div className="p-3 pb-2">

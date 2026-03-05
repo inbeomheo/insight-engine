@@ -83,7 +83,7 @@ def format_transcript_with_timestamps(segments: list) -> str:
         return ""
 
 
-def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None, detail_level=None):
+def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None, detail_level=None, memory_context=None):
     """프롬프트를 구성합니다."""
     # 현재 한국 시간 추가
     current_time = _get_korean_datetime()
@@ -101,6 +101,10 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
     # 개인 스타일 메모리 컨텍스트 주입 (RAG/웹 앞에 삽입)
     if style_memory_context:
         prompt += f"\n\n{style_memory_context}"
+
+    # AI 메모리 레이어 컨텍스트 주입
+    if memory_context:
+        prompt += f"\n\n{memory_context}"
 
     # RAG 참고자료 삽입
     if rag_context:
@@ -310,10 +314,20 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
             except Exception as sm_err:
                 current_app.logger.warning(f"스타일 메모리 컨텍스트 빌드 실패 (무시): {sm_err}")
 
+        # AI 메모리 레이어 컨텍스트 주입 (user_id가 있을 때)
+        memory_context = None
+        if user_id:
+            try:
+                from services.memory_service import memory_service
+                memory_context = memory_service.build_prompt_context(user_id) or None
+            except Exception as mem_err:
+                current_app.logger.warning(f"메모리 컨텍스트 빌드 실패 (무시): {mem_err}")
+
         prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context,
                                segments=segments, web_context=web_context,
                                style_memory_context=style_memory_context,
-                               detail_level=detail_level)
+                               detail_level=detail_level,
+                               memory_context=memory_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers,
                                                      detail_level=detail_level)
         is_glm = model.startswith("zhipuai/")

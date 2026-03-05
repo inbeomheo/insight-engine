@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\playwright.config.ts",
-    "rootDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+    "configFile": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\playwright.config.ts",
+    "rootDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
     "forbidOnly": false,
     "fullyParallel": true,
     "globalSetup": null,
@@ -10,9 +10,7 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 1
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "reporter": [
       [
@@ -40,35 +38,36 @@
     "quiet": false,
     "projects": [
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "no-auth-chromium",
         "name": "no-auth-chromium",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/main-page/**/*.spec.ts",
           "**/url-input/**/*.spec.ts",
+          "**/url-management/**/*.spec.ts",
           "**/accessibility/**/*.spec.ts",
           "**/responsive/**/*.spec.ts",
+          "**/settings-modals/**/*.spec.ts",
+          "**/history-usage/**/*.spec.ts",
+          "**/core-flow/**/*.spec.ts",
+          "**/result-card/**/*.spec.ts",
           "**/auth/login.spec.ts"
         ],
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "content-generation",
         "name": "content-generation",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/content-generation/**/*.spec.ts"
@@ -76,15 +75,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "batch-generation",
         "name": "batch-generation",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/batch-generation/**/*.spec.ts"
@@ -92,15 +89,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "auth-setup",
         "name": "auth-setup",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/auth/setup.spec.ts"
@@ -108,15 +103,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "authenticated-tests",
         "name": "authenticated-tests",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/settings/**/*.spec.ts",
@@ -126,15 +119,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "error-handling",
         "name": "error-handling",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/error-handling/**/*.spec.ts"
@@ -142,15 +133,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "performance",
         "name": "performance",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/performance/**/*.spec.ts"
@@ -158,15 +147,13 @@
         "timeout": 60000
       },
       {
-        "outputDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e/test-results",
+        "outputDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 1
-        },
+        "metadata": {},
         "id": "mobile-chrome",
         "name": "mobile-chrome",
-        "testDir": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
+        "testDir": "E:/자동화 프로젝트/250705_스마트 콘텐츠 생성기(완성)/tests/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/responsive/**/*.spec.ts"
@@ -179,7 +166,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.57.0",
-    "workers": 1,
+    "workers": 6,
     "webServer": {
       "command": "python app.py",
       "url": "http://localhost:5001",
@@ -187,140 +174,944 @@
       "reuseExistingServer": true,
       "timeout": 120000,
       "env": {
-        "ACLOCAL_PATH": "C:\\Program Files\\Git\\mingw64\\share\\aclocal;C:\\Program Files\\Git\\usr\\share\\aclocal",
         "ALLUSERSPROFILE": "C:\\ProgramData",
-        "APPDATA": "C:\\Users\\user\\AppData\\Roaming",
+        "APPDATA": "C:\\Users\\qlqla\\AppData\\Roaming",
+        "BROWSERSLIST_IGNORE_OLD_DATA": "true",
         "ChocolateyInstall": "C:\\ProgramData\\chocolatey",
-        "ChocolateyLastPathUpdate": "133776745652416316",
-        "CLAUDECODE": "1",
-        "CLAUDE_CODE_ENTRYPOINT": "cli",
+        "ChocolateyLastPathUpdate": "133883356670266500",
+        "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "0",
+        "CODEX_MANAGED_BY_NPM": "1",
+        "CODEX_THREAD_ID": "019cae09-9835-7fa0-b74d-8238aee9b9c4",
         "COLOR": "0",
-        "COMMONPROGRAMFILES": "C:\\Program Files\\Common Files",
+        "CommonProgramFiles": "C:\\Program Files\\Common Files",
         "CommonProgramFiles(x86)": "C:\\Program Files (x86)\\Common Files",
         "CommonProgramW6432": "C:\\Program Files\\Common Files",
-        "COMPUTERNAME": "202310474_허인",
-        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
-        "CONDA_PROMPT_MODIFIER": "False",
-        "CONFIG_SITE": "C:/Program Files/Git/etc/config.site",
-        "COREPACK_ENABLE_AUTO_PIN": "0",
-        "DISPLAY": "needs-to-be-defined",
+        "COMPUTERNAME": "DESKTOP-JK9R39H",
+        "ComSpec": "C:\\WINDOWS\\system32\\cmd.exe",
         "DriverData": "C:\\Windows\\System32\\Drivers\\DriverData",
         "EDITOR": "C:\\WINDOWS\\notepad.exe",
-        "EFC_33008_1262719628": "1",
-        "EFC_33008_1592913036": "1",
-        "EFC_33008_2283032206": "1",
-        "EFC_33008_2775293581": "1",
-        "EFC_33008_3789132940": "1",
-        "EXEPATH": "C:\\Program Files\\Git\\bin",
         "FPS_BROWSER_APP_PROFILE_STRING": "Internet Explorer",
         "FPS_BROWSER_USER_PROFILE_STRING": "Default",
-        "GIT_EDITOR": "true",
-        "GOPATH": "C:\\Users\\user\\go",
-        "HOME": "C:\\Users\\user",
+        "HOME": "C:\\Users\\qlqla",
         "HOMEDRIVE": "C:",
-        "HOMEPATH": "\\Users\\user",
-        "HOSTNAME": "202310474_ÇãÀιü",
-        "INFOPATH": "C:\\Program Files\\Git\\mingw64\\local\\info;C:\\Program Files\\Git\\mingw64\\share\\info;C:\\Program Files\\Git\\usr\\local\\info;C:\\Program Files\\Git\\usr\\share\\info;C:\\Program Files\\Git\\usr\\info;C:\\Program Files\\Git\\share\\info",
-        "INIT_CWD": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e",
-        "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\",
-        "LANG": "ko_KR.UTF-8",
-        "LOCALAPPDATA": "C:\\Users\\user\\AppData\\Local",
-        "LOGONSERVER": "\\\\202310474_허인",
-        "MANPATH": "C:\\Program Files\\Git\\mingw64\\local\\man;C:\\Program Files\\Git\\mingw64\\share\\man;C:\\Program Files\\Git\\usr\\local\\man;C:\\Program Files\\Git\\usr\\share\\man;C:\\Program Files\\Git\\usr\\man;C:\\Program Files\\Git\\share\\man",
-        "MINGW_CHOST": "x86_64-w64-mingw32",
-        "MINGW_PACKAGE_PREFIX": "mingw-w64-x86_64",
-        "MINGW_PREFIX": "C:/Program Files/Git/mingw64",
-        "MSYSTEM": "MINGW64",
-        "MSYSTEM_CARCH": "x86_64",
-        "MSYSTEM_CHOST": "x86_64-w64-mingw32",
-        "MSYSTEM_PREFIX": "C:/Program Files/Git/mingw64",
+        "HOMEPATH": "\\Users\\qlqla",
+        "INIT_CWD": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e",
+        "LOCALAPPDATA": "C:\\Users\\qlqla\\AppData\\Local",
+        "LOGONSERVER": "\\\\DESKTOP-JK9R39H",
         "NODE": "C:\\Program Files\\nodejs\\node.exe",
-        "NoDefaultCurrentDirectoryInExePath": "1",
         "npm_command": "exec",
-        "npm_config_cache": "C:\\Users\\user\\AppData\\Local\\npm-cache",
-        "npm_config_globalconfig": "C:\\Users\\user\\AppData\\Roaming\\npm\\etc\\npmrc",
-        "npm_config_global_prefix": "C:\\Users\\user\\AppData\\Roaming\\npm",
-        "npm_config_init_module": "C:\\Users\\user\\.npm-init.js",
-        "npm_config_local_prefix": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e",
-        "npm_config_node_gyp": "C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js",
+        "npm_config_cache": "C:\\Users\\qlqla\\AppData\\Local\\npm-cache",
+        "npm_config_globalconfig": "C:\\Users\\qlqla\\AppData\\Roaming\\npm\\etc\\npmrc",
+        "npm_config_global_prefix": "C:\\Users\\qlqla\\AppData\\Roaming\\npm",
+        "npm_config_init_module": "C:\\Users\\qlqla\\.npm-init.js",
+        "npm_config_local_prefix": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e",
+        "npm_config_node_gyp": "C:\\Program Files\\nodejs\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js",
         "npm_config_noproxy": "",
-        "npm_config_npm_version": "11.4.2",
-        "npm_config_prefix": "C:\\Users\\user\\AppData\\Roaming\\npm",
-        "npm_config_userconfig": "C:\\Users\\user\\.npmrc",
-        "npm_config_user_agent": "npm/11.4.2 node/v22.20.0 win32 x64 workspaces/false",
-        "npm_execpath": "C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js",
+        "npm_config_npm_version": "10.9.2",
+        "npm_config_prefix": "C:\\Users\\qlqla\\AppData\\Roaming\\npm",
+        "npm_config_userconfig": "C:\\Users\\qlqla\\.npmrc",
+        "npm_config_user_agent": "npm/10.9.2 node/v22.14.0 win32 x64 workspaces/false",
+        "npm_execpath": "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
         "npm_lifecycle_event": "npx",
         "npm_lifecycle_script": "playwright",
         "npm_node_execpath": "C:\\Program Files\\nodejs\\node.exe",
-        "npm_package_json": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\package.json",
+        "npm_package_json": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\package.json",
         "npm_package_name": "insight-engine-e2e-tests",
         "npm_package_version": "1.0.0",
-        "NUMBER_OF_PROCESSORS": "16",
-        "OLDPWD": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠",
-        "OneDrive": "C:\\Users\\user\\OneDrive - 한성크린텍",
-        "OneDriveCommercial": "C:\\Users\\user\\OneDrive - 한성크린텍",
-        "OneDriveConsumer": "C:\\Users\\user\\OneDrive",
-        "ORIGINAL_PATH": "C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\user\\bin;C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\user\\AppData\\Local\\PowerToys\\DSCModules;C:\\Users\\user\\go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Warp\\bin;C:\\Program Files\\wkhtmltopdf\\bin",
-        "ORIGINAL_TEMP": "C:/Users/user/AppData/Local/Temp",
-        "ORIGINAL_TMP": "C:/Users/user/AppData/Local/Temp",
+        "NUMBER_OF_PROCESSORS": "12",
+        "OneDrive": "C:\\Users\\qlqla\\OneDrive",
+        "OneDriveConsumer": "C:\\Users\\qlqla\\OneDrive",
+        "OPENAI_API_KEY": "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",
         "OS": "Windows_NT",
-        "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE": "delta",
-        "PATH": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\node_modules\\.bin;C:\\Users\\user\\Desktop\\연습\\node_modules\\.bin;C:\\Users\\user\\Desktop\\node_modules\\.bin;C:\\Users\\user\\node_modules\\.bin;C:\\Users\\node_modules\\.bin;C:\\node_modules\\.bin;C:\\Users\\user\\AppData\\Roaming\\npm\\node_modules\\npm\\node_modules\\@npmcli\\run-script\\lib\\node-gyp-bin;C:\\Users\\user\\bin;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\local\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Users\\user\\bin;C:\\Program Files\\Eclipse Adoptium\\jre-21.0.9.10-hotspot\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Program Files\\GitHub CLI;C:\\Users\\user\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Python312\\Scripts;C:\\Python312;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\Bandizip;C:\\Program Files\\dotnet;C:\\ProgramData\\chocolatey\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\nodejs;C:\\Program Files\\Go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\user\\AppData\\Local\\Programs\\Windsurf\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\user\\AppData\\Roaming\\npm;C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\user\\AppData\\Local\\PowerToys\\DSCModules;C:\\Users\\user\\go\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\.local\\bin;C:\\Users\\user\\AppData\\Local\\Programs\\Warp\\bin;C:\\Program Files\\wkhtmltopdf\\bin;C:\\Program Files\\Git\\usr\\bin\\vendor_perl;C:\\Program Files\\Git\\usr\\bin\\core_perl",
+        "PATH": "E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\.bin;E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\e2e\\node_modules\\.bin;E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\tests\\node_modules\\.bin;E:\\자동화 프로젝트\\250705_스마트 콘텐츠 생성기(완성)\\node_modules\\.bin;E:\\자동화 프로젝트\\node_modules\\.bin;E:\\node_modules\\.bin;C:\\Program Files\\nodejs\\node_modules\\npm\\node_modules\\@npmcli\\run-script\\lib\\node-gyp-bin;C:\\Users\\qlqla\\.codex\\tmp\\arg0\\codex-arg0f2niGV;C:\\Users\\qlqla\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\path;C:\\Python313\\Scripts\\;C:\\Python313\\;c:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;C:\\Program Files\\Bandizip\\;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Program Files (x86)\\ESTsoft\\ALSee\\x64;c:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs\\;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\GitHub CLI\\;C:\\Users\\qlqla\\.local\\bin;C:\\Program Files\\PowerToys\\DSCModules\\;C:\\Users\\qlqla\\.claude\\bin;C:\\Python313\\Scripts\\;C:\\Python313\\;c:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;C:\\Program Files\\Bandizip\\;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Program Files (x86)\\ESTsoft\\ALSee\\x64;c:\\Users\\qlqla\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs\\;C:\\ProgramData\\chocolatey\\bin;C:\\Program Files\\GitHub CLI\\;C:\\Program Files\\PowerToys\\DSCModules\\;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\bin;C:\\Users\\qlqla\\.pyenv\\pyenv-win\\shims;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Python312\\;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Python\\Launcher\\;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\qlqla\\AppData\\Roaming\\npm;C:\\Users\\qlqla\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin;C:\\Users\\qlqla\\AppData\\Local\\Microsoft\\WinGet\\Packages\\jqlang.jq_Microsoft.Winget.Source_8wekyb3d8bbwe;C:\\Users\\qlqla\\AppData\\Local\\Programs\\Warp\\bin;C:\\Users\\qlqla\\.local\\bin",
         "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY;.PYW;.CPL",
-        "PKG_CONFIG_PATH": "C:\\Program Files\\Git\\mingw64\\lib\\pkgconfig;C:\\Program Files\\Git\\mingw64\\share\\pkgconfig",
-        "PKG_CONFIG_SYSTEM_INCLUDE_PATH": "C:/Program Files/Git/mingw64/include",
-        "PKG_CONFIG_SYSTEM_LIBRARY_PATH": "C:/Program Files/Git/mingw64/lib",
-        "PLINK_PROTOCOL": "ssh",
-        "POSH_CURSOR_COLUMN": "1",
-        "POSH_CURSOR_LINE": "1",
-        "POSH_SESSION_ID": "ad2143f8-34e1-45a2-9dfc-1435f4155876",
-        "POSH_SHELL": "pwsh",
-        "POSH_SHELL_VERSION": "5.1.26100.7535",
-        "POWERLINE_COMMAND": "oh-my-posh",
         "PROCESSOR_ARCHITECTURE": "AMD64",
-        "PROCESSOR_IDENTIFIER": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
-        "PROCESSOR_LEVEL": "6",
-        "PROCESSOR_REVISION": "8d01",
+        "PROCESSOR_IDENTIFIER": "AMD64 Family 23 Model 1 Stepping 1, AuthenticAMD",
+        "PROCESSOR_LEVEL": "23",
+        "PROCESSOR_REVISION": "0101",
         "ProgramData": "C:\\ProgramData",
-        "PROGRAMFILES": "C:\\Program Files",
+        "ProgramFiles": "C:\\Program Files",
         "ProgramFiles(x86)": "C:\\Program Files (x86)",
         "ProgramW6432": "C:\\Program Files",
         "PROMPT": "$P$G",
-        "PSModulePath": "C:\\Users\\user\\Documents\\WindowsPowerShell\\Modules;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
+        "PSModulePath": "C:\\Users\\qlqla\\Documents\\WindowsPowerShell\\Modules;;C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
         "PUBLIC": "C:\\Users\\Public",
-        "PWD": "C:/Users/user/Desktop/연습/7. 스마트 컨텐츠/insight-engine/tests/e2e",
-        "PYENV_VIRTUALENV_DISABLE_PROMPT": "1",
+        "PYENV": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
+        "PYENV_HOME": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
+        "PYENV_ROOT": "C:\\Users\\qlqla\\.pyenv\\pyenv-win\\",
         "SESSIONNAME": "Console",
-        "SHELL": "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
-        "SHLVL": "1",
-        "SSH_ASKPASS": "C:/Program Files/Git/mingw64/bin/git-askpass.exe",
         "SSH_SOCKET_DIR": "~/.ssh",
-        "SYSTEMDRIVE": "C:",
-        "SYSTEMROOT": "C:\\WINDOWS",
-        "TEMP": "C:\\Users\\user\\AppData\\Local\\Temp",
-        "TERM": "xterm-256color",
+        "SystemDrive": "C:",
+        "SystemRoot": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\qlqla\\AppData\\Local\\Temp",
         "TERM_PROGRAM": "WarpTerminal",
-        "TMP": "C:\\Users\\user\\AppData\\Local\\Temp",
-        "TMPDIR": "C:\\Users\\user\\AppData\\Local\\Temp",
-        "USERDOMAIN": "202310474_허인",
-        "USERDOMAIN_ROAMINGPROFILE": "202310474_허인",
-        "USERNAME": "user",
-        "USERPROFILE": "C:\\Users\\user",
-        "VIRTUAL_ENV_DISABLE_PROMPT": "1",
-        "VSTO_SUPPRESSDISPLAYALERTS": "0",
+        "TMP": "C:\\Users\\qlqla\\AppData\\Local\\Temp",
+        "USERDOMAIN": "DESKTOP-JK9R39H",
+        "USERDOMAIN_ROAMINGPROFILE": "DESKTOP-JK9R39H",
+        "USERNAME": "qlqla",
+        "USERPROFILE": "C:\\Users\\qlqla",
         "WARP_HONOR_PS1": "0",
         "WARP_IS_LOCAL_SHELL_SESSION": "1",
         "WARP_PATH_APPEND": "",
         "WARP_SHELL_DEBUG_MODE": "0",
         "WARP_USE_SSH_WRAPPER": "1",
-        "WINDIR": "C:\\WINDOWS",
-        "ZES_ENABLE_SYSMAN": "1",
+        "windir": "C:\\WINDOWS",
         "SUPABASE_URL": "",
         "SUPABASE_ANON_KEY": ""
       }
     }
   },
   "suites": [
+    {
+      "title": "auth\\setup.spec.ts",
+      "file": "auth/setup.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "인증 상태 준비",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "auth-setup",
+              "projectName": "auth-setup",
+              "results": [],
+              "status": "skipped"
+            }
+          ],
+          "id": "d7b3b7637172e3fc3638-609b3bfb2bbfb10294ac",
+          "file": "auth/setup.spec.ts",
+          "line": 12,
+          "column": 6
+        }
+      ]
+    },
+    {
+      "title": "accessibility\\aria-labels.spec.ts",
+      "file": "accessibility/aria-labels.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "ARIA 레이블 @parallel @no-auth @a11y",
+          "file": "accessibility/aria-labels.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "버튼에 접근 가능한 이름이 있음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7d50e4afa3a80001188f-dff08cdde4d49182c20a",
+              "file": "accessibility/aria-labels.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "주요 입력 필드에 레이블이 있음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7d50e4afa3a80001188f-d8b3d33bfd851275dbd6",
+              "file": "accessibility/aria-labels.spec.ts",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "이미지에 alt 텍스트가 있음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7d50e4afa3a80001188f-e9914f359cef84187a22",
+              "file": "accessibility/aria-labels.spec.ts",
+              "line": 61,
+              "column": 7
+            },
+            {
+              "title": "랜드마크 영역이 정의됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7d50e4afa3a80001188f-0951d125d61d5c3c3a29",
+              "file": "accessibility/aria-labels.spec.ts",
+              "line": 76,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "accessibility\\keyboard-navigation.spec.ts",
+      "file": "accessibility/keyboard-navigation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "키보드 네비게이션 @parallel @no-auth @a11y",
+          "file": "accessibility/keyboard-navigation.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Tab 키로 주요 요소 탐색 가능",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "97c8d30574afba02e488-e21c817a1076bb2e382e",
+              "file": "accessibility/keyboard-navigation.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "Shift+Tab으로 역방향 탐색",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "97c8d30574afba02e488-093a4ed27e315c27cc6b",
+              "file": "accessibility/keyboard-navigation.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "Enter 키로 버튼 활성화",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "97c8d30574afba02e488-00ef1e74ebccc3a3690a",
+              "file": "accessibility/keyboard-navigation.spec.ts",
+              "line": 47,
+              "column": 7
+            },
+            {
+              "title": "Escape 키로 모달/드롭다운 닫기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "97c8d30574afba02e488-a9b16d831c0d8773c6cd",
+              "file": "accessibility/keyboard-navigation.spec.ts",
+              "line": 59,
+              "column": 7
+            },
+            {
+              "title": "포커스 표시가 시각적으로 명확함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "a11y"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "97c8d30574afba02e488-4f60179ca067574a7e60",
+              "file": "accessibility/keyboard-navigation.spec.ts",
+              "line": 74,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth\\login.spec.ts",
+      "file": "auth/login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "로그인 @parallel @no-auth",
+          "file": "auth/login.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "로그인 버튼/링크가 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "231ca1f0f4db3e4958c3-a47628e6769819b24b7e",
+              "file": "auth/login.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "로그인 폼이 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "231ca1f0f4db3e4958c3-97eeaf5d4269af2c51ba",
+              "file": "auth/login.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "빈 폼 제출 시 유효성 검사",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "231ca1f0f4db3e4958c3-b9107b4275b0764ad8e4",
+              "file": "auth/login.spec.ts",
+              "line": 39,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "core-flow\\user-journey.spec.ts",
+      "file": "core-flow/user-journey.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "핵심 사용자 흐름",
+          "file": "core-flow/user-journey.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "URL 없으면 생성 버튼이 보이지 않는다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-23a72572378ffd25283e",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 15,
+              "column": 7
+            },
+            {
+              "title": "URL 입력 후 생성 버튼이 나타난다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-e0b71e7953fd34421606",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "URL 입력 + Enter로 칩이 추가되고 입력이 초기화된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-6f6d0808fcfbe3576432",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "잘못된 URL 입력 시 에러 메시지가 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-2dd7a654aca97670dab3",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 42,
+              "column": 7
+            },
+            {
+              "title": "URL X 버튼 클릭으로 칩이 삭제된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-061240516fda8ae6ca97",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 51,
+              "column": 7
+            },
+            {
+              "title": "결과 없을 때 빈 상태 안내가 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-69585b4f1e097806387c",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "첫 방문 시 온보딩 모달이 표시되고 시작하기로 닫을 수 있다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-3cf185946930f7717399",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 73,
+              "column": 7
+            },
+            {
+              "title": "사이드바에 \"새 분석\" 버튼이 있다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-aadb13dc468e05e39f5f",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "사이드바 히스토리 검색이 동작한다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-0a8858ed198c92bbe04c",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "헤더에 로고와 설정 버튼이 있다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-2ed54ecc270c874d752b",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 111,
+              "column": 7
+            },
+            {
+              "title": "설정 버튼 클릭 시 설정 모달이 열린다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-e90e4b2c13173e2d86ba",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 118,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "다중 URL 모드",
+          "file": "core-flow/user-journey.spec.ts",
+          "line": 127,
+          "column": 6,
+          "specs": [
+            {
+              "title": "URL 2개 추가 시 모드 선택기가 나타난다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-a23dffebbb6ae2a6d4ef",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 132,
+              "column": 7
+            },
+            {
+              "title": "최대 10개 URL 제한이 적용된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "769c95805262ea82cc31-469104c0ba17c351fa52",
+              "file": "core-flow/user-journey.spec.ts",
+              "line": 148,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "history-usage\\panels.spec.ts",
+      "file": "history-usage/panels.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "히스토리 및 사용량 패널 @parallel",
+          "file": "history-usage/panels.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Suite 1: 사이드바 네비게이션",
+              "file": "history-usage/panels.spec.ts",
+              "line": 19,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-1.1: 대시보드 탭 클릭 시 활성화",
+                  "ok": true,
+                  "tags": [
+                    "parallel"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "8043ce292c1f3300d86a-9712b8c88fc95db0d3e6",
+                  "file": "history-usage/panels.spec.ts",
+                  "line": 20,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.2: 히스토리 탭 클릭 시 패널 표시",
+                  "ok": true,
+                  "tags": [
+                    "parallel"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "8043ce292c1f3300d86a-886740de3f7ab37295b0",
+                  "file": "history-usage/panels.spec.ts",
+                  "line": 34,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.3: 사용량 탭 클릭 시 패널 표시",
+                  "ok": true,
+                  "tags": [
+                    "parallel"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "8043ce292c1f3300d86a-2b82f0df78709d9e4c41",
+                  "file": "history-usage/panels.spec.ts",
+                  "line": 50,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Suite 2: 탭 전환",
+              "file": "history-usage/panels.spec.ts",
+              "line": 70,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-2.1: 빠른 탭 전환 시 정상 동작",
+                  "ok": true,
+                  "tags": [
+                    "parallel"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "8043ce292c1f3300d86a-3d5e84b2cae8c86492ae",
+                  "file": "history-usage/panels.spec.ts",
+                  "line": 71,
+                  "column": 9
+                },
+                {
+                  "title": "TC-2.2: 탭 활성 상태 유지",
+                  "ok": true,
+                  "tags": [
+                    "parallel"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "8043ce292c1f3300d86a-159e1a5706786c6d7322",
+                  "file": "history-usage/panels.spec.ts",
+                  "line": 107,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "main-page\\deepseek-provider.spec.ts",
+      "file": "main-page/deepseek-provider.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "DeepSeek 프로바이더",
+          "file": "main-page/deepseek-provider.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "프로바이더 목록에 DeepSeek가 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a64ac1863c4f6a4ab40f-dff592205e69dbd8fcf3",
+              "file": "main-page/deepseek-provider.spec.ts",
+              "line": 4,
+              "column": 7
+            },
+            {
+              "title": "DeepSeek 프로바이더에 올바른 모델이 포함되어 있다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a64ac1863c4f6a4ab40f-4a26d023d137b2b444f3",
+              "file": "main-page/deepseek-provider.spec.ts",
+              "line": 14,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
     {
       "title": "main-page\\page-load.spec.ts",
       "file": "main-page/page-load.spec.ts",
@@ -348,22 +1139,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4761,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:54:47.823Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "610ce0a50dc7ed2de43c-6514e29aaf66c4daf0e1",
@@ -385,22 +1162,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4365,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:54:52.896Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "610ce0a50dc7ed2de43c-88d40127e70568d858d8",
@@ -422,22 +1185,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 8048,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:54:57.284Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "610ce0a50dc7ed2de43c-25a533ef2644ad75a628",
@@ -459,22 +1208,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 7263,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:05.357Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "610ce0a50dc7ed2de43c-6514a57602d622d2b0e2",
@@ -494,90 +1229,13 @@
       "specs": [],
       "suites": [
         {
-          "title": "AI 프로바이더 목록 @parallel @no-auth",
+          "title": "AI provider list @parallel @no-auth",
           "file": "main-page/provider-list.spec.ts",
-          "line": 9,
+          "line": 19,
           "column": 6,
           "specs": [
             {
-              "title": "프로바이더 드롭다운이 표시됨",
-              "ok": false,
-              "tags": [
-                "parallel",
-                "no-auth"
-              ],
-              "tests": [
-                {
-                  "timeout": 60000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "no-auth-chromium",
-                  "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 14421,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n\n    at C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts:16:34",
-                        "location": {
-                          "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
-                          "column": 34,
-                          "line": 16
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 14 |\u001b[39m   test(\u001b[32m'프로바이더 드롭다운이 표시됨'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 15 |\u001b[39m     \u001b[36mconst\u001b[39m providerSelect \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#provider'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 16 |\u001b[39m     \u001b[36mawait\u001b[39m expect(providerSelect)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 17 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 18 |\u001b[39m\n \u001b[90m 19 |\u001b[39m   test(\u001b[32m'최소 1개 이상의 프로바이더 옵션이 있음'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
-                            "column": 34,
-                            "line": 16
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#provider')\nExpected: visible\nReceived: hidden\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('#provider')\u001b[22m\n\u001b[2m    14 × locator resolved to <select id=\"provider\" aria-describedby=\"selected-model-info\" class=\"w-full bg-white dark:bg-surface-dark border border-gray-300 dark:border-border-dark rounded-xl px-3 py-2.5 pr-10 text-sm text-gray-900 dark:text-white cursor-pointer appearance-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all hover:border-primary/50\">…</select>\u001b[22m\n\u001b[2m       - unexpected value \"hidden\"\u001b[22m\n\n\n  14 |   test('프로바이더 드롭다운이 표시됨', async ({ page }) => {\n  15 |     const providerSelect = page.locator('#provider');\n> 16 |     await expect(providerSelect).toBeVisible();\n     |                                  ^\n  17 |   });\n  18 |\n  19 |   test('최소 1개 이상의 프로바이더 옵션이 있음', async ({ page }) => {\n    at C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts:16:34"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:12.649Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\test-results\\main-page-provider-list-AI-fdac7-lel-no-auth-프로바이더-드롭다운이-표시됨-no-auth-chromium\\error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "C:\\Users\\user\\Desktop\\연습\\7. 스마트 컨텐츠\\insight-engine\\tests\\e2e\\main-page\\provider-list.spec.ts",
-                        "column": 34,
-                        "line": 16
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
-                }
-              ],
-              "id": "44f55067fa7d71e19ed8-9dbcbad11294d7eacb4a",
-              "file": "main-page/provider-list.spec.ts",
-              "line": 14,
-              "column": 7
-            },
-            {
-              "title": "최소 1개 이상의 프로바이더 옵션이 있음",
+              "title": "provider dropdown is visible",
               "ok": true,
               "tags": [
                 "parallel",
@@ -590,31 +1248,17 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4329,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:28.499Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "44f55067fa7d71e19ed8-f921e5637556b0fd8987",
+              "id": "44f55067fa7d71e19ed8-42b905af3100c90374f0",
               "file": "main-page/provider-list.spec.ts",
-              "line": 19,
+              "line": 24,
               "column": 7
             },
             {
-              "title": "프로바이더 선택이 가능함",
+              "title": "has at least one provider option",
               "ok": true,
               "tags": [
                 "parallel",
@@ -627,27 +1271,36 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4322,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:33.172Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
-              "id": "44f55067fa7d71e19ed8-1c24e0a40f9aa42bb90e",
+              "id": "44f55067fa7d71e19ed8-63c85afe7008828e59d5",
               "file": "main-page/provider-list.spec.ts",
-              "line": 25,
+              "line": 29,
+              "column": 7
+            },
+            {
+              "title": "provider selection is possible",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "44f55067fa7d71e19ed8-f04a07ffd4f13e25c294",
+              "file": "main-page/provider-list.spec.ts",
+              "line": 36,
               "column": 7
             }
           ]
@@ -681,22 +1334,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4305,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:37.518Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "c968dbd1ece7f0225a7b-c80516fb4900c74e0ddf",
@@ -718,22 +1357,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4225,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:41.849Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "c968dbd1ece7f0225a7b-d15fee741f88171e1957",
@@ -755,22 +1380,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4691,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:46.093Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "c968dbd1ece7f0225a7b-79d6ec412610a7bdc58b",
@@ -792,22 +1403,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4529,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:50.803Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "c968dbd1ece7f0225a7b-f6831dbe18d07671aa8d",
@@ -846,22 +1443,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4370,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:55.363Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "04157ecee158eab72da7-a279bf5b1b06af443e53",
@@ -883,22 +1466,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 5166,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:55:59.755Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "04157ecee158eab72da7-ef78766c8ca08fef597b",
@@ -920,22 +1489,8 @@
                   "expectedStatus": "passed",
                   "projectId": "no-auth-chromium",
                   "projectName": "no-auth-chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 4817,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-20T01:56:04.941Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "04157ecee158eab72da7-d1f11a79d00a372809ef",
@@ -946,15 +1501,3116 @@
           ]
         }
       ]
+    },
+    {
+      "title": "responsive\\mobile-view.spec.ts",
+      "file": "responsive/mobile-view.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "모바일 뷰 @parallel @no-auth @responsive",
+          "file": "responsive/mobile-view.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "모바일에서 레이아웃이 깨지지 않음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b264cb28c2b12cadb7a6-eb4163f695c47183ea82",
+              "file": "responsive/mobile-view.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "터치 타겟이 충분한 크기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b264cb28c2b12cadb7a6-bf11acce330f3a4044f3",
+              "file": "responsive/mobile-view.spec.ts",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "텍스트가 읽기 쉬운 크기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b264cb28c2b12cadb7a6-3a1d56b04de28c99e1cd",
+              "file": "responsive/mobile-view.spec.ts",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "입력 필드가 화면 너비에 맞음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "b264cb28c2b12cadb7a6-86cff5e96860a02da10d",
+              "file": "responsive/mobile-view.spec.ts",
+              "line": 55,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "responsive\\tablet-view.spec.ts",
+      "file": "responsive/tablet-view.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "태블릿 뷰 @parallel @no-auth @responsive",
+          "file": "responsive/tablet-view.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "태블릿에서 레이아웃이 적절히 조정됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "da496e2d3df8bed5b8ec-e049c58d86b8390c8981",
+              "file": "responsive/tablet-view.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "모든 기능 요소가 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "da496e2d3df8bed5b8ec-fd0b40151cdedcbb3ac4",
+              "file": "responsive/tablet-view.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "가로 스크롤 없음",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "responsive"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "da496e2d3df8bed5b8ec-4c529ff4bfc5a5751537",
+              "file": "responsive/tablet-view.spec.ts",
+              "line": 43,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "responsive\\ui-quality.spec.ts",
+      "file": "responsive/ui-quality.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "반응형 레이아웃",
+          "file": "responsive/ui-quality.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "데스크톱(1280px) — 사이드바와 메인 영역이 나란히 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-838de682ce370ba56403",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 9,
+              "column": 7
+            },
+            {
+              "title": "모바일(375px) — URL 입력과 메인 영역이 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-371e4c5637c69c49cbf4",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "태블릿(768px) — 레이아웃이 깨지지 않는다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-17325a391c2913cea823",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 35,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "접근성",
+          "file": "responsive/ui-quality.spec.ts",
+          "line": 52,
+          "column": 6,
+          "specs": [
+            {
+              "title": "주요 인터랙티브 요소에 aria-label이 있다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-e03bb513a97a10e960f8",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "키보드로 URL 입력 → Enter → 칩 추가가 가능하다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-d76c0b3b021f70cf7073",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 71,
+              "column": 7
+            },
+            {
+              "title": "JavaScript 콘솔 에러가 없다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-9c978d4b97ff8e9d6fa3",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 81,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "필터 & 검색 (결과 카드 있을 때)",
+          "file": "responsive/ui-quality.spec.ts",
+          "line": 93,
+          "column": 6,
+          "specs": [
+            {
+              "title": "결과가 없으면 FilterBar가 표시되지 않는다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-86e971f94d4cb3874838",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 94,
+              "column": 7
+            },
+            {
+              "title": "localStorage에 결과가 있으면 FilterBar가 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "33c1fe51c0eb6ec4bee8-fcaf068f23111f32ff44",
+              "file": "responsive/ui-quality.spec.ts",
+              "line": 103,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "result-card\\card-interactions.spec.ts",
+      "file": "result-card/card-interactions.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "결과 카드 상호작용",
+          "file": "result-card/card-interactions.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "접기/펼치기 토글",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-06684052f8ccb16a51d3",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 9,
+              "column": 7
+            },
+            {
+              "title": "더보기 메뉴 열기",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-e8b758ec79325d915363",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "카드 삭제",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-a259132e8a4fca2f3110",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "스타일 라벨 표시",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-21e90f9e7102aa1b0fc8",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 86,
+              "column": 7
+            },
+            {
+              "title": "통합 뱃지 표시 (merged:true)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-f815c797c6583a583fc5",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 102,
+              "column": 7
+            },
+            {
+              "title": "퓨전 뱃지 표시 (isFusion:true)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cdd6c3e8b16e18b3303e-f027cc6ac6af0870e2d6",
+              "file": "result-card/card-interactions.spec.ts",
+              "line": 122,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings-modals\\modals.spec.ts",
+      "file": "settings-modals/modals.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "온보딩 모달 @parallel @no-auth",
+          "file": "settings-modals/modals.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-1.1: 온보딩 모달 표시",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-cbb0d2fc072e3f2803d0",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 13,
+              "column": 7
+            },
+            {
+              "title": "TC-1.2: 온보딩 완료",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-24937710d4731940a910",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "TC-1.3: 재방문 시 모달 미표시",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-9dd8bb7c2ea813057c62",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 57,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "설정 모달 @parallel @no-auth",
+          "file": "settings-modals/modals.spec.ts",
+          "line": 73,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-2.1: 설정 모달 열기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-ac7ab6deb864d557791a",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "TC-2.2: API 키 정보 표시",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-c7186af9bf890f16bd95",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 92,
+              "column": 7
+            },
+            {
+              "title": "TC-2.3: 모달 외부 클릭 닫기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-19b7b6f3553e9e825821",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "TC-2.4: ESC 키로 닫기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-df4867f85c676329f3cb",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 122,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "커스텀 스타일 모달 @parallel @no-auth",
+          "file": "settings-modals/modals.spec.ts",
+          "line": 139,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-3.1: 커스텀 스타일 모달 열기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-8edf90b5cf06cdf12329",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 144,
+              "column": 7
+            },
+            {
+              "title": "TC-3.2: 커스텀 스타일 저장",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-83c4b1bdd3a48af5e7a0",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 158,
+              "column": 7
+            },
+            {
+              "title": "TC-3.3: 커스텀 스타일 모달 취소",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-480d22ccae98dcefb791",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 201,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "모달 접근성 @parallel @no-auth",
+          "file": "settings-modals/modals.spec.ts",
+          "line": 219,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-4.1: 포커스 트랩 - 설정 모달",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-857add46e8f70cc481e1",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 224,
+              "column": 7
+            },
+            {
+              "title": "TC-4.2: ARIA 속성 확인 - 온보딩 모달",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-d16dfc57635bca35e769",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 246,
+              "column": 7
+            },
+            {
+              "title": "TC-4.3: ARIA 속성 확인 - 설정 모달",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-09ff081d32aeb563873c",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 269,
+              "column": 7
+            },
+            {
+              "title": "TC-4.4: 키보드 네비게이션 - 커스텀 스타일 모달",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "935c6dcb7c1f8b5da3f6-c1cedb9112ccf93a45df",
+              "file": "settings-modals/modals.spec.ts",
+              "line": 287,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\url-management\\url-input.spec.ts",
+      "file": "tests/url-management/url-input.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "URL 입력 및 관리",
+          "file": "tests/url-management/url-input.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Suite 1: URL 입력",
+              "file": "tests/url-management/url-input.spec.ts",
+              "line": 27,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-1.1: 유효한 YouTube URL 입력",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-a3b576c44bea3cf2dcd5",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 28,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.2: youtu.be 단축 URL 입력",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-f99fb9a8de37bf591913",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 50,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.3: 잘못된 URL 입력",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-6d85c001bbf28a3d447e",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 61,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.4: 빈 입력",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-7779c6f6c673dc7f6c54",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 79,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Suite 2: URL 카드 관리",
+              "file": "tests/url-management/url-input.spec.ts",
+              "line": 102,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-2.1: URL 삭제",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-16a60b4b03f37cc4e12a",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 103,
+                  "column": 9
+                },
+                {
+                  "title": "TC-2.2: 최대 10개 URL 제한",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-aa87d5060c72743e9525",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 116,
+                  "column": 9
+                },
+                {
+                  "title": "TC-2.3: 중복 URL 검증",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "no-auth-chromium",
+                      "projectName": "no-auth-chromium",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "1fd53588feb338bde8b2-691e7a536de3024c92ca",
+                  "file": "tests/url-management/url-input.spec.ts",
+                  "line": 142,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "url-input\\invalid-url.spec.ts",
+      "file": "url-input/invalid-url.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "잘못된 URL 입력 @parallel",
+          "file": "url-input/invalid-url.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "잘못된 형식의 URL 거부",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e46db0b2ad852e7121ec-ac3c944cbb6b55e4829d",
+              "file": "url-input/invalid-url.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "YouTube가 아닌 URL 거부",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e46db0b2ad852e7121ec-7fa189bd05813e555bea",
+              "file": "url-input/invalid-url.spec.ts",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "Vimeo URL 거부",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e46db0b2ad852e7121ec-c7f118ecf47d9d0aa27a",
+              "file": "url-input/invalid-url.spec.ts",
+              "line": 37,
+              "column": 7
+            },
+            {
+              "title": "에러 메시지 표시",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e46db0b2ad852e7121ec-3039aed8bf4435a73265",
+              "file": "url-input/invalid-url.spec.ts",
+              "line": 44,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "url-input\\url-drag-drop.spec.ts",
+      "file": "url-input/url-drag-drop.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "URL 드래그앤드롭 (전체 페이지)",
+          "file": "url-input/url-drag-drop.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "YouTube URL 텍스트를 페이지에 드롭하면 URL이 추가된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "615bbe28ebd25f4d3f7e-9b728c12e0a193e9d35a",
+              "file": "url-input/url-drag-drop.spec.ts",
+              "line": 8,
+              "column": 7
+            },
+            {
+              "title": "드래그 중 오버레이가 표시되고, 나가면 사라진다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "615bbe28ebd25f4d3f7e-e00ae297f32594946bee",
+              "file": "url-input/url-drag-drop.spec.ts",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "유효하지 않은 텍스트를 드롭하면 URL이 추가되지 않는다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "615bbe28ebd25f4d3f7e-73c6f1475783f3cf10dd",
+              "file": "url-input/url-drag-drop.spec.ts",
+              "line": 51,
+              "column": 7
+            },
+            {
+              "title": "중복 URL 드롭 시 하나만 추가된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "615bbe28ebd25f4d3f7e-504d930982aeeca6d7f7",
+              "file": "url-input/url-drag-drop.spec.ts",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": "text/uri-list 형식 드롭도 처리된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "615bbe28ebd25f4d3f7e-f947ed3b3239f8b824c3",
+              "file": "url-input/url-drag-drop.spec.ts",
+              "line": 96,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "url-input\\url-management.spec.ts",
+      "file": "url-input/url-management.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "URL 관리 @parallel",
+          "file": "url-input/url-management.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "URL 삭제",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d4a9bf85cc7835dac833-53724698515e06eab149",
+              "file": "url-input/url-management.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "모든 URL 삭제",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d4a9bf85cc7835dac833-3ff093ac1415736d929a",
+              "file": "url-input/url-management.spec.ts",
+              "line": 37,
+              "column": 7
+            },
+            {
+              "title": "최대 10개 URL 제한",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d4a9bf85cc7835dac833-139333864ce318da1ac8",
+              "file": "url-input/url-management.spec.ts",
+              "line": 45,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "url-input\\valid-url.spec.ts",
+      "file": "url-input/valid-url.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "유효한 URL 입력 @parallel",
+          "file": "url-input/valid-url.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "유효한 YouTube URL 추가",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5b8b6994bb26d6ab429f-6a6a6d38949cd017e1a9",
+              "file": "url-input/valid-url.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "짧은 URL (youtu.be) 추가",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5b8b6994bb26d6ab429f-94707e859e1d7ac125da",
+              "file": "url-input/valid-url.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "여러 URL 추가",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5b8b6994bb26d6ab429f-0e758b13a52f00567cee",
+              "file": "url-input/valid-url.spec.ts",
+              "line": 39,
+              "column": 7
+            },
+            {
+              "title": "URL 추가 후 입력 필드 초기화",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "no-auth-chromium",
+                  "projectName": "no-auth-chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5b8b6994bb26d6ab429f-0b0f3f8930ef9a3538a9",
+              "file": "url-input/valid-url.spec.ts",
+              "line": 48,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "content-generation\\basic-generation.spec.ts",
+      "file": "content-generation/basic-generation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "기본 콘텐츠 생성",
+          "file": "content-generation/basic-generation.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [
+            {
+              "title": "단일 URL 생성 → 결과 카드 표시",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2c5cf44e1fc51e733146-5bbdf15deb428c55c7a5",
+              "file": "content-generation/basic-generation.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "URL 없이 생성 버튼이 표시되지 않음",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2c5cf44e1fc51e733146-c7b569ca28eeaa47871d",
+              "file": "content-generation/basic-generation.spec.ts",
+              "line": 48,
+              "column": 7
+            },
+            {
+              "title": "생성 중 로딩 상태 표시",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2c5cf44e1fc51e733146-8d103c7d5466324ace65",
+              "file": "content-generation/basic-generation.spec.ts",
+              "line": 56,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "content-generation\\provider-switch.spec.ts",
+      "file": "content-generation/provider-switch.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "프로바이더 전환",
+          "file": "content-generation/provider-switch.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "DeepSeek Chat으로 생성",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2bf823fdf6116f25d651-660c073cfa387cd17513",
+              "file": "content-generation/provider-switch.spec.ts",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "프로바이더 변경 후에도 생성 동작",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2bf823fdf6116f25d651-1c61c58d6df4db8e36c0",
+              "file": "content-generation/provider-switch.spec.ts",
+              "line": 80,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "content-generation\\style-variations.spec.ts",
+      "file": "content-generation/style-variations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "설정 UI (SettingsPopover)",
+          "file": "content-generation/style-variations.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "설정 팝오버 열기/닫기",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-48f6a3f0cb3e64f38394",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 14,
+              "column": 7
+            },
+            {
+              "title": "프로바이더 선택 → 모델 목록 변경",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-ef1f20099d434881f365",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "11개 내장 스타일 버튼 표시",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-583090f51c7941600483",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 54,
+              "column": 7
+            },
+            {
+              "title": "스타일 선택 토글",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-6d9fdb78c031086f0d0d",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "길이 옵션 3개 (짧게/보통/길게)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-b590b88459f58305389b",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 82,
+              "column": 7
+            },
+            {
+              "title": "문체 옵션 4개 (대화체/설명체/캐주얼/전문가)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-4050a4c147d60555dc7c",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 96,
+              "column": 7
+            },
+            {
+              "title": "설정 유지 확인 (팝오버 닫았다 다시 열기)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "content-generation",
+                  "projectName": "content-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "ddf16cec96854086a439-c7056df381ad59cfe1ba",
+              "file": "content-generation/style-variations.spec.ts",
+              "line": 110,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tests\\content-generation\\provider-model.spec.ts",
+      "file": "tests/content-generation/provider-model.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "콘텐츠 생성 테스트 @parallel @no-auth",
+          "file": "tests/content-generation/provider-model.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Suite 1: AI 프로바이더 및 모델 선택",
+              "file": "tests/content-generation/provider-model.spec.ts",
+              "line": 19,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-1.1: 프로바이더 선택",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-4e3f7bb9c17d4c256b02",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 20,
+                  "column": 9
+                },
+                {
+                  "title": "TC-1.2: 모델 선택",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-db38a290dcd7570b2666",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 42,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Suite 2: 스타일 선택",
+              "file": "tests/content-generation/provider-model.spec.ts",
+              "line": 70,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-2.1: 스타일 카드 선택",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-7ee7e7d93d2f2f69c820",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 71,
+                  "column": 9
+                },
+                {
+                  "title": "TC-2.2: 여러 스타일 순회",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-4dd3d6892dcfc82c6da6",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 86,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Suite 3: 모디파이어 설정",
+              "file": "tests/content-generation/provider-model.spec.ts",
+              "line": 109,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-3.1: 길이 모디파이어",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-7cbba0d03877ab724a46",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 110,
+                  "column": 9
+                },
+                {
+                  "title": "TC-3.2: 톤 모디파이어",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-0bd71c379a00b6a770c2",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 129,
+                  "column": 9
+                },
+                {
+                  "title": "TC-3.3: 이모지 모디파이어",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-59ebdbe862dcf9154f0a",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 148,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Suite 4: 콘텐츠 생성 실행",
+              "file": "tests/content-generation/provider-model.spec.ts",
+              "line": 168,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "TC-4.1: 생성 버튼 비활성화 상태",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-404d69e69e4cdac29627",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 169,
+                  "column": 9
+                },
+                {
+                  "title": "TC-4.2: 생성 실행 (UI 상태 검증)",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-3aa6be45447207bb63c2",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 184,
+                  "column": 9
+                },
+                {
+                  "title": "TC-4.3: 모든 옵션 조합 테스트",
+                  "ok": true,
+                  "tags": [
+                    "parallel",
+                    "no-auth"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "content-generation",
+                      "projectName": "content-generation",
+                      "results": [],
+                      "status": "skipped"
+                    }
+                  ],
+                  "id": "3ebfb8b58b35e5c9639f-df85df50eaa7e5d7a09c",
+                  "file": "tests/content-generation/provider-model.spec.ts",
+                  "line": 215,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "batch-generation\\batch-processing.spec.ts",
+      "file": "batch-generation/batch-processing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "배치 처리 (각각 분석)",
+          "file": "batch-generation/batch-processing.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "2개 URL 각각 분석 → 결과 카드 2개",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c029f5aea04b24ab2ef7-d74714b348060d3443ef",
+              "file": "batch-generation/batch-processing.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "URL 2개 추가 시 모드 선택기 표시",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c029f5aea04b24ab2ef7-77ef1815179e02ae734d",
+              "file": "batch-generation/batch-processing.spec.ts",
+              "line": 54,
+              "column": 7
+            },
+            {
+              "title": "최대 10개 URL 제한",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c029f5aea04b24ab2ef7-68e62a55dc918eedd571",
+              "file": "batch-generation/batch-processing.spec.ts",
+              "line": 70,
+              "column": 7
+            },
+            {
+              "title": "URL 칩 삭제 동작",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c029f5aea04b24ab2ef7-bf72370e15fad34dc3ff",
+              "file": "batch-generation/batch-processing.spec.ts",
+              "line": 84,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "batch-generation\\fusion-generation.spec.ts",
+      "file": "batch-generation/fusion-generation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "퓨전 분석 (Fusion)",
+          "file": "batch-generation/fusion-generation.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "2개 URL 퓨전 → 퓨전 카드 (퓨전 뱃지)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c6d347073e0e4c2d6900-a82b62160c45b3136d3b",
+              "file": "batch-generation/fusion-generation.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "퓨전 옵션 토글 (웹 리서치/댓글 심층 분석)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c6d347073e0e4c2d6900-1035f9154b9469684a10",
+              "file": "batch-generation/fusion-generation.spec.ts",
+              "line": 54,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "batch-generation\\merged-generation.spec.ts",
+      "file": "batch-generation/merged-generation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "합쳐서 분석 (Merged)",
+          "file": "batch-generation/merged-generation.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "2개 URL 합쳐서 → 통합 카드 (통합 뱃지)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "40e2d51dd4db1f700faf-8ffa7a1ea9af19cc3b55",
+              "file": "batch-generation/merged-generation.spec.ts",
+              "line": 16,
+              "column": 7
+            },
+            {
+              "title": "URL 1개일 때 합쳐서 모드에서 개별 분석 폴백",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "batch-generation",
+                  "projectName": "batch-generation",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "40e2d51dd4db1f700faf-f46605b6edbbfef5973a",
+              "file": "batch-generation/merged-generation.spec.ts",
+              "line": 51,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "history\\history-management.spec.ts",
+      "file": "history/history-management.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "히스토리 관리 @parallel @auth-required",
+          "file": "history/history-management.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "히스토리 패널이 존재함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c420c8f19c5d3ea7c5f0-0097dc1cd42812db471d",
+              "file": "history/history-management.spec.ts",
+              "line": 21,
+              "column": 7
+            },
+            {
+              "title": "빈 히스토리 안내 메시지",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c420c8f19c5d3ea7c5f0-b08025ee72ac6e40c8fa",
+              "file": "history/history-management.spec.ts",
+              "line": 40,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings\\api-keys.spec.ts",
+      "file": "settings/api-keys.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "API 키 관리 @parallel @auth-required",
+          "file": "settings/api-keys.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "설정 페이지 접근",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0c0931123bfdd830d411-c6346275ba96e880de69",
+              "file": "settings/api-keys.spec.ts",
+              "line": 21,
+              "column": 7
+            },
+            {
+              "title": "API 키 섹션이 존재함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0c0931123bfdd830d411-2371527b8f6107a6ea0d",
+              "file": "settings/api-keys.spec.ts",
+              "line": 40,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "usage\\usage-tracking.spec.ts",
+      "file": "usage/usage-tracking.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "사용량 추적 @parallel @auth-required",
+          "file": "usage/usage-tracking.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "사용량 표시 요소가 존재함",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "248dfab6ea41cef6f566-2c056f2b46ca94906d8e",
+              "file": "usage/usage-tracking.spec.ts",
+              "line": 17,
+              "column": 7
+            },
+            {
+              "title": "사용량 패널 열기",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "auth-required"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "authenticated-tests",
+                  "projectName": "authenticated-tests",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "248dfab6ea41cef6f566-0f63c860f18adcb85594",
+              "file": "usage/usage-tracking.spec.ts",
+              "line": 34,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "error-handling\\edge-cases.spec.ts",
+      "file": "error-handling/edge-cases.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "입력 엣지케이스",
+          "file": "error-handling/edge-cases.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "빈 입력 제출 시 URL이 추가되지 않는다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-f3fc8f2e065b27980a27",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 12,
+              "column": 7
+            },
+            {
+              "title": "특수 문자가 포함된 URL 처리",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-14d2d57e16f68767a65a",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "중복 URL 입력 시 에러 메시지가 표시된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-276dfa70f18a9304fb26",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "Vimeo URL 입력 시 거부된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-8c517e328c757aaa40da",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 48,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "동시성",
+          "file": "error-handling/edge-cases.spec.ts",
+          "line": 58,
+          "column": 6,
+          "specs": [
+            {
+              "title": "빠른 연속 URL 추가가 정상 처리된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-188faf9d083a0266ba19",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 63,
+              "column": 7
+            },
+            {
+              "title": "페이지 새로고침 후 크래시 없이 로드된다",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-7687af1b5172112f0152",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 81,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "API 에러 응답",
+          "file": "error-handling/edge-cases.spec.ts",
+          "line": 98,
+          "column": 6,
+          "specs": [
+            {
+              "title": "존재하지 않는 API 엔드포인트 요청 시 에러",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-b1b5b8ec55d03e27ca17",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 99,
+              "column": 7
+            },
+            {
+              "title": "/generate에 빈 body POST 시 에러 응답",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-a1b427513c8bacbf1dba",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 104,
+              "column": 7
+            },
+            {
+              "title": "/generate에 잘못된 URL POST 시 에러 응답",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2b8f2aea348eff7ef358-3b353b7651f039b08af9",
+              "file": "error-handling/edge-cases.spec.ts",
+              "line": 113,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "error-handling\\input-errors.spec.ts",
+      "file": "error-handling/input-errors.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "입력 에러 처리 @parallel",
+          "file": "error-handling/input-errors.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "빈 입력 제출 방지",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5e680cc5670b9cd1ca5-c22ae1129f43888c755e",
+              "file": "error-handling/input-errors.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "특수 문자가 포함된 URL 처리",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5e680cc5670b9cd1ca5-e000dbc3c0d24bb8870e",
+              "file": "error-handling/input-errors.spec.ts",
+              "line": 39,
+              "column": 7
+            },
+            {
+              "title": "매우 긴 URL 처리",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5e680cc5670b9cd1ca5-0a3e6bd5813c56f89529",
+              "file": "error-handling/input-errors.spec.ts",
+              "line": 47,
+              "column": 7
+            },
+            {
+              "title": "다중 URL 추가",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5e680cc5670b9cd1ca5-0af5a78df8a4135332bf",
+              "file": "error-handling/input-errors.spec.ts",
+              "line": 56,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "error-handling\\network-errors.spec.ts",
+      "file": "error-handling/network-errors.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "네트워크 에러 처리 @parallel",
+          "file": "error-handling/network-errors.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "오프라인 상태에서 적절한 에러 표시",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c99f3f9eb03a59f8f788-4da14bada7ba849c8b77",
+              "file": "error-handling/network-errors.spec.ts",
+              "line": 12,
+              "column": 7
+            },
+            {
+              "title": "서버 응답 지연 시 타임아웃 처리",
+              "ok": true,
+              "tags": [
+                "parallel"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "error-handling",
+                  "projectName": "error-handling",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "c99f3f9eb03a59f8f788-124f96f4f9f1afe18479",
+              "file": "error-handling/network-errors.spec.ts",
+              "line": 47,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "performance\\load-time.spec.ts",
+      "file": "performance/load-time.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "페이지 로드 성능 @parallel @no-auth @performance",
+          "file": "performance/load-time.spec.ts",
+          "line": 9,
+          "column": 6,
+          "specs": [
+            {
+              "title": "초기 페이지 로드가 10초 이내",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "performance"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "performance",
+                  "projectName": "performance",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "feb41230a37d32f40e23-eb4b995a5bdccd08be75",
+              "file": "performance/load-time.spec.ts",
+              "line": 10,
+              "column": 7
+            },
+            {
+              "title": "네트워크 idle 상태가 15초 이내",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "performance"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "performance",
+                  "projectName": "performance",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "feb41230a37d32f40e23-f04ef0fc30743b73403c",
+              "file": "performance/load-time.spec.ts",
+              "line": 23,
+              "column": 7
+            },
+            {
+              "title": "JavaScript 에러 없이 로드",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "performance"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "performance",
+                  "projectName": "performance",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "feb41230a37d32f40e23-efbc38396ec81cd509cc",
+              "file": "performance/load-time.spec.ts",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "주요 요소가 2초 이내에 표시됨",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "performance"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "performance",
+                  "projectName": "performance",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "feb41230a37d32f40e23-1d1917944fce2867334c",
+              "file": "performance/load-time.spec.ts",
+              "line": 46,
+              "column": 7
+            },
+            {
+              "title": "메모리 누수 없이 반복 로드 가능",
+              "ok": true,
+              "tags": [
+                "parallel",
+                "no-auth",
+                "performance"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "performance",
+                  "projectName": "performance",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "feb41230a37d32f40e23-dc350364db778bf8f207",
+              "file": "performance/load-time.spec.ts",
+              "line": 60,
+              "column": 7
+            }
+          ]
+        }
+      ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-01-20T01:54:37.522Z",
-    "duration": 92928.66500000001,
-    "expected": 13,
-    "skipped": 0,
-    "unexpected": 1,
+    "startTime": "2026-03-02T10:15:50.278Z",
+    "duration": 1154.9749999999995,
+    "expected": 0,
+    "skipped": 176,
+    "unexpected": 0,
     "flaky": 0
   }
 }

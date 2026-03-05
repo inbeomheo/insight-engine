@@ -106,12 +106,16 @@ class TestTtsServiceSynthesize(unittest.TestCase):
             TTSService.synthesize('')
         self.assertIn('입력', str(ctx.exception))
 
-    def test_raises_on_text_too_long(self):
+    @patch('services.tts_service._synthesize_edge')
+    @patch('services.tts_service._select_backend', return_value='edge')
+    def test_long_text_splits_into_chunks(self, _mock_select, mock_edge):
+        """장문은 에러 대신 청크 분할 후 합성한다."""
+        mock_edge.return_value = self.DUMMY_AUDIO
         TTSService = self._make_service()
         with patch('services.tts_service.TTS_MAX_CHARS', 10):
-            with self.assertRaises(ValueError) as ctx:
-                TTSService.synthesize('A' * 11)
-            self.assertIn('최대', str(ctx.exception))
+            result = TTSService.synthesize('A' * 11)
+        self.assertIsNotNone(result)
+        self.assertTrue(mock_edge.call_count >= 2)
 
     @patch('services.tts_service._synthesize_edge')
     @patch('services.tts_service._select_backend', return_value='edge')

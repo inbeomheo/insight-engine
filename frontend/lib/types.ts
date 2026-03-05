@@ -6,6 +6,8 @@ export interface GenerateRequest {
   style: string;
   modifiers: Modifiers;
   customPrompt?: string;
+  /** 직접 텍스트 입력 (URL 대신 사용) */
+  content?: string;
 }
 
 export interface WebSource {
@@ -178,6 +180,8 @@ export interface Report {
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   /** 타임스탬프 인용 목록 (enable_citations: true 시) */
   citations?: Citation[];
+  /** 즐겨찾기 여부 (F5-12) */
+  favorite?: boolean;
 }
 
 // === 인용 (Citation) ===
@@ -586,4 +590,76 @@ export interface EventSummary {
     important_key_points: KeyPointEvent[];
     open_questions: QuestionEvent[];
   };
+}
+
+// === 팩트체크 (F3-07) ===
+
+export interface FactClaim {
+  claim: string;
+  category: 'statistic' | 'date' | 'person' | 'event' | 'technical' | 'other';
+  verifiable: boolean;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface FactCheckResponse {
+  claims: FactClaim[];
+  summary: {
+    total: number;
+    verified: number;
+    uncertain: number;
+    suspicious: number;
+  };
+}
+
+// === SEO 최적화 (F3-08) ===
+
+export interface SeoOptimizeResponse {
+  score: number;
+  keyword_density: Record<string, { count: number; density_percent: number }>;
+  heading_structure: { h2: number; h3: number; h2_texts?: string[] };
+  suggestions: string[];
+  meta_length: { char_count: number; word_count: number };
+}
+
+// === 표절 감지 (F3-09) ===
+
+export interface PlagiarismResponse {
+  score: number;
+  duplicate_ratio: number;
+  repeated_phrases: { phrase: string; count: number }[];
+  similar_sentences: { sentence_a: string; sentence_b: string; similarity: number }[];
+  verdict: 'clean' | 'minor' | 'significant';
+}
+
+// === 가독성 (F3-10) ===
+
+export interface ReadabilityResponse {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D';
+  details: {
+    avg_sentence_length: number;
+    vocabulary_diversity: number;
+    foreign_ratio: number;
+    paragraph_count: number;
+    sentence_count: number;
+    char_count: number;
+  };
+  suggestions: string[];
+}
+
+// === 감정 흐름 (F3-11) ===
+
+export interface SentimentFlowItem {
+  paragraph_index: number;
+  text_preview: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  score: number;
+  emotion: string;
+}
+
+export interface SentimentFlowResponse {
+  flow: SentimentFlowItem[];
+  overall_arc: 'ascending' | 'descending' | 'stable' | 'fluctuating';
+  dominant_emotion: string;
 }

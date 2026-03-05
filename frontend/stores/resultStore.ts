@@ -18,6 +18,8 @@ interface ResultState {
   reports: Report[];
   searchQuery: string;
   styleFilter: string;
+  /** F8-25: 고정된 리포트 ID 집합 */
+  pinnedIds: Set<string>;
 
   addReport: (r: Report) => void;
   removeReport: (id: string) => void;
@@ -27,15 +29,41 @@ interface ResultState {
   setSearchQuery: (q: string) => void;
   setStyleFilter: (s: string) => void;
 
+  /** F8-25: 핀 고정/해제 토글 */
+  togglePin: (id: string) => void;
+  /** F8-25: 핀 고정된 리포트만 반환 */
+  pinnedReports: () => Report[];
+
   filteredReports: () => Report[];
 
   hydrate: () => void;
+}
+
+const PIN_STORAGE_KEY = 'insight_engine_pinned_ids';
+
+function loadPinnedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(PIN_STORAGE_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedIds(ids: Set<string>): void {
+  try {
+    localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // 저장 실패는 무시
+  }
 }
 
 export const useResultStore = create<ResultState>((set, get) => ({
   reports: [],
   searchQuery: '',
   styleFilter: '',
+  pinnedIds: new Set<string>(),
 
   addReport: (r) => {
     const next = [r, ...get().reports];
@@ -67,6 +95,24 @@ export const useResultStore = create<ResultState>((set, get) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStyleFilter: (s) => set({ styleFilter: s }),
 
+  // F8-25: 핀 고정/해제 토글
+  togglePin: (id) => {
+    const next = new Set(get().pinnedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    savePinnedIds(next);
+    set({ pinnedIds: next });
+  },
+
+  // F8-25: 고정된 리포트만 반환 (핀 순서 유지)
+  pinnedReports: () => {
+    const { reports, pinnedIds } = get();
+    return reports.filter((r) => pinnedIds.has(r.id));
+  },
+
   filteredReports: () => {
     const { reports, searchQuery, styleFilter } = get();
     return reports.filter((r) => {
@@ -81,7 +127,7 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   hydrate: () => {
     // Phase 4: 메인 스레드 블로킹 방지 — idle 시점에 JSON.parse 수행
-    const load = () => set({ reports: loadReports() });
+    const load = () => set({ reports: loadReports(), pinnedIds: loadPinnedIds() });
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(load);
     } else {
