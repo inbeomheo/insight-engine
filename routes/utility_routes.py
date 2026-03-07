@@ -834,3 +834,67 @@ def extract_snippets_route():
     except Exception as e:
         return handle_error(e, '스니펫 추출')
 
+
+# ── 가독성 벤치마크 ────────────────────────────────────
+
+@blog_bp.route('/api/benchmark-readability', methods=['POST'])
+def benchmark_readability_route():
+    """콘텐츠 가독성을 카테고리 벤치마크와 비교합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        category = data.get('category', 'blog')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.readability_benchmark_service import benchmark_readability
+        result = benchmark_readability(content, category)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '가독성 벤치마크')
+
+
+# ── 콘텐츠 아웃라인 생성 ───────────────────────────────
+
+@blog_bp.route('/api/generate-outline', methods=['POST'])
+def generate_outline_route():
+    """주제에 맞는 콘텐츠 아웃라인을 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '')
+        template = data.get('template', 'guide')
+        keywords = data.get('keywords', [])
+
+        if not topic or not topic.strip():
+            return jsonify({'error': '주제(topic)가 필요합니다.'}), 400
+
+        from services.outline_generator_service import generate_outline
+        result = generate_outline(topic, template, keywords)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '아웃라인 생성')
+
+
+# ── 읽기 시간 예측 ─────────────────────────────────────
+
+@blog_bp.route('/api/reading-time', methods=['POST'])
+def reading_time_route():
+    """콘텐츠의 읽기 시간과 난이도를 예측합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        content_type = data.get('content_type', 'general')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.reading_time_service import estimate_reading_time
+        result = estimate_reading_time(content, content_type)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '읽기 시간 예측')
+
