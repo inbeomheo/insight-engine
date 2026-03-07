@@ -1742,3 +1742,54 @@ def detect_section_drift_route():
 
     except Exception as e:
         return handle_error(e, '섹션 이탈 감지')
+
+    # ── Pronoun Clarity Checker ──────────────────────────────────────────
+    @blog_bp.route('/api/check-pronoun-clarity', methods=['POST'])
+    def check_pronoun_clarity_route():
+        """대명사 명확성을 검사합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.pronoun_clarity_service import check_pronoun_clarity
+            result = check_pronoun_clarity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '대명사 명확성 검사')
+
+    # ── Example Coverage Analyzer ────────────────────────────────────────
+    @blog_bp.route('/api/analyze-example-coverage', methods=['POST'])
+    def analyze_example_coverage_route():
+        """주장/조언의 예시·근거 커버리지를 분석합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.example_coverage_service import analyze_example_coverage
+            result = analyze_example_coverage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '예시 커버리지 분석')
+
+    # ── Question-Answer Closure Checker ──────────────────────────────────
+    @blog_bp.route('/api/check-qa-closure', methods=['POST'])
+    def check_qa_closure_route():
+        """질문-답변 완결성을 검사합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.qa_closure_service import check_qa_closure
+            result = check_qa_closure(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '질문-답변 완결성 검사')
