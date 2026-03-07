@@ -1844,3 +1844,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '수치 커버리지 분석')
+
+    # ── Simple Alternative Finder ────────────────────────────────────────
+    @blog_bp.route('/api/find-simple-alternatives', methods=['POST'])
+    def find_simple_alternatives_route():
+        """고난도 어휘의 쉬운 대체어를 제안합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.simple_alternative_service import find_simple_alternatives
+            result = find_simple_alternatives(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '쉬운 대체어 검색')
+
+    # ── Heading Term Placement Auditor ───────────────────────────────────
+    @blog_bp.route('/api/audit-heading-terms', methods=['POST'])
+    def audit_heading_terms_route():
+        """핵심 용어의 헤딩 배치를 점검합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.heading_term_placement_service import audit_heading_term_placement
+            result = audit_heading_term_placement(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '헤딩 용어 배치 점검')
+
+    # ── Acronym Expansion Compliance Checker ─────────────────────────────
+    @blog_bp.route('/api/check-acronym-expansion', methods=['POST'])
+    def check_acronym_expansion_route():
+        """약어의 첫 등장 시 풀어쓰기 여부를 점검합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.acronym_expansion_service import check_acronym_expansion
+            result = check_acronym_expansion(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '약어 풀어쓰기 점검')
