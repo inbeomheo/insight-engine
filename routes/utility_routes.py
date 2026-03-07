@@ -1441,3 +1441,64 @@ def verify_claims_route():
 
     except Exception as e:
         return handle_error(e, '주장/인용 검증')
+
+
+# ── 스키마 기회 탐색 ──────────────────────────────
+
+@blog_bp.route('/api/schema-opportunities', methods=['POST'])
+def schema_opportunities_route():
+    """콘텐츠의 구조화 데이터(JSON-LD) 적용 기회를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.schema_opportunity_service import find_schema_opportunities
+        result = find_schema_opportunities(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '스키마 기회 분석')
+
+
+# ── 군더더기/헤지 표현 감지 ──────────────────────────────
+
+@blog_bp.route('/api/detect-fillers', methods=['POST'])
+def detect_fillers_route():
+    """콘텐츠의 군더더기 및 헤지 표현을 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.filler_detector_service import detect_fillers
+        result = detect_fillers(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '군더더기 표현 감지')
+
+
+# ── 정보 이득 분석 ──────────────────────────────
+
+@blog_bp.route('/api/information-gain', methods=['POST'])
+def information_gain_route():
+    """콘텐츠의 정보 이득(차별화 수준)을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        reference_contents = data.get('reference_contents', None)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.information_gain_service import analyze_information_gain
+        result = analyze_information_gain(content, reference_contents)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '정보 이득 분석')
