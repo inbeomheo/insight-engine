@@ -125,15 +125,15 @@ def detect_geo_scope_assumptions(content: str) -> dict:
     else:
         level = 'unlabeled'
 
-    # 점수 계산
-    if level == 'none':
+    # 연속 점수 — 라벨 충족 비율 기반
+    if not sensitive_found:
         score = 100.0
-    elif level == 'labeled':
+    elif has_geo_label and not unlabeled:
         score = 95.0
-    elif level == 'partial':
-        score = 65.0
     else:
-        score = 35.0 - len(sensitive_found) * 5.0
+        labeled_ratio = 1.0 - (len(unlabeled) / max(1, len(sensitive_found)))
+        score = 35.0 + (labeled_ratio * 55.0)
+        score -= min(15.0, len(sensitive_found) * 3.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

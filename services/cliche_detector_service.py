@@ -112,15 +112,11 @@ def detect_cliches(content: str) -> dict:
     else:
         level = 'high'
 
-    # 점수
+    # 연속 점수 — 클리셰 건수 기반 비선형 감점
     if total == 0:
         score = 100.0
-    elif total <= 2:
-        score = 90.0
-    elif total <= 5:
-        score = 75.0 - (total - 2) * 5.0
     else:
-        score = max(20.0, 60.0 - (total - 5) * 5.0)
+        score = max(15.0, 100.0 - total ** 1.15 * 8.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

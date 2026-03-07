@@ -129,15 +129,12 @@ def detect_high_stakes_advice_risk(content: str) -> dict:
     else:
         risk_level = 'none'
 
-    # 점수 계산
+    # 연속 점수 — 안전장치 충족 기반
     if not is_ymyl:
         score = 100.0
-    elif risk_level == 'low':
-        score = 90.0
-    elif risk_level == 'medium':
-        score = 60.0
     else:
-        score = 30.0
+        safeguards = sum([has_disclaimer, has_authority])
+        score = 30.0 + (safeguards * 30.0)
 
     # 다중 YMYL 도메인 감점
     if len(ymyl_domains) >= 2 and risk_level != 'low':
