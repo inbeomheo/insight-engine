@@ -1092,3 +1092,64 @@ def check_redundancy_route():
 
     except Exception as e:
         return handle_error(e, '중복 표현 검사')
+
+
+# ── 피동 표현 감지 ────────────────────────────────────
+
+@blog_bp.route('/api/detect-passive', methods=['POST'])
+def detect_passive_route():
+    """한국어 피동 표현을 감지하고 능동 전환을 제안합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.passive_voice_service import detect_passive
+        result = detect_passive(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '피동 표현 감지')
+
+
+# ── 약어 추출 ─────────────────────────────────────────
+
+@blog_bp.route('/api/extract-acronyms', methods=['POST'])
+def extract_acronyms_route():
+    """콘텐츠에서 약어와 전문용어를 추출합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.acronym_extractor_service import extract_acronyms
+        result = extract_acronyms(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '약어 추출')
+
+
+# ── FAQ 생성 ──────────────────────────────────────────
+
+@blog_bp.route('/api/generate-faq', methods=['POST'])
+def generate_faq_route():
+    """콘텐츠 기반 FAQ를 자동 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        max_questions = data.get('max_questions', 5)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.faq_generator_service import generate_faq
+        result = generate_faq(content, max_questions)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'FAQ 생성')
