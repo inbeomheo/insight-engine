@@ -136,23 +136,14 @@ def analyze_recommendation_justification(content: str) -> dict:
         else:
             level = 'missing'
 
-    # 점수 계산
+    # 연속 점수 — score_val(0~3) 기반
     if not is_rec:
         score = 100.0
-    elif level == 'thorough':
-        score = 95.0
-    elif level == 'adequate':
-        score = 75.0
-    elif level == 'partial':
-        score = 50.0
     else:
-        score = 25.0
-
-    # 섹션별 누락 감점
-    if total_items > 0:
-        why_missing_ratio = len(missing_why_sections) / total_items
-        if why_missing_ratio > 0.5 and score > 30:
-            score -= 15.0
+        score = 25.0 + (score_val / 3.0 * 70.0)
+        if total_items > 0:
+            why_missing_ratio = len(missing_why_sections) / total_items
+            score -= min(15.0, why_missing_ratio * 15.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

@@ -141,23 +141,16 @@ def check_primary_source_preference(content: str) -> dict:
     if academic_citations >= 3 and level == 'fair':
         level = 'good'
 
-    # 점수 계산
+    # 연속 점수 — primary_ratio 기반
     if level == 'none':
-        # 출처 없음 — 인용이 필요한 콘텐츠인지 판단 불가
         word_count = len(content.split())
         score = 80.0 if word_count < 200 else 50.0
-    elif level == 'excellent':
-        score = 100.0
-    elif level == 'good':
-        score = 80.0
-    elif level == 'fair':
-        score = 60.0
     else:
-        score = 35.0
-
-    # 인용 문구 보너스
-    if citation_mentions >= 3 and score < 100:
-        score = min(100.0, score + 10.0)
+        score = 35.0 + (primary_ratio / 100.0 * 65.0)
+        if academic_citations >= 3:
+            score += 5.0
+        if citation_mentions >= 3:
+            score += 5.0
 
     score = round(max(0.0, min(100.0, score)), 1)
 

@@ -165,21 +165,13 @@ def check_prerequisite_disclosure(content: str) -> dict:
                     'reason': '본문에 암시되어 있으나 명시적 공시 없음',
                 })
 
-    # 점수 계산
+    # 연속 점수 — completeness 비율 기반
     if not is_tutorial:
         score = 100.0
-    elif level == 'good':
-        score = 90.0
-    elif level == 'fair':
-        score = 70.0
-    elif level == 'partial':
-        score = 50.0
     else:
-        score = 30.0
-
-    # 사전조건 섹션 보너스
-    if has_prereq_section and score < 100:
-        score = min(100.0, score + 10.0)
+        score = 30.0 + (completeness / 100.0 * 60.0)
+        if has_prereq_section:
+            score += 10.0
 
     score = round(max(0.0, min(100.0, score)), 1)
 
