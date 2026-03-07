@@ -1682,3 +1682,63 @@ def analyze_speakability_route():
 
     except Exception as e:
         return handle_error(e, '음성 적합성 분석')
+
+
+# ── 소제목 간격 분석 ──────────────────────────────
+
+@blog_bp.route('/api/detect-subheading-gaps', methods=['POST'])
+def detect_subheading_gaps_route():
+    """헤딩 사이 텍스트 길이와 섹션 균형을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.subheading_gap_service import detect_subheading_gaps
+        result = detect_subheading_gaps(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '소제목 간격 분석')
+
+
+# ── 헤딩 병렬성 검사 ──────────────────────────────
+
+@blog_bp.route('/api/check-heading-parallelism', methods=['POST'])
+def check_heading_parallelism_route():
+    """동일 레벨 헤딩의 문법 형태 일관성을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.heading_parallelism_service import check_heading_parallelism
+        result = check_heading_parallelism(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '헤딩 병렬성 검사')
+
+
+# ── 섹션 주제 이탈 감지 ──────────────────────────────
+
+@blog_bp.route('/api/detect-section-drift', methods=['POST'])
+def detect_section_drift_route():
+    """각 섹션이 소제목 주제에서 벗어나는 지점을 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.section_drift_service import detect_section_drift
+        result = detect_section_drift(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '섹션 이탈 감지')
