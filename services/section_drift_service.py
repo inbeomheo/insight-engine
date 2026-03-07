@@ -32,6 +32,9 @@ _STOPWORDS = {
 _PARTICLES = re.compile(
     r'(은|는|이|가|을|를|의|에|와|과|도|로|으로|에서|까지|부터|만|라|란)$'
 )
+_HEADING_PATTERN = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
+_KO_WORD_RE = re.compile(r'[가-힣]{2,10}')
+_EN_WORD_RE = re.compile(r'[A-Za-z]{2,}')
 
 
 def detect_section_drift(content: str) -> dict:
@@ -107,9 +110,7 @@ def detect_section_drift(content: str) -> dict:
 
 def _split_sections(content: str) -> list:
     """마크다운 헤딩 기준으로 (heading, body) 쌍으로 분할합니다."""
-    # 마크다운 헤딩 패턴: # ~ ######
-    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
-    matches = list(heading_pattern.finditer(content))
+    matches = list(_HEADING_PATTERN.finditer(content))
 
     if not matches:
         return []
@@ -129,9 +130,9 @@ def _split_sections(content: str) -> list:
 def _extract_keywords(text: str) -> list:
     """텍스트에서 키워드를 추출합니다 (불용어 제거, 조사 제거)."""
     # 한국어 단어 (2~10자)
-    korean_words = re.findall(r'[가-힣]{2,10}', text)
+    korean_words = _KO_WORD_RE.findall(text)
     # 영어 단어 (2자+)
-    english_words = re.findall(r'[A-Za-z]{2,}', text)
+    english_words = _EN_WORD_RE.findall(text)
 
     keywords = []
 

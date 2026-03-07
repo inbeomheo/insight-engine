@@ -11,6 +11,7 @@ from collections import Counter
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 _WORD_SPLIT = re.compile(r'[가-힣]{2,}|[a-zA-Z]{3,}', re.IGNORECASE)
+_PARA_SPLIT = re.compile(r'\n\s*\n')
 
 # 약한 도입 패턴 (주제문으로 부적합)
 _WEAK_OPENERS = [
@@ -30,7 +31,7 @@ _STRONG_OPENERS = [
 
 def _split_paragraphs(content: str) -> List[str]:
     """빈 줄 기준으로 문단을 분리합니다."""
-    paragraphs = re.split(r'\n\s*\n', content)
+    paragraphs = _PARA_SPLIT.split(content)
     result = []
     for p in paragraphs:
         text = p.strip()
@@ -166,15 +167,18 @@ def analyze_topic_sentence_alignment(content: str) -> dict:
     else:
         level = 'misaligned'
 
-    # 점수 계산
-    if level in ('none', 'well_aligned'):
+    # 연속 점수 — 정렬 비율 + 약한 도입 감점
+    if not analyzable:
         score = 100.0
-    elif level == 'mostly_aligned':
-        score = 80.0
-    elif level == 'partial':
-        score = 55.0
     else:
-        score = 30.0
+        aligned_ratio = aligned / len(analyzable)
+        score = aligned_ratio * 85.0 + 15.0
+        # 불일치 문단 추가 감점
+        if misaligned > 0:
+            score -= min(25.0, misaligned * 8.0)
+        # 약한 도입 감점
+        if weak > 0:
+            score -= min(10.0, weak * 3.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
