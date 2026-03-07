@@ -3076,3 +3076,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '문단 통일성 검사')
+
+    # ── Original Evidence Signal Analyzer ──
+    @blog_bp.route('/api/analyze-original-evidence', methods=['POST'])
+    def analyze_original_evidence_route():
+        """원본 증거 신호를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.original_evidence_signal_service import analyze_original_evidence
+            result = analyze_original_evidence(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '원본 증거 신호 분석')
+
+    # ── Adjacent Paragraph Cohesion Analyzer ──
+    @blog_bp.route('/api/analyze-adjacent-cohesion', methods=['POST'])
+    def analyze_adjacent_cohesion_route():
+        """인접 문단 간 응집도를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.adjacent_cohesion_service import analyze_adjacent_cohesion
+            result = analyze_adjacent_cohesion(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문단 응집도 분석')
+
+    # ── Claim-Evidence Distance Analyzer ──
+    @blog_bp.route('/api/analyze-claim-evidence-distance', methods=['POST'])
+    def analyze_claim_evidence_distance_route():
+        """주장-근거 거리를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.claim_evidence_distance_service import analyze_claim_evidence_distance
+            result = analyze_claim_evidence_distance(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '주장-근거 거리 분석')
