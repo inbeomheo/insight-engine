@@ -128,23 +128,15 @@ def analyze_tradeoff_coverage(content: str) -> dict:
     else:
         level = 'heavily_one_sided'
 
-    # 점수 계산
-    if not is_rec:
+    # 연속 점수 — balance_ratio 기반
+    if not is_rec or total == 0:
         score = 100.0
-    elif level == 'balanced':
-        score = 100.0
-    elif level == 'acceptable':
-        score = 80.0
-    elif level == 'one_sided':
-        score = 55.0
-    elif level == 'heavily_one_sided':
-        score = 30.0
     else:
-        score = 100.0
-
-    # 대상 제한 보너스
-    if has_target_limits and score < 100:
-        score = min(100.0, score + 10.0)
+        score = 30.0 + (min(balance_ratio, 30.0) / 30.0 * 60.0)
+        if has_contrast:
+            score += 5.0
+        if has_target_limits:
+            score += 5.0
 
     score = round(max(0.0, min(100.0, score)), 1)
 

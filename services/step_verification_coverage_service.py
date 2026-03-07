@@ -139,15 +139,8 @@ def analyze_step_verification_coverage(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 점수 계산
-    if level == 'thorough':
-        score = 95.0
-    elif level == 'partial':
-        score = 65.0
-    elif level == 'minimal':
-        score = 40.0
-    else:
-        score = 20.0
+    # 연속 점수 — coverage 비율 기반
+    score = 20.0 + (coverage / 100.0 * 75.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

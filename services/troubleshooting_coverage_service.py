@@ -133,23 +133,13 @@ def analyze_troubleshooting_coverage(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 점수 계산
+    # 연속 점수 — coverage 비율 기반
     if not is_guide:
         score = 100.0
-    elif level == 'comprehensive':
-        score = 95.0
-    elif level == 'good':
-        score = 80.0
-    elif level == 'fair':
-        score = 60.0
-    elif level == 'partial':
-        score = 40.0
     else:
-        score = 20.0
-
-    # 문제 해결 섹션 보너스
-    if has_ts_section and score < 100:
-        score = min(100.0, score + 5.0)
+        score = 20.0 + (coverage / 100.0 * 75.0)
+        if has_ts_section:
+            score += 5.0
 
     score = round(max(0.0, min(100.0, score)), 1)
 

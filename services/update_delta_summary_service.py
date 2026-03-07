@@ -108,17 +108,12 @@ def check_update_delta_summary(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 점수 계산
-    if level == 'comprehensive':
-        score = 95.0
-    elif level == 'good':
-        score = 75.0
-    elif level == 'partial':
-        score = 50.0
-    else:
-        # 업데이트 표시 없는 콘텐츠 — 필요 여부 불명
+    # 연속 점수 — total_signals(0~4) 기반
+    if total_signals == 0:
         word_count = len(content.split())
         score = 60.0 if word_count < 200 else 30.0
+    else:
+        score = 30.0 + (total_signals / 4.0 * 65.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
