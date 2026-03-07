@@ -1153,3 +1153,64 @@ def generate_faq_route():
 
     except Exception as e:
         return handle_error(e, 'FAQ 생성')
+
+
+# ── 콘텐츠 성과 예측 ─────────────────────────────────
+
+@blog_bp.route('/api/predict-performance', methods=['POST'])
+def predict_performance_route():
+    """콘텐츠의 성과(조회수, 참여도)를 예측합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        title = data.get('title', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.content_performance_predictor_service import predict_performance
+        result = predict_performance(content, title)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 성과 예측')
+
+
+# ── 브랜드 보이스 프로파일링 ──────────────────────────
+
+@blog_bp.route('/api/brand-voice', methods=['POST'])
+def brand_voice_route():
+    """콘텐츠의 브랜드 보이스(톤, 문체)를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.brand_voice_profiler_service import profile_brand_voice
+        result = profile_brand_voice(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '브랜드 보이스 분석')
+
+
+# ── 타겟 독자 페르소나 추론 ──────────────────────────
+
+@blog_bp.route('/api/audience-persona', methods=['POST'])
+def audience_persona_route():
+    """콘텐츠에서 타겟 독자 페르소나를 추론합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.audience_persona_service import build_persona
+        result = build_persona(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '독자 페르소나 추론')
