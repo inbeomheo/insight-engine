@@ -2329,3 +2329,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '제목 태그 길이 검사')
+
+    # ── Keyword Stuffing Detector ──
+    @blog_bp.route('/api/detect-keyword-stuffing', methods=['POST'])
+    def detect_keyword_stuffing_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.keyword_stuffing_detector_service import detect_keyword_stuffing
+            result = detect_keyword_stuffing(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '키워드 스터핑 감지')
+
+    # ── Sentence Ending Variety ──
+    @blog_bp.route('/api/analyze-sentence-ending-variety', methods=['POST'])
+    def analyze_sentence_ending_variety_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.sentence_ending_variety_service import analyze_sentence_ending_variety
+            result = analyze_sentence_ending_variety(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '종결어미 다양성 분석')
+
+    # ── URL Health Checker ──
+    @blog_bp.route('/api/check-url-health', methods=['POST'])
+    def check_url_health_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.url_health_checker_service import check_url_health
+            result = check_url_health(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, 'URL 건강 검사')
