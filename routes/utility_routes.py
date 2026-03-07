@@ -970,3 +970,65 @@ def analyze_transitions_route():
     except Exception as e:
         return handle_error(e, '연결어 분석')
 
+
+# ── 문단 균형 분석 ────────────────────────────────────
+
+@blog_bp.route('/api/paragraph-balance', methods=['POST'])
+def paragraph_balance_route():
+    """문단 길이 균형을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.paragraph_balance_service import analyze_balance
+        result = analyze_balance(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문단 균형 분석')
+
+
+# ── 파워워드 분석 ─────────────────────────────────────
+
+@blog_bp.route('/api/power-words', methods=['POST'])
+def power_words_route():
+    """콘텐츠의 파워워드를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        goal = data.get('goal', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.power_word_service import analyze_power_words, suggest_power_words
+        result = analyze_power_words(content)
+        if goal:
+            result['recommended'] = suggest_power_words(content, goal)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '파워워드 분석')
+
+
+# ── 감정 톤 매핑 ─────────────────────────────────────
+
+@blog_bp.route('/api/emotional-tone', methods=['POST'])
+def emotional_tone_route():
+    """콘텐츠의 감정 흐름을 매핑합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.emotional_tone_service import map_emotional_tone
+        result = map_emotional_tone(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '감정 톤 매핑')
