@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-@dataclass_or_dict = dict  # 간단 구조체 대신 dict 사용
+# 간단 구조체 대신 dict 사용
 
 
 def _format_vtt(entries: List[Dict]) -> str:
