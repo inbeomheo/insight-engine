@@ -2087,3 +2087,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '문체 일관성 점검')
+
+    @blog_bp.route('/api/detect-linking-verb-overuse', methods=['POST'])
+    def detect_linking_verb_overuse_route():
+        """연결 동사 과다 사용 감지 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.linking_verb_overuse_service import detect_linking_verb_overuse
+            result = detect_linking_verb_overuse(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '연결 동사 과다 사용 감지')
+
+    @blog_bp.route('/api/validate-instruction-sequence', methods=['POST'])
+    def validate_instruction_sequence_route():
+        """절차 시퀀스 검증 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.instruction_sequence_service import validate_instruction_sequence
+            result = validate_instruction_sequence(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '절차 시퀀스 검증')
+
+    @blog_bp.route('/api/score-content-depth', methods=['POST'])
+    def score_content_depth_route():
+        """콘텐츠 심도 측정 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.content_depth_scorer_service import score_content_depth
+            result = score_content_depth(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '콘텐츠 심도 측정')
