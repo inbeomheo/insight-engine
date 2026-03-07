@@ -2183,3 +2183,53 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '괄호 과다 사용 검사')
+
+    # ── Word Frequency Cloud Generator ──
+    @blog_bp.route('/api/generate-word-frequency', methods=['POST'])
+    def generate_word_frequency_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.word_frequency_cloud_service import generate_word_frequency
+            top_n = data.get('top_n', 30)
+            result = generate_word_frequency(content, top_n=top_n)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '단어 빈도 분석')
+
+    # ── Anaphora Repetition Detector ──
+    @blog_bp.route('/api/detect-anaphora-repetition', methods=['POST'])
+    def detect_anaphora_repetition_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.anaphora_repetition_service import detect_anaphora_repetition
+            result = detect_anaphora_repetition(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '수사 반복 감지')
+
+    # ── Table of Contents Generator ──
+    @blog_bp.route('/api/generate-toc', methods=['POST'])
+    def generate_toc_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.toc_generator_service import generate_toc
+            max_depth = data.get('max_depth', 3)
+            result = generate_toc(content, max_depth=max_depth)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '목차 생성')
