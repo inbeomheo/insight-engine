@@ -771,3 +771,66 @@ def generate_debate_route():
     except Exception as e:
         return handle_error(e, '토론 생성')
 
+
+# ── 콘텐츠 감성 분석 ──────────────────────────────────
+
+@blog_bp.route('/api/analyze-sentiment', methods=['POST'])
+def analyze_sentiment_route():
+    """콘텐츠의 감성 톤(긍정/부정/중립)을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.sentiment_analyzer_service import analyze_sentiment
+        result = analyze_sentiment(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '감성 분석')
+
+
+# ── 훅 문장 생성 ──────────────────────────────────────
+
+@blog_bp.route('/api/generate-hooks', methods=['POST'])
+def generate_hooks_route():
+    """주제에 대한 훅(서두) 문장을 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '')
+        content = data.get('content', '')
+        count = data.get('count', 5)
+
+        if not topic or not topic.strip():
+            return jsonify({'error': '주제(topic)가 필요합니다.'}), 400
+
+        from services.hook_generator_service import generate_hooks
+        result = generate_hooks(topic, content, count)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '훅 생성')
+
+
+# ── 소셜 프루프 스니펫 추출 ────────────────────────────
+
+@blog_bp.route('/api/extract-snippets', methods=['POST'])
+def extract_snippets_route():
+    """콘텐츠에서 소셜 공유용 스니펫을 추출합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        max_count = data.get('max_count', 10)
+
+        if not content or not content.strip():
+            return jsonify({'error': '스니펫을 추출할 콘텐츠가 필요합니다.'}), 400
+
+        from services.social_proof_service import extract_snippets
+        result = extract_snippets(content, max_count)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '스니펫 추출')
+
