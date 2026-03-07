@@ -17,6 +17,18 @@ _KO_PRONOUNS = ['이것', '그것', '저것', '이들', '그들', '이런', '그
 # 영어 지시어 (소문자 매칭용)
 _EN_PRONOUNS = ['it', 'this', 'that', 'they', 'them', 'these', 'those']
 
+# 사전 컴파일된 영어 지시어 패턴 (루프 내 re.compile 반복 방지)
+_EN_PRONOUN_PATTERNS = {
+    p: re.compile(r'\b' + re.escape(p) + r'\b', re.IGNORECASE)
+    for p in _EN_PRONOUNS
+}
+
+# 사전 컴파일된 영어 지시어+명사 패턴
+_EN_PRONOUN_NOUN_PATTERNS = {
+    p: re.compile(r'\b' + re.escape(p) + r'\s+(\w+)', re.IGNORECASE)
+    for p in _EN_PRONOUNS
+}
+
 # 한국어 명사 패턴 (2자 이상 한글, 조사 제외)
 _KO_NOUN_PATTERN = re.compile(r'[가-힣]{2,}')
 _KO_PARTICLE = re.compile(r'(은|는|이|가|을|를|의|에|와|과|도|로|으로|에서|까지|부터|만|라)$')
@@ -157,11 +169,9 @@ def _check_sentence(sentence: str, prev_sentence: str) -> list:
             'suggestion': suggestion,
         })
 
-    # --- 영어 지시어 검사 ---
+    # --- 영어 지시어 검사 (사전 컴파일 패턴 사용) ---
     for pronoun in _EN_PRONOUNS:
-        # 단어 경계로 매칭 (대소문자 무시)
-        pattern = re.compile(r'\b' + re.escape(pronoun) + r'\b', re.IGNORECASE)
-        if not pattern.search(sentence):
+        if not _EN_PRONOUN_PATTERNS[pronoun].search(sentence):
             continue
 
         # "this/that/these/those + 명사" 패턴은 명확 → 건너뜀
@@ -199,8 +209,7 @@ def _has_following_noun_ko(sentence: str, pronoun: str) -> bool:
 
 def _has_following_noun_en(sentence: str, pronoun: str) -> bool:
     """영어 지시어(this/that/these/those) 뒤에 명사가 오는지 확인합니다."""
-    pattern = re.compile(r'\b' + re.escape(pronoun) + r'\s+(\w+)', re.IGNORECASE)
-    match = pattern.search(sentence)
+    match = _EN_PRONOUN_NOUN_PATTERNS[pronoun].search(sentence)
     if match:
         following = match.group(1).lower()
         # 비명사 단어가 아니면 명사로 간주

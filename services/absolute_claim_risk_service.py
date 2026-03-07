@@ -123,15 +123,12 @@ def detect_absolute_claim_risk(content: str) -> dict:
     else:
         level = 'high'
 
-    # 점수 계산
-    if level == 'safe':
+    # 연속 점수 계산 — risk_ratio(0~100%)를 기반으로 감점
+    # risk_ratio 0% → 100점, 5% → 85점, 15% → 60점, 30%+ → 30점
+    if risk_ratio == 0:
         score = 100.0
-    elif level == 'low':
-        score = 85.0
-    elif level == 'moderate':
-        score = 60.0
     else:
-        score = 30.0
+        score = 100.0 - (risk_ratio * 2.3)  # 30% → ~31점, 15% → ~65.5점, 5% → ~88.5점
 
     score = round(max(0.0, min(100.0, score)), 1)
 

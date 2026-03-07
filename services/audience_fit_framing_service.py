@@ -104,18 +104,18 @@ def analyze_audience_fit_framing(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 점수 계산
-    if level == 'comprehensive':
-        score = 95.0
-    elif level == 'good':
-        score = 75.0
-    elif level == 'partial':
-        score = 50.0
-    else:
-        score = 25.0
+    # 연속 점수 계산 — 각 신호에 가중치 부여
+    # audience: 30점, context: 25점, not_for: 20점, 기본: 25점
+    score = 25.0
+    if has_audience:
+        score += 30.0
+    if has_context:
+        score += 25.0
+    if has_not_for:
+        score += 20.0
 
-    # 초반 배치 보너스
-    if audience_early and score < 100:
+    # 초반 배치 보너스 (대상 독자가 상위 30%에 위치)
+    if audience_early:
         score = min(100.0, score + 10.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
