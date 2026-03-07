@@ -646,3 +646,66 @@ def submit_nps_feedback():
     return jsonify({'success': True, **entry})
 
 
+# ── 콘텐츠 종합 등급 평가 ──────────────────────────────
+
+@blog_bp.route('/api/grade-content', methods=['POST'])
+def grade_content_route():
+    """콘텐츠를 종합 평가하여 A~F 등급을 반환합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '평가할 콘텐츠가 필요합니다.'}), 400
+
+        from services.content_grader_service import grade_content
+        result = grade_content(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 등급 평가')
+
+
+# ── 스마트 헤드라인 최적화 ──────────────────────────────
+
+@blog_bp.route('/api/optimize-headline', methods=['POST'])
+def optimize_headline_route():
+    """제목을 분석하고 최적화 제안을 반환합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', '')
+        content = data.get('content', '')
+
+        if not title or not title.strip():
+            return jsonify({'error': '분석할 제목이 필요합니다.'}), 400
+
+        from services.headline_optimizer_service import optimize_headline
+        result = optimize_headline(title, content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '헤드라인 최적화')
+
+
+# ── 콘텐츠 신선도 모니터링 ──────────────────────────────
+
+@blog_bp.route('/api/freshness-check', methods=['POST'])
+def freshness_check_route():
+    """콘텐츠의 신선도를 평가합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        published_date = data.get('published_date', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '평가할 콘텐츠가 필요합니다.'}), 400
+        if not published_date:
+            return jsonify({'error': '발행일(published_date)이 필요합니다. ISO 8601 형식 (예: 2025-06-15)'}), 400
+
+        from services.freshness_monitor_service import check_freshness
+        result = check_freshness(content, published_date)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 신선도 체크')
+
