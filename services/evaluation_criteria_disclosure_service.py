@@ -109,17 +109,11 @@ def check_evaluation_criteria_disclosure(content: str) -> dict:
     else:
         level = 'poor'
 
-    # 점수 계산
+    # 연속 점수 — 충족 비율 기반
     if not is_review:
         score = 100.0
-    elif level == 'excellent':
-        score = 95.0
-    elif level == 'good':
-        score = 75.0
-    elif level == 'fair':
-        score = 55.0
     else:
-        score = 30.0
+        score = 30.0 + (completeness / 100.0 * 70.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

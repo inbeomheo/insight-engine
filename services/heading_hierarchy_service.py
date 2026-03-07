@@ -147,15 +147,14 @@ def check_heading_hierarchy(content: str) -> dict:
     else:
         level = 'problematic'
 
-    # 점수 계산
-    if level == 'clean':
+    # 연속 점수 — 이슈 건수 기반
+    total_headings = len(headings)
+    if issue_count == 0:
         score = 100.0
-    elif level == 'minor':
-        score = 80.0
-    elif level == 'moderate':
-        score = 55.0
     else:
-        score = 25.0
+        issue_ratio = issue_count / max(1, total_headings)
+        score = 100.0 - (issue_count * 10.0) - (issue_ratio * 20.0)
+        score = max(10.0, score)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

@@ -126,15 +126,11 @@ def analyze_community_evidence(content: str) -> dict:
     else:
         level = 'none'
 
-    # 점수 계산
-    if level == 'rich':
-        score = 95.0
-    elif level == 'good':
-        score = 75.0
-    elif level == 'minimal':
-        score = 50.0
-    else:
+    # 연속 점수 — 신호 수 기반
+    if total_signals == 0:
         score = 30.0
+    else:
+        score = min(95.0, 30.0 + total_signals * 13.0)
 
     # 인용 패턴 보너스
     if citation_count >= 2 and score < 100:
