@@ -2135,3 +2135,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '콘텐츠 심도 측정')
+
+    # ── Conclusion Strength Analyzer ──
+    @blog_bp.route('/api/analyze-conclusion-strength', methods=['POST'])
+    def analyze_conclusion_strength_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.conclusion_strength_service import analyze_conclusion_strength
+            result = analyze_conclusion_strength(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '결론 강도 분석')
+
+    # ── Meta Description Quality Checker ──
+    @blog_bp.route('/api/check-meta-description-quality', methods=['POST'])
+    def check_meta_description_quality_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.meta_description_quality_service import check_meta_description_quality
+            result = check_meta_description_quality(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '메타 디스크립션 품질 검사')
+
+    # ── Parenthetical Overuse Checker ──
+    @blog_bp.route('/api/check-parenthetical-overuse', methods=['POST'])
+    def check_parenthetical_overuse_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.parenthetical_overuse_service import check_parenthetical_overuse
+            result = check_parenthetical_overuse(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '괄호 과다 사용 검사')
