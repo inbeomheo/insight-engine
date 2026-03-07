@@ -150,15 +150,12 @@ def check_numeric_unit_consistency(content: str) -> dict:
     else:
         level = 'inconsistent'
 
-    # 점수 계산
-    if level in ('none', 'consistent'):
+    # 연속 점수 — 비일관 건수 대비 검사 카테고리 기반
+    if categories_checked == 0 or inconsistent_count == 0:
         score = 100.0
-    elif level == 'minor':
-        score = 80.0
-    elif level == 'moderate':
-        score = 55.0
     else:
-        score = 30.0
+        ratio = inconsistent_count / max(1, categories_checked)
+        score = max(15.0, 100.0 - ratio * 70.0 - inconsistent_count * 10.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

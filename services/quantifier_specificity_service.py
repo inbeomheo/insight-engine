@@ -127,15 +127,12 @@ def analyze_quantifier_specificity(content: str) -> dict:
     else:
         level = 'vague'
 
-    # 점수 계산
-    if level == 'specific':
+    # 연속 점수 — 구체성 비율 기반
+    if pure_vague == 0:
         score = 100.0
-    elif level == 'good':
-        score = 80.0
-    elif level == 'moderate':
-        score = 55.0
     else:
-        score = 30.0
+        score = max(15.0, specificity_ratio * 0.85 + 15.0)
+        score -= min(15.0, pure_vague * 3.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

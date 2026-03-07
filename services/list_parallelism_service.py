@@ -157,15 +157,12 @@ def check_list_parallelism(content: str) -> dict:
     else:
         level = 'inconsistent'
 
-    # 점수 계산
-    if level == 'none' or level == 'consistent':
+    # 연속 점수 — 병렬 비율 기반
+    if total == 0 or non_parallel == 0:
         score = 100.0
-    elif level == 'mostly_consistent':
-        score = 80.0
-    elif level == 'mixed':
-        score = 55.0
     else:
-        score = 30.0
+        parallel_ratio = parallel_count / total
+        score = max(15.0, parallel_ratio * 90.0 + 10.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
