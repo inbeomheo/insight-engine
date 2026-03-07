@@ -11,6 +11,7 @@ from collections import Counter
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 _WORD_SPLIT = re.compile(r'[가-힣]{2,}|[a-zA-Z]{3,}', re.IGNORECASE)
+_PARA_SPLIT = re.compile(r'\n\s*\n')
 
 # 주제 전환 신호
 _TOPIC_SHIFT_SIGNALS = [
@@ -29,7 +30,7 @@ _STOPWORDS = {'그것', '이것', '저것', '하는', '되는', '있는', '없�
 
 def _split_paragraphs(content: str) -> List[str]:
     """빈 줄 기준으로 문단을 분리합니다."""
-    paragraphs = re.split(r'\n\s*\n', content)
+    paragraphs = _PARA_SPLIT.split(content)
     result = []
     for p in paragraphs:
         text = p.strip()
@@ -165,15 +166,15 @@ def check_paragraph_unity(content: str) -> dict:
     else:
         level = 'fragmented'
 
-    # 점수 계산
-    if level in ('none', 'unified'):
+    # 연속 점수 — 통일성 비율 + 평균 응집도 기반
+    if not analyzable:
         score = 100.0
-    elif level == 'mostly_unified':
-        score = 80.0
-    elif level == 'mixed':
-        score = 55.0
     else:
-        score = 30.0
+        unified_ratio = unified / len(analyzable) if analyzable else 1.0
+        score = (unified_ratio * 60.0) + (min(avg_coherence, 0.3) / 0.3 * 40.0)
+        # 분산 문단 추가 감점
+        if fragmented > 0:
+            score -= min(20.0, fragmented * 6.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

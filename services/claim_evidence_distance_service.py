@@ -144,15 +144,15 @@ def analyze_claim_evidence_distance(content: str) -> dict:
     else:
         level = 'weakly_supported'
 
-    # 점수 계산
-    if level in ('none', 'well_supported'):
+    # 연속 점수 — 지원 비율 기반
+    if total_claims == 0:
         score = 100.0
-    elif level == 'mostly_supported':
-        score = 80.0
-    elif level == 'mixed':
-        score = 55.0
     else:
-        score = 30.0
+        support_ratio = supported / total_claims
+        score = support_ratio * 90.0 + 10.0
+        # 미지원 건수 추가 감점
+        if unsupported > 0:
+            score -= min(20.0, unsupported * 5.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

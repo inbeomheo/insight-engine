@@ -122,17 +122,9 @@ def analyze_original_evidence(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 점수 계산
-    if level == 'strong':
-        score = 95.0
-    elif level == 'good':
-        score = 80.0
-    elif level == 'partial':
-        score = 60.0
-    elif level == 'minimal':
-        score = 40.0
-    else:
-        score = 20.0
+    # 연속 점수 — 카테고리 충족 비율 기반
+    total_categories = len(_ALL_CATEGORIES)
+    score = 20.0 + (count / total_categories * 80.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
