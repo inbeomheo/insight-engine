@@ -2974,3 +2974,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '제목 계층 구조 검사')
+
+    # ── Numeric & Unit Consistency Checker ──
+    @blog_bp.route('/api/check-numeric-unit-consistency', methods=['POST'])
+    def check_numeric_unit_consistency_route():
+        """숫자/단위 표기 일관성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.numeric_unit_consistency_service import check_numeric_unit_consistency
+            result = check_numeric_unit_consistency(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '숫자/단위 일관성 검사')
+
+    # ── Step Verification Coverage Analyzer ──
+    @blog_bp.route('/api/analyze-step-verification-coverage', methods=['POST'])
+    def analyze_step_verification_coverage_route():
+        """가이드 문서의 단계별 검증 기준 커버리지를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.step_verification_coverage_service import analyze_step_verification_coverage
+            result = analyze_step_verification_coverage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '단계 검증 커버리지 분석')
+
+    # ── Comparison Criteria Completeness Checker ──
+    @blog_bp.route('/api/check-comparison-criteria-completeness', methods=['POST'])
+    def check_comparison_criteria_completeness_route():
+        """비교 콘텐츠의 기준 명시 완전성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.comparison_criteria_completeness_service import check_comparison_criteria_completeness
+            result = check_comparison_criteria_completeness(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '비교 기준 완전성 검사')
