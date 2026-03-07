@@ -2377,3 +2377,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, 'URL 건강 검사')
+
+    # ── Passive Construction Ratio ──
+    @blog_bp.route('/api/analyze-passive-ratio', methods=['POST'])
+    def analyze_passive_ratio_route():
+        """피동/수동 구문 비율을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.passive_construction_ratio_service import analyze_passive_ratio
+            result = analyze_passive_ratio(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '피동 구문 비율 분석')
+
+    # ── Average Words Per Sentence ──
+    @blog_bp.route('/api/analyze-avg-words-per-sentence', methods=['POST'])
+    def analyze_avg_words_per_sentence_route():
+        """문장당 평균 단어 수를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.avg_words_per_sentence_service import analyze_avg_words_per_sentence
+            result = analyze_avg_words_per_sentence(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문장당 평균 단어 수 분석')
+
+    # ── Emoji Usage Analyzer ──
+    @blog_bp.route('/api/analyze-emoji-usage', methods=['POST'])
+    def analyze_emoji_usage_route():
+        """이모지 사용 패턴을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.emoji_usage_analyzer_service import analyze_emoji_usage
+            result = analyze_emoji_usage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '이모지 사용 분석')
