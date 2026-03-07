@@ -1381,3 +1381,63 @@ def serp_features_route():
 
     except Exception as e:
         return handle_error(e, 'SERP 기능 분석')
+
+
+# ── 토픽 클러스터 매핑 ──────────────────────────────
+
+@blog_bp.route('/api/topic-clusters', methods=['POST'])
+def topic_clusters_route():
+    """콘텐츠 목록의 토픽 클러스터 구조를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        contents = data.get('contents', [])
+
+        if not contents or not isinstance(contents, list):
+            return jsonify({'error': '분석할 콘텐츠 목록(contents)이 필요합니다.'}), 400
+
+        from services.topic_cluster_service import map_topic_clusters
+        result = map_topic_clusters(contents)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '토픽 클러스터 분석')
+
+
+# ── 엔터티 커버리지 분석 ──────────────────────────────
+
+@blog_bp.route('/api/analyze-entities', methods=['POST'])
+def analyze_entities_route():
+    """콘텐츠의 엔터티 커버리지를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.entity_coverage_service import analyze_entities
+        result = analyze_entities(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '엔터티 분석')
+
+
+# ── 주장/인용 검증 ──────────────────────────────
+
+@blog_bp.route('/api/verify-claims', methods=['POST'])
+def verify_claims_route():
+    """콘텐츠의 사실 주장과 인용 출처를 검증합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.claim_verifier_service import verify_claims
+        result = verify_claims(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '주장/인용 검증')
