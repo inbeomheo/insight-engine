@@ -2776,3 +2776,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '평가 기준 공시 점검')
+
+    @blog_bp.route('/api/analyze-recommendation-justification', methods=['POST'])
+    def analyze_recommendation_justification_route():
+        """추천 항목의 근거 충분성을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.recommendation_justification_service import analyze_recommendation_justification
+            result = analyze_recommendation_justification(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '추천 근거 분석')
+
+    @blog_bp.route('/api/check-prerequisite-disclosure', methods=['POST'])
+    def check_prerequisite_disclosure_route():
+        """튜토리얼/가이드의 사전조건 공시를 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.prerequisite_disclosure_service import check_prerequisite_disclosure
+            result = check_prerequisite_disclosure(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '사전조건 공시 점검')
+
+    @blog_bp.route('/api/analyze-troubleshooting-coverage', methods=['POST'])
+    def analyze_troubleshooting_coverage_route():
+        """가이드의 문제 해결 커버리지를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.troubleshooting_coverage_service import analyze_troubleshooting_coverage
+            result = analyze_troubleshooting_coverage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문제 해결 커버리지 분석')
