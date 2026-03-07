@@ -1991,3 +1991,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '챕터 분할점 감지')
+
+    @blog_bp.route('/api/analyze-question-density', methods=['POST'])
+    def analyze_question_density_route():
+        """질문 밀도 분석 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.question_density_service import analyze_question_density
+            result = analyze_question_density(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '질문 밀도 분석')
+
+    @blog_bp.route('/api/audit-whitespace-formatting', methods=['POST'])
+    def audit_whitespace_formatting_route():
+        """공백/포맷 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.whitespace_formatting_service import audit_whitespace_formatting
+            result = audit_whitespace_formatting(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '공백/포맷 점검')
+
+    @blog_bp.route('/api/analyze-bullet-density', methods=['POST'])
+    def analyze_bullet_density_route():
+        """불릿 리스트 밀도 분석 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.bullet_point_density_service import analyze_bullet_density
+            result = analyze_bullet_density(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '불릿 리스트 밀도 분석')
