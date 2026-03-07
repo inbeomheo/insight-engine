@@ -166,27 +166,42 @@ def analyze_jargon_coverage(content: str) -> dict:
     }
 
 
+# 용어별 정의 패턴 캐시 (루프 내 re.search 문자열 치환 반복 방지)
+_definition_pattern_cache: dict = {}
+
+
+def _get_definition_patterns(term: str) -> list:
+    """용어별 컴파일된 정의 패턴을 반환합니다 (캐시 사용)."""
+    if term in _definition_pattern_cache:
+        return _definition_pattern_cache[term]
+
+    escaped = re.escape(term)
+    compiled = []
+    for template in _DEFINITION_PATTERNS:
+        pattern_str = template.pattern.replace('{term}', escaped)
+        try:
+            compiled.append(re.compile(pattern_str))
+        except re.error:
+            continue
+
+    _definition_pattern_cache[term] = compiled
+    return compiled
+
+
 def _check_definition(term: str, content: str, first_pos: int) -> tuple:
     """용어의 첫 등장 위치 앞뒤 100자 윈도우에서 정의 패턴을 검색합니다.
 
     Returns:
         (has_definition: bool, definition_text: str)
     """
-    # 앞뒤 100자 윈도우
     window_start = max(0, first_pos - 100)
     window_end = min(len(content), first_pos + len(term) + 100)
     window = content[window_start:window_end]
 
-    # 정의 패턴 매칭
-    escaped_term = re.escape(term)
-    for pattern_template in _DEFINITION_PATTERNS:
-        pattern_str = pattern_template.pattern.replace('{term}', escaped_term)
-        try:
-            match = re.search(pattern_str, window)
-            if match:
-                return True, match.group(0).strip()
-        except re.error:
-            continue
+    for pattern in _get_definition_patterns(term):
+        match = pattern.search(window)
+        if match:
+            return True, match.group(0).strip()
 
     return False, ''
 

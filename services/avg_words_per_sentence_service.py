@@ -89,15 +89,15 @@ def analyze_avg_words_per_sentence(content: str) -> dict:
     else:
         level = 'too_long'
 
-    # 점수
-    if 10 <= avg <= 20:
-        score = 100.0
-    elif 7 <= avg < 10 or 20 < avg <= 25:
-        score = 80.0
-    elif 5 <= avg < 7 or 25 < avg <= 30:
-        score = 60.0
-    else:
-        score = max(20.0, 60.0 - abs(avg - 15) * 2.0)
+    # 연속 비선형 점수 — 최적 중심(15)으로부터 편차 기반
+    optimal_center = 15.0
+    deviation = abs(avg - optimal_center)
+    if deviation <= 5:  # 10~20 범위: 높은 점수
+        score = 100.0 - (deviation * 2.0)  # 최소 90점
+    elif deviation <= 10:  # 5~10 또는 20~25 범위
+        score = 90.0 - ((deviation - 5) ** 1.3 * 4.0)  # 비선형 감점
+    else:  # 극단 범위
+        score = max(15.0, 60.0 - ((deviation - 10) ** 1.2 * 3.0))
 
     # 긴 문장 페널티
     if long_sentences > total * 0.3:

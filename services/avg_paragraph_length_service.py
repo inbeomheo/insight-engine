@@ -96,15 +96,22 @@ def analyze_avg_paragraph_length(content: str) -> dict:
     else:
         level = 'too_long'
 
-    # 점수
+    # 연속 점수 — 최적 범위(100단어)로부터의 편차 기반
+    optimal_center = 100.0  # 최적 단락 길이 중심
+    deviation = abs(avg_words - optimal_center)
     if 50 <= avg_words <= 150:
-        score = 100.0
-    elif 30 <= avg_words < 50 or 150 < avg_words <= 200:
-        score = 80.0
-    elif avg_words < 30:
-        score = max(30.0, 80.0 - (30 - avg_words) * 2.0)
+        score = 100.0 - (deviation * 0.2)  # 범위 내에서도 미세 차등
     else:
-        score = max(30.0, 80.0 - (avg_words - 200) * 1.0)
+        score = max(20.0, 100.0 - (deviation * 0.5))
+
+    # 균일성 보정 — 단락 길이 표준편차 기반
+    if total >= 2:
+        word_counts = [pd['word_count'] for pd in paragraph_data]
+        mean_wc = sum(word_counts) / len(word_counts)
+        if mean_wc > 0:
+            variance = sum((w - mean_wc) ** 2 for w in word_counts) / len(word_counts)
+            cv = (variance ** 0.5) / mean_wc  # 변동계수
+            score -= min(15.0, cv * 15.0)  # 최대 15점 감점
 
     # 극단적 단락 페널티
     if long_paras > total * 0.3:
