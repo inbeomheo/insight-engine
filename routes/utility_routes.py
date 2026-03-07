@@ -2581,3 +2581,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '데이터 시각화 기회 분석')
+
+    # ── Sentence Starter Diversity ──
+    @blog_bp.route('/api/analyze-sentence-starter-diversity', methods=['POST'])
+    def analyze_sentence_starter_diversity_route():
+        """문장 시작어 다양성을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.sentence_starter_diversity_service import analyze_sentence_starter_diversity
+            result = analyze_sentence_starter_diversity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문장 시작어 다양성 분석')
+
+    # ── Average Paragraph Length ──
+    @blog_bp.route('/api/analyze-avg-paragraph-length', methods=['POST'])
+    def analyze_avg_paragraph_length_route():
+        """단락 평균 길이를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.avg_paragraph_length_service import analyze_avg_paragraph_length
+            result = analyze_avg_paragraph_length(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '단락 평균 길이 분석')
+
+    # ── Quotation Usage Analyzer ──
+    @blog_bp.route('/api/analyze-quotation-usage', methods=['POST'])
+    def analyze_quotation_usage_route():
+        """인용문 사용 패턴을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.quotation_usage_analyzer_service import analyze_quotation_usage
+            result = analyze_quotation_usage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '인용문 사용 분석')
