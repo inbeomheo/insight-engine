@@ -1895,3 +1895,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '약어 풀어쓰기 점검')
+
+    @blog_bp.route('/api/detect-actionability-gaps', methods=['POST'])
+    def detect_actionability_gaps_route():
+        """실행 가능성 갭 감지 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.actionability_gap_service import detect_actionability_gaps
+            result = detect_actionability_gaps(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '실행 가능성 갭 감지')
+
+    @blog_bp.route('/api/check-thesis-frontload', methods=['POST'])
+    def check_thesis_frontload_route():
+        """핵심 주장 프론트로드 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.thesis_frontload_service import check_thesis_frontload
+            result = check_thesis_frontload(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '핵심 주장 프론트로드 점검')
+
+    @blog_bp.route('/api/detect-list-table-opportunities', methods=['POST'])
+    def detect_list_table_opportunities_route():
+        """목록/표 변환 기회 감지 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.list_table_opportunity_service import detect_list_table_opportunities
+            result = detect_list_table_opportunities(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '목록/표 변환 기회 감지')
