@@ -2281,3 +2281,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '글 형식 템플릿 검사')
+
+    # ── Emotional Arc Mapper ──
+    @blog_bp.route('/api/map-emotional-arc', methods=['POST'])
+    def map_emotional_arc_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.emotional_arc_mapper_service import map_emotional_arc
+            result = map_emotional_arc(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '감정 아크 매핑')
+
+    # ── Sentence Length Rhythm Analyzer ──
+    @blog_bp.route('/api/analyze-sentence-rhythm', methods=['POST'])
+    def analyze_sentence_rhythm_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.sentence_length_rhythm_service import analyze_sentence_rhythm
+            result = analyze_sentence_rhythm(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문장 리듬 분석')
+
+    # ── Title Tag Length Checker ──
+    @blog_bp.route('/api/check-title-tag-length', methods=['POST'])
+    def check_title_tag_length_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.title_tag_length_service import check_title_tag_length
+            result = check_title_tag_length(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '제목 태그 길이 검사')
