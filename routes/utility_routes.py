@@ -3127,3 +3127,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '주장-근거 거리 분석')
+
+    # ── Definition Gap Detector ──
+    @blog_bp.route('/api/detect-definition-gaps', methods=['POST'])
+    def detect_definition_gaps_route():
+        """정의 없는 전문 용어/약어를 탐지합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.definition_gap_service import detect_definition_gaps
+            result = detect_definition_gaps(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '정의 갭 탐지')
+
+    # ── Methodology Transparency Checker ──
+    @blog_bp.route('/api/check-methodology-transparency', methods=['POST'])
+    def check_methodology_transparency_route():
+        """방법론 투명성을 검사합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.methodology_transparency_service import check_methodology_transparency
+            result = check_methodology_transparency(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '방법론 투명성 검사')
+
+    # ── Concept Load Analyzer ──
+    @blog_bp.route('/api/analyze-concept-load', methods=['POST'])
+    def analyze_concept_load_route():
+        """구간별 인지부하를 분석합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.concept_load_service import analyze_concept_load
+            result = analyze_concept_load(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '인지부하 분석')
