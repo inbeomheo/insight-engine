@@ -2530,3 +2530,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '문장 복잡도 평가')
+
+    # ── Gender-Neutral Language Checker ──
+    @blog_bp.route('/api/check-gender-neutral', methods=['POST'])
+    def check_gender_neutral_route():
+        """성별 포용적 언어 사용을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.gender_neutral_language_service import check_gender_neutral
+            result = check_gender_neutral(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '성별 포용 언어 검사')
+
+    # ── Temporal Reference Checker ──
+    @blog_bp.route('/api/check-temporal-references', methods=['POST'])
+    def check_temporal_references_route():
+        """시제/시간 참조 일관성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.temporal_reference_checker_service import check_temporal_references
+            result = check_temporal_references(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '시제 참조 검사')
+
+    # ── Data Visualization Opportunity ──
+    @blog_bp.route('/api/find-visualization-opportunities', methods=['POST'])
+    def find_visualization_opportunities_route():
+        """데이터 시각화 기회를 찾습니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.data_visualization_opportunity_service import find_visualization_opportunities
+            result = find_visualization_opportunities(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '데이터 시각화 기회 분석')
