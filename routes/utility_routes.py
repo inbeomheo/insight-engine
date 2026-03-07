@@ -2824,3 +2824,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '문제 해결 커버리지 분석')
+
+    @blog_bp.route('/api/analyze-extractability', methods=['POST'])
+    def analyze_extractability_route():
+        """콘텐츠의 문맥 독립 추출 가능성을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.extractability_analyzer_service import analyze_extractability
+            result = analyze_extractability(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '추출 가능성 분석')
+
+    @blog_bp.route('/api/analyze-community-evidence', methods=['POST'])
+    def analyze_community_evidence_route():
+        """커뮤니티 근거 포함 여부를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.community_evidence_service import analyze_community_evidence
+            result = analyze_community_evidence(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '커뮤니티 근거 분석')
+
+    @blog_bp.route('/api/check-update-delta-summary', methods=['POST'])
+    def check_update_delta_summary_route():
+        """업데이트 변경 요약 블록 존재 여부를 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.update_delta_summary_service import check_update_delta_summary
+            result = check_update_delta_summary(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '업데이트 요약 점검')
