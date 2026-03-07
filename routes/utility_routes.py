@@ -1943,3 +1943,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '목록/표 변환 기회 감지')
+
+    @blog_bp.route('/api/audit-image-seo', methods=['POST'])
+    def audit_image_seo_route():
+        """이미지 SEO 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.image_seo_auditor_service import audit_image_seo
+            result = audit_image_seo(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '이미지 SEO 점검')
+
+    @blog_bp.route('/api/audit-source-diversity', methods=['POST'])
+    def audit_source_diversity_route():
+        """외부 소스 다양성 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.external_source_diversity_service import audit_external_source_diversity
+            result = audit_external_source_diversity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '외부 소스 다양성 점검')
+
+    @blog_bp.route('/api/detect-chapter-breakpoints', methods=['POST'])
+    def detect_chapter_breakpoints_route():
+        """챕터 분할점 감지 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.chapter_breakpoint_service import detect_chapter_breakpoints
+            result = detect_chapter_breakpoints(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '챕터 분할점 감지')
