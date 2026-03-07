@@ -2632,3 +2632,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '인용문 사용 분석')
+
+    @blog_bp.route('/api/analyze-noun-verb-ratio', methods=['POST'])
+    def analyze_noun_verb_ratio_route():
+        """명사/동사 비율을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.noun_verb_ratio_service import analyze_noun_verb_ratio
+            result = analyze_noun_verb_ratio(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '명사/동사 비율 분석')
+
+    @blog_bp.route('/api/score-content-scanability', methods=['POST'])
+    def score_content_scanability_route():
+        """콘텐츠 스캔 가독성을 평가합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.content_scanability_service import score_content_scanability
+            result = score_content_scanability(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '스캔 가독성 평가')
+
+    @blog_bp.route('/api/analyze-passive-active-trend', methods=['POST'])
+    def analyze_passive_active_trend_route():
+        """섹션별 능동/피동 비율 추이를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.passive_active_trend_service import analyze_passive_active_trend
+            result = analyze_passive_active_trend(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '능동/피동 추이 분석')
