@@ -3025,3 +3025,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '비교 기준 완전성 검사')
+
+    # ── Terminology Drift Analyzer ──
+    @blog_bp.route('/api/analyze-terminology-drift', methods=['POST'])
+    def analyze_terminology_drift_route():
+        """섹션 간 용어 혼용을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.terminology_drift_service import analyze_terminology_drift
+            result = analyze_terminology_drift(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '용어 혼용 분석')
+
+    # ── Topic Sentence Alignment Analyzer ──
+    @blog_bp.route('/api/analyze-topic-sentence-alignment', methods=['POST'])
+    def analyze_topic_sentence_alignment_route():
+        """문단별 주제문 정렬을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.topic_sentence_alignment_service import analyze_topic_sentence_alignment
+            result = analyze_topic_sentence_alignment(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '주제문 정렬 분석')
+
+    # ── Paragraph Unity Checker ──
+    @blog_bp.route('/api/check-paragraph-unity', methods=['POST'])
+    def check_paragraph_unity_route():
+        """문단별 주제 통일성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.paragraph_unity_service import check_paragraph_unity
+            result = check_paragraph_unity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문단 통일성 검사')
