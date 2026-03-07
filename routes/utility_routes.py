@@ -2039,3 +2039,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '불릿 리스트 밀도 분석')
+
+    @blog_bp.route('/api/check-code-block-quality', methods=['POST'])
+    def check_code_block_quality_route():
+        """코드 블록 품질 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.code_block_quality_service import check_code_block_quality
+            result = check_code_block_quality(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '코드 블록 품질 점검')
+
+    @blog_bp.route('/api/check-paragraph-opening-variety', methods=['POST'])
+    def check_paragraph_opening_variety_route():
+        """문단 시작 다양성 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.paragraph_opening_variety_service import check_paragraph_opening_variety
+            result = check_paragraph_opening_variety(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문단 시작 다양성 점검')
+
+    @blog_bp.route('/api/check-tone-consistency', methods=['POST'])
+    def check_tone_consistency_route():
+        """문체 일관성 점검 API."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.tone_consistency_service import check_tone_consistency
+            result = check_tone_consistency(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문체 일관성 점검')
