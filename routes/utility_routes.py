@@ -2728,3 +2728,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '장단점 균형 분석')
+
+    @blog_bp.route('/api/check-primary-source-preference', methods=['POST'])
+    def check_primary_source_preference_route():
+        """인용 출처의 1차/2차 비율을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.primary_source_preference_service import check_primary_source_preference
+            result = check_primary_source_preference(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '출처 품질 분석')
+
+    @blog_bp.route('/api/detect-high-stakes-advice-risk', methods=['POST'])
+    def detect_high_stakes_advice_risk_route():
+        """고위험 조언 콘텐츠의 안전성을 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
+            result = detect_high_stakes_advice_risk(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, 'YMYL 위험 감지')
+
+    @blog_bp.route('/api/check-evaluation-criteria-disclosure', methods=['POST'])
+    def check_evaluation_criteria_disclosure_route():
+        """리뷰/비교 글의 평가 기준 공시를 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
+            result = check_evaluation_criteria_disclosure(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '평가 기준 공시 점검')
