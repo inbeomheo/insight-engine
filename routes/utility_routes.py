@@ -2479,3 +2479,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '콘텐츠 대칭성 분석')
+
+    # ── Rhetorical Device Detector ──
+    @blog_bp.route('/api/detect-rhetorical-devices', methods=['POST'])
+    def detect_rhetorical_devices_route():
+        """수사법을 감지합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.rhetorical_device_detector_service import detect_rhetorical_devices
+            result = detect_rhetorical_devices(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '수사법 감지')
+
+    # ── Cliché Detector ──
+    @blog_bp.route('/api/detect-cliches', methods=['POST'])
+    def detect_cliches_route():
+        """진부한 표현을 감지합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.cliche_detector_service import detect_cliches
+            result = detect_cliches(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '클리셰 감지')
+
+    # ── Sentence Complexity Scorer ──
+    @blog_bp.route('/api/score-sentence-complexity', methods=['POST'])
+    def score_sentence_complexity_route():
+        """문장 복잡도를 평가합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.sentence_complexity_scorer_service import score_sentence_complexity
+            result = score_sentence_complexity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '문장 복잡도 평가')
