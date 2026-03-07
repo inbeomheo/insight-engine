@@ -1214,3 +1214,44 @@ def audience_persona_route():
 
     except Exception as e:
         return handle_error(e, '독자 페르소나 추론')
+
+
+# ── 시각 콘텐츠 제안 ─────────────────────────────────
+
+@blog_bp.route('/api/suggest-visuals', methods=['POST'])
+def suggest_visuals_route():
+    """콘텐츠에 삽입할 시각 콘텐츠를 제안합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.visual_content_service import suggest_visuals
+        result = suggest_visuals(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '시각 콘텐츠 제안')
+
+
+# ── AI 답변 엔진 최적화 ──────────────────────────────
+
+@blog_bp.route('/api/analyze-aeo', methods=['POST'])
+def analyze_aeo_route():
+    """AI 검색엔진 답변 인용 가능성을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        target_query = data.get('target_query', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.aeo_optimizer_service import analyze_aeo
+        result = analyze_aeo(content, target_query)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'AEO 분석')
