@@ -1318,3 +1318,66 @@ def check_originality_route():
 
     except Exception as e:
         return handle_error(e, '독창성 검사')
+
+
+# ── 토픽 갭 분석 ────────────────────────────────────
+
+@blog_bp.route('/api/topic-gaps', methods=['POST'])
+def topic_gaps_route():
+    """현재 콘텐츠와 참고 콘텐츠를 비교하여 빠진 주제를 찾습니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        reference_contents = data.get('reference_contents', None)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.topic_gap_service import analyze_topic_gaps
+        result = analyze_topic_gaps(content, reference_contents)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '토픽 갭 분석')
+
+
+# ── E-E-A-T 신뢰 신호 분석 ──────────────────────────
+
+@blog_bp.route('/api/analyze-eeat', methods=['POST'])
+def analyze_eeat_route():
+    """콘텐츠의 E-E-A-T 신뢰 신호를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        author_info = data.get('author_info', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.eeat_analyzer_service import analyze_eeat
+        result = analyze_eeat(content, author_info)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'E-E-A-T 분석')
+
+
+# ── SERP 기능 기회 분석 ──────────────────────────────
+
+@blog_bp.route('/api/serp-features', methods=['POST'])
+def serp_features_route():
+    """SERP 특수 기능 노출 가능성을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        target_keyword = data.get('target_keyword', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.serp_feature_service import analyze_serp_features
+        result = analyze_serp_features(content, target_keyword)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'SERP 기능 분석')
