@@ -23,8 +23,8 @@ _PLAIN_ENDINGS = re.compile(r'(?:다|이다)[.?!]?\s*$')
 # 영어 단어
 _ENGLISH_WORD = re.compile(r'[A-Za-z]{2,}')
 
-# 접속사
-_CONJUNCTIONS = re.compile(r'\b(?:그리고|또한|하지만|그러나|따라서|그러므로)\b')
+# 접속사 (한국어는 \b 사용 불가 — 조사 결합으로 경계 불명확)
+_CONJUNCTIONS = re.compile(r'(?<![가-힣])(?:그리고|또한|하지만|그러나|따라서|그러므로)(?![가-힣])')
 
 # 부사절
 _SUBORDINATE_CLAUSES = re.compile(r'(?:하면|할\s*때|하므로|하기\s*때문에)')

@@ -153,16 +153,10 @@ def analyze_adjacent_cohesion(content: str) -> dict:
     else:
         level = 'fragmented'
 
-    # 점수 계산
-    if level == 'cohesive':
-        score = 100.0
-    elif level == 'mostly_cohesive':
-        score = 80.0
-    elif level == 'mixed':
-        score = 55.0
-    else:
-        score = 30.0
-
+    # 연속 점수 계산 — 평균 응집도 + 약한 쌍 비율 기반
+    # avg_cohesion(0~1)을 70% 가중, 약한 쌍 비율을 30% 가중
+    weak_ratio = weak_count / total_pairs if total_pairs > 0 else 0
+    score = (avg_cohesion * 70.0) + ((1.0 - weak_ratio) * 30.0)
     score = round(max(0.0, min(100.0, score)), 1)
 
     suggestions = _generate_suggestions(

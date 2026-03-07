@@ -49,6 +49,12 @@ _EN_FILLERS = {
     'right': '삭제 권장',
 }
 
+# 사전 컴파일된 영어 filler 패턴 (루프 내 re.compile 반복 방지)
+_EN_FILLER_PATTERNS = {
+    phrase: re.compile(r'\b' + re.escape(phrase) + r'\b', re.IGNORECASE)
+    for phrase in _EN_FILLERS
+}
+
 # ── 한국어 헤지(hedge) 패턴 ──────────────────────────────
 # (phrase, suggestion) — 정규식 기반 항목은 별도 리스트
 _KO_HEDGES = {
@@ -85,6 +91,12 @@ _EN_HEDGES = {
     'it appears': '단정적 표현으로 대체',
 }
 
+# 사전 컴파일된 영어 hedge 패턴 (루프 내 re.compile 반복 방지)
+_EN_HEDGE_PATTERNS = {
+    phrase: re.compile(r'\b' + re.escape(phrase) + r'\b', re.IGNORECASE)
+    for phrase in _EN_HEDGES
+}
+
 
 def _split_sentences(content: str) -> list[str]:
     """콘텐츠를 문장 단위로 분리합니다."""
@@ -110,11 +122,9 @@ def _detect_in_sentence(sentence: str) -> list[dict]:
                 'suggestion': suggestion,
             })
 
-    # ── 영어 filler ──
+    # ── 영어 filler (사전 컴파일 패턴 사용) ──
     for phrase, suggestion in _EN_FILLERS.items():
-        # 단어 경계를 사용하여 부분 매칭 방지
-        pattern = re.compile(r'\b' + re.escape(phrase) + r'\b', re.IGNORECASE)
-        for m in pattern.finditer(sentence):
+        for m in _EN_FILLER_PATTERNS[phrase].finditer(sentence):
             detections.append({
                 'phrase': m.group(),
                 'category': 'filler',
@@ -145,10 +155,9 @@ def _detect_in_sentence(sentence: str) -> list[dict]:
                 'suggestion': suggestion,
             })
 
-    # ── 영어 hedge ──
+    # ── 영어 hedge (사전 컴파일 패턴 사용) ──
     for phrase, suggestion in _EN_HEDGES.items():
-        pattern = re.compile(r'\b' + re.escape(phrase) + r'\b', re.IGNORECASE)
-        for m in pattern.finditer(sentence):
+        for m in _EN_HEDGE_PATTERNS[phrase].finditer(sentence):
             detections.append({
                 'phrase': m.group(),
                 'category': 'hedge',
