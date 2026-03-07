@@ -1793,3 +1793,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '질문-답변 완결성 검사')
+
+    # ── Adverb Overuse Detector ──────────────────────────────────────────
+    @blog_bp.route('/api/detect-adverb-overuse', methods=['POST'])
+    def detect_adverb_overuse_route():
+        """부사 남용을 감지합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.adverb_overuse_service import detect_adverb_overuse
+            result = detect_adverb_overuse(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '부사 남용 감지')
+
+    # ── Clause Overload Detector ─────────────────────────────────────────
+    @blog_bp.route('/api/detect-clause-overload', methods=['POST'])
+    def detect_clause_overload_route():
+        """문장 내 절 과부하를 감지합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.clause_overload_service import detect_clause_overload
+            result = detect_clause_overload(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '절 과부하 감지')
+
+    # ── Statistics Coverage Analyzer ─────────────────────────────────────
+    @blog_bp.route('/api/analyze-statistics-coverage', methods=['POST'])
+    def analyze_statistics_coverage_route():
+        """섹션별 수치 근거 커버리지를 분석합니다."""
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.statistics_coverage_service import analyze_statistics_coverage
+            result = analyze_statistics_coverage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '수치 커버리지 분석')
