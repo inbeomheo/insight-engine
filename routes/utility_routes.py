@@ -709,3 +709,65 @@ def freshness_check_route():
     except Exception as e:
         return handle_error(e, '콘텐츠 신선도 체크')
 
+
+# ── 인터랙티브 퀴즈 생성 ──────────────────────────────
+
+@blog_bp.route('/api/generate-quiz', methods=['POST'])
+def generate_quiz_route():
+    """콘텐츠에서 퀴즈를 자동 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        count = data.get('count', 5)
+
+        if not content or not content.strip():
+            return jsonify({'error': '퀴즈를 생성할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quiz_generator_service import generate_quiz
+        result = generate_quiz(content, count)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '퀴즈 생성')
+
+
+# ── 콘텐츠 카니발리제이션 감지 ──────────────────────────
+
+@blog_bp.route('/api/check-cannibalization', methods=['POST'])
+def check_cannibalization_route():
+    """여러 콘텐츠 간의 키워드 카니발리제이션을 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        contents = data.get('contents', [])
+
+        if not contents or len(contents) < 2:
+            return jsonify({'error': '최소 2개 콘텐츠가 필요합니다. contents: [{id, title, content}, ...]'}), 400
+
+        from services.cannibalization_service import detect_cannibalization
+        result = detect_cannibalization(contents)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '카니발리제이션 감지')
+
+
+# ── AI 토론 생성 ──────────────────────────────────────
+
+@blog_bp.route('/api/generate-debate', methods=['POST'])
+def generate_debate_route():
+    """주제에 대한 다각적 관점(찬성/반대/중립)을 생성합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        topic = data.get('topic', '')
+        content = data.get('content', '')
+
+        if not topic or not topic.strip():
+            return jsonify({'error': '토론 주제가 필요합니다.'}), 400
+
+        from services.debate_service import generate_debate
+        result = generate_debate(topic, content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '토론 생성')
+
