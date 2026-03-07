@@ -898,3 +898,75 @@ def reading_time_route():
     except Exception as e:
         return handle_error(e, '읽기 시간 예측')
 
+
+# ── CTA 분석 ─────────────────────────────────────────
+
+@blog_bp.route('/api/analyze-cta', methods=['POST'])
+def analyze_cta_route():
+    """콘텐츠의 CTA를 감지하고 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        goal = data.get('goal', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.cta_optimizer_service import analyze_ctas, suggest_ctas
+        analysis = analyze_ctas(content)
+        if goal:
+            suggestions = suggest_ctas(content, goal)
+            analysis['goal_suggestions'] = suggestions
+        return jsonify(analysis)
+
+    except Exception as e:
+        return handle_error(e, 'CTA 분석')
+
+
+# ── 키워드 밀도 분석 ──────────────────────────────────
+
+@blog_bp.route('/api/keyword-density', methods=['POST'])
+def keyword_density_route():
+    """콘텐츠의 키워드 밀도를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        keywords = data.get('keywords', None)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        if keywords:
+            from services.keyword_density_service import analyze_density
+            result = analyze_density(content, keywords)
+        else:
+            from services.keyword_density_service import get_density_report
+            result = get_density_report(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '키워드 밀도 분석')
+
+
+# ── 연결어 분석 ───────────────────────────────────────
+
+@blog_bp.route('/api/analyze-transitions', methods=['POST'])
+def analyze_transitions_route():
+    """콘텐츠의 연결어 사용을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        suggest = data.get('suggest', False)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.transition_analyzer_service import analyze_transitions, suggest_transitions
+        result = analyze_transitions(content)
+        if suggest:
+            result['recommendations'] = suggest_transitions(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '연결어 분석')
+
