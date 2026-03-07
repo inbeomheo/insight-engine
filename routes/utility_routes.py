@@ -1622,3 +1622,63 @@ def audit_promises_route():
 
     except Exception as e:
         return handle_error(e, '약속 이행 감사')
+
+
+# ── 내부 일관성 검사 ──────────────────────────────
+
+@blog_bp.route('/api/check-consistency', methods=['POST'])
+def check_consistency_route():
+    """콘텐츠 내부의 수치/날짜/비교 모순을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.consistency_checker_service import check_consistency
+        result = check_consistency(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '일관성 검사')
+
+
+# ── 전문 용어 정의 커버리지 ──────────────────────────────
+
+@blog_bp.route('/api/analyze-jargon', methods=['POST'])
+def analyze_jargon_route():
+    """전문 용어/약어의 정의 동반 여부를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.jargon_analyzer_service import analyze_jargon_coverage
+        result = analyze_jargon_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '전문 용어 분석')
+
+
+# ── 음성 적합성 분석 ──────────────────────────────
+
+@blog_bp.route('/api/analyze-speakability', methods=['POST'])
+def analyze_speakability_route():
+    """콘텐츠의 음성 재생 적합성을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.speakability_service import analyze_speakability
+        result = analyze_speakability(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '음성 적합성 분석')
