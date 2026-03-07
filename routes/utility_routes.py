@@ -1255,3 +1255,66 @@ def analyze_aeo_route():
 
     except Exception as e:
         return handle_error(e, 'AEO 분석')
+
+
+# ── 검색 의도 분석 ──────────────────────────────────
+
+@blog_bp.route('/api/search-intent', methods=['POST'])
+def search_intent_route():
+    """콘텐츠의 검색 의도 적합도를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        target_keyword = data.get('target_keyword', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.search_intent_service import analyze_search_intent
+        result = analyze_search_intent(content, target_keyword)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '검색 의도 분석')
+
+
+# ── 내부 링크 기회 탐지 ──────────────────────────────
+
+@blog_bp.route('/api/internal-links', methods=['POST'])
+def internal_links_route():
+    """여러 콘텐츠 간 내부 링크 기회를 탐지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        contents = data.get('contents', [])
+        current_content = data.get('current_content', '')
+
+        if not contents or len(contents) < 2:
+            return jsonify({'error': '최소 2개 콘텐츠가 필요합니다. contents: [{id, title, content}, ...]'}), 400
+
+        from services.internal_link_service import find_link_opportunities
+        result = find_link_opportunities(contents, current_content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '내부 링크 탐지')
+
+
+# ── 독창성 검사 ──────────────────────────────────────
+
+@blog_bp.route('/api/check-originality', methods=['POST'])
+def check_originality_route():
+    """콘텐츠의 독창성과 중복 리스크를 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        reference_contents = data.get('reference_contents', None)
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.originality_checker_service import check_originality
+        result = check_originality(content, reference_contents)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '독창성 검사')
