@@ -2680,3 +2680,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '능동/피동 추이 분석')
+
+    @blog_bp.route('/api/check-material-connection-disclosure', methods=['POST'])
+    def check_material_connection_disclosure_route():
+        """제휴/협찬 공시 누락을 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.material_connection_disclosure_service import check_material_connection_disclosure
+            result = check_material_connection_disclosure(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '이해관계 공시 점검')
+
+    @blog_bp.route('/api/check-ai-disclosure', methods=['POST'])
+    def check_ai_disclosure_route():
+        """AI 작성/보조 표시 누락을 점검합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.ai_disclosure_checker_service import check_ai_disclosure
+            result = check_ai_disclosure(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, 'AI 공시 점검')
+
+    @blog_bp.route('/api/analyze-tradeoff-coverage', methods=['POST'])
+    def analyze_tradeoff_coverage_route():
+        """장단점 균형을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
+            result = analyze_tradeoff_coverage(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '장단점 균형 분석')
