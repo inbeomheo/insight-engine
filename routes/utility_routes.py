@@ -1032,3 +1032,63 @@ def emotional_tone_route():
 
     except Exception as e:
         return handle_error(e, '감정 톤 매핑')
+
+
+# ── 참여 점수 ─────────────────────────────────────────
+
+@blog_bp.route('/api/engagement-score', methods=['POST'])
+def engagement_score_route():
+    """콘텐츠의 참여 유도력을 종합 평가합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.engagement_scorer_service import score_engagement
+        result = score_engagement(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '참여 점수 분석')
+
+
+# ── 문장 다양성 분석 ──────────────────────────────────
+
+@blog_bp.route('/api/sentence-variety', methods=['POST'])
+def sentence_variety_route():
+    """문장 길이/구조 다양성을 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.sentence_variety_service import analyze_variety
+        result = analyze_variety(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문장 다양성 분석')
+
+
+# ── 중복 표현 검사 ────────────────────────────────────
+
+@blog_bp.route('/api/check-redundancy', methods=['POST'])
+def check_redundancy_route():
+    """콘텐츠의 중복/반복 표현을 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.redundancy_checker_service import check_redundancy
+        result = check_redundancy(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '중복 표현 검사')
