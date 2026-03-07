@@ -1502,3 +1502,63 @@ def information_gain_route():
 
     except Exception as e:
         return handle_error(e, '정보 이득 분석')
+
+
+# ── 자막 아티팩트 감지 ──────────────────────────────
+
+@blog_bp.route('/api/detect-artifacts', methods=['POST'])
+def detect_artifacts_route():
+    """유튜브 자막 전사의 아티팩트를 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.transcript_artifact_service import detect_transcript_artifacts
+        result = detect_transcript_artifacts(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '자막 아티팩트 감지')
+
+
+# ── 포용적 언어 검사 ──────────────────────────────
+
+@blog_bp.route('/api/check-inclusive-language', methods=['POST'])
+def check_inclusive_language_route():
+    """콘텐츠의 포용적 언어 사용을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.inclusive_language_service import check_inclusive_language
+        result = check_inclusive_language(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '포용적 언어 검사')
+
+
+# ── 홍보 톤 포화도 검사 ──────────────────────────────
+
+@blog_bp.route('/api/check-promotional-tone', methods=['POST'])
+def check_promotional_tone_route():
+    """콘텐츠의 홍보/세일즈 표현 밀도를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.promotional_tone_service import check_promotional_tone
+        result = check_promotional_tone(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '홍보 톤 분석')
