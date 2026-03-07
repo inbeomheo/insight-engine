@@ -137,15 +137,14 @@ def analyze_concept_load(content: str) -> dict:
     else:
         level = 'heavy_overload'
 
-    # 점수 계산
-    if level == 'manageable':
+    # 연속 점수 — 과부하 비율 기반
+    total_windows = max(1, len(sentences) - _WINDOW_SIZE + 1)
+    overload_ratio = overloaded_count / total_windows
+    if overloaded_count == 0:
         score = 100.0
-    elif level == 'minor_overload':
-        score = 75.0
-    elif level == 'moderate_overload':
-        score = 50.0
     else:
-        score = 25.0
+        score = 100.0 - (overload_ratio * 80.0) - (min(max_concepts, 15) * 1.5)
+        score = max(10.0, score)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

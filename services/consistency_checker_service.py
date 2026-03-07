@@ -40,6 +40,9 @@ _COMPARISON_PATTERNS = [
 # 주제어 근접 범위 (문자 수)
 _CONTEXT_WINDOW = 30
 
+# 주제 키워드 추출용 조사 패턴 (모듈 레벨 사전컴파일)
+_TOPIC_PARTICLES = re.compile(r'(은|는|이|가|을|를|의|에|와|과|도|로|으로)$')
+
 
 def check_consistency(content: str) -> dict:
     """콘텐츠 내부의 모순/불일치를 감지합니다.
@@ -128,9 +131,8 @@ def _extract_topic_keywords(context: str) -> set:
     # 한국어 2자 이상 명사 + 영어 3자 이상
     kr = set(re.findall(r'[가-힣]{2,}', context))
     en = set(w.lower() for w in re.findall(r'[A-Za-z]{3,}', context))
-    # 조사 제거
-    _particles = re.compile(r'(은|는|이|가|을|를|의|에|와|과|도|로|으로)$')
-    kr = {_particles.sub('', w) for w in kr if len(_particles.sub('', w)) >= 2}
+    # 조사 제거 (모듈 레벨 사전컴파일 패턴 사용)
+    kr = {_TOPIC_PARTICLES.sub('', w) for w in kr if len(_TOPIC_PARTICLES.sub('', w)) >= 2}
     return kr | en
 
 

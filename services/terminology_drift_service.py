@@ -11,6 +11,7 @@ from collections import Counter
 
 _HEADING = re.compile(r'^#{1,6}\s+(.+)', re.MULTILINE)
 _WORD_SPLIT = re.compile(r'[가-힣]+|[a-zA-Z]+(?:-[a-zA-Z]+)*', re.IGNORECASE)
+_IS_KOREAN = re.compile(r'[가-힣]')
 
 # 동의어 그룹 (같은 개념을 다르게 부르는 표현)
 _SYNONYM_GROUPS = [
@@ -90,7 +91,7 @@ def _extract_terms(text: str) -> Counter:
     for w in words:
         if len(w) < 2:
             continue
-        if re.match(r'[가-힣]', w):
+        if _IS_KOREAN.match(w):
             processed.append(_strip_particle(w))
         else:
             processed.append(w.lower())
@@ -182,15 +183,13 @@ def analyze_terminology_drift(content: str) -> dict:
     else:
         level = 'drifting'
 
-    # 점수 계산
-    if level == 'consistent':
+    # 연속 점수 — 드리프트 건수 및 섹션 수 기반
+    if drift_count == 0:
         score = 100.0
-    elif level == 'minor':
-        score = 80.0
-    elif level == 'moderate':
-        score = 55.0
     else:
-        score = 30.0
+        drift_ratio = drift_count / max(1, len(sections))
+        score = 100.0 - (drift_count * 12.0) - (drift_ratio * 20.0)
+        score = max(10.0, score)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
