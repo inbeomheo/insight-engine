@@ -2872,3 +2872,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '업데이트 요약 점검')
+
+    # ── Audience-Fit Framing Analyzer ──
+    @blog_bp.route('/api/analyze-audience-fit-framing', methods=['POST'])
+    def analyze_audience_fit_framing_route():
+        """대상 독자/상황/비적합 프레이밍을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.audience_fit_framing_service import analyze_audience_fit_framing
+            result = analyze_audience_fit_framing(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '대상 프레이밍 분석')
+
+    # ── Geo Scope Assumption Detector ──
+    @blog_bp.route('/api/detect-geo-scope-assumptions', methods=['POST'])
+    def detect_geo_scope_assumptions_route():
+        """지역 의존 정보의 범위 라벨 누락을 탐지합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.geo_scope_assumption_service import detect_geo_scope_assumptions
+            result = detect_geo_scope_assumptions(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '지역 범위 가정 탐지')
+
+    # ── Absolute Claim Risk Detector ──
+    @blog_bp.route('/api/detect-absolute-claim-risk', methods=['POST'])
+    def detect_absolute_claim_risk_route():
+        """절대 표현의 위험도를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.absolute_claim_risk_service import detect_absolute_claim_risk
+            result = detect_absolute_claim_risk(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '절대 표현 위험 분석')
