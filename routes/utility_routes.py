@@ -2233,3 +2233,51 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '목차 생성')
+
+    # ── Sentence Connector Variety Analyzer ──
+    @blog_bp.route('/api/analyze-connector-variety', methods=['POST'])
+    def analyze_connector_variety_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.sentence_connector_variety_service import analyze_connector_variety
+            result = analyze_connector_variety(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '연결어 다양성 분석')
+
+    # ── Content Freshness Indicator ──
+    @blog_bp.route('/api/check-content-freshness', methods=['POST'])
+    def check_content_freshness_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.content_freshness_indicator_service import check_content_freshness
+            result = check_content_freshness(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '콘텐츠 시의성 평가')
+
+    # ── Article Format Template Checker ──
+    @blog_bp.route('/api/check-article-format', methods=['POST'])
+    def check_article_format_route():
+        try:
+            data = request.get_json(silent=True) or {}
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.article_format_template_service import check_article_format
+            result = check_article_format(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '글 형식 템플릿 검사')
