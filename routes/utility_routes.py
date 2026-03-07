@@ -2428,3 +2428,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '이모지 사용 분석')
+
+    # ── Acronym Consistency Checker ──
+    @blog_bp.route('/api/check-acronym-consistency', methods=['POST'])
+    def check_acronym_consistency_route():
+        """약어 일관성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.acronym_consistency_checker_service import check_acronym_consistency
+            result = check_acronym_consistency(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '약어 일관성 검사')
+
+    # ── Heading Keyword Density ──
+    @blog_bp.route('/api/analyze-heading-keyword-density', methods=['POST'])
+    def analyze_heading_keyword_density_route():
+        """헤딩 키워드 밀도를 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.heading_keyword_density_service import analyze_heading_keyword_density
+            result = analyze_heading_keyword_density(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '헤딩 키워드 밀도 분석')
+
+    # ── Content Symmetry Analyzer ──
+    @blog_bp.route('/api/analyze-content-symmetry', methods=['POST'])
+    def analyze_content_symmetry_route():
+        """콘텐츠 구조적 대칭성을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.content_symmetry_analyzer_service import analyze_content_symmetry
+            result = analyze_content_symmetry(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '콘텐츠 대칭성 분석')
