@@ -173,15 +173,12 @@ def detect_definition_gaps(content: str) -> dict:
     else:
         level = 'many_gaps'
 
-    # 점수 계산
-    if level == 'all_defined':
-        score = 100.0
-    elif level == 'minor_gaps':
-        score = 80.0
-    elif level == 'moderate_gaps':
-        score = 55.0
-    else:
-        score = 30.0
+    # 연속 점수 — 정의 비율 기반
+    coverage_ratio = defined_count / total if total > 0 else 1.0
+    score = coverage_ratio * 100.0
+    # 미정의 건수 추가 감점 (건수가 많을수록 비선형 증가)
+    if undefined_count > 0:
+        score -= min(20.0, undefined_count ** 1.2 * 3.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

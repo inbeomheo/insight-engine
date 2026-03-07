@@ -120,17 +120,8 @@ def check_methodology_transparency(content: str) -> dict:
     else:
         level = 'opaque'
 
-    # 점수 계산
-    if level == 'transparent':
-        score = 95.0
-    elif level == 'good':
-        score = 75.0
-    elif level == 'partial':
-        score = 55.0
-    elif level == 'minimal':
-        score = 35.0
-    else:
-        score = 15.0
+    # 연속 점수 — 카테고리 충족 비율 기반
+    score = 15.0 + (found_count / total * 85.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 

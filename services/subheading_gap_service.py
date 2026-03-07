@@ -10,6 +10,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# 정규표현식 사전컴파일
+_HEADING_PATTERN = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
+_WHITESPACE_RE = re.compile(r'\s+')
+_KO_WORD_RE = re.compile(r'[가-힣]{2,}')
+_EN_WORD_RE = re.compile(r'[A-Za-z]+')
+_PARA_SPLIT_RE = re.compile(r'\n\s*\n')
+
 # 섹션 길이 임계값 (글자 수 기준)
 _TOO_LONG_THRESHOLD = 300
 _TOO_SHORT_THRESHOLD = 50
@@ -71,10 +78,7 @@ def detect_subheading_gaps(content: str) -> dict:
 
 def _split_sections(content: str) -> list:
     """마크다운 헤딩 기준으로 섹션을 분할합니다."""
-    # 헤딩 패턴: 줄 시작의 #{1,6} + 공백 + 텍스트
-    heading_pattern = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
-
-    matches = list(heading_pattern.finditer(content))
+    matches = list(_HEADING_PATTERN.finditer(content))
     if not matches:
         return []
 
@@ -102,15 +106,15 @@ def _analyze_section(section: dict) -> dict:
     body = section['body']
 
     # 글자 수: 공백 제외
-    char_count = len(re.sub(r'\s+', '', body))
+    char_count = len(_WHITESPACE_RE.sub('', body))
 
     # 단어 수: 한국어(2자+) + 영어 단어 합산
-    korean_words = re.findall(r'[가-힣]{2,}', body)
-    english_words = re.findall(r'[A-Za-z]+', body)
+    korean_words = _KO_WORD_RE.findall(body)
+    english_words = _EN_WORD_RE.findall(body)
     word_count = len(korean_words) + len(english_words)
 
     # 단락 수: 빈 줄로 구분
-    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', body) if p.strip()]
+    paragraphs = [p.strip() for p in _PARA_SPLIT_RE.split(body) if p.strip()]
     paragraph_count = max(len(paragraphs), 1) if body else 0
 
     # 상태 판정
