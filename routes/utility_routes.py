@@ -2923,3 +2923,54 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '절대 표현 위험 분석')
+
+    # ── Quantifier Specificity Analyzer ──
+    @blog_bp.route('/api/analyze-quantifier-specificity', methods=['POST'])
+    def analyze_quantifier_specificity_route():
+        """수량 표현의 구체성을 분석합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.quantifier_specificity_service import analyze_quantifier_specificity
+            result = analyze_quantifier_specificity(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '수량 구체성 분석')
+
+    # ── List Parallelism Checker ──
+    @blog_bp.route('/api/check-list-parallelism', methods=['POST'])
+    def check_list_parallelism_route():
+        """목록 항목의 병렬 구조 일관성을 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.list_parallelism_service import check_list_parallelism
+            result = check_list_parallelism(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '목록 병렬 구조 검사')
+
+    # ── Heading Hierarchy Integrity Checker ──
+    @blog_bp.route('/api/check-heading-hierarchy', methods=['POST'])
+    def check_heading_hierarchy_route():
+        """마크다운 제목 계층 구조를 검사합니다."""
+        try:
+            data = request.get_json(force=True)
+            content = data.get('content', '')
+            if not content or not content.strip():
+                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+            from services.heading_hierarchy_service import check_heading_hierarchy
+            result = check_heading_hierarchy(content)
+            return jsonify(result)
+
+        except Exception as e:
+            return handle_error(e, '제목 계층 구조 검사')
