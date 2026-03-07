@@ -1562,3 +1562,63 @@ def check_promotional_tone_route():
 
     except Exception as e:
         return handle_error(e, '홍보 톤 분석')
+
+
+# ── 수치 약속 무결성 검사 ──────────────────────────────
+
+@blog_bp.route('/api/check-numerical-promises', methods=['POST'])
+def check_numerical_promises_route():
+    """제목의 수치 약속이 본문에서 이행되는지 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.numerical_promise_service import check_numerical_promises
+        result = check_numerical_promises(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '수치 약속 검사')
+
+
+# ── 앵커 텍스트 품질 감사 ──────────────────────────────
+
+@blog_bp.route('/api/audit-anchors', methods=['POST'])
+def audit_anchors_route():
+    """콘텐츠 내 링크의 앵커 텍스트 품질을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.anchor_text_service import audit_anchor_texts
+        result = audit_anchor_texts(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '앵커 텍스트 감사')
+
+
+# ── 약속 이행 감사 ──────────────────────────────
+
+@blog_bp.route('/api/audit-promises', methods=['POST'])
+def audit_promises_route():
+    """제목/소제목의 약속이 본문에서 이행되는지 검증합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.promise_match_service import audit_promise_match
+        result = audit_promise_match(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '약속 이행 감사')
