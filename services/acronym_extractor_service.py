@@ -9,6 +9,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_UPPERCASE_ACRONYM_RE = re.compile(r'(?<![A-Za-z])([A-Z][A-Za-z0-9]{1,5})(?![A-Za-z])')
+_CAMEL_TERM_RE = re.compile(r'(?<![A-Za-z])([A-Z][a-z]+[A-Z][A-Za-z]*)(?![A-Za-z])')
+
 # 알려진 약어 사전
 _KNOWN_ACRONYMS = {
     'AI': '인공지능 (Artificial Intelligence)',
@@ -86,7 +89,7 @@ def extract_acronyms(content: str) -> dict:
         }
 
     # 대문자 약어 추출 (2~6자) — 한국어 경계 대응
-    uppercase_acronyms = re.findall(r'(?<![A-Za-z])([A-Z][A-Za-z0-9]{1,5})(?![A-Za-z])', content)
+    uppercase_acronyms = _UPPERCASE_ACRONYM_RE.findall(content)
 
     # 빈도 계산
     freq = {}
@@ -100,7 +103,7 @@ def extract_acronyms(content: str) -> dict:
         freq[acr] = freq.get(acr, 0) + 1
 
     # CamelCase 약어 (SaaS, DevOps 등)
-    camel_terms = re.findall(r'(?<![A-Za-z])([A-Z][a-z]+[A-Z][A-Za-z]*)(?![A-Za-z])', content)
+    camel_terms = _CAMEL_TERM_RE.findall(content)
     for term in camel_terms:
         if term in _KNOWN_ACRONYMS:
             freq[term] = freq.get(term, 0) + 1

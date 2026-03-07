@@ -67,12 +67,14 @@ _ACTION_PATTERNS_EN = [
 
 # 문장 분리
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
+_LIST_BULLET_RE = re.compile(r'^\s*[-*]\s+', re.MULTILINE)
+_LIST_NUMBER_RE = re.compile(r'^\s*\d+\.\s+', re.MULTILINE)
 
 
 def _split_sentences(content: str) -> List[str]:
     cleaned = _HEADING_RE.sub('', content)
-    cleaned = re.sub(r'^\s*[-*]\s+', '', cleaned, flags=re.MULTILINE)
-    cleaned = re.sub(r'^\s*\d+\.\s+', '', cleaned, flags=re.MULTILINE)
+    cleaned = _LIST_BULLET_RE.sub('', cleaned)
+    cleaned = _LIST_NUMBER_RE.sub('', cleaned)
     raw = _SENTENCE_SPLIT.split(cleaned)
     return [s.strip() for s in raw if s.strip() and len(s.strip()) >= 5]
 

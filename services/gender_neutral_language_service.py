@@ -99,15 +99,11 @@ def check_gender_neutral(content: str) -> dict:
     else:
         level = 'significant'
 
-    # 점수
+    # 연속 점수 — 이슈 건수 기반 비선형 감점
     if total == 0:
         score = 100.0
-    elif total <= 2:
-        score = 85.0
-    elif total <= 5:
-        score = 70.0 - (total - 2) * 5.0
     else:
-        score = max(20.0, 55.0 - (total - 5) * 5.0)
+        score = max(15.0, 100.0 - total ** 1.1 * 10.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
