@@ -69,57 +69,46 @@ def _find_matches_list(content: str, patterns: list) -> List[str]:
     return matches
 
 
-def analyze_tradeoff_coverage(content: str) -> dict:
-    """장단점 균형을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_recommendation_content': False,
+        'positive_count': 0, 'negative_count': 0,
+        'balance_ratio': 0.0, 'has_contrast': False,
+        'has_target_limits': False, 'level': 'none',
+    },
+    'positive_expressions': [],
+    'negative_expressions': [],
+    'one_sided_sections': [],
+    'suggestions': [],
+}
 
-    Returns:
-        score, summary, suggestions, one_sided_sections를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_recommendation_content': False,
-                'positive_count': 0,
-                'negative_count': 0,
-                'balance_ratio': 0.0,
-                'has_contrast': False,
-                'has_target_limits': False,
-                'level': 'none',
-            },
-            'positive_expressions': [],
-            'negative_expressions': [],
-            'one_sided_sections': [],
-            'suggestions': [],
-        }
 
-    # 추천 콘텐츠 여부
-    is_rec = _count_matches(content, _RECOMMENDATION_SIGNALS) > 0
+def _analyze_content_balance(content: str) -> Dict:
+    """콘텐츠의 긍정/부정 균형 데이터를 수집합니다."""
+    pos_count = _count_matches(content, _POSITIVE_PATTERNS)
+    neg_count = _count_matches(content, _NEGATIVE_PATTERNS)
+    total = pos_count + neg_count
+    return {
+        'is_rec': _count_matches(content, _RECOMMENDATION_SIGNALS) > 0,
+        'pos_count': pos_count,
+        'neg_count': neg_count,
+        'pos_exprs': _find_matches_list(content, _POSITIVE_PATTERNS),
+        'neg_exprs': _find_matches_list(content, _NEGATIVE_PATTERNS),
+        'has_contrast': _count_matches(content, _CONTRAST_PATTERNS) > 0,
+        'has_target_limits': _count_matches(content, _TARGET_LIMIT_PATTERNS) > 0,
+        'balance_ratio': round(neg_count / max(total, 1) * 100, 1),
+        'one_sided': _find_one_sided_sections(content),
+    }
 
-    # 긍정/부정 표현 수
-    positive_count = _count_matches(content, _POSITIVE_PATTERNS)
-    negative_count = _count_matches(content, _NEGATIVE_PATTERNS)
 
-    positive_exprs = _find_matches_list(content, _POSITIVE_PATTERNS)
-    negative_exprs = _find_matches_list(content, _NEGATIVE_PATTERNS)
-
-    # 역접 패턴 여부
-    has_contrast = _count_matches(content, _CONTRAST_PATTERNS) > 0
-
-    # 대상 제한 여부
-    has_target_limits = _count_matches(content, _TARGET_LIMIT_PATTERNS) > 0
-
-    # 균형 비율 (부정 / 전체)
-    total = positive_count + negative_count
-    balance_ratio = round(negative_count / max(total, 1) * 100, 1)
-
-    # 섹션별 편향 분석
-    one_sided = _find_one_sided_sections(content)
-
-    # 레벨 판정
+def _compute_tradeoff_score(is_rec: bool, total: int, balance_ratio: float,
+                             has_contrast: bool, has_target_limits: bool) -> tuple:
+    """장단점 균형 점수와 레벨을 계산합니다."""
     if not is_rec or total == 0:
-        level = 'none'
-    elif balance_ratio >= 25 and has_contrast:
+        return 100.0, 'none'
+
+    if balance_ratio >= 25 and has_contrast:
         level = 'balanced'
     elif balance_ratio >= 15:
         level = 'acceptable'
@@ -128,38 +117,50 @@ def analyze_tradeoff_coverage(content: str) -> dict:
     else:
         level = 'heavily_one_sided'
 
-    # 연속 점수 — balance_ratio 기반
-    if not is_rec or total == 0:
-        score = 100.0
-    else:
-        score = 30.0 + (min(balance_ratio, 30.0) / 30.0 * 60.0)
-        if has_contrast:
-            score += 5.0
-        if has_target_limits:
-            score += 5.0
+    score = 30.0 + (min(balance_ratio, 30.0) / 30.0 * 60.0)
+    if has_contrast:
+        score += 5.0
+    if has_target_limits:
+        score += 5.0
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    score = round(max(0.0, min(100.0, score)), 1)
+
+def analyze_tradeoff_coverage(content: str) -> dict:
+    """장단점 균형을 분석합니다.
+
+    Returns:
+        score, summary, suggestions, one_sided_sections를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    bal = _analyze_content_balance(content)
+    total = bal['pos_count'] + bal['neg_count']
+    score, level = _compute_tradeoff_score(
+        bal['is_rec'], total, bal['balance_ratio'],
+        bal['has_contrast'], bal['has_target_limits'],
+    )
 
     suggestions = _generate_suggestions(
-        is_rec, positive_count, negative_count,
-        balance_ratio, has_contrast, has_target_limits,
-        level, one_sided
+        bal['is_rec'], bal['pos_count'], bal['neg_count'],
+        bal['balance_ratio'], bal['has_contrast'], bal['has_target_limits'],
+        level, bal['one_sided'],
     )
 
     return {
         'score': score,
         'summary': {
-            'is_recommendation_content': is_rec,
-            'positive_count': positive_count,
-            'negative_count': negative_count,
-            'balance_ratio': balance_ratio,
-            'has_contrast': has_contrast,
-            'has_target_limits': has_target_limits,
+            'is_recommendation_content': bal['is_rec'],
+            'positive_count': bal['pos_count'],
+            'negative_count': bal['neg_count'],
+            'balance_ratio': bal['balance_ratio'],
+            'has_contrast': bal['has_contrast'],
+            'has_target_limits': bal['has_target_limits'],
             'level': level,
         },
-        'positive_expressions': positive_exprs[:10],
-        'negative_expressions': negative_exprs[:10],
-        'one_sided_sections': one_sided[:5],
+        'positive_expressions': bal['pos_exprs'][:10],
+        'negative_expressions': bal['neg_exprs'][:10],
+        'one_sided_sections': bal['one_sided'][:5],
         'suggestions': suggestions,
     }
 

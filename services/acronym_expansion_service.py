@@ -47,6 +47,50 @@ _EXPANSION_BEFORE = re.compile(
 )
 
 
+_EMPTY_RESULT = {
+    'acronyms': [],
+    'summary': {'total_acronyms': 0, 'expanded': 0, 'unexpanded': 0, 'well_known': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _find_expanded_acronyms(content: str) -> set:
+    """풀어쓰기된 약어를 모든 패턴에서 찾습니다."""
+    expanded = set()
+    for match in _EXPANSION_PATTERN_PAREN.finditer(content):
+        if match.group(1):
+            expanded.add(match.group(1))
+        if match.group(3):
+            expanded.add(match.group(3))
+    for match in _EXPANSION_PATTERN_INLINE.finditer(content):
+        expanded.add(match.group(1))
+    for match in _EXPANSION_BEFORE.finditer(content):
+        expanded.add(match.group(2))
+    return expanded
+
+
+def _classify_acronyms(all_acronyms: set, expanded_set: set) -> tuple:
+    """약어를 상태별로 분류합니다.
+
+    Returns:
+        (acronyms_list, well_known_count)
+    """
+    acronyms = []
+    well_known_count = 0
+    for acr in sorted(all_acronyms):
+        is_well_known = acr in _WELL_KNOWN
+        is_expanded = acr in expanded_set
+        if is_well_known:
+            well_known_count += 1
+        status = 'expanded' if is_expanded else ('well_known' if is_well_known else 'unexpanded')
+        acronyms.append({
+            'acronym': acr, 'is_expanded': is_expanded,
+            'is_well_known': is_well_known, 'status': status,
+        })
+    return acronyms, well_known_count
+
+
 def check_acronym_expansion(content: str) -> dict:
     """약어의 첫 등장 시 풀어쓰기 여부를 점검합니다.
 
@@ -57,86 +101,25 @@ def check_acronym_expansion(content: str) -> dict:
         acronyms, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'acronyms': [],
-            'summary': {'total_acronyms': 0, 'expanded': 0, 'unexpanded': 0,
-                        'well_known': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 모든 약어 찾기
-    all_acronyms = set()
-    for match in _ACRONYM_PATTERN.finditer(content):
-        acr = match.group(1)
-        if acr not in _ACRONYM_EXCEPTIONS:
-            all_acronyms.add(acr)
-
+    all_acronyms = {m.group(1) for m in _ACRONYM_PATTERN.finditer(content)} - _ACRONYM_EXCEPTIONS
     if not all_acronyms:
-        return {
-            'acronyms': [],
-            'summary': {'total_acronyms': 0, 'expanded': 0, 'unexpanded': 0,
-                        'well_known': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 풀어쓰기된 약어 찾기
-    expanded_acronyms = set()
-
-    # 패턴 1: 괄호 기반
-    for match in _EXPANSION_PATTERN_PAREN.finditer(content):
-        if match.group(1):
-            expanded_acronyms.add(match.group(1))
-        if match.group(3):
-            expanded_acronyms.add(match.group(3))
-
-    # 패턴 2: 인라인 설명
-    for match in _EXPANSION_PATTERN_INLINE.finditer(content):
-        expanded_acronyms.add(match.group(1))
-
-    # 패턴 3: "Full Name (약어)"
-    for match in _EXPANSION_BEFORE.finditer(content):
-        expanded_acronyms.add(match.group(2))
-
-    # 결과 구성
-    acronyms = []
-    well_known_count = 0
-    for acr in sorted(all_acronyms):
-        is_well_known = acr in _WELL_KNOWN
-        is_expanded = acr in expanded_acronyms
-        if is_well_known:
-            well_known_count += 1
-
-        status = 'expanded' if is_expanded else ('well_known' if is_well_known else 'unexpanded')
-        acronyms.append({
-            'acronym': acr,
-            'is_expanded': is_expanded,
-            'is_well_known': is_well_known,
-            'status': status,
-        })
-
+    acronyms, well_known_count = _classify_acronyms(all_acronyms, _find_expanded_acronyms(content))
     total = len(acronyms)
     expanded = sum(1 for a in acronyms if a['is_expanded'])
     unexpanded = sum(1 for a in acronyms if a['status'] == 'unexpanded')
-
-    # 점수: (expanded + well_known) / total * 100
     compliant = expanded + well_known_count
-    score = round((compliant / total * 100) if total > 0 else 100.0, 1)
-    score = max(0.0, min(100.0, score))
-
-    suggestions = _generate_suggestions(acronyms, unexpanded, total)
+    score = max(0.0, min(100.0, round((compliant / total * 100) if total > 0 else 100.0, 1)))
 
     return {
         'acronyms': acronyms,
-        'summary': {
-            'total_acronyms': total,
-            'expanded': expanded,
-            'unexpanded': unexpanded,
-            'well_known': well_known_count,
-        },
+        'summary': {'total_acronyms': total, 'expanded': expanded,
+                    'unexpanded': unexpanded, 'well_known': well_known_count},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(acronyms, unexpanded, total),
     }
 
 

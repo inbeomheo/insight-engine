@@ -58,6 +58,60 @@ def _extract_domain(url: str) -> str:
         return ''
 
 
+_EMPTY_RESULT = {
+    'sources': [],
+    'domain_distribution': [],
+    'summary': {'total_sources': 0, 'unique_domains': 0,
+                'diversity_score': 0.0, 'citation_count': 0},
+    'score': 50.0,
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
+
+
+def _extract_sources(content: str) -> tuple:
+    """콘텐츠에서 URL과 도메인을 추출합니다.
+
+    Returns:
+        (sources, domain_counter)
+    """
+    urls = set()
+    for match in _URL_RE.finditer(content):
+        urls.add(match.group(0).rstrip('.,;:'))
+    for match in _MD_LINK_RE.finditer(content):
+        urls.add(match.group(2).rstrip('.,;:'))
+
+    sources = []
+    domain_counter = Counter()
+    for url in urls:
+        domain = _extract_domain(url)
+        if not domain or domain in _EXCLUDE_DOMAINS:
+            continue
+        sources.append({'url': url, 'domain': domain})
+        domain_counter[domain] += 1
+
+    return sources, domain_counter
+
+
+def _count_citations(content: str) -> int:
+    """인용 표현 카운트를 반환합니다."""
+    count = 0
+    for pattern in _CITATION_PATTERNS_KO + _CITATION_PATTERNS_EN:
+        count += len(pattern.findall(content))
+    return count
+
+
+def _compute_diversity_score(domain_counter: Counter, total_sources: int,
+                              domain_distribution: List[Dict]) -> float:
+    """다양성 점수를 계산합니다."""
+    unique = len(domain_counter)
+    diversity_ratio = unique / total_sources if total_sources > 0 else 0.0
+    source_bonus = min(30.0, unique * 10.0)
+    score = round(min(100.0, diversity_ratio * 70.0 + source_bonus), 1)
+    if domain_distribution and domain_distribution[0]['percentage'] > 60:
+        score = round(max(0.0, score - 20.0), 1)
+    return score
+
+
 def audit_external_source_diversity(content: str) -> dict:
     """외부 소스의 다양성을 평가합니다.
 
@@ -68,86 +122,39 @@ def audit_external_source_diversity(content: str) -> dict:
         sources, domain_distribution, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'sources': [],
-            'domain_distribution': [],
-            'summary': {'total_sources': 0, 'unique_domains': 0,
-                        'diversity_score': 0.0, 'citation_count': 0},
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # URL 추출
-    urls = set()
-    for match in _URL_RE.finditer(content):
-        urls.add(match.group(0).rstrip('.,;:'))
-    for match in _MD_LINK_RE.finditer(content):
-        urls.add(match.group(2).rstrip('.,;:'))
-
-    # 도메인 추출 및 필터링
-    sources = []
-    domain_counter = Counter()
-    for url in urls:
-        domain = _extract_domain(url)
-        if not domain or domain in _EXCLUDE_DOMAINS:
-            continue
-        sources.append({'url': url, 'domain': domain})
-        domain_counter[domain] += 1
-
-    # 인용 표현 카운트
-    citation_count = 0
-    for pattern in _CITATION_PATTERNS_KO + _CITATION_PATTERNS_EN:
-        citation_count += len(pattern.findall(content))
+    sources, domain_counter = _extract_sources(content)
+    citation_count = _count_citations(content)
 
     if not sources:
-        score = 50.0 if citation_count == 0 else 60.0
-        suggestions = ['외부 링크가 없습니다. 신뢰할 수 있는 출처를 인용하면 E-E-A-T 점수가 향상됩니다.']
         return {
-            'sources': [],
-            'domain_distribution': [],
-            'summary': {'total_sources': 0, 'unique_domains': 0,
-                        'diversity_score': 0.0, 'citation_count': citation_count},
-            'score': score,
-            'suggestions': suggestions,
+            **_EMPTY_RESULT,
+            'summary': {**_EMPTY_RESULT['summary'], 'citation_count': citation_count},
+            'score': 50.0 if citation_count == 0 else 60.0,
+            'suggestions': ['외부 링크가 없습니다. 신뢰할 수 있는 출처를 인용하면 E-E-A-T 점수가 향상됩니다.'],
         }
 
-    unique_domains = len(domain_counter)
     total_sources = len(sources)
-
-    # 다양성 점수: 고유 도메인 / 전체 소스
+    unique_domains = len(domain_counter)
     diversity_ratio = unique_domains / total_sources if total_sources > 0 else 0.0
 
-    # 도메인 분포
     domain_distribution = [
-        {'domain': domain, 'count': count,
-         'percentage': round(count / total_sources * 100, 1)}
-        for domain, count in domain_counter.most_common()
+        {'domain': d, 'count': c, 'percentage': round(c / total_sources * 100, 1)}
+        for d, c in domain_counter.most_common()
     ]
-
-    # 점수 계산
-    # 기본: 다양성 비율 × 70 + 소스 수 보너스(최대 30)
-    source_bonus = min(30.0, unique_domains * 10.0)
-    score = round(min(100.0, diversity_ratio * 70.0 + source_bonus), 1)
-
-    # 단일 도메인 과의존 페널티
-    if domain_distribution and domain_distribution[0]['percentage'] > 60:
-        score = round(max(0.0, score - 20.0), 1)
-
-    suggestions = _generate_suggestions(
-        unique_domains, total_sources, domain_distribution, citation_count
-    )
+    score = _compute_diversity_score(domain_counter, total_sources, domain_distribution)
 
     return {
         'sources': sources,
         'domain_distribution': domain_distribution,
         'summary': {
-            'total_sources': total_sources,
-            'unique_domains': unique_domains,
+            'total_sources': total_sources, 'unique_domains': unique_domains,
             'diversity_score': round(diversity_ratio * 100, 1),
             'citation_count': citation_count,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(unique_domains, total_sources, domain_distribution, citation_count),
     }
 
 
