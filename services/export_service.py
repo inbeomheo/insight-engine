@@ -23,6 +23,81 @@ def _get_font_name():
 DEFAULT_FONT = _get_font_name()
 
 
+def _init_doc_with_title(title: str):
+    """문서를 생성하고 기본 스타일과 제목을 설정합니다."""
+    doc = Document()
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = DEFAULT_FONT
+    font.size = Pt(11)
+    style.paragraph_format.space_after = Pt(6)
+    style.paragraph_format.line_spacing = 1.5
+
+    if title:
+        heading = doc.add_heading(title, level=0)
+        for run in heading.runs:
+            run.font.name = DEFAULT_FONT
+            run.font.size = Pt(20)
+    return doc
+
+
+def _process_markdown_line(doc, line: str) -> None:
+    """마크다운 라인을 DOCX 요소로 변환하여 문서에 추가합니다."""
+    if not line.strip():
+        return
+
+    # 헤딩
+    heading_match = re.match(r'^(#{1,6})\s+(.+)', line)
+    if heading_match:
+        level = min(len(heading_match.group(1)), 4)
+        text = heading_match.group(2).strip()
+        h = doc.add_heading(text, level=level)
+        for run in h.runs:
+            run.font.name = DEFAULT_FONT
+        return
+
+    # 인용문 (>)
+    if line.strip().startswith('>'):
+        quote_text = line.strip().lstrip('>').strip()
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Inches(0.5)
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after = Pt(6)
+        run = p.add_run(quote_text)
+        run.font.name = DEFAULT_FONT
+        run.font.italic = True
+        run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+        return
+
+    # 불릿 리스트 (-, *, +)
+    list_match = re.match(r'^[\s]*[-*+]\s+(.+)', line)
+    if list_match:
+        p = doc.add_paragraph(style='List Bullet')
+        _add_formatted_text(p, list_match.group(1))
+        return
+
+    # 순서 리스트 (1. 2. 3.)
+    ol_match = re.match(r'^[\s]*\d+[.)]\s+(.+)', line)
+    if ol_match:
+        p = doc.add_paragraph(style='List Number')
+        _add_formatted_text(p, ol_match.group(1))
+        return
+
+    # 구분선 (---, ***, ___)
+    if re.match(r'^[-*_]{3,}\s*$', line):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(12)
+        p.paragraph_format.space_after = Pt(12)
+        run = p.add_run('─' * 50)
+        run.font.color.rgb = RGBColor(0xD1, 0xD5, 0xDB)
+        run.font.size = Pt(8)
+        return
+
+    # 일반 단락
+    p = doc.add_paragraph()
+    _add_formatted_text(p, line)
+
+
 def markdown_to_docx(title: str, content: str) -> io.BytesIO:
     """마크다운 텍스트를 DOCX 바이너리로 변환합니다.
 
@@ -33,94 +108,10 @@ def markdown_to_docx(title: str, content: str) -> io.BytesIO:
     Returns:
         BytesIO: DOCX 파일 바이너리 스트림
     """
-    doc = Document()
+    doc = _init_doc_with_title(title)
+    for line in content.split('\n'):
+        _process_markdown_line(doc, line)
 
-    # 기본 스타일 설정
-    style = doc.styles['Normal']
-    font = style.font
-    font.name = DEFAULT_FONT
-    font.size = Pt(11)
-    style.paragraph_format.space_after = Pt(6)
-    style.paragraph_format.line_spacing = 1.5
-
-    # 제목 추가
-    if title:
-        heading = doc.add_heading(title, level=0)
-        for run in heading.runs:
-            run.font.name = DEFAULT_FONT
-            run.font.size = Pt(20)
-
-    # 마크다운 파싱 및 변환
-    lines = content.split('\n')
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-
-        # 빈 줄
-        if not line.strip():
-            i += 1
-            continue
-
-        # 헤딩
-        heading_match = re.match(r'^(#{1,6})\s+(.+)', line)
-        if heading_match:
-            level = min(len(heading_match.group(1)), 4)
-            text = heading_match.group(2).strip()
-            h = doc.add_heading(text, level=level)
-            for run in h.runs:
-                run.font.name = DEFAULT_FONT
-            i += 1
-            continue
-
-        # 인용문 (>)
-        if line.strip().startswith('>'):
-            quote_text = line.strip().lstrip('>').strip()
-            p = doc.add_paragraph()
-            p.paragraph_format.left_indent = Inches(0.5)
-            p.paragraph_format.space_before = Pt(6)
-            p.paragraph_format.space_after = Pt(6)
-            run = p.add_run(quote_text)
-            run.font.name = DEFAULT_FONT
-            run.font.italic = True
-            run.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-            i += 1
-            continue
-
-        # 불릿 리스트 (-, *, +)
-        list_match = re.match(r'^[\s]*[-*+]\s+(.+)', line)
-        if list_match:
-            text = list_match.group(1)
-            p = doc.add_paragraph(style='List Bullet')
-            _add_formatted_text(p, text)
-            i += 1
-            continue
-
-        # 순서 리스트 (1. 2. 3.)
-        ol_match = re.match(r'^[\s]*\d+[.)]\s+(.+)', line)
-        if ol_match:
-            text = ol_match.group(1)
-            p = doc.add_paragraph(style='List Number')
-            _add_formatted_text(p, text)
-            i += 1
-            continue
-
-        # 구분선 (---, ***, ___)
-        if re.match(r'^[-*_]{3,}\s*$', line):
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(12)
-            p.paragraph_format.space_after = Pt(12)
-            run = p.add_run('─' * 50)
-            run.font.color.rgb = RGBColor(0xD1, 0xD5, 0xDB)
-            run.font.size = Pt(8)
-            i += 1
-            continue
-
-        # 일반 단락
-        p = doc.add_paragraph()
-        _add_formatted_text(p, line)
-        i += 1
-
-    # BytesIO로 저장
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)

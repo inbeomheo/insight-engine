@@ -14,6 +14,15 @@ _KO_WORD_RE = re.compile(r'[가-힣]+')
 _EN_WORD_RE = re.compile(r'[A-Za-z]+')
 
 
+_EMPTY_RESULT = {
+    'sentence_data': [],
+    'summary': {'total_sentences': 0, 'total_words': 0,
+                'avg_words': 0.0, 'readability_level': 'none'},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
 def _split_sentences(content: str) -> List[str]:
     cleaned = _HEADING_RE.sub('', content)
     raw = _SENTENCE_SPLIT.split(cleaned)
@@ -27,31 +36,12 @@ def _count_words(sentence: str) -> int:
     return len([t for t in tokens if len(t) >= 1])
 
 
-def analyze_avg_words_per_sentence(content: str) -> dict:
-    """문장당 평균 단어 수를 분석합니다.
+def _collect_sentence_data(sentences: List[str]) -> tuple:
+    """문장별 단어 수를 집계합니다.
 
     Returns:
-        sentence_data, summary, score, suggestions를 포함하는 dict
+        (sentence_data, total_words, long_sentences, short_sentences)
     """
-    if not content or not content.strip():
-        return {
-            'sentence_data': [],
-            'summary': {'total_sentences': 0, 'total_words': 0,
-                        'avg_words': 0.0, 'readability_level': 'none'},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'sentence_data': [],
-            'summary': {'total_sentences': 0, 'total_words': 0,
-                        'avg_words': 0.0, 'readability_level': 'none'},
-            'score': 0.0,
-            'suggestions': [],
-        }
-
     sentence_data = []
     total_words = 0
     long_sentences = 0
@@ -76,10 +66,15 @@ def analyze_avg_words_per_sentence(content: str) -> dict:
             'category': length_cat,
         })
 
-    total = len(sentences)
-    avg = round(total_words / total, 1) if total > 0 else 0.0
+    return sentence_data, total_words, long_sentences, short_sentences
 
-    # 가독성 레벨
+
+def _compute_readability_score(avg: float, long_sentences: int, total: int) -> tuple:
+    """평균 단어 수 기반 가독성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if 10 <= avg <= 20:
         level = 'optimal'
     elif 5 <= avg < 10 or 20 < avg <= 30:
@@ -89,36 +84,48 @@ def analyze_avg_words_per_sentence(content: str) -> dict:
     else:
         level = 'too_long'
 
-    # 연속 비선형 점수 — 최적 중심(15)으로부터 편차 기반
     optimal_center = 15.0
     deviation = abs(avg - optimal_center)
-    if deviation <= 5:  # 10~20 범위: 높은 점수
-        score = 100.0 - (deviation * 2.0)  # 최소 90점
-    elif deviation <= 10:  # 5~10 또는 20~25 범위
-        score = 90.0 - ((deviation - 5) ** 1.3 * 4.0)  # 비선형 감점
-    else:  # 극단 범위
+    if deviation <= 5:
+        score = 100.0 - (deviation * 2.0)
+    elif deviation <= 10:
+        score = 90.0 - ((deviation - 5) ** 1.3 * 4.0)
+    else:
         score = max(15.0, 60.0 - ((deviation - 10) ** 1.2 * 3.0))
 
-    # 긴 문장 페널티
     if long_sentences > total * 0.3:
         score -= 10.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(avg, level, long_sentences, short_sentences, total)
+
+def analyze_avg_words_per_sentence(content: str) -> dict:
+    """문장당 평균 단어 수를 분석합니다.
+
+    Returns:
+        sentence_data, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    sentence_data, total_words, long_sentences, short_sentences = _collect_sentence_data(sentences)
+    total = len(sentences)
+    avg = round(total_words / total, 1) if total > 0 else 0.0
+    score, level = _compute_readability_score(avg, long_sentences, total)
 
     return {
         'sentence_data': sentence_data[:30],
         'summary': {
-            'total_sentences': total,
-            'total_words': total_words,
-            'avg_words': avg,
-            'readability_level': level,
-            'long_sentences': long_sentences,
-            'short_sentences': short_sentences,
+            'total_sentences': total, 'total_words': total_words,
+            'avg_words': avg, 'readability_level': level,
+            'long_sentences': long_sentences, 'short_sentences': short_sentences,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(avg, level, long_sentences, short_sentences, total),
     }
 
 

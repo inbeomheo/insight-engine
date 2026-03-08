@@ -23,6 +23,50 @@ _OPTIMAL_MAX = 3.0  # %
 _WARNING_MAX = 5.0  # % 이상이면 키워드 스터핑 경고
 
 
+def _analyze_keyword_density(kw: str, content_lower: str, total_words: int) -> tuple:
+    """단일 키워드의 밀도와 위치를 분석합니다.
+
+    Returns:
+        (keyword_result_dict, suggestion_or_none)
+    """
+    kw_lower = kw.lower()
+    positions = []
+    content_len = max(len(content_lower), 1)
+    for match in re.finditer(re.escape(kw_lower), content_lower):
+        pos_ratio = match.start() / content_len
+        if pos_ratio <= 0.25:
+            positions.append('top')
+        elif pos_ratio >= 0.75:
+            positions.append('bottom')
+        else:
+            positions.append('middle')
+
+    count = len(positions)
+    density = round((count / total_words) * 100, 2)
+
+    if density < _OPTIMAL_MIN and count > 0:
+        status = 'low'
+        suggestion = f'"{kw}" 밀도({density}%)가 낮습니다. {_OPTIMAL_MIN}~{_OPTIMAL_MAX}% 범위를 목표로 하세요.'
+    elif density > _WARNING_MAX:
+        status = 'stuffing'
+        suggestion = f'"{kw}" 밀도({density}%)가 과다합니다. 키워드 스터핑으로 판정될 수 있습니다.'
+    elif density > _OPTIMAL_MAX:
+        status = 'high'
+        suggestion = f'"{kw}" 밀도({density}%)가 다소 높습니다. 자연스럽게 줄여 보세요.'
+    elif count == 0:
+        status = 'missing'
+        suggestion = f'"{kw}"이(가) 콘텐츠에 없습니다. 자연스럽게 포함시켜 보세요.'
+    else:
+        status = 'optimal'
+        suggestion = None
+
+    result = {
+        'keyword': kw, 'count': count, 'density': density,
+        'status': status, 'positions': positions,
+    }
+    return result, suggestion
+
+
 def analyze_density(content: str, keywords: list = None) -> dict:
     """지정된 키워드의 밀도를 분석합니다.
 
@@ -39,27 +83,15 @@ def analyze_density(content: str, keywords: list = None) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'keywords': [],
-            'total_words': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {'keywords': [], 'total_words': 0, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     if not keywords:
-        return {
-            'keywords': [],
-            'total_words': len(_tokenize(content)),
-            'suggestions': ['분석할 키워드를 지정해 주세요.'],
-        }
+        return {'keywords': [], 'total_words': len(_tokenize(content)),
+                'suggestions': ['분석할 키워드를 지정해 주세요.']}
 
-    words = _tokenize(content)
-    total_words = len(words)
+    total_words = len(_tokenize(content))
     if total_words == 0:
-        return {
-            'keywords': [],
-            'total_words': 0,
-            'suggestions': ['단어가 추출되지 않았습니다.'],
-        }
+        return {'keywords': [], 'total_words': 0, 'suggestions': ['단어가 추출되지 않았습니다.']}
 
     content_lower = content.lower()
     results = []
@@ -68,55 +100,15 @@ def analyze_density(content: str, keywords: list = None) -> dict:
     for kw in keywords:
         if not kw or not kw.strip():
             continue
-        kw_clean = kw.strip()
-        kw_lower = kw_clean.lower()
-
-        # 키워드 등장 횟수 및 위치
-        positions = []
-        for match in re.finditer(re.escape(kw_lower), content_lower):
-            # 위치를 전체 텍스트 비율로 계산
-            pos_ratio = match.start() / max(len(content), 1)
-            if pos_ratio <= 0.25:
-                positions.append('top')
-            elif pos_ratio >= 0.75:
-                positions.append('bottom')
-            else:
-                positions.append('middle')
-
-        count = len(positions)
-        density = round((count / total_words) * 100, 2)
-
-        if density < _OPTIMAL_MIN and count > 0:
-            status = 'low'
-            suggestions.append(f'"{kw_clean}" 밀도({density}%)가 낮습니다. {_OPTIMAL_MIN}~{_OPTIMAL_MAX}% 범위를 목표로 하세요.')
-        elif density > _WARNING_MAX:
-            status = 'stuffing'
-            suggestions.append(f'"{kw_clean}" 밀도({density}%)가 과다합니다. 키워드 스터핑으로 판정될 수 있습니다.')
-        elif density > _OPTIMAL_MAX:
-            status = 'high'
-            suggestions.append(f'"{kw_clean}" 밀도({density}%)가 다소 높습니다. 자연스럽게 줄여 보세요.')
-        elif count == 0:
-            status = 'missing'
-            suggestions.append(f'"{kw_clean}"이(가) 콘텐츠에 없습니다. 자연스럽게 포함시켜 보세요.')
-        else:
-            status = 'optimal'
-
-        results.append({
-            'keyword': kw_clean,
-            'count': count,
-            'density': density,
-            'status': status,
-            'positions': positions,
-        })
+        result, suggestion = _analyze_keyword_density(kw.strip(), content_lower, total_words)
+        results.append(result)
+        if suggestion:
+            suggestions.append(suggestion)
 
     if not suggestions:
         suggestions.append('모든 키워드가 적정 밀도 범위에 있습니다.')
 
-    return {
-        'keywords': results,
-        'total_words': total_words,
-        'suggestions': suggestions,
-    }
+    return {'keywords': results, 'total_words': total_words, 'suggestions': suggestions}
 
 
 def get_density_report(content: str, top_n: int = 10) -> dict:
