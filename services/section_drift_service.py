@@ -37,6 +37,28 @@ _KO_WORD_RE = re.compile(r'[가-힣]{2,10}')
 _EN_WORD_RE = re.compile(r'[A-Za-z]{2,}')
 
 
+_EMPTY_RESULT = {
+    'sections': [],
+    'overall_coherence': 100.0,
+    'drifted_sections': [],
+    'suggestions': [],
+}
+
+
+def _summarize_drift(analyzed: list) -> tuple:
+    """분석된 섹션에서 일관성 점수와 이탈 섹션을 요약합니다.
+
+    Returns:
+        (overall_coherence, drifted_sections)
+    """
+    if not analyzed:
+        return 100.0, []
+    avg_relevance = sum(s['relevance_score'] for s in analyzed) / len(analyzed)
+    overall_coherence = round(avg_relevance * 100, 1)
+    drifted_sections = [s['heading'] for s in analyzed if s['status'] == 'drifted']
+    return overall_coherence, drifted_sections
+
+
 def detect_section_drift(content: str) -> dict:
     """콘텐츠의 섹션별 주제 이탈을 분석합니다.
 
@@ -44,67 +66,23 @@ def detect_section_drift(content: str) -> dict:
         content: 마크다운 형식의 콘텐츠
 
     Returns:
-        {
-            "sections": [
-                {
-                    "heading": str,
-                    "heading_keywords": list,
-                    "top_body_keywords": list,
-                    "relevance_score": float,
-                    "status": str,       # "on_topic" | "partial_drift" | "drifted"
-                    "drift_keywords": list,
-                }
-            ],
-            "overall_coherence": float,  # 0-100
-            "drifted_sections": list[str],
-            "suggestions": list[str],
-        }
+        sections, overall_coherence, drifted_sections, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'sections': [],
-            'overall_coherence': 100.0,
-            'drifted_sections': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 섹션 분할
     sections = _split_sections(content)
-
     if not sections:
-        return {
-            'sections': [],
-            'overall_coherence': 100.0,
-            'drifted_sections': [],
-            'suggestions': ['마크다운 헤딩(#)이 없습니다. 소제목을 추가해 주세요.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['마크다운 헤딩(#)이 없습니다. 소제목을 추가해 주세요.']}
 
-    # 각 섹션 분석
-    analyzed = []
-    for heading, body in sections:
-        result = _analyze_section(heading, body)
-        analyzed.append(result)
-
-    # 전체 일관성 점수 (0-100)
-    if analyzed:
-        avg_relevance = sum(s['relevance_score'] for s in analyzed) / len(analyzed)
-        overall_coherence = round(avg_relevance * 100, 1)
-    else:
-        overall_coherence = 100.0
-
-    # 이탈 섹션 목록
-    drifted_sections = [
-        s['heading'] for s in analyzed if s['status'] == 'drifted'
-    ]
-
-    # 제안사항 생성
-    suggestions = _generate_suggestions(analyzed, drifted_sections)
+    analyzed = [_analyze_section(heading, body) for heading, body in sections]
+    overall_coherence, drifted_sections = _summarize_drift(analyzed)
 
     return {
         'sections': analyzed,
         'overall_coherence': overall_coherence,
         'drifted_sections': drifted_sections,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(analyzed, drifted_sections),
     }
 
 

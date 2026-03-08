@@ -58,6 +58,43 @@ def _extract_stats(content: str) -> List[Dict[str, str]]:
     return stats[:4]
 
 
+_COLORS = ['#4F46E5', '#7C3AED', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#F97316', '#6366F1']
+
+
+def _render_key_points(key_points: List[str]) -> str:
+    """핵심 포인트를 HTML로 렌더링합니다."""
+    parts = []
+    for i, point in enumerate(key_points):
+        color = _COLORS[i % len(_COLORS)]
+        safe_point = html.escape(point)
+        parts.append(f'''
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="min-width:36px;height:36px;border-radius:50%;background:{color};
+                        color:#fff;display:flex;align-items:center;justify-content:center;
+                        font-weight:700;font-size:16px;">{i+1}</div>
+            <p style="margin:0;padding-top:6px;font-size:15px;color:#374151;line-height:1.5;">{safe_point}</p>
+        </div>''')
+    return ''.join(parts)
+
+
+def _render_stats_section(stats: List[Dict[str, str]]) -> str:
+    """통계 데이터를 HTML 섹션으로 렌더링합니다."""
+    if not stats:
+        return ''
+    items = ''
+    for i, stat in enumerate(stats):
+        color = _COLORS[i % len(_COLORS)]
+        items += f'''
+            <div style="text-align:center;padding:16px;">
+                <div style="font-size:28px;font-weight:800;color:{color};">{html.escape(stat["value"])}{html.escape(stat["unit"])}</div>
+            </div>'''
+    return f'''
+        <div style="display:flex;justify-content:space-around;flex-wrap:wrap;
+                    background:#F9FAFB;border-radius:12px;padding:16px;margin-bottom:24px;">
+            {items}
+        </div>'''
+
+
 def generate_infographic(content: str, title: str) -> str:
     """콘텐츠를 HTML 인포그래픽으로 변환합니다.
 
@@ -72,40 +109,8 @@ def generate_infographic(content: str, title: str) -> str:
         return '<p>콘텐츠가 없습니다.</p>'
 
     safe_title = html.escape(title or '인포그래픽')
-    key_points = _extract_key_points(content)
-    stats = _extract_stats(content)
-
-    # 색상 팔레트
-    colors = ['#4F46E5', '#7C3AED', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#F97316', '#6366F1']
-
-    # 핵심 포인트 HTML
-    points_html = ''
-    for i, point in enumerate(key_points):
-        color = colors[i % len(colors)]
-        safe_point = html.escape(point)
-        points_html += f'''
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-            <div style="min-width:36px;height:36px;border-radius:50%;background:{color};
-                        color:#fff;display:flex;align-items:center;justify-content:center;
-                        font-weight:700;font-size:16px;">{i+1}</div>
-            <p style="margin:0;padding-top:6px;font-size:15px;color:#374151;line-height:1.5;">{safe_point}</p>
-        </div>'''
-
-    # 통계 HTML
-    stats_html = ''
-    if stats:
-        stats_items = ''
-        for i, stat in enumerate(stats):
-            color = colors[i % len(colors)]
-            stats_items += f'''
-            <div style="text-align:center;padding:16px;">
-                <div style="font-size:28px;font-weight:800;color:{color};">{html.escape(stat["value"])}{html.escape(stat["unit"])}</div>
-            </div>'''
-        stats_html = f'''
-        <div style="display:flex;justify-content:space-around;flex-wrap:wrap;
-                    background:#F9FAFB;border-radius:12px;padding:16px;margin-bottom:24px;">
-            {stats_items}
-        </div>'''
+    points_html = _render_key_points(_extract_key_points(content))
+    stats_html = _render_stats_section(_extract_stats(content))
 
     return f'''<!DOCTYPE html>
 <html lang="ko">

@@ -44,6 +44,37 @@ def _is_passive(sentence: str) -> bool:
     return False
 
 
+_EMPTY_RESULT = {
+    'passive_sentences': [],
+    'summary': {'total_sentences': 0, 'passive_count': 0,
+                'passive_ratio': 0.0, 'level': 'none'},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _classify_passive_level(ratio: float) -> str:
+    """피동 비율에서 레벨을 분류합니다."""
+    if ratio <= 15:
+        return 'low'
+    elif ratio <= 30:
+        return 'moderate'
+    elif ratio <= 50:
+        return 'high'
+    return 'excessive'
+
+
+def _compute_passive_score(ratio: float) -> float:
+    """피동 비율에서 점수를 계산합니다 (0~100)."""
+    if ratio <= 20:
+        score = 100.0
+    elif ratio <= 35:
+        score = 100.0 - (ratio - 20) * 2.0
+    else:
+        score = max(0.0, 70.0 - (ratio - 35) * 2.0)
+    return round(max(0.0, min(100.0, score)), 1)
+
+
 def analyze_passive_ratio(content: str) -> dict:
     """피동/수동 구문 비율을 분석합니다.
 
@@ -51,66 +82,31 @@ def analyze_passive_ratio(content: str) -> dict:
         passive_sentences, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'passive_sentences': [],
-            'summary': {'total_sentences': 0, 'passive_count': 0,
-                        'passive_ratio': 0.0, 'level': 'none'},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     sentences = _split_sentences(content)
     if not sentences:
-        return {
-            'passive_sentences': [],
-            'summary': {'total_sentences': 0, 'passive_count': 0,
-                        'passive_ratio': 0.0, 'level': 'none'},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    passive_list = []
-    for sent in sentences:
-        if _is_passive(sent):
-            passive_list.append({
-                'text': sent if len(sent) <= 60 else sent[:57] + '...',
-            })
+    passive_list = [
+        {'text': sent if len(sent) <= 60 else sent[:57] + '...'}
+        for sent in sentences if _is_passive(sent)
+    ]
 
     total = len(sentences)
-    passive_count = len(passive_list)
-    ratio = round(passive_count / total * 100, 1) if total > 0 else 0.0
-
-    # 레벨
-    if ratio <= 15:
-        level = 'low'
-    elif ratio <= 30:
-        level = 'moderate'
-    elif ratio <= 50:
-        level = 'high'
-    else:
-        level = 'excessive'
-
-    # 점수
-    if ratio <= 20:
-        score = 100.0
-    elif ratio <= 35:
-        score = 100.0 - (ratio - 20) * 2.0
-    else:
-        score = max(0.0, 70.0 - (ratio - 35) * 2.0)
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(ratio, passive_count, level)
+    ratio = round(len(passive_list) / total * 100, 1) if total > 0 else 0.0
+    level = _classify_passive_level(ratio)
 
     return {
         'passive_sentences': passive_list[:20],
         'summary': {
             'total_sentences': total,
-            'passive_count': passive_count,
+            'passive_count': len(passive_list),
             'passive_ratio': ratio,
             'level': level,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _compute_passive_score(ratio),
+        'suggestions': _generate_suggestions(ratio, len(passive_list), level),
     }
 
 
