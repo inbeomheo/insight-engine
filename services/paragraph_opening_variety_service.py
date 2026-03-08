@@ -58,36 +58,16 @@ def _get_opening_pattern(sentence: str) -> str:
     return ''
 
 
-def check_paragraph_opening_variety(content: str) -> dict:
-    """문단 시작 패턴의 다양성을 점검합니다.
+_EMPTY_SUMMARY = {'total_paragraphs': 0, 'unique_patterns': 0,
+                   'variety_rate': 0.0, 'most_repeated': ''}
+
+
+def _build_opening_data(paragraph_openings: list) -> tuple:
+    """문단 시작 패턴 데이터를 구성합니다.
 
     Returns:
-        openings, pattern_frequency, summary, score, suggestions를 포함하는 dict
+        (openings, pattern_frequency, pattern_counter)
     """
-    if not content or not content.strip():
-        return {
-            'openings': [],
-            'pattern_frequency': [],
-            'summary': {'total_paragraphs': 0, 'unique_patterns': 0,
-                        'variety_rate': 0.0, 'most_repeated': ''},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    paragraph_openings = _extract_paragraphs(content)
-    if len(paragraph_openings) < 2:
-        return {
-            'openings': [{'text': o, 'pattern': _get_opening_pattern(o)}
-                         for o in paragraph_openings],
-            'pattern_frequency': [],
-            'summary': {'total_paragraphs': len(paragraph_openings),
-                        'unique_patterns': len(paragraph_openings),
-                        'variety_rate': 100.0, 'most_repeated': ''},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 패턴 추출
     patterns = [_get_opening_pattern(o) for o in paragraph_openings]
     pattern_counter = Counter(p for p in patterns if p)
 
@@ -99,20 +79,17 @@ def check_paragraph_opening_variety(content: str) -> dict:
             'is_repeated': pattern_counter.get(pattern, 0) > 1,
         })
 
-    # 빈도 분포
     pattern_frequency = [
         {'pattern': pattern, 'count': count}
         for pattern, count in pattern_counter.most_common()
         if count > 1
     ]
 
-    total = len(paragraph_openings)
-    unique = len(pattern_counter)
-    variety_rate = round((unique / total * 100) if total > 0 else 0.0, 1)
-    most_repeated = pattern_counter.most_common(1)[0][0] if pattern_counter else ''
-    max_repeat = pattern_counter.most_common(1)[0][1] if pattern_counter else 0
+    return openings, pattern_frequency, pattern_counter
 
-    # 점수: 다양성 비율 기반
+
+def _compute_variety_score(variety_rate: float, max_repeat: int) -> float:
+    """다양성 점수를 계산합니다."""
     if variety_rate >= 80:
         score = 100.0
     elif variety_rate >= 60:
@@ -121,26 +98,52 @@ def check_paragraph_opening_variety(content: str) -> dict:
         score = 60.0 + (variety_rate - 40) * 1.0
     else:
         score = max(0.0, variety_rate * 1.5)
-    # 과도한 반복 페널티
+
     if max_repeat >= 4:
         score = max(0.0, score - (max_repeat - 3) * 10)
-    score = round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(
-        variety_rate, pattern_frequency, most_repeated, max_repeat, total
-    )
+    return round(max(0.0, min(100.0, score)), 1)
+
+
+def check_paragraph_opening_variety(content: str) -> dict:
+    """문단 시작 패턴의 다양성을 점검합니다.
+
+    Returns:
+        openings, pattern_frequency, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {'openings': [], 'pattern_frequency': [],
+                'summary': dict(_EMPTY_SUMMARY), 'score': 100.0, 'suggestions': []}
+
+    paragraph_openings = _extract_paragraphs(content)
+    if len(paragraph_openings) < 2:
+        return {
+            'openings': [{'text': o, 'pattern': _get_opening_pattern(o)}
+                         for o in paragraph_openings],
+            'pattern_frequency': [],
+            'summary': {**_EMPTY_SUMMARY, 'total_paragraphs': len(paragraph_openings),
+                        'unique_patterns': len(paragraph_openings), 'variety_rate': 100.0},
+            'score': 100.0, 'suggestions': [],
+        }
+
+    openings, pattern_frequency, pattern_counter = _build_opening_data(paragraph_openings)
+    total = len(paragraph_openings)
+    variety_rate = round((len(pattern_counter) / total * 100) if total > 0 else 0.0, 1)
+    most_repeated = pattern_counter.most_common(1)[0][0] if pattern_counter else ''
+    max_repeat = pattern_counter.most_common(1)[0][1] if pattern_counter else 0
+    score = _compute_variety_score(variety_rate, max_repeat)
 
     return {
         'openings': openings,
         'pattern_frequency': pattern_frequency,
         'summary': {
-            'total_paragraphs': total,
-            'unique_patterns': unique,
-            'variety_rate': variety_rate,
-            'most_repeated': most_repeated,
+            'total_paragraphs': total, 'unique_patterns': len(pattern_counter),
+            'variety_rate': variety_rate, 'most_repeated': most_repeated,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            variety_rate, pattern_frequency, most_repeated, max_repeat, total
+        ),
     }
 
 

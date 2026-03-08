@@ -20,6 +20,47 @@ _KATAKANA_PATTERN = re.compile(r'[\u30a0-\u30ff]')
 _ENGLISH_WORD_PATTERN = re.compile(r'[a-zA-Z]{2,}')
 
 
+def _compute_text_metrics(plain: str) -> dict:
+    """텍스트 기본 통계를 계산합니다.
+
+    Returns:
+        avg_sentence_length, ttr, foreign_ratio, paragraph_count, sentence_count, char_count를 포함하는 dict
+    """
+    paragraphs = [p.strip() for p in plain.split('\n\n') if p.strip()]
+    sentences = _split_sentences(plain)
+    words = plain.split()
+    char_count = len(plain)
+
+    sentence_count = max(len(sentences), 1)
+    avg_sentence_length = round(sum(len(s) for s in sentences) / sentence_count, 1)
+
+    ttr = round(len(set(words)) / len(words), 3) if words else 0.0
+
+    hanja_count = len(_HANJA_PATTERN.findall(plain))
+    english_count = sum(len(m) for m in _ENGLISH_WORD_PATTERN.findall(plain))
+    foreign_ratio = round((hanja_count + english_count) / char_count, 3) if char_count > 0 else 0.0
+
+    return {
+        'avg_sentence_length': avg_sentence_length,
+        'vocabulary_diversity': ttr,
+        'foreign_ratio': foreign_ratio,
+        'paragraph_count': len(paragraphs),
+        'sentence_count': sentence_count,
+        'char_count': char_count,
+    }
+
+
+def _score_to_grade(score: int) -> str:
+    """점수를 등급으로 변환합니다."""
+    if score >= 80:
+        return 'A'
+    elif score >= 60:
+        return 'B'
+    elif score >= 40:
+        return 'C'
+    return 'D'
+
+
 def analyze_readability(text: str) -> dict:
     """텍스트의 가독성을 분석합니다.
 
@@ -43,65 +84,26 @@ def analyze_readability(text: str) -> dict:
     """
     if not text or not text.strip():
         return {
-            'score': 0,
-            'grade': 'D',
+            'score': 0, 'grade': 'D',
             'details': _empty_details(),
             'suggestions': ['텍스트가 비어 있습니다.'],
         }
 
-    # 마크다운 제거
     plain = _strip_markdown(text)
-
-    # 기본 통계
-    paragraphs = [p.strip() for p in plain.split('\n\n') if p.strip()]
-    sentences = _split_sentences(plain)
-    words = plain.split()
-    char_count = len(plain)
-
-    sentence_count = max(len(sentences), 1)
-    avg_sentence_length = round(sum(len(s) for s in sentences) / sentence_count, 1)
-
-    # 어휘 다양성 (Type-Token Ratio)
-    unique_words = set(words)
-    ttr = round(len(unique_words) / len(words), 3) if words else 0.0
-
-    # 한자/외래어 비율
-    hanja_count = len(_HANJA_PATTERN.findall(plain))
-    english_count = sum(len(m) for m in _ENGLISH_WORD_PATTERN.findall(plain))
-    foreign_chars = hanja_count + english_count
-    foreign_ratio = round(foreign_chars / char_count, 3) if char_count > 0 else 0.0
-
-    # 점수 계산
+    details = _compute_text_metrics(plain)
     score, suggestions = _calculate_score(
-        avg_sentence_length=avg_sentence_length,
-        ttr=ttr,
-        foreign_ratio=foreign_ratio,
-        paragraph_count=len(paragraphs),
-        sentence_count=sentence_count,
-        char_count=char_count,
+        avg_sentence_length=details['avg_sentence_length'],
+        ttr=details['vocabulary_diversity'],
+        foreign_ratio=details['foreign_ratio'],
+        paragraph_count=details['paragraph_count'],
+        sentence_count=details['sentence_count'],
+        char_count=details['char_count'],
     )
-
-    # 등급
-    if score >= 80:
-        grade = 'A'
-    elif score >= 60:
-        grade = 'B'
-    elif score >= 40:
-        grade = 'C'
-    else:
-        grade = 'D'
 
     return {
         'score': score,
-        'grade': grade,
-        'details': {
-            'avg_sentence_length': avg_sentence_length,
-            'vocabulary_diversity': ttr,
-            'foreign_ratio': foreign_ratio,
-            'paragraph_count': len(paragraphs),
-            'sentence_count': sentence_count,
-            'char_count': char_count,
-        },
+        'grade': _score_to_grade(score),
+        'details': details,
         'suggestions': suggestions,
     }
 

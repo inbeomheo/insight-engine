@@ -114,40 +114,23 @@ def _has_definition_nearby(content: str, term: str, position: int) -> bool:
     return any(p.search(context) for p in _DEFINITION_PATTERNS)
 
 
-def detect_definition_gaps(content: str) -> dict:
-    """정의 없는 전문 용어/약어를 탐지합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_terms': 0, 'defined_terms': 0,
+        'undefined_terms': 0, 'level': 'none',
+    },
+    'undefined_terms': [],
+    'suggestions': [],
+}
+
+
+def _check_definitions(content: str, terms: list) -> tuple:
+    """용어별 정의 존재 여부를 확인합니다.
 
     Returns:
-        score, summary, undefined_terms, suggestions를 포함하는 dict
+        (defined_count, undefined_items)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_terms': 0,
-                'defined_terms': 0,
-                'undefined_terms': 0,
-                'level': 'none',
-            },
-            'undefined_terms': [],
-            'suggestions': [],
-        }
-
-    terms = _find_terms(content)
-
-    if not terms:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_terms': 0,
-                'defined_terms': 0,
-                'undefined_terms': 0,
-                'level': 'none',
-            },
-            'undefined_terms': [],
-            'suggestions': [],
-        }
-
     defined_count = 0
     undefined_items = []
 
@@ -160,10 +143,15 @@ def detect_definition_gaps(content: str) -> dict:
                 'type': term['type'],
             })
 
-    total = len(terms)
-    undefined_count = total - defined_count
+    return defined_count, undefined_items
 
-    # 레벨 판정
+
+def _compute_gap_score(total: int, defined_count: int, undefined_count: int) -> tuple:
+    """정의 갭 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if undefined_count == 0:
         level = 'all_defined'
     elif undefined_count <= 2:
@@ -173,29 +161,41 @@ def detect_definition_gaps(content: str) -> dict:
     else:
         level = 'many_gaps'
 
-    # 연속 점수 — 정의 비율 기반
-    coverage_ratio = defined_count / total if total > 0 else 1.0
-    score = coverage_ratio * 100.0
-    # 미정의 건수 추가 감점 (건수가 많을수록 비선형 증가)
+    score = (defined_count / total * 100.0) if total > 0 else 100.0
     if undefined_count > 0:
         score -= min(20.0, undefined_count ** 1.2 * 3.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        total, defined_count, undefined_count, level, undefined_items
-    )
+
+def detect_definition_gaps(content: str) -> dict:
+    """정의 없는 전문 용어/약어를 탐지합니다.
+
+    Returns:
+        score, summary, undefined_terms, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    terms = _find_terms(content)
+    if not terms:
+        return dict(_EMPTY_RESULT)
+
+    defined_count, undefined_items = _check_definitions(content, terms)
+    total = len(terms)
+    undefined_count = total - defined_count
+    score, level = _compute_gap_score(total, defined_count, undefined_count)
 
     return {
         'score': score,
         'summary': {
-            'total_terms': total,
-            'defined_terms': defined_count,
-            'undefined_terms': undefined_count,
-            'level': level,
+            'total_terms': total, 'defined_terms': defined_count,
+            'undefined_terms': undefined_count, 'level': level,
         },
         'undefined_terms': undefined_items[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            total, defined_count, undefined_count, level, undefined_items
+        ),
     }
 
 
