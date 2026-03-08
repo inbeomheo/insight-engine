@@ -32,6 +32,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
+import { ReportProvider } from './ReportContext';
 import AudioPlayer from './AudioPlayer';
 import SeoSection from './SeoSection';
 import GeoSection from './GeoSection';
@@ -316,6 +317,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   if (viewMode === 'compact') {
     const preview = report.content.slice(0, 100) + (report.content.length > 100 ? '…' : '');
     return (
+      <ReportProvider report={report}>
       <Card
         className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow cursor-pointer"
         onClick={onExpandToFull}
@@ -336,10 +338,12 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{preview}</p>
         </div>
       </Card>
+      </ReportProvider>
     );
   }
 
   return (
+    <ReportProvider report={report}>
     <>
     {chatOpen && report.url && (
       <VideoChatPanel
@@ -763,6 +767,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       </div>
     </Card>
     </>
+    </ReportProvider>
   );
 });
 

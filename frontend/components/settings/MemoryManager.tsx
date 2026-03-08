@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useListManager } from '@/hooks/useListManager';
 
 interface UserMemory {
   preferred_topics?: string[];
@@ -17,6 +18,10 @@ export default function MemoryManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // 리스트 관리 — useListManager로 add/remove 보일러플레이트 제거
+  const topics = useListManager<string>();
+  const avoids = useListManager<string>();
+
   // 편집용 상태
   const [topicInput, setTopicInput] = useState('');
   const [avoidInput, setAvoidInput] = useState('');
@@ -30,6 +35,8 @@ export default function MemoryManager() {
         const data = await res.json();
         const mem = data.memory || {};
         setMemory(mem);
+        topics.set(mem.preferred_topics || []);
+        avoids.set(mem.avoid_topics || []);
         setToneInput(mem.preferred_tone || '');
         setInstructionsInput(mem.custom_instructions || '');
       }
@@ -38,6 +45,7 @@ export default function MemoryManager() {
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -54,13 +62,18 @@ export default function MemoryManager() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMemory(data.memory || {});
+        const mem = data.memory || {};
+        setMemory(mem);
+        // 서버 응답으로 리스트 동기화
+        topics.set(mem.preferred_topics || []);
+        avoids.set(mem.avoid_topics || []);
       }
     } catch {
       // 무시
     } finally {
       setIsSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const clearMemory = useCallback(async () => {
@@ -69,36 +82,39 @@ export default function MemoryManager() {
       const res = await fetch('/api/memory', { method: 'DELETE' });
       if (res.ok) {
         setMemory({});
+        topics.clear();
+        avoids.clear();
         setToneInput('');
         setInstructionsInput('');
       }
     } catch {
       // 무시
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addTopic = () => {
     if (!topicInput.trim()) return;
-    const topics = [...(memory.preferred_topics || []), topicInput.trim()];
-    updateKey('preferred_topics', topics);
+    const newTopics = [...topics.items, topicInput.trim()];
+    updateKey('preferred_topics', newTopics);
     setTopicInput('');
   };
 
   const removeTopic = (topic: string) => {
-    const topics = (memory.preferred_topics || []).filter((t) => t !== topic);
-    updateKey('preferred_topics', topics);
+    const newTopics = topics.items.filter((t) => t !== topic);
+    updateKey('preferred_topics', newTopics);
   };
 
   const addAvoid = () => {
     if (!avoidInput.trim()) return;
-    const avoids = [...(memory.avoid_topics || []), avoidInput.trim()];
-    updateKey('avoid_topics', avoids);
+    const newAvoids = [...avoids.items, avoidInput.trim()];
+    updateKey('avoid_topics', newAvoids);
     setAvoidInput('');
   };
 
   const removeAvoid = (topic: string) => {
-    const avoids = (memory.avoid_topics || []).filter((t) => t !== topic);
-    updateKey('avoid_topics', avoids);
+    const newAvoids = avoids.items.filter((t) => t !== topic);
+    updateKey('avoid_topics', newAvoids);
   };
 
   if (isLoading) {
@@ -124,7 +140,7 @@ export default function MemoryManager() {
           </button>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(memory.preferred_topics || []).map((topic) => (
+          {topics.items.map((topic) => (
             <span key={topic} className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
               {topic}
               <button onClick={() => removeTopic(topic)} aria-label={`${topic} 주제 제거`} className="hover:text-red-500">x</button>
@@ -171,7 +187,7 @@ export default function MemoryManager() {
           </button>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(memory.avoid_topics || []).map((topic) => (
+          {avoids.items.map((topic) => (
             <span key={topic} className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400">
               {topic}
               <button onClick={() => removeAvoid(topic)} aria-label={`${topic} 주제 제거`} className="hover:text-red-700">x</button>

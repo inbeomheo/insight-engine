@@ -5,6 +5,7 @@ import { Plus, Trash2, Rss, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useApiCall } from '@/hooks/useApiCall';
 
 interface Subscription {
   id: string;
@@ -17,32 +18,31 @@ interface Subscription {
 /** RSS 피드 구독 관리 패널 */
 export const RssSubscription = memo(function RssSubscription() {
   const [subs, setSubs] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
   const [feedInput, setFeedInput] = useState('');
-  const [creating, setCreating] = useState(false);
+
+  const listCall = useApiCall<{ subscriptions: Subscription[] }>();
+  const subscribeCall = useApiCall<{ error?: string }>();
+  const unsubscribeCall = useApiCall<void>();
 
   const fetchSubs = useCallback(async () => {
-    try {
+    const result = await listCall.execute(async () => {
       const res = await fetch('/api/rss/list');
       if (!res.ok) throw new Error('조회 실패');
-      const data = await res.json();
-      setSubs(data.subscriptions || []);
-    } catch {
-      toast.error('RSS 구독 목록을 불러올 수 없습니다.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.json();
+    }, 'RSS 구독 목록을 불러올 수 없습니다.');
+    if (result) setSubs(result.subscriptions || []);
+  }, [listCall.execute]);
 
   useEffect(() => {
     fetchSubs();
-  }, [fetchSubs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubscribe() {
     const url = feedInput.trim();
     if (!url) return;
-    setCreating(true);
-    try {
+
+    const result = await subscribeCall.execute(async () => {
       const res = await fetch('/api/rss/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,22 +53,17 @@ export const RssSubscription = memo(function RssSubscription() {
       toast.success('RSS 피드가 구독되었습니다.');
       setFeedInput('');
       fetchSubs();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '구독에 실패했습니다.');
-    } finally {
-      setCreating(false);
-    }
+      return data;
+    }, '구독에 실패했습니다.');
   }
 
   async function handleUnsubscribe(id: string) {
-    try {
+    await unsubscribeCall.execute(async () => {
       const res = await fetch(`/api/rss/unsubscribe/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast.success('구독이 해제되었습니다.');
       setSubs((prev) => prev.filter((s) => s.id !== id));
-    } catch {
-      toast.error('구독 해제에 실패했습니다.');
-    }
+    }, '구독 해제에 실패했습니다.');
   }
 
   return (
@@ -94,14 +89,14 @@ export const RssSubscription = memo(function RssSubscription() {
           size="sm"
           className="h-8"
           onClick={handleSubscribe}
-          disabled={creating || !feedInput.trim()}
+          disabled={subscribeCall.isLoading || !feedInput.trim()}
         >
-          {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+          {subscribeCall.isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
         </Button>
       </div>
 
       {/* 목록 */}
-      {loading ? (
+      {listCall.isLoading ? (
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>

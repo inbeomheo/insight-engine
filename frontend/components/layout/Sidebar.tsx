@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import WorkspaceSelector from './WorkspaceSelector';
 
 /** 히스토리 항목 — memo로 불필요한 리렌더 방지 */
@@ -66,6 +67,7 @@ export default function Sidebar() {
   const removeReport = useResultStore((s) => s.removeReport);
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
 
   const handleHistoryClick = useCallback((id: string) => {
@@ -105,14 +107,14 @@ export default function Sidebar() {
   }, [setActiveReportId, isMobile, setSidebarOpen]);
 
   const filtered = useMemo(() => {
-    if (!search) return reports;
-    const q = search.toLowerCase();
+    if (!debouncedSearch) return reports;
+    const q = debouncedSearch.toLowerCase();
     return reports.filter(
       (r) =>
         r.title.toLowerCase().includes(q) ||
         (r.youtube_title || '').toLowerCase().includes(q)
     );
-  }, [reports, search]);
+  }, [reports, debouncedSearch]);
 
   const grouped = useMemo(() => {
     const groups: Record<string, typeof filtered> = {};

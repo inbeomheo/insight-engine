@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { ArrowUp, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import InputWrapper from '@/components/ui/InputWrapper';
 
 const MIN_CHARS = 50;
 
@@ -25,14 +26,8 @@ export default function TextInput({ onGenerate, isLoading }: TextInputProps) {
   }, [text, isValid, isLoading, onGenerate]);
 
   return (
-    <div className="w-full">
-      <div className={`
-        relative border rounded-2xl bg-white px-4 py-3
-        shadow-sm transition-all duration-200
-        ${focused
-          ? 'border-primary/40 shadow-[0_0_0_3px_rgba(79,70,229,0.08)] ring-0'
-          : 'border-border/60 hover:border-border'}
-      `}>
+    <div>
+      <InputWrapper focused={focused} className="px-4 py-3">
         <div className="flex items-start gap-2">
           <Type className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-2" />
           <Textarea
@@ -61,7 +56,7 @@ export default function TextInput({ onGenerate, isLoading }: TextInputProps) {
             <ArrowUp className="h-4 w-4 text-white" />
           </Button>
         </div>
-      </div>
+      </InputWrapper>
 
       <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
         텍스트를 직접 입력하면 URL 없이 콘텐츠를 생성합니다

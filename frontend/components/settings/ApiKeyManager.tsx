@@ -1,10 +1,11 @@
 'use client';
 
 import { memo, useEffect, useState } from 'react';
-import { Key, Plus, Trash2, Copy, Check } from 'lucide-react';
+import { Key, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useApiCall } from '@/hooks/useApiCall';
 
 interface ApiKeyInfo {
   key_id: string;
@@ -18,8 +19,9 @@ interface ApiKeyInfo {
 export const ApiKeyManager = memo(function ApiKeyManager() {
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const createCall = useApiCall<{ key?: string; error?: string }>();
+  const revokeCall = useApiCall<void>();
 
   const fetchKeys = () => {
     fetch('/api/keys')
@@ -31,8 +33,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
   useEffect(fetchKeys, []);
 
   const handleCreate = async () => {
-    setCreating(true);
-    try {
+    const result = await createCall.execute(async () => {
       const res = await fetch('/api/keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,17 +49,14 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
       } else {
         toast.error(data.error || 'API 키 생성 실패');
       }
-    } catch {
-      toast.error('요청 중 오류가 발생했습니다.');
-    } finally {
-      setCreating(false);
-    }
+      return data;
+    }, '요청 중 오류가 발생했습니다.');
   };
 
   const handleRevoke = async (keyId: string) => {
     if (!confirm('이 API 키를 비활성화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
 
-    try {
+    await revokeCall.execute(async () => {
       const res = await fetch(`/api/keys/${keyId}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('API 키가 비활성화되었습니다.');
@@ -66,9 +64,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
       } else {
         toast.error('삭제에 실패했습니다.');
       }
-    } catch {
-      toast.error('요청 중 오류가 발생했습니다.');
-    }
+    }, '요청 중 오류가 발생했습니다.');
   };
 
   return (
@@ -86,9 +82,9 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
           onChange={(e) => setNewKeyName(e.target.value)}
           className="max-w-xs"
         />
-        <Button onClick={handleCreate} disabled={creating} size="sm">
+        <Button onClick={handleCreate} disabled={createCall.isLoading} size="sm">
           <Plus className="h-4 w-4 mr-1" />
-          {creating ? '생성 중...' : '새 키 생성'}
+          {createCall.isLoading ? '생성 중...' : '새 키 생성'}
         </Button>
       </div>
 

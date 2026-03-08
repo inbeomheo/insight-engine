@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, type DragEvent, type ChangeEvent } from 'react';
+import { useState, useCallback } from 'react';
 import { FileUp, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DropZone from '@/components/ui/DropZone';
 
 const ACCEPTED_TYPES = '.pdf,.docx';
 const ACCEPTED_MIME = [
@@ -10,7 +11,6 @@ const ACCEPTED_MIME = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 const MAX_SIZE_MB = 10;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 interface FileUploadProps {
   file: File | null;
@@ -19,48 +19,28 @@ interface FileUploadProps {
 }
 
 export default function FileUpload({ file, onFileSelect, disabled }: FileUploadProps) {
-  const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  function validate(f: File): string | null {
-    if (!ACCEPTED_MIME.includes(f.type) && !f.name.match(/\.(pdf|docx)$/i)) {
-      return 'PDF 또는 DOCX 파일만 업로드 가능합니다.';
-    }
-    if (f.size > MAX_SIZE_BYTES) {
-      return `파일 크기가 ${MAX_SIZE_MB}MB를 초과합니다.`;
-    }
-    if (f.size === 0) {
-      return '빈 파일입니다.';
-    }
-    return null;
-  }
-
-  function handleFile(f: File) {
-    const err = validate(f);
-    if (err) {
-      setError(err);
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    setError('');
-    onFileSelect(f);
-  }
-
-  function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    setDragOver(false);
-    if (disabled) return;
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  }
-
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) handleFile(f);
-    // input 초기화 (같은 파일 재선택 가능하게)
-    e.target.value = '';
-  }
+  // MIME/확장자 + 빈 파일 검증 (크기 초과는 DropZone이 처리)
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      const f = files[0];
+      if (!f) return;
+      if (!ACCEPTED_MIME.includes(f.type) && !f.name.match(/\.(pdf|docx)$/i)) {
+        setError('PDF 또는 DOCX 파일만 업로드 가능합니다.');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      if (f.size === 0) {
+        setError('빈 파일입니다.');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      setError('');
+      onFileSelect(f);
+    },
+    [onFileSelect],
+  );
 
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes}B`;
@@ -91,35 +71,18 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
 
   return (
     <div>
-      <div
-        role="button"
-        tabIndex={0}
-        className={`
-          flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6
-          transition-colors
-          ${dragOver ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/40'}
-          ${disabled ? 'pointer-events-none opacity-50' : ''}
-        `}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
+      <DropZone
+        onFiles={handleFiles}
+        accept={ACCEPTED_TYPES}
+        maxSizeMB={MAX_SIZE_MB}
+        disabled={disabled}
       >
         <FileUp className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
           PDF, DOCX 파일을 드래그하거나 클릭하여 업로드
         </p>
         <p className="text-xs text-muted-foreground/60">최대 {MAX_SIZE_MB}MB</p>
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPTED_TYPES}
-        className="hidden"
-        onChange={handleChange}
-        disabled={disabled}
-      />
+      </DropZone>
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
     </div>
   );

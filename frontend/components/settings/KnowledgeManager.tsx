@@ -1,35 +1,21 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useKnowledge } from '@/hooks/useKnowledge';
-import { cn } from '@/lib/utils';
+import DropZone from '@/components/ui/DropZone';
 
 const ALLOWED_EXTENSIONS = '.txt,.md,.pdf';
 const MAX_FILE_SIZE_MB = 10;
 
 export default function KnowledgeManager() {
   const { documents, isLoading, upload, isUploading, remove, isDeleting } = useKnowledge();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        return;
-      }
-      upload(file);
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      const file = files[0];
+      if (file) upload(file);
     },
-    [upload]
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    },
-    [handleFile]
+    [upload],
   );
 
   return (
@@ -38,37 +24,21 @@ export default function KnowledgeManager() {
         지식 베이스
       </label>
 
-      {/* 드래그 영역 */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
-        className={cn(
-          'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors',
-          dragOver
-            ? 'border-primary bg-primary/5'
-            : 'border-border hover:border-primary/50'
-        )}
+      {/* 드래그 영역 — DropZone 공용 컴포넌트 사용 */}
+      <DropZone
+        onFiles={handleFiles}
+        accept={ALLOWED_EXTENSIONS}
+        maxSizeMB={MAX_FILE_SIZE_MB}
+        disabled={isUploading}
+        className="p-4 text-center"
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept={ALLOWED_EXTENSIONS}
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-            e.target.value = '';
-          }}
-        />
         <p className="text-sm text-muted-foreground">
           {isUploading ? '업로드 중...' : '파일을 드래그하거나 클릭하여 업로드'}
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
           .txt, .md, .pdf (최대 {MAX_FILE_SIZE_MB}MB)
         </p>
-      </div>
+      </DropZone>
 
       {/* 문서 목록 */}
       {isLoading ? (

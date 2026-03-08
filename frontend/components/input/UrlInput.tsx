@@ -4,6 +4,7 @@ import { useState, useRef, type KeyboardEvent, type ClipboardEvent, type DragEve
 import { ArrowUp, SlidersHorizontal, X, Link2, Youtube, Globe, BookOpen, Rss, FileText, Headphones, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import InputWrapper from '@/components/ui/InputWrapper';
 import { extractVideoId, detectSourceType, SOURCE_TYPE_LABELS, type SourceType } from '@/lib/constants';
 
 // 소스 타입별 아이콘 + 색상 매핑
@@ -99,16 +100,9 @@ export default function UrlInput({
   }
 
   return (
-    <div className="w-full w-full">
-      {/* 입력 바 */}
-      <div className={`
-        relative flex items-center gap-1.5
-        border rounded-2xl bg-white px-4 py-2.5
-        shadow-sm transition-all duration-200
-        ${focused
-          ? 'border-primary/40 shadow-[0_0_0_3px_rgba(79,70,229,0.08)] ring-0'
-          : 'border-border/60 hover:border-border'}
-      `}>
+    <div className="w-full">
+      {/* 입력 바 — InputWrapper로 포커스/에러 스타일 통일 */}
+      <InputWrapper focused={focused} error={error} className="flex items-center gap-1.5 px-4 py-2.5">
         <InputIcon className={`h-4 w-4 shrink-0 transition-colors duration-150 ${inputIconClass}`} />
         <input
           id="url-input"
@@ -142,12 +136,10 @@ export default function UrlInput({
         >
           <ArrowUp className="h-4 w-4 text-white" />
         </Button>
-      </div>
+      </InputWrapper>
 
-      {/* 힌트/에러 */}
-      {error ? (
-        <p className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
-      ) : (
+      {/* 힌트 (에러는 InputWrapper가 표시) */}
+      {!error && (
         <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
           YouTube · 웹페이지 · RSS · arXiv · Podcast · 최대 10개
         </p>

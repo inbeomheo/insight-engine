@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useResultStore } from '@/stores/resultStore';
 import { STYLE_OPTIONS } from '@/lib/constants';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 export default function FilterBar() {
   // reports.length만 구독 (전체 배열 구독 방지)
@@ -23,19 +24,17 @@ export default function FilterBar() {
 
   // 검색 입력 디바운스 (300ms) — 매 키 입력마다 필터링 방지
   const [localQuery, setLocalQuery] = useState(searchQuery);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const debouncedQuery = useDebouncedValue(localQuery, 300);
 
+  // 외부에서 searchQuery가 변경되면 로컬 상태 동기화
   useEffect(() => {
     setLocalQuery(searchQuery);
   }, [searchQuery]);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setLocalQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearchQuery(value);
-    }, 300);
-  }, [setSearchQuery]);
+  // 디바운스된 값이 변경되면 스토어에 반영
+  useEffect(() => {
+    setSearchQuery(debouncedQuery);
+  }, [debouncedQuery, setSearchQuery]);
 
   if (!hasReports) return null;
 
@@ -45,7 +44,7 @@ export default function FilterBar() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           value={localQuery}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setLocalQuery(e.target.value)}
           placeholder="결과 검색..."
           className="pl-9 h-10 text-sm"
         />

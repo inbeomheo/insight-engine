@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, ShieldCheck } from 'lucide-react';
+import { useListManager } from '@/hooks/useListManager';
 
 // 기본 금칙어 (config.py의 QA_FORBIDDEN_WORDS와 동기화)
 const DEFAULT_FORBIDDEN_WORDS = [
@@ -18,19 +19,26 @@ interface QaRulesEditorProps {
 
 export default function QaRulesEditor({ forbiddenWords, onChange }: QaRulesEditorProps) {
   const [input, setInput] = useState('');
+  const words = useListManager<string>(forbiddenWords);
+
+  // props 변경 시 내부 리스트 동기화
+  useEffect(() => {
+    words.set(forbiddenWords);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forbiddenWords]);
 
   function handleAdd() {
     const word = input.trim();
-    if (!word || forbiddenWords.includes(word)) {
+    if (!word || words.items.includes(word)) {
       setInput('');
       return;
     }
-    onChange([...forbiddenWords, word]);
+    onChange([...words.items, word]);
     setInput('');
   }
 
   function handleRemove(word: string) {
-    onChange(forbiddenWords.filter((w) => w !== word));
+    onChange(words.items.filter((w) => w !== word));
   }
 
   function handleReset() {
@@ -88,7 +96,7 @@ export default function QaRulesEditor({ forbiddenWords, onChange }: QaRulesEdito
 
       {/* 태그 목록 */}
       <div className="flex flex-wrap gap-1.5">
-        {forbiddenWords.map((word) => (
+        {words.items.map((word) => (
           <Badge
             key={word}
             variant="secondary"
@@ -105,7 +113,7 @@ export default function QaRulesEditor({ forbiddenWords, onChange }: QaRulesEdito
             </button>
           </Badge>
         ))}
-        {forbiddenWords.length === 0 && (
+        {words.items.length === 0 && (
           <p className="text-xs text-muted-foreground">금칙어가 없습니다.</p>
         )}
       </div>
