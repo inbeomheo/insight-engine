@@ -48,44 +48,32 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def check_update_delta_summary(content: str) -> dict:
-    """업데이트 변경 요약 블록 존재 여부를 점검합니다.
+_EMPTY_RESULT = {
+    'score': 50.0,
+    'summary': {
+        'has_update_date': False, 'has_delta_summary': False,
+        'has_delta_heading': False, 'has_version': False,
+        'update_signals': 0, 'level': 'none',
+    },
+    'update_signals': [],
+    'suggestions': [],
+}
+
+
+def _collect_signals(content: str) -> tuple:
+    """업데이트 신호를 수집합니다.
 
     Returns:
-        score, summary, update_signals, suggestions를 포함하는 dict
+        (has_update_date, has_delta, has_delta_heading, has_version, signals)
     """
-    if not content or not content.strip():
-        return {
-            'score': 50.0,
-            'summary': {
-                'has_update_date': False,
-                'has_delta_summary': False,
-                'has_delta_heading': False,
-                'has_version': False,
-                'update_signals': 0,
-                'level': 'none',
-            },
-            'update_signals': [],
-            'suggestions': [],
-        }
-
-    # 업데이트 날짜
     has_update_date = _has_pattern(content, _UPDATE_DATE_PATTERNS)
-
-    # 변경 사항 요약
-    delta_count = _count_matches(content, _DELTA_PATTERNS)
-    has_delta = delta_count >= 2
-
-    # 변경 헤딩
+    has_delta = _count_matches(content, _DELTA_PATTERNS) >= 2
     headings = _HEADING_RE.findall(content)
     has_delta_heading = any(
         _has_pattern(h, _DELTA_HEADING_PATTERNS) for h in headings
     )
-
-    # 버전 표기
     has_version = _has_pattern(content, _VERSION_PATTERNS)
 
-    # 신호 수
     signals = []
     if has_update_date:
         signals.append('update_date')
@@ -96,9 +84,15 @@ def check_update_delta_summary(content: str) -> dict:
     if has_version:
         signals.append('version')
 
-    total_signals = len(signals)
+    return has_update_date, has_delta, has_delta_heading, has_version, signals
 
-    # 레벨 판정
+
+def _compute_delta_score(total_signals: int, content: str) -> tuple:
+    """점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total_signals >= 3:
         level = 'comprehensive'
     elif total_signals >= 2:
@@ -108,32 +102,40 @@ def check_update_delta_summary(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 연속 점수 — total_signals(0~4) 기반
     if total_signals == 0:
-        word_count = len(content.split())
-        score = 60.0 if word_count < 200 else 30.0
+        score = 60.0 if len(content.split()) < 200 else 30.0
     else:
         score = 30.0 + (total_signals / 4.0 * 65.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        has_update_date, has_delta, has_delta_heading,
-        has_version, level, signals
-    )
+
+def check_update_delta_summary(content: str) -> dict:
+    """업데이트 변경 요약 블록 존재 여부를 점검합니다.
+
+    Returns:
+        score, summary, update_signals, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    has_date, has_delta, has_heading, has_version, signals = _collect_signals(content)
+    score, level = _compute_delta_score(len(signals), content)
 
     return {
         'score': score,
         'summary': {
-            'has_update_date': has_update_date,
+            'has_update_date': has_date,
             'has_delta_summary': has_delta,
-            'has_delta_heading': has_delta_heading,
+            'has_delta_heading': has_heading,
             'has_version': has_version,
-            'update_signals': total_signals,
+            'update_signals': len(signals),
             'level': level,
         },
         'update_signals': signals,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            has_date, has_delta, has_heading, has_version, level, signals
+        ),
     }
 
 

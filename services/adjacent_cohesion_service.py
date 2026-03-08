@@ -85,41 +85,23 @@ def _calc_pair_cohesion(para_a: str, para_b: str) -> Dict:
     }
 
 
-def analyze_adjacent_cohesion(content: str) -> dict:
-    """인접 문단 간 응집도를 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_pairs': 0, 'weak_pairs': 0,
+        'avg_cohesion': 0.0, 'level': 'none',
+    },
+    'pair_details': [],
+    'suggestions': [],
+}
+
+
+def _analyze_pairs(paragraphs: List[str]) -> tuple:
+    """인접 문단 쌍의 응집도를 분석합니다.
 
     Returns:
-        score, summary, pair_details, suggestions를 포함하는 dict
+        (pair_details, weak_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_pairs': 0,
-                'weak_pairs': 0,
-                'avg_cohesion': 0.0,
-                'level': 'none',
-            },
-            'pair_details': [],
-            'suggestions': [],
-        }
-
-    paragraphs = _split_paragraphs(content)
-
-    if len(paragraphs) < 2:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_pairs': 0,
-                'weak_pairs': 0,
-                'avg_cohesion': 0.0,
-                'level': 'none',
-            },
-            'pair_details': [],
-            'suggestions': [],
-        }
-
-    # 인접 쌍 분석
     pair_details = []
     weak_count = 0
 
@@ -138,11 +120,19 @@ def analyze_adjacent_cohesion(content: str) -> dict:
         if is_weak:
             weak_count += 1
 
+    return pair_details, weak_count
+
+
+def _compute_cohesion_score(pair_details: list, weak_count: int) -> tuple:
+    """응집도 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level, avg_cohesion)
+    """
     total_pairs = len(pair_details)
     cohesion_values = [p['effective_cohesion'] for p in pair_details]
     avg_cohesion = sum(cohesion_values) / len(cohesion_values) if cohesion_values else 0
 
-    # 레벨 판정
     if weak_count == 0:
         level = 'cohesive'
     elif weak_count / total_pairs <= 0.2:
@@ -152,26 +142,40 @@ def analyze_adjacent_cohesion(content: str) -> dict:
     else:
         level = 'fragmented'
 
-    # 연속 점수 계산 — 평균 응집도 + 약한 쌍 비율 기반
-    # avg_cohesion(0~1)을 70% 가중, 약한 쌍 비율을 30% 가중
     weak_ratio = weak_count / total_pairs if total_pairs > 0 else 0
     score = (avg_cohesion * 70.0) + ((1.0 - weak_ratio) * 30.0)
-    score = round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(
-        total_pairs, weak_count, avg_cohesion, level, pair_details
-    )
+    return round(max(0.0, min(100.0, score)), 1), level, round(avg_cohesion, 3)
+
+
+def analyze_adjacent_cohesion(content: str) -> dict:
+    """인접 문단 간 응집도를 분석합니다.
+
+    Returns:
+        score, summary, pair_details, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    paragraphs = _split_paragraphs(content)
+    if len(paragraphs) < 2:
+        return dict(_EMPTY_RESULT)
+
+    pair_details, weak_count = _analyze_pairs(paragraphs)
+    score, level, avg_cohesion = _compute_cohesion_score(pair_details, weak_count)
 
     return {
         'score': score,
         'summary': {
-            'total_pairs': total_pairs,
+            'total_pairs': len(pair_details),
             'weak_pairs': weak_count,
-            'avg_cohesion': round(avg_cohesion, 3),
+            'avg_cohesion': avg_cohesion,
             'level': level,
         },
         'pair_details': pair_details[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            len(pair_details), weak_count, avg_cohesion, level, pair_details
+        ),
     }
 
 

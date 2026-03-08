@@ -111,54 +111,41 @@ def _analyze_paragraph(paragraph: str) -> Dict:
     }
 
 
-def analyze_topic_sentence_alignment(content: str) -> dict:
-    """문단별 주제문 정렬을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_paragraphs': 0, 'aligned_count': 0,
+        'misaligned_count': 0, 'weak_opener_count': 0, 'level': 'none',
+    },
+    'paragraph_details': [],
+    'suggestions': [],
+}
+
+
+def _aggregate_alignment(details: list) -> tuple:
+    """문단 분석 결과를 집계합니다.
 
     Returns:
-        score, summary, paragraph_details, suggestions를 포함하는 dict
+        (aligned, misaligned, weak, analyzable)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_paragraphs': 0,
-                'aligned_count': 0,
-                'misaligned_count': 0,
-                'weak_opener_count': 0,
-                'level': 'none',
-            },
-            'paragraph_details': [],
-            'suggestions': [],
-        }
-
-    paragraphs = _split_paragraphs(content)
-
-    if not paragraphs:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_paragraphs': 0,
-                'aligned_count': 0,
-                'misaligned_count': 0,
-                'weak_opener_count': 0,
-                'level': 'none',
-            },
-            'paragraph_details': [],
-            'suggestions': [],
-        }
-
-    details = [_analyze_paragraph(p) for p in paragraphs]
-
     aligned = sum(1 for d in details if d['alignment'] in ('strong', 'aligned'))
     misaligned = sum(1 for d in details if d['alignment'] == 'misaligned')
     weak = sum(1 for d in details if d['has_weak_opener'])
-    total = len(details)
-
-    # 레벨 판정
     analyzable = [d for d in details if d['alignment'] != 'too_short']
+    return aligned, misaligned, weak, analyzable
+
+
+def _compute_alignment_score(aligned: int, misaligned: int, weak: int,
+                              analyzable: list) -> tuple:
+    """정렬 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if not analyzable:
-        level = 'none'
-    elif misaligned == 0 and weak == 0:
+        return 100.0, 'none'
+
+    if misaligned == 0 and weak == 0:
         level = 'well_aligned'
     elif misaligned <= 1 and weak <= 1:
         level = 'mostly_aligned'
@@ -167,29 +154,36 @@ def analyze_topic_sentence_alignment(content: str) -> dict:
     else:
         level = 'misaligned'
 
-    # 연속 점수 — 정렬 비율 + 약한 도입 감점
-    if not analyzable:
-        score = 100.0
-    else:
-        aligned_ratio = aligned / len(analyzable)
-        score = aligned_ratio * 85.0 + 15.0
-        # 불일치 문단 추가 감점
-        if misaligned > 0:
-            score -= min(25.0, misaligned * 8.0)
-        # 약한 도입 감점
-        if weak > 0:
-            score -= min(10.0, weak * 3.0)
+    score = (aligned / len(analyzable)) * 85.0 + 15.0
+    if misaligned > 0:
+        score -= min(25.0, misaligned * 8.0)
+    if weak > 0:
+        score -= min(10.0, weak * 3.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        total, aligned, misaligned, weak, level, details
-    )
+
+def analyze_topic_sentence_alignment(content: str) -> dict:
+    """문단별 주제문 정렬을 분석합니다.
+
+    Returns:
+        score, summary, paragraph_details, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    paragraphs = _split_paragraphs(content)
+    if not paragraphs:
+        return dict(_EMPTY_RESULT)
+
+    details = [_analyze_paragraph(p) for p in paragraphs]
+    aligned, misaligned, weak, analyzable = _aggregate_alignment(details)
+    score, level = _compute_alignment_score(aligned, misaligned, weak, analyzable)
 
     return {
         'score': score,
         'summary': {
-            'total_paragraphs': total,
+            'total_paragraphs': len(details),
             'aligned_count': aligned,
             'misaligned_count': misaligned,
             'weak_opener_count': weak,
@@ -197,7 +191,9 @@ def analyze_topic_sentence_alignment(content: str) -> dict:
         },
         'paragraph_details': [d for d in details[:10]
                                if d['alignment'] != 'too_short'],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            len(details), aligned, misaligned, weak, level, details
+        ),
     }
 
 
