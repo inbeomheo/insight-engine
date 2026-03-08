@@ -45,6 +45,7 @@ export default function CouponInput({ onApply }: CouponInputProps) {
           onClick={handleApply}
           disabled={loading || !code.trim()}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          aria-label="쿠폰 적용"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : '적용'}
         </button>

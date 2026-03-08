@@ -103,6 +103,7 @@ export default function VideoChatPanel({
           size="icon"
           className="h-8 w-8 shrink-0"
           onClick={onClose}
+          aria-label="영상 채팅 패널 닫기"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -140,6 +141,7 @@ export default function VideoChatPanel({
                     type="button"
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowSources(showSources === idx ? null : idx)}
+                    aria-label={showSources === idx ? '자막 근거 접기' : '자막 근거 펼치기'}
                   >
                     <ChevronDown
                       className={`h-3 w-3 transition-transform ${
@@ -202,6 +204,7 @@ export default function VideoChatPanel({
             className="h-11 w-11 shrink-0 rounded-xl"
             onClick={handleSend}
             disabled={!input.trim() || loading}
+            aria-label="질문 전송"
           >
             <Send className="h-4 w-4" />
           </Button>

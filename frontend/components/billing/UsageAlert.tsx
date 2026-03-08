@@ -38,6 +38,7 @@ export default function UsageAlert({ used, total, thresholds = [80, 100] }: Usag
       <button
         onClick={() => setDismissed((prev) => new Set(prev).add(activeThreshold))}
         className="shrink-0 rounded p-1 hover:bg-white/10"
+        aria-label="사용량 경고 닫기"
       >
         <X className="h-4 w-4 text-gray-400" />
       </button>
