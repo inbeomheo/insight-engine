@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Download, Loader2 } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface InfographicPreviewProps {
   title: string;
@@ -18,7 +19,7 @@ export default function InfographicPreview({ title, content }: InfographicPrevie
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/export/infographic', {
+      const res = await fetch(apiUrl('/api/export/infographic'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, content }),

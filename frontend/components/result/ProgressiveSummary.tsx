@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { apiUrl } from '@/lib/api';
 
 interface SummaryResult {
   one_line: string;
@@ -24,7 +25,7 @@ export default function ProgressiveSummary({ content, model }: ProgressiveSummar
     if (loading || !content) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/progressive-summary', {
+      const res = await fetch(apiUrl('/api/progressive-summary'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, model }),

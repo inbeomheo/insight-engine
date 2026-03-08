@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Copy, Check, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface ABTitleSelectorProps {
   originalTitle: string;
@@ -19,7 +20,7 @@ export default function ABTitleSelector({ originalTitle, content }: ABTitleSelec
   const handleGenerate = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ab-titles', {
+      const res = await fetch(apiUrl('/api/ab-titles'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: originalTitle, content: content.slice(0, 500) }),

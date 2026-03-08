@@ -6,6 +6,7 @@ import sys
 from urllib.parse import urlparse
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 try:
@@ -28,6 +29,10 @@ def create_app(test_config=None):
 
     # 프록시 환경(Railway, Render 등)에서 올바른 host/scheme 인식
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+    # CORS: 프론트엔드(Next.js)에서 Flask를 직접 호출할 수 있도록 허용
+    allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
+    CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
 
     app.config.from_object('config')
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0

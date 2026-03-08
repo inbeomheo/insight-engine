@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Download, Star } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface Template {
   id: string;
@@ -29,7 +30,7 @@ export default function MarketplaceBrowser() {
       if (query) params.set('q', query);
       if (category) params.set('category', category);
 
-      const res = await fetch(`/api/marketplace?${params}`);
+      const res = await fetch(apiUrl(`/api/marketplace?${params}`));
       const data = await res.json();
       setTemplates(data.templates || []);
     } catch {
@@ -45,7 +46,7 @@ export default function MarketplaceBrowser() {
 
   const handleDownload = async (templateId: string) => {
     try {
-      const res = await fetch(`/api/marketplace/${templateId}/download`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/marketplace/${templateId}/download`), { method: 'POST' });
       const data = await res.json();
       if (data.prompt_text) {
         await navigator.clipboard.writeText(data.prompt_text);

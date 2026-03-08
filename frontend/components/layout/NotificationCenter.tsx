@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, Check, CheckCheck, X, FileText, Calendar, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiUrl } from '@/lib/api';
 
 interface Notification {
   id: string;
@@ -33,7 +34,7 @@ export default function NotificationCenter() {
   // 알림 로드
   const loadNotifications = useCallback(async () => {
     try {
-      const res = await fetch('/api/notifications?user_id=anonymous&limit=20');
+      const res = await fetch(apiUrl('/api/notifications?user_id=anonymous&limit=20'));
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -54,7 +55,7 @@ export default function NotificationCenter() {
   // 알림 읽음 처리
   const markRead = useCallback(async (id: string) => {
     try {
-      await fetch(`/api/notifications/${id}/read?user_id=anonymous`, { method: 'POST' });
+      await fetch(apiUrl(`/api/notifications/${id}/read?user_id=anonymous`), { method: 'POST' });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
       );
@@ -67,7 +68,7 @@ export default function NotificationCenter() {
   // 전체 읽음 처리
   const markAllRead = useCallback(async () => {
     try {
-      await fetch('/api/notifications/read-all', {
+      await fetch(apiUrl('/api/notifications/read-all'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: 'anonymous' }),

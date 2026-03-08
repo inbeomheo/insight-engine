@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, RefreshCw, ImageIcon, Loader2 } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface ThumbnailPreviewProps {
   title: string;
@@ -18,7 +19,7 @@ export default function ThumbnailPreview({ title, keywords = [] }: ThumbnailPrev
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/generate-thumbnail', {
+      const res = await fetch(apiUrl('/api/generate-thumbnail'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, keywords }),

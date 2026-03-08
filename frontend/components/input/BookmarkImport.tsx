@@ -4,6 +4,7 @@ import { useState, useRef, type ChangeEvent } from 'react';
 import { Bookmark, FileUp, Loader2, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface BookmarkItem {
   url: string;
@@ -37,7 +38,7 @@ export default function BookmarkImport({ onUrlsSelected, disabled }: BookmarkImp
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/bookmarks/parse', {
+      const res = await fetch(apiUrl('/api/bookmarks/parse'), {
         method: 'POST',
         body: formData,
       });

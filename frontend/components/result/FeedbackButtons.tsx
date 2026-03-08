@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { apiUrl } from '@/lib/api';
 
 interface FeedbackButtonsProps {
   styleId: string;
@@ -18,7 +19,7 @@ export default function FeedbackButtons({ styleId, contentId }: FeedbackButtonsP
     if (loading || submitted) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/feedback', {
+      const res = await fetch(apiUrl('/api/feedback'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ style_id: styleId, content_id: contentId, rating }),

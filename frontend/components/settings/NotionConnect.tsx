@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useApiCall } from '@/hooks/useApiCall';
+import { apiUrl } from '@/lib/api';
 
 export default function NotionConnect() {
   const [apiKey, setApiKey] = useState('');
@@ -13,7 +14,7 @@ export default function NotionConnect() {
   const testCall = useApiCall<{ error?: string }>();
 
   useEffect(() => {
-    fetch('/api/notion/status')
+    fetch(apiUrl('/api/notion/status'))
       .then((res) => res.json())
       .then((data) => setConfigured(data.configured))
       .catch(() => setConfigured(false));
@@ -28,7 +29,7 @@ export default function NotionConnect() {
     setMessage(null);
 
     const result = await testCall.execute(async () => {
-      const res = await fetch('/api/notion/import', {
+      const res = await fetch(apiUrl('/api/notion/import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: '', api_key: apiKey }),

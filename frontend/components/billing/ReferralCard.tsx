@@ -5,6 +5,7 @@ import { Gift, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface ReferralInfo {
   code: string;
@@ -19,7 +20,7 @@ export const ReferralCard = memo(function ReferralCard() {
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
-    fetch('/api/referral/info')
+    fetch(apiUrl('/api/referral/info'))
       .then((r) => (r.ok ? r.json() : null))
       .then(setInfo)
       .catch(() => {});
@@ -39,7 +40,7 @@ export const ReferralCard = memo(function ReferralCard() {
     }
     setApplying(true);
     try {
-      const res = await fetch('/api/referral/apply', {
+      const res = await fetch(apiUrl('/api/referral/apply'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: applyCode.trim() }),

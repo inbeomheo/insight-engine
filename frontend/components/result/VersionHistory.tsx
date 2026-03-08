@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { History, RotateCcw, Eye, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiUrl } from '@/lib/api';
 
 interface Version {
   id: string;
@@ -29,7 +30,7 @@ export default function VersionHistory({ contentId, onRestore }: VersionHistoryP
   useEffect(() => {
     async function loadVersions() {
       try {
-        const res = await fetch(`/api/content/${contentId}/versions`);
+        const res = await fetch(apiUrl(`/api/content/${contentId}/versions`));
         if (res.ok) {
           const data = await res.json();
           setVersions(data.versions || []);
@@ -46,7 +47,7 @@ export default function VersionHistory({ contentId, onRestore }: VersionHistoryP
     setSelectedVersion(versionId);
     setDiffResult('');
     try {
-      const res = await fetch(`/api/content/${contentId}/versions/${versionId}`);
+      const res = await fetch(apiUrl(`/api/content/${contentId}/versions/${versionId}`));
       if (res.ok) {
         const data = await res.json();
         setVersionContent(data.content || '');
@@ -64,7 +65,7 @@ export default function VersionHistory({ contentId, onRestore }: VersionHistoryP
 
     try {
       const res = await fetch(
-        `/api/content/${contentId}/versions/diff?a=${prevId}&b=${versionId}`
+        apiUrl(`/api/content/${contentId}/versions/diff?a=${prevId}&b=${versionId}`)
       );
       if (res.ok) {
         const data = await res.json();
@@ -81,14 +82,14 @@ export default function VersionHistory({ contentId, onRestore }: VersionHistoryP
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/content/${contentId}/versions/${versionId}/restore`,
+        apiUrl(`/api/content/${contentId}/versions/${versionId}/restore`),
         { method: 'POST' },
       );
       if (res.ok) {
         const data = await res.json();
         onRestore?.(data.content, data.html || '');
         // 목록 새로고침
-        const listRes = await fetch(`/api/content/${contentId}/versions`);
+        const listRes = await fetch(apiUrl(`/api/content/${contentId}/versions`));
         if (listRes.ok) {
           const listData = await listRes.json();
           setVersions(listData.versions || []);

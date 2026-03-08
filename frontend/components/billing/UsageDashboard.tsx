@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState } from 'react';
 import { BarChart3, Coins, Calendar } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface UsageData {
   credits: { balance: number; plan: string };
@@ -14,7 +15,7 @@ export const UsageDashboard = memo(function UsageDashboard() {
   const [data, setData] = useState<UsageData | null>(null);
 
   useEffect(() => {
-    fetch('/api/usage/my-usage')
+    fetch(apiUrl('/api/usage/my-usage'))
       .then((r) => (r.ok ? r.json() : null))
       .then(setData)
       .catch(() => {});

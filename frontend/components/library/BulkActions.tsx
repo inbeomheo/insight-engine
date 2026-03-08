@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { Trash2, Archive, Tag, RefreshCw } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 export type BulkActionType = 'delete' | 'archive' | 'tag' | 'status_change';
 
@@ -38,7 +39,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
   const runAction = async (action: BulkActionType, extra: Record<string, unknown> = {}) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/content/bulk', {
+      const res = await fetch(apiUrl('/api/content/bulk'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, item_ids: selectedIds, ...extra }),

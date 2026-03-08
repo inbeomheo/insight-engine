@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiUrl } from '@/lib/api';
 
 interface SearchResult {
   id: string;
@@ -40,7 +41,7 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
+        const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(q)}&limit=10`));
         if (res.ok) {
           const data = await res.json();
           setResults(data.results || []);

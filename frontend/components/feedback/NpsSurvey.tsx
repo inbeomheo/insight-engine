@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, Check } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface NpsSurveyProps {
   onSubmit?: (score: number, feedback: string) => Promise<void>;
@@ -21,7 +22,7 @@ export default function NpsSurvey({ onSubmit }: NpsSurveyProps) {
       if (onSubmit) {
         await onSubmit(score, feedback);
       } else {
-        await fetch('/api/feedback/nps', {
+        await fetch(apiUrl('/api/feedback/nps'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ score, feedback }),

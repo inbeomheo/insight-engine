@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useApiCall } from '@/hooks/useApiCall';
+import { apiUrl } from '@/lib/api';
 
 interface ApiKeyInfo {
   key_id: string;
@@ -24,7 +25,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
   const revokeCall = useApiCall<void>();
 
   const fetchKeys = () => {
-    fetch('/api/keys')
+    fetch(apiUrl('/api/keys'))
       .then((r) => (r.ok ? r.json() : { keys: [] }))
       .then((d) => setKeys(d.keys ?? []))
       .catch(() => {});
@@ -34,7 +35,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
 
   const handleCreate = async () => {
     const result = await createCall.execute(async () => {
-      const res = await fetch('/api/keys', {
+      const res = await fetch(apiUrl('/api/keys'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newKeyName || 'default' }),
@@ -57,7 +58,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
     if (!confirm('이 API 키를 비활성화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
 
     await revokeCall.execute(async () => {
-      const res = await fetch(`/api/keys/${keyId}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/keys/${keyId}`), { method: 'DELETE' });
       if (res.ok) {
         toast.success('API 키가 비활성화되었습니다.');
         fetchKeys();

@@ -5,6 +5,7 @@ import { CreditCard, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface SubscriptionInfo {
   plan: string;
@@ -19,7 +20,7 @@ export const SubscriptionManager = memo(function SubscriptionManager() {
   const [loading, setLoading] = useState(false);
 
   const fetchSub = () => {
-    fetch('/api/subscription')
+    fetch(apiUrl('/api/subscription'))
       .then((r) => (r.ok ? r.json() : null))
       .then(setSub)
       .catch(() => {});
@@ -31,7 +32,7 @@ export const SubscriptionManager = memo(function SubscriptionManager() {
     if (!confirm('구독을 취소하시겠습니까? Free 플랜으로 전환됩니다.')) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+      const res = await fetch(apiUrl('/api/subscription/cancel'), { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         toast.success('구독이 취소되었습니다.');

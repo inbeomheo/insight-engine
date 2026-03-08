@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useApiCall } from '@/hooks/useApiCall';
+import { apiUrl } from '@/lib/api';
 
 interface Subscription {
   id: string;
@@ -26,7 +27,7 @@ export const RssSubscription = memo(function RssSubscription() {
 
   const fetchSubs = useCallback(async () => {
     const result = await listCall.execute(async () => {
-      const res = await fetch('/api/rss/list');
+      const res = await fetch(apiUrl('/api/rss/list'));
       if (!res.ok) throw new Error('조회 실패');
       return res.json();
     }, 'RSS 구독 목록을 불러올 수 없습니다.');
@@ -43,7 +44,7 @@ export const RssSubscription = memo(function RssSubscription() {
     if (!url) return;
 
     const result = await subscribeCall.execute(async () => {
-      const res = await fetch('/api/rss/subscribe', {
+      const res = await fetch(apiUrl('/api/rss/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ feed_url: url }),
@@ -59,7 +60,7 @@ export const RssSubscription = memo(function RssSubscription() {
 
   async function handleUnsubscribe(id: string) {
     await unsubscribeCall.execute(async () => {
-      const res = await fetch(`/api/rss/unsubscribe/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/rss/unsubscribe/${id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast.success('구독이 해제되었습니다.');
       setSubs((prev) => prev.filter((s) => s.id !== id));

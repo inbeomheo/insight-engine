@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { apiUrl } from '@/lib/api';
 import AgentProgress from './AgentProgress';
 
 interface PipelineResult {
@@ -56,7 +57,7 @@ export default function AgentPipeline({ onComplete, className }: AgentPipelinePr
     setCurrentStep(0);
 
     try {
-      const res = await fetch('/api/agent/pipeline', {
+      const res = await fetch(apiUrl('/api/agent/pipeline'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: topic.trim() }),

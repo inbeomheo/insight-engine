@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { apiUrl } from '@/lib/api';
 
 // ── 타입 정의 ─────────────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ export function KnowledgeGraphPanel({ className = '' }: { className?: string }) 
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch('/api/knowledge/graph');
+      const resp = await fetch(apiUrl('/api/knowledge/graph'));
       if (!resp.ok) throw new Error(`API 오류: ${resp.status}`);
       const data = await resp.json();
       setGraphData(data);

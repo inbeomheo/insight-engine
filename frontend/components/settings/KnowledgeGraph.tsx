@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { apiUrl } from '@/lib/api';
 
 interface GraphNode {
   name: string;
@@ -42,7 +43,7 @@ export default function KnowledgeGraph() {
   const fetchGraph = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/knowledge/graph');
+      const res = await fetch(apiUrl('/api/knowledge/graph'));
       if (res.ok) {
         const data = await res.json();
         setGraphData(data);
@@ -56,7 +57,7 @@ export default function KnowledgeGraph() {
 
   const fetchSubgraph = useCallback(async (entity: string) => {
     try {
-      const res = await fetch(`/api/knowledge/graph/subgraph?entity=${encodeURIComponent(entity)}`);
+      const res = await fetch(apiUrl(`/api/knowledge/graph/subgraph?entity=${encodeURIComponent(entity)}`));
       if (res.ok) {
         const data = await res.json();
         setSubgraph(data);

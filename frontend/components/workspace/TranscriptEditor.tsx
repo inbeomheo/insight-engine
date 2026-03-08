@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { apiUrl } from '@/lib/api';
 
 /** 서버에서 반환하는 문장 구조 */
 interface TranscriptSentence {
@@ -65,7 +66,7 @@ export const TranscriptEditor = memo(function TranscriptEditor({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/transcript/${videoId}`);
+      const res = await fetch(apiUrl(`/api/transcript/${videoId}`));
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `HTTP ${res.status}`);

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Folder, FolderOpen, Plus, Trash2, ChevronRight, ChevronDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiUrl } from '@/lib/api';
 
 interface FolderItem {
   id: string;
@@ -26,7 +27,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
   // 폴더 목록 로드
   const loadFolders = useCallback(async () => {
     try {
-      const res = await fetch('/api/folders');
+      const res = await fetch(apiUrl('/api/folders'));
       if (res.ok) {
         const data = await res.json();
         setFolders(data.folders || []);
@@ -46,7 +47,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
     if (!name) return;
 
     try {
-      const res = await fetch('/api/folders', {
+      const res = await fetch(apiUrl('/api/folders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -64,7 +65,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
   // 폴더 삭제
   const deleteFolder = useCallback(async (folderId: string) => {
     try {
-      const res = await fetch(`/api/folders/${folderId}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/folders/${folderId}`), { method: 'DELETE' });
       if (res.ok) {
         if (selectedFolderId === folderId) onSelectFolder?.(null);
         loadFolders();

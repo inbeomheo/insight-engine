@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { BookOpen, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { apiUrl } from '@/lib/api';
 
 interface ReadabilityResult {
   score: number;
@@ -38,7 +39,7 @@ export default function ReadabilityGauge({ content }: ReadabilityGaugeProps) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/readability', {
+      const res = await fetch(apiUrl('/api/readability'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: content }),

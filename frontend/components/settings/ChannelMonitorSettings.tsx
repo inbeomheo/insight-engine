@@ -5,6 +5,7 @@ import { Plus, Trash2, Radio, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface Monitor {
   id: string;
@@ -27,7 +28,7 @@ export const ChannelMonitorSettings = memo(function ChannelMonitorSettings() {
 
   const fetchMonitors = useCallback(async () => {
     try {
-      const res = await fetch('/api/channel-monitors');
+      const res = await fetch(apiUrl('/api/channel-monitors'));
       if (!res.ok) throw new Error('조회 실패');
       const data = await res.json();
       setMonitors(data.monitors || []);
@@ -58,7 +59,7 @@ export const ChannelMonitorSettings = memo(function ChannelMonitorSettings() {
     setCreating(true);
     try {
       const channelId = extractChannelId(channelInput);
-      const res = await fetch('/api/channel-monitors', {
+      const res = await fetch(apiUrl('/api/channel-monitors'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel_id: channelId }),
@@ -79,7 +80,7 @@ export const ChannelMonitorSettings = memo(function ChannelMonitorSettings() {
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/channel-monitors/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/channel-monitors/${id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error();
       toast.success('모니터가 삭제되었습니다.');
       setMonitors((prev) => prev.filter((m) => m.id !== id));

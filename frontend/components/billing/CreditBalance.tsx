@@ -3,6 +3,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Coins, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { apiUrl } from '@/lib/api';
 
 interface CreditInfo {
   balance: number;
@@ -14,7 +15,7 @@ export const CreditBalance = memo(function CreditBalance() {
   const [credits, setCredits] = useState<CreditInfo | null>(null);
 
   useEffect(() => {
-    fetch('/api/credits/balance')
+    fetch(apiUrl('/api/credits/balance'))
       .then((r) => (r.ok ? r.json() : null))
       .then(setCredits)
       .catch(() => {});

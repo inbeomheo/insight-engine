@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { BarChart3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { apiUrl } from '@/lib/api';
 
 interface ScoreResult {
   total_score: number;
@@ -47,7 +48,7 @@ export default function ScoreCard({ content }: ScoreCardProps) {
     if (loading || !content) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/content-score', {
+      const res = await fetch(apiUrl('/api/content-score'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

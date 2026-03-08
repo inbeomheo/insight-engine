@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { ShieldCheck, ShieldAlert, AlertTriangle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { apiUrl } from '@/lib/api';
 
 interface FactClaim {
   claim: string;
@@ -35,7 +36,7 @@ export default function FactCheckBadge({ content }: FactCheckBadgeProps) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/fact-check', {
+      const res = await fetch(apiUrl('/api/fact-check'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

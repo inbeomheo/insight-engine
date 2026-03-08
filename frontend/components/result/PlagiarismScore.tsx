@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Copy, Loader2, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { apiUrl } from '@/lib/api';
 
 interface PlagiarismResult {
   score: number;
@@ -31,7 +32,7 @@ export default function PlagiarismScore({ content }: PlagiarismScoreProps) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/plagiarism-check', {
+      const res = await fetch(apiUrl('/api/plagiarism-check'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

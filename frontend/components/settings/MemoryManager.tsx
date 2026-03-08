@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useListManager } from '@/hooks/useListManager';
+import { apiUrl } from '@/lib/api';
 
 interface UserMemory {
   preferred_topics?: string[];
@@ -30,7 +31,7 @@ export default function MemoryManager() {
 
   const fetchMemory = useCallback(async () => {
     try {
-      const res = await fetch('/api/memory');
+      const res = await fetch(apiUrl('/api/memory'));
       if (res.ok) {
         const data = await res.json();
         const mem = data.memory || {};
@@ -55,7 +56,7 @@ export default function MemoryManager() {
   const updateKey = useCallback(async (key: string, value: unknown) => {
     setIsSaving(true);
     try {
-      const res = await fetch('/api/memory', {
+      const res = await fetch(apiUrl('/api/memory'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value }),
@@ -79,7 +80,7 @@ export default function MemoryManager() {
   const clearMemory = useCallback(async () => {
     if (!confirm('메모리를 전체 초기화하시겠습니까?')) return;
     try {
-      const res = await fetch('/api/memory', { method: 'DELETE' });
+      const res = await fetch(apiUrl('/api/memory'), { method: 'DELETE' });
       if (res.ok) {
         setMemory({});
         topics.clear();

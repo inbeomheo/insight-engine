@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Activity, FileText, Send, MessageSquare, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslation } from '@/hooks/useTranslation';
+import { apiUrl } from '@/lib/api';
 
 interface ActivityItem {
   id: string;
@@ -41,7 +42,7 @@ export default function ActivityFeed({ workspaceId }: ActivityFeedProps) {
     if (!workspaceId) return;
 
     setLoading(true);
-    fetch(`/api/workspaces/${workspaceId}/activity?limit=50`)
+    fetch(apiUrl(`/api/workspaces/${workspaceId}/activity?limit=50`))
       .then((res) => res.ok ? res.json() : { items: [] })
       .then((data) => setItems(data.items || []))
       .catch(() => setItems([]))

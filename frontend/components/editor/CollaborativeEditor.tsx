@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, Circle } from 'lucide-react';
 import PresenceCursors from './PresenceCursors';
+import { apiUrl } from '@/lib/api';
 
 interface Participant {
   user_id: string;
@@ -38,7 +39,7 @@ export default function CollaborativeEditor({
     let currentSessionId: string | null = null;
     async function joinSession() {
       try {
-        const res = await fetch('/api/collab/session', {
+        const res = await fetch(apiUrl('/api/collab/session'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content_id: contentId, user_id: userId, user_name: userName }),
@@ -60,7 +61,7 @@ export default function CollaborativeEditor({
     return () => {
       // 세션 퇴장
       if (currentSessionId) {
-        fetch(`/api/collab/session/${currentSessionId}/leave`, {
+        fetch(apiUrl(`/api/collab/session/${currentSessionId}/leave`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId }),
@@ -76,7 +77,7 @@ export default function CollaborativeEditor({
     pollRef.current = setInterval(async () => {
       try {
         // 하트비트
-        await fetch(`/api/collab/session/${sessionId}/heartbeat`, {
+        await fetch(apiUrl(`/api/collab/session/${sessionId}/heartbeat`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -86,7 +87,7 @@ export default function CollaborativeEditor({
         });
 
         // 세션 상태 폴링
-        const res = await fetch(`/api/collab/session/${sessionId}`);
+        const res = await fetch(apiUrl(`/api/collab/session/${sessionId}`));
         if (!res.ok) return;
         const data = await res.json();
         setParticipants(data.participants || []);
@@ -112,7 +113,7 @@ export default function CollaborativeEditor({
 
       if (!sessionId) return;
       try {
-        const res = await fetch(`/api/collab/session/${sessionId}/update`, {
+        const res = await fetch(apiUrl(`/api/collab/session/${sessionId}/update`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

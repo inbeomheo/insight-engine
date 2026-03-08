@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { apiUrl } from '@/lib/api';
 
 // === 상태별 설정 ===
 
@@ -39,14 +40,14 @@ const TAB_FILTERS: Array<{ value: string; label: string }> = [
 
 async function fetchContents(workspaceId: string, status?: string): Promise<WorkspaceContent[]> {
   const params = status && status !== 'all' ? `?status=${status}` : '';
-  const res = await fetch(`/api/workspace/${workspaceId}/contents${params}`);
+  const res = await fetch(apiUrl(`/api/workspace/${workspaceId}/contents${params}`));
   if (!res.ok) return [];
   const data = await res.json();
   return data.contents ?? [];
 }
 
 async function postAction(contentId: string, action: string, body?: Record<string, string>): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`/api/workspace/contents/${contentId}/${action}`, {
+  const res = await fetch(apiUrl(`/api/workspace/contents/${contentId}/${action}`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface PlanInfo {
   name: string;
@@ -18,7 +19,7 @@ export const PricingPage = memo(function PricingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/credits/plans')
+    fetch(apiUrl('/api/credits/plans'))
       .then((r) => r.json())
       .then((d) => setPlans(d.plans ?? {}))
       .catch(() => toast.error('플랜 정보를 불러오지 못했습니다.'))
@@ -91,7 +92,7 @@ function CheckoutButton({
     if (disabled) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/payment/checkout', {
+      const res = await fetch(apiUrl('/api/payment/checkout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ price_id: planId, mode: 'subscription' }),

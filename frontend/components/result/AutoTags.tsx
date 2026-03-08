@@ -5,6 +5,7 @@ import { Tags, X, Plus, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/api';
 
 interface AutoTagsProps {
   /** 콘텐츠 텍스트 (태그 자동 생성용) */
@@ -26,7 +27,7 @@ export default function AutoTags({ content }: AutoTagsProps) {
     if (loading || !content) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/auto-tags', {
+      const res = await fetch(apiUrl('/api/auto-tags'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

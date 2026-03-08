@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { RefreshCw, XCircle, RotateCcw, Loader2 } from 'lucide-react';
 import type { PublishQueueItem } from '@/lib/types';
+import { apiUrl } from '@/lib/api';
 
 /** 상태별 배지 스타일 */
 const STATUS_CONFIG: Record<
@@ -58,7 +59,7 @@ export const PublishQueue = memo(function PublishQueue() {
 
   const fetchQueue = useCallback(async () => {
     try {
-      const res = await fetch('/api/publish-queue');
+      const res = await fetch(apiUrl('/api/publish-queue'));
       const data = await res.json();
       if (data.error) {
         setError(data.error);
@@ -84,7 +85,7 @@ export const PublishQueue = memo(function PublishQueue() {
   const handleCancel = useCallback(async (itemId: string) => {
     setActionLoading(itemId);
     try {
-      const res = await fetch(`/api/publish-queue/${itemId}/cancel`, {
+      const res = await fetch(apiUrl(`/api/publish-queue/${itemId}/cancel`), {
         method: 'POST',
       });
       const data = await res.json();
@@ -101,7 +102,7 @@ export const PublishQueue = memo(function PublishQueue() {
   const handleRetry = useCallback(async (itemId: string) => {
     setActionLoading(itemId);
     try {
-      const res = await fetch(`/api/publish-queue/${itemId}/retry`, {
+      const res = await fetch(apiUrl(`/api/publish-queue/${itemId}/retry`), {
         method: 'POST',
       });
       const data = await res.json();

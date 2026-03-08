@@ -34,7 +34,15 @@ import type {
 } from './types';
 import { parseSSEStream } from './sse-parser';
 
-const BASE = '';
+/** Flask 백엔드 직접 호출 (Next.js 프록시 우회) */
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+/** 직접 fetch 호출 시 사용하는 URL 빌더 */
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+const BASE = API_BASE;
 
 const TIMEOUT_MS: Record<string, number> = {
   '/generate': 300_000,

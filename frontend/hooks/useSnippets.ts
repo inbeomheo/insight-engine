@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { apiUrl } from '@/lib/api';
 
 const LOCAL_KEY = 'insight-engine-snippets';
 
@@ -19,7 +20,7 @@ export function useSnippets() {
   const fetchSnippets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/user/snippets');
+      const res = await fetch(apiUrl('/api/user/snippets'));
       if (res.ok) {
         const data = await res.json();
         setSnippets(data.snippets || []);
@@ -40,7 +41,7 @@ export function useSnippets() {
 
   const addSnippet = useCallback(async (data: { category: string; label: string; content: string }) => {
     try {
-      const res = await fetch('/api/user/snippets', {
+      const res = await fetch(apiUrl('/api/user/snippets'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -62,7 +63,7 @@ export function useSnippets() {
 
   const removeSnippet = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/user/snippets/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/user/snippets/${id}`), { method: 'DELETE' });
       if (res.ok) {
         await fetchSnippets();
         return;
