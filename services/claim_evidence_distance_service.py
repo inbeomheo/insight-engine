@@ -49,57 +49,29 @@ def _is_evidence(sentence: str) -> bool:
     return any(p.search(sentence) for p in _EVIDENCE_PATTERNS)
 
 
-def analyze_claim_evidence_distance(content: str) -> dict:
-    """주장-근거 거리를 분석합니다.
+def _empty_result() -> dict:
+    """분석 대상이 없을 때 반환할 빈 결과를 생성합니다."""
+    return {
+        'score': 100.0,
+        'summary': {
+            'total_claims': 0, 'supported_claims': 0,
+            'distant_claims': 0, 'unsupported_claims': 0, 'level': 'none',
+        },
+        'distant_claims': [],
+        'suggestions': [],
+    }
+
+
+def _evaluate_claims(
+    sentences: List[str],
+    claim_indices: List[int],
+    evidence_indices: List[int],
+) -> tuple:
+    """주장별 가장 가까운 근거 거리를 평가합니다.
 
     Returns:
-        score, summary, distant_claims, suggestions를 포함하는 dict
+        (supported, distant, unsupported, distant_items)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_claims': 0,
-                'supported_claims': 0,
-                'distant_claims': 0,
-                'unsupported_claims': 0,
-                'level': 'none',
-            },
-            'distant_claims': [],
-            'suggestions': [],
-        }
-
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_claims': 0,
-                'supported_claims': 0,
-                'distant_claims': 0,
-                'unsupported_claims': 0,
-                'level': 'none',
-            },
-            'distant_claims': [],
-            'suggestions': [],
-        }
-
-    # 각 문장의 역할 분류
-    roles = []
-    for s in sentences:
-        if _is_evidence(s):
-            roles.append('evidence')
-        elif _is_claim(s):
-            roles.append('claim')
-        else:
-            roles.append('neutral')
-
-    # 주장별 가장 가까운 근거 거리 계산
-    claim_indices = [i for i, r in enumerate(roles) if r == 'claim']
-    evidence_indices = [i for i, r in enumerate(roles) if r == 'evidence']
-
     supported = 0
     distant = 0
     unsupported = 0
@@ -109,65 +81,85 @@ def analyze_claim_evidence_distance(content: str) -> dict:
         if not evidence_indices:
             unsupported += 1
             distant_items.append({
-                'sentence': sentences[ci][:80],
-                'position': ci,
-                'nearest_evidence_distance': -1,
-                'issue': '문서에 근거가 없음',
+                'sentence': sentences[ci][:80], 'position': ci,
+                'nearest_evidence_distance': -1, 'issue': '문서에 근거가 없음',
             })
             continue
 
-        # 가장 가까운 근거까지의 거리
         min_dist = min(abs(ci - ei) for ei in evidence_indices)
-
         if min_dist <= _MAX_DISTANCE:
             supported += 1
         else:
             distant += 1
             distant_items.append({
-                'sentence': sentences[ci][:80],
-                'position': ci,
+                'sentence': sentences[ci][:80], 'position': ci,
                 'nearest_evidence_distance': min_dist,
                 'issue': f'가장 가까운 근거가 {min_dist}문장 떨어짐',
             })
 
-    total_claims = len(claim_indices)
+    return supported, distant, unsupported, distant_items
 
-    # 레벨 판정
+
+def _compute_score_and_level(total_claims: int, supported: int,
+                              distant: int, unsupported: int) -> tuple:
+    """지원 비율 기반으로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total_claims == 0:
-        level = 'none'
-    elif distant + unsupported == 0:
+        return 100.0, 'none'
+
+    weak = distant + unsupported
+    if weak == 0:
         level = 'well_supported'
-    elif (distant + unsupported) / total_claims <= 0.2:
+    elif weak / total_claims <= 0.2:
         level = 'mostly_supported'
-    elif (distant + unsupported) / total_claims <= 0.5:
+    elif weak / total_claims <= 0.5:
         level = 'mixed'
     else:
         level = 'weakly_supported'
 
-    # 연속 점수 — 지원 비율 기반
-    if total_claims == 0:
-        score = 100.0
-    else:
-        support_ratio = supported / total_claims
-        score = support_ratio * 90.0 + 10.0
-        # 미지원 건수 추가 감점
-        if unsupported > 0:
-            score -= min(20.0, unsupported * 5.0)
-
+    score = (supported / total_claims) * 90.0 + 10.0
+    if unsupported > 0:
+        score -= min(20.0, unsupported * 5.0)
     score = round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(
-        total_claims, supported, distant, unsupported, level, distant_items
+    return score, level
+
+
+def analyze_claim_evidence_distance(content: str) -> dict:
+    """주장-근거 거리를 분석합니다.
+
+    Returns:
+        score, summary, distant_claims, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return _empty_result()
+
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                 if s.strip() and len(s.strip()) >= 5]
+    if not sentences:
+        return _empty_result()
+
+    roles = ['evidence' if _is_evidence(s) else 'claim' if _is_claim(s) else 'neutral'
+             for s in sentences]
+
+    claim_indices = [i for i, r in enumerate(roles) if r == 'claim']
+    evidence_indices = [i for i, r in enumerate(roles) if r == 'evidence']
+
+    supported, distant, unsupported, distant_items = _evaluate_claims(
+        sentences, claim_indices, evidence_indices,
     )
+    total_claims = len(claim_indices)
+    score, level = _compute_score_and_level(total_claims, supported, distant, unsupported)
+    suggestions = _generate_suggestions(total_claims, supported, distant, unsupported, level, distant_items)
 
     return {
         'score': score,
         'summary': {
-            'total_claims': total_claims,
-            'supported_claims': supported,
-            'distant_claims': distant,
-            'unsupported_claims': unsupported,
-            'level': level,
+            'total_claims': total_claims, 'supported_claims': supported,
+            'distant_claims': distant, 'unsupported_claims': unsupported, 'level': level,
         },
         'distant_claims': distant_items[:10],
         'suggestions': suggestions,

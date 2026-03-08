@@ -29,84 +29,66 @@ _ATTRIBUTION = re.compile(
 _BLOCKQUOTE = re.compile(r'^\s*>\s+(.+)$', re.MULTILINE)
 
 
-def analyze_quotation_usage(content: str) -> dict:
-    """인용문 사용 패턴을 분석합니다.
+_EMPTY_RESULT = {
+    'quotations': [],
+    'summary': {
+        'total_quotes': 0, 'direct_quotes': 0, 'emphasis_quotes': 0,
+        'block_quotes': 0, 'with_attribution': 0, 'level': 'none',
+    },
+    'score': 50.0,
+    'suggestions': [],
+}
+
+
+def _collect_quotations(cleaned: str, raw_content: str) -> tuple:
+    """텍스트에서 인용문을 수집하고 유형별 카운트를 반환합니다.
 
     Returns:
-        quotations, summary, score, suggestions를 포함하는 dict
+        (quotations, direct_quotes, emphasis_quotes, block_quotes)
     """
-    if not content or not content.strip():
-        return {
-            'quotations': [],
-            'summary': {
-                'total_quotes': 0,
-                'direct_quotes': 0,
-                'emphasis_quotes': 0,
-                'block_quotes': 0,
-                'with_attribution': 0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': [],
-        }
-
-    cleaned = _HEADING_RE.sub('', content)
-    word_count = len(cleaned.split())
-
     quotations = []
-
-    # 큰따옴표 (직접 인용 또는 강조)
     direct_quotes = 0
     emphasis_quotes = 0
 
+    def _truncate(text: str) -> str:
+        return text if len(text) <= 60 else text[:57] + '...'
+
     for match in _DOUBLE_QUOTE.finditer(cleaned):
         text = match.group(1)
-        # 10단어 이상이면 직접 인용으로 분류
         if len(text.split()) >= 5:
-            q_type = 'direct'
             direct_quotes += 1
+            quotations.append({'text': _truncate(text), 'type': 'direct'})
         else:
-            q_type = 'emphasis'
             emphasis_quotes += 1
-        quotations.append({
-            'text': text if len(text) <= 60 else text[:57] + '...',
-            'type': q_type,
-        })
+            quotations.append({'text': _truncate(text), 'type': 'emphasis'})
 
-    # 작은따옴표 (강조)
     for match in _SINGLE_QUOTE.finditer(cleaned):
         text = match.group(1)
         emphasis_quotes += 1
-        quotations.append({
-            'text': text if len(text) <= 60 else text[:57] + '...',
-            'type': 'emphasis',
-        })
+        quotations.append({'text': _truncate(text), 'type': 'emphasis'})
 
-    # 한국어 겹따옴표
     for match in _KO_QUOTE.finditer(cleaned):
         text = match.group(1) or match.group(2)
         if text:
             direct_quotes += 1
-            quotations.append({
-                'text': text if len(text) <= 60 else text[:57] + '...',
-                'type': 'direct',
-            })
+            quotations.append({'text': _truncate(text), 'type': 'direct'})
 
-    # 블록 인용
-    block_matches = _BLOCKQUOTE.findall(content)
+    block_matches = _BLOCKQUOTE.findall(raw_content)
     block_quotes = len(block_matches)
     for bq in block_matches[:5]:
-        quotations.append({
-            'text': bq.strip()[:60],
-            'type': 'block',
-        })
+        quotations.append({'text': bq.strip()[:60], 'type': 'block'})
 
-    # 출처 표시 여부
-    attribution_count = len(_ATTRIBUTION.findall(cleaned))
+    return quotations, direct_quotes, emphasis_quotes, block_quotes
 
-    total = direct_quotes + emphasis_quotes + block_quotes
 
-    # 레벨
+def _calculate_score(direct: int, emphasis: int, block: int, attribution: int) -> tuple:
+    """인용 카운트로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
+    total = direct + emphasis + block
+
     if total == 0:
         level = 'none'
     elif total <= 3:
@@ -116,39 +98,45 @@ def analyze_quotation_usage(content: str) -> dict:
     else:
         level = 'heavy'
 
-    # 점수 (적절한 인용 사용이 좋음)
     if total == 0:
-        score = 50.0  # 중립
+        score = 50.0
     elif 2 <= total <= 8:
         score = 90.0
-        # 출처 있으면 보너스
-        if attribution_count > 0:
+        if attribution > 0:
             score += 10.0
     elif total == 1:
         score = 70.0
     else:
         score = max(40.0, 90.0 - (total - 8) * 5.0)
 
-    # 강조 따옴표 과다 감점
-    if emphasis_quotes > 10:
-        score -= min(20.0, (emphasis_quotes - 10) * 3.0)
+    if emphasis > 10:
+        score -= min(20.0, (emphasis - 10) * 3.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        direct_quotes, emphasis_quotes, block_quotes,
-        attribution_count, total, level
-    )
+
+def analyze_quotation_usage(content: str) -> dict:
+    """인용문 사용 패턴을 분석합니다.
+
+    Returns:
+        quotations, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    cleaned = _HEADING_RE.sub('', content)
+    quotations, direct, emphasis, block = _collect_quotations(cleaned, content)
+    attribution = len(_ATTRIBUTION.findall(cleaned))
+    total = direct + emphasis + block
+    score, level = _calculate_score(direct, emphasis, block, attribution)
+    suggestions = _generate_suggestions(direct, emphasis, block, attribution, total, level)
 
     return {
         'quotations': quotations[:20],
         'summary': {
-            'total_quotes': total,
-            'direct_quotes': direct_quotes,
-            'emphasis_quotes': emphasis_quotes,
-            'block_quotes': block_quotes,
-            'with_attribution': attribution_count,
-            'level': level,
+            'total_quotes': total, 'direct_quotes': direct,
+            'emphasis_quotes': emphasis, 'block_quotes': block,
+            'with_attribution': attribution, 'level': level,
         },
         'score': score,
         'suggestions': suggestions,
