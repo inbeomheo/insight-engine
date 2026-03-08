@@ -2,7 +2,7 @@
 import os
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
         return None
 
 
-def check_monitors(supabase_client=None) -> list:
+def check_monitors(supabase_client: Any = None) -> list:
     """활성 모니터를 확인하고 신규 영상이 있으면 목록을 반환합니다.
 
     Returns:

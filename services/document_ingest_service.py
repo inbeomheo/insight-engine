@@ -6,7 +6,7 @@ PDF, DOCX, PPTX 파일에서 텍스트를 추출하여 콘텐츠 생성 파이�
 import logging
 import os
 import tempfile
-from typing import Dict
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ def _extract_pptx(file_path: str) -> Dict:
     }
 
 
-def extract_from_upload(file_storage) -> Dict:
+def extract_from_upload(file_storage: Any) -> Dict:
     """Flask FileStorage 객체에서 텍스트를 추출합니다.
 
     Args:

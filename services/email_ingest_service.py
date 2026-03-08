@@ -6,14 +6,14 @@ import email
 import logging
 import re
 from email.header import decode_header
-from typing import Dict
+from typing import Any, Dict
 
 import trafilatura
 
 logger = logging.getLogger(__name__)
 
 
-def parse_email_file(file_storage) -> Dict:
+def parse_email_file(file_storage: Any) -> Dict:
     """업로드된 .eml 파일에서 제목, 본문, 발신자, 날짜를 추출합니다.
 
     Args:
