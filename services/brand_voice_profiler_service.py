@@ -381,6 +381,40 @@ def _generate_suggestions(
     return suggestions
 
 
+_EMPTY_PROFILE = {
+    "voice_profile": {
+        "formality": "neutral",
+        "tone": "neutral",
+        "energy": "low",
+    },
+    "metrics": {
+        "formality_score": 50.0,
+        "vocabulary_complexity": 0.0,
+        "sentence_complexity": 0.0,
+        "emotional_intensity": 0.0,
+        "consistency_score": 100.0,
+    },
+    "characteristics": [],
+    "dominant_patterns": [],
+    "suggestions": [],
+}
+
+
+def _compute_all_metrics(sentences: list, words: list, content: str) -> dict:
+    """모든 브랜드 보이스 메트릭을 계산합니다.
+
+    Returns:
+        각 메트릭의 원시값 dict (반올림 전)
+    """
+    return {
+        "formality_score": _calc_formality_score(sentences),
+        "vocabulary_complexity": _calc_vocabulary_complexity(words),
+        "sentence_complexity": _calc_sentence_complexity(sentences, content),
+        "emotional_intensity": _calc_emotional_intensity(sentences, content),
+        "consistency_score": _calc_consistency_score(sentences, content),
+    }
+
+
 def profile_brand_voice(content: Optional[str]) -> dict:
     """콘텐츠의 브랜드 보이스를 분석하여 프로파일을 반환합니다.
 
@@ -388,72 +422,32 @@ def profile_brand_voice(content: Optional[str]) -> dict:
         content: 분석할 텍스트 콘텐츠
 
     Returns:
-        voice_profile, metrics, characteristics, dominant_patterns, suggestions를 포함하는 딕셔너리
+        voice_profile, metrics, characteristics, dominant_patterns, suggestions를 포함하는 dict
     """
-    # 빈/None 입력 처리
     if not content or not content.strip():
-        return {
-            "voice_profile": {
-                "formality": "neutral",
-                "tone": "neutral",
-                "energy": "low",
-            },
-            "metrics": {
-                "formality_score": 50.0,
-                "vocabulary_complexity": 0.0,
-                "sentence_complexity": 0.0,
-                "emotional_intensity": 0.0,
-                "consistency_score": 100.0,
-            },
-            "characteristics": [],
-            "dominant_patterns": [],
-            "suggestions": ["분석할 콘텐츠가 충분하지 않습니다."],
-        }
+        return {**_EMPTY_PROFILE, "suggestions": ["분석할 콘텐츠가 충분하지 않습니다."]}
 
     content = content.strip()
     sentences = _split_sentences(content)
     words = _split_words(content)
 
-    # 메트릭 계산
-    formality_score = _calc_formality_score(sentences)
-    vocabulary_complexity = _calc_vocabulary_complexity(words)
-    sentence_complexity = _calc_sentence_complexity(sentences, content)
-    emotional_intensity = _calc_emotional_intensity(sentences, content)
-    consistency_score = _calc_consistency_score(sentences, content)
-
-    # 프로파일 결정
-    formality = _determine_formality(formality_score)
+    raw = _compute_all_metrics(sentences, words, content)
+    formality = _determine_formality(raw["formality_score"])
     tone = _determine_tone(
-        formality_score, vocabulary_complexity, sentence_complexity, emotional_intensity
+        raw["formality_score"], raw["vocabulary_complexity"],
+        raw["sentence_complexity"], raw["emotional_intensity"]
     )
-    energy = _determine_energy(emotional_intensity, sentences)
+    energy = _determine_energy(raw["emotional_intensity"], sentences)
 
-    metrics = {
-        "formality_score": round(formality_score, 1),
-        "vocabulary_complexity": round(vocabulary_complexity, 1),
-        "sentence_complexity": round(sentence_complexity, 1),
-        "emotional_intensity": round(emotional_intensity, 1),
-        "consistency_score": round(consistency_score, 1),
-    }
-
+    metrics = {k: round(v, 1) for k, v in raw.items()}
     characteristics = _detect_characteristics(
-        formality_score, emotional_intensity, sentences, words, content
-    )
-    dominant_patterns = _detect_dominant_patterns(
-        sentences, words, content, characteristics
-    )
-    suggestions = _generate_suggestions(
-        formality, tone, energy, metrics, characteristics
+        raw["formality_score"], raw["emotional_intensity"], sentences, words, content
     )
 
     return {
-        "voice_profile": {
-            "formality": formality,
-            "tone": tone,
-            "energy": energy,
-        },
+        "voice_profile": {"formality": formality, "tone": tone, "energy": energy},
         "metrics": metrics,
         "characteristics": characteristics,
-        "dominant_patterns": dominant_patterns,
-        "suggestions": suggestions,
+        "dominant_patterns": _detect_dominant_patterns(sentences, words, content, characteristics),
+        "suggestions": _generate_suggestions(formality, tone, energy, metrics, characteristics),
     }

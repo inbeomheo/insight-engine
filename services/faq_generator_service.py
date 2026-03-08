@@ -33,6 +33,36 @@ _STOPWORDS = {
 }
 
 
+_EMPTY_RESULT = {
+    'faqs': [],
+    'topics': [],
+    'schema_json': '',
+    'markdown': '',
+    'suggestions': [],
+}
+
+
+def _build_faqs(topics: list, content: str, max_questions: int) -> list:
+    """토픽 목록에서 FAQ 항목을 생성합니다."""
+    sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content) if len(s.strip()) >= 10]
+    faqs = []
+
+    for topic in topics[:max_questions]:
+        related = [s for s in sentences if topic in s]
+        if not related:
+            related = sentences[:3]
+
+        pattern = _select_pattern(topic, content, related)
+        faqs.append({
+            'question': pattern['template'].format(topic=topic),
+            'answer': _generate_answer(topic, related, content),
+            'type': pattern['type'],
+            'topic': topic,
+        })
+
+    return faqs
+
+
 def generate_faq(content: str, max_questions: int = 5) -> dict:
     """콘텐츠 기반 FAQ를 자동 생성합니다.
 
@@ -41,73 +71,23 @@ def generate_faq(content: str, max_questions: int = 5) -> dict:
         max_questions: 최대 질문 수 (기본 5)
 
     Returns:
-        {
-            "faqs": [{"question": str, "answer": str, "type": str, "topic": str}],
-            "topics": list[str],
-            "schema_json": str,
-            "markdown": str,
-            "suggestions": list[str],
-        }
+        faqs, topics, schema_json, markdown, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'faqs': [],
-            'topics': [],
-            'schema_json': '',
-            'markdown': '',
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 주제 추출
     topics = _extract_topics(content)
-
     if not topics:
-        return {
-            'faqs': [],
-            'topics': [],
-            'schema_json': '',
-            'markdown': '',
-            'suggestions': ['주제를 추출할 수 없습니다. 더 구체적인 콘텐츠가 필요합니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['주제를 추출할 수 없습니다. 더 구체적인 콘텐츠가 필요합니다.']}
 
-    # FAQ 생성
-    faqs = []
-    sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content) if len(s.strip()) >= 10]
-
-    for topic in topics[:max_questions]:
-        # 토픽과 관련된 문장 찾기
-        related = [s for s in sentences if topic in s]
-        if not related:
-            related = sentences[:3]
-
-        # 가장 적합한 질문 패턴 선택
-        pattern = _select_pattern(topic, content, related)
-        question = pattern['template'].format(topic=topic)
-
-        # 답변 생성 (관련 문장 조합)
-        answer = _generate_answer(topic, related, content)
-
-        faqs.append({
-            'question': question,
-            'answer': answer,
-            'type': pattern['type'],
-            'topic': topic,
-        })
-
-    # FAQ 스키마 (SEO용)
-    schema = _build_faq_schema(faqs)
-
-    # 마크다운
-    markdown = _build_faq_markdown(faqs)
-
-    suggestions = _generate_suggestions(faqs, topics)
+    faqs = _build_faqs(topics, content, max_questions)
 
     return {
         'faqs': faqs,
         'topics': topics,
-        'schema_json': schema,
-        'markdown': markdown,
-        'suggestions': suggestions,
+        'schema_json': _build_faq_schema(faqs),
+        'markdown': _build_faq_markdown(faqs),
+        'suggestions': _generate_suggestions(faqs, topics),
     }
 
 

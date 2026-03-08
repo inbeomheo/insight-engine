@@ -82,6 +82,51 @@ def export_to_notion(title: str, content: str, api_key: str, parent_page_id: str
         }
 
 
+def _parse_code_block(lines: list, start: int) -> tuple:
+    """코드 블록을 파싱합니다.
+
+    Returns:
+        (block_dict, next_index)
+    """
+    lang = lines[start].strip()[3:].strip()
+    code_lines = []
+    i = start + 1
+    while i < len(lines) and not lines[i].strip().startswith('```'):
+        code_lines.append(lines[i])
+        i += 1
+    block = {
+        'object': 'block',
+        'type': 'code',
+        'code': {
+            'rich_text': [{'type': 'text', 'text': {'content': '\n'.join(code_lines)}}],
+            'language': lang or 'plain text',
+        },
+    }
+    return block, i + 1
+
+
+def _parse_line_block(stripped: str) -> dict:
+    """단일 라인을 Notion 블록으로 변환합니다."""
+    if stripped.startswith('### '):
+        return _heading_block(stripped[4:], 3)
+    if stripped.startswith('## '):
+        return _heading_block(stripped[3:], 2)
+    if stripped.startswith('# '):
+        return _heading_block(stripped[2:], 1)
+    if stripped.startswith('> '):
+        return {'object': 'block', 'type': 'quote',
+                'quote': {'rich_text': _rich_text(stripped[2:])}}
+    if stripped.startswith(('- ', '* ', '+ ')):
+        return {'object': 'block', 'type': 'bulleted_list_item',
+                'bulleted_list_item': {'rich_text': _rich_text(stripped[2:])}}
+    if re.match(r'^\d+\.\s', stripped):
+        text = re.sub(r'^\d+\.\s', '', stripped)
+        return {'object': 'block', 'type': 'numbered_list_item',
+                'numbered_list_item': {'rich_text': _rich_text(text)}}
+    return {'object': 'block', 'type': 'paragraph',
+            'paragraph': {'rich_text': _rich_text(stripped)}}
+
+
 def _markdown_to_notion_blocks(md: str) -> list[dict]:
     """마크다운 텍스트를 Notion 블록 배열로 변환합니다."""
     blocks = []
@@ -89,73 +134,17 @@ def _markdown_to_notion_blocks(md: str) -> list[dict]:
     i = 0
 
     while i < len(lines):
-        line = lines[i]
-        stripped = line.strip()
-
+        stripped = lines[i].strip()
         if not stripped:
             i += 1
             continue
 
-        # 코드 블록
         if stripped.startswith('```'):
-            lang = stripped[3:].strip()
-            code_lines = []
-            i += 1
-            while i < len(lines) and not lines[i].strip().startswith('```'):
-                code_lines.append(lines[i])
-                i += 1
-            blocks.append({
-                'object': 'block',
-                'type': 'code',
-                'code': {
-                    'rich_text': [{'type': 'text', 'text': {'content': '\n'.join(code_lines)}}],
-                    'language': lang or 'plain text',
-                },
-            })
-            i += 1
+            block, i = _parse_code_block(lines, i)
+            blocks.append(block)
             continue
 
-        # 헤딩
-        if stripped.startswith('### '):
-            blocks.append(_heading_block(stripped[4:], 3))
-        elif stripped.startswith('## '):
-            blocks.append(_heading_block(stripped[3:], 2))
-        elif stripped.startswith('# '):
-            blocks.append(_heading_block(stripped[2:], 1))
-
-        # 인용문
-        elif stripped.startswith('> '):
-            blocks.append({
-                'object': 'block',
-                'type': 'quote',
-                'quote': {'rich_text': _rich_text(stripped[2:])},
-            })
-
-        # 비순서 목록
-        elif stripped.startswith(('- ', '* ', '+ ')):
-            blocks.append({
-                'object': 'block',
-                'type': 'bulleted_list_item',
-                'bulleted_list_item': {'rich_text': _rich_text(stripped[2:])},
-            })
-
-        # 순서 목록
-        elif re.match(r'^\d+\.\s', stripped):
-            text = re.sub(r'^\d+\.\s', '', stripped)
-            blocks.append({
-                'object': 'block',
-                'type': 'numbered_list_item',
-                'numbered_list_item': {'rich_text': _rich_text(text)},
-            })
-
-        # 일반 텍스트
-        else:
-            blocks.append({
-                'object': 'block',
-                'type': 'paragraph',
-                'paragraph': {'rich_text': _rich_text(stripped)},
-            })
-
+        blocks.append(_parse_line_block(stripped))
         i += 1
 
     return blocks
