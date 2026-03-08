@@ -72,28 +72,24 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def analyze_community_evidence(content: str) -> dict:
-    """커뮤니티 근거 포함 여부를 분석합니다.
+_EMPTY_RESULT = {
+    'score': 50.0,
+    'summary': {
+        'sources_found': [], 'sources_missing': list(_COMMUNITY_SOURCES.keys()),
+        'citation_count': 0, 'community_url_count': 0,
+        'coverage_ratio': 0.0, 'level': 'none',
+    },
+    'community_signals': [],
+    'suggestions': [],
+}
+
+
+def _scan_sources(content: str) -> tuple:
+    """커뮤니티 소스 타입별 존재 여부를 스캔합니다.
 
     Returns:
-        score, summary, community_signals, suggestions를 포함하는 dict
+        (sources_found, sources_missing, signals)
     """
-    if not content or not content.strip():
-        return {
-            'score': 50.0,
-            'summary': {
-                'sources_found': [],
-                'sources_missing': list(_COMMUNITY_SOURCES.keys()),
-                'citation_count': 0,
-                'community_url_count': 0,
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'community_signals': [],
-            'suggestions': [],
-        }
-
-    # 소스 타입별 탐지
     sources_found = []
     sources_missing = []
     signals = []
@@ -105,18 +101,15 @@ def analyze_community_evidence(content: str) -> dict:
         else:
             sources_missing.append(src_name)
 
-    # 커뮤니티 인용 패턴
-    citation_count = _count_matches(content, _COMMUNITY_CITATION)
+    return sources_found, sources_missing, signals
 
-    # 커뮤니티 URL
-    url_count = _count_matches(content, _COMMUNITY_URLS)
 
-    # 커버리지 비율
-    total = len(_COMMUNITY_SOURCES)
-    coverage = round(len(sources_found) / max(total, 1) * 100, 1)
+def _compute_evidence_score(total_signals: int, citation_count: int) -> tuple:
+    """커뮤니티 근거 점수와 레벨을 계산합니다.
 
-    # 레벨 판정
-    total_signals = len(sources_found) + citation_count + url_count
+    Returns:
+        (score, level)
+    """
     if total_signals >= 5:
         level = 'rich'
     elif total_signals >= 3:
@@ -126,22 +119,32 @@ def analyze_community_evidence(content: str) -> dict:
     else:
         level = 'none'
 
-    # 연속 점수 — 신호 수 기반
     if total_signals == 0:
         score = 30.0
     else:
         score = min(95.0, 30.0 + total_signals * 13.0)
 
-    # 인용 패턴 보너스
     if citation_count >= 2 and score < 100:
         score = min(100.0, score + 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        sources_found, sources_missing, citation_count,
-        url_count, coverage, level
-    )
+
+def analyze_community_evidence(content: str) -> dict:
+    """커뮤니티 근거 포함 여부를 분석합니다.
+
+    Returns:
+        score, summary, community_signals, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sources_found, sources_missing, signals = _scan_sources(content)
+    citation_count = _count_matches(content, _COMMUNITY_CITATION)
+    url_count = _count_matches(content, _COMMUNITY_URLS)
+    coverage = round(len(sources_found) / max(len(_COMMUNITY_SOURCES), 1) * 100, 1)
+    total_signals = len(sources_found) + citation_count + url_count
+    score, level = _compute_evidence_score(total_signals, citation_count)
 
     return {
         'score': score,
@@ -154,7 +157,10 @@ def analyze_community_evidence(content: str) -> dict:
             'level': level,
         },
         'community_signals': signals,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            sources_found, sources_missing, citation_count,
+            url_count, coverage, level
+        ),
     }
 
 

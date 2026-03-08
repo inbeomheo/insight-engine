@@ -32,56 +32,38 @@ _STUFFING_THRESHOLD = 3.0  # 단일 키워드 3% 이상
 _WARNING_THRESHOLD = 2.0   # 2% 이상 경고
 
 
-def detect_keyword_stuffing(content: str) -> dict:
-    """키워드 과잉 삽입을 감지합니다.
+_EMPTY_RESULT = {
+    'keyword_density': [],
+    'stuffed_keywords': [],
+    'summary': {'total_words': 0, 'unique_keywords': 0,
+                'max_density': 0.0, 'stuffing_detected': False},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-    Returns:
-        keyword_density, stuffed_keywords, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'keyword_density': [],
-            'stuffed_keywords': [],
-            'summary': {'total_words': 0, 'unique_keywords': 0,
-                        'max_density': 0.0, 'stuffing_detected': False},
-            'score': 100.0,
-            'suggestions': [],
-        }
 
-    # 전처리
+def _extract_words(content: str) -> list:
+    """콘텐츠에서 불용어를 제외한 단어를 추출합니다."""
     cleaned = _HEADING_RE.sub('', content)
     cleaned = _MD_LINK_RE.sub(r'\1', cleaned)
     cleaned = _HTML_TAG_RE.sub('', cleaned)
 
-    # 단어 추출
     ko_words = [w for w in _KO_WORD_RE.findall(cleaned) if w not in _STOPWORDS]
     en_words = [w.lower() for w in _EN_WORD_RE.findall(cleaned) if w.lower() not in _STOPWORDS]
-    all_words = ko_words + en_words
+    return ko_words + en_words
 
-    if not all_words:
-        return {
-            'keyword_density': [],
-            'stuffed_keywords': [],
-            'summary': {'total_words': 0, 'unique_keywords': 0,
-                        'max_density': 0.0, 'stuffing_detected': False},
-            'score': 100.0,
-            'suggestions': [],
-        }
 
-    total = len(all_words)
-    counter = Counter(all_words)
+def _analyze_density(counter: Counter, total: int) -> tuple:
+    """밀도 분석 및 과잉 키워드를 감지합니다.
 
-    # 밀도 계산 (상위 20개)
-    keyword_density = []
-    for word, count in counter.most_common(20):
-        density = round(count / total * 100, 2)
-        keyword_density.append({
-            'keyword': word,
-            'count': count,
-            'density': density,
-        })
+    Returns:
+        (keyword_density, stuffed, warned)
+    """
+    keyword_density = [
+        {'keyword': word, 'count': count, 'density': round(count / total * 100, 2)}
+        for word, count in counter.most_common(20)
+    ]
 
-    # 과잉 키워드 감지 (최소 50단어 이상에서만 판정)
     stuffed = []
     warned = []
     if total >= 50:
@@ -91,18 +73,32 @@ def detect_keyword_stuffing(content: str) -> dict:
             elif kd['density'] >= _WARNING_THRESHOLD:
                 warned.append(kd)
 
-    max_density = keyword_density[0]['density'] if keyword_density else 0.0
-    stuffing_detected = len(stuffed) > 0
+    return keyword_density, stuffed, warned
 
-    # 점수 계산
+
+def detect_keyword_stuffing(content: str) -> dict:
+    """키워드 과잉 삽입을 감지합니다.
+
+    Returns:
+        keyword_density, stuffed_keywords, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    all_words = _extract_words(content)
+    if not all_words:
+        return dict(_EMPTY_RESULT)
+
+    total = len(all_words)
+    counter = Counter(all_words)
+    keyword_density, stuffed, warned = _analyze_density(counter, total)
+
+    max_density = keyword_density[0]['density'] if keyword_density else 0.0
     score = 100.0
     for s in stuffed:
         score -= (s['density'] - _STUFFING_THRESHOLD) * 10 + 10
     for w in warned:
         score -= 5.0
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(stuffed, warned, max_density)
 
     return {
         'keyword_density': keyword_density,
@@ -111,10 +107,10 @@ def detect_keyword_stuffing(content: str) -> dict:
             'total_words': total,
             'unique_keywords': len(counter),
             'max_density': max_density,
-            'stuffing_detected': stuffing_detected,
+            'stuffing_detected': len(stuffed) > 0,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': round(max(0.0, min(100.0, score)), 1),
+        'suggestions': _generate_suggestions(stuffed, warned, max_density),
     }
 
 

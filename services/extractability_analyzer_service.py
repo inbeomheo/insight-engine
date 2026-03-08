@@ -54,42 +54,23 @@ def _is_extractable(sentence: str) -> bool:
     return len(sentence) >= 30 and not _is_context_dependent(sentence)
 
 
-def analyze_extractability(content: str) -> dict:
-    """콘텐츠의 문맥 독립 추출 가능성을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 0.0,
+    'summary': {
+        'total_sentences': 0, 'extractable_count': 0,
+        'dependent_count': 0, 'extractable_ratio': 0.0, 'level': 'none',
+    },
+    'flagged_spans': [],
+    'suggestions': [],
+}
+
+
+def _classify_sentences(sentences: list) -> tuple:
+    """문장을 추출 가능/문맥 의존으로 분류합니다.
 
     Returns:
-        score, summary, flagged_spans, suggestions를 포함하는 dict
+        (extractable, dependent)
     """
-    if not content or not content.strip():
-        return {
-            'score': 0.0,
-            'summary': {
-                'total_sentences': 0,
-                'extractable_count': 0,
-                'dependent_count': 0,
-                'extractable_ratio': 0.0,
-                'level': 'none',
-            },
-            'flagged_spans': [],
-            'suggestions': [],
-        }
-
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 10]
-
-    if not sentences:
-        return {
-            'score': 50.0,
-            'summary': {
-                'total_sentences': 0,
-                'extractable_count': 0,
-                'dependent_count': 0,
-                'extractable_ratio': 0.0,
-                'level': 'none',
-            },
-            'flagged_spans': [],
-            'suggestions': [],
-        }
-
     extractable = []
     dependent = []
 
@@ -99,11 +80,15 @@ def analyze_extractability(content: str) -> dict:
         elif _is_extractable(s):
             extractable.append(s[:60])
 
-    total = len(sentences)
-    ext_ratio = round(len(extractable) / max(total, 1) * 100, 1)
-    dep_ratio = round(len(dependent) / max(total, 1) * 100, 1)
+    return extractable, dependent
 
-    # 레벨 판정
+
+def _compute_extractability_score(ext_ratio: float, dep_ratio: float) -> tuple:
+    """추출 가능성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if ext_ratio >= 60:
         level = 'excellent'
     elif ext_ratio >= 40:
@@ -113,18 +98,31 @@ def analyze_extractability(content: str) -> dict:
     else:
         level = 'poor'
 
-    # 점수 계산
     score = min(100.0, ext_ratio * 1.5)
-    # 문맥 의존 비율 감점
     if dep_ratio > 30:
         score -= (dep_ratio - 30) * 0.5
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        total, len(extractable), len(dependent),
-        ext_ratio, dep_ratio, level, dependent[:3]
-    )
+
+def analyze_extractability(content: str) -> dict:
+    """콘텐츠의 문맥 독립 추출 가능성을 분석합니다.
+
+    Returns:
+        score, summary, flagged_spans, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 10]
+    if not sentences:
+        return {**_EMPTY_RESULT, 'score': 50.0}
+
+    extractable, dependent = _classify_sentences(sentences)
+    total = len(sentences)
+    ext_ratio = round(len(extractable) / max(total, 1) * 100, 1)
+    dep_ratio = round(len(dependent) / max(total, 1) * 100, 1)
+    score, level = _compute_extractability_score(ext_ratio, dep_ratio)
 
     return {
         'score': score,
@@ -136,7 +134,10 @@ def analyze_extractability(content: str) -> dict:
             'level': level,
         },
         'flagged_spans': dependent[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            total, len(extractable), len(dependent),
+            ext_ratio, dep_ratio, level, dependent[:3]
+        ),
     }
 
 
