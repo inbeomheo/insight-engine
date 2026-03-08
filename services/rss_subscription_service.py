@@ -164,7 +164,7 @@ def check_new_entries(subscription: Dict) -> List[Dict]:
     return new_entries
 
 
-def update_last_checked(user_id: str, feed_id: str, last_entry_url: Optional[str] = None):
+def update_last_checked(user_id: str, feed_id: str, last_entry_url: Optional[str] = None) -> None:
     """구독의 마지막 확인 시간을 업데이트합니다."""
     with _lock:
         data = _load_all()

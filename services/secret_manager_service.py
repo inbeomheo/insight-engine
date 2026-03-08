@@ -115,7 +115,7 @@ def get_secret(secret_name: str, env_fallback: str = '') -> str:
     return value or ''
 
 
-def clear_cache():
+def clear_cache() -> None:
     """시크릿 캐시 초기화 (테스트/갱신 시 사용)"""
     _SECRET_CACHE.clear()
 

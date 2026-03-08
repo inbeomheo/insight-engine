@@ -23,7 +23,7 @@ class RetentionService:
         self._last_active: dict[str, str] = {}
         self._notifications: list[dict] = []
 
-    def record_activity(self, user_id: str):
+    def record_activity(self, user_id: str) -> None:
         """사용자 활동 기록"""
         self._last_active[user_id] = datetime.now(timezone.utc).isoformat()
 

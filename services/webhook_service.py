@@ -55,7 +55,7 @@ class WebhookService:
         else:
             self.enabled = enabled
 
-    def send(self, event: str, data: dict):
+    def send(self, event: str, data: dict) -> None:
         """웹훅 비동기 전송 (fire-and-forget)"""
         if not self.enabled or not self.url:
             return
