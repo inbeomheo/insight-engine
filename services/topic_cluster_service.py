@@ -212,6 +212,157 @@ def _extract_topic_keywords(text: str) -> Counter:
     return Counter({word: freq for word, freq in counts.items() if freq >= 2})
 
 
+def _extract_all_keywords(
+    contents: list,
+) -> tuple:
+    """콘텐츠 목록에서 키워드를 추출하고 토픽-콘텐츠 매핑을 생성합니다.
+
+    Returns:
+        (content_keywords, topic_to_contents, pillar_candidates)
+    """
+    content_keywords: Dict[str, Counter] = {}
+    topic_to_contents: Dict[str, Dict[str, int]] = defaultdict(dict)
+
+    for item in contents:
+        cid = item.get("id", "")
+        title = item.get("title", "")
+        body = item.get("content", "")
+
+        title_kw = _extract_topic_keywords(title + " " + title)
+        body_kw = _extract_topic_keywords(body)
+        content_keywords[cid] = body_kw + title_kw
+
+    for cid, kw_counter in content_keywords.items():
+        for keyword, freq in kw_counter.items():
+            topic_to_contents[keyword][cid] = freq
+
+    pillar_candidates = []
+    for topic, cid_freq_map in topic_to_contents.items():
+        if len(cid_freq_map) >= 2:
+            pillar_candidates.append((topic, len(cid_freq_map), sum(cid_freq_map.values())))
+    pillar_candidates.sort(key=lambda x: (x[1], x[2]), reverse=True)
+
+    return content_keywords, topic_to_contents, pillar_candidates
+
+
+def _build_clusters_greedy(
+    contents: list,
+    content_keywords: Dict[str, Counter],
+    topic_to_contents: Dict[str, Dict[str, int]],
+    pillar_candidates: list,
+) -> tuple:
+    """그리디 방식으로 pillar-supporting 클러스터를 구성합니다.
+
+    Returns:
+        (clusters, clustered_content_ids)
+    """
+    clustered_content_ids: set = set()
+    clusters = []
+
+    for pillar_topic, _, _ in pillar_candidates:
+        cid_freq_map = topic_to_contents[pillar_topic]
+        available_cids = {cid: freq for cid, freq in cid_freq_map.items()
+                         if cid not in clustered_content_ids}
+        if len(available_cids) < 2:
+            continue
+
+        pillar_content_id = max(available_cids, key=available_cids.get)
+        pillar_kws = set(content_keywords.get(pillar_content_id, {}).keys())
+
+        supporting = []
+        for cid, freq in available_cids.items():
+            if cid == pillar_content_id:
+                continue
+            support_kws = set(content_keywords.get(cid, {}).keys())
+            shared_kws = sorted(pillar_kws & support_kws)
+            total_support_kws = len(support_kws) if support_kws else 1
+            relevance = min(round(len(shared_kws) / total_support_kws, 2), 1.0)
+
+            title = ""
+            for item in contents:
+                if item.get("id") == cid:
+                    title = item.get("title", "")
+                    break
+
+            supporting.append({
+                "id": cid, "title": title,
+                "relevance": relevance, "shared_keywords": shared_kws,
+            })
+
+        # cluster_strength 계산
+        all_shared_kws: set = set()
+        for s in supporting:
+            all_shared_kws.update(s["shared_keywords"])
+        kw_score = min(len(all_shared_kws) * 10, 50)
+        support_score = min(len(supporting) * 10, 30)
+
+        title_bonus = 0
+        for item in contents:
+            if item.get("id") == pillar_content_id:
+                if pillar_topic in item.get("title", ""):
+                    title_bonus = 20
+                break
+
+        cluster_strength = max(min(kw_score + support_score + title_bonus, 100), 0)
+
+        clusters.append({
+            "pillar_topic": pillar_topic,
+            "pillar_content_id": pillar_content_id,
+            "supporting_contents": supporting,
+            "cluster_strength": float(cluster_strength),
+        })
+        clustered_content_ids.add(pillar_content_id)
+        for s in supporting:
+            clustered_content_ids.add(s["id"])
+
+    return clusters, clustered_content_ids
+
+
+def _generate_cluster_suggestions(
+    clusters: list,
+    unclustered: list,
+    coverage: float,
+    total_count: int,
+) -> list:
+    """클러스터 분석 결과에 대한 개선 제안을 생성합니다."""
+    suggestions = []
+
+    if unclustered:
+        suggestions.append(
+            f"{len(unclustered)}개 콘텐츠가 클러스터에 속하지 않습니다. "
+            f"관련 주제의 콘텐츠를 추가하면 클러스터 커버리지가 개선됩니다."
+        )
+    for cluster in clusters:
+        if len(cluster["supporting_contents"]) < 2:
+            suggestions.append(
+                f"'{cluster['pillar_topic']}' 클러스터의 서포팅 콘텐츠가 부족합니다. "
+                f"관련 콘텐츠를 추가하세요."
+            )
+    weak_clusters = [c for c in clusters if c["cluster_strength"] < 30]
+    if weak_clusters:
+        topics = ", ".join(c["pillar_topic"] for c in weak_clusters)
+        suggestions.append(
+            f"결합도가 낮은 클러스터가 있습니다 ({topics}). "
+            f"공유 키워드를 늘려 내부 링크를 강화하세요."
+        )
+    if coverage < 50 and total_count >= 3:
+        suggestions.append(
+            f"전체 커버리지가 {coverage}%로 낮습니다. "
+            f"공통 주제를 중심으로 콘텐츠 전략을 재구성하세요."
+        )
+    if not suggestions:
+        suggestions.append("토픽 클러스터가 잘 구성되어 있습니다.")
+
+    return suggestions
+
+
+_EMPTY_CLUSTER_RESULT = {
+    "clusters": [],
+    "unclustered": [],
+    "summary": {"total_clusters": 0, "avg_cluster_size": 0.0, "coverage": 0.0},
+}
+
+
 def map_topic_clusters(contents: list) -> dict:
     """여러 콘텐츠를 분석하여 pillar-supporting 구조의 토픽 클러스터 맵을 생성합니다.
 
@@ -226,192 +377,31 @@ def map_topic_clusters(contents: list) -> dict:
             "suggestions": [...]
         }
     """
-    # --- 엣지 케이스: 빈 입력 또는 단일 콘텐츠 ---
     if not contents:
-        return {
-            "clusters": [],
-            "unclustered": [],
-            "summary": {"total_clusters": 0, "avg_cluster_size": 0.0, "coverage": 0.0},
-            "suggestions": ["콘텐츠를 추가하여 토픽 클러스터 분석을 시작하세요."],
-        }
+        return {**_EMPTY_CLUSTER_RESULT, "suggestions": ["콘텐츠를 추가하여 토픽 클러스터 분석을 시작하세요."]}
 
     total_count = len(contents)
-
     if total_count == 1:
         return {
-            "clusters": [],
+            **_EMPTY_CLUSTER_RESULT,
             "unclustered": [contents[0].get("id", "0")],
-            "summary": {"total_clusters": 0, "avg_cluster_size": 0.0, "coverage": 0.0},
             "suggestions": ["최소 2개 이상의 콘텐츠가 있어야 클러스터를 형성할 수 있습니다."],
         }
 
-    # --- 1단계: 콘텐츠별 키워드 추출 ---
-    # content_keywords[content_id] = Counter({keyword: freq})
-    content_keywords: Dict[str, Counter] = {}
-    # title_keywords[content_id] = set(제목에서 추출한 키워드)
-    title_keywords: Dict[str, set] = {}
+    content_keywords, topic_to_contents, pillar_candidates = _extract_all_keywords(contents)
+    clusters, clustered_ids = _build_clusters_greedy(
+        contents, content_keywords, topic_to_contents, pillar_candidates,
+    )
 
-    for item in contents:
-        cid = item.get("id", "")
-        title = item.get("title", "")
-        body = item.get("content", "")
-
-        # 제목 키워드 (가중치 부여를 위해 별도 추출)
-        title_kw = _extract_topic_keywords(title + " " + title)  # 제목을 2번 반복해 가중치 효과
-        body_kw = _extract_topic_keywords(body)
-
-        # 합산 (제목 키워드는 이미 2배 카운트됨)
-        combined = body_kw + title_kw
-        content_keywords[cid] = combined
-
-        # 제목에서 나온 키워드 집합 (1회 이상이면 포함)
-        raw_title_kw = _extract_topic_keywords(title + " " + title)
-        title_keywords[cid] = set(raw_title_kw.keys())
-
-    # --- 2단계: 토픽별 콘텐츠 매핑 ---
-    # topic_to_contents[keyword] = {content_id: freq}
-    topic_to_contents: Dict[str, Dict[str, int]] = defaultdict(dict)
-
-    for cid, kw_counter in content_keywords.items():
-        for keyword, freq in kw_counter.items():
-            topic_to_contents[keyword][cid] = freq
-
-    # --- 3단계: 필러 토픽 결정 ---
-    # 최소 2개 콘텐츠에서 공유되는 토픽만 필러 후보
-    pillar_candidates = []
-    for topic, cid_freq_map in topic_to_contents.items():
-        if len(cid_freq_map) >= 2:
-            pillar_candidates.append((topic, len(cid_freq_map), sum(cid_freq_map.values())))
-
-    # 공유 콘텐츠 수 내림차순, 동률 시 총 빈도 내림차순 정렬
-    pillar_candidates.sort(key=lambda x: (x[1], x[2]), reverse=True)
-
-    # --- 4단계: 클러스터 구성 (그리디) ---
-    clustered_content_ids: set = set()
-    clusters = []
-
-    for pillar_topic, shared_count, _ in pillar_candidates:
-        cid_freq_map = topic_to_contents[pillar_topic]
-
-        # 이미 클러스터에 할당된 콘텐츠를 제외한 후보
-        available_cids = {cid: freq for cid, freq in cid_freq_map.items()
-                         if cid not in clustered_content_ids}
-
-        # 최소 2개 콘텐츠가 남아야 클러스터 형성
-        if len(available_cids) < 2:
-            continue
-
-        # 필러 콘텐츠: 해당 토픽을 가장 많이 다루는(빈도 최다) 콘텐츠
-        pillar_content_id = max(available_cids, key=available_cids.get)
-
-        # 서포팅 콘텐츠: 필러 제외한 나머지
-        supporting = []
-        for cid, freq in available_cids.items():
-            if cid == pillar_content_id:
-                continue
-
-            # 공유 키워드 계산: 필러 콘텐츠와 서포팅 콘텐츠 간 공통 키워드
-            pillar_kws = set(content_keywords.get(pillar_content_id, {}).keys())
-            support_kws = set(content_keywords.get(cid, {}).keys())
-            shared_kws = sorted(pillar_kws & support_kws)
-
-            # relevance: 공유 키워드 비율 (서포팅 콘텐츠 키워드 대비)
-            total_support_kws = len(support_kws) if support_kws else 1
-            relevance = round(len(shared_kws) / total_support_kws, 2)
-            relevance = min(relevance, 1.0)
-
-            # 콘텐츠 제목 찾기
-            title = ""
-            for item in contents:
-                if item.get("id") == cid:
-                    title = item.get("title", "")
-                    break
-
-            supporting.append({
-                "id": cid,
-                "title": title,
-                "relevance": relevance,
-                "shared_keywords": shared_kws,
-            })
-
-        # --- cluster_strength 계산 ---
-        # 공유 키워드 수 × 10 (최대 50)
-        # 모든 서포팅 콘텐츠와 필러 간 공유 키워드의 합집합 크기
-        all_shared_kws = set()
-        for s in supporting:
-            all_shared_kws.update(s["shared_keywords"])
-        kw_score = min(len(all_shared_kws) * 10, 50)
-
-        # supporting 콘텐츠 수 × 10 (최대 30)
-        support_score = min(len(supporting) * 10, 30)
-
-        # 제목에 필러 토픽 포함 시 +20
-        title_bonus = 0
-        for item in contents:
-            if item.get("id") == pillar_content_id:
-                if pillar_topic in item.get("title", ""):
-                    title_bonus = 20
-                break
-
-        cluster_strength = min(kw_score + support_score + title_bonus, 100)
-        cluster_strength = max(cluster_strength, 0)
-
-        # 클러스터 등록
-        clusters.append({
-            "pillar_topic": pillar_topic,
-            "pillar_content_id": pillar_content_id,
-            "supporting_contents": supporting,
-            "cluster_strength": float(cluster_strength),
-        })
-
-        # 할당 완료 표시
-        clustered_content_ids.add(pillar_content_id)
-        for s in supporting:
-            clustered_content_ids.add(s["id"])
-
-    # --- 5단계: unclustered 콘텐츠 ---
     all_ids = [item.get("id", "") for item in contents]
-    unclustered = [cid for cid in all_ids if cid not in clustered_content_ids]
+    unclustered = [cid for cid in all_ids if cid not in clustered_ids]
 
-    # --- 6단계: 요약 ---
     total_clusters = len(clusters)
-    cluster_sizes = [1 + len(c["supporting_contents"]) for c in clusters]  # 필러 + 서포팅
+    cluster_sizes = [1 + len(c["supporting_contents"]) for c in clusters]
     avg_cluster_size = round(sum(cluster_sizes) / total_clusters, 2) if total_clusters > 0 else 0.0
-    clustered_count = len(clustered_content_ids)
-    coverage = round((clustered_count / total_count) * 100, 2) if total_count > 0 else 0.0
+    coverage = round((len(clustered_ids) / total_count) * 100, 2) if total_count > 0 else 0.0
 
-    # --- 7단계: 제안 생성 ---
-    suggestions = []
-
-    if unclustered:
-        suggestions.append(
-            f"{len(unclustered)}개 콘텐츠가 클러스터에 속하지 않습니다. "
-            f"관련 주제의 콘텐츠를 추가하면 클러스터 커버리지가 개선됩니다."
-        )
-
-    for cluster in clusters:
-        if len(cluster["supporting_contents"]) < 2:
-            suggestions.append(
-                f"'{cluster['pillar_topic']}' 클러스터의 서포팅 콘텐츠가 부족합니다. "
-                f"관련 콘텐츠를 추가하세요."
-            )
-
-    weak_clusters = [c for c in clusters if c["cluster_strength"] < 30]
-    if weak_clusters:
-        topics = ", ".join(c["pillar_topic"] for c in weak_clusters)
-        suggestions.append(
-            f"결합도가 낮은 클러스터가 있습니다 ({topics}). "
-            f"공유 키워드를 늘려 내부 링크를 강화하세요."
-        )
-
-    if coverage < 50 and total_count >= 3:
-        suggestions.append(
-            f"전체 커버리지가 {coverage}%로 낮습니다. "
-            f"공통 주제를 중심으로 콘텐츠 전략을 재구성하세요."
-        )
-
-    if not suggestions:
-        suggestions.append("토픽 클러스터가 잘 구성되어 있습니다.")
+    suggestions = _generate_cluster_suggestions(clusters, unclustered, coverage, total_count)
 
     return {
         "clusters": clusters,

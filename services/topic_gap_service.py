@@ -206,6 +206,96 @@ def _generate_general_questions(topics: Counter) -> List[str]:
     return questions
 
 
+def _analyze_self_only(
+    content: str,
+    my_topics: Counter,
+    my_topic_set: set,
+) -> Dict[str, Any]:
+    """reference 없이 자체 구조 분석 결과를 반환합니다."""
+    structural_gaps = _detect_structural_gaps(content)
+    coverage = _calculate_structural_score(content)
+    missing_questions = _generate_general_questions(my_topics)
+
+    suggestions = []
+    if coverage < 60:
+        suggestions.append('콘텐츠 구조를 보강해보세요 (헤딩, 예시, 정의, 결론).')
+    if len(my_topics) < 5:
+        suggestions.append('다루는 주제가 적습니다. 관련 하위 주제를 추가해보세요.')
+    if not missing_questions:
+        suggestions.append('독자 관점의 질문과 답변을 포함하면 도움이 됩니다.')
+
+    return {
+        'gaps': structural_gaps,
+        'coverage_score': round(coverage, 1),
+        'my_unique_topics': sorted(my_topic_set),
+        'common_topics': [],
+        'missing_questions': missing_questions[:5],
+        'suggestions': suggestions if suggestions else ['구조적으로 잘 작성된 콘텐츠입니다.'],
+    }
+
+
+def _build_gap_list(
+    missing_topics: set,
+    ref_topic_counter: Counter,
+    ref_topics_by_source: Dict[str, set],
+) -> list:
+    """누락 토픽에서 갭 목록을 생성하고 중요도순으로 정렬합니다."""
+    gaps = []
+    for topic in missing_topics:
+        source_count = ref_topic_counter[topic]
+        found_in = [
+            title for title, topics in ref_topics_by_source.items()
+            if topic in topics
+        ]
+        importance = 'high' if source_count >= 2 else 'medium'
+        gaps.append({
+            'topic': topic, 'importance': importance,
+            'found_in': found_in,
+            'suggestion': f"'{topic}' 주제를 추가하면 콘텐츠 커버리지가 향상됩니다.",
+        })
+    importance_order = {'high': 0, 'medium': 1, 'low': 2}
+    gaps.sort(key=lambda g: (importance_order.get(g['importance'], 3), g['topic']))
+    return gaps
+
+
+def _find_missing_questions(
+    ref_questions: List[str],
+    my_topic_set: set,
+) -> List[str]:
+    """참고 콘텐츠 질문 중 내 콘텐츠에서 답하지 않은 질문을 찾습니다."""
+    missing = []
+    for q in ref_questions:
+        q_words = set(re.findall(r'[가-힣]{2,}|[a-zA-Z]{3,}', q.lower()))
+        q_words -= _STOPWORDS
+        if q_words and not q_words.issubset(my_topic_set):
+            missing.append(q)
+    return list(dict.fromkeys(missing))[:10]
+
+
+def _generate_gap_suggestions(
+    gaps: list,
+    missing_topics: set,
+    common_topics: set,
+    unique_topics: set,
+    coverage: float,
+) -> list:
+    """갭 분석 결과에 대한 개선 제안을 생성합니다."""
+    suggestions = []
+    high_gaps = [g for g in gaps if g['importance'] == 'high']
+    if high_gaps:
+        topics_str = ', '.join(g['topic'] for g in high_gaps[:3])
+        suggestions.append(f"우선적으로 다음 주제를 보강하세요: {topics_str}")
+    if len(missing_topics) > len(common_topics):
+        suggestions.append('참고 콘텐츠 대비 다루지 않은 주제가 많습니다. 콘텐츠 범위를 넓혀보세요.')
+    if unique_topics:
+        suggestions.append(f'차별화된 주제({len(unique_topics)}개)가 있어 독자에게 고유한 가치를 제공합니다.')
+    if coverage < 50:
+        suggestions.append('주제 커버리지가 50% 미만입니다. 핵심 토픽을 보강해보세요.')
+    if not suggestions:
+        suggestions.append('전반적으로 주제 커버리지가 양호합니다.')
+    return suggestions
+
+
 def analyze_topic_gaps(
     content: str,
     reference_contents: Optional[List[Dict[str, str]]] = None,
@@ -226,47 +316,22 @@ def analyze_topic_gaps(
             "suggestions": list,      # 보강 제안
         }
     """
-    # 빈 콘텐츠 처리
     if not content or not content.strip():
         return {
-            'gaps': [],
-            'coverage_score': 0.0,
-            'my_unique_topics': [],
-            'common_topics': [],
-            'missing_questions': [],
+            'gaps': [], 'coverage_score': 0.0, 'my_unique_topics': [],
+            'common_topics': [], 'missing_questions': [],
             'suggestions': ['분석할 콘텐츠가 없습니다. 콘텐츠를 입력해주세요.'],
         }
 
     my_topics = _extract_topics(content)
     my_topic_set = set(my_topics.keys())
 
-    # reference가 없는 경우: 자체 구조 분석
     if not reference_contents:
-        structural_gaps = _detect_structural_gaps(content)
-        coverage = _calculate_structural_score(content)
-        missing_questions = _generate_general_questions(my_topics)
+        return _analyze_self_only(content, my_topics, my_topic_set)
 
-        suggestions = []
-        if coverage < 60:
-            suggestions.append('콘텐츠 구조를 보강해보세요 (헤딩, 예시, 정의, 결론).')
-        if len(my_topics) < 5:
-            suggestions.append('다루는 주제가 적습니다. 관련 하위 주제를 추가해보세요.')
-        if not missing_questions:
-            suggestions.append('독자 관점의 질문과 답변을 포함하면 도움이 됩니다.')
-
-        return {
-            'gaps': structural_gaps,
-            'coverage_score': round(coverage, 1),
-            'my_unique_topics': sorted(my_topic_set),
-            'common_topics': [],
-            'missing_questions': missing_questions[:5],
-            'suggestions': suggestions if suggestions else ['구조적으로 잘 작성된 콘텐츠입니다.'],
-        }
-
-    # reference가 있는 경우: 비교 분석
     # 참고 콘텐츠별 토픽 추출
-    ref_topics_by_source: Dict[str, set] = {}  # title -> set of topics
-    ref_topic_counter = Counter()  # 전체 참고 콘텐츠 토픽 출현 횟수 (소스 수 기준)
+    ref_topics_by_source: Dict[str, set] = {}
+    ref_topic_counter = Counter()
     ref_questions: List[str] = []
 
     for ref in reference_contents:
@@ -274,81 +339,22 @@ def analyze_topic_gaps(
         ref_text = ref.get('content', '')
         if not ref_text:
             continue
-
         topics = _extract_topics(ref_text)
         topic_set = set(topics.keys())
         ref_topics_by_source[title] = topic_set
-
-        # 소스별 토픽 카운트 (몇 개 소스에서 등장했는지)
         for topic in topic_set:
             ref_topic_counter[topic] += 1
-
-        # 질문 추출
         ref_questions.extend(_extract_questions(ref_text))
 
     all_ref_topics = set(ref_topic_counter.keys())
-
-    # 갭: reference에 있지만 내 콘텐츠에 없는 토픽
     missing_topics = all_ref_topics - my_topic_set
     common_topics = my_topic_set & all_ref_topics
     unique_topics = my_topic_set - all_ref_topics
 
-    # 갭 목록 생성 (importance 결정)
-    gaps = []
-    for topic in missing_topics:
-        source_count = ref_topic_counter[topic]
-        found_in = [
-            title for title, topics in ref_topics_by_source.items()
-            if topic in topics
-        ]
-
-        if source_count >= 2:
-            importance = 'high'
-        else:
-            importance = 'medium'
-
-        gaps.append({
-            'topic': topic,
-            'importance': importance,
-            'found_in': found_in,
-            'suggestion': f"'{topic}' 주제를 추가하면 콘텐츠 커버리지가 향상됩니다.",
-        })
-
-    # importance 순서대로 정렬 (high > medium > low)
-    importance_order = {'high': 0, 'medium': 1, 'low': 2}
-    gaps.sort(key=lambda g: (importance_order.get(g['importance'], 3), g['topic']))
-
-    # coverage_score 계산: (공통 토픽 / 전체 reference 토픽) × 100
-    if all_ref_topics:
-        coverage = (len(common_topics) / len(all_ref_topics)) * 100
-    else:
-        coverage = 100.0  # 참고 토픽이 없으면 100
-
-    # missing_questions: 참고에서 추출한 질문 중 내 콘텐츠에 답이 없는 것
-    missing_questions = []
-    for q in ref_questions:
-        # 질문의 핵심 단어가 내 콘텐츠에 있는지 확인
-        q_words = set(re.findall(r'[가-힣]{2,}|[a-zA-Z]{3,}', q.lower()))
-        q_words -= _STOPWORDS
-        if q_words and not q_words.issubset(my_topic_set):
-            missing_questions.append(q)
-
-    missing_questions = list(dict.fromkeys(missing_questions))[:10]  # 중복 제거, 최대 10개
-
-    # 제안 생성
-    suggestions = []
-    high_gaps = [g for g in gaps if g['importance'] == 'high']
-    if high_gaps:
-        topics_str = ', '.join(g['topic'] for g in high_gaps[:3])
-        suggestions.append(f"우선적으로 다음 주제를 보강하세요: {topics_str}")
-    if len(missing_topics) > len(common_topics):
-        suggestions.append('참고 콘텐츠 대비 다루지 않은 주제가 많습니다. 콘텐츠 범위를 넓혀보세요.')
-    if unique_topics:
-        suggestions.append(f'차별화된 주제({len(unique_topics)}개)가 있어 독자에게 고유한 가치를 제공합니다.')
-    if coverage < 50:
-        suggestions.append('주제 커버리지가 50% 미만입니다. 핵심 토픽을 보강해보세요.')
-    if not suggestions:
-        suggestions.append('전반적으로 주제 커버리지가 양호합니다.')
+    gaps = _build_gap_list(missing_topics, ref_topic_counter, ref_topics_by_source)
+    coverage = (len(common_topics) / len(all_ref_topics)) * 100 if all_ref_topics else 100.0
+    missing_questions = _find_missing_questions(ref_questions, my_topic_set)
+    suggestions = _generate_gap_suggestions(gaps, missing_topics, common_topics, unique_topics, coverage)
 
     return {
         'gaps': gaps,
