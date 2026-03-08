@@ -18,6 +18,15 @@ _NGRAM_SIZE = 5
 _DUPLICATE_THRESHOLD = 2
 
 
+_EMPTY_RESULT = {
+    'score': 0,
+    'duplicate_ratio': 0.0,
+    'repeated_phrases': [],
+    'similar_sentences': [],
+    'verdict': 'clean',
+}
+
+
 def check_plagiarism(content: str) -> dict:
     """콘텐츠의 내부 중복/반복을 분석합니다.
 
@@ -34,57 +43,47 @@ def check_plagiarism(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return _empty_result()
+        return dict(_EMPTY_RESULT)
 
-    # 마크다운 제거
     plain = _strip_markdown(content)
     sentences = _split_sentences(plain)
-
     if len(sentences) < 2:
-        return _empty_result()
+        return dict(_EMPTY_RESULT)
 
-    # 1) n-gram 반복 분석
     repeated_phrases = _find_repeated_ngrams(plain)
-
-    # 2) 문장 간 유사도 분석
     similar_pairs = _find_similar_sentences(sentences)
-
-    # 3) 중복 점수 계산
-    ngram_score = min(len(repeated_phrases) * 10, 50)
-    similarity_score = min(len(similar_pairs) * 15, 50)
-    score = min(ngram_score + similarity_score, 100)
-
-    # 판정
-    if score < 20:
-        verdict = 'clean'
-    elif score < 50:
-        verdict = 'minor'
-    else:
-        verdict = 'significant'
-
-    total_words = len(plain.split())
-    repeated_word_count = sum(
-        len(p['phrase'].split()) * (p['count'] - 1) for p in repeated_phrases
-    )
-    duplicate_ratio = round(repeated_word_count / total_words, 3) if total_words > 0 else 0.0
+    score, verdict = _compute_score_and_verdict(repeated_phrases, similar_pairs)
 
     return {
         'score': score,
-        'duplicate_ratio': duplicate_ratio,
+        'duplicate_ratio': _compute_duplicate_ratio(plain, repeated_phrases),
         'repeated_phrases': repeated_phrases[:10],
         'similar_sentences': similar_pairs[:5],
         'verdict': verdict,
     }
 
 
-def _empty_result() -> dict:
-    return {
-        'score': 0,
-        'duplicate_ratio': 0.0,
-        'repeated_phrases': [],
-        'similar_sentences': [],
-        'verdict': 'clean',
-    }
+def _compute_score_and_verdict(repeated_phrases: list, similar_pairs: list) -> tuple:
+    """n-gram 반복과 유사 문장 수로 점수와 판정을 계산합니다."""
+    score = min(min(len(repeated_phrases) * 10, 50) + min(len(similar_pairs) * 15, 50), 100)
+    if score < 20:
+        verdict = 'clean'
+    elif score < 50:
+        verdict = 'minor'
+    else:
+        verdict = 'significant'
+    return score, verdict
+
+
+def _compute_duplicate_ratio(plain: str, repeated_phrases: list) -> float:
+    """반복 구문의 단어 비율을 계산합니다."""
+    total_words = len(plain.split())
+    if total_words == 0:
+        return 0.0
+    repeated_word_count = sum(
+        len(p['phrase'].split()) * (p['count'] - 1) for p in repeated_phrases
+    )
+    return round(repeated_word_count / total_words, 3)
 
 
 def _strip_markdown(text: str) -> str:

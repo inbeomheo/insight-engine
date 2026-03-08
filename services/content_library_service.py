@@ -120,17 +120,37 @@ def search_items(
     with _lock:
         items = [i for i in _items.values() if not i.get('is_deleted')]
 
-    # 필터 적용
-    if workspace_id:
-        items = [i for i in items if i.get('workspace_id') == workspace_id]
-    if user_id:
-        items = [i for i in items if i.get('user_id') == user_id]
-    if folder_id:
-        items = [i for i in items if i.get('folder_id') == folder_id]
-    if style:
-        items = [i for i in items if i.get('style') == style]
-    if status:
-        items = [i for i in items if i.get('status') == status]
+    items = _apply_filters(
+        items, query=query, style=style, tags=tags, status=status,
+        workspace_id=workspace_id, user_id=user_id, folder_id=folder_id,
+        is_pinned=is_pinned, is_archived=is_archived,
+    )
+    items.sort(key=lambda i: i.get(sort_by, ''), reverse=sort_desc)
+
+    total = len(items)
+    start = (page - 1) * per_page
+    return {
+        'items': items[start:start + per_page],
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': max(1, -(-total // per_page)),
+    }
+
+
+def _apply_filters(
+    items: list[dict], *, query: str, style: str, tags: list[str] | None,
+    status: str, workspace_id: str, user_id: str, folder_id: str,
+    is_pinned: Optional[bool], is_archived: Optional[bool],
+) -> list[dict]:
+    """필터 조건들을 순차 적용합니다."""
+    field_filters = [
+        ('workspace_id', workspace_id), ('user_id', user_id),
+        ('folder_id', folder_id), ('style', style), ('status', status),
+    ]
+    for field, val in field_filters:
+        if val:
+            items = [i for i in items if i.get(field) == val]
     if is_pinned is not None:
         items = [i for i in items if i.get('is_pinned') == is_pinned]
     if is_archived is not None:
@@ -139,26 +159,8 @@ def search_items(
         items = [i for i in items if all(t in i.get('tags', []) for t in tags)]
     if query:
         q = query.lower()
-        items = [
-            i for i in items
-            if q in i.get('title', '').lower() or q in i.get('content', '').lower()
-        ]
-
-    # 정렬
-    reverse = sort_desc
-    items.sort(key=lambda i: i.get(sort_by, ''), reverse=reverse)
-
-    # 페이지네이션
-    total = len(items)
-    start = (page - 1) * per_page
-    end = start + per_page
-    return {
-        'items': items[start:end],
-        'total': total,
-        'page': page,
-        'per_page': per_page,
-        'pages': max(1, -(-total // per_page)),
-    }
+        items = [i for i in items if q in i.get('title', '').lower() or q in i.get('content', '').lower()]
+    return items
 
 
 def increment_view(item_id: str) -> None:

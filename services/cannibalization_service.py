@@ -23,6 +23,13 @@ _STOPWORDS = {
 _MIN_KEYWORD_LEN = 2
 
 
+_EMPTY_DETECT_RESULT = {
+    'conflicts': [],
+    'total_conflicts': 0,
+    'summary': '카니발리제이션 분석에는 최소 2개 콘텐츠가 필요합니다.',
+}
+
+
 def detect_cannibalization(contents: List[dict]) -> dict:
     """여러 콘텐츠 간의 키워드 카니발리제이션을 감지합니다.
 
@@ -44,42 +51,48 @@ def detect_cannibalization(contents: List[dict]) -> dict:
         }
     """
     if not contents or len(contents) < 2:
-        return {
-            'conflicts': [],
-            'total_conflicts': 0,
-            'summary': '카니발리제이션 분석에는 최소 2개 콘텐츠가 필요합니다.',
-        }
+        return dict(_EMPTY_DETECT_RESULT)
 
-    # 각 콘텐츠의 키워드 추출
-    content_keywords = {}
-    for item in contents:
-        cid = item.get('id', '')
-        text = f"{item.get('title', '')} {item.get('content', '')}"
-        keywords = _extract_keywords(text)
-        content_keywords[cid] = {
-            'title': item.get('title', ''),
-            'keywords': keywords,
-        }
-
-    # 키워드 겹침 감지
+    content_keywords = _build_content_keywords(contents)
     conflicts = _find_conflicts(content_keywords)
-
-    # 심각도 정렬
     conflicts.sort(key=lambda c: {'high': 0, 'medium': 1, 'low': 2}[c['severity']])
 
     total = len(conflicts)
-    if total == 0:
-        summary = '카니발리제이션이 감지되지 않았습니다.'
-    elif total <= 3:
-        summary = f'{total}개 키워드에서 경미한 카니발리제이션이 감지되었습니다.'
-    else:
-        summary = f'{total}개 키워드에서 카니발리제이션이 감지되었습니다. 콘텐츠 차별화가 필요합니다.'
-
     return {
         'conflicts': conflicts,
         'total_conflicts': total,
-        'summary': summary,
+        'summary': _build_summary(total),
     }
+
+
+def _build_content_keywords(contents: List[dict]) -> dict:
+    """각 콘텐츠에서 키워드를 추출하여 ID별 매핑을 반환합니다."""
+    result = {}
+    for item in contents:
+        cid = item.get('id', '')
+        text = f"{item.get('title', '')} {item.get('content', '')}"
+        result[cid] = {
+            'title': item.get('title', ''),
+            'keywords': _extract_keywords(text),
+        }
+    return result
+
+
+def _build_summary(total: int) -> str:
+    """충돌 수에 따른 요약 문장을 반환합니다."""
+    if total == 0:
+        return '카니발리제이션이 감지되지 않았습니다.'
+    if total <= 3:
+        return f'{total}개 키워드에서 경미한 카니발리제이션이 감지되었습니다.'
+    return f'{total}개 키워드에서 카니발리제이션이 감지되었습니다. 콘텐츠 차별화가 필요합니다.'
+
+
+_EMPTY_PAIR_RESULT = {
+    'similarity_score': 0.0,
+    'shared_keywords': [],
+    'is_cannibalized': False,
+    'suggestion': '비교할 콘텐츠가 부족합니다.',
+}
 
 
 def check_pair(content_a: str, content_b: str, title_a: str = '', title_b: str = '') -> dict:
@@ -100,44 +113,34 @@ def check_pair(content_a: str, content_b: str, title_a: str = '', title_b: str =
         }
     """
     if not content_a or not content_b:
-        return {
-            'similarity_score': 0.0,
-            'shared_keywords': [],
-            'is_cannibalized': False,
-            'suggestion': '비교할 콘텐츠가 부족합니다.',
-        }
+        return dict(_EMPTY_PAIR_RESULT)
 
     kw_a = _extract_keywords(f"{title_a} {content_a}")
     kw_b = _extract_keywords(f"{title_b} {content_b}")
 
-    set_a = set(kw_a.keys())
-    set_b = set(kw_b.keys())
-
+    set_a, set_b = set(kw_a.keys()), set(kw_b.keys())
     shared = set_a & set_b
     union = set_a | set_b
 
-    similarity = len(shared) / len(union) if union else 0.0
-    similarity = round(similarity, 3)
-
-    # 상위 공유 키워드
+    similarity = round(len(shared) / len(union), 3) if union else 0.0
     shared_sorted = sorted(shared, key=lambda k: kw_a.get(k, 0) + kw_b.get(k, 0), reverse=True)
-
     is_cannibalized = similarity > 0.3 and len(shared) >= 3
-
-    if is_cannibalized:
-        if similarity > 0.6:
-            suggestion = '유사도가 매우 높습니다. 두 콘텐츠를 하나로 병합하는 것을 권장합니다.'
-        else:
-            suggestion = '키워드 겹침이 있습니다. 각 콘텐츠의 타겟 키워드를 차별화하세요.'
-    else:
-        suggestion = '카니발리제이션 위험이 낮습니다.'
 
     return {
         'similarity_score': similarity,
         'shared_keywords': shared_sorted[:10],
         'is_cannibalized': is_cannibalized,
-        'suggestion': suggestion,
+        'suggestion': _pair_suggestion(similarity, is_cannibalized),
     }
+
+
+def _pair_suggestion(similarity: float, is_cannibalized: bool) -> str:
+    """유사도와 카니발리제이션 여부에 따른 제안을 반환합니다."""
+    if not is_cannibalized:
+        return '카니발리제이션 위험이 낮습니다.'
+    if similarity > 0.6:
+        return '유사도가 매우 높습니다. 두 콘텐츠를 하나로 병합하는 것을 권장합니다.'
+    return '키워드 겹침이 있습니다. 각 콘텐츠의 타겟 키워드를 차별화하세요.'
 
 
 def _extract_keywords(text: str, top_n: int = 30) -> dict:
