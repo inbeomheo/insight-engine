@@ -59,42 +59,38 @@ def _count_matches(content: str, patterns: list) -> int:
     return sum(len(p.findall(content)) for p in patterns)
 
 
-def analyze_audience_fit_framing(content: str) -> dict:
-    """대상 독자/상황/비적합 명시를 분석합니다.
+_EMPTY_RESULT = {
+    'score': 50.0,
+    'summary': {'has_audience': False, 'has_context': False, 'has_not_for': False,
+                'audience_early': False, 'framing_signals': 0, 'level': 'none'},
+    'audience_matches': [],
+    'suggestions': [],
+}
+
+
+def _detect_framing_signals(content: str) -> tuple:
+    """대상/상황/비적합 신호를 탐지합니다.
 
     Returns:
-        score, summary, suggestions를 포함하는 dict
+        (audience_matches, has_audience, audience_early, has_context, has_not_for)
     """
-    if not content or not content.strip():
-        return {
-            'score': 50.0,
-            'summary': {
-                'has_audience': False,
-                'has_context': False,
-                'has_not_for': False,
-                'audience_early': False,
-                'framing_signals': 0,
-                'level': 'none',
-            },
-            'audience_matches': [],
-            'suggestions': [],
-        }
-
-    # 대상 독자
     audience_matches = _find_early_matches(content, _AUDIENCE_PATTERNS)
     has_audience = len(audience_matches) > 0
     audience_early = any(m['is_early'] for m in audience_matches)
-
-    # 상황/맥락
     has_context = _has_pattern(content, _CONTEXT_PATTERNS)
-
-    # 비적합 대상
     has_not_for = _has_pattern(content, _NOT_FOR_PATTERNS)
+    return audience_matches, has_audience, audience_early, has_context, has_not_for
 
-    # 신호 수
+
+def _compute_framing_score(has_audience: bool, has_context: bool,
+                            has_not_for: bool, audience_early: bool) -> tuple:
+    """프레이밍 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     signals = sum([has_audience, has_context, has_not_for])
 
-    # 레벨 판정
     if signals >= 3:
         level = 'comprehensive'
     elif signals >= 2:
@@ -104,8 +100,6 @@ def analyze_audience_fit_framing(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 연속 점수 계산 — 각 신호에 가중치 부여
-    # audience: 30점, context: 25점, not_for: 20점, 기본: 25점
     score = 25.0
     if has_audience:
         score += 30.0
@@ -113,30 +107,36 @@ def analyze_audience_fit_framing(content: str) -> dict:
         score += 25.0
     if has_not_for:
         score += 20.0
-
-    # 초반 배치 보너스 (대상 독자가 상위 30%에 위치)
     if audience_early:
         score = min(100.0, score + 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        has_audience, has_context, has_not_for,
-        audience_early, level
-    )
+
+def analyze_audience_fit_framing(content: str) -> dict:
+    """대상 독자/상황/비적합 명시를 분석합니다.
+
+    Returns:
+        score, summary, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    audience_matches, has_audience, audience_early, has_context, has_not_for = \
+        _detect_framing_signals(content)
+    score, level = _compute_framing_score(has_audience, has_context, has_not_for, audience_early)
 
     return {
         'score': score,
         'summary': {
-            'has_audience': has_audience,
-            'has_context': has_context,
-            'has_not_for': has_not_for,
-            'audience_early': audience_early,
-            'framing_signals': signals,
+            'has_audience': has_audience, 'has_context': has_context,
+            'has_not_for': has_not_for, 'audience_early': audience_early,
+            'framing_signals': sum([has_audience, has_context, has_not_for]),
             'level': level,
         },
         'audience_matches': [m['text'] for m in audience_matches[:5]],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(has_audience, has_context, has_not_for,
+                                              audience_early, level),
     }
 
 

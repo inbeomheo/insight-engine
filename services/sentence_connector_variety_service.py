@@ -68,34 +68,22 @@ def _find_connector(sentence: str) -> tuple:
     return None, None
 
 
-def analyze_connector_variety(content: str) -> dict:
-    """연결어 다양성을 분석합니다.
+_EMPTY_RESULT = {
+    'connectors': [],
+    'category_distribution': {},
+    'summary': {'total_sentences': 0, 'connector_count': 0,
+                'unique_connectors': 0, 'variety_rate': 0.0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_connectors(sentences: list) -> tuple:
+    """문장에서 연결어를 추출합니다.
 
     Returns:
-        connectors, category_distribution, summary, score, suggestions를 포함하는 dict
+        (found_connectors, connector_counts, category_counts)
     """
-    if not content or not content.strip():
-        return {
-            'connectors': [],
-            'category_distribution': {},
-            'summary': {'total_sentences': 0, 'connector_count': 0,
-                        'unique_connectors': 0, 'variety_rate': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'connectors': [],
-            'category_distribution': {},
-            'summary': {'total_sentences': 0, 'connector_count': 0,
-                        'unique_connectors': 0, 'variety_rate': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 연결어 추출
     found_connectors = []
     connector_counts = Counter()
     category_counts = Counter()
@@ -104,48 +92,46 @@ def analyze_connector_variety(content: str) -> dict:
         word, cat = _find_connector(sent)
         if word:
             found_connectors.append({
-                'word': word,
-                'category': cat,
+                'word': word, 'category': cat,
                 'sentence': sent if len(sent) <= 60 else sent[:57] + '...',
             })
             connector_counts[word] += 1
             category_counts[cat] += 1
 
+    return found_connectors, connector_counts, category_counts
+
+
+def analyze_connector_variety(content: str) -> dict:
+    """연결어 다양성을 분석합니다.
+
+    Returns:
+        connectors, category_distribution, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    found_connectors, connector_counts, category_counts = _scan_connectors(sentences)
     total_connectors = len(found_connectors)
     unique_connectors = len(connector_counts)
-
-    # 다양성 비율
     variety_rate = round(
         (unique_connectors / total_connectors * 100) if total_connectors > 0 else 0.0, 1
     )
-
-    # 카테고리 분포
     cat_dist = dict(category_counts)
-
-    # 점수 계산
-    score = _calculate_score(
-        total_connectors, unique_connectors, variety_rate,
-        len(sentences), connector_counts
-    )
-
-    # 반복 연결어 찾기
     repeated = {w: c for w, c in connector_counts.items() if c >= 3}
-
-    suggestions = _generate_suggestions(
-        total_connectors, len(sentences), variety_rate, repeated, cat_dist
-    )
 
     return {
         'connectors': found_connectors,
         'category_distribution': cat_dist,
-        'summary': {
-            'total_sentences': len(sentences),
-            'connector_count': total_connectors,
-            'unique_connectors': unique_connectors,
-            'variety_rate': variety_rate,
-        },
-        'score': score,
-        'suggestions': suggestions,
+        'summary': {'total_sentences': len(sentences), 'connector_count': total_connectors,
+                     'unique_connectors': unique_connectors, 'variety_rate': variety_rate},
+        'score': _calculate_score(total_connectors, unique_connectors, variety_rate,
+                                   len(sentences), connector_counts),
+        'suggestions': _generate_suggestions(total_connectors, len(sentences),
+                                              variety_rate, repeated, cat_dist),
     }
 
 

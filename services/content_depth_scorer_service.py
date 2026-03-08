@@ -58,6 +58,52 @@ def _count_patterns(content: str, patterns: list) -> int:
     return count
 
 
+_EMPTY_RESULT = {
+    'depth_indicators': {},
+    'summary': {'total_indicators': 0, 'depth_level': 'empty',
+                'word_count': 0, 'indicator_density': 0.0},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _measure_depth_indicators(content: str) -> dict:
+    """콘텐츠에서 심도 지표를 측정합니다."""
+    return {
+        'examples': _count_patterns(content, _EXAMPLE_PATTERNS),
+        'evidence': _count_patterns(content, _EVIDENCE_PATTERNS),
+        'comparisons': _count_patterns(content, _COMPARISON_PATTERNS),
+        'causal_reasoning': _count_patterns(content, _CAUSAL_PATTERNS),
+        'definitions': _count_patterns(content, _DEFINITION_PATTERNS),
+        'code_blocks': len(_CODE_PATTERN.findall(content)) // 2,
+        'inline_code': len(_INLINE_CODE.findall(content)),
+    }
+
+
+def _compute_depth_score(indicators: dict, word_count: int) -> tuple:
+    """심도 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, depth_level, density)
+    """
+    total_indicators = sum(indicators.values())
+    density = round((total_indicators / word_count * 100) if word_count > 0 else 0.0, 2)
+
+    active = sum(1 for v in indicators.values() if v > 0)
+    score = round(max(0.0, min(100.0, min(60.0, density * 15.0) + (active / 7) * 40.0)), 1)
+
+    if score >= 80:
+        level = 'deep'
+    elif score >= 50:
+        level = 'moderate'
+    elif score >= 20:
+        level = 'shallow'
+    else:
+        level = 'surface'
+
+    return score, level, density
+
+
 def score_content_depth(content: str) -> dict:
     """콘텐츠 심도를 측정합니다.
 
@@ -65,77 +111,20 @@ def score_content_depth(content: str) -> dict:
         depth_indicators, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'depth_indicators': {},
-            'summary': {'total_indicators': 0, 'depth_level': 'empty',
-                        'word_count': 0, 'indicator_density': 0.0},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 지표 카운트
-    examples = _count_patterns(content, _EXAMPLE_PATTERNS)
-    evidence = _count_patterns(content, _EVIDENCE_PATTERNS)
-    comparisons = _count_patterns(content, _COMPARISON_PATTERNS)
-    causal = _count_patterns(content, _CAUSAL_PATTERNS)
-    definitions = _count_patterns(content, _DEFINITION_PATTERNS)
-    code_blocks = len(_CODE_PATTERN.findall(content)) // 2  # 열기+닫기
-    inline_codes = len(_INLINE_CODE.findall(content))
-
-    depth_indicators = {
-        'examples': examples,
-        'evidence': evidence,
-        'comparisons': comparisons,
-        'causal_reasoning': causal,
-        'definitions': definitions,
-        'code_blocks': code_blocks,
-        'inline_code': inline_codes,
-    }
-
-    total_indicators = sum(depth_indicators.values())
-
-    # 단어 수
-    en_words = len(re.findall(r'[A-Za-z]+', content))
-    ko_words = len(re.findall(r'[가-힣]+', content))
-    word_count = en_words + ko_words
-
-    density = round((total_indicators / word_count * 100) if word_count > 0 else 0.0, 2)
-
-    # 다양성 점수: 0이 아닌 지표 카테고리 수
-    active_categories = sum(1 for v in depth_indicators.values() if v > 0)
-    total_categories = 7  # 전체 카테고리 수
-
-    # 점수 계산: 밀도 + 다양성 조합
-    # 밀도 점수 (최대 60점)
-    density_score = min(60.0, density * 15.0)
-    # 다양성 점수 (최대 40점)
-    diversity_score = (active_categories / total_categories) * 40.0
-    score = round(max(0.0, min(100.0, density_score + diversity_score)), 1)
-
-    # 심도 레벨
-    if score >= 80:
-        depth_level = 'deep'
-    elif score >= 50:
-        depth_level = 'moderate'
-    elif score >= 20:
-        depth_level = 'shallow'
-    else:
-        depth_level = 'surface'
-
-    suggestions = _generate_suggestions(
-        depth_indicators, depth_level, active_categories, density
-    )
+    indicators = _measure_depth_indicators(content)
+    word_count = len(re.findall(r'[A-Za-z]+', content)) + len(re.findall(r'[가-힣]+', content))
+    score, depth_level, density = _compute_depth_score(indicators, word_count)
 
     return {
-        'depth_indicators': depth_indicators,
-        'summary': {
-            'total_indicators': total_indicators,
-            'depth_level': depth_level,
-            'word_count': word_count,
-            'indicator_density': density,
-        },
+        'depth_indicators': indicators,
+        'summary': {'total_indicators': sum(indicators.values()), 'depth_level': depth_level,
+                     'word_count': word_count, 'indicator_density': density},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            indicators, depth_level, sum(1 for v in indicators.values() if v > 0), density
+        ),
     }
 
 
