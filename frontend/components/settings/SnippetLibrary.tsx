@@ -60,6 +60,7 @@ export const SnippetLibrary = memo(function SnippetLibrary() {
           <div className="flex gap-1.5 flex-wrap">
             {CATEGORIES.map((c) => (
               <button key={c.id} onClick={() => setForm((f) => ({ ...f, category: c.id }))}
+                aria-label={`${c.label} 카테고리 선택`}
                 className={`px-2 py-0.5 rounded text-xs border ${form.category === c.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' : 'border-zinc-200 dark:border-zinc-700'}`}>
                 {c.label}
               </button>
@@ -74,9 +75,9 @@ export const SnippetLibrary = memo(function SnippetLibrary() {
       )}
 
       <div className="flex gap-1.5 flex-wrap">
-        <button onClick={() => setFilter(null)} className={`px-2 py-0.5 rounded text-xs border ${!filter ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-zinc-200 dark:border-zinc-700'}`}>전체</button>
+        <button onClick={() => setFilter(null)} aria-label="전체 카테고리 필터" className={`px-2 py-0.5 rounded text-xs border ${!filter ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-zinc-200 dark:border-zinc-700'}`}>전체</button>
         {CATEGORIES.map((c) => (
-          <button key={c.id} onClick={() => setFilter(c.id)} className={`px-2 py-0.5 rounded text-xs border ${filter === c.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-zinc-200 dark:border-zinc-700'}`}>
+          <button key={c.id} onClick={() => setFilter(c.id)} aria-label={`${c.label} 카테고리 필터`} className={`px-2 py-0.5 rounded text-xs border ${filter === c.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-zinc-200 dark:border-zinc-700'}`}>
             {c.label}
           </button>
         ))}

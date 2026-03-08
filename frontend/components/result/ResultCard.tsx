@@ -82,6 +82,8 @@ const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string
 
 const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [collapsed, setCollapsed] = useState(false);
+  // 한번이라도 펼쳤으면 DOM 유지 (display:none으로만 숨김 → 토글 즉시 반응)
+  const [hasExpanded, setHasExpanded] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -430,7 +432,11 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? '카드 펼치기' : '카드 접기'}
+              onClick={() => {
+                if (collapsed) setHasExpanded(true);
+                setCollapsed(!collapsed);
+              }}
             >
               {collapsed ? (
                 <ChevronDown className="h-4 w-4" />
@@ -473,9 +479,9 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
         ) : null}
       </div>
 
-      {/* 본문 */}
-      {!collapsed && (
-        <CardContent className="px-6 pb-5 pt-4 border-t border-border/50">
+      {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
+      {hasExpanded && (
+      <CardContent className="px-6 pb-5 pt-4 border-t border-border/50" style={{ display: collapsed ? 'none' : undefined }}>
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
           {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
@@ -595,6 +601,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <button
                   type="button"
                   onClick={() => setEventOpen(false)}
+                  aria-label="이벤트 패널 닫기"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   닫기
@@ -629,7 +636,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
           {/* 더보기 메뉴 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -761,6 +768,7 @@ function NlpAnalysisSection({ analysis }: { analysis: NlpAnalysis }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label="NLP 분석 펼치기/접기"
         className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
       >
         <span className="flex items-center gap-2">

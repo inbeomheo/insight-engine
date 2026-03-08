@@ -49,6 +49,7 @@ export default function FusionSections({ sections, fusionMeta }: FusionSectionsP
         <div className="rounded-lg border border-[var(--border-primary)]">
           <button
             onClick={() => setFaqOpen(!faqOpen)}
+            aria-label="FAQ 섹션 펼치기/접기"
             className="flex w-full items-center justify-between p-3 text-sm font-medium"
           >
             <span>자주 묻는 질문 (FAQ)</span>
@@ -66,6 +67,7 @@ export default function FusionSections({ sections, fusionMeta }: FusionSectionsP
         <div className="rounded-lg border border-[var(--border-primary)]">
           <button
             onClick={() => setSourcesOpen(!sourcesOpen)}
+            aria-label="참고 소스 펼치기/접기"
             className="flex w-full items-center justify-between p-3 text-sm font-medium"
           >
             <span>참고 소스 ({sections.sources_used.length}개)</span>
