@@ -7,7 +7,7 @@ Topic Sentence Alignment Analyzer 서비스
 """
 import re
 from typing import List, Dict
-from collections import Counter
+
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 _WORD_SPLIT = re.compile(r'[가-힣]{2,}|[a-zA-Z]{3,}', re.IGNORECASE)

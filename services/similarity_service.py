@@ -8,7 +8,7 @@ import math
 import re
 import logging
 from collections import Counter
-from typing import Dict, List
+from typing import List
 
 logger = logging.getLogger(__name__)
 
