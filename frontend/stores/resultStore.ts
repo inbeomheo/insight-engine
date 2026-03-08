@@ -3,15 +3,19 @@ import { toast } from 'sonner';
 import type { Report } from '@/lib/types';
 import { loadReports, saveReports } from '@/lib/storage';
 
-// localStorage 저장을 디바운스 — 빠른 연속 호출 시 마지막 1회만 실제 write
+// localStorage 저장을 디바운스 + idle 시점 실행 — 메인 스레드 블로킹 방지
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 function debouncedSave(reports: Report[]): boolean {
   if (saveTimer) clearTimeout(saveTimer);
-  let result = true;
   saveTimer = setTimeout(() => {
-    result = saveReports(reports);
-  }, 300);
-  return result;
+    // idle 시점에 JSON.stringify 수행 (메인 스레드 블로킹 방지)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => saveReports(reports), { timeout: 2000 });
+    } else {
+      saveReports(reports);
+    }
+  }, 500);
+  return true;
 }
 
 interface ResultState {
@@ -85,9 +89,16 @@ export const useResultStore = create<ResultState>((set, get) => ({
   },
 
   updateReport: (id, partial) => {
-    const next = get().reports.map((r) =>
-      r.id === id ? { ...r, ...partial } : r
-    );
+    const reports = get().reports;
+    const idx = reports.findIndex((r) => r.id === id);
+    if (idx === -1) return;
+    // 동일 참조 방지: 실제 변경이 있을 때만 업데이트
+    const target = reports[idx];
+    const keys = Object.keys(partial) as (keyof Report)[];
+    const hasChange = keys.some((k) => target[k] !== partial[k]);
+    if (!hasChange) return;
+    const next = [...reports];
+    next[idx] = { ...target, ...partial };
     debouncedSave(next);
     set({ reports: next });
   },

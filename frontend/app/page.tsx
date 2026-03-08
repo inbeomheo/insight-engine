@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
 import { Sparkles, Youtube, Layers, Combine, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -82,17 +82,38 @@ export default function Home() {
     setScheduleTarget(report);
   }, []);
 
+  // onExpandToFull — 안정 참조 (인라인 화살표 함수 방지 → memo 유지)
+  const handleExpandToFull = useCallback(() => handleViewModeChange('full'), [handleViewModeChange]);
+
   // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
   const filtered = useMemo(() => {
+    const lowerQuery = searchQuery?.toLowerCase();
     return reports.filter((r) => {
-      const matchStyle = !styleFilter || r.style === styleFilter;
-      const matchSearch =
-        !searchQuery ||
-        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.content.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchStyle && matchSearch;
+      if (styleFilter && r.style !== styleFilter) return false;
+      if (!lowerQuery) return true;
+      return (
+        r.title.toLowerCase().includes(lowerQuery) ||
+        r.content.toLowerCase().includes(lowerQuery)
+      );
     });
   }, [reports, searchQuery, styleFilter]);
+
+  // 카드 목록 점진적 렌더링 — 첫 렌더 시 5개만, 나머지는 idle 시점에 추가
+  const INITIAL_RENDER_COUNT = 5;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
+  const deferredFiltered = useDeferredValue(filtered);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_RENDER_COUNT);
+  }, [searchQuery, styleFilter]);
+
+  useEffect(() => {
+    if (visibleCount >= deferredFiltered.length) return;
+    const id = requestIdleCallback(() => {
+      setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
+    }, { timeout: 200 });
+    return () => cancelIdleCallback(id);
+  }, [visibleCount, deferredFiltered.length]);
 
   // 도움말 패널 + 가이드 투어
   const [helpOpen, setHelpOpen] = useState(false);
@@ -160,21 +181,21 @@ export default function Home() {
   async function handleGenerate() {
     if (urls.length === 0) return;
     const ok = await generateBatchUrls([...urls]);
-    if (ok) clearUrls();
+    if (ok) startTransition(() => clearUrls());
   }
 
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
   async function handleGenerateMerged() {
     if (urls.length < 2) return;
     const ok = await generateMergedUrls([...urls]);
-    if (ok) clearUrls();
+    if (ok) startTransition(() => clearUrls());
   }
 
   // 퓨전 분석 (2~5개 URL → 교차분석 + 웹리서치)
   async function handleGenerateFusion() {
     if (urls.length < 2) return;
     const ok = await generateFusionUrls([...urls]);
-    if (ok) clearUrls();
+    if (ok) startTransition(() => clearUrls());
   }
 
   return (
@@ -344,7 +365,7 @@ export default function Home() {
                 )}
                 {isLoading && <LoadingSkeleton />}
 
-                {filtered.map((r) => (
+                {deferredFiltered.slice(0, visibleCount).map((r) => (
                   <div
                     key={r.id}
                     data-report-id={r.id}
@@ -359,10 +380,17 @@ export default function Home() {
                       mcpPlugins={mcpPlugins}
                       onSchedule={handleScheduleOpen}
                       viewMode={viewMode}
-                      onExpandToFull={() => handleViewModeChange('full')}
+                      onExpandToFull={handleExpandToFull}
                     />
                   </div>
                 ))}
+                {visibleCount < deferredFiltered.length && (
+                  <div className="text-center py-4">
+                    <p className="text-xs text-muted-foreground">
+                      {deferredFiltered.length - visibleCount}개 카드 로딩 중...
+                    </p>
+                  </div>
+                )}
 
                 {/* 빈 상태 */}
                 {!isLoading && reports.length === 0 && (

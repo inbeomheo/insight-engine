@@ -26,6 +26,11 @@ import type {
   CampaignPack,
   CampaignResult,
   ProviderValidateResponse,
+  FactCheckResponse,
+  SeoOptimizeResponse,
+  PlagiarismResponse,
+  ReadabilityResponse,
+  SentimentFlowResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
 

@@ -7,6 +7,9 @@
 
 // ── 타입 정의 ─────────────────────────────────────────────────────────────────
 
+// WebGPU 글로벌 타입 (런타임 브라우저 API — @webgpu/types 대체)
+type GPUAdapter = { requestAdapterInfo(): Promise<{ vendor: string; device: string; architecture: string; description: string }> };
+
 export type WebGPUStatus = 'unsupported' | 'available' | 'loading' | 'ready' | 'error';
 
 export interface InferenceOptions {
