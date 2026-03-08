@@ -20,39 +20,23 @@ def _split_paragraphs(content: str) -> List[str]:
     return [p.strip() for p in paragraphs if p.strip() and len(p.strip()) >= 10]
 
 
-def analyze_avg_paragraph_length(content: str) -> dict:
-    """단락 평균 길이를 분석합니다.
+_EMPTY_RESULT = {
+    'paragraph_data': [],
+    'summary': {
+        'total_paragraphs': 0, 'avg_words': 0.0,
+        'avg_sentences': 0.0, 'level': 'none',
+    },
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _classify_paragraphs(paragraphs: List[str]) -> tuple:
+    """단락별 단어/문장 수를 분류합니다.
 
     Returns:
-        paragraph_data, summary, score, suggestions를 포함하는 dict
+        (paragraph_data, long_paras, short_paras, total_words, total_sentences)
     """
-    if not content or not content.strip():
-        return {
-            'paragraph_data': [],
-            'summary': {
-                'total_paragraphs': 0,
-                'avg_words': 0.0,
-                'avg_sentences': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    paragraphs = _split_paragraphs(content)
-    if not paragraphs:
-        return {
-            'paragraph_data': [],
-            'summary': {
-                'total_paragraphs': 0,
-                'avg_words': 0.0,
-                'avg_sentences': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': [],
-        }
-
     paragraph_data = []
     total_words = 0
     total_sentences = 0
@@ -61,8 +45,7 @@ def analyze_avg_paragraph_length(content: str) -> dict:
 
     for p in paragraphs:
         words = len(p.split())
-        sentences = len([s for s in _SENTENCE_SPLIT.split(p) if s.strip()])
-        sentences = max(sentences, 1)
+        sentences = max(len([s for s in _SENTENCE_SPLIT.split(p) if s.strip()]), 1)
         total_words += words
         total_sentences += sentences
 
@@ -77,16 +60,19 @@ def analyze_avg_paragraph_length(content: str) -> dict:
 
         paragraph_data.append({
             'preview': p[:50] + '...' if len(p) > 50 else p,
-            'word_count': words,
-            'sentence_count': sentences,
-            'category': category,
+            'word_count': words, 'sentence_count': sentences, 'category': category,
         })
 
-    total = len(paragraphs)
-    avg_words = round(total_words / total, 1)
-    avg_sentences = round(total_sentences / total, 1)
+    return paragraph_data, long_paras, short_paras, total_words, total_sentences
 
-    # 레벨
+
+def _compute_paragraph_score(avg_words: float, paragraph_data: list,
+                              long_paras: int, short_paras: int, total: int) -> tuple:
+    """평균 단어 수 기반으로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if 50 <= avg_words <= 150:
         level = 'optimal'
     elif 30 <= avg_words < 50 or 150 < avg_words <= 200:
@@ -96,44 +82,55 @@ def analyze_avg_paragraph_length(content: str) -> dict:
     else:
         level = 'too_long'
 
-    # 연속 점수 — 최적 범위(100단어)로부터의 편차 기반
-    optimal_center = 100.0  # 최적 단락 길이 중심
-    deviation = abs(avg_words - optimal_center)
+    deviation = abs(avg_words - 100.0)
     if 50 <= avg_words <= 150:
-        score = 100.0 - (deviation * 0.2)  # 범위 내에서도 미세 차등
+        score = 100.0 - (deviation * 0.2)
     else:
         score = max(20.0, 100.0 - (deviation * 0.5))
 
-    # 균일성 보정 — 단락 길이 표준편차 기반
     if total >= 2:
         word_counts = [pd['word_count'] for pd in paragraph_data]
         mean_wc = sum(word_counts) / len(word_counts)
         if mean_wc > 0:
             variance = sum((w - mean_wc) ** 2 for w in word_counts) / len(word_counts)
-            cv = (variance ** 0.5) / mean_wc  # 변동계수
-            score -= min(15.0, cv * 15.0)  # 최대 15점 감점
+            cv = (variance ** 0.5) / mean_wc
+            score -= min(15.0, cv * 15.0)
 
-    # 극단적 단락 페널티
     if long_paras > total * 0.3:
         score -= 10.0
     if short_paras > total * 0.5:
         score -= 10.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        avg_words, avg_sentences, level, long_paras, short_paras, total
-    )
+
+def analyze_avg_paragraph_length(content: str) -> dict:
+    """단락 평균 길이를 분석합니다.
+
+    Returns:
+        paragraph_data, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    paragraphs = _split_paragraphs(content)
+    if not paragraphs:
+        return dict(_EMPTY_RESULT)
+
+    paragraph_data, long_paras, short_paras, total_words, total_sentences = _classify_paragraphs(paragraphs)
+    total = len(paragraphs)
+    avg_words = round(total_words / total, 1)
+    avg_sentences = round(total_sentences / total, 1)
+
+    score, level = _compute_paragraph_score(avg_words, paragraph_data, long_paras, short_paras, total)
+    suggestions = _generate_suggestions(avg_words, avg_sentences, level, long_paras, short_paras, total)
 
     return {
         'paragraph_data': paragraph_data[:20],
         'summary': {
-            'total_paragraphs': total,
-            'avg_words': avg_words,
-            'avg_sentences': avg_sentences,
-            'long_paragraphs': long_paras,
-            'short_paragraphs': short_paras,
-            'level': level,
+            'total_paragraphs': total, 'avg_words': avg_words,
+            'avg_sentences': avg_sentences, 'long_paragraphs': long_paras,
+            'short_paragraphs': short_paras, 'level': level,
         },
         'score': score,
         'suggestions': suggestions,

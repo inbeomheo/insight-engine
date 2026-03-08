@@ -18,101 +18,48 @@ _PARAGRAPH_SPLIT = re.compile(r'\n\s*\n')
 _BLOCKQUOTE_RE = re.compile(r'^\s*>\s+.+$', re.MULTILINE)
 
 
-def score_content_scanability(content: str) -> dict:
-    """콘텐츠의 스캔 가독성을 평가합니다.
-
-    Returns:
-        elements, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'elements': {},
-            'summary': {
-                'total_elements': 0,
-                'scanability_score': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    word_count = len(content.split())
-    if word_count < 10:
-        return {
-            'elements': {
-                'headings': 0, 'bold_texts': 0, 'list_items': 0,
-                'code_blocks': 0, 'images': 0, 'tables': 0,
-                'blockquotes': 0, 'short_paragraphs': 0, 'total_paragraphs': 0,
-            },
-            'summary': {
-                'total_elements': 0,
-                'scanability_score': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': [],
-        }
-
-    # 스캔 가독성 요소 감지
-    headings = len(_HEADING_RE.findall(content))
-    bold_texts = len(_BOLD_RE.findall(content))
-    list_items = len(_LIST_RE.findall(content))
-    code_blocks = len(_CODE_BLOCK_RE.findall(content))
-    images = len(_IMAGE_RE.findall(content))
-    tables = len(_TABLE_RE.findall(content))
-    blockquotes = len(_BLOCKQUOTE_RE.findall(content))
-
-    # 단락 분석
+def _detect_elements(content: str) -> Dict:
+    """콘텐츠에서 스캔 가독성 요소를 감지합니다."""
     paragraphs = [p.strip() for p in _PARAGRAPH_SPLIT.split(content) if p.strip()]
-    short_paras = sum(1 for p in paragraphs if len(p.split()) <= 50)
     total_paras = max(len(paragraphs), 1)
-    short_para_ratio = round(short_paras / total_paras * 100, 1)
+    short_paras = sum(1 for p in paragraphs if len(p.split()) <= 50)
 
-    elements = {
-        'headings': headings,
-        'bold_texts': bold_texts,
-        'list_items': list_items,
-        'code_blocks': code_blocks,
-        'images': images,
-        'tables': tables,
-        'blockquotes': blockquotes,
+    return {
+        'headings': len(_HEADING_RE.findall(content)),
+        'bold_texts': len(_BOLD_RE.findall(content)),
+        'list_items': len(_LIST_RE.findall(content)),
+        'code_blocks': len(_CODE_BLOCK_RE.findall(content)),
+        'images': len(_IMAGE_RE.findall(content)),
+        'tables': len(_TABLE_RE.findall(content)),
+        'blockquotes': len(_BLOCKQUOTE_RE.findall(content)),
         'short_paragraphs': short_paras,
         'total_paragraphs': total_paras,
     }
 
-    total_elements = headings + bold_texts + list_items + code_blocks + images + tables + blockquotes
 
-    # 점수 계산 (각 요소별 가중치)
-    score = 0.0
+def _compute_scanability_score(elements: Dict, word_count: int) -> tuple:
+    """요소 기반으로 스캔 가독성 점수와 레벨을 계산합니다.
 
-    # 헤딩 (200단어당 1개 이상 권장)
+    Returns:
+        (score, level)
+    """
+    short_para_ratio = elements['short_paragraphs'] / max(elements['total_paragraphs'], 1) * 100
     expected_headings = max(1, word_count // 200)
-    heading_score = min(25.0, (headings / max(expected_headings, 1)) * 25.0)
-    score += heading_score
 
-    # 목록 (있으면 좋음)
-    if list_items > 0:
-        score += min(20.0, list_items * 4.0)
-
-    # 굵은 글씨 (핵심 포인트 강조)
-    if bold_texts > 0:
-        score += min(15.0, bold_texts * 3.0)
-
-    # 짧은 단락 비율 (60% 이상이면 만점)
+    score = min(25.0, (elements['headings'] / max(expected_headings, 1)) * 25.0)
+    if elements['list_items'] > 0:
+        score += min(20.0, elements['list_items'] * 4.0)
+    if elements['bold_texts'] > 0:
+        score += min(15.0, elements['bold_texts'] * 3.0)
     score += min(20.0, short_para_ratio * 0.3)
-
-    # 시각적 요소 (이미지, 테이블, 코드)
-    visual = images + tables + code_blocks
+    visual = elements['images'] + elements['tables'] + elements['code_blocks']
     if visual > 0:
         score += min(10.0, visual * 5.0)
-
-    # 블록인용
-    if blockquotes > 0:
-        score += min(10.0, blockquotes * 3.0)
+    if elements['blockquotes'] > 0:
+        score += min(10.0, elements['blockquotes'] * 3.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
 
-    # 레벨
     if score >= 70:
         level = 'excellent'
     elif score >= 50:
@@ -122,15 +69,46 @@ def score_content_scanability(content: str) -> dict:
     else:
         level = 'poor'
 
+    return score, level
+
+
+_ZERO_ELEMENTS = {
+    'headings': 0, 'bold_texts': 0, 'list_items': 0,
+    'code_blocks': 0, 'images': 0, 'tables': 0,
+    'blockquotes': 0, 'short_paragraphs': 0, 'total_paragraphs': 0,
+}
+
+
+def score_content_scanability(content: str) -> dict:
+    """콘텐츠의 스캔 가독성을 평가합니다.
+
+    Returns:
+        elements, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {
+            'elements': {}, 'score': 0.0,
+            'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
+            'suggestions': ['콘텐츠가 비어 있습니다.'],
+        }
+
+    word_count = len(content.split())
+    if word_count < 10:
+        return {
+            'elements': dict(_ZERO_ELEMENTS), 'score': 50.0,
+            'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
+            'suggestions': [],
+        }
+
+    elements = _detect_elements(content)
+    total_elements = sum(elements[k] for k in ('headings', 'bold_texts', 'list_items',
+                                                 'code_blocks', 'images', 'tables', 'blockquotes'))
+    score, level = _compute_scanability_score(elements, word_count)
     suggestions = _generate_suggestions(elements, score, level, word_count)
 
     return {
         'elements': elements,
-        'summary': {
-            'total_elements': total_elements,
-            'scanability_score': score,
-            'level': level,
-        },
+        'summary': {'total_elements': total_elements, 'scanability_score': score, 'level': level},
         'score': score,
         'suggestions': suggestions,
     }

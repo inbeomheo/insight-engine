@@ -70,6 +70,54 @@ class SimulatorService:
         'default': 200,
     }
 
+    @staticmethod
+    def _compute_quality(content_len: int, has_structure: bool,
+                         has_seo_keywords: bool, has_images: bool,
+                         title_length: int) -> float:
+        """콘텐츠 품질 점수(0~1)를 계산합니다."""
+        quality = 0.0
+        if 800 <= content_len <= 3000:
+            quality += 0.3
+        elif content_len > 300:
+            quality += 0.15
+        if has_structure:
+            quality += 0.2
+        if has_seo_keywords:
+            quality += 0.25
+        if has_images:
+            quality += 0.15
+        if 30 <= title_length <= 60:
+            quality += 0.1
+        return quality
+
+    @staticmethod
+    def _find_bottlenecks(has_seo_keywords: bool, has_structure: bool,
+                          has_images: bool, title_length: int,
+                          content_len: int) -> tuple:
+        """병목 항목과 개선 제안을 생성합니다.
+
+        Returns:
+            (bottlenecks, recommendations)
+        """
+        bottlenecks = []
+        recommendations = []
+        if not has_seo_keywords:
+            bottlenecks.append("SEO 키워드 없음")
+            recommendations.append("핵심 키워드를 제목과 소제목에 자연스럽게 포함하세요")
+        if not has_structure:
+            bottlenecks.append("콘텐츠 구조 부족")
+            recommendations.append("H2/H3 소제목으로 콘텐츠를 명확하게 구분하세요")
+        if not has_images:
+            bottlenecks.append("이미지 없음")
+            recommendations.append("관련 이미지나 인포그래픽을 추가하면 체류 시간이 향상됩니다")
+        if title_length < 30 or title_length > 60:
+            bottlenecks.append(f"제목 길이 비최적 ({title_length}자)")
+            recommendations.append("제목은 30~60자가 최적입니다")
+        if content_len < 800:
+            bottlenecks.append("콘텐츠 너무 짧음")
+            recommendations.append("800자 이상으로 확장하면 SEO와 신뢰도가 향상됩니다")
+        return bottlenecks, recommendations
+
     def simulate(
         self,
         content: str,
@@ -99,94 +147,42 @@ class SimulatorService:
 
         base_views = self.PLATFORM_BASE_VIEWS.get(platform, 200)
         style_mult = self.STYLE_VIEW_MULTIPLIER.get(style_id, 1.0)
-
-        # 콘텐츠 품질 분석
         content_len = len(content)
-        word_count = len(content.split())
-        heading_count = content.count('\n#')
-        has_structure = heading_count >= 2
-
-        # 팔로워 기여
+        has_structure = content.count('\n#') >= 2
         follower_boost = math.log10(max(10, follower_count)) * 50
 
-        # 콘텐츠 품질 점수 (0~1)
-        quality = 0.0
-        if 800 <= content_len <= 3000:
-            quality += 0.3
-        elif content_len > 300:
-            quality += 0.15
-        if has_structure:
-            quality += 0.2
-        if has_seo_keywords:
-            quality += 0.25
-        if has_images:
-            quality += 0.15
-        if 30 <= title_length <= 60:
-            quality += 0.1
+        quality = self._compute_quality(content_len, has_structure, has_seo_keywords, has_images, title_length)
 
-        # 예상 조회수
         predicted_views = int(
-            (base_views + follower_boost) *
-            style_mult *
-            (0.5 + quality * 1.5) *
-            (1 + random.uniform(-0.2, 0.3))  # ±25% 변동
+            (base_views + follower_boost) * style_mult *
+            (0.5 + quality * 1.5) * (1 + random.uniform(-0.2, 0.3))
         )
 
-        # 예상 CTR (%)
         base_ctr = {'naver_popular': 3.5, 'blog_seo': 2.5, 'geo_seo': 4.0}.get(style_id, 2.0)
         predicted_ctr = base_ctr * (0.8 + quality * 0.5)
         if 30 <= title_length <= 50:
             predicted_ctr *= 1.2
-
         predicted_clicks = int(predicted_views * predicted_ctr / 100)
 
-        # 예상 공유수 (SNS 바이럴 계수)
         share_rate = {'sns_post': 0.05, 'naver_popular': 0.03, 'tutorial': 0.02}.get(style_id, 0.01)
-        predicted_shares = int(predicted_clicks * share_rate)
-
-        # 참여도 점수
         engagement = min(100, quality * 60 + style_mult * 15 + (predicted_ctr / 5) * 25)
-
-        # SEO 잠재력
         seo_potential = min(100, (
-            (30 if has_seo_keywords else 0) +
-            (20 if has_structure else 0) +
-            (25 if 800 <= content_len <= 3000 else 10) +
-            (style_mult - 1) * 15 +
-            15
+            (30 if has_seo_keywords else 0) + (20 if has_structure else 0) +
+            (25 if 800 <= content_len <= 3000 else 10) + (style_mult - 1) * 15 + 15
         ))
 
-        # 신뢰 구간
-        confidence_interval = max(15, 40 - quality * 30)
-
-        # 병목 및 개선 제안
-        bottlenecks = []
-        recommendations = []
-
-        if not has_seo_keywords:
-            bottlenecks.append("SEO 키워드 없음")
-            recommendations.append("핵심 키워드를 제목과 소제목에 자연스럽게 포함하세요")
-        if not has_structure:
-            bottlenecks.append("콘텐츠 구조 부족")
-            recommendations.append("H2/H3 소제목으로 콘텐츠를 명확하게 구분하세요")
-        if not has_images:
-            bottlenecks.append("이미지 없음")
-            recommendations.append("관련 이미지나 인포그래픽을 추가하면 체류 시간이 향상됩니다")
-        if title_length < 30 or title_length > 60:
-            bottlenecks.append(f"제목 길이 비최적 ({title_length}자)")
-            recommendations.append("제목은 30~60자가 최적입니다")
-        if content_len < 800:
-            bottlenecks.append("콘텐츠 너무 짧음")
-            recommendations.append("800자 이상으로 확장하면 SEO와 신뢰도가 향상됩니다")
+        bottlenecks, recommendations = self._find_bottlenecks(
+            has_seo_keywords, has_structure, has_images, title_length, content_len,
+        )
 
         return SimulationResult(
             predicted_views_30d=predicted_views,
             predicted_clicks_30d=predicted_clicks,
-            predicted_shares=predicted_shares,
+            predicted_shares=int(predicted_clicks * share_rate),
             predicted_ctr=predicted_ctr,
             engagement_score=engagement,
             seo_potential=seo_potential,
-            confidence_interval=confidence_interval,
+            confidence_interval=max(15, 40 - quality * 30),
             bottlenecks=bottlenecks,
             recommendations=recommendations,
         )
