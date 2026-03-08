@@ -2,7 +2,6 @@
 
 공개 공유 링크 생성, 만료 관리, 접근 카운트 추적.
 """
-import uuid
 import time
 import secrets
 import logging

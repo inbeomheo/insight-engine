@@ -8,7 +8,7 @@ import uuid
 import time
 import logging
 from threading import Lock
-from typing import Any, Callable
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 

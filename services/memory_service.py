@@ -6,7 +6,7 @@ JSON 파일 기반 로컬 저장 + Supabase 연동 (선택적).
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
