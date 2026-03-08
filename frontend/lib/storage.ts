@@ -21,64 +21,49 @@ function safeSet(key: string, value: unknown): boolean {
   }
 }
 
-// 보고서 히스토리
-export function loadReports(): Report[] {
-  return safeGet<Report[]>(STORAGE_KEYS.REPORTS, []);
+/** localStorage 키에 대한 load/save 쌍을 생성하는 팩토리 */
+export function makeStorage<T>(key: string, fallback: T) {
+  return {
+    load: (): T => safeGet<T>(key, fallback),
+    save: (value: T): boolean => safeSet(key, value),
+    /** requestIdleCallback 기반 비동기 로드 (hydrate용) */
+    loadIdle: (cb: (value: T) => void) => {
+      const doLoad = () => cb(safeGet<T>(key, fallback));
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(doLoad);
+      } else {
+        setTimeout(doLoad, 0);
+      }
+    },
+  };
 }
 
-export function saveReports(reports: Report[]): boolean {
-  return safeSet(STORAGE_KEYS.REPORTS, reports);
-}
+// ── 기존 export 유지 (호출부 변경 없음) ──────────────────────
 
-// 프로바이더/모델 선택
-export function loadSelectedProvider(): string {
-  return safeGet<string>(STORAGE_KEYS.PROVIDER, '');
-}
+const reportsStorage = makeStorage<Report[]>(STORAGE_KEYS.REPORTS, []);
+export const loadReports = reportsStorage.load;
+export const saveReports = reportsStorage.save;
 
-export function saveSelectedProvider(id: string) {
-  safeSet(STORAGE_KEYS.PROVIDER, id);
-}
+const providerStorage = makeStorage<string>(STORAGE_KEYS.PROVIDER, '');
+export const loadSelectedProvider = providerStorage.load;
+export const saveSelectedProvider = (id: string) => providerStorage.save(id);
 
-export function loadSelectedModel(): string {
-  return safeGet<string>(STORAGE_KEYS.MODEL, '');
-}
+const modelStorage = makeStorage<string>(STORAGE_KEYS.MODEL, '');
+export const loadSelectedModel = modelStorage.load;
+export const saveSelectedModel = (id: string) => modelStorage.save(id);
 
-export function saveSelectedModel(id: string) {
-  safeSet(STORAGE_KEYS.MODEL, id);
-}
+const customStylesStorage = makeStorage<CustomStyle[]>(STORAGE_KEYS.CUSTOM_STYLES, []);
+export const loadCustomStyles = customStylesStorage.load;
+export const saveCustomStyles = (styles: CustomStyle[]) => customStylesStorage.save(styles);
 
-// 커스텀 스타일
-export function loadCustomStyles(): CustomStyle[] {
-  return safeGet<CustomStyle[]>(STORAGE_KEYS.CUSTOM_STYLES, []);
-}
+const ollamaStorage = makeStorage<string>(STORAGE_KEYS.OLLAMA_BASE_URL, '');
+export const loadOllamaBaseUrl = ollamaStorage.load;
+export const saveOllamaBaseUrl = (url: string) => ollamaStorage.save(url);
 
-export function saveCustomStyles(styles: CustomStyle[]) {
-  safeSet(STORAGE_KEYS.CUSTOM_STYLES, styles);
-}
+const webhookStorage = makeStorage<string>(STORAGE_KEYS.WEBHOOK_URL, '');
+export const loadWebhookUrl = webhookStorage.load;
+export const saveWebhookUrl = (url: string) => webhookStorage.save(url);
 
-// Ollama Base URL
-export function loadOllamaBaseUrl(): string {
-  return safeGet<string>(STORAGE_KEYS.OLLAMA_BASE_URL, '');
-}
-
-export function saveOllamaBaseUrl(url: string) {
-  safeSet(STORAGE_KEYS.OLLAMA_BASE_URL, url);
-}
-
-// 웹훅 URL
-export function loadWebhookUrl(): string {
-  return safeGet<string>(STORAGE_KEYS.WEBHOOK_URL, '');
-}
-
-export function saveWebhookUrl(url: string) {
-  safeSet(STORAGE_KEYS.WEBHOOK_URL, url);
-}
-
-// 온보딩
-export function isOnboardingDone(): boolean {
-  return safeGet<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);
-}
-
-export function setOnboardingDone() {
-  safeSet(STORAGE_KEYS.ONBOARDING_DONE, true);
-}
+const onboardingStorage = makeStorage<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);
+export const isOnboardingDone = onboardingStorage.load;
+export const setOnboardingDone = () => onboardingStorage.save(true);

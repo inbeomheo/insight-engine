@@ -59,9 +59,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     init.signal.addEventListener('abort', () => controller.abort());
   }
 
+  // FormData일 때는 Content-Type 헤더 생략 (브라우저가 boundary 자동 설정)
+  const isFormData = init?.body instanceof FormData;
+  const headers = isFormData ? undefined : { 'Content-Type': 'application/json' };
+
   try {
     const res = await fetch(`${BASE}${url}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       ...init,
       signal: controller.signal,
     });
@@ -73,6 +77,33 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Blob 응답 전용 (DOCX/PDF 등 바이너리 다운로드) */
+async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
+  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${BASE}${url}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.blob();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
     }
     throw err;
   } finally {
@@ -93,42 +124,27 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
   });
 }
 
+/** 파일 업로드용 FormData 빌더 (generateFromFile/Audio 공용) */
+function buildFileFormData(
+  file: File,
+  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+): FormData {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('model', opts.model);
+  fd.append('style', opts.style);
+  if (opts.modifiers) fd.append('modifiers', JSON.stringify(opts.modifiers));
+  if (opts.customPrompt) fd.append('customPrompt', opts.customPrompt);
+  if (opts.detail_level) fd.append('detail_level', opts.detail_level);
+  return fd;
+}
+
 // 파일 업로드 생성 (PDF/DOCX)
 export async function generateFromFile(
   file: File,
   opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
 ): Promise<GenerateResponse> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('model', opts.model);
-  formData.append('style', opts.style);
-  if (opts.modifiers) formData.append('modifiers', JSON.stringify(opts.modifiers));
-  if (opts.customPrompt) formData.append('customPrompt', opts.customPrompt);
-  if (opts.detail_level) formData.append('detail_level', opts.detail_level);
-
-  const timeoutMs = TIMEOUT_MS['/generate'] ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(`${BASE}/generate`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
-    }
-    return res.json();
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
 
 // 오디오 파일 업로드 생성 (음성 메모, 팟캐스트 녹음)
@@ -136,37 +152,7 @@ export async function generateFromAudio(
   file: File,
   opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
 ): Promise<GenerateResponse> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('model', opts.model);
-  formData.append('style', opts.style);
-  if (opts.modifiers) formData.append('modifiers', JSON.stringify(opts.modifiers));
-  if (opts.customPrompt) formData.append('customPrompt', opts.customPrompt);
-  if (opts.detail_level) formData.append('detail_level', opts.detail_level);
-
-  const timeoutMs = TIMEOUT_MS['/generate'] ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(`${BASE}/generate`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
-    }
-    return res.json();
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
 
 // 스트리밍 생성
@@ -269,24 +255,12 @@ export async function fetchPlaylistVideos(
 
 // DOCX 내보내기
 export async function exportDocx(title: string, content: string): Promise<Blob> {
-  const res = await fetch(`${BASE}/api/export/docx`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content }),
-  });
-  if (!res.ok) throw new Error('DOCX 내보내기 실패');
-  return res.blob();
+  return requestBlob('/api/export/docx', { method: 'POST', body: JSON.stringify({ title, content }) });
 }
 
 // 포맷별 내보내기 (MD, TXT, ZIP)
 export async function exportFormat(format: 'markdown' | 'txt' | 'zip', title: string, content: string): Promise<Blob> {
-  const res = await fetch(`${BASE}/api/export/${format}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content }),
-  });
-  if (!res.ok) throw new Error('내보내기 실패');
-  return res.blob();
+  return requestBlob(`/api/export/${format}`, { method: 'POST', body: JSON.stringify({ title, content }) });
 }
 
 // 퓨전 분석
