@@ -6,7 +6,7 @@ Original Evidence Signal Analyzer 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 # 직접 경험 패턴
 _DIRECT_EXPERIENCE = {

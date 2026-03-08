@@ -354,7 +354,6 @@ def _parse_sentiment_flow(raw: str) -> dict:
         return empty
 
     import json as json_mod
-    import re
 
     text = raw.strip()
     if text.startswith('```'):
