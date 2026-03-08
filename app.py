@@ -84,21 +84,20 @@ def create_app(test_config=None):
             referer = request.headers.get('Referer')
             host = request.host_url.rstrip('/')
 
-            def is_local_dev(url):
-                """개발 환경의 로컬 주소인지 확인"""
-                return app.debug and any(local in url for local in ('localhost', '127.0.0.1'))
+            def is_allowed_origin(url):
+                """CORS 허용 목록에 포함된 origin인지 확인"""
+                return url.rstrip('/') in [o.rstrip('/') for o in allowed_origins]
 
             if origin:
-                # 'null' origin 허용 제거 (보안 강화)
                 if not origin.startswith(host) and origin != 'file://':
-                    # 개발 환경에서는 localhost/127.0.0.1 허용
-                    if not is_local_dev(origin):
+                    # CORS 허용 목록 또는 로컬 개발 환경이면 통과
+                    if not is_allowed_origin(origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Origin'}), 403
             elif referer:
                 parsed = urlparse(referer)
                 referer_origin = f"{parsed.scheme}://{parsed.netloc}"
                 if not referer_origin.startswith(host):
-                    if not is_local_dev(referer_origin):
+                    if not is_allowed_origin(referer_origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
         return None
 
