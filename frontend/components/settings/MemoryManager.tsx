@@ -119,7 +119,7 @@ export default function MemoryManager() {
             placeholder="주제 추가..."
             className="flex-1 rounded-md border px-3 py-1.5 text-sm"
           />
-          <button onClick={addTopic} className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">
+          <button onClick={addTopic} aria-label="선호 주제 추가" className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">
             추가
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function MemoryManager() {
           {(memory.preferred_topics || []).map((topic) => (
             <span key={topic} className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
               {topic}
-              <button onClick={() => removeTopic(topic)} className="hover:text-red-500">x</button>
+              <button onClick={() => removeTopic(topic)} aria-label={`${topic} 주제 제거`} className="hover:text-red-500">x</button>
             </span>
           ))}
         </div>
@@ -146,6 +146,7 @@ export default function MemoryManager() {
           />
           <button
             onClick={() => updateKey('preferred_tone', toneInput.trim())}
+            aria-label="선호 톤 저장"
             className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground"
           >
             저장
@@ -165,7 +166,7 @@ export default function MemoryManager() {
             placeholder="피할 주제..."
             className="flex-1 rounded-md border px-3 py-1.5 text-sm"
           />
-          <button onClick={addAvoid} className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">
+          <button onClick={addAvoid} aria-label="피하는 주제 추가" className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground">
             추가
           </button>
         </div>
@@ -173,7 +174,7 @@ export default function MemoryManager() {
           {(memory.avoid_topics || []).map((topic) => (
             <span key={topic} className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400">
               {topic}
-              <button onClick={() => removeAvoid(topic)} className="hover:text-red-700">x</button>
+              <button onClick={() => removeAvoid(topic)} aria-label={`${topic} 주제 제거`} className="hover:text-red-700">x</button>
             </span>
           ))}
         </div>
@@ -192,6 +193,7 @@ export default function MemoryManager() {
         <button
           onClick={() => updateKey('custom_instructions', instructionsInput.trim())}
           disabled={isSaving}
+          aria-label="커스텀 지시사항 저장"
           className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
         >
           저장
@@ -214,6 +216,7 @@ export default function MemoryManager() {
       <div className="pt-2 border-t">
         <button
           onClick={clearMemory}
+          aria-label="메모리 전체 초기화"
           className="text-xs text-red-500 hover:text-red-700"
         >
           메모리 전체 초기화

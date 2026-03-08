@@ -156,6 +156,7 @@ export default function FeedbackWidget({
                     <button
                       key={ft.value}
                       onClick={() => setType(ft.value)}
+                      aria-label={`${ft.label} 유형 선택`}
                       className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
                         type === ft.value
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
@@ -218,6 +219,7 @@ export default function FeedbackWidget({
               <button
                 onClick={handleSubmit}
                 disabled={status === 'submitting'}
+                aria-label="피드백 전송"
                 className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {status === 'submitting' ? '전송 중...' : '피드백 전송'}

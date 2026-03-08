@@ -119,6 +119,7 @@ export default function SettingsPopover() {
             <button
               key={s.id}
               onClick={() => setSelectedStyle(s.id)}
+              aria-label={`${s.label} 스타일 선택`}
               className={cn(
                 'px-3 py-1.5 rounded-full text-sm border transition-all',
                 selectedStyle === s.id
@@ -140,6 +141,7 @@ export default function SettingsPopover() {
             <button
               key={o.value}
               onClick={() => setModifiers({ length: o.value })}
+              aria-label={`${o.label} 길이 선택`}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all text-center',
                 modifiers.length === o.value
@@ -162,6 +164,7 @@ export default function SettingsPopover() {
             <button
               key={o.value}
               onClick={() => setModifiers({ writing_style: o.value })}
+              aria-label={`${o.label} 문체 선택`}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all',
                 modifiers.writing_style === o.value
@@ -183,6 +186,7 @@ export default function SettingsPopover() {
             <button
               key={o.value}
               onClick={() => setModifiers({ language: o.value })}
+              aria-label={`${o.label} 언어 선택`}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all',
                 (modifiers.language ?? 'ko') === o.value
@@ -220,6 +224,7 @@ export default function SettingsPopover() {
         <label className="text-sm font-medium text-muted-foreground mb-2 block">생성 옵션</label>
         <button
           onClick={() => setEnableWebSearch(!enableWebSearch)}
+          aria-label="웹 검색 보강 토글"
           className={cn(
             'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm border transition-all',
             enableWebSearch
@@ -297,6 +302,7 @@ function WebhookSection({
         <button
           onClick={handleTest}
           disabled={testing || !webhookUrl.trim()}
+          aria-label="웹훅 테스트"
           className={cn(
             'h-9 px-3 text-sm rounded-lg border transition-all whitespace-nowrap',
             'bg-background text-foreground border-border hover:border-primary/50',
