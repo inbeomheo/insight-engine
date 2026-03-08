@@ -70,6 +70,41 @@ def _find_statistics(text: str) -> List[Dict]:
     return stats
 
 
+_EMPTY_RESULT = {
+    'statistics': [], 'section_coverage': [],
+    'summary': {'total_stats': 0, 'sections_with_stats': 0, 'total_sections': 0, 'coverage_rate': 0.0},
+    'score': 0.0, 'suggestions': [],
+}
+
+
+def _scan_section_stats(sections: List[Dict]) -> tuple:
+    """각 섹션의 수치 통계를 수집합니다.
+
+    Returns:
+        (all_statistics, section_coverage)
+    """
+    all_statistics = []
+    section_coverage = []
+    for sec in sections:
+        sec_text = '\n'.join(sec['content_lines'])
+        sec_stats = _find_statistics(sec_text)
+        for stat in sec_stats:
+            stat['section'] = sec['section']
+            all_statistics.append(stat)
+        section_coverage.append({
+            'section': sec['section'],
+            'stat_count': len(sec_stats),
+            'has_stats': len(sec_stats) > 0,
+        })
+    return all_statistics, section_coverage
+
+
+def _compute_coverage_score(coverage_rate: float, stat_types: set) -> float:
+    """커버리지율과 수치 유형 다양성으로 점수를 계산합니다."""
+    type_diversity = min(len(stat_types) * 10, 40)
+    return round(max(0.0, min(100.0, coverage_rate * 0.6 + type_diversity)), 1)
+
+
 def analyze_statistics_coverage(content: str) -> dict:
     """콘텐츠의 수치 근거 커버리지를 분석합니다.
 
@@ -80,60 +115,27 @@ def analyze_statistics_coverage(content: str) -> dict:
         statistics, section_coverage, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'statistics': [],
-            'section_coverage': [],
-            'summary': {
-                'total_stats': 0, 'sections_with_stats': 0,
-                'total_sections': 0, 'coverage_rate': 0.0,
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     sections = _parse_sections(content)
     if not sections:
         sections = [{'section': '(전체)', 'content_lines': content.split('\n')}]
 
-    all_statistics = []
-    section_coverage = []
-
-    for sec in sections:
-        sec_text = '\n'.join(sec['content_lines'])
-        sec_stats = _find_statistics(sec_text)
-
-        for stat in sec_stats:
-            stat['section'] = sec['section']
-            all_statistics.append(stat)
-
-        section_coverage.append({
-            'section': sec['section'],
-            'stat_count': len(sec_stats),
-            'has_stats': len(sec_stats) > 0,
-        })
-
+    all_statistics, section_coverage = _scan_section_stats(sections)
     total_sections = len(section_coverage)
     sections_with = sum(1 for sc in section_coverage if sc['has_stats'])
     coverage_rate = round((sections_with / total_sections * 100) if total_sections > 0 else 0.0, 1)
-
     stat_types = set(s['type'] for s in all_statistics)
-    type_diversity = min(len(stat_types) * 10, 40)
-    coverage_score = coverage_rate * 0.6 + type_diversity
-    score = round(max(0.0, min(100.0, coverage_score)), 1)
-
-    suggestions = _generate_suggestions(all_statistics, section_coverage, coverage_rate, stat_types)
 
     return {
         'statistics': all_statistics,
         'section_coverage': section_coverage,
         'summary': {
-            'total_stats': len(all_statistics),
-            'sections_with_stats': sections_with,
-            'total_sections': total_sections,
-            'coverage_rate': coverage_rate,
+            'total_stats': len(all_statistics), 'sections_with_stats': sections_with,
+            'total_sections': total_sections, 'coverage_rate': coverage_rate,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _compute_coverage_score(coverage_rate, stat_types),
+        'suggestions': _generate_suggestions(all_statistics, section_coverage, coverage_rate, stat_types),
     }
 
 

@@ -23,6 +23,27 @@ def _db_op(name: str, default, fn):
 # 목록 조회
 # =============================================
 
+def _user_filter_expr(user_id: str | None) -> str:
+    """사용자 필터 표현식을 생성합니다."""
+    if user_id:
+        return f"is_public.eq.true,user_id.eq.{user_id}"
+    return "is_public.eq.true"
+
+
+def _build_page_result(
+    templates_data: list, total: int, page: int, user_id: str | None,
+) -> dict:
+    """템플릿 목록과 페이지 정보를 API 응답으로 변환합니다."""
+    offset = (page - 1) * PAGE_SIZE
+    return {
+        'templates': [_format_template(t, user_id) for t in (templates_data or [])],
+        'total': total,
+        'page': page,
+        'per_page': PAGE_SIZE,
+        'has_more': (offset + PAGE_SIZE) < total,
+    }
+
+
 def get_templates(user_id: str | None, page: int = 1, search: str = '') -> dict:
     """템플릿 목록 조회
 
@@ -41,52 +62,27 @@ def get_templates(user_id: str | None, page: int = 1, search: str = '') -> dict:
         return _empty_page(page)
 
     def operation():
-        offset = (page - 1) * PAGE_SIZE
-
-        # 공개 템플릿 + 본인 템플릿 조합 쿼리
-        # RLS가 이미 "is_public OR user_id = auth.uid()"를 보장하므로
-        # 여기서는 추가 필터 없이 전체 조회 (anon key로는 RLS 적용됨)
+        filter_expr = _user_filter_expr(user_id)
         query = supabase.table('ie_prompt_templates').select('*', count='exact')
-
         if search:
-            # 이름 또는 설명 검색 (부분 일치)
             query = query.or_(f"name.ilike.%{search}%,description.ilike.%{search}%")
-
-        # 공개 + 본인 필터 (Supabase RLS 미작동 환경 대비 명시적 필터)
         if user_id:
-            query = query.or_(f"is_public.eq.true,user_id.eq.{user_id}")
+            query = query.or_(filter_expr)
         else:
             query = query.eq('is_public', True)
 
-        count_result = query.execute()
-        total = count_result.count or 0
+        total = (query.execute()).count or 0
+        offset = (page - 1) * PAGE_SIZE
 
-        # 정렬: 본인 템플릿 우선, 그 다음 usage_count DESC
         result = (
-            supabase.table('ie_prompt_templates')
-            .select('*')
-            .or_(
-                f"is_public.eq.true,user_id.eq.{user_id}"
-                if user_id
-                else "is_public.eq.true"
-            )
+            supabase.table('ie_prompt_templates').select('*')
+            .or_(filter_expr)
             .order('usage_count', desc=True)
             .order('created_at', desc=True)
             .range(offset, offset + PAGE_SIZE - 1)
             .execute()
         )
-
-        templates = []
-        for t in result.data or []:
-            templates.append(_format_template(t, user_id))
-
-        return {
-            'templates': templates,
-            'total': total,
-            'page': page,
-            'per_page': PAGE_SIZE,
-            'has_more': (offset + PAGE_SIZE) < total,
-        }
+        return _build_page_result(result.data, total, page, user_id)
 
     return _db_op('get_templates', _empty_page(page), operation)
 

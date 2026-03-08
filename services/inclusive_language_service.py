@@ -109,35 +109,18 @@ for category, rules in _RULES.items():
         })
 
 
-def check_inclusive_language(content: str) -> dict:
-    """콘텐츠에서 배제적/편향적 표현을 감지합니다.
+_EMPTY_RESULT = {
+    'issues': [],
+    'summary': {'total': 0, 'by_category': {}, 'by_severity': {}},
+    'inclusivity_score': 100.0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 검사할 콘텐츠
 
-    Returns:
-        {
-            "issues": [{"phrase", "category", "sentence", "alternative", "severity"}],
-            "summary": {"total": int, "by_category": dict, "by_severity": dict},
-            "inclusivity_score": float,  # 0-100
-            "suggestions": list[str],
-        }
-    """
-    if not content or not content.strip():
-        return {
-            'issues': [],
-            'summary': {'total': 0, 'by_category': {}, 'by_severity': {}},
-            'inclusivity_score': 100.0,
-            'suggestions': ['검사할 콘텐츠가 비어 있습니다.'],
-        }
-
-    # 문장 분리
-    sentences = _split_sentences(content)
-
-    # 이슈 감지
+def _detect_issues(sentences: list) -> list:
+    """문장 목록에서 배제적 표현을 감지합니다 (중복 제거 포함)."""
     issues = []
-    seen = set()  # (phrase_lower, sentence) 중복 방지
-
+    seen = set()
     for rule in _COMPILED_RULES:
         for sentence in sentences:
             if rule['pattern'].search(sentence):
@@ -151,28 +134,33 @@ def check_inclusive_language(content: str) -> dict:
                         'alternative': rule['alternative'],
                         'severity': rule['severity'],
                     })
+    return issues
 
-    # 요약 통계
+
+def check_inclusive_language(content: str) -> dict:
+    """콘텐츠에서 배제적/편향적 표현을 감지합니다.
+
+    Args:
+        content: 검사할 콘텐츠
+
+    Returns:
+        issues, summary, inclusivity_score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
+
+    issues = _detect_issues(_split_sentences(content))
     cat_counter = Counter(i['category'] for i in issues)
-    sev_counter = Counter(i['severity'] for i in issues)
-
-    summary = {
-        'total': len(issues),
-        'by_category': dict(cat_counter),
-        'by_severity': dict(sev_counter),
-    }
-
-    # 포용성 점수 계산
-    score = _calculate_score(issues, content)
-
-    # 제안 생성
-    suggestions = _generate_suggestions(issues, cat_counter)
 
     return {
         'issues': issues,
-        'summary': summary,
-        'inclusivity_score': score,
-        'suggestions': suggestions,
+        'summary': {
+            'total': len(issues),
+            'by_category': dict(cat_counter),
+            'by_severity': dict(Counter(i['severity'] for i in issues)),
+        },
+        'inclusivity_score': _calculate_score(issues, content),
+        'suggestions': _generate_suggestions(issues, cat_counter),
     }
 
 
