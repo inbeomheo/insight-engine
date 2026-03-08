@@ -92,19 +92,19 @@ def generate_title_variants(
             temperature=0.9,
             max_tokens=500,
         )
-
         raw = response.choices[0].message.content.strip()
-
-        # JSON 파싱 (코드 블록 제거)
-        if raw.startswith('```'):
-            raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
-
-        titles = json.loads(raw)
-        if isinstance(titles, list):
-            return [str(t).strip() for t in titles if t][:count]
-
-        return []
+        return _parse_title_response(raw, count)
 
     except Exception as e:
         logger.error(f"A/B 제목 생성 실패: {e}")
         raise RuntimeError(f'제목 생성 실패: {e}')
+
+
+def _parse_title_response(raw: str, count: int) -> List[str]:
+    """AI 응답에서 JSON 배열을 파싱하여 제목 리스트를 반환합니다."""
+    if raw.startswith('```'):
+        raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
+    titles = json.loads(raw)
+    if isinstance(titles, list):
+        return [str(t).strip() for t in titles if t][:count]
+    return []

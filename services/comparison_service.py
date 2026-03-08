@@ -27,7 +27,19 @@ def generate_comparison(items: List[Dict]) -> str:
     if len(items) < 2:
         raise ValueError('최소 2개 이상의 항목이 필요합니다.')
 
-    # 모든 키 수집 (순서 유지)
+    all_keys = _collect_ordered_keys(items)
+    if not all_keys:
+        raise ValueError('비교 항목에 데이터가 없습니다.')
+
+    name_key = 'name' if 'name' in all_keys else None
+    value_keys = [k for k in all_keys if k != name_key]
+    headers = _build_headers(items, name_key)
+
+    return _render_table(headers, value_keys, items)
+
+
+def _collect_ordered_keys(items: List[Dict]) -> List[str]:
+    """모든 항목에서 키를 순서 유지하며 수집합니다."""
     all_keys = []
     seen = set()
     for item in items:
@@ -37,29 +49,23 @@ def generate_comparison(items: List[Dict]) -> str:
             if key not in seen:
                 all_keys.append(key)
                 seen.add(key)
+    return all_keys
 
-    if not all_keys:
-        raise ValueError('비교 항목에 데이터가 없습니다.')
 
-    # 마크다운 테이블 생성
-    # 헤더: 기준 | 항목1 | 항목2 | ...
-    # 'name' 키가 있으면 항목명으로 사용, 없으면 인덱스
-    name_key = 'name' if 'name' in all_keys else None
-    value_keys = [k for k in all_keys if k != name_key]
-
+def _build_headers(items: List[Dict], name_key: str | None) -> List[str]:
+    """테이블 헤더 행을 구성합니다."""
     if name_key:
-        headers = ['기준'] + [item.get(name_key, f'항목 {i+1}') for i, item in enumerate(items)]
-    else:
-        headers = ['기준'] + [f'항목 {i+1}' for i in range(len(items))]
+        return ['기준'] + [item.get(name_key, f'항목 {i+1}') for i, item in enumerate(items)]
+    return ['기준'] + [f'항목 {i+1}' for i in range(len(items))]
 
-    lines = []
-    # 헤더 행
-    lines.append('| ' + ' | '.join(headers) + ' |')
-    # 구분선
-    lines.append('| ' + ' | '.join(['---'] * len(headers)) + ' |')
-    # 데이터 행
+
+def _render_table(headers: List[str], value_keys: List[str], items: List[Dict]) -> str:
+    """마크다운 테이블 문자열을 생성합니다."""
+    lines = [
+        '| ' + ' | '.join(headers) + ' |',
+        '| ' + ' | '.join(['---'] * len(headers)) + ' |',
+    ]
     for key in value_keys:
         row = [key] + [str(item.get(key, '-')) for item in items]
         lines.append('| ' + ' | '.join(row) + ' |')
-
     return '\n'.join(lines)
