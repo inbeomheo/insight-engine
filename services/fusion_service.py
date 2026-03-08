@@ -2,7 +2,7 @@
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from services import ai_service, content_service
 from services import comment_analyzer_service, web_research_service
