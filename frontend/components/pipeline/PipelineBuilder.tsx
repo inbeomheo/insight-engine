@@ -131,6 +131,7 @@ export default function PipelineBuilder({ onRun }: PipelineBuilderProps) {
                 key={st.type}
                 className="w-full px-3 py-2 text-left text-sm hover:bg-accent/50 transition-colors"
                 onClick={() => addStep(st.type)}
+                aria-label={`${st.label} 단계 추가`}
               >
                 <div className="font-medium text-foreground">{st.label}</div>
                 <div className="text-[11px] text-muted-foreground/60">{st.description}</div>

@@ -54,6 +54,7 @@ export default function OnboardingModal() {
               <button
                 key={id}
                 onClick={() => selectProvider(id)}
+                aria-label={`${id} 프로바이더 선택`}
                 className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                   selectedProvider === id
                     ? 'border-primary bg-indigo-50/50 shadow-sm'

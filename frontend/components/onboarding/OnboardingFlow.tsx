@@ -74,6 +74,7 @@ export default function OnboardingFlow({ steps = DEFAULT_STEPS, onComplete }: On
 
       <button
         onClick={handleNext}
+        aria-label={currentStep < steps.length - 1 ? '다음 단계' : '온보딩 완료'}
         className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
       >
         {currentStep < steps.length - 1 ? '다음' : '완료'}
