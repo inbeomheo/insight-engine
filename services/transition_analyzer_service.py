@@ -69,40 +69,21 @@ for category, data in _TRANSITION_WORDS.items():
         _ALL_TRANSITIONS[word] = category
 
 
-def analyze_transitions(content: str) -> dict:
-    """콘텐츠의 연결어 사용을 분석합니다.
+_EMPTY_RESULT = {
+    'transitions': [],
+    'summary': {'total': 0, 'categories': {}, 'density': 0},
+    'paragraph_analysis': [],
+    'score': 0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _scan_paragraphs(paragraphs: list) -> tuple:
+    """문단에서 연결어를 탐지합니다.
 
     Returns:
-        {
-            "transitions": [{"word": str, "category": str, "category_label": str, "paragraph": int}],
-            "summary": {"total": int, "categories": dict, "density": float},
-            "paragraph_analysis": [{"index": int, "has_transition": bool, "transitions": list}],
-            "score": int (1~100),
-            "suggestions": list[str],
-        }
+        (found_transitions, category_counts, paragraph_analysis)
     """
-    if not content or not content.strip():
-        return {
-            'transitions': [],
-            'summary': {'total': 0, 'categories': {}, 'density': 0},
-            'paragraph_analysis': [],
-            'score': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
-    if not paragraphs:
-        return {
-            'transitions': [],
-            'summary': {'total': 0, 'categories': {}, 'density': 0},
-            'paragraph_analysis': [],
-            'score': 0,
-            'suggestions': ['분석할 문단이 없습니다.'],
-        }
-
     found_transitions = []
     category_counts = {}
     paragraph_analysis = []
@@ -127,15 +108,28 @@ def analyze_transitions(content: str) -> dict:
             'transitions': para_transitions,
         })
 
+    return found_transitions, category_counts, paragraph_analysis
+
+
+def analyze_transitions(content: str) -> dict:
+    """콘텐츠의 연결어 사용을 분석합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+
+    Returns:
+        transitions, summary, paragraph_analysis, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
+    if not paragraphs:
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
+
+    found_transitions, category_counts, paragraph_analysis = _scan_paragraphs(paragraphs)
     total = len(found_transitions)
-    # 문단 수 대비 연결어 밀도
     density = round(total / max(len(paragraphs), 1) * 100, 1)
-
-    # 점수 계산 (0~100)
-    score = _calculate_score(paragraphs, paragraph_analysis, category_counts)
-
-    # 제안
-    suggestions = _generate_suggestions(paragraphs, paragraph_analysis, category_counts, density)
 
     return {
         'transitions': found_transitions,
@@ -145,8 +139,8 @@ def analyze_transitions(content: str) -> dict:
             'density': density,
         },
         'paragraph_analysis': paragraph_analysis,
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(paragraphs, paragraph_analysis, category_counts),
+        'suggestions': _generate_suggestions(paragraphs, paragraph_analysis, category_counts, density),
     }
 
 

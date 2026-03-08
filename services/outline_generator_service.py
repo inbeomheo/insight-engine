@@ -68,51 +68,23 @@ _OUTLINE_TEMPLATES = {
 }
 
 
-def generate_outline(
-    topic: str,
-    template: str = 'guide',
-    keywords: list = None,
-) -> dict:
-    """주제에 맞는 콘텐츠 아웃라인을 생성합니다.
+_EMPTY_OUTLINE = {
+    'topic': '',
+    'template': '',
+    'template_label': '',
+    'outline': [],
+    'markdown': '',
+    'estimated_word_count': 0,
+    'seo_tips': [],
+}
 
-    Args:
-        topic: 콘텐츠 주제
-        template: 템플릿 유형 (guide, listicle, comparison, tutorial, opinion)
-        keywords: SEO 키워드 리스트 (선택)
+
+def _build_outline_from_template(topic: str, tmpl: dict) -> tuple:
+    """템플릿으로부터 아웃라인 구조와 마크다운을 생성합니다.
 
     Returns:
-        {
-            "topic": str,
-            "template": str,
-            "template_label": str,
-            "outline": [
-                {
-                    "level": 2,
-                    "text": str,
-                    "children": [{"level": 3, "text": str}],
-                }
-            ],
-            "markdown": str,
-            "estimated_word_count": int,
-            "seo_tips": list[str],
-        }
+        (outline, markdown, estimated_word_count)
     """
-    if not topic or not topic.strip():
-        return {
-            'topic': '',
-            'template': template,
-            'template_label': '',
-            'outline': [],
-            'markdown': '',
-            'estimated_word_count': 0,
-            'seo_tips': [],
-        }
-
-    topic = topic.strip()
-    if template not in _OUTLINE_TEMPLATES:
-        template = 'guide'
-
-    tmpl = _OUTLINE_TEMPLATES[template]
     outline = []
     md_lines = [f'# {topic}\n']
 
@@ -131,21 +103,43 @@ def generate_outline(
             'children': children,
         })
 
-    # 키워드 SEO 팁
-    seo_tips = _generate_seo_tips(topic, keywords or [])
-
-    # 예상 글자수 (섹션당 200~400자 추정)
     total_sections = sum(1 + len(s.get('h3s', [])) for s in tmpl['sections'])
-    estimated = total_sections * 250
+    return outline, '\n'.join(md_lines), total_sections * 250
+
+
+def generate_outline(
+    topic: str,
+    template: str = 'guide',
+    keywords: list = None,
+) -> dict:
+    """주제에 맞는 콘텐츠 아웃라인을 생성합니다.
+
+    Args:
+        topic: 콘텐츠 주제
+        template: 템플릿 유형 (guide, listicle, comparison, tutorial, opinion)
+        keywords: SEO 키워드 리스트 (선택)
+
+    Returns:
+        topic, template, outline, markdown, estimated_word_count, seo_tips를 포함하는 dict
+    """
+    if not topic or not topic.strip():
+        return {**_EMPTY_OUTLINE, 'template': template}
+
+    topic = topic.strip()
+    if template not in _OUTLINE_TEMPLATES:
+        template = 'guide'
+
+    tmpl = _OUTLINE_TEMPLATES[template]
+    outline, markdown, estimated = _build_outline_from_template(topic, tmpl)
 
     return {
         'topic': topic,
         'template': template,
         'template_label': tmpl['label'],
         'outline': outline,
-        'markdown': '\n'.join(md_lines),
+        'markdown': markdown,
         'estimated_word_count': estimated,
-        'seo_tips': seo_tips,
+        'seo_tips': _generate_seo_tips(topic, keywords or []),
     }
 
 

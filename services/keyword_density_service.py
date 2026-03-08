@@ -111,46 +111,18 @@ def analyze_density(content: str, keywords: list = None) -> dict:
     return {'keywords': results, 'total_words': total_words, 'suggestions': suggestions}
 
 
-def get_density_report(content: str, top_n: int = 10) -> dict:
-    """콘텐츠에서 자동으로 상위 키워드를 추출하고 밀도를 분석합니다.
+_EMPTY_REPORT = {
+    'top_keywords': [],
+    'total_words': 0,
+    'unique_words': 0,
+    'lexical_diversity': 0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
-        top_n: 상위 N개 키워드
 
-    Returns:
-        {
-            "top_keywords": [{"keyword": str, "count": int, "density": float, "status": str}],
-            "total_words": int,
-            "unique_words": int,
-            "lexical_diversity": float,
-            "suggestions": list[str],
-        }
-    """
-    if not content or not content.strip():
-        return {
-            'top_keywords': [],
-            'total_words': 0,
-            'unique_words': 0,
-            'lexical_diversity': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    words = _tokenize(content)
-    total_words = len(words)
-
-    # 불용어 제외 빈도 계산
-    freq = {}
-    for w in words:
-        if w not in _STOPWORDS and len(w) >= 2:
-            freq[w] = freq.get(w, 0) + 1
-
-    unique_words = len(freq)
-    lexical_diversity = round(unique_words / max(total_words, 1), 3)
-
-    # 상위 키워드
+def _build_top_keywords(freq: dict, total_words: int, top_n: int) -> list:
+    """빈도 상위 키워드를 밀도 상태와 함께 반환합니다."""
     sorted_kws = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:top_n]
-
     top_keywords = []
     for kw, count in sorted_kws:
         density = round((count / total_words) * 100, 2)
@@ -162,33 +134,59 @@ def get_density_report(content: str, top_n: int = 10) -> dict:
             status = 'optimal'
         else:
             status = 'low'
-
         top_keywords.append({
-            'keyword': kw,
-            'count': count,
-            'density': density,
-            'status': status,
+            'keyword': kw, 'count': count,
+            'density': density, 'status': status,
         })
+    return top_keywords
 
+
+def _report_suggestions(top_keywords: list, lexical_diversity: float) -> list:
+    """밀도 보고서용 제안을 생성합니다."""
     suggestions = []
     stuffing = [k for k in top_keywords if k['status'] == 'stuffing']
     if stuffing:
         suggestions.append(f'{len(stuffing)}개 키워드가 과다 사용되었습니다. 동의어로 대체해 보세요.')
-
     if lexical_diversity < 0.3:
         suggestions.append('어휘 다양성이 낮습니다. 다양한 표현을 사용해 보세요.')
     elif lexical_diversity > 0.8:
         suggestions.append('어휘 다양성이 높습니다. 핵심 키워드 반복이 부족할 수 있습니다.')
-
     if not suggestions:
         suggestions.append('키워드 분포가 양호합니다.')
+    return suggestions
+
+
+def get_density_report(content: str, top_n: int = 10) -> dict:
+    """콘텐츠에서 자동으로 상위 키워드를 추출하고 밀도를 분석합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+        top_n: 상위 N개 키워드
+
+    Returns:
+        top_keywords, total_words, unique_words, lexical_diversity, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_REPORT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    words = _tokenize(content)
+    total_words = len(words)
+
+    freq = {}
+    for w in words:
+        if w not in _STOPWORDS and len(w) >= 2:
+            freq[w] = freq.get(w, 0) + 1
+
+    unique_words = len(freq)
+    lexical_diversity = round(unique_words / max(total_words, 1), 3)
+    top_keywords = _build_top_keywords(freq, total_words, top_n)
 
     return {
         'top_keywords': top_keywords,
         'total_words': total_words,
         'unique_words': unique_words,
         'lexical_diversity': lexical_diversity,
-        'suggestions': suggestions,
+        'suggestions': _report_suggestions(top_keywords, lexical_diversity),
     }
 
 
