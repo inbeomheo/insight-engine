@@ -59,6 +59,42 @@ def _extract_years(content: str) -> List[int]:
     return years
 
 
+_EMPTY_RESULT = {
+    'date_references': [],
+    'time_signals': {},
+    'freshness_indicators': {},
+    'summary': {'has_dates': False, 'newest_year': 0,
+                'freshness_level': 'unknown'},
+    'score': 50.0,
+    'suggestions': [],
+}
+
+
+def _collect_freshness_signals(content: str) -> tuple:
+    """콘텐츠에서 시의성 관련 신호를 수집합니다.
+
+    Returns:
+        (date_refs, newest_year, time_signals, trend_count, outdated_count, outdated_matches)
+    """
+    date_refs = []
+    for pattern in _DATE_PATTERNS:
+        for match in pattern.finditer(content):
+            date_refs.append(match.group())
+
+    years = _extract_years(content)
+    newest_year = max(years) if years else 0
+
+    time_signals = {}
+    for category, patterns in _TIME_REFS.items():
+        count = sum(len(p.findall(content)) for p in patterns)
+        if count > 0:
+            time_signals[category] = count
+
+    outdated_matches = _OUTDATED_TERMS.findall(content)
+    return (date_refs, newest_year, time_signals,
+            len(_TREND_KEYWORDS.findall(content)), len(outdated_matches), outdated_matches)
+
+
 def check_content_freshness(content: str) -> dict:
     """콘텐츠 시의성을 평가합니다.
 
@@ -67,74 +103,35 @@ def check_content_freshness(content: str) -> dict:
         summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'date_references': [],
-            'time_signals': {},
-            'freshness_indicators': {},
-            'summary': {'has_dates': False, 'newest_year': 0,
-                        'freshness_level': 'unknown'},
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     current_year = datetime.now().year
+    date_refs, newest_year, time_signals, trend_count, outdated_count, outdated_matches = \
+        _collect_freshness_signals(content)
 
-    # 날짜 참조 추출
-    date_refs = []
-    for pattern in _DATE_PATTERNS:
-        for match in pattern.finditer(content):
-            date_refs.append(match.group())
-
-    # 연도 추출
-    years = _extract_years(content)
-    newest_year = max(years) if years else 0
-
-    # 시간 참조 신호
-    time_signals = {}
-    for category, patterns in _TIME_REFS.items():
-        count = sum(len(p.findall(content)) for p in patterns)
-        if count > 0:
-            time_signals[category] = count
-
-    # 트렌드 키워드
-    trend_matches = _TREND_KEYWORDS.findall(content)
-    trend_count = len(trend_matches)
-
-    # 구식 표현
-    outdated_matches = _OUTDATED_TERMS.findall(content)
-    outdated_count = len(outdated_matches)
-
-    freshness_indicators = {
-        'trend_keywords': trend_count,
-        'outdated_terms': outdated_count,
-        'recent_signals': time_signals.get('recent', 0),
-        'outdated_signals': time_signals.get('outdated', 0),
-    }
-
-    # 시의성 레벨 결정
     level = _determine_level(newest_year, current_year, time_signals,
                               trend_count, outdated_count)
-
-    # 점수 계산
-    score = _calculate_score(newest_year, current_year, time_signals,
-                              trend_count, outdated_count)
-
-    suggestions = _generate_suggestions(
-        newest_year, current_year, date_refs, time_signals,
-        trend_count, outdated_count, outdated_matches, level
-    )
 
     return {
         'date_references': list(set(date_refs))[:20],
         'time_signals': time_signals,
-        'freshness_indicators': freshness_indicators,
+        'freshness_indicators': {
+            'trend_keywords': trend_count,
+            'outdated_terms': outdated_count,
+            'recent_signals': time_signals.get('recent', 0),
+            'outdated_signals': time_signals.get('outdated', 0),
+        },
         'summary': {
             'has_dates': len(date_refs) > 0,
             'newest_year': newest_year,
             'freshness_level': level,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(newest_year, current_year, time_signals,
+                                   trend_count, outdated_count),
+        'suggestions': _generate_suggestions(
+            newest_year, current_year, date_refs, time_signals,
+            trend_count, outdated_count, outdated_matches, level
+        ),
     }
 
 

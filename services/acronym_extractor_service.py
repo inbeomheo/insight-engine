@@ -66,59 +66,43 @@ _KNOWN_ACRONYMS = {
 }
 
 
-def extract_acronyms(content: str) -> dict:
-    """콘텐츠에서 약어와 전문용어를 추출합니다.
+_EMPTY_RESULT = {
+    'acronyms': [],
+    'summary': {'total': 0, 'known': 0, 'unknown': 0},
+    'glossary_markdown': '',
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _scan_acronyms(content: str) -> tuple:
+    """콘텐츠에서 약어를 추출하고 분류합니다.
 
     Returns:
-        {
-            "acronyms": [{"term": str, "definition": str, "count": int, "known": bool}],
-            "summary": {"total": int, "known": int, "unknown": int},
-            "glossary_markdown": str,
-            "suggestions": list[str],
-        }
+        (acronyms_list, known_count, unknown_count)
     """
-    if not content or not content.strip():
-        return {
-            'acronyms': [],
-            'summary': {'total': 0, 'known': 0, 'unknown': 0},
-            'glossary_markdown': '',
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 대문자 약어 추출 (2~6자) — 한국어 경계 대응
-    uppercase_acronyms = _UPPERCASE_ACRONYM_RE.findall(content)
-
-    # 빈도 계산
+    # 대문자 약어 추출 (2~6자)
     freq = {}
-    for acr in uppercase_acronyms:
-        # 단일 문자나 너무 일반적인 단어 제외
+    for acr in _UPPERCASE_ACRONYM_RE.findall(content):
         if len(acr) < 2:
             continue
-        # 일반 영단어 제외 (전부 대문자가 아닌 것)
         if not acr.isupper() and acr not in _KNOWN_ACRONYMS:
             continue
         freq[acr] = freq.get(acr, 0) + 1
 
     # CamelCase 약어 (SaaS, DevOps 등)
-    camel_terms = _CAMEL_TERM_RE.findall(content)
-    for term in camel_terms:
+    for term in _CAMEL_TERM_RE.findall(content):
         if term in _KNOWN_ACRONYMS:
             freq[term] = freq.get(term, 0) + 1
 
-    # 결과 정리
     acronyms = []
     known_count = 0
     unknown_count = 0
 
     for term, count in sorted(freq.items(), key=lambda x: x[1], reverse=True):
         known = term in _KNOWN_ACRONYMS
-        definition = _KNOWN_ACRONYMS.get(term, '정의를 확인해 주세요')
         acronyms.append({
             'term': term,
-            'definition': definition,
+            'definition': _KNOWN_ACRONYMS.get(term, '정의를 확인해 주세요'),
             'count': count,
             'known': known,
         })
@@ -127,11 +111,22 @@ def extract_acronyms(content: str) -> dict:
         else:
             unknown_count += 1
 
-    # 용어집 마크다운 생성
-    glossary = _build_glossary_markdown(acronyms)
+    return acronyms, known_count, unknown_count
 
-    # 제안
-    suggestions = _generate_suggestions(acronyms, known_count, unknown_count)
+
+def extract_acronyms(content: str) -> dict:
+    """콘텐츠에서 약어와 전문용어를 추출합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+
+    Returns:
+        acronyms, summary, glossary_markdown, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    acronyms, known_count, unknown_count = _scan_acronyms(content)
 
     return {
         'acronyms': acronyms,
@@ -140,8 +135,8 @@ def extract_acronyms(content: str) -> dict:
             'known': known_count,
             'unknown': unknown_count,
         },
-        'glossary_markdown': glossary,
-        'suggestions': suggestions,
+        'glossary_markdown': _build_glossary_markdown(acronyms),
+        'suggestions': _generate_suggestions(acronyms, known_count, unknown_count),
     }
 
 

@@ -452,43 +452,18 @@ def _generate_suggestions(factors: dict) -> list[str]:
     return suggestions
 
 
-def analyze_aeo(content: str, target_query: str = '') -> dict:
-    """
-    콘텐츠의 AEO(AI Answer Engine Optimization) 점수를 분석한다.
+_ZERO_FACTORS = {
+    'direct_answer': 0.0,
+    'structured_data': 0.0,
+    'authority_signals': 0.0,
+    'clarity': 0.0,
+    'citation_worthiness': 0.0,
+}
 
-    Args:
-        content: 분석할 콘텐츠 텍스트
-        target_query: 타겟 검색 쿼리 (선택)
 
-    Returns:
-        AEO 분석 결과 dict (aeo_score, grade, factors, optimizations 등)
-    """
-    # 빈 콘텐츠 / None 처리
-    if not content or not content.strip():
-        return {
-            'aeo_score': 0.0,
-            'grade': 'F',
-            'factors': {
-                'direct_answer': 0.0,
-                'structured_data': 0.0,
-                'authority_signals': 0.0,
-                'clarity': 0.0,
-                'citation_worthiness': 0.0,
-            },
-            'optimizations': _generate_optimizations({
-                'direct_answer': 0.0,
-                'structured_data': 0.0,
-                'authority_signals': 0.0,
-                'clarity': 0.0,
-                'citation_worthiness': 0.0,
-            }),
-            'query_alignment': None,
-            'summary': 'AEO 점수 0점(F등급)입니다. 콘텐츠가 비어 있어 분석할 수 없습니다.',
-            'suggestions': ['콘텐츠를 작성한 후 다시 분석하세요.'],
-        }
-
-    # 각 factor 채점
-    factors = {
+def _score_all_factors(content: str) -> dict:
+    """모든 AEO 요소를 채점합니다."""
+    return {
         'direct_answer': _score_direct_answer(content),
         'structured_data': _score_structured_data(content),
         'authority_signals': _score_authority_signals(content),
@@ -496,37 +471,42 @@ def analyze_aeo(content: str, target_query: str = '') -> dict:
         'citation_worthiness': _score_citation_worthiness(content),
     }
 
-    # 가중 평균 계산
-    aeo_score = sum(
-        factors[k] * _WEIGHTS[k] for k in _WEIGHTS
-    )
 
-    # 등급 결정
+def analyze_aeo(content: str, target_query: str = '') -> dict:
+    """콘텐츠의 AEO(AI Answer Engine Optimization) 점수를 분석합니다.
+
+    Args:
+        content: 분석할 콘텐츠 텍스트
+        target_query: 타겟 검색 쿼리 (선택)
+
+    Returns:
+        aeo_score, grade, factors, optimizations, query_alignment, summary, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {
+            'aeo_score': 0.0, 'grade': 'F', 'factors': dict(_ZERO_FACTORS),
+            'optimizations': _generate_optimizations(dict(_ZERO_FACTORS)),
+            'query_alignment': None,
+            'summary': 'AEO 점수 0점(F등급)입니다. 콘텐츠가 비어 있어 분석할 수 없습니다.',
+            'suggestions': ['콘텐츠를 작성한 후 다시 분석하세요.'],
+        }
+
+    factors = _score_all_factors(content)
+    aeo_score = sum(factors[k] * _WEIGHTS[k] for k in _WEIGHTS)
     grade = _compute_grade(aeo_score)
 
-    # 쿼리 정합성
     query_alignment: Optional[float] = None
     if target_query and target_query.strip():
         query_alignment = _compute_query_alignment(content, target_query)
 
-    # 최적화 제안
-    optimizations = _generate_optimizations(factors)
+    logger.info(f"AEO 분석 완료: {aeo_score:.1f}점 ({grade}등급)")
 
-    # 요약
-    summary = _generate_summary(aeo_score, grade, factors)
-
-    # 개선 제안
-    suggestions = _generate_suggestions(factors)
-
-    result = {
+    return {
         'aeo_score': round(aeo_score, 1),
         'grade': grade,
         'factors': {k: round(v, 1) for k, v in factors.items()},
-        'optimizations': optimizations,
+        'optimizations': _generate_optimizations(factors),
         'query_alignment': round(query_alignment, 1) if query_alignment is not None else None,
-        'summary': summary,
-        'suggestions': suggestions,
+        'summary': _generate_summary(aeo_score, grade, factors),
+        'suggestions': _generate_suggestions(factors),
     }
-
-    logger.info(f"AEO 분석 완료: {aeo_score:.1f}점 ({grade}등급)")
-    return result
