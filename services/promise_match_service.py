@@ -7,7 +7,6 @@ AI API 호출 없이 순수 Python(re, collections)으로 동작합니다.
 """
 import re
 import logging
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 

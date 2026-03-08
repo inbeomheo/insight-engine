@@ -9,7 +9,6 @@
 """
 import logging
 import re
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 
