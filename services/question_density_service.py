@@ -75,34 +75,22 @@ def _parse_sections(content: str) -> List[Dict]:
     return sections
 
 
-def analyze_question_density(content: str) -> dict:
-    """콘텐츠의 질문 밀도를 분석합니다.
+_EMPTY_RESULT = {
+    'questions': [],
+    'section_analysis': [],
+    'summary': {'total_questions': 0, 'total_sentences': 0,
+                'question_density': 0.0, 'rhetorical_count': 0},
+    'score': 50.0,
+    'suggestions': [],
+}
+
+
+def _detect_questions(sentences: List[str]) -> tuple:
+    """문장 목록에서 질문을 감지합니다.
 
     Returns:
-        questions, section_analysis, summary, score, suggestions를 포함하는 dict
+        (questions, rhetorical_count)
     """
-    if not content or not content.strip():
-        return {
-            'questions': [],
-            'section_analysis': [],
-            'summary': {'total_questions': 0, 'total_sentences': 0,
-                        'question_density': 0.0, 'rhetorical_count': 0},
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'questions': [],
-            'section_analysis': [],
-            'summary': {'total_questions': 0, 'total_sentences': 0,
-                        'question_density': 0.0, 'rhetorical_count': 0},
-            'score': 50.0,
-            'suggestions': [],
-        }
-
-    # 질문 감지
     questions = []
     rhetorical_count = 0
     for i, sent in enumerate(sentences):
@@ -116,25 +104,11 @@ def analyze_question_density(content: str) -> dict:
                 'is_rhetorical': is_rhet,
                 'position_index': i,
             })
+    return questions, rhetorical_count
 
-    total_q = len(questions)
-    total_s = len(sentences)
-    density = round((total_q / total_s * 100) if total_s > 0 else 0.0, 1)
 
-    # 섹션별 분석
-    sections = _parse_sections(content)
-    section_analysis = []
-    for sec in sections:
-        text = '\n'.join(sec['lines'])
-        sec_sents = _split_sentences(text)
-        sec_questions = sum(1 for s in sec_sents if _is_question(s))
-        section_analysis.append({
-            'section': sec['section'],
-            'questions': sec_questions,
-            'sentences': len(sec_sents),
-        })
-
-    # 점수: 적정 밀도 5-15%
+def _compute_density_score(density: float) -> float:
+    """질문 밀도 기반 점수를 계산합니다."""
     if density == 0:
         score = 40.0
     elif density < 3:
@@ -145,21 +119,43 @@ def analyze_question_density(content: str) -> dict:
         score = 100.0 - (density - 15) * 3
     else:
         score = max(0.0, 70.0 - (density - 25) * 2)
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(total_q, density, rhetorical_count, sections)
+
+def analyze_question_density(content: str) -> dict:
+    """콘텐츠의 질문 밀도를 분석합니다.
+
+    Returns:
+        questions, section_analysis, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    questions, rhetorical_count = _detect_questions(sentences)
+    total_q = len(questions)
+    total_s = len(sentences)
+    density = round((total_q / total_s * 100) if total_s > 0 else 0.0, 1)
+
+    sections = _parse_sections(content)
+    section_analysis = []
+    for sec in sections:
+        sec_sents = _split_sentences('\n'.join(sec['lines']))
+        section_analysis.append({
+            'section': sec['section'],
+            'questions': sum(1 for s in sec_sents if _is_question(s)),
+            'sentences': len(sec_sents),
+        })
 
     return {
-        'questions': questions,
-        'section_analysis': section_analysis,
-        'summary': {
-            'total_questions': total_q,
-            'total_sentences': total_s,
-            'question_density': density,
-            'rhetorical_count': rhetorical_count,
-        },
-        'score': score,
-        'suggestions': suggestions,
+        'questions': questions, 'section_analysis': section_analysis,
+        'summary': {'total_questions': total_q, 'total_sentences': total_s,
+                    'question_density': density, 'rhetorical_count': rhetorical_count},
+        'score': _compute_density_score(density),
+        'suggestions': _generate_suggestions(total_q, density, rhetorical_count, sections),
     }
 
 

@@ -74,31 +74,21 @@ def _parse_paragraphs(content: str) -> List[Dict]:
     return paragraphs
 
 
-def detect_list_table_opportunities(content: str) -> dict:
-    """목록/표 변환 후보 구간을 감지합니다.
+_EMPTY_RESULT = {
+    'opportunities': [],
+    'summary': {'total_opportunities': 0, 'list_candidates': 0,
+                'table_candidates': 0, 'long_paragraphs': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_paragraph_opportunities(paragraphs: List[Dict]) -> tuple:
+    """문단별로 목록/표 변환 후보를 스캔합니다.
 
     Returns:
-        opportunities, summary, score, suggestions를 포함하는 dict
+        (opportunities, list_candidates, table_candidates, long_paragraphs)
     """
-    if not content or not content.strip():
-        return {
-            'opportunities': [],
-            'summary': {'total_opportunities': 0, 'list_candidates': 0,
-                        'table_candidates': 0, 'long_paragraphs': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    paragraphs = _parse_paragraphs(content)
-    if not paragraphs:
-        return {
-            'opportunities': [],
-            'summary': {'total_opportunities': 0, 'list_candidates': 0,
-                        'table_candidates': 0, 'long_paragraphs': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     opportunities = []
     list_candidates = 0
     table_candidates = 0
@@ -109,7 +99,6 @@ def detect_list_table_opportunities(content: str) -> dict:
         opp_type = None
         reason = ''
 
-        # 나열형 감지
         for pattern in _ENUMERATION_PATTERNS:
             if pattern.search(text):
                 opp_type = 'list'
@@ -117,7 +106,6 @@ def detect_list_table_opportunities(content: str) -> dict:
                 list_candidates += 1
                 break
 
-        # 비교형 감지
         if not opp_type:
             for pattern in _COMPARISON_PATTERNS:
                 if pattern.search(text):
@@ -126,7 +114,6 @@ def detect_list_table_opportunities(content: str) -> dict:
                     table_candidates += 1
                     break
 
-        # 긴 문단 감지
         if not opp_type and len(text) >= _LONG_PARAGRAPH_THRESHOLD:
             opp_type = 'list'
             reason = f'긴 문단({len(text)}자) — 핵심 포인트를 목록으로 분리 권장'
@@ -134,31 +121,39 @@ def detect_list_table_opportunities(content: str) -> dict:
             list_candidates += 1
 
         if opp_type:
-            excerpt = text if len(text) <= 100 else text[:97] + '...'
             opportunities.append({
-                'section': para['section'],
-                'type': opp_type,
-                'reason': reason,
-                'excerpt': excerpt,
+                'section': para['section'], 'type': opp_type, 'reason': reason,
+                'excerpt': text if len(text) <= 100 else text[:97] + '...',
             })
 
-    total = len(opportunities)
-    total_paras = len(paragraphs)
-    opp_ratio = (total / total_paras) if total_paras > 0 else 0.0
-    score = round(max(0.0, min(100.0, (1.0 - opp_ratio) * 100.0)), 1)
+    return opportunities, list_candidates, table_candidates, long_paragraphs
 
-    suggestions = _generate_suggestions(opportunities, list_candidates, table_candidates, long_paragraphs)
+
+def detect_list_table_opportunities(content: str) -> dict:
+    """목록/표 변환 후보 구간을 감지합니다.
+
+    Returns:
+        opportunities, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    paragraphs = _parse_paragraphs(content)
+    if not paragraphs:
+        return dict(_EMPTY_RESULT)
+
+    opportunities, list_cands, table_cands, long_paras = _scan_paragraph_opportunities(paragraphs)
+
+    total = len(opportunities)
+    opp_ratio = (total / len(paragraphs)) if paragraphs else 0.0
+    score = round(max(0.0, min(100.0, (1.0 - opp_ratio) * 100.0)), 1)
 
     return {
         'opportunities': opportunities,
-        'summary': {
-            'total_opportunities': total,
-            'list_candidates': list_candidates,
-            'table_candidates': table_candidates,
-            'long_paragraphs': long_paragraphs,
-        },
+        'summary': {'total_opportunities': total, 'list_candidates': list_cands,
+                    'table_candidates': table_cands, 'long_paragraphs': long_paras},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(opportunities, list_cands, table_cands, long_paras),
     }
 
 

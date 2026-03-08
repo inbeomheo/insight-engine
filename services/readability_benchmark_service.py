@@ -75,11 +75,8 @@ def benchmark_readability(content: str, category: str = 'blog') -> dict:
     """
     if not content or not content.strip():
         return {
-            'category': category,
-            'metrics': {},
-            'benchmarks': {},
-            'overall_status': 'below',
-            'percentile': 0,
+            'category': category, 'metrics': {}, 'benchmarks': {},
+            'overall_status': 'below', 'percentile': 0,
             'suggestions': ['콘텐츠가 비어 있습니다.'],
         }
 
@@ -88,8 +85,23 @@ def benchmark_readability(content: str, category: str = 'blog') -> dict:
 
     bench = _BENCHMARKS[category]
     metrics = _calculate_metrics(content)
+    comparisons, overall = _compare_with_benchmark(metrics, bench)
 
-    # 벤치마크 비교
+    return {
+        'category': category, 'category_label': bench['label'],
+        'metrics': metrics, 'benchmarks': comparisons,
+        'overall_status': overall,
+        'percentile': _estimate_percentile(metrics, bench),
+        'suggestions': _generate_suggestions(comparisons, bench, category),
+    }
+
+
+def _compare_with_benchmark(metrics: dict, bench: dict) -> tuple:
+    """지표를 벤치마크와 비교합니다.
+
+    Returns:
+        (comparisons, overall_status)
+    """
     comparisons = {}
     statuses = []
 
@@ -103,37 +115,17 @@ def benchmark_readability(content: str, category: str = 'blog') -> dict:
         else:
             status = 'within'
 
-        comparisons[key] = {
-            'value': value,
-            'range': [low, high],
-            'status': status,
-        }
+        comparisons[key] = {'value': value, 'range': [low, high], 'status': status}
         statuses.append(status)
 
-    # 종합 상태
-    within_count = statuses.count('within')
-    if within_count >= 2:
+    if statuses.count('within') >= 2:
         overall = 'within'
     elif statuses.count('below') >= 2:
         overall = 'below'
     else:
         overall = 'above'
 
-    # 백분위 추정
-    percentile = _estimate_percentile(metrics, bench)
-
-    # 제안
-    suggestions = _generate_suggestions(comparisons, bench, category)
-
-    return {
-        'category': category,
-        'category_label': bench['label'],
-        'metrics': metrics,
-        'benchmarks': comparisons,
-        'overall_status': overall,
-        'percentile': percentile,
-        'suggestions': suggestions,
-    }
+    return comparisons, overall
 
 
 def get_categories() -> list:
