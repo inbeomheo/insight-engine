@@ -20,6 +20,47 @@ _INSIGHT_KEYWORDS = [
 ]
 
 
+_EMPTY_RESULT = {
+    'snippets': [],
+    'total': 0,
+    'best_snippet': None,
+}
+
+
+def _collect_all_snippets(plain: str) -> list:
+    """모든 유형의 스니펫을 수집합니다 (중복 제거)."""
+    snippets = []
+    seen = set()
+
+    for match in _STAT_PATTERN.finditer(plain):
+        text = _clean_snippet(match.group())
+        if text and text not in seen and 20 <= len(text) <= 200:
+            snippets.append(_make_snippet(text, 'statistic'))
+            seen.add(text)
+
+    for match in _QUOTE_PATTERN.finditer(plain):
+        text = match.group(1).strip()
+        if text and text not in seen:
+            snippets.append(_make_snippet(text, 'quote'))
+            seen.add(text)
+
+    for match in _COMPARISON_PATTERN.finditer(plain):
+        text = _clean_snippet(match.group())
+        if text and text not in seen and 20 <= len(text) <= 200:
+            snippets.append(_make_snippet(text, 'comparison'))
+            seen.add(text)
+
+    for sentence in re.split(r'[.!?。]\s*', plain):
+        sentence = sentence.strip()
+        if not sentence or len(sentence) < 20 or sentence in seen:
+            continue
+        if any(kw in sentence for kw in _INSIGHT_KEYWORDS) and len(sentence) <= 200:
+            snippets.append(_make_snippet(sentence, 'insight'))
+            seen.add(sentence)
+
+    return snippets
+
+
 def extract_snippets(content: str, max_count: int = 10) -> dict:
     """콘텐츠에서 소셜 공유용 스니펫을 추출합니다.
 
@@ -28,73 +69,17 @@ def extract_snippets(content: str, max_count: int = 10) -> dict:
         max_count: 최대 추출 수 (기본 10)
 
     Returns:
-        {
-            "snippets": [
-                {
-                    "type": "statistic" | "quote" | "insight" | "comparison",
-                    "text": str,
-                    "char_count": int,
-                    "social_ready": bool (280자 이하면 True),
-                    "suggested_platform": str,
-                }
-            ],
-            "total": int,
-            "best_snippet": str | None,
-        }
+        snippets, total, best_snippet를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'snippets': [],
-            'total': 0,
-            'best_snippet': None,
-        }
+        return dict(_EMPTY_RESULT)
 
-    plain = _strip_markdown(content)
-    snippets = []
-    seen_texts = set()
-
-    # 1) 통계/숫자 스니펫
-    for match in _STAT_PATTERN.finditer(plain):
-        text = _clean_snippet(match.group())
-        if text and text not in seen_texts and 20 <= len(text) <= 200:
-            snippets.append(_make_snippet(text, 'statistic'))
-            seen_texts.add(text)
-
-    # 2) 인용문 스니펫
-    for match in _QUOTE_PATTERN.finditer(plain):
-        text = match.group(1).strip()
-        if text and text not in seen_texts:
-            snippets.append(_make_snippet(text, 'quote'))
-            seen_texts.add(text)
-
-    # 3) 비교/대비 스니펫
-    for match in _COMPARISON_PATTERN.finditer(plain):
-        text = _clean_snippet(match.group())
-        if text and text not in seen_texts and 20 <= len(text) <= 200:
-            snippets.append(_make_snippet(text, 'comparison'))
-            seen_texts.add(text)
-
-    # 4) 인사이트 키워드 기반
-    sentences = re.split(r'[.!?。]\s*', plain)
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence or len(sentence) < 20 or sentence in seen_texts:
-            continue
-        if any(kw in sentence for kw in _INSIGHT_KEYWORDS):
-            if len(sentence) <= 200:
-                snippets.append(_make_snippet(sentence, 'insight'))
-                seen_texts.add(sentence)
-
-    # 중복 제거 후 제한
-    snippets = snippets[:max_count]
-
-    # 베스트 스니펫 선택 (통계 > 인용 > 인사이트 > 비교, 짧을수록 좋음)
-    best = _select_best(snippets)
+    snippets = _collect_all_snippets(_strip_markdown(content))[:max_count]
 
     return {
         'snippets': snippets,
         'total': len(snippets),
-        'best_snippet': best,
+        'best_snippet': _select_best(snippets),
     }
 
 

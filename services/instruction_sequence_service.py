@@ -110,6 +110,42 @@ def _validate_sequence(items: List[Dict]) -> List[Dict]:
     return issues
 
 
+_EMPTY_RESULT = {
+    'sequences': [],
+    'ordinals': [],
+    'issues': [],
+    'summary': {'total_sequences': 0, 'total_steps': 0,
+                'total_issues': 0, 'has_instructions': False},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _collect_all_issues(numbered: list, step_items: list, ordinals: list) -> List[Dict]:
+    """모든 시퀀스 유형에서 이슈를 수집합니다."""
+    all_issues = []
+    for seq in numbered:
+        all_issues.extend(_validate_sequence(seq))
+    if step_items:
+        all_issues.extend(_validate_sequence(step_items))
+    if ordinals:
+        all_issues.extend(_validate_sequence(ordinals))
+    return all_issues
+
+
+def _summarize_sequences(numbered: list) -> List[Dict]:
+    """번호 시퀀스를 요약합니다."""
+    summaries = []
+    for i, seq in enumerate(numbered):
+        nums = [s['number'] for s in seq]
+        summaries.append({
+            'index': i + 1,
+            'steps': len(seq),
+            'range': f'{nums[0]}-{nums[-1]}' if nums else '',
+        })
+    return summaries
+
+
 def validate_instruction_sequence(content: str) -> dict:
     """절차의 논리적 일관성을 검증합니다.
 
@@ -117,64 +153,24 @@ def validate_instruction_sequence(content: str) -> dict:
         sequences, ordinals, issues, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'sequences': [],
-            'ordinals': [],
-            'issues': [],
-            'summary': {'total_sequences': 0, 'total_steps': 0,
-                        'total_issues': 0, 'has_instructions': False},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 번호 시퀀스 찾기
     numbered = _find_numbered_sequences(content)
     step_items = _find_step_sequences(content)
     ordinals = _find_ordinal_sequences(content)
 
-    all_issues = []
-
-    # 번호 시퀀스 검증
-    for seq in numbered:
-        issues = _validate_sequence(seq)
-        all_issues.extend(issues)
-
-    # Step N 검증
-    if step_items:
-        step_issues = _validate_sequence(step_items)
-        all_issues.extend(step_issues)
-
-    # 서수 시퀀스 검증
-    if ordinals:
-        ordinal_issues = _validate_sequence(ordinals)
-        all_issues.extend(ordinal_issues)
-
+    all_issues = _collect_all_issues(numbered, step_items, ordinals)
     total_steps = sum(len(s) for s in numbered) + len(step_items) + len(ordinals)
     has_instructions = total_steps > 0
     total_issues = len(all_issues)
 
-    # 점수
-    if not has_instructions:
-        score = 100.0
-    elif total_issues == 0:
+    if not has_instructions or total_issues == 0:
         score = 100.0
     else:
         score = round(max(0.0, 100.0 - total_issues * 20.0), 1)
 
-    # 시퀀스 요약
-    seq_summaries = []
-    for i, seq in enumerate(numbered):
-        nums = [s['number'] for s in seq]
-        seq_summaries.append({
-            'index': i + 1,
-            'steps': len(seq),
-            'range': f'{nums[0]}-{nums[-1]}' if nums else '',
-        })
-
-    suggestions = _generate_suggestions(all_issues, has_instructions, total_steps)
-
     return {
-        'sequences': seq_summaries,
+        'sequences': _summarize_sequences(numbered),
         'ordinals': ordinals,
         'issues': all_issues,
         'summary': {
@@ -184,7 +180,7 @@ def validate_instruction_sequence(content: str) -> dict:
             'has_instructions': has_instructions,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(all_issues, has_instructions, total_steps),
     }
 
 

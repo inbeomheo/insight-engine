@@ -70,58 +70,41 @@ def _classify_tokens(content: str) -> Dict[str, int]:
     return {'nouns': nouns, 'verbs': verbs}
 
 
-def analyze_noun_verb_ratio(content: str) -> dict:
-    """명사/동사 비율을 분석합니다.
+_EMPTY_SUMMARY = {
+    'noun_ratio': 0.0,
+    'verb_ratio': 0.0,
+    'nv_ratio': 0.0,
+    'level': 'none',
+}
+
+_EMPTY_RESULT = {
+    'counts': {'nouns': 0, 'verbs': 0},
+    'summary': dict(_EMPTY_SUMMARY),
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _compute_nv_metrics(nouns: int, verbs: int) -> tuple:
+    """명사/동사 비율 메트릭과 점수를 계산합니다.
 
     Returns:
-        counts, summary, score, suggestions를 포함하는 dict
+        (noun_ratio, verb_ratio, nv_ratio, level, score)
     """
-    if not content or not content.strip():
-        return {
-            'counts': {'nouns': 0, 'verbs': 0},
-            'summary': {
-                'noun_ratio': 0.0,
-                'verb_ratio': 0.0,
-                'nv_ratio': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    counts = _classify_tokens(content)
-    nouns = counts['nouns']
-    verbs = counts['verbs']
     total = nouns + verbs
-
-    if total == 0:
-        return {
-            'counts': counts,
-            'summary': {
-                'noun_ratio': 0.0,
-                'verb_ratio': 0.0,
-                'nv_ratio': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': [],
-        }
-
     noun_ratio = round(nouns / total * 100, 1)
     verb_ratio = round(verbs / total * 100, 1)
     nv_ratio = round(nouns / max(verbs, 1), 2)
 
-    # 레벨 (이상적 비율: 명사 60-70%, 동사 30-40%)
     if 1.2 <= nv_ratio <= 3.0:
         level = 'balanced'
     elif nv_ratio > 3.0:
         level = 'noun_heavy'
-    elif nv_ratio < 1.2 and nv_ratio >= 0.5:
+    elif nv_ratio >= 0.5:
         level = 'verb_heavy'
     else:
         level = 'very_verb_heavy'
 
-    # 점수
     if 1.5 <= nv_ratio <= 2.5:
         score = 100.0
     elif 1.2 <= nv_ratio < 1.5 or 2.5 < nv_ratio <= 3.0:
@@ -131,20 +114,36 @@ def analyze_noun_verb_ratio(content: str) -> dict:
     else:
         score = max(30.0, 70.0 - abs(nv_ratio - 2.0) * 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return noun_ratio, verb_ratio, nv_ratio, level, round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(noun_ratio, verb_ratio, nv_ratio, level)
+
+def analyze_noun_verb_ratio(content: str) -> dict:
+    """명사/동사 비율을 분석합니다.
+
+    Returns:
+        counts, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    counts = _classify_tokens(content)
+    nouns = counts['nouns']
+    verbs = counts['verbs']
+
+    if nouns + verbs == 0:
+        return {'counts': counts, 'summary': dict(_EMPTY_SUMMARY),
+                'score': 50.0, 'suggestions': []}
+
+    noun_ratio, verb_ratio, nv_ratio, level, score = _compute_nv_metrics(nouns, verbs)
 
     return {
         'counts': counts,
         'summary': {
-            'noun_ratio': noun_ratio,
-            'verb_ratio': verb_ratio,
-            'nv_ratio': nv_ratio,
-            'level': level,
+            'noun_ratio': noun_ratio, 'verb_ratio': verb_ratio,
+            'nv_ratio': nv_ratio, 'level': level,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(noun_ratio, verb_ratio, nv_ratio, level),
     }
 
 
