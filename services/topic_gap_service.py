@@ -296,40 +296,20 @@ def _generate_gap_suggestions(
     return suggestions
 
 
-def analyze_topic_gaps(
-    content: str,
-    reference_contents: Optional[List[Dict[str, str]]] = None,
-) -> Dict[str, Any]:
-    """현재 콘텐츠와 참고 콘텐츠를 비교하여 토픽 갭을 분석합니다.
+_EMPTY_GAP_RESULT = {
+    'gaps': [], 'coverage_score': 0.0, 'my_unique_topics': [],
+    'common_topics': [], 'missing_questions': [], 'suggestions': [],
+}
 
-    Args:
-        content: 내 콘텐츠 텍스트
-        reference_contents: 참고 콘텐츠 리스트 [{"title": str, "content": str}, ...]
+
+def _collect_reference_topics(
+    reference_contents: List[Dict[str, str]],
+) -> tuple:
+    """참고 콘텐츠에서 토픽과 질문을 수집합니다.
 
     Returns:
-        {
-            "gaps": list,             # 빠진 주제 목록
-            "coverage_score": float,  # 0-100 주제 커버리지
-            "my_unique_topics": list,  # 내 콘텐츠에만 있는 주제
-            "common_topics": list,    # 공통 주제
-            "missing_questions": list, # 빠진 질문
-            "suggestions": list,      # 보강 제안
-        }
+        (ref_topics_by_source, ref_topic_counter, ref_questions)
     """
-    if not content or not content.strip():
-        return {
-            'gaps': [], 'coverage_score': 0.0, 'my_unique_topics': [],
-            'common_topics': [], 'missing_questions': [],
-            'suggestions': ['분석할 콘텐츠가 없습니다. 콘텐츠를 입력해주세요.'],
-        }
-
-    my_topics = _extract_topics(content)
-    my_topic_set = set(my_topics.keys())
-
-    if not reference_contents:
-        return _analyze_self_only(content, my_topics, my_topic_set)
-
-    # 참고 콘텐츠별 토픽 추출
     ref_topics_by_source: Dict[str, set] = {}
     ref_topic_counter = Counter()
     ref_questions: List[str] = []
@@ -346,21 +326,49 @@ def analyze_topic_gaps(
             ref_topic_counter[topic] += 1
         ref_questions.extend(_extract_questions(ref_text))
 
+    return ref_topics_by_source, ref_topic_counter, ref_questions
+
+
+def analyze_topic_gaps(
+    content: str,
+    reference_contents: Optional[List[Dict[str, str]]] = None,
+) -> Dict[str, Any]:
+    """현재 콘텐츠와 참고 콘텐츠를 비교하여 토픽 갭을 분석합니다.
+
+    Args:
+        content: 내 콘텐츠 텍스트
+        reference_contents: 참고 콘텐츠 리스트 [{"title": str, "content": str}, ...]
+
+    Returns:
+        gaps, coverage_score, my_unique_topics, common_topics, missing_questions, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_GAP_RESULT, 'suggestions': ['분석할 콘텐츠가 없습니다. 콘텐츠를 입력해주세요.']}
+
+    my_topics = _extract_topics(content)
+    my_topic_set = set(my_topics.keys())
+
+    if not reference_contents:
+        return _analyze_self_only(content, my_topics, my_topic_set)
+
+    ref_topics_by_source, ref_topic_counter, ref_questions = _collect_reference_topics(reference_contents)
     all_ref_topics = set(ref_topic_counter.keys())
     missing_topics = all_ref_topics - my_topic_set
     common_topics = my_topic_set & all_ref_topics
     unique_topics = my_topic_set - all_ref_topics
+    coverage = (len(common_topics) / len(all_ref_topics)) * 100 if all_ref_topics else 100.0
 
     gaps = _build_gap_list(missing_topics, ref_topic_counter, ref_topics_by_source)
-    coverage = (len(common_topics) / len(all_ref_topics)) * 100 if all_ref_topics else 100.0
-    missing_questions = _find_missing_questions(ref_questions, my_topic_set)
-    suggestions = _generate_gap_suggestions(gaps, missing_topics, common_topics, unique_topics, coverage)
 
     return {
         'gaps': gaps,
         'coverage_score': round(coverage, 1),
         'my_unique_topics': sorted(unique_topics),
         'common_topics': sorted(common_topics),
-        'missing_questions': missing_questions,
-        'suggestions': suggestions,
+        'missing_questions': _find_missing_questions(ref_questions, my_topic_set),
+        'suggestions': _generate_gap_suggestions(
+            gaps=gaps, missing_topics=missing_topics,
+            common_topics=common_topics, unique_topics=unique_topics,
+            coverage=coverage,
+        ),
     }

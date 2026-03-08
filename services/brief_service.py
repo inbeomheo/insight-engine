@@ -89,18 +89,30 @@ def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
     parsed = _parse_brief_json(content_text)
 
     if parsed is None:
-        # 파싱 실패 시 기본 구조 반환
-        return {
-            "title_suggestions": [topic],
-            "overview": content_text[:200],
-            "target_audience": "일반 독자",
-            "key_points": [],
-            "recommended_structure": [],
-            "keywords": keywords or [],
-            "tone": "전문적",
-        }
+        return _fallback_brief(topic, content_text, keywords)
 
-    # 필수 키 보장
+    return _ensure_brief_defaults(parsed, topic, keywords)
+
+
+def _fallback_brief(
+    topic: str, content_text: str, keywords: Optional[List[str]],
+) -> Dict:
+    """JSON 파싱 실패 시 기본 브리프 구조를 반환합니다."""
+    return {
+        "title_suggestions": [topic],
+        "overview": content_text[:200],
+        "target_audience": "일반 독자",
+        "key_points": [],
+        "recommended_structure": [],
+        "keywords": keywords or [],
+        "tone": "전문적",
+    }
+
+
+def _ensure_brief_defaults(
+    parsed: Dict, topic: str, keywords: Optional[List[str]],
+) -> Dict:
+    """파싱된 브리프에 누락된 필수 키를 기본값으로 채웁니다."""
     defaults = {
         "title_suggestions": [topic],
         "overview": "",
@@ -113,7 +125,6 @@ def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
     for key, default in defaults.items():
         if key not in parsed or not parsed[key]:
             parsed[key] = default
-
     return parsed
 
 

@@ -290,63 +290,71 @@ def _analyze_screenshot(paragraphs: list[str]) -> list[dict]:
     return suggestions
 
 
+_EMPTY_VISUAL_RESULT = {
+    'suggestions': [],
+    'summary': {'total_suggestions': 0, 'by_type': {}, 'visual_density_score': 0.0},
+    'existing_visuals': [],
+    'recommendations': [],
+}
+
+_ANALYZERS = [
+    _analyze_chart, _analyze_table, _analyze_infographic,
+    _analyze_diagram, _analyze_image, _analyze_screenshot,
+]
+
+_TYPE_RECOMMENDATIONS = {
+    'chart': '숫자 데이터를 차트로 시각화하는 것을 권장합니다',
+    'table': '비교 항목을 표로 정리하면 한눈에 파악할 수 있습니다',
+    'infographic': '단계별 프로세스를 인포그래픽으로 표현하면 직관적입니다',
+    'diagram': '시스템 구조를 다이어그램으로 표현하면 명확해집니다',
+    'screenshot': 'UI 가이드에 스크린샷을 추가하면 따라하기 쉬워집니다',
+}
+
+
+def _collect_all_suggestions(paragraphs: list[str]) -> list[dict]:
+    """6종 분석기를 실행하여 시각 콘텐츠 제안을 수집합니다."""
+    results = []
+    for analyzer in _ANALYZERS:
+        results.extend(analyzer(paragraphs))
+    return results
+
+
+def _build_recommendations(
+    by_type: dict[str, int],
+    density_score: float,
+    has_suggestions: bool,
+) -> list[str]:
+    """타입별 집계와 밀도 점수로 추천 문구를 생성합니다."""
+    recs = []
+    if density_score < 30:
+        recs.append('시각 콘텐츠를 추가하면 가독성이 향상됩니다')
+    for vis_type, msg in _TYPE_RECOMMENDATIONS.items():
+        if by_type.get(vis_type, 0) > 0:
+            recs.append(msg)
+    if not has_suggestions and not recs:
+        recs.append('현재 콘텐츠는 시각 요소가 충분합니다')
+    return recs
+
+
 def suggest_visuals(content: str) -> dict:
-    """
-    콘텐츠를 분석하여 시각 콘텐츠 삽입 제안을 생성한다.
+    """콘텐츠를 분석하여 시각 콘텐츠 삽입 제안을 생성합니다.
 
     Args:
         content: 분석할 텍스트 콘텐츠 (마크다운 포함 가능)
 
     Returns:
-        suggestions, summary, existing_visuals, recommendations를 포함하는 딕셔너리
+        suggestions, summary, existing_visuals, recommendations를 포함하는 dict
     """
-    # 빈/None 입력 처리
     if not content or not content.strip():
-        return {
-            'suggestions': [],
-            'summary': {
-                'total_suggestions': 0,
-                'by_type': {},
-                'visual_density_score': 0.0,
-            },
-            'existing_visuals': [],
-            'recommendations': [],
-        }
+        return dict(_EMPTY_VISUAL_RESULT)
 
     paragraphs = _split_paragraphs(content)
-    existing_visuals = _detect_existing_visuals(content)
+    all_suggestions = _collect_all_suggestions(paragraphs)
     density_score = _calc_visual_density(content, paragraphs)
 
-    # 각 유형별 분석 실행
-    all_suggestions = []
-    all_suggestions.extend(_analyze_chart(paragraphs))
-    all_suggestions.extend(_analyze_table(paragraphs))
-    all_suggestions.extend(_analyze_infographic(paragraphs))
-    all_suggestions.extend(_analyze_diagram(paragraphs))
-    all_suggestions.extend(_analyze_image(paragraphs))
-    all_suggestions.extend(_analyze_screenshot(paragraphs))
-
-    # 타입별 집계
     by_type: dict[str, int] = {}
     for s in all_suggestions:
         by_type[s['type']] = by_type.get(s['type'], 0) + 1
-
-    # 전체 제안 생성
-    recommendations = []
-    if density_score < 30:
-        recommendations.append('시각 콘텐츠를 추가하면 가독성이 향상됩니다')
-    if by_type.get('chart', 0) > 0:
-        recommendations.append('숫자 데이터를 차트로 시각화하는 것을 권장합니다')
-    if by_type.get('table', 0) > 0:
-        recommendations.append('비교 항목을 표로 정리하면 한눈에 파악할 수 있습니다')
-    if by_type.get('infographic', 0) > 0:
-        recommendations.append('단계별 프로세스를 인포그래픽으로 표현하면 직관적입니다')
-    if by_type.get('diagram', 0) > 0:
-        recommendations.append('시스템 구조를 다이어그램으로 표현하면 명확해집니다')
-    if by_type.get('screenshot', 0) > 0:
-        recommendations.append('UI 가이드에 스크린샷을 추가하면 따라하기 쉬워집니다')
-    if not all_suggestions and not recommendations:
-        recommendations.append('현재 콘텐츠는 시각 요소가 충분합니다')
 
     return {
         'suggestions': all_suggestions,
@@ -355,6 +363,6 @@ def suggest_visuals(content: str) -> dict:
             'by_type': by_type,
             'visual_density_score': round(density_score, 1),
         },
-        'existing_visuals': existing_visuals,
-        'recommendations': recommendations,
+        'existing_visuals': _detect_existing_visuals(content),
+        'recommendations': _build_recommendations(by_type, density_score, bool(all_suggestions)),
     }
