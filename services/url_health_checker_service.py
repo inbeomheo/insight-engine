@@ -109,6 +109,15 @@ def _check_url(url: str) -> Dict:
     return {'url': url, 'issues': issues, 'status': status}
 
 
+_EMPTY_RESULT = {
+    'url_results': [],
+    'summary': {'total_urls': 0, 'healthy': 0,
+                'issues_found': 0, 'health_rate': 100.0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
 def check_url_health(content: str) -> dict:
     """콘텐츠 내 URL 건강 상태를 검사합니다.
 
@@ -116,30 +125,33 @@ def check_url_health(content: str) -> dict:
         url_results, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'url_results': [],
-            'summary': {'total_urls': 0, 'healthy': 0,
-                        'issues_found': 0, 'health_rate': 100.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     extracted = _extract_urls(content)
-
     if not extracted:
-        return {
-            'url_results': [],
-            'summary': {'total_urls': 0, 'healthy': 0,
-                        'issues_found': 0, 'health_rate': 100.0},
-            'score': 100.0,
-            'suggestions': ['콘텐츠에 URL이 없습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠에 URL이 없습니다.']}
 
-    # URL 검사
+    results, healthy, issues_count = _evaluate_urls(extracted)
+    total = len(results)
+    health_rate = round(healthy / total * 100, 1) if total > 0 else 100.0
+    score = round(max(0.0, min(100.0, health_rate)), 1)
+
+    return {
+        'url_results': results[:30],
+        'summary': {
+            'total_urls': total, 'healthy': healthy,
+            'issues_found': issues_count, 'health_rate': health_rate,
+        },
+        'score': score,
+        'suggestions': _generate_suggestions(results, healthy, total, health_rate),
+    }
+
+
+def _evaluate_urls(extracted: List[Dict]) -> tuple:
+    """추출된 URL 목록을 검사하여 (results, healthy, issues_count) 튜플을 반환합니다."""
     results = []
     healthy = 0
     issues_count = 0
-
     for item in extracted:
         check = _check_url(item['url'])
         check['context'] = item['context']
@@ -148,26 +160,7 @@ def check_url_health(content: str) -> dict:
             healthy += 1
         else:
             issues_count += len(check['issues'])
-
-    total = len(results)
-    health_rate = round(healthy / total * 100, 1) if total > 0 else 100.0
-
-    # 점수
-    score = round(max(0.0, min(100.0, health_rate)), 1)
-
-    suggestions = _generate_suggestions(results, healthy, total, health_rate)
-
-    return {
-        'url_results': results[:30],
-        'summary': {
-            'total_urls': total,
-            'healthy': healthy,
-            'issues_found': issues_count,
-            'health_rate': health_rate,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+    return results, healthy, issues_count
 
 
 def _generate_suggestions(results: List[Dict], healthy: int,

@@ -42,6 +42,21 @@ REPURPOSE_PROMPTS = {
 }
 
 
+def _build_system_prompt(target_format: str, language: str) -> str:
+    """대상 포맷과 언어에 맞는 시스템 프롬프트를 조합합니다."""
+    if target_format not in REPURPOSE_PROMPTS:
+        raise ValueError(
+            f"지원하지 않는 포맷: {target_format}. "
+            f"지원 목록: {list(REPURPOSE_PROMPTS.keys())}"
+        )
+    base_prompt = REPURPOSE_PROMPTS[target_format]
+    lang_suffix = {
+        'en': " Write in English.",
+        'ja': " 日本語で作成してください。",
+    }.get(language, "")
+    return base_prompt + lang_suffix + " 금지 표현(놀라운, 혁신적 등)은 사용하지 마세요."
+
+
 class RepurposeService:
     """
     콘텐츠 재활용 변환 서비스
@@ -80,20 +95,7 @@ class RepurposeService:
         Returns:
             {'format': str, 'content': str, 'character_count': int}
         """
-        if target_format not in REPURPOSE_PROMPTS:
-            raise ValueError(
-                f"지원하지 않는 포맷: {target_format}. "
-                f"지원 목록: {list(REPURPOSE_PROMPTS.keys())}"
-            )
-
-        base_prompt = REPURPOSE_PROMPTS[target_format]
-
-        lang_suffix = {
-            'en': " Write in English.",
-            'ja': " 日本語で作成してください。",
-        }.get(language, "")
-
-        system_prompt = base_prompt + lang_suffix + " 금지 표현(놀라운, 혁신적 등)은 사용하지 마세요."
+        system_prompt = _build_system_prompt(target_format, language)
 
         try:
             from services.ai_service import call_litellm

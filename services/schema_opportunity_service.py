@@ -146,6 +146,13 @@ _TEMPLATES = {
 # 총 스키마 타입 수 (커버리지 계산용)
 _TOTAL_SCHEMA_TYPES = 7
 
+_EMPTY_RESULT = {
+    'opportunities': [],
+    'total_opportunities': 0,
+    'coverage_score': 0.0,
+    'suggestions': [],
+}
+
 
 def find_schema_opportunities(content: str) -> dict:
     """콘텐츠를 분석하여 구조화 데이터 적용 기회를 찾습니다.
@@ -162,27 +169,23 @@ def find_schema_opportunities(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'opportunities': [],
-            'total_opportunities': 0,
-            'coverage_score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력해 주세요.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력해 주세요.']}
 
+    opportunities = _collect_opportunities(content)
+    coverage = round((len(opportunities) / _TOTAL_SCHEMA_TYPES) * 100, 1)
+
+    return {
+        'opportunities': opportunities,
+        'total_opportunities': len(opportunities),
+        'coverage_score': coverage,
+        'suggestions': _generate_suggestions(opportunities, content),
+    }
+
+
+def _collect_opportunities(content: str) -> list:
+    """각 스키마 타입별 감지를 실행하고 신뢰도 내림차순으로 정렬합니다."""
     opportunities = []
-
-    # 각 스키마 타입별 감지
-    detectors = [
-        ('FAQPage', _detect_faq),
-        ('HowTo', _detect_howto),
-        ('Article', _detect_article),
-        ('VideoObject', _detect_video_object),
-        ('Clip', _detect_clip),
-        ('DefinedTerm', _detect_defined_term),
-        ('ItemList', _detect_item_list),
-    ]
-
-    for schema_type, detector in detectors:
+    for schema_type, detector in _DETECTORS:
         result = detector(content)
         if result['confidence'] > 0:
             opportunities.append({
@@ -192,21 +195,8 @@ def find_schema_opportunities(content: str) -> dict:
                 'json_ld_template': _TEMPLATES[schema_type],
                 'priority': _calc_priority(result['confidence']),
             })
-
-    # 신뢰도 내림차순 정렬
     opportunities.sort(key=lambda x: x['confidence'], reverse=True)
-
-    # 커버리지 점수: 감지된 스키마 수 / 전체 타입 수 * 100
-    coverage = (len(opportunities) / _TOTAL_SCHEMA_TYPES) * 100
-
-    suggestions = _generate_suggestions(opportunities, content)
-
-    return {
-        'opportunities': opportunities,
-        'total_opportunities': len(opportunities),
-        'coverage_score': round(coverage, 1),
-        'suggestions': suggestions,
-    }
+    return opportunities
 
 
 # ── 스키마 타입별 감지 함수 ──
@@ -340,6 +330,19 @@ def _detect_item_list(content: str) -> dict:
         confidence = min(len(evidence) * 12 + list_items * 5, 100)
 
     return {'confidence': confidence, 'evidence': evidence[:5]}
+
+
+# ── 감지 함수 레지스트리 (함수 정의 이후에 배치) ──
+
+_DETECTORS = [
+    ('FAQPage', _detect_faq),
+    ('HowTo', _detect_howto),
+    ('Article', _detect_article),
+    ('VideoObject', _detect_video_object),
+    ('Clip', _detect_clip),
+    ('DefinedTerm', _detect_defined_term),
+    ('ItemList', _detect_item_list),
+]
 
 
 # ── 헬퍼 함수 ──
