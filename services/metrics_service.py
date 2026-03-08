@@ -88,16 +88,16 @@ else:
     # 노옵 클래스 — prometheus 없어도 코드 동작
     class _Noop:
         """Prometheus 미설치 시 노옵 대체 객체"""
-        def labels(self, **kwargs):
+        def labels(self, **kwargs) -> '_Noop':
             """레이블 선택 (노옵)"""
             return self
-        def inc(self, *a, **k):
+        def inc(self, *a, **k) -> None:
             """카운터 증가 (노옵)"""
             pass
-        def observe(self, *a, **k):
+        def observe(self, *a, **k) -> None:
             """히스토그램 관측 (노옵)"""
             pass
-        def set(self, *a, **k):
+        def set(self, *a, **k) -> None:
             """게이지 설정 (노옵)"""
             pass
 

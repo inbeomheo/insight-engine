@@ -675,7 +675,7 @@ def extract_faq_schema(content: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def extract_cta(content):
+def extract_cta(content: str) -> Optional[Dict[str, str]]:
     """geo_seo 스타일 콘텐츠에서 CTA 문구를 추출합니다.
 
     **CTA_PRIMARY**: ... / **CTA_SECONDARY**: ... 패턴을 인식합니다.
@@ -741,7 +741,7 @@ def inline_edit(content: str, selection: str, instruction: str, model: str, cont
     }
 
 
-def create_full_blog_post(content, model_name='gemini/gemini-3-flash-preview', style_prompt=None, return_prompt=False):
+def create_full_blog_post(content: str, model_name: str = 'gemini/gemini-3-flash-preview', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.
