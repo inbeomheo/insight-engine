@@ -31,6 +31,36 @@ MAX_EXTERNAL_LINKS = 3
 # 내부링크 함수 (P3-7A)
 # ====================
 
+def _score_histories(histories: list, content_words: set) -> List[Dict[str, Any]]:
+    """히스토리 아이템과 콘텐츠 간 자카드 유사도를 계산합니다."""
+    scored = []
+    for h in histories:
+        title = h.get('title', '')
+        youtube_url = h.get('url', '')
+        if not title or not youtube_url:
+            continue
+
+        title_words = set(
+            w.lower() for w in re.findall(r'[가-힣a-zA-Z]{2,}', title)
+        )
+        if not title_words:
+            continue
+
+        intersection = content_words & title_words
+        union = content_words | title_words
+        relevance = len(intersection) / len(union) if union else 0.0
+
+        if relevance > 0.05:
+            scored.append({
+                'title': title,
+                'url': youtube_url,
+                'relevance': round(relevance, 3),
+            })
+
+    scored.sort(key=lambda x: x['relevance'], reverse=True)
+    return scored
+
+
 def find_internal_links(content: str, user_id: str = None) -> List[Dict[str, Any]]:
     """과거 생성 콘텐츠에서 현재 콘텐츠와 연관된 내부링크를 찾습니다.
 
@@ -54,7 +84,6 @@ def find_internal_links(content: str, user_id: str = None) -> List[Dict[str, Any
         if not supabase:
             return []
 
-        # 최근 히스토리 50건 조회 (url과 title만)
         result = supabase.table('ie_histories') \
             .select('report_id, title, url') \
             .eq('user_id', user_id) \
@@ -66,40 +95,11 @@ def find_internal_links(content: str, user_id: str = None) -> List[Dict[str, Any
         if not histories:
             return []
 
-        # 현재 콘텐츠에서 키워드 추출 (공백 기준 분리 후 2자 이상 단어만)
         content_words = set(
             w.lower() for w in re.findall(r'[가-힣a-zA-Z]{2,}', content)
         )
 
-        # 각 히스토리 아이템과 관련도 계산
-        scored = []
-        for h in histories:
-            title = h.get('title', '')
-            youtube_url = h.get('url', '')
-            if not title or not youtube_url:
-                continue
-
-            title_words = set(
-                w.lower() for w in re.findall(r'[가-힣a-zA-Z]{2,}', title)
-            )
-            if not title_words:
-                continue
-
-            # 자카드 유사도로 관련도 계산
-            intersection = content_words & title_words
-            union = content_words | title_words
-            relevance = len(intersection) / len(union) if union else 0.0
-
-            if relevance > 0.05:  # 최소 관련도 임계값
-                scored.append({
-                    'title': title,
-                    'url': youtube_url,
-                    'relevance': round(relevance, 3),
-                })
-
-        # 관련도 내림차순 정렬 후 상위 MAX_INTERNAL_LINKS개 반환
-        scored.sort(key=lambda x: x['relevance'], reverse=True)
-        return scored[:MAX_INTERNAL_LINKS]
+        return _score_histories(histories, content_words)[:MAX_INTERNAL_LINKS]
 
     except Exception as e:
         logger.warning(f"내부링크 검색 실패 (무시): {e}")

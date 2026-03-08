@@ -71,12 +71,50 @@ class ComplexityReport:
         return suggestions
 
 
+_EMPTY_REPORT = ComplexityReport(
+    avg_sentence_length=0, avg_word_length=0,
+    paragraph_count=0, sentence_count=0,
+    heading_depth=0, list_count=0, code_block_count=0,
+    technical_term_count=0, domain_detected='unknown',
+    readability_score=0, complexity_score=0, expertise_level='beginner'
+)
+
+
+def _compute_scores(avg_sentence_len: float, avg_word_len: float,
+                     tech_count: int, heading_depth: int,
+                     code_blocks: int, paragraph_count: int) -> tuple:
+    """가독성, 복잡도, 전문성을 계산합니다.
+
+    Returns:
+        (readability, complexity, expertise)
+    """
+    sentence_penalty = max(0, (avg_sentence_len - 80) / 200) * 50
+    word_penalty = max(0, (avg_word_len - 5) / 10) * 20
+    readability = round(max(0, 100 - sentence_penalty - word_penalty), 1)
+
+    complexity = min(100, (
+        max(0, avg_sentence_len - 50) * 0.3 +
+        heading_depth * 3 +
+        tech_count * 2 +
+        code_blocks * 5 +
+        max(0, paragraph_count - 5) * 2
+    ))
+
+    if tech_count >= 10 or avg_sentence_len >= 120:
+        expertise = 'expert'
+    elif tech_count >= 5 or avg_sentence_len >= 80:
+        expertise = 'intermediate'
+    else:
+        expertise = 'beginner'
+
+    return readability, complexity, expertise
+
+
 class ComplexityService:
     """콘텐츠 복잡도 분석 서비스"""
 
     def analyze(self, content: str) -> ComplexityReport:
-        """
-        콘텐츠 복잡도 종합 분석
+        """콘텐츠 복잡도 종합 분석.
 
         Args:
             content: 분석할 마크다운 텍스트
@@ -85,18 +123,9 @@ class ComplexityService:
             ComplexityReport
         """
         if not content or not content.strip():
-            return ComplexityReport(
-                avg_sentence_length=0, avg_word_length=0,
-                paragraph_count=0, sentence_count=0,
-                heading_depth=0, list_count=0, code_block_count=0,
-                technical_term_count=0, domain_detected='unknown',
-                readability_score=0, complexity_score=0, expertise_level='beginner'
-            )
+            return _EMPTY_REPORT
 
-        # 마크다운 정제 (분석용 평문)
         plain = self._strip_markdown(content)
-
-        # 구조 분석
         paragraphs = [p for p in content.split('\n\n') if p.strip()]
         sentences = self._split_sentences(plain)
         words = plain.split()
@@ -104,34 +133,16 @@ class ComplexityService:
         avg_sentence_len = sum(len(s) for s in sentences) / max(1, len(sentences))
         avg_word_len = sum(len(w) for w in words) / max(1, len(words))
 
-        # 마크다운 구조
         headings = re.findall(r'^(#{1,6})\s', content, re.MULTILINE)
         heading_depth = max((len(h) for h in headings), default=0)
         list_items = len(re.findall(r'^[-*+]\s', content, re.MULTILINE))
         code_blocks = len(re.findall(r'```', content)) // 2
-
-        # 전문 용어
         tech_count, domain = self._count_tech_terms(content)
 
-        # 가독성 점수 계산 (한국어 Flesch 변형)
-        readability = self._korean_readability(avg_sentence_len, avg_word_len)
-
-        # 복잡도 점수 (0~100)
-        complexity = min(100, (
-            max(0, avg_sentence_len - 50) * 0.3 +
-            heading_depth * 3 +
-            tech_count * 2 +
-            code_blocks * 5 +
-            max(0, len(paragraphs) - 5) * 2
-        ))
-
-        # 전문성 수준
-        if tech_count >= 10 or avg_sentence_len >= 120:
-            expertise = 'expert'
-        elif tech_count >= 5 or avg_sentence_len >= 80:
-            expertise = 'intermediate'
-        else:
-            expertise = 'beginner'
+        readability, complexity, expertise = _compute_scores(
+            avg_sentence_len, avg_word_len, tech_count,
+            heading_depth, code_blocks, len(paragraphs),
+        )
 
         return ComplexityReport(
             avg_sentence_length=avg_sentence_len,
@@ -176,10 +187,3 @@ class ComplexityService:
         detected = max_domain if domain_counts.get(max_domain, 0) > 0 else 'general'
         return total, detected
 
-    def _korean_readability(self, avg_sentence_len: float, avg_word_len: float) -> float:
-        """한국어 가독성 점수 (0~100, 높을수록 읽기 쉬움)"""
-        # 최적: 문장 50~80자, 단어 3~5자
-        sentence_penalty = max(0, (avg_sentence_len - 80) / 200) * 50
-        word_penalty = max(0, (avg_word_len - 5) / 10) * 20
-        score = max(0, 100 - sentence_penalty - word_penalty)
-        return round(score, 1)

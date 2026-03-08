@@ -202,6 +202,57 @@ def _generate_suggestions(claims: List[Dict]) -> List[str]:
     return suggestions
 
 
+_EMPTY_RESULT = {
+    "claims": [],
+    "summary": {
+        "total_claims": 0,
+        "cited": 0,
+        "uncited": 0,
+        "citation_rate": 0.0,
+    },
+    "credibility_score": 100.0,
+    "suggestions": [],
+}
+
+
+def _scan_claims(sentences: List[str], content: str) -> List[Dict]:
+    """문장에서 주장을 감지하고 출처 여부를 분석합니다."""
+    claims = []
+    for sentence in sentences:
+        claim_type = _detect_claim_type(sentence)
+        if claim_type is None:
+            continue
+        has_source, source = _detect_source(sentence, content)
+        claims.append({
+            "text": sentence,
+            "type": claim_type,
+            "has_source": has_source,
+            "source": source,
+            "needs_citation": not has_source,
+            "severity": _determine_severity(claim_type, sentence),
+        })
+    return claims
+
+
+def _compute_credibility(claims: List[Dict]) -> tuple:
+    """신뢰도 점수와 요약 통계를 계산합니다.
+
+    Returns:
+        (total, cited, uncited, citation_rate, credibility_score)
+    """
+    total = len(claims)
+    cited = sum(1 for c in claims if c["has_source"])
+    uncited = total - cited
+    citation_rate = (cited / total * 100) if total > 0 else 0.0
+
+    high_uncited = sum(1 for c in claims if c["severity"] == "high" and c["needs_citation"])
+    uncited_high_ratio = (high_uncited / total) if total > 0 else 0.0
+    credibility_score = max(0.0, min(100.0,
+        citation_rate * 0.6 + (100 - uncited_high_ratio * 100) * 0.4))
+
+    return total, cited, uncited, round(citation_rate, 2), round(credibility_score, 2)
+
+
 def verify_claims(content: str) -> dict:
     """콘텐츠에서 주장을 감지하고 출처 필요 여부를 분석합니다.
 
@@ -211,58 +262,11 @@ def verify_claims(content: str) -> dict:
     Returns:
         claims, summary, credibility_score, suggestions를 포함하는 dict
     """
-    # 빈 입력 처리
     if not content or not content.strip():
-        return {
-            "claims": [],
-            "summary": {
-                "total_claims": 0,
-                "cited": 0,
-                "uncited": 0,
-                "citation_rate": 0.0,
-            },
-            "credibility_score": 100.0,
-            "suggestions": [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    claims: List[Dict] = []
-
-    for sentence in sentences:
-        claim_type = _detect_claim_type(sentence)
-        if claim_type is None:
-            continue
-
-        has_source, source = _detect_source(sentence, content)
-        severity = _determine_severity(claim_type, sentence)
-        needs_citation = not has_source
-
-        claims.append({
-            "text": sentence,
-            "type": claim_type,
-            "has_source": has_source,
-            "source": source,
-            "needs_citation": needs_citation,
-            "severity": severity,
-        })
-
-    # 요약 계산
-    total = len(claims)
-    cited = sum(1 for c in claims if c["has_source"])
-    uncited = total - cited
-
-    citation_rate = (cited / total * 100) if total > 0 else 0.0
-
-    # 신뢰도 점수 계산
-    # credibility_score = citation_rate × 0.6 + (100 - uncited_high_severity_ratio × 100) × 0.4
-    high_uncited = sum(1 for c in claims if c["severity"] == "high" and c["needs_citation"])
-    uncited_high_ratio = (high_uncited / total) if total > 0 else 0.0
-    credibility_score = citation_rate * 0.6 + (100 - uncited_high_ratio * 100) * 0.4
-
-    # 0-100 범위 클램핑
-    credibility_score = max(0.0, min(100.0, credibility_score))
-
-    suggestions = _generate_suggestions(claims)
+    claims = _scan_claims(_split_sentences(content), content)
+    total, cited, uncited, citation_rate, credibility_score = _compute_credibility(claims)
 
     return {
         "claims": claims,
@@ -270,8 +274,8 @@ def verify_claims(content: str) -> dict:
             "total_claims": total,
             "cited": cited,
             "uncited": uncited,
-            "citation_rate": round(citation_rate, 2),
+            "citation_rate": citation_rate,
         },
-        "credibility_score": round(credibility_score, 2),
-        "suggestions": suggestions,
+        "credibility_score": credibility_score,
+        "suggestions": _generate_suggestions(claims),
     }
