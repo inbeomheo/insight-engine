@@ -29,6 +29,16 @@ _OVERUSE_WORDS = [
 ]
 
 
+_EMPTY_RESULT = {
+    'repeated_phrases': [],
+    'redundant_patterns': [],
+    'overused_words': [],
+    'similar_sentences': [],
+    'score': 100,
+    'suggestions': [],
+}
+
+
 def check_redundancy(content: str) -> dict:
     """콘텐츠의 중복/반복 표현을 감지합니다.
 
@@ -46,40 +56,20 @@ def check_redundancy(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'repeated_phrases': [],
-            'redundant_patterns': [],
-            'overused_words': [],
-            'similar_sentences': [],
-            'score': 100,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 1. 반복 문구 감지 (3단어 이상 n-gram)
     repeated_phrases = _find_repeated_phrases(content)
-
-    # 2. 중복 패턴 감지
     redundant_patterns = _find_redundant_patterns(content)
-
-    # 3. 과도 사용 단어
     overused_words = _find_overused_words(content)
-
-    # 4. 유사 문장 감지
     similar_sentences = _find_similar_sentences(content)
-
-    # 점수 계산
-    score = _calculate_score(repeated_phrases, redundant_patterns, overused_words, similar_sentences)
-
-    # 제안
-    suggestions = _generate_suggestions(repeated_phrases, redundant_patterns, overused_words, similar_sentences)
 
     return {
         'repeated_phrases': repeated_phrases,
         'redundant_patterns': redundant_patterns,
         'overused_words': overused_words,
         'similar_sentences': similar_sentences,
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
+        'suggestions': _generate_suggestions(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
     }
 
 

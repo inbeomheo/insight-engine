@@ -21,6 +21,13 @@ _PARA_SPLIT_RE = re.compile(r'\n\s*\n')
 _TOO_LONG_THRESHOLD = 300
 _TOO_SHORT_THRESHOLD = 50
 
+_EMPTY_RESULT = {
+    'sections': [],
+    'gaps': [],
+    'balance_score': 100.0,
+    'suggestions': [],
+}
+
 
 def detect_subheading_gaps(content: str) -> dict:
     """마크다운 콘텐츠의 헤딩 간 불균형을 분석합니다.
@@ -38,41 +45,21 @@ def detect_subheading_gaps(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'sections': [],
-            'gaps': [],
-            'balance_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 섹션 분할
     sections = _split_sections(content)
-
     if not sections:
-        return {
-            'sections': [],
-            'gaps': [],
-            'balance_score': 100.0,
-            'suggestions': ['헤딩이 없습니다. 마크다운 헤딩(#, ##, ###)을 추가해 주세요.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['헤딩이 없습니다. 마크다운 헤딩(#, ##, ###)을 추가해 주세요.']}
 
-    # 각 섹션 분석
     analyzed = [_analyze_section(s) for s in sections]
-
-    # 갭(문제) 감지
     gaps = _detect_gaps(analyzed)
-
-    # 균형 점수 계산
     balance_score = _calculate_balance_score(analyzed)
-
-    # 개선 제안
-    suggestions = _generate_suggestions(analyzed, gaps, balance_score)
 
     return {
         'sections': analyzed,
         'gaps': gaps,
         'balance_score': balance_score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(analyzed, gaps, balance_score),
     }
 
 

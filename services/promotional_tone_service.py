@@ -69,6 +69,15 @@ _CATEGORY_IMPACT = {
 _HOTSPOT_DENSITY_THRESHOLD = 0.05
 
 
+_EMPTY_RESULT = {
+    'detections': [],
+    'summary': {'total': 0, 'by_category': {}, 'promo_density': 0.0},
+    'hotspots': [],
+    'trust_score': 100.0,
+    'suggestions': [],
+}
+
+
 def check_promotional_tone(content: str) -> dict:
     """콘텐츠의 프로모션 표현 밀도를 분석합니다.
 
@@ -85,41 +94,19 @@ def check_promotional_tone(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'detections': [],
-            'summary': {'total': 0, 'by_category': {}, 'promo_density': 0.0},
-            'hotspots': [],
-            'trust_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 문장 분리
-    sentences = _split_sentences(content)
-
-    # 단락 분리
-    paragraphs = _split_paragraphs(content)
-
-    # 프로모션 표현 감지
-    detections = _detect_promotions(sentences)
-
-    # 요약 통계
+    detections = _detect_promotions(_split_sentences(content))
     summary = _build_summary(detections, content)
-
-    # 핫스팟 분석
-    hotspots = _find_hotspots(paragraphs)
-
-    # 신뢰 점수 계산
+    hotspots = _find_hotspots(_split_paragraphs(content))
     trust_score = _calculate_trust_score(detections, summary, hotspots)
-
-    # 개선 제안
-    suggestions = _generate_suggestions(detections, summary, hotspots, trust_score)
 
     return {
         'detections': detections,
         'summary': summary,
         'hotspots': hotspots,
         'trust_score': trust_score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(detections, summary, hotspots, trust_score),
     }
 
 
@@ -267,54 +254,35 @@ def _calculate_trust_score(detections: list, summary: dict, hotspots: list) -> f
     return round(max(0.0, min(100.0, score)), 1)
 
 
+_CATEGORY_SUGGESTIONS = {
+    'superlative': (2, '최상급 표현이 다수 사용되었습니다. "최고의", "유일한" 등을 구체적 수치나 근거로 대체하세요.'),
+    'hype': (1, '과장 표현("혁신적", "놀라운" 등)이 감지되었습니다. 구체적인 성과나 데이터로 뒷받침하세요.'),
+    'urgency': (1, '긴급성 유도 표현("지금 바로", "한정" 등)이 포함되어 있습니다. 정보 전달 콘텐츠에서는 지양하세요.'),
+    'guarantee': (1, '보장/확실 표현이 사용되었습니다. 법적 리스크를 고려하여 조건부 표현으로 완화하세요.'),
+}
+
+
 def _generate_suggestions(detections: list, summary: dict, hotspots: list, trust_score: float) -> list:
     """분석 결과 기반 개선 제안을 생성합니다."""
-    suggestions = []
-
     if not detections:
-        suggestions.append('프로모션 표현이 감지되지 않았습니다. 콘텐츠 신뢰도가 높습니다.')
-        return suggestions
+        return ['프로모션 표현이 감지되지 않았습니다. 콘텐츠 신뢰도가 높습니다.']
 
-    # 카테고리별 제안
-    by_cat = summary['by_category']
+    suggestions = _category_suggestions(summary['by_category'])
 
-    if by_cat.get('superlative', 0) >= 2:
-        suggestions.append(
-            '최상급 표현이 다수 사용되었습니다. '
-            '"최고의", "유일한" 등을 구체적 수치나 근거로 대체하세요.'
-        )
-
-    if by_cat.get('hype', 0) >= 1:
-        suggestions.append(
-            '과장 표현("혁신적", "놀라운" 등)이 감지되었습니다. '
-            '구체적인 성과나 데이터로 뒷받침하세요.'
-        )
-
-    if by_cat.get('urgency', 0) >= 1:
-        suggestions.append(
-            '긴급성 유도 표현("지금 바로", "한정" 등)이 포함되어 있습니다. '
-            '정보 전달 콘텐츠에서는 지양하세요.'
-        )
-
-    if by_cat.get('guarantee', 0) >= 1:
-        suggestions.append(
-            '보장/확실 표현이 사용되었습니다. '
-            '법적 리스크를 고려하여 조건부 표현으로 완화하세요.'
-        )
-
-    # 핫스팟 경고
     if hotspots:
         indices = ', '.join(str(h['paragraph_index'] + 1) for h in hotspots)
-        suggestions.append(
-            f'단락 {indices}에 프로모션 표현이 집중되어 있습니다. '
-            '해당 구간을 중심으로 표현을 완화하세요.'
-        )
+        suggestions.append(f'단락 {indices}에 프로모션 표현이 집중되어 있습니다. 해당 구간을 중심으로 표현을 완화하세요.')
 
-    # 전반적 신뢰도
     if trust_score < 50:
-        suggestions.append(
-            '전체 신뢰 점수가 낮습니다(50점 미만). '
-            '콘텐츠 전반에 걸쳐 객관적 톤으로 재작성을 권장합니다.'
-        )
+        suggestions.append('전체 신뢰 점수가 낮습니다(50점 미만). 콘텐츠 전반에 걸쳐 객관적 톤으로 재작성을 권장합니다.')
 
+    return suggestions
+
+
+def _category_suggestions(by_cat: dict) -> list:
+    """카테고리별 감지 수에 따른 제안 목록을 반환합니다."""
+    suggestions = []
+    for cat, (threshold, message) in _CATEGORY_SUGGESTIONS.items():
+        if by_cat.get(cat, 0) >= threshold:
+            suggestions.append(message)
     return suggestions
