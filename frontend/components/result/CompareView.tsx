@@ -77,6 +77,7 @@ export default function CompareView({ left, right, onClose }: Props) {
         {onClose && (
           <button
             onClick={onClose}
+            aria-label="비교 뷰 닫기"
             className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             <X className="w-4 h-4" />

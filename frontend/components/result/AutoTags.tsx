@@ -101,6 +101,7 @@ export default function AutoTags({ content }: AutoTagsProps) {
             {editing && (
               <button
                 onClick={() => removeTag(tag)}
+                aria-label={`${tag} 태그 제거`}
                 className="ml-0.5 hover:text-destructive"
               >
                 <X className="h-2.5 w-2.5" />

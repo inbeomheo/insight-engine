@@ -191,6 +191,7 @@ export default function AudioPlayer({ audioBlob, title, onClose }: AudioPlayerPr
               key={s}
               type="button"
               onClick={() => setSpeed(s)}
+              aria-label={`재생 속도 ${s}배`}
               className={`px-1.5 py-0.5 rounded text-xs font-mono transition-colors ${
                 speed === s
                   ? 'bg-primary text-primary-foreground'
