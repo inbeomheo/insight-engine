@@ -14,6 +14,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+_EMPTY_SCORES = {
+    'readability': 0, 'seo': 0, 'structure': 0,
+    'originality': 0, 'engagement': 0,
+}
+
+_WEIGHTS = {
+    'readability': 0.20, 'seo': 0.25, 'structure': 0.15,
+    'originality': 0.20, 'engagement': 0.20,
+}
+
+
+def _compute_total_score(scores: dict) -> int:
+    """가중 평균으로 종합 점수를 계산합니다."""
+    total = round(sum(scores[k] * _WEIGHTS[k] for k in _WEIGHTS))
+    return max(0, min(100, total))
+
 
 def grade_content(content: str) -> dict:
     """콘텐츠를 종합 평가하여 A~F 등급을 부여합니다.
@@ -38,12 +54,7 @@ def grade_content(content: str) -> dict:
     """
     if not content or not content.strip():
         return {
-            'grade': 'F',
-            'total_score': 0,
-            'scores': {
-                'readability': 0, 'seo': 0, 'structure': 0,
-                'originality': 0, 'engagement': 0,
-            },
+            'grade': 'F', 'total_score': 0, 'scores': dict(_EMPTY_SCORES),
             'suggestions': ['콘텐츠가 비어 있습니다.'],
             'summary': '평가할 수 없습니다.',
         }
@@ -51,57 +62,25 @@ def grade_content(content: str) -> dict:
     from services.readability_service import analyze_readability
     from services.quality_service import calculate_comprehensive_score
 
-    # 기존 서비스 결과 수집
     readability_result = analyze_readability(content)
     quality_result = calculate_comprehensive_score(content)
 
-    readability_score = readability_result.get('score', 0)
-    seo_score = quality_result.get('seo', 0)
-    structure_score = quality_result.get('structure', 0)
-    originality_score = quality_result.get('originality', 0)
-
-    # 참여도 예측 (규칙 기반)
-    engagement_score = _predict_engagement(content)
-
-    # 종합 점수 (가중 평균)
-    weights = {
-        'readability': 0.20,
-        'seo': 0.25,
-        'structure': 0.15,
-        'originality': 0.20,
-        'engagement': 0.20,
+    scores = {
+        'readability': readability_result.get('score', 0),
+        'seo': quality_result.get('seo', 0),
+        'structure': quality_result.get('structure', 0),
+        'originality': quality_result.get('originality', 0),
+        'engagement': _predict_engagement(content),
     }
-    total = round(
-        readability_score * weights['readability']
-        + seo_score * weights['seo']
-        + structure_score * weights['structure']
-        + originality_score * weights['originality']
-        + engagement_score * weights['engagement']
-    )
-    total = max(0, min(100, total))
-
-    # 등급 산출
+    total = _compute_total_score(scores)
     grade = _score_to_grade(total)
 
-    # 제안 수집
-    suggestions = _collect_suggestions(
-        readability_result, quality_result, engagement_score, content
-    )
-
-    summary = _generate_summary(grade, total)
-
     return {
-        'grade': grade,
-        'total_score': total,
-        'scores': {
-            'readability': readability_score,
-            'seo': seo_score,
-            'structure': structure_score,
-            'originality': originality_score,
-            'engagement': engagement_score,
-        },
-        'suggestions': suggestions,
-        'summary': summary,
+        'grade': grade, 'total_score': total, 'scores': scores,
+        'suggestions': _collect_suggestions(
+            readability_result, quality_result, scores['engagement'], content
+        ),
+        'summary': _generate_summary(grade, total),
     }
 
 

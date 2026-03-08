@@ -63,6 +63,48 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_comparison_content': False, 'criteria_categories': 0,
+        'criteria_found': [], 'completeness_ratio': 0.0, 'level': 'none',
+    },
+    'criteria_details': [],
+    'suggestions': [],
+}
+
+
+def _scan_criteria(content: str) -> tuple:
+    """비교 기준 카테고리를 스캔합니다.
+
+    Returns:
+        (criteria_details, found_categories)
+    """
+    found_categories = []
+    criteria_details = []
+    for cat_name, cat_info in _CRITERIA_PATTERNS.items():
+        has = _has_pattern(content, cat_info['patterns'])
+        criteria_details.append({
+            'category': cat_name, 'label': cat_info['label'], 'found': has,
+        })
+        if has:
+            found_categories.append(cat_name)
+    return criteria_details, found_categories
+
+
+def _compute_completeness_level(found_count: int) -> str:
+    """충족 카테고리 수로 완전성 레벨을 결정합니다."""
+    if found_count >= 4:
+        return 'comprehensive'
+    elif found_count >= 3:
+        return 'good'
+    elif found_count >= 2:
+        return 'partial'
+    elif found_count >= 1:
+        return 'minimal'
+    return 'missing'
+
+
 def check_comparison_criteria_completeness(content: str) -> dict:
     """비교 콘텐츠의 기준 명시 완전성을 검사합니다.
 
@@ -70,86 +112,29 @@ def check_comparison_criteria_completeness(content: str) -> dict:
         score, summary, criteria_found, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_comparison_content': False,
-                'criteria_categories': 0,
-                'criteria_found': [],
-                'completeness_ratio': 0.0,
-                'level': 'none',
-            },
-            'criteria_details': [],
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 비교 콘텐츠인지 확인
-    is_comparison = _has_pattern(content, _COMPARISON_SIGNAL)
+    if not _has_pattern(content, _COMPARISON_SIGNAL):
+        return dict(_EMPTY_RESULT)
 
-    if not is_comparison:
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_comparison_content': False,
-                'criteria_categories': 0,
-                'criteria_found': [],
-                'completeness_ratio': 0.0,
-                'level': 'none',
-            },
-            'criteria_details': [],
-            'suggestions': [],
-        }
-
-    # 기준 카테고리 검사
-    found_categories = []
-    criteria_details = []
-
-    for cat_name, cat_info in _CRITERIA_PATTERNS.items():
-        has = _has_pattern(content, cat_info['patterns'])
-        criteria_details.append({
-            'category': cat_name,
-            'label': cat_info['label'],
-            'found': has,
-        })
-        if has:
-            found_categories.append(cat_name)
-
-    total_categories = len(_CRITERIA_PATTERNS)
+    criteria_details, found_categories = _scan_criteria(content)
     found_count = len(found_categories)
+    total_categories = len(_CRITERIA_PATTERNS)
     completeness = round(found_count / total_categories * 100, 1)
-
-    # 레벨 판정
-    if found_count >= 4:
-        level = 'comprehensive'
-    elif found_count >= 3:
-        level = 'good'
-    elif found_count >= 2:
-        level = 'partial'
-    elif found_count >= 1:
-        level = 'minimal'
-    else:
-        level = 'missing'
-
-    # 연속 점수 — 카테고리 충족 비율 기반
-    score = 15.0 + (found_count / total_categories * 85.0)
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(
-        found_categories, criteria_details, completeness, level
-    )
+    level = _compute_completeness_level(found_count)
+    score = round(max(0.0, min(100.0, 15.0 + (found_count / total_categories * 85.0))), 1)
 
     return {
         'score': score,
         'summary': {
-            'is_comparison_content': True,
-            'criteria_categories': found_count,
+            'is_comparison_content': True, 'criteria_categories': found_count,
             'criteria_found': found_categories,
-            'completeness_ratio': completeness,
-            'level': level,
+            'completeness_ratio': completeness, 'level': level,
         },
         'criteria_details': criteria_details,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            found_categories, criteria_details, completeness, level
+        ),
     }
 
 

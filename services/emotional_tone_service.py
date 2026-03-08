@@ -69,6 +69,44 @@ _EMOTION_LEXICON = {
 }
 
 
+_EMPTY_RESULT = {
+    'arc': [],
+    'overall': {'dominant_emotion': 'neutral', 'emotion_label': '중립',
+                'valence': 0, 'distribution': {}},
+    'flow_pattern': 'none',
+    'score': 0,
+    'suggestions': [],
+}
+
+
+def _analyze_paragraphs(paragraphs: list) -> tuple:
+    """문단별 감정을 분석하고 전체 감정을 집계합니다.
+
+    Returns:
+        (arc, total_emotions)
+    """
+    arc = []
+    total_emotions = {}
+
+    for idx, para in enumerate(paragraphs):
+        emotions = _score_paragraph(para)
+        dominant = max(emotions, key=emotions.get) if emotions else 'neutral'
+        valence = _calculate_valence(emotions)
+
+        arc.append({
+            'index': idx,
+            'dominant_emotion': dominant,
+            'emotion_label': _EMOTION_LEXICON.get(dominant, {}).get('label', '중립'),
+            'valence': round(valence, 2),
+            'emotions': emotions,
+        })
+
+        for emo, score in emotions.items():
+            total_emotions[emo] = total_emotions.get(emo, 0) + score
+
+    return arc, total_emotions
+
+
 def map_emotional_tone(content: str) -> dict:
     """콘텐츠의 감정 흐름을 매핑합니다.
 
@@ -87,74 +125,31 @@ def map_emotional_tone(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'arc': [],
-            'overall': {'dominant_emotion': 'neutral', 'emotion_label': '중립',
-                        'valence': 0, 'distribution': {}},
-            'flow_pattern': 'none',
-            'score': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     paragraphs = [p.strip() for p in re.split(r'\n\s*\n|\n', content) if len(p.strip()) >= 5]
     if not paragraphs:
-        return {
-            'arc': [],
-            'overall': {'dominant_emotion': 'neutral', 'emotion_label': '중립',
-                        'valence': 0, 'distribution': {}},
-            'flow_pattern': 'none',
-            'score': 0,
-            'suggestions': ['분석할 문단이 없습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
 
-    # 문단별 감정 분석
-    arc = []
-    total_emotions = {}
+    arc, total_emotions = _analyze_paragraphs(paragraphs)
 
-    for idx, para in enumerate(paragraphs):
-        emotions = _score_paragraph(para)
-        dominant = max(emotions, key=emotions.get) if emotions else 'neutral'
-        valence = _calculate_valence(emotions)
-
-        label = _EMOTION_LEXICON.get(dominant, {}).get('label', '중립')
-        arc.append({
-            'index': idx,
-            'dominant_emotion': dominant,
-            'emotion_label': label,
-            'valence': round(valence, 2),
-            'emotions': emotions,
-        })
-
-        for emo, score in emotions.items():
-            total_emotions[emo] = total_emotions.get(emo, 0) + score
-
-    # 전체 분석
     overall_dominant = max(total_emotions, key=total_emotions.get) if total_emotions else 'neutral'
-    overall_valence = _calculate_valence(total_emotions)
     total_score = sum(total_emotions.values()) or 1
     distribution = {k: round(v / total_score * 100, 1)
                     for k, v in sorted(total_emotions.items(), key=lambda x: x[1], reverse=True)}
-
-    # 흐름 패턴 감지
     flow_pattern = _detect_flow_pattern(arc)
-
-    # 점수
-    score = _calculate_tone_score(arc, distribution, flow_pattern)
-
-    # 제안
-    suggestions = _generate_suggestions(arc, distribution, flow_pattern)
 
     return {
         'arc': arc,
         'overall': {
             'dominant_emotion': overall_dominant,
             'emotion_label': _EMOTION_LEXICON.get(overall_dominant, {}).get('label', '중립'),
-            'valence': round(overall_valence, 2),
+            'valence': round(_calculate_valence(total_emotions), 2),
             'distribution': distribution,
         },
         'flow_pattern': flow_pattern,
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_tone_score(arc, distribution, flow_pattern),
+        'suggestions': _generate_suggestions(arc, distribution, flow_pattern),
     }
 
 
