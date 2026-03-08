@@ -190,14 +190,71 @@ def search_relevant_chunks(
         return []
 
 
+def _build_qa_messages(
+    context_text: str,
+    question: str,
+    history: Optional[List[Dict[str, str]]],
+) -> List[Dict[str, str]]:
+    """Q&A 시스템/사용자/히스토리 메시지를 구성합니다."""
+    system_prompt = (
+        "당신은 YouTube 영상 내용 전문가입니다.\n"
+        "아래에 제공된 영상 자막 내용만을 바탕으로 사용자 질문에 답변하세요.\n"
+        "자막에 없는 내용은 '영상에서 해당 내용을 찾을 수 없습니다'라고 명확하게 답하세요.\n"
+        "추측하거나 자막 외 정보를 추가하지 마세요.\n\n"
+        f"[영상 자막 내용]\n{context_text}"
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    if history:
+        for msg in history[-(MAX_HISTORY_MESSAGES):]:
+            if msg.get("role") in ("user", "assistant") and msg.get("content"):
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+    messages.append({"role": "user", "content": question})
+    return messages
+
+
+def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[str]:
+    """LiteLLM으로 답변을 생성합니다. 실패 시 None 반환."""
+    try:
+        kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": 1024,
+            "temperature": 0.3,
+        }
+        if model.startswith("zhipuai/"):
+            kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
+            api_key = os.environ.get("ZHIPUAI_API_KEY", "")
+            if api_key:
+                kwargs["api_key"] = api_key
+
+        response = litellm_completion(**kwargs)
+        return response.choices[0].message.content or ""
+    except Exception as e:
+        logger.error(f"Q&A 답변 생성 실패 (video_id={video_id}): {e}")
+        return None
+
+
+def _format_qa_sources(chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """청크 목록을 소스 정보 형식으로 변환합니다."""
+    return [
+        {
+            "text": chunk["text"][:200],
+            "relevance": round(1.0 - min(chunk["distance"], 1.0), 3),
+        }
+        for chunk in chunks
+    ]
+
+
 def answer_question(
     video_id: str,
     question: str,
     history: Optional[List[Dict[str, str]]] = None,
     model: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    영상 자막 기반으로 질문에 답변을 생성합니다.
+    """영상 자막 기반으로 질문에 답변을 생성합니다.
 
     Args:
         video_id: YouTube 영상 ID
@@ -209,81 +266,20 @@ def answer_question(
         {"answer": str, "sources": [{"text": str, "relevance": float}]}
     """
     if not _LITELLM_AVAILABLE:
-        return {
-            "answer": "AI 서비스를 사용할 수 없습니다. litellm 설치를 확인해주세요.",
-            "sources": [],
-        }
+        return {"answer": "AI 서비스를 사용할 수 없습니다. litellm 설치를 확인해주세요.", "sources": []}
 
-    # 관련 청크 검색
     top_k = int(os.environ.get("RAG_TOP_K", DEFAULT_TOP_K))
     relevant_chunks = search_relevant_chunks(video_id, question, top_k=top_k)
-
-    # 청크가 없으면 인덱싱이 안 된 상태
     if not relevant_chunks:
-        return {
-            "answer": "영상 자막 데이터를 찾을 수 없습니다. 먼저 영상을 분석해주세요.",
-            "sources": [],
-        }
+        return {"answer": "영상 자막 데이터를 찾을 수 없습니다. 먼저 영상을 분석해주세요.", "sources": []}
 
-    # 컨텍스트 구성
-    context_parts = []
-    for i, chunk in enumerate(relevant_chunks, 1):
-        context_parts.append(f"[자막 구간 {i}]\n{chunk['text']}")
-    context_text = "\n\n".join(context_parts)
-
-    # 시스템 프롬프트
-    system_prompt = (
-        "당신은 YouTube 영상 내용 전문가입니다.\n"
-        "아래에 제공된 영상 자막 내용만을 바탕으로 사용자 질문에 답변하세요.\n"
-        "자막에 없는 내용은 '영상에서 해당 내용을 찾을 수 없습니다'라고 명확하게 답하세요.\n"
-        "추측하거나 자막 외 정보를 추가하지 마세요.\n\n"
-        f"[영상 자막 내용]\n{context_text}"
+    context_text = "\n\n".join(
+        f"[자막 구간 {i}]\n{chunk['text']}" for i, chunk in enumerate(relevant_chunks, 1)
     )
+    messages = _build_qa_messages(context_text, question, history)
+    answer = _call_litellm(messages, model or DEFAULT_QA_MODEL, video_id)
 
-    # 대화 히스토리 구성 (최대 MAX_HISTORY_MESSAGES개)
-    messages = [{"role": "system", "content": system_prompt}]
+    if answer is None:
+        return {"answer": "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.", "sources": []}
 
-    if history:
-        trimmed_history = history[-(MAX_HISTORY_MESSAGES):]
-        for msg in trimmed_history:
-            if msg.get("role") in ("user", "assistant") and msg.get("content"):
-                messages.append({"role": msg["role"], "content": msg["content"]})
-
-    messages.append({"role": "user", "content": question})
-
-    # LiteLLM 호출
-    qa_model = model or DEFAULT_QA_MODEL
-    try:
-        # Zhipu AI 모델은 별도 api_base 필요
-        kwargs: Dict[str, Any] = {
-            "model": qa_model,
-            "messages": messages,
-            "max_tokens": 1024,
-            "temperature": 0.3,
-        }
-        if qa_model.startswith("zhipuai/"):
-            kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
-            api_key = os.environ.get("ZHIPUAI_API_KEY", "")
-            if api_key:
-                kwargs["api_key"] = api_key
-
-        response = litellm_completion(**kwargs)
-        answer = response.choices[0].message.content or ""
-
-    except Exception as e:
-        logger.error(f"Q&A 답변 생성 실패 (video_id={video_id}): {e}")
-        return {
-            "answer": "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-            "sources": [],
-        }
-
-    # 소스 정보 구성 (거리가 낮을수록 더 관련성 높음)
-    sources = [
-        {
-            "text": chunk["text"][:200],  # 미리보기용 200자 잘라내기
-            "relevance": round(1.0 - min(chunk["distance"], 1.0), 3),
-        }
-        for chunk in relevant_chunks
-    ]
-
-    return {"answer": answer.strip(), "sources": sources}
+    return {"answer": answer.strip(), "sources": _format_qa_sources(relevant_chunks)}

@@ -202,122 +202,136 @@ def _calculate_intent_signals(content: str, keyword: str) -> Dict[str, float]:
     return signals
 
 
-def _calculate_format_match(content: str, intent: str) -> tuple:
-    """
-    콘텐츠 형식이 감지된 의도에 맞는지 점수화한다.
-    (점수, 문제 목록)을 반환한다.
-    """
+def _check_informational_format(content: str, lines: List[str]) -> tuple:
+    """정보형 콘텐츠 형식 적합도를 계산합니다."""
     score = 0.0
     issues = []
-    lines = content.split('\n') if content else []
 
-    if intent == 'informational':
-        # 헤딩 3개 이상
-        heading_count = sum(1 for line in lines if re.match(r'^#{1,6}\s', line))
-        if heading_count >= 3:
-            score += 30
-        elif heading_count >= 1:
-            score += 15
-        else:
-            issues.append('정보형 콘텐츠에 헤딩(제목) 구조가 부족합니다')
+    heading_count = sum(1 for line in lines if re.match(r'^#{1,6}\s', line))
+    if heading_count >= 3:
+        score += 30
+    elif heading_count >= 1:
+        score += 15
+    else:
+        issues.append('정보형 콘텐츠에 헤딩(제목) 구조가 부족합니다')
 
-        # 긴 문단 (100자 이상 문단 존재)
-        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
-        long_paras = sum(1 for p in paragraphs if len(p) >= 100)
-        if long_paras >= 2:
-            score += 25
-        elif long_paras >= 1:
-            score += 10
-        else:
-            issues.append('설명이 충분히 상세하지 않습니다')
+    paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+    long_paras = sum(1 for p in paragraphs if len(p) >= 100)
+    if long_paras >= 2:
+        score += 25
+    elif long_paras >= 1:
+        score += 10
+    else:
+        issues.append('설명이 충분히 상세하지 않습니다')
 
-        # 정의 포함 ("~란", "~이란", "정의", "의미")
-        if re.search(r'(이란|란\s|정의|의미는|개념은)', content):
-            score += 25
-        else:
-            issues.append('핵심 용어의 정의가 포함되면 좋겠습니다')
+    if re.search(r'(이란|란\s|정의|의미는|개념은)', content):
+        score += 25
+    else:
+        issues.append('핵심 용어의 정의가 포함되면 좋겠습니다')
 
-        # 목록 구조
-        list_count = sum(1 for line in lines
-                         if re.match(r'^\s*[-*]\s', line) or
-                         re.match(r'^\s*\d+[\.\)]\s', line))
-        if list_count >= 3:
-            score += 20
-        elif list_count >= 1:
-            score += 10
-
-    elif intent == 'commercial':
-        # 비교 표현
-        if _check_patterns(content, [r'보다\s*(더|낫|좋)', r'대비', r'비해',
-                                      r'차이점', r'vs\.?', r'비교']):
-            score += 25
-        else:
-            issues.append('비교 분석 표현이 부족합니다')
-
-        # 장단점 표현
-        if re.search(r'(장점|단점|장단점|pros|cons|강점|약점)', content,
-                      re.IGNORECASE):
-            score += 25
-        else:
-            issues.append('장단점 분석이 포함되면 좋겠습니다')
-
-        # 표(테이블) 구조
-        if re.search(r'\|.+\|.+\|', content):
-            score += 25
-        else:
-            issues.append('비교표가 있으면 상업적 의도에 더 적합합니다')
-
-        # 평가 기준/점수
-        if re.search(r'(평가|점수|별점|평점|\d+\/\d+|[★☆⭐])', content):
-            score += 25
-
-    elif intent == 'transactional':
-        # CTA (Call to Action)
-        if re.search(r'(시작하세요|신청하세요|가입하세요|구매하세요|클릭|지금\s*확인|'
-                      r'무료\s*체험|바로\s*시작)', content):
-            score += 30
-        else:
-            issues.append('행동 유도 문구(CTA)가 부족합니다')
-
-        # 가격/혜택 정보
-        if re.search(r'(\d+[,.]?\d*\s*원|₩|할인|무료|쿠폰|혜택|특가)', content):
-            score += 30
-        else:
-            issues.append('가격이나 혜택 정보가 포함되면 좋겠습니다')
-
-        # 긴급성/희소성
-        if re.search(r'(지금|바로|즉시|한정|마감|선착순|오늘만)', content):
-            score += 20
-
-        # 결제/구매 안내
-        if re.search(r'(결제|카드|계좌|배송|환불|보장)', content):
-            score += 20
-
-    elif intent == 'navigational':
-        # 브랜드명 반복
-        if _detect_brand_repetition(content):
-            score += 30
-        else:
-            issues.append('브랜드/서비스명이 충분히 언급되지 않았습니다')
-
-        # 기능/서비스 나열
-        list_count = sum(1 for line in lines
-                         if re.match(r'^\s*[-*]\s', line) or
-                         re.match(r'^\s*\d+[\.\)]\s', line))
-        if list_count >= 3:
-            score += 25
-        elif list_count >= 1:
-            score += 10
-
-        # URL/링크 포함
-        if re.search(r'(https?://|www\.|\.com|\.co\.kr)', content):
-            score += 25
-
-        # 공식/홈페이지 표현
-        if re.search(r'(공식|홈페이지|사이트|로그인|바로가기)', content):
-            score += 20
+    list_count = sum(1 for line in lines
+                     if re.match(r'^\s*[-*]\s', line) or
+                     re.match(r'^\s*\d+[\.\)]\s', line))
+    if list_count >= 3:
+        score += 20
+    elif list_count >= 1:
+        score += 10
 
     return min(score, 100.0), issues
+
+
+def _check_commercial_format(content: str) -> tuple:
+    """상업형 콘텐츠 형식 적합도를 계산합니다."""
+    score = 0.0
+    issues = []
+
+    if _check_patterns(content, [r'보다\s*(더|낫|좋)', r'대비', r'비해',
+                                  r'차이점', r'vs\.?', r'비교']):
+        score += 25
+    else:
+        issues.append('비교 분석 표현이 부족합니다')
+
+    if re.search(r'(장점|단점|장단점|pros|cons|강점|약점)', content, re.IGNORECASE):
+        score += 25
+    else:
+        issues.append('장단점 분석이 포함되면 좋겠습니다')
+
+    if re.search(r'\|.+\|.+\|', content):
+        score += 25
+    else:
+        issues.append('비교표가 있으면 상업적 의도에 더 적합합니다')
+
+    if re.search(r'(평가|점수|별점|평점|\d+\/\d+|[★☆⭐])', content):
+        score += 25
+
+    return min(score, 100.0), issues
+
+
+def _check_transactional_format(content: str) -> tuple:
+    """거래형 콘텐츠 형식 적합도를 계산합니다."""
+    score = 0.0
+    issues = []
+
+    if re.search(r'(시작하세요|신청하세요|가입하세요|구매하세요|클릭|지금\s*확인|'
+                  r'무료\s*체험|바로\s*시작)', content):
+        score += 30
+    else:
+        issues.append('행동 유도 문구(CTA)가 부족합니다')
+
+    if re.search(r'(\d+[,.]?\d*\s*원|₩|할인|무료|쿠폰|혜택|특가)', content):
+        score += 30
+    else:
+        issues.append('가격이나 혜택 정보가 포함되면 좋겠습니다')
+
+    if re.search(r'(지금|바로|즉시|한정|마감|선착순|오늘만)', content):
+        score += 20
+
+    if re.search(r'(결제|카드|계좌|배송|환불|보장)', content):
+        score += 20
+
+    return min(score, 100.0), issues
+
+
+def _check_navigational_format(content: str, lines: List[str]) -> tuple:
+    """네비게이션형 콘텐츠 형식 적합도를 계산합니다."""
+    score = 0.0
+    issues = []
+
+    if _detect_brand_repetition(content):
+        score += 30
+    else:
+        issues.append('브랜드/서비스명이 충분히 언급되지 않았습니다')
+
+    list_count = sum(1 for line in lines
+                     if re.match(r'^\s*[-*]\s', line) or
+                     re.match(r'^\s*\d+[\.\)]\s', line))
+    if list_count >= 3:
+        score += 25
+    elif list_count >= 1:
+        score += 10
+
+    if re.search(r'(https?://|www\.|\.com|\.co\.kr)', content):
+        score += 25
+
+    if re.search(r'(공식|홈페이지|사이트|로그인|바로가기)', content):
+        score += 20
+
+    return min(score, 100.0), issues
+
+
+def _calculate_format_match(content: str, intent: str) -> tuple:
+    """콘텐츠 형식이 감지된 의도에 맞는지 점수화합니다."""
+    lines = content.split('\n') if content else []
+
+    checkers = {
+        'informational': lambda: _check_informational_format(content, lines),
+        'commercial': lambda: _check_commercial_format(content),
+        'transactional': lambda: _check_transactional_format(content),
+        'navigational': lambda: _check_navigational_format(content, lines),
+    }
+
+    checker = checkers.get(intent)
+    return checker() if checker else (0.0, [])
 
 
 def _generate_suggestions(intent: str, format_score: float,
@@ -358,9 +372,34 @@ def _generate_suggestions(intent: str, format_score: float,
     return suggestions
 
 
+_EMPTY_RESULT = {
+    'detected_intent': 'informational',
+    'intent_confidence': 0.0,
+    'intent_signals': {
+        'informational': 0.0, 'commercial': 0.0,
+        'transactional': 0.0, 'navigational': 0.0,
+    },
+    'content_format_match': 0.0,
+    'format_issues': ['콘텐츠가 비어 있습니다'],
+    'recommended_format': _RECOMMENDED_FORMATS['informational'],
+    'suggestions': ['콘텐츠를 작성한 후 다시 분석하세요'],
+}
+
+
+def _detect_primary_intent(signals: Dict[str, float]) -> tuple:
+    """신호 점수에서 최고 의도와 신뢰도를 반환합니다."""
+    sorted_intents = sorted(signals.items(), key=lambda x: x[1], reverse=True)
+    detected = sorted_intents[0][0]
+    top_score = sorted_intents[0][1]
+    second_score = sorted_intents[1][1] if len(sorted_intents) > 1 else 0.0
+    confidence = min(top_score - second_score, 100.0)
+    if top_score == 0:
+        return 'informational', 0.0
+    return detected, confidence
+
+
 def analyze_search_intent(content: str, target_keyword: str = '') -> dict:
-    """
-    콘텐츠와 타겟 키워드의 검색 의도를 분석하고 적합도를 점수화한다.
+    """콘텐츠와 타겟 키워드의 검색 의도를 분석하고 적합도를 점수화합니다.
 
     Args:
         content: 분석할 콘텐츠 텍스트
@@ -369,52 +408,14 @@ def analyze_search_intent(content: str, target_keyword: str = '') -> dict:
     Returns:
         검색 의도 분석 결과 딕셔너리
     """
-    # 빈 콘텐츠 처리
     if not content or not content.strip():
-        return {
-            'detected_intent': 'informational',
-            'intent_confidence': 0.0,
-            'intent_signals': {
-                'informational': 0.0,
-                'commercial': 0.0,
-                'transactional': 0.0,
-                'navigational': 0.0,
-            },
-            'content_format_match': 0.0,
-            'format_issues': ['콘텐츠가 비어 있습니다'],
-            'recommended_format': _RECOMMENDED_FORMATS['informational'],
-            'suggestions': ['콘텐츠를 작성한 후 다시 분석하세요'],
-        }
+        return dict(_EMPTY_RESULT)
 
     keyword = target_keyword.strip() if target_keyword else ''
-
-    # 1. 의도별 신호 점수 계산
     signals = _calculate_intent_signals(content, keyword)
-
-    # 2. 최고 점수 의도 감지
-    sorted_intents = sorted(signals.items(), key=lambda x: x[1], reverse=True)
-    detected_intent = sorted_intents[0][0]
-    top_score = sorted_intents[0][1]
-    second_score = sorted_intents[1][1] if len(sorted_intents) > 1 else 0.0
-
-    # 3. 신뢰도: 최고 점수 - 두 번째 점수
-    intent_confidence = min(top_score - second_score, 100.0)
-
-    # 모든 점수가 0이면 기본값 informational
-    if top_score == 0:
-        detected_intent = 'informational'
-        intent_confidence = 0.0
-
-    # 4. 콘텐츠 형식 매칭
+    detected_intent, intent_confidence = _detect_primary_intent(signals)
     format_score, format_issues = _calculate_format_match(content, detected_intent)
-
-    # 5. 권장 형식
-    recommended_format = _RECOMMENDED_FORMATS.get(detected_intent,
-                                                   '가이드/설명형 콘텐츠')
-
-    # 6. 제안 생성
-    suggestions = _generate_suggestions(detected_intent, format_score,
-                                         format_issues, signals)
+    suggestions = _generate_suggestions(detected_intent, format_score, format_issues, signals)
 
     result = {
         'detected_intent': detected_intent,
@@ -422,7 +423,7 @@ def analyze_search_intent(content: str, target_keyword: str = '') -> dict:
         'intent_signals': signals,
         'content_format_match': format_score,
         'format_issues': format_issues,
-        'recommended_format': recommended_format,
+        'recommended_format': _RECOMMENDED_FORMATS.get(detected_intent, '가이드/설명형 콘텐츠'),
         'suggestions': suggestions,
     }
 

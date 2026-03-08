@@ -222,6 +222,65 @@ def find_external_links(topic: str, max_results: int = MAX_EXTERNAL_LINKS) -> Li
         return []
 
 
+def _prepare_links_to_insert(
+    internal_links: List[Dict], external_links: List[Dict], max_links: int,
+) -> List[Dict]:
+    """삽입할 링크 목록을 구성합니다 (내부 우선, 외부 보충)."""
+    links = []
+    for link in internal_links[:MAX_INTERNAL_LINKS]:
+        links.append({
+            'url': link['url'],
+            'anchor_hint': link.get('anchor_text') or _extract_key_phrase(link.get('title', '')),
+            'type': 'internal',
+        })
+
+    remaining = max_links - len(links)
+    for link in external_links[:min(MAX_EXTERNAL_LINKS, remaining)]:
+        links.append({
+            'url': link['url'],
+            'anchor_hint': _extract_key_phrase(link.get('title', '')),
+            'type': 'external',
+        })
+    return links
+
+
+def _try_insert_single_link(
+    modified: str, link_info: Dict, code_block_ranges: List[tuple],
+) -> tuple:
+    """단일 링크 삽입을 시도합니다.
+
+    Returns:
+        성공 시 (수정 텍스트, 새 ranges), 실패 시 None
+    """
+    anchor_hint = link_info.get('anchor_hint', '')
+    url = link_info['url']
+    if not anchor_hint or not url:
+        return None
+
+    match = re.search(re.escape(anchor_hint), modified, flags=re.IGNORECASE)
+    if not match:
+        return None
+
+    start, end = match.start(), match.end()
+    if _is_in_code_block(start, code_block_ranges):
+        return None
+    if _is_already_linked(modified, start, end):
+        return None
+
+    original_text = modified[start:end]
+    markdown_link = f'[{original_text}]({url})'
+    modified = modified[:start] + markdown_link + modified[end:]
+
+    offset_diff = len(markdown_link) - len(original_text)
+    new_ranges = [
+        (s + offset_diff if s > start else s, e + offset_diff if e > start else e)
+        for s, e in code_block_ranges
+    ]
+
+    logger.debug(f"링크 삽입: [{original_text}]({url})")
+    return modified, new_ranges
+
+
 def insert_links_into_content(
     content: str,
     internal_links: List[Dict],
@@ -246,71 +305,21 @@ def insert_links_into_content(
     if not internal_links and not external_links:
         return content
 
-    # 코드 블록 범위 추적 (코드 블록 내부는 수정하지 않음)
-    code_block_ranges = _find_code_block_ranges(content)
-
-    # 삽입할 링크 목록 구성 (내부 2개 + 외부 3개 순서로)
-    links_to_insert = []
-    for link in internal_links[:MAX_INTERNAL_LINKS]:
-        links_to_insert.append({
-            'url': link['url'],
-            'anchor_hint': link.get('anchor_text') or _extract_key_phrase(link.get('title', '')),
-            'type': 'internal',
-        })
-
-    remaining = max_links - len(links_to_insert)
-    for link in external_links[:min(MAX_EXTERNAL_LINKS, remaining)]:
-        links_to_insert.append({
-            'url': link['url'],
-            'anchor_hint': _extract_key_phrase(link.get('title', '')),
-            'type': 'external',
-        })
-
+    links_to_insert = _prepare_links_to_insert(internal_links, external_links, max_links)
     if not links_to_insert:
         return content
 
+    code_block_ranges = _find_code_block_ranges(content)
     modified = content
     inserted_count = 0
 
     for link_info in links_to_insert:
         if inserted_count >= max_links:
             break
-
-        anchor_hint = link_info.get('anchor_hint', '')
-        url = link_info['url']
-
-        if not anchor_hint or not url:
-            continue
-
-        # 콘텐츠에서 앵커 텍스트 위치 탐색
-        pattern = re.escape(anchor_hint)
-        match = re.search(pattern, modified, flags=re.IGNORECASE)
-        if not match:
-            continue
-
-        start, end = match.start(), match.end()
-
-        # 코드 블록 내부면 건너뜀
-        if _is_in_code_block(start, code_block_ranges):
-            continue
-
-        # 이미 링크로 감싸진 위치면 건너뜀
-        if _is_already_linked(modified, start, end):
-            continue
-
-        original_text = modified[start:end]
-        markdown_link = f'[{original_text}]({url})'
-        modified = modified[:start] + markdown_link + modified[end:]
-
-        # 삽입 후 코드 블록 범위 오프셋 재계산
-        offset_diff = len(markdown_link) - len(original_text)
-        code_block_ranges = [
-            (s + offset_diff if s > start else s, e + offset_diff if e > start else e)
-            for s, e in code_block_ranges
-        ]
-
-        inserted_count += 1
-        logger.debug(f"링크 삽입: [{original_text}]({url})")
+        result = _try_insert_single_link(modified, link_info, code_block_ranges)
+        if result:
+            modified, code_block_ranges = result
+            inserted_count += 1
 
     return modified
 
