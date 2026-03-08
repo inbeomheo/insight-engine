@@ -69,6 +69,71 @@ def _calc_cv(values: List[float]) -> float:
     return round(std / mean, 3)
 
 
+_EMPTY_RESULT = {
+    'sections': [],
+    'balance': {},
+    'summary': {
+        'total_sections': 0, 'symmetry_score': 0.0,
+        'cv': 0.0, 'level': 'none',
+    },
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _compute_balance(sections: List[Dict]) -> tuple:
+    """섹션별 비율과 밸런스 정보를 계산합니다.
+
+    Returns:
+        (section_data, balance, cv)
+    """
+    word_counts = [s['word_count'] for s in sections]
+    total_words = sum(word_counts)
+    mean_words = total_words / len(sections)
+    cv = _calc_cv([float(w) for w in word_counts])
+
+    section_data = []
+    for s in sections:
+        ratio = round(s['word_count'] / max(total_words, 1) * 100, 1)
+        section_data.append({
+            'title': s['title'] if len(s['title']) <= 30 else s['title'][:27] + '...',
+            'word_count': s['word_count'],
+            'ratio': ratio,
+        })
+
+    balance = {
+        'mean_words': round(mean_words, 1),
+        'min_words': min(word_counts),
+        'max_words': max(word_counts),
+        'range_ratio': round(max(word_counts) / max(min(word_counts), 1), 1),
+        'cv': cv,
+    }
+
+    return section_data, balance, cv
+
+
+def _compute_symmetry_score(cv: float) -> tuple:
+    """변동계수로 대칭성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
+    if cv <= 0.3:
+        level = 'symmetric'
+        score = 100.0
+    elif cv <= 0.5:
+        level = 'moderate'
+        score = 100.0 - (cv - 0.3) * 100.0
+    elif cv <= 0.8:
+        level = 'asymmetric'
+        score = 80.0 - (cv - 0.5) * 60.0
+    else:
+        level = 'very_asymmetric'
+        score = max(0.0, 50.0 - (cv - 1.0) * 30.0)
+
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
 def analyze_content_symmetry(content: str) -> dict:
     """콘텐츠의 구조적 대칭성을 분석합니다.
 
@@ -76,18 +141,7 @@ def analyze_content_symmetry(content: str) -> dict:
         sections, balance, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'sections': [],
-            'balance': {},
-            'summary': {
-                'total_sections': 0,
-                'symmetry_score': 0.0,
-                'cv': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     sections = _split_sections(content)
 
@@ -98,68 +152,19 @@ def analyze_content_symmetry(content: str) -> dict:
                           'char_count': s['char_count']} for s in sections],
             'balance': {},
             'summary': {
-                'total_sections': len(sections),
-                'symmetry_score': 0.0,
-                'cv': 0.0,
-                'level': 'single',
+                'total_sections': len(sections), 'symmetry_score': 0.0,
+                'cv': 0.0, 'level': 'single',
             },
             'score': 50.0,
             'suggestions': ['섹션이 1개뿐입니다. 구조적 분석을 위해 헤딩으로 섹션을 나누세요.'],
         }
 
-    word_counts = [s['word_count'] for s in sections]
-    total_words = sum(word_counts)
-    mean_words = total_words / len(sections)
-
-    # 변동계수 (CV)
-    cv = _calc_cv([float(w) for w in word_counts])
-
-    # 섹션별 비율
-    section_data = []
-    shortest = min(word_counts)
-    longest = max(word_counts)
-
-    for s in sections:
-        ratio = round(s['word_count'] / max(total_words, 1) * 100, 1)
-        section_data.append({
-            'title': s['title'] if len(s['title']) <= 30 else s['title'][:27] + '...',
-            'word_count': s['word_count'],
-            'ratio': ratio,
-        })
-
-    # 밸런스 정보
-    balance = {
-        'mean_words': round(mean_words, 1),
-        'min_words': shortest,
-        'max_words': longest,
-        'range_ratio': round(longest / max(shortest, 1), 1),
-        'cv': cv,
-    }
-
-    # 레벨 판정
-    if cv <= 0.3:
-        level = 'symmetric'
-    elif cv <= 0.5:
-        level = 'moderate'
-    elif cv <= 0.8:
-        level = 'asymmetric'
-    else:
-        level = 'very_asymmetric'
-
-    # 점수 계산
-    if cv <= 0.3:
-        score = 100.0
-    elif cv <= 0.5:
-        score = 100.0 - (cv - 0.3) * 100.0
-    elif cv <= 1.0:
-        score = 80.0 - (cv - 0.5) * 60.0
-    else:
-        score = max(0.0, 50.0 - (cv - 1.0) * 30.0)
-
-    score = round(max(0.0, min(100.0, score)), 1)
+    section_data, balance, cv = _compute_balance(sections)
+    score, level = _compute_symmetry_score(cv)
 
     suggestions = _generate_suggestions(
-        cv, level, section_data, shortest, longest, mean_words
+        cv, level, section_data, balance['min_words'], balance['max_words'],
+        balance['mean_words']
     )
 
     return {

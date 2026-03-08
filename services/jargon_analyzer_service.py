@@ -58,111 +58,83 @@ _DEFINITION_PATTERNS = [
 ]
 
 
+_EMPTY_RESULT = {
+    'terms': [],
+    'summary': {'total': 0, 'defined': 0, 'undefined': 0},
+    'coverage_score': 100.0,
+    'suggestions': [],
+}
+
+
+def _collect_terms(content: str) -> dict:
+    """콘텐츠에서 전문 용어를 수집합니다 (중복 제거, 첫 등장 위치 기록).
+
+    Returns:
+        {term: {"type": str, "first_occurrence": int}}
+    """
+    found = {}
+
+    for m in _PAREN_TERM_PATTERN.finditer(content):
+        abbr = m.group(1)
+        if abbr not in _COMMON_ABBREVIATIONS and abbr not in found:
+            found[abbr] = {'type': 'abbreviation', 'first_occurrence': m.start()}
+
+    for m in _ABBR_PATTERN.finditer(content):
+        abbr = m.group(1)
+        if abbr not in _COMMON_ABBREVIATIONS and abbr not in found:
+            found[abbr] = {'type': 'abbreviation', 'first_occurrence': m.start()}
+
+    for m in _CAMEL_PATTERN.finditer(content):
+        term = m.group(1)
+        if term not in found:
+            found[term] = {'type': 'technical', 'first_occurrence': m.start()}
+
+    for jargon in _KOREAN_JARGON:
+        idx = content.find(jargon)
+        if idx != -1 and jargon not in found:
+            found[jargon] = {'type': 'korean_jargon', 'first_occurrence': idx}
+
+    return found
+
+
+def _check_all_definitions(found_terms: dict, content: str) -> list:
+    """각 용어의 정의 동반 여부를 검사합니다."""
+    results = []
+    for term, info in found_terms.items():
+        has_def, def_text = _check_definition(term, content, info['first_occurrence'])
+        results.append({
+            'term': term, 'type': info['type'],
+            'first_occurrence': info['first_occurrence'],
+            'has_definition': has_def, 'definition_text': def_text,
+            'status': 'defined' if has_def else 'undefined',
+        })
+    results.sort(key=lambda x: x['first_occurrence'])
+    return results
+
+
 def analyze_jargon_coverage(content: str) -> dict:
     """콘텐츠 내 전문 용어의 정의 커버리지를 분석합니다.
 
-    Args:
-        content: 분석할 콘텐츠 텍스트
-
     Returns:
-        {
-            "terms": [{"term": str, "type": str, "first_occurrence": int,
-                       "has_definition": bool, "definition_text": str, "status": str}],
-            "summary": {"total": int, "defined": int, "undefined": int},
-            "coverage_score": float,  # 0-100
-            "suggestions": list[str],
-        }
+        terms, summary, coverage_score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'terms': [],
-            'summary': {'total': 0, 'defined': 0, 'undefined': 0},
-            'coverage_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 용어 수집 (중복 제거, 첫 등장 위치 기록)
-    found_terms = {}  # {term: {"type": ..., "first_occurrence": ...}}
-
-    # 1) 괄호 용어 (우선 처리 — 정의가 이미 포함된 경우)
-    for m in _PAREN_TERM_PATTERN.finditer(content):
-        abbr = m.group(1)
-        if abbr not in _COMMON_ABBREVIATIONS and abbr not in found_terms:
-            found_terms[abbr] = {
-                'type': 'abbreviation',
-                'first_occurrence': m.start(),
-            }
-
-    # 2) 영문 약어
-    for m in _ABBR_PATTERN.finditer(content):
-        abbr = m.group(1)
-        if abbr not in _COMMON_ABBREVIATIONS and abbr not in found_terms:
-            found_terms[abbr] = {
-                'type': 'abbreviation',
-                'first_occurrence': m.start(),
-            }
-
-    # 3) 카멜케이스/파스칼케이스 기술 용어
-    for m in _CAMEL_PATTERN.finditer(content):
-        term = m.group(1)
-        if term not in found_terms:
-            found_terms[term] = {
-                'type': 'technical',
-                'first_occurrence': m.start(),
-            }
-
-    # 4) 한국어 전문 용어
-    for jargon in _KOREAN_JARGON:
-        idx = content.find(jargon)
-        if idx != -1 and jargon not in found_terms:
-            found_terms[jargon] = {
-                'type': 'korean_jargon',
-                'first_occurrence': idx,
-            }
-
+    found_terms = _collect_terms(content)
     if not found_terms:
-        return {
-            'terms': [],
-            'summary': {'total': 0, 'defined': 0, 'undefined': 0},
-            'coverage_score': 100.0,
-            'suggestions': ['전문 용어가 감지되지 않았습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['전문 용어가 감지되지 않았습니다.']}
 
-    # 각 용어의 정의 동반 여부 검사
-    results = []
-    for term, info in found_terms.items():
-        pos = info['first_occurrence']
-        has_def, def_text = _check_definition(term, content, pos)
-
-        results.append({
-            'term': term,
-            'type': info['type'],
-            'first_occurrence': pos,
-            'has_definition': has_def,
-            'definition_text': def_text,
-            'status': 'defined' if has_def else 'undefined',
-        })
-
-    # 첫 등장 위치 순으로 정렬
-    results.sort(key=lambda x: x['first_occurrence'])
-
+    results = _check_all_definitions(found_terms, content)
     defined_count = sum(1 for r in results if r['has_definition'])
     total = len(results)
-    undefined_count = total - defined_count
-
     coverage = (defined_count / total * 100) if total > 0 else 100.0
-
-    suggestions = _generate_suggestions(results, coverage)
 
     return {
         'terms': results,
-        'summary': {
-            'total': total,
-            'defined': defined_count,
-            'undefined': undefined_count,
-        },
+        'summary': {'total': total, 'defined': defined_count, 'undefined': total - defined_count},
         'coverage_score': round(coverage, 1),
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(results, coverage),
     }
 
 

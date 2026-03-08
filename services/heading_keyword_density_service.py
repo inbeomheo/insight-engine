@@ -62,50 +62,32 @@ def _get_body_keywords(content: str, top_n: int = 10) -> List[str]:
     return [word for word, _ in counter.most_common(top_n)]
 
 
-def analyze_heading_keyword_density(content: str) -> dict:
-    """헤딩 키워드 밀도를 분석합니다.
+_EMPTY_RESULT = {
+    'headings': [],
+    'keyword_coverage': [],
+    'summary': {
+        'total_headings': 0, 'body_keywords_in_headings': 0,
+        'coverage_ratio': 0.0, 'level': 'none',
+    },
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _analyze_keyword_coverage(headings: List[Dict], body_keywords: List[str]) -> tuple:
+    """헤딩과 본문 키워드의 커버리지를 분석합니다.
 
     Returns:
-        headings, keyword_coverage, summary, score, suggestions를 포함하는 dict
+        (heading_data, keyword_coverage, covered, duplicated, coverage_ratio)
     """
-    if not content or not content.strip():
-        return {
-            'headings': [],
-            'keyword_coverage': [],
-            'summary': {
-                'total_headings': 0,
-                'body_keywords_in_headings': 0,
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    headings = _extract_headings(content)
-
-    if not headings:
-        return {
-            'headings': [],
-            'keyword_coverage': [],
-            'summary': {
-                'total_headings': 0,
-                'body_keywords_in_headings': 0,
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': ['헤딩이 없습니다. H1~H6 헤딩을 추가하세요.'],
-        }
-
-    body_keywords = _get_body_keywords(content)
-
-    # 헤딩별 키워드 분석
     heading_data = []
     all_heading_tokens = set()
+    heading_keyword_counter = Counter()
+
     for h in headings:
         tokens = _tokenize(h['text'])
         all_heading_tokens.update(tokens)
+        heading_keyword_counter.update(tokens)
         heading_data.append({
             'level': h['level'],
             'text': h['text'] if len(h['text']) <= 50 else h['text'][:47] + '...',
@@ -113,28 +95,25 @@ def analyze_heading_keyword_density(content: str) -> dict:
             'keyword_count': len(tokens),
         })
 
-    # 본문 키워드가 헤딩에 포함된 비율
     covered = [kw for kw in body_keywords if kw in all_heading_tokens]
     coverage_ratio = round(len(covered) / max(len(body_keywords), 1) * 100, 1)
 
-    # 키워드 커버리지 목록
-    keyword_coverage = []
-    for kw in body_keywords:
-        keyword_coverage.append({
-            'keyword': kw,
-            'in_heading': kw in all_heading_tokens,
-        })
+    keyword_coverage = [
+        {'keyword': kw, 'in_heading': kw in all_heading_tokens}
+        for kw in body_keywords
+    ]
 
-    # 헤딩 키워드 중복 검사
-    heading_keyword_counter = Counter()
-    for h in headings:
-        tokens = _tokenize(h['text'])
-        heading_keyword_counter.update(tokens)
+    duplicated = {kw: c for kw, c in heading_keyword_counter.items() if c >= 3}
 
-    duplicated = {kw: count for kw, count in heading_keyword_counter.items()
-                  if count >= 3}
+    return heading_data, keyword_coverage, covered, duplicated, coverage_ratio
 
-    # 레벨 판정
+
+def _compute_density_score(coverage_ratio: float, duplicated: dict) -> tuple:
+    """커버리지 비율로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if coverage_ratio >= 60:
         level = 'excellent'
     elif coverage_ratio >= 40:
@@ -144,14 +123,32 @@ def analyze_heading_keyword_density(content: str) -> dict:
     else:
         level = 'poor'
 
-    # 점수 계산
     score = min(100.0, coverage_ratio * 1.5)
-
-    # 중복 키워드 감점
     if duplicated:
         score -= min(20.0, len(duplicated) * 5.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def analyze_heading_keyword_density(content: str) -> dict:
+    """헤딩 키워드 밀도를 분석합니다.
+
+    Returns:
+        headings, keyword_coverage, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    headings = _extract_headings(content)
+    if not headings:
+        return {**_EMPTY_RESULT, 'score': 50.0,
+                'suggestions': ['헤딩이 없습니다. H1~H6 헤딩을 추가하세요.']}
+
+    body_keywords = _get_body_keywords(content)
+    heading_data, keyword_coverage, covered, duplicated, coverage_ratio = (
+        _analyze_keyword_coverage(headings, body_keywords)
+    )
+    score, level = _compute_density_score(coverage_ratio, duplicated)
 
     suggestions = _generate_suggestions(
         coverage_ratio, level, body_keywords, covered, duplicated, len(headings)
