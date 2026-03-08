@@ -243,6 +243,7 @@ export function KnowledgeGraphPanel({ className = '' }: { className?: string }) 
         <button
           onClick={fetchGraph}
           disabled={loading}
+          aria-label="지식 그래프 새로고침"
           className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
         >
           {loading ? '로딩 중…' : '새로고침'}

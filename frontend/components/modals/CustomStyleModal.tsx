@@ -124,6 +124,7 @@ export default function CustomStyleModal() {
                 <button
                   key={ic}
                   onClick={() => setIcon(ic)}
+                  aria-label={`${ic} 아이콘 선택`}
                   className={`flex-1 p-2 text-center rounded-lg border transition-all text-lg ${
                     icon === ic
                       ? 'border-primary bg-primary/10'
