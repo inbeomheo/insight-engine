@@ -7,7 +7,6 @@ import json
 import re
 from typing import Dict, Optional
 
-from flask import current_app
 
 
 _SUMMARY_PROMPT = """다음 콘텐츠를 3단계로 요약하세요. JSON으로만 응답하세요 (마크다운 코드블록 없이).

@@ -6,7 +6,7 @@ Primary Source Preference Checker 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 # URL 추출
 _URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+', re.IGNORECASE)
