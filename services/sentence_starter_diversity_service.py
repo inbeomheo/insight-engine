@@ -27,61 +27,45 @@ def _get_starter(sentence: str) -> str:
     return tokens[0].lower().strip('\"\'([{')
 
 
-def analyze_sentence_starter_diversity(content: str) -> dict:
-    """문장 시작어 다양성을 분석합니다.
+_EMPTY_RESULT = {
+    'starter_data': [],
+    'summary': {
+        'total_sentences': 0, 'unique_starters': 0,
+        'diversity_ratio': 0.0, 'consecutive_repeats': 0, 'level': 'none',
+    },
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _analyze_starters(starters: list, total: int) -> tuple:
+    """시작어 통계를 분석합니다.
 
     Returns:
-        starter_data, summary, score, suggestions를 포함하는 dict
+        (starter_counter, diversity_ratio, consecutive_repeats, starter_data)
     """
-    if not content or not content.strip():
-        return {
-            'starter_data': [],
-            'summary': {
-                'total_sentences': 0,
-                'unique_starters': 0,
-                'diversity_ratio': 0.0,
-                'consecutive_repeats': 0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'starter_data': [],
-            'summary': {
-                'total_sentences': 0,
-                'unique_starters': 0,
-                'diversity_ratio': 0.0,
-                'consecutive_repeats': 0,
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': [],
-        }
-
-    starters = [_get_starter(s) for s in sentences]
     starter_counter = Counter(starters)
-    unique_count = len(starter_counter)
-    total = len(starters)
+    diversity_ratio = round(len(starter_counter) / max(total, 1) * 100, 1)
 
-    diversity_ratio = round(unique_count / max(total, 1) * 100, 1)
-
-    # 연속 반복 감지
     consecutive_repeats = 0
     for i in range(1, len(starters)):
         if starters[i] == starters[i - 1] and starters[i]:
             consecutive_repeats += 1
 
-    # 시작어 빈도 데이터
     starter_data = [
         {'starter': word, 'count': count, 'ratio': round(count / total * 100, 1)}
         for word, count in starter_counter.most_common(15)
     ]
 
-    # 레벨
+    return starter_counter, diversity_ratio, consecutive_repeats, starter_data
+
+
+def _compute_diversity_score(diversity_ratio: float, consecutive_repeats: int) -> tuple:
+    """다양성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if diversity_ratio >= 70:
         level = 'diverse'
     elif diversity_ratio >= 50:
@@ -91,30 +75,44 @@ def analyze_sentence_starter_diversity(content: str) -> dict:
     else:
         level = 'very_repetitive'
 
-    # 점수
     score = min(100.0, diversity_ratio * 1.3)
-
-    # 연속 반복 감점
     if consecutive_repeats > 0:
         score -= min(20.0, consecutive_repeats * 5.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        starter_counter, diversity_ratio, level, consecutive_repeats, total
-    )
+
+def analyze_sentence_starter_diversity(content: str) -> dict:
+    """문장 시작어 다양성을 분석합니다.
+
+    Returns:
+        starter_data, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    starters = [_get_starter(s) for s in sentences]
+    total = len(starters)
+    starter_counter, diversity_ratio, consec, starter_data = _analyze_starters(starters, total)
+    score, level = _compute_diversity_score(diversity_ratio, consec)
 
     return {
         'starter_data': starter_data,
         'summary': {
             'total_sentences': total,
-            'unique_starters': unique_count,
+            'unique_starters': len(starter_counter),
             'diversity_ratio': diversity_ratio,
-            'consecutive_repeats': consecutive_repeats,
+            'consecutive_repeats': consec,
             'level': level,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            starter_counter, diversity_ratio, level, consec, total
+        ),
     }
 
 

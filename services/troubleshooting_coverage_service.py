@@ -66,6 +66,17 @@ _TROUBLESHOOTING_HEADING_PATTERNS = [
 
 _HEADING_RE = re.compile(r'^#{1,3}\s+(.+)$', re.MULTILINE)
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_guide_content': False, 'has_troubleshooting_section': False,
+        'categories_found': [], 'categories_missing': [],
+        'coverage_ratio': 0.0, 'level': 'none',
+    },
+    'missing_categories': [],
+    'suggestions': [],
+}
+
 
 def _count_matches(content: str, patterns: list) -> int:
     return sum(len(p.findall(content)) for p in patterns)
@@ -75,54 +86,33 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def analyze_troubleshooting_coverage(content: str) -> dict:
-    """가이드의 문제 해결 커버리지를 분석합니다.
+def _scan_categories(content: str) -> tuple:
+    """트러블슈팅 카테고리 존재 여부를 스캔합니다.
 
     Returns:
-        score, summary, suggestions, missing_categories를 포함하는 dict
+        (categories_found, categories_missing)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_guide_content': False,
-                'has_troubleshooting_section': False,
-                'categories_found': [],
-                'categories_missing': [],
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'missing_categories': [],
-            'suggestions': [],
-        }
-
-    # 가이드 콘텐츠 여부
-    is_guide = _count_matches(content, _GUIDE_SIGNALS) >= 2
-
-    # 문제 해결 섹션 존재 여부
-    headings = _HEADING_RE.findall(content)
-    has_ts_section = any(
-        _has_pattern(h, _TROUBLESHOOTING_HEADING_PATTERNS) for h in headings
-    )
-
-    # 각 카테고리 존재 여부
-    categories_found = []
-    categories_missing = []
-
+    found = []
+    missing = []
     for cat_name, cat_info in _TROUBLESHOOTING_CATEGORIES.items():
         if _has_pattern(content, cat_info['patterns']):
-            categories_found.append(cat_name)
+            found.append(cat_name)
         else:
-            categories_missing.append(cat_name)
+            missing.append(cat_name)
+    return found, missing
 
-    # 커버리지 비율
-    total = len(_TROUBLESHOOTING_CATEGORIES)
-    coverage = round(len(categories_found) / max(total, 1) * 100, 1)
 
-    # 레벨 판정
+def _compute_level_and_score(is_guide: bool, coverage: float,
+                              has_ts_section: bool) -> tuple:
+    """레벨과 점수를 계산합니다.
+
+    Returns:
+        (level, score)
+    """
     if not is_guide:
-        level = 'none'
-    elif coverage >= 80:
+        return 'none', 100.0
+
+    if coverage >= 80:
         level = 'comprehensive'
     elif coverage >= 60:
         level = 'good'
@@ -133,25 +123,30 @@ def analyze_troubleshooting_coverage(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 연속 점수 — coverage 비율 기반
-    if not is_guide:
-        score = 100.0
-    else:
-        score = 20.0 + (coverage / 100.0 * 75.0)
-        if has_ts_section:
-            score += 5.0
+    score = 20.0 + (coverage / 100.0 * 75.0)
+    if has_ts_section:
+        score += 5.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return level, round(max(0.0, min(100.0, score)), 1)
 
-    missing_details = [
-        {'category': m, 'label': _TROUBLESHOOTING_CATEGORIES[m]['label']}
-        for m in categories_missing
-    ]
 
-    suggestions = _generate_suggestions(
-        is_guide, has_ts_section, categories_found,
-        categories_missing, coverage, level
+def analyze_troubleshooting_coverage(content: str) -> dict:
+    """가이드의 문제 해결 커버리지를 분석합니다.
+
+    Returns:
+        score, summary, suggestions, missing_categories를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    is_guide = _count_matches(content, _GUIDE_SIGNALS) >= 2
+    headings = _HEADING_RE.findall(content)
+    has_ts_section = any(
+        _has_pattern(h, _TROUBLESHOOTING_HEADING_PATTERNS) for h in headings
     )
+    categories_found, categories_missing = _scan_categories(content)
+    coverage = round(len(categories_found) / max(len(_TROUBLESHOOTING_CATEGORIES), 1) * 100, 1)
+    level, score = _compute_level_and_score(is_guide, coverage, has_ts_section)
 
     return {
         'score': score,
@@ -163,8 +158,14 @@ def analyze_troubleshooting_coverage(content: str) -> dict:
             'coverage_ratio': coverage,
             'level': level,
         },
-        'missing_categories': missing_details,
-        'suggestions': suggestions,
+        'missing_categories': [
+            {'category': m, 'label': _TROUBLESHOOTING_CATEGORIES[m]['label']}
+            for m in categories_missing
+        ],
+        'suggestions': _generate_suggestions(
+            is_guide, has_ts_section, categories_found,
+            categories_missing, coverage, level
+        ),
     }
 
 

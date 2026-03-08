@@ -46,6 +46,25 @@ _CRITERIA_PATTERNS = {
 
 _HEADING_RE = re.compile(r'^#{1,3}\s+(.+)$', re.MULTILINE)
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_review_content': False, 'criteria_found': [],
+        'criteria_missing': [], 'completeness_ratio': 0.0, 'level': 'none',
+    },
+    'criteria_details': {},
+    'missing_criteria': [],
+    'suggestions': [],
+}
+
+_CRITERIA_LABELS = {
+    'evaluation_criteria': '평가 기준',
+    'test_method': '테스트 방법',
+    'sample_size': '표본/샘플 수',
+    'test_date': '테스트 날짜',
+    'limitations': '한계/주의사항',
+}
+
 
 def _has_pattern(content: str, patterns: list) -> bool:
     """패턴 중 하나라도 매칭되면 True."""
@@ -56,31 +75,12 @@ def _count_matches(content: str, patterns: list) -> int:
     return sum(len(p.findall(content)) for p in patterns)
 
 
-def check_evaluation_criteria_disclosure(content: str) -> dict:
-    """리뷰/비교 글의 평가 기준 공시를 점검합니다.
+def _scan_criteria(content: str) -> tuple:
+    """각 기준 항목의 존재 여부를 스캔합니다.
 
     Returns:
-        score, summary, suggestions, missing_criteria를 포함하는 dict
+        (criteria_details, criteria_found, criteria_missing)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_review_content': False,
-                'criteria_found': [],
-                'criteria_missing': [],
-                'completeness_ratio': 0.0,
-                'level': 'none',
-            },
-            'criteria_details': {},
-            'missing_criteria': [],
-            'suggestions': [],
-        }
-
-    # 리뷰/비교 콘텐츠 여부
-    is_review = _count_matches(content, _REVIEW_SIGNALS) >= 2
-
-    # 각 기준 항목 존재 여부
     criteria_found = []
     criteria_missing = []
     criteria_details = {}
@@ -93,14 +93,19 @@ def check_evaluation_criteria_disclosure(content: str) -> dict:
         else:
             criteria_missing.append(name)
 
-    # 완성도 비율
-    total_criteria = len(_CRITERIA_PATTERNS)
-    completeness = round(len(criteria_found) / max(total_criteria, 1) * 100, 1)
+    return criteria_details, criteria_found, criteria_missing
 
-    # 레벨 판정
+
+def _compute_level_and_score(is_review: bool, completeness: float) -> tuple:
+    """레벨과 점수를 계산합니다.
+
+    Returns:
+        (level, score)
+    """
     if not is_review:
-        level = 'none'
-    elif completeness >= 80:
+        return 'none', 100.0
+
+    if completeness >= 80:
         level = 'excellent'
     elif completeness >= 60:
         level = 'good'
@@ -109,27 +114,23 @@ def check_evaluation_criteria_disclosure(content: str) -> dict:
     else:
         level = 'poor'
 
-    # 연속 점수 — 충족 비율 기반
-    if not is_review:
-        score = 100.0
-    else:
-        score = 30.0 + (completeness / 100.0 * 70.0)
+    score = round(max(0.0, min(100.0, 30.0 + (completeness / 100.0 * 70.0))), 1)
+    return level, score
 
-    score = round(max(0.0, min(100.0, score)), 1)
 
-    # 라벨 매핑
-    criteria_labels = {
-        'evaluation_criteria': '평가 기준',
-        'test_method': '테스트 방법',
-        'sample_size': '표본/샘플 수',
-        'test_date': '테스트 날짜',
-        'limitations': '한계/주의사항',
-    }
+def check_evaluation_criteria_disclosure(content: str) -> dict:
+    """리뷰/비교 글의 평가 기준 공시를 점검합니다.
 
-    suggestions = _generate_suggestions(
-        is_review, criteria_found, criteria_missing,
-        completeness, level, criteria_labels
-    )
+    Returns:
+        score, summary, suggestions, missing_criteria를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    is_review = _count_matches(content, _REVIEW_SIGNALS) >= 2
+    criteria_details, criteria_found, criteria_missing = _scan_criteria(content)
+    completeness = round(len(criteria_found) / max(len(_CRITERIA_PATTERNS), 1) * 100, 1)
+    level, score = _compute_level_and_score(is_review, completeness)
 
     return {
         'score': score,
@@ -142,10 +143,13 @@ def check_evaluation_criteria_disclosure(content: str) -> dict:
         },
         'criteria_details': criteria_details,
         'missing_criteria': [
-            {'name': m, 'label': criteria_labels.get(m, m)}
+            {'name': m, 'label': _CRITERIA_LABELS.get(m, m)}
             for m in criteria_missing
         ],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            is_review, criteria_found, criteria_missing,
+            completeness, level, _CRITERIA_LABELS
+        ),
     }
 
 
