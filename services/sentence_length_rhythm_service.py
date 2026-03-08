@@ -18,42 +18,27 @@ def _split_sentences(content: str) -> List[str]:
     return [s.strip() for s in raw if s.strip() and len(s.strip()) >= 3]
 
 
-def analyze_sentence_rhythm(content: str) -> dict:
-    """문장 길이 리듬을 분석합니다.
+_EMPTY_RESULT = {
+    'length_data': [],
+    'rhythm_analysis': {},
+    'summary': {'total_sentences': 0, 'avg_length': 0.0,
+                'std_deviation': 0.0, 'rhythm_quality': 'none'},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _build_length_data(sentences: List[str]) -> tuple:
+    """문장별 길이 데이터와 통계를 생성합니다.
 
     Returns:
-        length_data, rhythm_analysis, summary, score, suggestions를 포함하는 dict
+        (length_data, lengths, avg, std_dev)
     """
-    if not content or not content.strip():
-        return {
-            'length_data': [],
-            'rhythm_analysis': {},
-            'summary': {'total_sentences': 0, 'avg_length': 0.0,
-                        'std_deviation': 0.0, 'rhythm_quality': 'none'},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'length_data': [],
-            'rhythm_analysis': {},
-            'summary': {'total_sentences': 0, 'avg_length': 0.0,
-                        'std_deviation': 0.0, 'rhythm_quality': 'none'},
-            'score': 0.0,
-            'suggestions': [],
-        }
-
-    # 문장 길이 데이터
     lengths = [len(s) for s in sentences]
     avg = sum(lengths) / len(lengths)
-
-    # 표준편차
     variance = sum((l - avg) ** 2 for l in lengths) / len(lengths)
     std_dev = round(variance ** 0.5, 1)
 
-    # 길이 카테고리
     length_data = []
     for i, (sent, length) in enumerate(zip(sentences, lengths)):
         if length < 20:
@@ -66,45 +51,50 @@ def analyze_sentence_rhythm(content: str) -> dict:
             category = 'very_long'
 
         length_data.append({
-            'index': i + 1,
-            'length': length,
-            'category': category,
+            'index': i + 1, 'length': length, 'category': category,
             'text': sent if len(sent) <= 50 else sent[:47] + '...',
         })
 
-    # 리듬 분석
+    return length_data, lengths, avg, std_dev
+
+
+def analyze_sentence_rhythm(content: str) -> dict:
+    """문장 길이 리듬을 분석합니다.
+
+    Returns:
+        length_data, rhythm_analysis, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    length_data, lengths, avg, std_dev = _build_length_data(sentences)
+
     consecutive_same = _count_consecutive_same(length_data)
     category_dist = {}
     for d in length_data:
-        cat = d['category']
-        category_dist[cat] = category_dist.get(cat, 0) + 1
+        category_dist[d['category']] = category_dist.get(d['category'], 0) + 1
 
-    # 리듬 품질
     rhythm_quality = _assess_rhythm(std_dev, consecutive_same, len(sentences))
 
-    rhythm_analysis = {
-        'category_distribution': category_dist,
-        'max_consecutive_same': consecutive_same,
-        'length_range': max(lengths) - min(lengths) if lengths else 0,
-    }
-
-    score = _calculate_score(std_dev, consecutive_same, len(sentences), category_dist)
-
-    suggestions = _generate_suggestions(
-        avg, std_dev, consecutive_same, rhythm_quality, category_dist
-    )
-
     return {
-        'length_data': length_data[:50],  # 최대 50개
-        'rhythm_analysis': rhythm_analysis,
-        'summary': {
-            'total_sentences': len(sentences),
-            'avg_length': round(avg, 1),
-            'std_deviation': std_dev,
-            'rhythm_quality': rhythm_quality,
+        'length_data': length_data[:50],
+        'rhythm_analysis': {
+            'category_distribution': category_dist,
+            'max_consecutive_same': consecutive_same,
+            'length_range': max(lengths) - min(lengths) if lengths else 0,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'summary': {
+            'total_sentences': len(sentences), 'avg_length': round(avg, 1),
+            'std_deviation': std_dev, 'rhythm_quality': rhythm_quality,
+        },
+        'score': _calculate_score(std_dev, consecutive_same, len(sentences), category_dist),
+        'suggestions': _generate_suggestions(
+            avg, std_dev, consecutive_same, rhythm_quality, category_dist
+        ),
     }
 
 

@@ -79,34 +79,22 @@ def _classify_tone(sentence: str) -> str:
     return 'neutral'
 
 
-def check_tone_consistency(content: str) -> dict:
-    """문체 일관성을 점검합니다.
+_EMPTY_RESULT = {
+    'tone_analysis': [],
+    'inconsistencies': [],
+    'summary': {'total_sentences': 0, 'dominant_tone': '',
+                'consistency_rate': 0.0, 'tone_distribution': {}},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _classify_sentences(sentences: List[str]) -> tuple:
+    """문장별 톤을 분류하고 지배적 톤을 결정합니다.
 
     Returns:
-        tone_analysis, inconsistencies, summary, score, suggestions를 포함하는 dict
+        (tone_analysis, tone_counts, dominant)
     """
-    if not content or not content.strip():
-        return {
-            'tone_analysis': [],
-            'inconsistencies': [],
-            'summary': {'total_sentences': 0, 'dominant_tone': '',
-                        'consistency_rate': 0.0, 'tone_distribution': {}},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'tone_analysis': [],
-            'inconsistencies': [],
-            'summary': {'total_sentences': 0, 'dominant_tone': '',
-                        'consistency_rate': 0.0, 'tone_distribution': {}},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 톤 분류
     tone_analysis = []
     tone_counts = {'formal': 0, 'polite': 0, 'casual': 0, 'neutral': 0}
 
@@ -118,55 +106,69 @@ def check_tone_consistency(content: str) -> dict:
             'tone': tone,
         })
 
-    # 지배적 톤 (neutral 제외)
     non_neutral = {k: v for k, v in tone_counts.items() if k != 'neutral'}
-    if non_neutral:
-        dominant = max(non_neutral, key=non_neutral.get)
-    else:
-        dominant = 'neutral'
+    dominant = max(non_neutral, key=non_neutral.get) if non_neutral else 'neutral'
 
-    # 비일관 문장 감지
+    return tone_analysis, tone_counts, dominant
+
+
+def _find_inconsistencies(tone_analysis: List[Dict], dominant: str,
+                           tone_counts: Dict) -> tuple:
+    """비일관 문장을 감지하고 일관성 비율을 계산합니다.
+
+    Returns:
+        (inconsistencies, consistency_rate)
+    """
     inconsistencies = []
     if dominant != 'neutral':
         for ta in tone_analysis:
             if ta['tone'] != 'neutral' and ta['tone'] != dominant:
                 inconsistencies.append({
-                    'text': ta['text'],
-                    'expected': dominant,
+                    'text': ta['text'], 'expected': dominant,
                     'actual': ta['tone'],
                 })
 
-    # 일관성 비율
     total_toned = sum(v for k, v in tone_counts.items() if k != 'neutral')
     dominant_count = tone_counts.get(dominant, 0) if dominant != 'neutral' else 0
     consistency_rate = round(
         (dominant_count / total_toned * 100) if total_toned > 0 else 100.0, 1
     )
+    return inconsistencies, consistency_rate
 
-    # 점수
-    if total_toned == 0:
-        score = 100.0
-    else:
-        score = round(min(100.0, consistency_rate), 1)
 
-    # 분포
-    distribution = {k: v for k, v in tone_counts.items() if v > 0}
+def check_tone_consistency(content: str) -> dict:
+    """문체 일관성을 점검합니다.
 
-    suggestions = _generate_suggestions(
-        dominant, inconsistencies, consistency_rate, distribution
+    Returns:
+        tone_analysis, inconsistencies, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    tone_analysis, tone_counts, dominant = _classify_sentences(sentences)
+    inconsistencies, consistency_rate = _find_inconsistencies(
+        tone_analysis, dominant, tone_counts
     )
+
+    total_toned = sum(v for k, v in tone_counts.items() if k != 'neutral')
+    score = 100.0 if total_toned == 0 else round(min(100.0, consistency_rate), 1)
+    distribution = {k: v for k, v in tone_counts.items() if v > 0}
 
     return {
         'tone_analysis': tone_analysis,
         'inconsistencies': inconsistencies,
         'summary': {
-            'total_sentences': len(sentences),
-            'dominant_tone': dominant,
-            'consistency_rate': consistency_rate,
-            'tone_distribution': distribution,
+            'total_sentences': len(sentences), 'dominant_tone': dominant,
+            'consistency_rate': consistency_rate, 'tone_distribution': distribution,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            dominant, inconsistencies, consistency_rate, distribution
+        ),
     }
 
 

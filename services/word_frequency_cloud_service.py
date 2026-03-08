@@ -41,6 +41,44 @@ _HTML_TAG_RE = re.compile(r'<[^>]+>')
 _KO_WORD_RE = re.compile(r'[가-힣]{2,}')
 _EN_WORD_RE = re.compile(r'[A-Za-z]{3,}')
 
+_EMPTY_RESULT = {
+    'word_cloud': [],
+    'summary': {'total_words': 0, 'unique_words': 0,
+                'diversity_ratio': 0.0, 'dominant_language': ''},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _extract_filtered_words(content: str) -> tuple:
+    """콘텐츠에서 불용어를 제외한 한국어/영어 단어를 추출합니다.
+
+    Returns:
+        (ko_filtered, en_filtered)
+    """
+    cleaned = _HEADING_RE.sub('', content)
+    cleaned = _MD_LINK_RE.sub(r'\1', cleaned)
+    cleaned = _HTML_TAG_RE.sub('', cleaned)
+
+    ko_words = _KO_WORD_RE.findall(cleaned)
+    ko_filtered = [w for w in ko_words if w not in _KO_STOPWORDS]
+
+    en_words = [w.lower() for w in _EN_WORD_RE.findall(cleaned)]
+    en_filtered = [w for w in en_words if w not in _EN_STOPWORDS]
+
+    return ko_filtered, en_filtered
+
+
+def _compute_diversity_score(diversity: float) -> float:
+    """단어 다양성 비율 기반 점수를 계산합니다."""
+    if 30 <= diversity <= 70:
+        score = 100.0
+    elif diversity < 30:
+        score = max(30.0, diversity * 3.3)
+    else:
+        score = max(50.0, 100.0 - (diversity - 70) * 1.5)
+    return round(min(100.0, score), 1)
+
 
 def generate_word_frequency(content: str, top_n: int = 30) -> dict:
     """단어 빈도를 분석하여 워드 클라우드 데이터를 생성합니다.
@@ -53,83 +91,40 @@ def generate_word_frequency(content: str, top_n: int = 30) -> dict:
         word_cloud, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'word_cloud': [],
-            'summary': {'total_words': 0, 'unique_words': 0,
-                        'diversity_ratio': 0.0, 'dominant_language': ''},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 전처리
-    cleaned = _HEADING_RE.sub('', content)
-    cleaned = _MD_LINK_RE.sub(r'\1', cleaned)
-    cleaned = _HTML_TAG_RE.sub('', cleaned)
-
-    # 한국어 단어 추출
-    ko_words = _KO_WORD_RE.findall(cleaned)
-    ko_filtered = [w for w in ko_words if w not in _KO_STOPWORDS]
-
-    # 영어 단어 추출
-    en_words = [w.lower() for w in _EN_WORD_RE.findall(cleaned)]
-    en_filtered = [w for w in en_words if w not in _EN_STOPWORDS]
-
+    ko_filtered, en_filtered = _extract_filtered_words(content)
     all_words = ko_filtered + en_filtered
 
     if not all_words:
-        return {
-            'word_cloud': [],
-            'summary': {'total_words': 0, 'unique_words': 0,
-                        'diversity_ratio': 0.0, 'dominant_language': ''},
-            'score': 50.0,
-            'suggestions': ['분석 가능한 키워드가 부족합니다.'],
-        }
+        return {**_EMPTY_RESULT, 'score': 50.0,
+                'suggestions': ['분석 가능한 키워드가 부족합니다.']}
 
-    # 빈도 계산
     counter = Counter(all_words)
     total = len(all_words)
     unique = len(counter)
 
-    # 상위 N개
     top_words = counter.most_common(top_n)
     max_count = top_words[0][1] if top_words else 1
 
-    word_cloud = []
-    for word, count in top_words:
-        word_cloud.append({
-            'word': word,
-            'count': count,
-            'frequency': round(count / total * 100, 2),
-            'weight': round(count / max_count, 2),
-        })
+    word_cloud = [
+        {'word': word, 'count': count,
+         'frequency': round(count / total * 100, 2),
+         'weight': round(count / max_count, 2)}
+        for word, count in top_words
+    ]
 
-    # 다양성 비율
     diversity = round(unique / total * 100, 1) if total > 0 else 0.0
-
-    # 지배 언어
-    dominant = 'ko' if len(ko_filtered) >= len(en_filtered) else 'en'
-
-    # 점수: 다양성 기반 (30-70% 최적)
-    if 30 <= diversity <= 70:
-        score = 100.0
-    elif diversity < 30:
-        score = max(30.0, diversity * 3.3)
-    else:
-        score = max(50.0, 100.0 - (diversity - 70) * 1.5)
-    score = round(min(100.0, score), 1)
-
-    suggestions = _generate_suggestions(word_cloud, diversity, total)
 
     return {
         'word_cloud': word_cloud,
         'summary': {
-            'total_words': total,
-            'unique_words': unique,
+            'total_words': total, 'unique_words': unique,
             'diversity_ratio': diversity,
-            'dominant_language': dominant,
+            'dominant_language': 'ko' if len(ko_filtered) >= len(en_filtered) else 'en',
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _compute_diversity_score(diversity),
+        'suggestions': _generate_suggestions(word_cloud, diversity, total),
     }
 
 
