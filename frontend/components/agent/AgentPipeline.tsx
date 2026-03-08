@@ -95,6 +95,7 @@ export default function AgentPipeline({ onComplete, className }: AgentPipelinePr
           onClick={runPipeline}
           disabled={!topic.trim() || isRunning}
           className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+          aria-label="에이전트 파이프라인 실행"
         >
           {isRunning ? '실행 중...' : '파이프라인 실행'}
         </button>
