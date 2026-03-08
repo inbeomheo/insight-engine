@@ -47,9 +47,10 @@ export default function UrlInput({
   const dragIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // 입력 중 URL 소스 타입 감지 (비어있으면 null)
-  const inputSourceType = input.trim() ? detectSourceType(input.trim()) : null;
-  const inputIsWiki = input.trim() ? isWikipediaUrl(input.trim()) : false;
+  // 입력 중 URL 소스 타입 감지 (trim 1회만 수행)
+  const trimmedInput = input.trim();
+  const inputSourceType = trimmedInput ? detectSourceType(trimmedInput) : null;
+  const inputIsWiki = trimmedInput ? isWikipediaUrl(trimmedInput) : false;
   const InputIcon = inputIsWiki
     ? BookOpen
     : inputSourceType

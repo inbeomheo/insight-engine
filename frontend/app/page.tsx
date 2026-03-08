@@ -45,16 +45,21 @@ import { isOnboardingDone } from '@/lib/storage';
 import type { Report, ViewMode } from '@/lib/types';
 
 export default function Home() {
-  const { hydrate: hydrateSettings } = useSettingsStore();
+  const hydrateSettings = useSettingsStore((s) => s.hydrate);
   const hydrateResults = useResultStore((s) => s.hydrate);
   const reports = useResultStore((s) => s.reports);
   const searchQuery = useResultStore((s) => s.searchQuery);
   const styleFilter = useResultStore((s) => s.styleFilter);
 
-  const { settingsPopoverOpen, setSettingsPopoverOpen, setOnboardingOpen, activeReportId, activeView } =
-    useUIStore();
+  const settingsPopoverOpen = useUIStore((s) => s.settingsPopoverOpen);
+  const setSettingsPopoverOpen = useUIStore((s) => s.setSettingsPopoverOpen);
+  const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
+  const activeReportId = useUIStore((s) => s.activeReportId);
+  const activeView = useUIStore((s) => s.activeView);
 
-  const { generationMode, enableAgentMode, setEnableAgentMode } = useSettingsStore();
+  const generationMode = useSettingsStore((s) => s.generationMode);
+  const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
+  const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
