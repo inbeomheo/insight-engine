@@ -232,6 +232,7 @@ export const TranscriptEditor = memo(function TranscriptEditor({
                 {sentence.start_time !== null && (
                   <button
                     onClick={() => handleTimestampClick(sentence.start_time!)}
+                    aria-label={`${formatTimestamp(sentence.start_time)} 타임스탬프로 이동`}
                     className="text-xs font-mono text-blue-500 hover:text-blue-700 dark:text-blue-400 shrink-0 pt-0.5 min-w-[3.5rem] text-right"
                   >
                     {formatTimestamp(sentence.start_time)}

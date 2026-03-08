@@ -98,6 +98,7 @@ export default function QaRulesEditor({ forbiddenWords, onChange }: QaRulesEdito
             <button
               type="button"
               onClick={() => handleRemove(word)}
+              aria-label={`${word} 금칙어 제거`}
               className="ml-0.5 rounded-full hover:bg-destructive/20 p-0.5 transition-colors"
             >
               <X className="h-3 w-3" />

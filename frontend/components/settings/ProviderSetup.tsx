@@ -161,6 +161,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
                   <button
                     type="button"
                     onClick={() => updateState(id, { showKey: !state.showKey })}
+                    aria-label={state.showKey ? 'API 키 숨기기' : 'API 키 보기'}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
                   >
                     {state.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
