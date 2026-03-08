@@ -5,7 +5,6 @@
 종합 다이제스트 마크다운을 생성합니다.
 """
 import logging
-from collections import defaultdict
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)

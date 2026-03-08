@@ -7,7 +7,6 @@ List/Table Snippet, How-to, FAQ Rich Result)에 노출될 가능성을
 """
 import re
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

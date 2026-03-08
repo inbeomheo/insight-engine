@@ -4,7 +4,6 @@
 주제와 키워드를 기반으로 구조화된 콘텐츠 아웃라인(H2/H3)을 생성합니다.
 규칙 기반 템플릿으로 AI 호출 없이 즉시 생성.
 """
-import re
 import logging
 
 logger = logging.getLogger(__name__)
