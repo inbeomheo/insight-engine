@@ -3,7 +3,6 @@
 인메모리 콘텐츠 검색 — 제목, 본문, 스타일에서 키워드 검색.
 Supabase FTS 연동 시 교체 가능.
 """
-import re
 import logging
 from typing import Optional
 
