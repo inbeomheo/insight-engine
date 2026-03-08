@@ -160,7 +160,7 @@ class RealtimeTranslateService:
         current_chunk = []
         current_len = 0
 
-        def flush_chunk():
+        def flush_chunk() -> None:
             if not current_chunk:
                 return
             chunk_text = '\n\n'.join(current_chunk)

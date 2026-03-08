@@ -47,7 +47,7 @@ def _md_to_sections(content: str, headings: List[Tuple[int, str, str]]) -> str:
     current_body = []
     current_heading = None
 
-    def flush():
+    def flush() -> None:
         nonlocal current_heading
         body = '\n'.join(current_body).strip()
         if current_heading:

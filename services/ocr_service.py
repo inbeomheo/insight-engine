@@ -7,7 +7,7 @@ LiteLLM을 통해 호출하며, 추출된 텍스트를 콘텐츠 생성에 활�
 import base64
 import logging
 import os
-from typing import Dict
+from typing import Any, Dict
 
 from litellm import completion
 
@@ -54,7 +54,7 @@ def extract_text_from_image(image_path: str) -> Dict:
     return _call_vision_api(image_data, mime_type)
 
 
-def extract_from_upload(file_storage) -> Dict:
+def extract_from_upload(file_storage: Any) -> Dict:
     """업로드된 이미지(FileStorage)에서 텍스트를 추출합니다.
 
     Args:

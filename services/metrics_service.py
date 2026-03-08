@@ -193,7 +193,7 @@ def track_request_metrics(f: Callable) -> Callable:
 def init_metrics_endpoint(app: Any) -> None:
     """Flask 앱에 /metrics 엔드포인트 등록"""
     @app.route('/metrics')
-    def metrics_endpoint():
+    def metrics_endpoint() -> 'Response':
         """Prometheus 메트릭 엔드포인트 핸들러"""
         from flask import Response
         data, content_type = get_metrics_output()

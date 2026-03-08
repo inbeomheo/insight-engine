@@ -11,7 +11,7 @@ quality_check: true 파라미터가 있을 때만 동작합니다.
 import json
 import re
 import os
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from flask import current_app
 
@@ -306,7 +306,7 @@ def calculate_comprehensive_score(content: str) -> Dict:
 
 
 def auto_regenerate(
-    content_fn,
+    content_fn: Callable[..., Tuple[Dict, str]],
     source_summary: str,
     quality_threshold: str = "C",
     max_retries: int = 1,
