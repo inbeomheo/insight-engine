@@ -152,31 +152,10 @@ def _extract_pptx(file_path: str) -> Dict:
     except Exception as e:
         raise ValueError(f'PPTX 파일을 읽을 수 없습니다: {e}')
 
-    slides_text = []
-    for idx, slide in enumerate(prs.slides, 1):
-        parts = []
-
-        # 슬라이드 제목
-        if slide.shapes.title and slide.shapes.title.text.strip():
-            parts.append(f'### {slide.shapes.title.text.strip()}')
-
-        # 본문 텍스트 (제목 제외)
-        for shape in slide.shapes:
-            if shape == slide.shapes.title:
-                continue
-            if shape.has_text_frame:
-                text = shape.text_frame.text.strip()
-                if text:
-                    parts.append(text)
-
-        # 발표자 노트
-        if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
-            notes = slide.notes_slide.notes_text_frame.text.strip()
-            if notes:
-                parts.append(f'> 노트: {notes}')
-
-        if parts:
-            slides_text.append(f'## 슬라이드 {idx}\n\n' + '\n\n'.join(parts))
+    slides_text = [
+        text for idx, slide in enumerate(prs.slides, 1)
+        if (text := _extract_slide_text(slide, idx))
+    ]
 
     content = '\n\n'.join(slides_text)
     if not content.strip():
@@ -195,6 +174,31 @@ def _extract_pptx(file_path: str) -> Dict:
         'source_type': 'document',
         'page_count': len(prs.slides),
     }
+
+
+def _extract_slide_text(slide, idx: int) -> str:
+    """단일 슬라이드에서 제목, 본문, 노트를 추출합니다."""
+    parts = []
+
+    if slide.shapes.title and slide.shapes.title.text.strip():
+        parts.append(f'### {slide.shapes.title.text.strip()}')
+
+    for shape in slide.shapes:
+        if shape == slide.shapes.title:
+            continue
+        if shape.has_text_frame:
+            text = shape.text_frame.text.strip()
+            if text:
+                parts.append(text)
+
+    if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+        notes = slide.notes_slide.notes_text_frame.text.strip()
+        if notes:
+            parts.append(f'> 노트: {notes}')
+
+    if parts:
+        return f'## 슬라이드 {idx}\n\n' + '\n\n'.join(parts)
+    return ''
 
 
 def extract_from_upload(file_storage: Any) -> Dict:

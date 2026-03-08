@@ -45,8 +45,14 @@ def _generate_with_runway(prompt: str, duration: int = 4) -> bytes:
     resp.raise_for_status()
     task_id = resp.json()['id']
 
-    # 폴링 (최대 3분)
+    return _poll_runway_task(task_id, headers)
+
+
+def _poll_runway_task(task_id: str, headers: dict) -> bytes:
+    """RunwayML 태스크 완료를 폴링합니다 (최대 3분)."""
     import time
+    import httpx
+
     for _ in range(36):
         time.sleep(5)
         with httpx.Client(timeout=10) as client:

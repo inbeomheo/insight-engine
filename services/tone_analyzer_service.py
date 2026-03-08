@@ -61,6 +61,12 @@ _TONE_PATTERNS = {
     },
 }
 
+_EMPTY_RESULT = {
+    'primary_tone': 'neutral',
+    'scores': {tone: 0.0 for tone in _TONE_PATTERNS},
+    'suggestions': [],
+}
+
 
 def analyze_tone(text: str) -> Dict:
     """텍스트의 톤을 분석합니다.
@@ -76,43 +82,38 @@ def analyze_tone(text: str) -> Dict:
         }
     """
     if not text or not text.strip():
-        return {
-            'primary_tone': 'neutral',
-            'scores': {tone: 0.0 for tone in _TONE_PATTERNS},
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     text_lower = text.lower()
     word_count = max(len(text.split()), 1)
-    scores = {}
-
-    for tone, indicators in _TONE_PATTERNS.items():
-        # 키워드 매칭 점수
-        keyword_hits = sum(1 for kw in indicators['keywords'] if kw in text_lower)
-        keyword_score = min(keyword_hits / (word_count * 0.05 + 1), 1.0)
-
-        # 패턴 매칭 점수
-        pattern_hits = sum(
-            len(re.findall(pat, text)) for pat in indicators['patterns']
-        )
-        pattern_score = min(pattern_hits / (word_count * 0.02 + 1), 1.0)
-
-        # 가중 평균 (키워드 60%, 패턴 40%)
-        scores[tone] = round(keyword_score * 0.6 + pattern_score * 0.4, 3)
+    scores = _compute_tone_scores(text, text_lower, word_count)
 
     # 주요 톤 결정
     primary = max(scores, key=scores.get)
     if scores[primary] < 0.05:
         primary = 'neutral'
 
-    # 개선 제안 생성
-    suggestions = _generate_suggestions(primary, scores)
-
     return {
         'primary_tone': primary,
         'scores': scores,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(primary, scores),
     }
+
+
+def _compute_tone_scores(text: str, text_lower: str, word_count: int) -> Dict[str, float]:
+    """톤별 점수를 계산합니다."""
+    scores = {}
+    for tone, indicators in _TONE_PATTERNS.items():
+        keyword_hits = sum(1 for kw in indicators['keywords'] if kw in text_lower)
+        keyword_score = min(keyword_hits / (word_count * 0.05 + 1), 1.0)
+
+        pattern_hits = sum(
+            len(re.findall(pat, text)) for pat in indicators['patterns']
+        )
+        pattern_score = min(pattern_hits / (word_count * 0.02 + 1), 1.0)
+
+        scores[tone] = round(keyword_score * 0.6 + pattern_score * 0.4, 3)
+    return scores
 
 
 def _generate_suggestions(primary: str, scores: Dict[str, float]) -> List[str]:
