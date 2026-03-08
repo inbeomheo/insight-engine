@@ -71,31 +71,25 @@ _BODY_SIGNALS = re.compile(r'(?:본론|본문|내용|Main|Body)', re.IGNORECASE)
 _CONCLUSION_SIGNALS = re.compile(r'(?:결론|마무리|정리|요약|Conclusion|Summary)', re.IGNORECASE)
 
 
-def check_article_format(content: str) -> dict:
-    """콘텐츠의 글 형식 템플릿 부합도를 분석합니다.
+_EMPTY_RESULT = {
+    'detected_formats': [],
+    'structure_elements': {},
+    'summary': {'primary_format': 'none', 'format_count': 0,
+                'has_intro': False, 'has_body': True, 'has_conclusion': False},
+    'score': 0.0,
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
 
-    Returns:
-        detected_formats, structure_elements, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'detected_formats': [],
-            'structure_elements': {},
-            'summary': {'primary_format': 'none', 'format_count': 0,
-                        'has_intro': False, 'has_body': True, 'has_conclusion': False},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
 
-    # 포맷 감지
+def _detect_formats(content: str) -> List[Dict]:
+    """콘텐츠에서 글 형식 패턴을 감지하여 신호 수 내림차순으로 반환합니다."""
     detected = []
     for fmt_id, fmt_info in _FORMAT_PATTERNS.items():
         match_count = 0
         for pattern in fmt_info['signals']:
-            matches = pattern.findall(content)
-            match_count += len(matches)
+            match_count += len(pattern.findall(content))
 
-        if match_count >= 2:  # 최소 2개 신호
+        if match_count >= 2:
             detected.append({
                 'format': fmt_id,
                 'label': fmt_info['label'],
@@ -104,30 +98,35 @@ def check_article_format(content: str) -> dict:
                 'confidence': 'high' if match_count >= 4 else 'medium',
             })
 
-    # 신호 수로 정렬
     detected.sort(key=lambda x: x['signal_count'], reverse=True)
+    return detected
 
-    # 구조 요소 감지
+
+def _analyze_structure(content: str) -> Dict:
+    """콘텐츠의 구조 요소(서론/본론/결론, 헤딩 수)를 분석합니다."""
     headings = [m.group(2).strip() for m in _HEADING_RE.finditer(content)]
     heading_text = ' '.join(headings)
 
-    has_intro = bool(_INTRO_SIGNALS.search(heading_text)) or bool(_INTRO_SIGNALS.search(content[:200]))
-    has_conclusion = bool(_CONCLUSION_SIGNALS.search(heading_text))
-    has_body = len(headings) >= 2  # 헤딩 2개 이상이면 본문 구조 있음
-
-    structure = {
-        'has_intro': has_intro,
-        'has_body': has_body,
-        'has_conclusion': has_conclusion,
+    return {
+        'has_intro': bool(_INTRO_SIGNALS.search(heading_text)) or bool(_INTRO_SIGNALS.search(content[:200])),
+        'has_body': len(headings) >= 2,
+        'has_conclusion': bool(_CONCLUSION_SIGNALS.search(heading_text)),
         'heading_count': len(headings),
     }
 
+
+def check_article_format(content: str) -> dict:
+    """콘텐츠의 글 형식 템플릿 부합도를 분석합니다.
+
+    Returns:
+        detected_formats, structure_elements, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    detected = _detect_formats(content)
+    structure = _analyze_structure(content)
     primary = detected[0]['format'] if detected else 'unstructured'
-
-    # 점수 계산
-    score = _calculate_score(detected, structure)
-
-    suggestions = _generate_suggestions(detected, structure, primary)
 
     return {
         'detected_formats': detected,
@@ -135,12 +134,12 @@ def check_article_format(content: str) -> dict:
         'summary': {
             'primary_format': primary,
             'format_count': len(detected),
-            'has_intro': has_intro,
-            'has_body': has_body,
-            'has_conclusion': has_conclusion,
+            'has_intro': structure['has_intro'],
+            'has_body': structure['has_body'],
+            'has_conclusion': structure['has_conclusion'],
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(detected, structure),
+        'suggestions': _generate_suggestions(detected, structure, primary),
     }
 
 

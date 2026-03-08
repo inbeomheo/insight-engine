@@ -79,6 +79,38 @@ def _determine_severity(clause_count: int) -> str:
     return 'low'
 
 
+_EMPTY_RESULT = {
+    'overloaded_sentences': [],
+    'summary': {'total_sentences': 0, 'overloaded': 0, 'avg_clauses': 0.0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_overloaded(sentences: List[str]) -> tuple:
+    """문장 목록에서 과부하 문장을 스캔합니다.
+
+    Returns:
+        (overloaded, total_clauses)
+    """
+    overloaded = []
+    total_clauses = 0
+
+    for sentence in sentences:
+        clause_count, markers = _count_clauses(sentence)
+        total_clauses += clause_count
+
+        if clause_count >= 3:
+            overloaded.append({
+                'sentence': sentence if len(sentence) <= 200 else sentence[:197] + '...',
+                'clause_count': clause_count,
+                'severity': _determine_severity(clause_count),
+                'markers': markers,
+            })
+
+    return overloaded, total_clauses
+
+
 def detect_clause_overload(content: str) -> dict:
     """문장 내 절 과부하를 감지합니다.
 
@@ -89,46 +121,19 @@ def detect_clause_overload(content: str) -> dict:
         overloaded_sentences, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'overloaded_sentences': [],
-            'summary': {'total_sentences': 0, 'overloaded': 0, 'avg_clauses': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     sentences = _split_sentences(content)
     if not sentences:
-        return {
-            'overloaded_sentences': [],
-            'summary': {'total_sentences': 0, 'overloaded': 0, 'avg_clauses': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    overloaded = []
-    total_clauses = 0
-
-    for sentence in sentences:
-        clause_count, markers = _count_clauses(sentence)
-        total_clauses += clause_count
-
-        if clause_count >= 3:
-            severity = _determine_severity(clause_count)
-            overloaded.append({
-                'sentence': sentence if len(sentence) <= 200 else sentence[:197] + '...',
-                'clause_count': clause_count,
-                'severity': severity,
-                'markers': markers,
-            })
+    overloaded, total_clauses = _scan_overloaded(sentences)
 
     total_sentences = len(sentences)
     avg_clauses = round(total_clauses / total_sentences, 2) if total_sentences > 0 else 0.0
     overloaded_count = len(overloaded)
-
     overload_ratio = (overloaded_count / total_sentences) if total_sentences > 0 else 0.0
     score = round(max(0.0, min(100.0, (1.0 - overload_ratio) * 100.0)), 1)
-
-    suggestions = _generate_suggestions(overloaded_count, total_sentences, avg_clauses, overloaded)
 
     return {
         'overloaded_sentences': overloaded,
@@ -138,7 +143,7 @@ def detect_clause_overload(content: str) -> dict:
             'avg_clauses': avg_clauses,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(overloaded_count, total_sentences, avg_clauses, overloaded),
     }
 
 
