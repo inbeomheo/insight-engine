@@ -98,9 +98,32 @@ def _validate_quality_result(data: Dict) -> Dict:
     return data
 
 
+def _build_eval_kwargs(eval_model: str, eval_prompt: str) -> Dict:
+    """LiteLLM 호출 파라미터를 구성합니다."""
+    kwargs = {
+        "model": eval_model,
+        "messages": [{"role": "user", "content": eval_prompt}],
+        "temperature": 0.1,
+        "max_tokens": 512,
+        "timeout": 60,
+    }
+
+    if eval_model.startswith("zhipuai/"):
+        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
+        if not zhipuai_key:
+            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
+        kwargs["model"] = f"openai/{eval_model.replace('zhipuai/', '')}"
+        kwargs["api_base"] = 'https://open.bigmodel.cn/api/paas/v4/'
+        kwargs["api_key"] = zhipuai_key
+
+    if eval_model.startswith("ollama_chat/") or eval_model.startswith("ollama/"):
+        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+    return kwargs
+
+
 def evaluate_quality(content: str, source_summary: str, model: Optional[str] = None) -> Dict:
-    """
-    LLM-as-judge 패턴으로 생성된 콘텐츠의 품질을 평가합니다.
+    """LLM-as-judge 패턴으로 생성된 콘텐츠의 품질을 평가합니다.
 
     Args:
         content: 평가할 생성 콘텐츠 텍스트
@@ -108,13 +131,7 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
         model: 평가에 사용할 모델 ID (None이면 자동 선택)
 
     Returns:
-        dict: {
-            accuracy, coherence, readability, usefulness: int (1~10),
-            overall: float,
-            grade: str ("A"/"B"/"C"/"D"),
-            feedback: str,
-            eval_model: str (사용된 모델)
-        }
+        dict: accuracy/coherence/readability/usefulness(1~10), overall, grade, feedback, eval_model
 
     Raises:
         Exception: 평가 모델이 없거나 LLM 호출 실패 시
@@ -126,9 +143,7 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
     if not eval_model:
         raise Exception("품질 평가에 사용 가능한 AI 모델이 없습니다. API 키를 확인해주세요.")
 
-    # 자막 요약: 최초 500자로 제한
     truncated_summary = source_summary[:500] if source_summary else '(자막 요약 없음)'
-    # 콘텐츠: 최초 3000자로 제한 (평가 비용 절감)
     truncated_content = content[:3000] if content else ''
 
     eval_prompt = QUALITY_EVAL_PROMPT.format(
@@ -136,27 +151,7 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
         content=truncated_content,
     )
 
-    # LiteLLM 호출 파라미터 구성
-    kwargs = {
-        "model": eval_model,
-        "messages": [{"role": "user", "content": eval_prompt}],
-        "temperature": 0.1,  # 평가 일관성을 위해 낮은 temperature
-        "max_tokens": 512,
-        "timeout": 60,
-    }
-
-    # GLM 모델 처리
-    if eval_model.startswith("zhipuai/"):
-        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
-        if not zhipuai_key:
-            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
-        kwargs["model"] = f"openai/{eval_model.replace('zhipuai/', '')}"
-        kwargs["api_base"] = 'https://open.bigmodel.cn/api/paas/v4/'
-        kwargs["api_key"] = zhipuai_key
-
-    # Ollama 처리
-    if eval_model.startswith("ollama_chat/") or eval_model.startswith("ollama/"):
-        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    kwargs = _build_eval_kwargs(eval_model, eval_prompt)
 
     try:
         response = completion(**kwargs)

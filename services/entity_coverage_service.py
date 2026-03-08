@@ -76,6 +76,18 @@ _SENTENCE_SPLIT = re.compile(r'[.!?\n]+')
 # 제품명에서 기술명과 겹치는 항목 (제품 우선)
 _PRODUCT_TECH_OVERLAP = KNOWN_PRODUCTS & KNOWN_TECHNOLOGIES  # ChatGPT 등
 
+_EMPTY_RESULT = {
+    "entities": [],
+    "entity_density": 0.0,
+    "type_distribution": {},
+    "relationships": [],
+    "coverage_score": 0,
+    "suggestions": ["콘텐츠에서 엔터티가 감지되지 않았습니다. 구체적인 브랜드, 기술명, 인물명을 추가하세요."],
+}
+
+# 약어 필터 (일반 영어 단어)
+_ACRONYM_STOPWORDS = {"THE", "AND", "FOR", "BUT", "NOT", "ARE", "WAS", "HAS", "HAD", "HIS", "HER", "HIM", "ITS"}
+
 
 def _split_sentences(content: str) -> List[str]:
     """콘텐츠를 문장 단위로 분리합니다."""
@@ -118,67 +130,61 @@ def _count_occurrences(content: str, entity_name: str) -> int:
     return len(re.findall(pattern, content))
 
 
-def _extract_entities(content: str) -> List[Dict[str, Any]]:
-    """콘텐츠에서 모든 유형의 엔터티를 추출합니다."""
-    found = {}  # name -> type (중복 방지)
-
-    # 1. 제품 감지 (최우선 — 기술과 겹치는 항목 처리)
+def _detect_dictionary_entities(content: str) -> Dict[str, str]:
+    """사전 기반 엔터티(제품/브랜드/기술)를 감지합니다."""
+    found = {}
     for product in KNOWN_PRODUCTS:
         if product in content:
             found[product] = "product"
-
-    # 2. 브랜드 감지
     for brand in KNOWN_BRANDS:
         if brand in content and brand not in found:
             found[brand] = "brand"
-
-    # 3. 기술 감지 (사전)
     for tech in KNOWN_TECHNOLOGIES:
         if tech in content and tech not in found:
             found[tech] = "technology"
+    return found
 
-    # 4. 영문 약어 (2-6자 대문자, 사전에 없는 것)
+
+def _detect_pattern_entities(content: str, found: Dict[str, str]) -> None:
+    """패턴 기반 엔터티(약어/인물/조직/개념)를 감지하여 found에 추가합니다."""
     for match in _ACRONYM_PATTERN.finditer(content):
         acronym = match.group(1)
-        if acronym not in found and acronym not in {"THE", "AND", "FOR", "BUT", "NOT", "ARE", "WAS", "HAS", "HAD", "HIS", "HER", "HIM", "ITS"}:
-            # 기술명으로 분류
+        if acronym not in found and acronym not in _ACRONYM_STOPWORDS:
             found[acronym] = "technology"
 
-    # 5. person 감지 — 한국어 접미어
     for match in _PERSON_SUFFIX_PATTERN.finditer(content):
         name = match.group(1)
         if name not in found:
             found[name] = "person"
 
-    # 6. person 감지 — CEO/CTO 등 직함
     for match in _TITLE_NAME_PATTERN.finditer(content):
         name = match.group(1)
         if name not in found:
             found[name] = "person"
 
-    # 7. person 감지 — 영문 이름 (2단어)
     for match in _ENGLISH_NAME_PATTERN.finditer(content):
         full_name = match.group(0)
-        # 브랜드/제품/기술과 겹치지 않는지 확인
         words = full_name.split()
         if not any(w in found for w in words) and full_name not in found:
-            # 일반 영문 구문 필터: 두 단어 모두 일반 영단어가 아닐 때만
             found[full_name] = "person"
 
-    # 8. 조직 감지 — 한국어 접미어
     for match in _ORG_SUFFIX_PATTERN.finditer(content):
         org_name = match.group(0).strip()
         base = match.group(1)
         if base not in found and org_name not in found:
             found[org_name] = "organization"
 
-    # 9. 개념 감지 — 키워드 2회 이상 등장
     for concept in CONCEPT_KEYWORDS:
         count = content.count(concept)
         if count >= 2 and concept not in found:
             found[concept] = "concept"
 
-    # 엔터티 목록 구성
+
+def _extract_entities(content: str) -> List[Dict[str, Any]]:
+    """콘텐츠에서 모든 유형의 엔터티를 추출합니다."""
+    found = _detect_dictionary_entities(content)
+    _detect_pattern_entities(content, found)
+
     entities = []
     for name, entity_type in found.items():
         count = _count_occurrences(content, name)
@@ -190,7 +196,6 @@ def _extract_entities(content: str) -> List[Dict[str, Any]]:
                 "context": _extract_context(content, name),
             })
 
-    # count 기준 내림차순 정렬
     entities.sort(key=lambda e: e["count"], reverse=True)
     return entities
 
@@ -306,14 +311,7 @@ def analyze_entities(content: str) -> dict:
     """
     # 빈 콘텐츠 처리
     if not content or not content.strip():
-        return {
-            "entities": [],
-            "entity_density": 0.0,
-            "type_distribution": {},
-            "relationships": [],
-            "coverage_score": 0,
-            "suggestions": ["콘텐츠에서 엔터티가 감지되지 않았습니다. 구체적인 브랜드, 기술명, 인물명을 추가하세요."],
-        }
+        return dict(_EMPTY_RESULT)
 
     # 엔터티 추출
     entities = _extract_entities(content)

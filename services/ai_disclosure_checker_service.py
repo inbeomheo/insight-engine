@@ -42,6 +42,21 @@ _AUTOMATION_TRACES = [
 ]
 
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'has_ai_markers': False,
+        'disclosure_found': False,
+        'automation_traces': 0,
+        'human_review_noted': False,
+    },
+    'ai_markers': [],
+    'disclosure_markers': [],
+    'automation_traces': [],
+    'suggestions': [],
+}
+
+
 def _find_matches(content: str, patterns: list) -> List[Dict]:
     """패턴 매칭 결과를 반환합니다."""
     matches = []
@@ -59,6 +74,42 @@ def _find_matches(content: str, patterns: list) -> List[Dict]:
     return matches
 
 
+def _detect_all_markers(content: str) -> tuple:
+    """모든 유형의 마커를 탐지합니다.
+
+    Returns:
+        (ai_markers, disclosure_markers, trace_matches, human_review)
+    """
+    ko_markers = _find_matches(content, _KO_AI_MARKERS)
+    en_markers = _find_matches(content, _EN_AI_MARKERS)
+    ai_markers = ko_markers + en_markers
+
+    disclosure_markers = _find_matches(content, _AI_DISCLOSURE_PATTERNS)
+    trace_matches = _find_matches(content, _AUTOMATION_TRACES)
+
+    human_review = any(
+        re.search(r'(?:편집|검토|감수|reviewed|edited|verified)', d['text'], re.IGNORECASE)
+        for d in disclosure_markers
+    )
+
+    return ai_markers, disclosure_markers, trace_matches, human_review
+
+
+def _compute_disclosure_score(has_ai: bool, has_disclosure: bool,
+                               has_traces: bool, human_review: bool) -> float:
+    """공시 점수를 계산합니다."""
+    score = 100.0
+    if has_ai and not has_disclosure:
+        score -= 40.0
+    elif has_ai and has_disclosure and not human_review:
+        score -= 15.0
+    if has_traces and not has_disclosure:
+        score -= 20.0
+    elif has_traces and not has_ai:
+        score -= 10.0
+    return round(max(0.0, min(100.0, score)), 1)
+
+
 def check_ai_disclosure(content: str) -> dict:
     """AI 작성/보조 표시 누락을 점검합니다.
 
@@ -66,65 +117,19 @@ def check_ai_disclosure(content: str) -> dict:
         score, summary, suggestions, ai_markers, disclosure_found를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'has_ai_markers': False,
-                'disclosure_found': False,
-                'automation_traces': 0,
-                'human_review_noted': False,
-            },
-            'ai_markers': [],
-            'disclosure_markers': [],
-            'automation_traces': [],
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # AI 마커 탐지
-    ko_markers = _find_matches(content, _KO_AI_MARKERS)
-    en_markers = _find_matches(content, _EN_AI_MARKERS)
-    ai_markers = ko_markers + en_markers
-
-    # 공시 문구 탐지
-    disclosure_markers = _find_matches(content, _AI_DISCLOSURE_PATTERNS)
-
-    # 자동화 흔적 탐지
-    trace_matches = _find_matches(content, _AUTOMATION_TRACES)
-
-    has_ai_markers = len(ai_markers) > 0
+    ai_markers, disclosure_markers, trace_matches, human_review = _detect_all_markers(content)
+    has_ai = len(ai_markers) > 0
     has_disclosure = len(disclosure_markers) > 0
     has_traces = len(trace_matches) > 0
 
-    # 편집 책임자 표시 여부
-    human_review = any(
-        re.search(r'(?:편집|검토|감수|reviewed|edited|verified)', d['text'], re.IGNORECASE)
-        for d in disclosure_markers
-    )
-
-    # 점수 계산
-    score = 100.0
-
-    if has_ai_markers and not has_disclosure:
-        score -= 40.0
-    elif has_ai_markers and has_disclosure and not human_review:
-        score -= 15.0
-
-    if has_traces and not has_disclosure:
-        score -= 20.0
-    elif has_traces and not has_ai_markers:
-        score -= 10.0
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(
-        has_ai_markers, has_disclosure, has_traces,
-        human_review, ai_markers, trace_matches, score
-    )
+    score = _compute_disclosure_score(has_ai, has_disclosure, has_traces, human_review)
 
     return {
         'score': score,
         'summary': {
-            'has_ai_markers': has_ai_markers,
+            'has_ai_markers': has_ai,
             'disclosure_found': has_disclosure,
             'automation_traces': len(trace_matches),
             'human_review_noted': human_review,
@@ -132,7 +137,10 @@ def check_ai_disclosure(content: str) -> dict:
         'ai_markers': ai_markers[:10],
         'disclosure_markers': disclosure_markers[:10],
         'automation_traces': trace_matches[:5],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            has_ai, has_disclosure, has_traces,
+            human_review, ai_markers, trace_matches, score
+        ),
     }
 
 
