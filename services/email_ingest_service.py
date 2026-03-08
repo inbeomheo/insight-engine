@@ -66,26 +66,8 @@ def parse_forwarded_email(raw_text: str) -> Dict:
     if not raw_text or len(raw_text.strip()) < 10:
         raise ValueError('이메일 텍스트가 너무 짧습니다.')
 
-    subject = ''
-    sender = ''
-    date_str = ''
-    body_start = 0
-
     lines = raw_text.strip().split('\n')
-
-    # 헤더 영역 파싱 (상단 20줄 이내에서 From/Subject/Date 검색)
-    header_end = min(len(lines), 20)
-    for i, line in enumerate(lines[:header_end]):
-        stripped = line.strip()
-        if re.match(r'^(From|보낸\s*사람|발신자)\s*[:：]', stripped, re.IGNORECASE):
-            sender = re.sub(r'^(From|보낸\s*사람|발신자)\s*[:：]\s*', '', stripped, flags=re.IGNORECASE)
-            body_start = max(body_start, i + 1)
-        elif re.match(r'^(Subject|제목)\s*[:：]', stripped, re.IGNORECASE):
-            subject = re.sub(r'^(Subject|제목)\s*[:：]\s*', '', stripped, flags=re.IGNORECASE)
-            body_start = max(body_start, i + 1)
-        elif re.match(r'^(Date|날짜|보낸\s*날짜)\s*[:：]', stripped, re.IGNORECASE):
-            date_str = re.sub(r'^(Date|날짜|보낸\s*날짜)\s*[:：]\s*', '', stripped, flags=re.IGNORECASE)
-            body_start = max(body_start, i + 1)
+    subject, sender, date_str, body_start = _parse_forwarded_headers(lines)
 
     body_text = '\n'.join(lines[body_start:]).strip()
     if not body_text:
@@ -98,6 +80,39 @@ def parse_forwarded_email(raw_text: str) -> Dict:
         'from': sender,
         'date': date_str,
     }
+
+
+# 헤더 패턴: (매칭 정규식, 제거용 정규식, 결과 필드명)
+_HEADER_PATTERNS = [
+    (r'^(From|보낸\s*사람|발신자)\s*[:：]', 'sender'),
+    (r'^(Subject|제목)\s*[:：]', 'subject'),
+    (r'^(Date|날짜|보낸\s*날짜)\s*[:：]', 'date'),
+]
+
+
+def _parse_forwarded_headers(lines: list) -> tuple:
+    """포워딩 이메일 상단에서 From/Subject/Date 헤더를 추출합니다."""
+    subject = ''
+    sender = ''
+    date_str = ''
+    body_start = 0
+
+    header_end = min(len(lines), 20)
+    for i, line in enumerate(lines[:header_end]):
+        stripped = line.strip()
+        for pattern, field in _HEADER_PATTERNS:
+            if re.match(pattern, stripped, re.IGNORECASE):
+                value = re.sub(pattern + r'\s*', '', stripped, flags=re.IGNORECASE)
+                if field == 'sender':
+                    sender = value
+                elif field == 'subject':
+                    subject = value
+                else:
+                    date_str = value
+                body_start = max(body_start, i + 1)
+                break
+
+    return subject, sender, date_str, body_start
 
 
 def _decode_header_value(value: str) -> str:

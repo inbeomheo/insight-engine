@@ -47,81 +47,90 @@ class TelegramBotService:
         if not chat_id:
             return {'ok': True}
 
-        # /start 명령어
         if text.startswith('/start'):
-            self._send_message(
-                chat_id,
-                '👋 안녕하세요! Insight Engine 봇입니다.\n\n'
-                'YouTube 영상 URL을 전송하면 AI 콘텐츠 생성을 도와드립니다.\n\n'
-                '사용법:\n'
-                '1. YouTube URL을 이 채팅에 붙여넣기\n'
-                '2. 스타일을 선택하면 콘텐츠가 생성됩니다.\n\n'
-                '명령어:\n'
-                '/generate <URL> — 블로그 SEO 스타일로 생성\n'
-                '/styles — 지원 스타일 목록',
-            )
-            return {'ok': True}
-
-        # /styles 명령어
+            return self._handle_start(chat_id)
         if text.startswith('/styles'):
-            self._send_message(
-                chat_id,
-                '📋 지원 콘텐츠 스타일:\n\n'
-                '• blog_seo — 블로그 SEO\n'
-                '• summary — 요약\n'
-                '• tutorial — 튜토리얼\n'
-                '• qna — Q&A\n'
-                '• sns_post — SNS 포스트\n'
-                '• newsletter — 뉴스레터\n\n'
-                '사용: /generate <URL> <스타일>',
-            )
-            return {'ok': True}
-
-        # /generate 명령어
+            return self._handle_styles(chat_id)
         if text.startswith('/generate'):
-            parts = text.split()
-            url = parts[1] if len(parts) > 1 else ''
-            style = parts[2] if len(parts) > 2 else 'blog_seo'
+            return self._handle_generate(chat_id, text)
+        return self._handle_url_message(chat_id, text)
 
-            if not YOUTUBE_URL_RE.search(url):
-                self._send_message(chat_id, '❌ 유효한 YouTube URL을 입력해주세요.')
-                return {'ok': True}
+    def _handle_start(self, chat_id: int) -> dict:
+        """/start 명령어 처리"""
+        self._send_message(
+            chat_id,
+            '👋 안녕하세요! Insight Engine 봇입니다.\n\n'
+            'YouTube 영상 URL을 전송하면 AI 콘텐츠 생성을 도와드립니다.\n\n'
+            '사용법:\n'
+            '1. YouTube URL을 이 채팅에 붙여넣기\n'
+            '2. 스타일을 선택하면 콘텐츠가 생성됩니다.\n\n'
+            '명령어:\n'
+            '/generate <URL> — 블로그 SEO 스타일로 생성\n'
+            '/styles — 지원 스타일 목록',
+        )
+        return {'ok': True}
 
-            logger.info(f"Telegram 봇: /generate — {url} (스타일: {style})")
-            self._send_message(
-                chat_id,
-                f'⏳ 콘텐츠 생성 요청을 접수했습니다.\n\n'
-                f'URL: {url}\n'
-                f'스타일: {style}\n\n'
-                f'Insight Engine 서버에서 결과를 확인하세요.',
-            )
-            return {'ok': True, 'url': url, 'style': style}
+    def _handle_styles(self, chat_id: int) -> dict:
+        """/styles 명령어 처리"""
+        self._send_message(
+            chat_id,
+            '📋 지원 콘텐츠 스타일:\n\n'
+            '• blog_seo — 블로그 SEO\n'
+            '• summary — 요약\n'
+            '• tutorial — 튜토리얼\n'
+            '• qna — Q&A\n'
+            '• sns_post — SNS 포스트\n'
+            '• newsletter — 뉴스레터\n\n'
+            '사용: /generate <URL> <스타일>',
+        )
+        return {'ok': True}
 
-        # URL만 전송한 경우
-        urls = YOUTUBE_URL_RE.findall(text)
-        if urls:
-            youtube_url = urls[0]
-            logger.info(f"Telegram 봇: URL 감지 — {youtube_url}")
+    def _handle_generate(self, chat_id: int, text: str) -> dict:
+        """/generate 명령어 처리"""
+        parts = text.split()
+        url = parts[1] if len(parts) > 1 else ''
+        style = parts[2] if len(parts) > 2 else 'blog_seo'
 
-            keyboard = {
-                'inline_keyboard': [
-                    [
-                        {'text': '📝 블로그 SEO', 'callback_data': f'gen:blog_seo:{youtube_url}'},
-                        {'text': '📋 요약', 'callback_data': f'gen:summary:{youtube_url}'},
-                    ],
-                    [
-                        {'text': '📱 SNS 포스트', 'callback_data': f'gen:sns_post:{youtube_url}'},
-                        {'text': '📰 뉴스레터', 'callback_data': f'gen:newsletter:{youtube_url}'},
-                    ],
-                ]
-            }
-            self._send_message(
-                chat_id,
-                f'🎬 YouTube URL을 감지했습니다!\n`{youtube_url}`\n\n콘텐츠 스타일을 선택하세요:',
-                reply_markup=keyboard,
-            )
+        if not YOUTUBE_URL_RE.search(url):
+            self._send_message(chat_id, '❌ 유효한 YouTube URL을 입력해주세요.')
             return {'ok': True}
 
+        logger.info(f"Telegram 봇: /generate — {url} (스타일: {style})")
+        self._send_message(
+            chat_id,
+            f'⏳ 콘텐츠 생성 요청을 접수했습니다.\n\n'
+            f'URL: {url}\n'
+            f'스타일: {style}\n\n'
+            f'Insight Engine 서버에서 결과를 확인하세요.',
+        )
+        return {'ok': True, 'url': url, 'style': style}
+
+    def _handle_url_message(self, chat_id: int, text: str) -> dict:
+        """URL이 포함된 일반 메시지 처리"""
+        urls = YOUTUBE_URL_RE.findall(text)
+        if not urls:
+            return {'ok': True}
+
+        youtube_url = urls[0]
+        logger.info(f"Telegram 봇: URL 감지 — {youtube_url}")
+
+        keyboard = {
+            'inline_keyboard': [
+                [
+                    {'text': '📝 블로그 SEO', 'callback_data': f'gen:blog_seo:{youtube_url}'},
+                    {'text': '📋 요약', 'callback_data': f'gen:summary:{youtube_url}'},
+                ],
+                [
+                    {'text': '📱 SNS 포스트', 'callback_data': f'gen:sns_post:{youtube_url}'},
+                    {'text': '📰 뉴스레터', 'callback_data': f'gen:newsletter:{youtube_url}'},
+                ],
+            ]
+        }
+        self._send_message(
+            chat_id,
+            f'🎬 YouTube URL을 감지했습니다!\n`{youtube_url}`\n\n콘텐츠 스타일을 선택하세요:',
+            reply_markup=keyboard,
+        )
         return {'ok': True}
 
     def handle_callback_query(self, callback_query: dict) -> dict:
