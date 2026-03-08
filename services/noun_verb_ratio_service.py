@@ -7,7 +7,7 @@ Noun-to-Verb Ratio 서비스
 """
 import re
 from typing import List, Dict
-from collections import Counter
+
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 

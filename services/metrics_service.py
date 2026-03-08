@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # prometheus_client 선택적 import
 try:
     from prometheus_client import (
-        Counter, Histogram, Gauge, Summary,
+        Counter, Histogram, Gauge,
         generate_latest, CONTENT_TYPE_LATEST, REGISTRY
     )
     _PROMETHEUS_AVAILABLE = True

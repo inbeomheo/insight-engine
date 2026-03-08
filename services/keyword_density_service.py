@@ -6,7 +6,6 @@
 """
 import re
 import logging
-import math
 
 logger = logging.getLogger(__name__)
 
