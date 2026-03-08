@@ -3,7 +3,6 @@
 텍스트의 가독성, 전문성 수준, 구조 복잡도를 정량 분석
 """
 import logging
-import math
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List

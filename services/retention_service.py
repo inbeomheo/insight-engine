@@ -2,7 +2,7 @@
 이탈 방지 서비스 (F4-22)
 비활성 사용자 감지 + 알림 생성
 """
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from services.logging_config import ServiceLogger
 
 logger = ServiceLogger('RetentionService')

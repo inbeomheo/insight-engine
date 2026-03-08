@@ -9,7 +9,7 @@ import time
 import markdown
 import threading
 from datetime import datetime
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 from flask import current_app
 from litellm import completion
