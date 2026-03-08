@@ -37,6 +37,7 @@ export default function MultiLangView({ results }: MultiLangViewProps) {
             key={lang}
             type="button"
             onClick={() => setActiveLang(lang)}
+            aria-label={`${lang} 언어 탭`}
             className={`px-3 py-1.5 text-sm font-medium rounded-t transition-colors ${
               activeLang === lang
                 ? 'bg-primary text-primary-foreground'

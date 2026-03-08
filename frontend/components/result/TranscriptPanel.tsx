@@ -56,6 +56,7 @@ export const TranscriptPanel = memo(function TranscriptPanel({ segments, videoId
             <div key={i} className="flex gap-2 py-1 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 group">
               <button
                 onClick={() => handleTimestampClick(seg.start)}
+                aria-label={`${formatTimestamp(seg.start)} 타임스탬프로 이동`}
                 className="text-xs font-mono text-blue-500 hover:text-blue-700 dark:text-blue-400 shrink-0 pt-0.5"
               >
                 {formatTimestamp(seg.start)}

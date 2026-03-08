@@ -24,6 +24,7 @@ export const ViewModeSelector = memo(function ViewModeSelector({ mode, onChange 
         <button
           key={id}
           onClick={() => onChange(id)}
+          aria-label={`${label} 뷰 모드`}
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all',
             mode === id
