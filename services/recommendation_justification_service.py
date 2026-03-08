@@ -54,43 +54,28 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def analyze_recommendation_justification(content: str) -> dict:
-    """추천 항목의 근거 충분성을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_recommendation_content': False, 'total_items': 0,
+        'has_why': False, 'has_best_for': False,
+        'has_comparison': False, 'justification_level': 'none',
+    },
+    'missing_why': [],
+    'missing_best_for': [],
+    'suggestions': [],
+}
+
+
+def _analyze_item_sections(content: str) -> tuple:
+    """추천 항목 섹션별 근거 누락을 분석합니다.
 
     Returns:
-        score, summary, suggestions, missing_why, missing_best_for를 포함하는 dict
+        (total_items, missing_why_sections, missing_best_for_sections)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_recommendation_content': False,
-                'total_items': 0,
-                'has_why': False,
-                'has_best_for': False,
-                'has_comparison': False,
-                'justification_level': 'none',
-            },
-            'missing_why': [],
-            'missing_best_for': [],
-            'suggestions': [],
-        }
-
-    is_rec = _count_matches(content, _RECOMMENDATION_SIGNALS) >= 2
-
-    # 전체 텍스트에서 근거 패턴 탐지
-    why_count = _count_matches(content, _WHY_PATTERNS)
-    best_for_count = _count_matches(content, _BEST_FOR_PATTERNS)
-    comparison_count = _count_matches(content, _COMPARISON_PATTERNS)
-
-    has_why = why_count >= 2
-    has_best_for = best_for_count >= 1
-    has_comparison = comparison_count >= 1
-
-    # 섹션별 분석
     sections = list(_HEADING_RE.finditer(content))
-    missing_why_sections = []
-    missing_best_for_sections = []
+    missing_why = []
+    missing_best_for = []
     total_items = 0
 
     for i, h in enumerate(sections):
@@ -102,50 +87,70 @@ def analyze_recommendation_justification(content: str) -> dict:
         if len(section_text) < 30:
             continue
 
-        # 추천 항목 섹션인지 확인 (번호/제목 패턴)
         is_item = bool(re.match(r'\d+[\.\)]', title)) or _has_pattern(title, _RECOMMENDATION_SIGNALS)
         if not is_item:
             continue
 
         total_items += 1
-
         if not _has_pattern(section_text, _WHY_PATTERNS):
-            missing_why_sections.append(title[:30])
-
+            missing_why.append(title[:30])
         if not _has_pattern(section_text, _BEST_FOR_PATTERNS):
-            missing_best_for_sections.append(title[:30])
+            missing_best_for.append(title[:30])
 
-    # 근거 수준 판정
+    return total_items, missing_why, missing_best_for
+
+
+def _compute_justification_score(is_rec: bool, has_why: bool, has_best_for: bool,
+                                  has_comparison: bool, total_items: int,
+                                  missing_why: list) -> tuple:
+    """근거 충분성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if not is_rec:
-        level = 'none'
+        return 100.0, 'none'
+
+    score_val = sum([has_why, has_best_for, has_comparison])
+
+    if score_val >= 3:
+        level = 'thorough'
+    elif score_val >= 2:
+        level = 'adequate'
+    elif score_val >= 1:
+        level = 'partial'
     else:
-        score_val = 0
-        if has_why:
-            score_val += 1
-        if has_best_for:
-            score_val += 1
-        if has_comparison:
-            score_val += 1
+        level = 'missing'
 
-        if score_val >= 3:
-            level = 'thorough'
-        elif score_val >= 2:
-            level = 'adequate'
-        elif score_val >= 1:
-            level = 'partial'
-        else:
-            level = 'missing'
+    score = 25.0 + (score_val / 3.0 * 70.0)
+    if total_items > 0:
+        why_missing_ratio = len(missing_why) / total_items
+        score -= min(15.0, why_missing_ratio * 15.0)
 
-    # 연속 점수 — score_val(0~3) 기반
-    if not is_rec:
-        score = 100.0
-    else:
-        score = 25.0 + (score_val / 3.0 * 70.0)
-        if total_items > 0:
-            why_missing_ratio = len(missing_why_sections) / total_items
-            score -= min(15.0, why_missing_ratio * 15.0)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    score = round(max(0.0, min(100.0, score)), 1)
+
+def analyze_recommendation_justification(content: str) -> dict:
+    """추천 항목의 근거 충분성을 분석합니다.
+
+    Returns:
+        score, summary, suggestions, missing_why, missing_best_for를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    is_rec = _count_matches(content, _RECOMMENDATION_SIGNALS) >= 2
+    has_why = _count_matches(content, _WHY_PATTERNS) >= 2
+    has_best_for = _count_matches(content, _BEST_FOR_PATTERNS) >= 1
+    has_comparison = _count_matches(content, _COMPARISON_PATTERNS) >= 1
+
+    total_items, missing_why_sections, missing_best_for_sections = (
+        _analyze_item_sections(content)
+    )
+    score, level = _compute_justification_score(
+        is_rec, has_why, has_best_for, has_comparison,
+        total_items, missing_why_sections
+    )
 
     suggestions = _generate_suggestions(
         is_rec, has_why, has_best_for, has_comparison,

@@ -20,55 +20,23 @@ _LENGTH_CATEGORIES = {
 }
 
 
-def analyze_variety(content: str) -> dict:
-    """문장 다양성을 분석합니다.
+_EMPTY_RESULT = {
+    'sentences': [],
+    'length_distribution': {},
+    'start_pattern': {'unique_ratio': 0, 'repeated': []},
+    'variety_score': 0,
+    'stats': {'count': 0, 'avg_length': 0, 'std_dev': 0,
+              'min_length': 0, 'max_length': 0},
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _analyze_sentences(sentences: list) -> tuple:
+    """문장별 길이/카테고리/시작 단어를 분석합니다.
 
     Returns:
-        {
-            "sentences": [{"text": str, "length": int, "category": str, "start_word": str}],
-            "length_distribution": dict,
-            "start_pattern": {"unique_ratio": float, "repeated": list},
-            "variety_score": int (0~100),
-            "stats": {"count": int, "avg_length": float, "std_dev": float,
-                      "min_length": int, "max_length": int},
-            "suggestions": list[str],
-        }
+        (analyzed, lengths, start_words, length_dist)
     """
-    if not content or not content.strip():
-        return {
-            'sentences': [],
-            'length_distribution': {},
-            'start_pattern': {'unique_ratio': 0, 'repeated': []},
-            'variety_score': 0,
-            'stats': {'count': 0, 'avg_length': 0, 'std_dev': 0,
-                      'min_length': 0, 'max_length': 0},
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 마크다운 정리
-    clean = re.sub(r'#{1,6}\s+', '', content)
-    clean = re.sub(r'```[\s\S]*?```', '', clean)
-    clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
-
-    # 문장 분리
-    raw_sentences = re.split(r'(?<=[.!?。])\s+|\n+', clean)
-    sentences = [s.strip() for s in raw_sentences if len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'sentences': [],
-            'length_distribution': {},
-            'start_pattern': {'unique_ratio': 0, 'repeated': []},
-            'variety_score': 0,
-            'stats': {'count': 0, 'avg_length': 0, 'std_dev': 0,
-                      'min_length': 0, 'max_length': 0},
-            'suggestions': ['분석할 문장이 없습니다.'],
-        }
-
-    # 문장별 분석
     analyzed = []
     lengths = []
     start_words = []
@@ -80,7 +48,6 @@ def analyze_variety(content: str) -> dict:
         category = _categorize_length(length)
         length_dist[category] += 1
 
-        # 시작 단어 (첫 2~4자 한글 단어)
         start_match = re.match(r'([가-힣]{1,6})', sent)
         start_word = start_match.group(1) if start_match else sent[:3]
         start_words.append(start_word)
@@ -92,40 +59,65 @@ def analyze_variety(content: str) -> dict:
             'start_word': start_word,
         })
 
-    # 통계
-    count = len(lengths)
-    avg_length = sum(lengths) / count
-    variance = sum((l - avg_length) ** 2 for l in lengths) / count
-    std_dev = round(math.sqrt(variance), 1)
+    return analyzed, lengths, start_words, length_dist
 
-    # 시작 패턴 분석
-    unique_starts = len(set(start_words))
-    unique_ratio = round(unique_starts / count, 2)
+
+def _analyze_start_patterns(start_words: list, count: int) -> tuple:
+    """시작 단어 반복 패턴을 분석합니다.
+
+    Returns:
+        (unique_ratio, repeated)
+    """
+    unique_ratio = round(len(set(start_words)) / count, 2)
     start_freq = {}
     for w in start_words:
         start_freq[w] = start_freq.get(w, 0) + 1
     repeated = [{'word': w, 'count': c} for w, c in start_freq.items() if c >= 3]
     repeated.sort(key=lambda x: x['count'], reverse=True)
+    return unique_ratio, repeated
 
-    # 다양성 점수 계산
+
+def analyze_variety(content: str) -> dict:
+    """문장 다양성을 분석합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+
+    Returns:
+        sentences, length_distribution, start_pattern, variety_score, stats, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    clean = re.sub(r'#{1,6}\s+', '', content)
+    clean = re.sub(r'```[\s\S]*?```', '', clean)
+    clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
+
+    raw_sentences = re.split(r'(?<=[.!?。])\s+|\n+', clean)
+    sentences = [s.strip() for s in raw_sentences if len(s.strip()) >= 5]
+
+    if not sentences:
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
+
+    analyzed, lengths, start_words, length_dist = _analyze_sentences(sentences)
+
+    count = len(lengths)
+    avg_length = sum(lengths) / count
+    variance = sum((l - avg_length) ** 2 for l in lengths) / count
+    std_dev = round(math.sqrt(variance), 1)
+
+    unique_ratio, repeated = _analyze_start_patterns(start_words, count)
     variety_score = _calculate_variety_score(length_dist, count, unique_ratio, std_dev, avg_length)
-
-    # 제안
     suggestions = _generate_suggestions(length_dist, count, unique_ratio, repeated, avg_length)
 
     return {
         'sentences': analyzed,
         'length_distribution': length_dist,
-        'start_pattern': {
-            'unique_ratio': unique_ratio,
-            'repeated': repeated,
-        },
+        'start_pattern': {'unique_ratio': unique_ratio, 'repeated': repeated},
         'variety_score': variety_score,
         'stats': {
-            'count': count,
-            'avg_length': round(avg_length, 1),
-            'std_dev': std_dev,
-            'min_length': min(lengths),
+            'count': count, 'avg_length': round(avg_length, 1),
+            'std_dev': std_dev, 'min_length': min(lengths),
             'max_length': max(lengths),
         },
         'suggestions': suggestions,

@@ -59,88 +59,63 @@ def _detect_repetition(sentences: List[str]) -> int:
     return count
 
 
-def detect_rhetorical_devices(content: str) -> dict:
-    """수사법을 감지합니다.
+_EMPTY_RESULT = {
+    'devices': [],
+    'summary': {
+        'total_devices': 0, 'device_types': 0,
+        'density': 0.0, 'level': 'none',
+    },
+    'score': 50.0,
+    'suggestions': [],
+}
+
+# 패턴 매핑: (장치 이름, 패턴 리스트)
+_DEVICE_CHECKS = [
+    ('simile', [_KO_SIMILE, _EN_SIMILE]),
+    ('metaphor', [_KO_METAPHOR]),
+    ('hyperbole', [_KO_HYPERBOLE, _EN_HYPERBOLE]),
+    ('parallelism', [_KO_PARALLEL]),
+    ('enumeration', [_KO_ENUM]),
+    ('antithesis', [_KO_ANTITHESIS, _EN_ANTITHESIS]),
+]
+
+
+def _scan_devices(sentences: List[str]) -> tuple:
+    """문장별 수사 장치를 스캔합니다.
 
     Returns:
-        devices, summary, score, suggestions를 포함하는 dict
+        (devices, type_counter)
     """
-    if not content or not content.strip():
-        return {
-            'devices': [],
-            'summary': {
-                'total_devices': 0,
-                'device_types': 0,
-                'density': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'devices': [],
-            'summary': {
-                'total_devices': 0,
-                'device_types': 0,
-                'density': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': [],
-        }
-
     devices = []
     type_counter = Counter()
 
     for sent in sentences:
-        # 직유
-        if _KO_SIMILE.search(sent) or _EN_SIMILE.search(sent):
-            devices.append({'type': 'simile', 'text': sent[:60]})
-            type_counter['simile'] += 1
+        for device_name, patterns in _DEVICE_CHECKS:
+            if any(p.search(sent) for p in patterns):
+                devices.append({'type': device_name, 'text': sent[:60]})
+                type_counter[device_name] += 1
 
-        # 은유
-        if _KO_METAPHOR.search(sent):
-            devices.append({'type': 'metaphor', 'text': sent[:60]})
-            type_counter['metaphor'] += 1
-
-        # 과장
-        if _KO_HYPERBOLE.search(sent) or _EN_HYPERBOLE.search(sent):
-            devices.append({'type': 'hyperbole', 'text': sent[:60]})
-            type_counter['hyperbole'] += 1
-
-        # 대구/병렬
-        if _KO_PARALLEL.search(sent):
-            devices.append({'type': 'parallelism', 'text': sent[:60]})
-            type_counter['parallelism'] += 1
-
-        # 열거
-        if _KO_ENUM.search(sent):
-            devices.append({'type': 'enumeration', 'text': sent[:60]})
-            type_counter['enumeration'] += 1
-
-        # 설의법
         if _RHETORICAL_Q.search(sent) and sent.strip().endswith('?'):
             devices.append({'type': 'rhetorical_question', 'text': sent[:60]})
             type_counter['rhetorical_question'] += 1
 
-        # 대조
-        if _KO_ANTITHESIS.search(sent) or _EN_ANTITHESIS.search(sent):
-            devices.append({'type': 'antithesis', 'text': sent[:60]})
-            type_counter['antithesis'] += 1
-
-    # 반복 감지
     rep_count = _detect_repetition(sentences)
     if rep_count > 0:
         type_counter['repetition'] = rep_count
 
+    return devices, type_counter
+
+
+def _compute_rhetoric_score(type_counter: Counter, sentence_count: int) -> tuple:
+    """수사 장치 다양성으로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level, device_types, total_devices, density)
+    """
     total_devices = sum(type_counter.values())
     device_types = len(type_counter)
-    density = round(total_devices / max(len(sentences), 1) * 100, 1)
+    density = round(total_devices / max(sentence_count, 1) * 100, 1)
 
-    # 레벨
     if device_types >= 4:
         level = 'rich'
     elif device_types >= 2:
@@ -150,16 +125,32 @@ def detect_rhetorical_devices(content: str) -> dict:
     else:
         level = 'none'
 
-    # 점수 (다양한 수사법 사용 = 높은 점수)
     score = min(100.0, device_types * 20.0 + total_devices * 3.0)
-
-    # 과다 사용 감점
-    for t, c in type_counter.items():
-        if c > len(sentences) * 0.4:
+    for _t, c in type_counter.items():
+        if c > sentence_count * 0.4:
             score -= 10.0
 
     score = round(max(0.0, min(100.0, score)), 1)
+    return score, level, device_types, total_devices, density
 
+
+def detect_rhetorical_devices(content: str) -> dict:
+    """수사법을 감지합니다.
+
+    Returns:
+        devices, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    devices, type_counter = _scan_devices(sentences)
+    score, level, device_types, total_devices, density = (
+        _compute_rhetoric_score(type_counter, len(sentences))
+    )
     suggestions = _generate_suggestions(type_counter, device_types, density, level)
 
     return {
