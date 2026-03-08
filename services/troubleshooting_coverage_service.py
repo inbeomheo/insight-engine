@@ -6,7 +6,7 @@ FAQ형 문제 해결이 없는지 탐지합니다.
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 # 가이드/튜토리얼 신호
 _GUIDE_SIGNALS = [

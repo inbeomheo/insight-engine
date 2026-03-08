@@ -4,7 +4,6 @@
 콘텐츠의 문단 간 연결어 사용을 분석하고,
 부족한 곳에 적절한 전환 표현을 추천합니다.
 """
-import re
 import logging
 
 logger = logging.getLogger(__name__)
