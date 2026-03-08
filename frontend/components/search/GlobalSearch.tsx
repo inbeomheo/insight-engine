@@ -116,6 +116,7 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
                     key={r.id}
                     className="w-full px-3 py-2.5 text-left hover:bg-accent/50 transition-colors border-b border-border/20 last:border-0"
                     onClick={() => handleSelect(r.id)}
+                    aria-label={`${r.title} 검색 결과 선택`}
                   >
                     <div className="flex items-center gap-2">
                       <FileText className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />

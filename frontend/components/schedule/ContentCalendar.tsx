@@ -117,6 +117,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
             <button
               key={i}
               onClick={() => setSelectedDate(isSelected ? null : key)}
+              aria-label={`${key} 날짜 선택`}
               className={[
                 'relative min-h-[72px] p-1.5 text-left bg-background transition-colors',
                 !cell.current && 'opacity-40',
