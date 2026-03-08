@@ -118,10 +118,34 @@ def _parse_events_json(raw_text: str) -> List[Dict]:
     return []
 
 
+def _add_type_specific_fields(normalized: Dict, event: Dict) -> None:
+    """이벤트 타입별 전용 필드를 정규화하여 추가합니다."""
+    event_type = normalized['type']
+
+    if event_type == 'action_item':
+        priority = event.get('priority', 'medium')
+        normalized['priority'] = priority if priority in ('high', 'medium', 'low') else 'medium'
+
+    elif event_type == 'key_point':
+        try:
+            importance = max(0.0, min(1.0, float(event.get('importance', 0.7))))
+        except (TypeError, ValueError):
+            importance = 0.7
+        normalized['importance'] = importance
+
+    elif event_type == 'decision':
+        stakeholders = event.get('stakeholders', [])
+        if not isinstance(stakeholders, list):
+            stakeholders = []
+        normalized['stakeholders'] = [str(s)[:50] for s in stakeholders[:5]]
+
+    elif event_type == 'question':
+        status = event.get('status', 'open')
+        normalized['status'] = status if status in ('open', 'resolved') else 'open'
+
+
 def _validate_events(events: List[Dict]) -> List[Dict]:
     """이벤트 목록을 검증하고 정규화합니다.
-
-    필수 필드가 없는 이벤트는 제거하고, 선택 필드는 기본값으로 채웁니다.
 
     Args:
         events: 파싱된 이벤트 리스트
@@ -147,41 +171,13 @@ def _validate_events(events: List[Dict]) -> List[Dict]:
             logger.warning("이벤트 #%d: content가 비어있음, 건너뜀", i)
             continue
 
-        # 기본 구조 정규화
         normalized: Dict = {
             'type': event_type,
-            'content': content[:200],  # 최대 200자
+            'content': content[:200],
             'timestamp': str(event.get('timestamp', '')).strip(),
             'context': str(event.get('context', '')).strip()[:300],
         }
-
-        # 타입별 전용 필드 추가
-        if event_type == 'action_item':
-            priority = event.get('priority', 'medium')
-            if priority not in ('high', 'medium', 'low'):
-                priority = 'medium'
-            normalized['priority'] = priority
-
-        elif event_type == 'key_point':
-            try:
-                importance = float(event.get('importance', 0.7))
-                importance = max(0.0, min(1.0, importance))
-            except (TypeError, ValueError):
-                importance = 0.7
-            normalized['importance'] = importance
-
-        elif event_type == 'decision':
-            stakeholders = event.get('stakeholders', [])
-            if not isinstance(stakeholders, list):
-                stakeholders = []
-            normalized['stakeholders'] = [str(s)[:50] for s in stakeholders[:5]]
-
-        elif event_type == 'question':
-            status = event.get('status', 'open')
-            if status not in ('open', 'resolved'):
-                status = 'open'
-            normalized['status'] = status
-
+        _add_type_specific_fields(normalized, event)
         valid_events.append(normalized)
 
     return valid_events

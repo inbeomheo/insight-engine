@@ -60,6 +60,33 @@ def _split_into_slides(markdown: str) -> list[str]:
     return slides if slides else [markdown.strip()]
 
 
+def _convert_markdown_line(stripped: str) -> str:
+    """단일 마크다운 줄을 HTML 태그로 변환합니다."""
+    if not stripped:
+        return ''
+    if stripped.startswith('### '):
+        return f'<h3>{_inline_format(stripped[4:])}</h3>'
+    if stripped.startswith('## '):
+        return f'<h2>{_inline_format(stripped[3:])}</h2>'
+    if stripped.startswith('# '):
+        return f'<h1>{_inline_format(stripped[2:])}</h1>'
+    if stripped.startswith('> '):
+        return f'<blockquote>{_inline_format(stripped[2:])}</blockquote>'
+    if re.match(r'^[-*+]\s', stripped):
+        return f'<li>{_inline_format(stripped[2:])}</li>'
+    if re.match(r'^\d+\.\s', stripped):
+        text = re.sub(r'^\d+\.\s', '', stripped)
+        return f'<li>{_inline_format(text)}</li>'
+    if re.match(r'^!\[.*?\]\(.*?\)', stripped):
+        m = re.match(r'^!\[(.*?)\]\((.*?)\)', stripped)
+        if m:
+            return f'<img src="{escape(m.group(2))}" alt="{escape(m.group(1))}" style="max-height:400px;">'
+        return ''
+    if stripped in ('---', '***', '___'):
+        return '<hr>'
+    return f'<p>{_inline_format(stripped)}</p>'
+
+
 def _render_slide(content: str) -> str:
     """단일 슬라이드 내용을 HTML로 변환합니다."""
     lines = content.split('\n')
@@ -69,7 +96,6 @@ def _render_slide(content: str) -> str:
     code_lines: list[str] = []
 
     for line in lines:
-        # 코드 블록 시작/종료
         if line.strip().startswith('```'):
             if in_code_block:
                 code = escape('\n'.join(code_lines))
@@ -85,47 +111,14 @@ def _render_slide(content: str) -> str:
             code_lines.append(line)
             continue
 
-        stripped = line.strip()
+        tag = _convert_markdown_line(line.strip())
+        if tag:
+            html_parts.append(tag)
 
-        # 빈 줄
-        if not stripped:
-            continue
-
-        # 헤딩
-        if stripped.startswith('### '):
-            html_parts.append(f'<h3>{_inline_format(stripped[4:])}</h3>')
-        elif stripped.startswith('## '):
-            html_parts.append(f'<h2>{_inline_format(stripped[3:])}</h2>')
-        elif stripped.startswith('# '):
-            html_parts.append(f'<h1>{_inline_format(stripped[2:])}</h1>')
-        # 인용문
-        elif stripped.startswith('> '):
-            html_parts.append(f'<blockquote>{_inline_format(stripped[2:])}</blockquote>')
-        # 불릿 목록
-        elif re.match(r'^[-*+]\s', stripped):
-            html_parts.append(f'<li>{_inline_format(stripped[2:])}</li>')
-        # 순서 목록
-        elif re.match(r'^\d+\.\s', stripped):
-            text = re.sub(r'^\d+\.\s', '', stripped)
-            html_parts.append(f'<li>{_inline_format(text)}</li>')
-        # 이미지
-        elif re.match(r'^!\[.*?\]\(.*?\)', stripped):
-            m = re.match(r'^!\[(.*?)\]\((.*?)\)', stripped)
-            if m:
-                html_parts.append(f'<img src="{escape(m.group(2))}" alt="{escape(m.group(1))}" style="max-height:400px;">')
-        # 수평선
-        elif stripped in ('---', '***', '___'):
-            html_parts.append('<hr>')
-        # 일반 텍스트
-        else:
-            html_parts.append(f'<p>{_inline_format(stripped)}</p>')
-
-    # 닫히지 않은 코드 블록 처리
     if in_code_block and code_lines:
         code = escape('\n'.join(code_lines))
         html_parts.append(f'<pre><code>{code}</code></pre>')
 
-    # li 태그를 ul로 감싸기
     result = _wrap_list_items('\n'.join(html_parts))
     return f'    <section>\n      {result}\n    </section>'
 
