@@ -18,6 +18,7 @@ export default function GenerationModeSelector() {
         <button
           key={m.key}
           onClick={() => setGenerationMode(m.key)}
+          aria-label={`${m.label} 생성 모드`}
           className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             generationMode === m.key
               ? 'bg-[var(--accent-primary)] text-white'

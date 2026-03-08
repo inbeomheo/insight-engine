@@ -33,6 +33,7 @@ export const ModifierPresets = memo(function ModifierPresets({ currentModifiers,
         <button
           key={preset.id}
           onClick={() => onSelect(preset.modifiers)}
+          aria-label={`${preset.label} 프리셋 선택`}
           className={cn(
             'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
             isActive(preset)

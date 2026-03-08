@@ -23,6 +23,7 @@ export const DetailPreset = memo(function DetailPreset({ value, onChange }: Deta
         <button
           key={level.id}
           onClick={() => onChange(level.id)}
+          aria-label={`${level.label} 상세도`}
           className={cn(
             'px-3 py-1 rounded-md text-xs font-medium transition-all',
             value === level.id
