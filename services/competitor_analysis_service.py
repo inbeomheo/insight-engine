@@ -38,6 +38,30 @@ def _extract_keywords_simple(text: str, top_n: int = 10) -> List[str]:
     return _compute_tfidf(tokens, top_n=top_n)
 
 
+def _scrape_competitors(search_urls: List[Dict]) -> List[Dict]:
+    """검색 URL 목록에서 경쟁 콘텐츠를 수집합니다."""
+    from services.web_scraper_service import scrape_webpage
+
+    competitors = []
+    for url_info in search_urls[:5]:
+        try:
+            scraped = scrape_webpage(url_info['url'])
+            content = scraped.get('content', '')
+            if not content or len(content) < 50:
+                continue
+
+            competitors.append({
+                "title": scraped.get('title', url_info.get('title', '')),
+                "url": url_info['url'],
+                "structure": _analyze_content_structure(content),
+                "keywords": _extract_keywords_simple(content, top_n=8),
+            })
+        except Exception as e:
+            logger.warning(f"경쟁 URL 분석 실패: {url_info['url']} - {e}")
+            continue
+    return competitors
+
+
 def analyze_competitors(
     keyword: str,
     my_content: Optional[str] = None,
@@ -49,10 +73,7 @@ def analyze_competitors(
         my_content: 내 콘텐츠 (비교 분석용, 선택)
 
     Returns:
-        dict: {
-            keyword, competitors: [{title, url, structure, keywords}],
-            avg_stats, my_analysis, differentiation_tips
-        }
+        keyword, competitors, avg_stats, my_analysis, differentiation_tips를 포함하는 dict
 
     Raises:
         ValueError: 키워드가 비어있을 때
@@ -60,36 +81,9 @@ def analyze_competitors(
     if not keyword or not keyword.strip():
         raise ValueError("분석할 키워드를 입력해주세요.")
 
-    from services.web_scraper_service import scrape_webpage
-
-    # 웹 검색으로 상위 URL 수집
-    search_urls = _search_urls(keyword)
-
-    competitors = []
-    for url_info in search_urls[:5]:
-        try:
-            scraped = scrape_webpage(url_info['url'])
-            content = scraped.get('content', '')
-            if not content or len(content) < 50:
-                continue
-
-            structure = _analyze_content_structure(content)
-            keywords = _extract_keywords_simple(content, top_n=8)
-
-            competitors.append({
-                "title": scraped.get('title', url_info.get('title', '')),
-                "url": url_info['url'],
-                "structure": structure,
-                "keywords": keywords,
-            })
-        except Exception as e:
-            logger.warning(f"경쟁 URL 분석 실패: {url_info['url']} - {e}")
-            continue
-
-    # 평균 통계 계산
+    competitors = _scrape_competitors(_search_urls(keyword))
     avg_stats = _calculate_avg_stats(competitors)
 
-    # 내 콘텐츠 분석
     my_analysis = None
     if my_content and my_content.strip():
         my_analysis = {
@@ -97,16 +91,15 @@ def analyze_competitors(
             "keywords": _extract_keywords_simple(my_content, top_n=8),
         }
 
-    # 차별화 포인트 생성
-    tips = _generate_differentiation_tips(competitors, my_analysis, avg_stats)
-
     return {
         "keyword": keyword,
         "competitors": competitors,
         "competitor_count": len(competitors),
         "avg_stats": avg_stats,
         "my_analysis": my_analysis,
-        "differentiation_tips": tips,
+        "differentiation_tips": _generate_differentiation_tips(
+            competitors, my_analysis, avg_stats
+        ),
     }
 
 

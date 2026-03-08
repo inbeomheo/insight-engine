@@ -48,40 +48,29 @@ _QUESTION_PATTERNS = [
 ]
 
 
-def optimize_headline(title: str, content: str = '') -> dict:
-    """제목을 분석하고 최적화 제안을 제공합니다.
+_EMPTY_ANALYSIS = {
+    'length_score': 0,
+    'emotional_score': 0,
+    'power_word_score': 0,
+    'number_score': 0,
+    'pattern_type': 'unknown',
+}
 
-    Args:
-        title: 분석할 제목
-        content: 참고용 본문 (선택, 현재 미사용)
+_EMPTY_RESULT = {
+    'score': 0,
+    'grade': 'F',
+    'analysis': dict(_EMPTY_ANALYSIS),
+    'suggestions': ['제목이 비어 있습니다.'],
+    'optimized_titles': [],
+}
+
+
+def _compute_headline_scores(title: str) -> tuple:
+    """제목의 개별 점수와 종합 점수를 계산합니다.
 
     Returns:
-        {
-            "score": int (0~100),
-            "grade": str ("A"~"F"),
-            "analysis": {
-                "length_score": int,
-                "emotional_score": int,
-                "power_word_score": int,
-                "number_score": int,
-                "pattern_type": str,
-            },
-            "suggestions": list[str],
-            "optimized_titles": list[str],
-        }
+        (analysis, total_score)
     """
-    if not title or not title.strip():
-        return {
-            'score': 0,
-            'grade': 'F',
-            'analysis': _empty_analysis(),
-            'suggestions': ['제목이 비어 있습니다.'],
-            'optimized_titles': [],
-        }
-
-    title = title.strip()
-
-    # 개별 점수 계산
     length_score = _score_length(title)
     emotional_score = _score_emotional(title)
     power_word_score = _score_power_words(title)
@@ -89,7 +78,6 @@ def optimize_headline(title: str, content: str = '') -> dict:
     pattern_type = _detect_pattern(title)
     pattern_bonus = _pattern_bonus(pattern_type)
 
-    # 종합 점수 (가중 합산)
     total = round(
         length_score * 0.25
         + emotional_score * 0.25
@@ -99,35 +87,44 @@ def optimize_headline(title: str, content: str = '') -> dict:
     )
     total = max(0, min(100, total))
 
-    grade = _score_to_grade(total)
+    analysis = {
+        'length_score': length_score,
+        'emotional_score': emotional_score,
+        'power_word_score': power_word_score,
+        'number_score': number_score,
+        'pattern_type': pattern_type,
+    }
+    return analysis, total
+
+
+def optimize_headline(title: str, content: str = '') -> dict:
+    """제목을 분석하고 최적화 제안을 제공합니다.
+
+    Args:
+        title: 분석할 제목
+        content: 참고용 본문 (선택, 현재 미사용)
+
+    Returns:
+        score, grade, analysis, suggestions, optimized_titles를 포함하는 dict
+    """
+    if not title or not title.strip():
+        return dict(_EMPTY_RESULT)
+
+    title = title.strip()
+    analysis, total = _compute_headline_scores(title)
+
     suggestions = _generate_suggestions(
-        title, length_score, emotional_score, power_word_score,
-        number_score, pattern_type,
+        title, analysis['length_score'], analysis['emotional_score'],
+        analysis['power_word_score'], analysis['number_score'],
+        analysis['pattern_type'],
     )
-    optimized = _generate_optimized_titles(title, suggestions)
 
     return {
         'score': total,
-        'grade': grade,
-        'analysis': {
-            'length_score': length_score,
-            'emotional_score': emotional_score,
-            'power_word_score': power_word_score,
-            'number_score': number_score,
-            'pattern_type': pattern_type,
-        },
+        'grade': _score_to_grade(total),
+        'analysis': analysis,
         'suggestions': suggestions,
-        'optimized_titles': optimized,
-    }
-
-
-def _empty_analysis() -> dict:
-    return {
-        'length_score': 0,
-        'emotional_score': 0,
-        'power_word_score': 0,
-        'number_score': 0,
-        'pattern_type': 'unknown',
+        'optimized_titles': _generate_optimized_titles(title, suggestions),
     }
 
 

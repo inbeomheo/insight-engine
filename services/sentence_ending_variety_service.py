@@ -58,34 +58,22 @@ def _classify_ending(sentence: str) -> str:
     return 'other'
 
 
-def analyze_sentence_ending_variety(content: str) -> dict:
-    """문장 종결어미 다양성을 분석합니다.
+_EMPTY_RESULT = {
+    'ending_data': [],
+    'ending_distribution': {},
+    'summary': {'total_sentences': 0, 'unique_endings': 0,
+                'variety_rate': 0.0, 'dominant_ending': ''},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _classify_all_endings(sentences: List[str]) -> tuple:
+    """모든 문장의 종결어미를 분류합니다.
 
     Returns:
-        ending_data, ending_distribution, summary, score, suggestions를 포함하는 dict
+        (ending_data, ending_counts, dominant, dominant_ratio, variety_rate)
     """
-    if not content or not content.strip():
-        return {
-            'ending_data': [],
-            'ending_distribution': {},
-            'summary': {'total_sentences': 0, 'unique_endings': 0,
-                        'variety_rate': 0.0, 'dominant_ending': ''},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'ending_data': [],
-            'ending_distribution': {},
-            'summary': {'total_sentences': 0, 'unique_endings': 0,
-                        'variety_rate': 0.0, 'dominant_ending': ''},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 종결어미 분류
     ending_data = []
     ending_counts = Counter()
 
@@ -101,33 +89,45 @@ def analyze_sentence_ending_variety(content: str) -> dict:
     unique = len(ending_counts)
     variety_rate = round(unique / total * 100, 1) if total > 0 else 0.0
 
-    # 지배적 종결어미
     dominant = ending_counts.most_common(1)[0][0] if ending_counts else ''
     dominant_ratio = round(
         ending_counts[dominant] / total * 100, 1
     ) if dominant and total > 0 else 0.0
 
-    # 분포
-    distribution = dict(ending_counts)
+    return ending_data, ending_counts, dominant, dominant_ratio, variety_rate
 
-    # 점수 계산
-    score = _calculate_score(variety_rate, dominant_ratio, ending_counts, total)
 
-    suggestions = _generate_suggestions(
-        dominant, dominant_ratio, variety_rate, ending_counts
+def analyze_sentence_ending_variety(content: str) -> dict:
+    """문장 종결어미 다양성을 분석합니다.
+
+    Returns:
+        ending_data, ending_distribution, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    ending_data, ending_counts, dominant, dominant_ratio, variety_rate = (
+        _classify_all_endings(sentences)
     )
+    total = len(sentences)
 
     return {
         'ending_data': ending_data[:30],
-        'ending_distribution': distribution,
+        'ending_distribution': dict(ending_counts),
         'summary': {
             'total_sentences': total,
-            'unique_endings': unique,
+            'unique_endings': len(ending_counts),
             'variety_rate': variety_rate,
             'dominant_ending': dominant,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(variety_rate, dominant_ratio, ending_counts, total),
+        'suggestions': _generate_suggestions(
+            dominant, dominant_ratio, variety_rate, ending_counts
+        ),
     }
 
 
