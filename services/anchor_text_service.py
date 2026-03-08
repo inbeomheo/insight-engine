@@ -34,6 +34,36 @@ _MD_LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 _HTML_LINK_RE = re.compile(r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
 
 
+_EMPTY_RESULT = {
+    'links': [],
+    'summary': {'total': 0, 'good': 0, 'generic': 0, 'bad': 0, 'naked_url': 0},
+    'anchor_quality_score': 100.0,
+    'suggestions': [],
+}
+
+
+def _classify_links(raw_links: list) -> tuple:
+    """링크 목록을 품질 분류하고 요약을 생성합니다.
+
+    Returns:
+        (links, summary)
+    """
+    links = []
+    for anchor, url in raw_links:
+        quality = _classify_anchor(anchor)
+        suggestion = _make_suggestion(anchor, url, quality)
+        links.append({
+            'anchor': anchor, 'url': url,
+            'quality': quality, 'suggestion': suggestion,
+        })
+
+    summary = {'total': len(links), 'good': 0, 'generic': 0, 'bad': 0, 'naked_url': 0}
+    for link in links:
+        summary[link['quality']] += 1
+
+    return links, summary
+
+
 def audit_anchor_texts(content: str) -> dict:
     """콘텐츠 내 링크의 앵커 텍스트 품질을 감사합니다.
 
@@ -41,60 +71,22 @@ def audit_anchor_texts(content: str) -> dict:
         content: 분석할 콘텐츠 (마크다운 또는 HTML)
 
     Returns:
-        {
-            "links": [{"anchor": str, "url": str, "quality": str, "suggestion": str}],
-            "summary": {"total": int, "good": int, "generic": int, "bad": int, "naked_url": int},
-            "anchor_quality_score": float,  # 0-100
-            "suggestions": list[str],
-        }
+        links, summary, anchor_quality_score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'links': [],
-            'summary': {'total': 0, 'good': 0, 'generic': 0, 'bad': 0, 'naked_url': 0},
-            'anchor_quality_score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 링크 추출
     raw_links = _extract_links(content)
-
     if not raw_links:
-        return {
-            'links': [],
-            'summary': {'total': 0, 'good': 0, 'generic': 0, 'bad': 0, 'naked_url': 0},
-            'anchor_quality_score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 각 링크 품질 판정
-    links = []
-    for anchor, url in raw_links:
-        quality = _classify_anchor(anchor)
-        suggestion = _make_suggestion(anchor, url, quality)
-        links.append({
-            'anchor': anchor,
-            'url': url,
-            'quality': quality,
-            'suggestion': suggestion,
-        })
-
-    # 요약 집계
-    summary = {'total': len(links), 'good': 0, 'generic': 0, 'bad': 0, 'naked_url': 0}
-    for link in links:
-        summary[link['quality']] += 1
-
-    # 품질 점수 계산 (good=100, generic=50, bad=0, naked_url=0)
-    score = _calculate_score(summary)
-
-    # 개선 제안 생성
-    suggestions = _generate_suggestions(summary, links)
+    links, summary = _classify_links(raw_links)
 
     return {
         'links': links,
         'summary': summary,
-        'anchor_quality_score': score,
-        'suggestions': suggestions,
+        'anchor_quality_score': _calculate_score(summary),
+        'suggestions': _generate_suggestions(summary, links),
     }
 
 

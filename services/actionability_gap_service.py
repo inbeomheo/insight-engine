@@ -111,25 +111,21 @@ def _parse_sections(content: str) -> List[Dict]:
     return sections
 
 
-def detect_actionability_gaps(content: str) -> dict:
-    """콘텐츠에서 실행 가능한 조언이 부족한 구간을 감지합니다.
+_EMPTY_RESULT = {
+    'section_analysis': [],
+    'summary': {'total_advice': 0, 'total_actions': 0,
+                'actionability_rate': 0.0, 'gap_sections': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _analyze_sections(sections: List[Dict]) -> tuple:
+    """각 섹션의 조언/실행 단계를 분석합니다.
 
     Returns:
-        section_analysis, summary, score, suggestions를 포함하는 dict
+        (section_analysis, total_advice, total_actions, gap_sections)
     """
-    if not content or not content.strip():
-        return {
-            'section_analysis': [],
-            'summary': {'total_advice': 0, 'total_actions': 0,
-                        'actionability_rate': 0.0, 'gap_sections': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sections = _parse_sections(content)
-    if not sections:
-        sections = [{'section': '(전체)', 'lines': content.split('\n')}]
-
     section_analysis = []
     total_advice = 0
     total_actions = 0
@@ -154,10 +150,26 @@ def detect_actionability_gaps(content: str) -> dict:
             'has_gap': has_gap,
         })
 
+    return section_analysis, total_advice, total_actions, gap_sections
+
+
+def detect_actionability_gaps(content: str) -> dict:
+    """콘텐츠에서 실행 가능한 조언이 부족한 구간을 감지합니다.
+
+    Returns:
+        section_analysis, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sections = _parse_sections(content)
+    if not sections:
+        sections = [{'section': '(전체)', 'lines': content.split('\n')}]
+
+    section_analysis, total_advice, total_actions, gap_sections = _analyze_sections(sections)
+
     rate = round((total_actions / total_advice * 100) if total_advice > 0 else 100.0, 1)
     score = round(min(100.0, rate), 1)
-
-    suggestions = _generate_suggestions(section_analysis, gap_sections, rate)
 
     return {
         'section_analysis': section_analysis,
@@ -168,7 +180,7 @@ def detect_actionability_gaps(content: str) -> dict:
             'gap_sections': gap_sections,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(section_analysis, gap_sections, rate),
     }
 
 

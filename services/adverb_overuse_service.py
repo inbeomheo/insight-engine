@@ -108,29 +108,20 @@ def _find_weak_combinations(content: str) -> List[Dict[str, str]]:
     return combos
 
 
-def detect_adverb_overuse(content: str) -> dict:
-    """콘텐츠에서 부사 남용을 감지합니다.
+_EMPTY_RESULT = {
+    'adverbs': [],
+    'weak_combinations': [],
+    'summary': {'total_adverbs': 0, 'adverb_density': 0.0, 'weak_combos': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 텍스트 콘텐츠
 
-    Returns:
-        adverbs, weak_combinations, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'adverbs': [],
-            'weak_combinations': [],
-            'summary': {'total_adverbs': 0, 'adverb_density': 0.0, 'weak_combos': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 부사 감지
+def _build_adverb_list(content: str) -> List[Dict]:
+    """한국어/영어 부사를 감지하여 정렬된 목록을 반환합니다."""
     ko_adverbs = _find_korean_adverbs(content)
     en_adverbs = _find_english_adverbs(content)
 
-    # 부사 목록 구성
     adverbs = []
     for word, count in ko_adverbs.items():
         adverbs.append({
@@ -141,16 +132,11 @@ def detect_adverb_overuse(content: str) -> dict:
             'text': word, 'type': 'english_ly', 'count': count, 'suggestion': '',
         })
     adverbs.sort(key=lambda a: a['count'], reverse=True)
+    return adverbs
 
-    # 약한 조합 감지
-    weak_combinations = _find_weak_combinations(content)
 
-    # 밀도 계산
-    total_adverb_count = sum(a['count'] for a in adverbs)
-    word_count = _count_words(content)
-    density = round((total_adverb_count / word_count * 100) if word_count > 0 else 0.0, 2)
-
-    # 점수 계산
+def _compute_adverb_score(density: float) -> float:
+    """부사 밀도 기반 점수를 계산합니다 (0~100)."""
     if density <= 2.0:
         score = 100.0
     elif density <= 5.0:
@@ -159,9 +145,28 @@ def detect_adverb_overuse(content: str) -> dict:
         score = 80.0 - (density - 5.0) * 8.0
     else:
         score = max(0.0, 40.0 - (density - 10.0) * 4.0)
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(adverbs, density, weak_combinations)
+
+def detect_adverb_overuse(content: str) -> dict:
+    """콘텐츠에서 부사 남용을 감지합니다.
+
+    Args:
+        content: 분석할 텍스트 콘텐츠
+
+    Returns:
+        adverbs, weak_combinations, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    adverbs = _build_adverb_list(content)
+    weak_combinations = _find_weak_combinations(content)
+
+    total_adverb_count = sum(a['count'] for a in adverbs)
+    word_count = _count_words(content)
+    density = round((total_adverb_count / word_count * 100) if word_count > 0 else 0.0, 2)
+    score = _compute_adverb_score(density)
 
     return {
         'adverbs': adverbs,
@@ -172,7 +177,7 @@ def detect_adverb_overuse(content: str) -> dict:
             'weak_combos': len(weak_combinations),
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(adverbs, density, weak_combinations),
     }
 
 
