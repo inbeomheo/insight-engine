@@ -3,6 +3,7 @@
 플랜별 기능 접근 제어 데코레이터
 """
 from functools import wraps
+from typing import Callable
 from flask import g, jsonify
 from services.logging_config import ServiceLogger
 
@@ -39,7 +40,7 @@ class FeatureGateService:
         # user_id → plan_id 매핑 (프로덕션에서는 DB)
         self._user_plans: dict[str, str] = {}
 
-    def set_user_plan(self, user_id: str, plan_id: str):
+    def set_user_plan(self, user_id: str, plan_id: str) -> None:
         """사용자 플랜 설정"""
         self._user_plans[user_id] = plan_id
 
@@ -66,7 +67,7 @@ class FeatureGateService:
 feature_gate_service = FeatureGateService()
 
 
-def require_feature(feature: str):
+def require_feature(feature: str) -> Callable:
     """기능 접근 제한 데코레이터
 
     Usage:

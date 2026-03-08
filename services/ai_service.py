@@ -9,6 +9,7 @@ import time
 import markdown
 import threading
 from datetime import datetime
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 from flask import current_app
 from litellm import completion
@@ -258,8 +259,10 @@ def _convert_error_message(error_msg, model=None):
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
 
-def create_content(content, model, style_prompt=None, return_prompt=False, modifiers=None, style_id=None,
-                   user_id=None, segments=None, web_search=False, detail_level=None):
+def create_content(content: str, model: str, style_prompt: Optional[str] = None, return_prompt: bool = False,
+                   modifiers: Optional[Dict[str, Any]] = None, style_id: Optional[str] = None,
+                   user_id: Optional[str] = None, segments: Optional[List[Dict[str, Any]]] = None,
+                   web_search: bool = False, detail_level: Optional[str] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
     LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
     API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
@@ -397,7 +400,9 @@ def create_content(content, model, style_prompt=None, return_prompt=False, modif
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
-def create_content_stream(content, model, style_prompt=None, modifiers=None, style_id=None, detail_level=None):
+def create_content_stream(content: str, model: str, style_prompt: Optional[str] = None,
+                          modifiers: Optional[Dict[str, Any]] = None, style_id: Optional[str] = None,
+                          detail_level: Optional[str] = None) -> Generator[Optional[str], None, None]:
     """
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 토큰을 yield하고, 마지막에 None을 yield합니다.
@@ -433,8 +438,9 @@ def create_content_stream(content, model, style_prompt=None, modifiers=None, sty
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
-def create_content_with_fallback(content, models, style_prompt=None,
-                                 return_prompt=False, modifiers=None, style_id=None, user_id=None):
+def create_content_with_fallback(content: str, models: List[str], style_prompt: Optional[str] = None,
+                                 return_prompt: bool = False, modifiers: Optional[Dict[str, Any]] = None,
+                                 style_id: Optional[str] = None, user_id: Optional[str] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
     모델 리스트를 순차 시도하여 첫 성공 결과를 반환합니다.
     API 키가 없는 모델은 자동 스킵합니다.
@@ -496,7 +502,7 @@ def create_content_with_fallback(content, models, style_prompt=None,
     raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
 
 
-def extract_seo_metadata(content):
+def extract_seo_metadata(content: str) -> Optional[Dict[str, Any]]:
     """blog_seo 스타일 콘텐츠에서 SEO 메타데이터를 정규식으로 추출합니다.
 
     Args:
@@ -544,7 +550,7 @@ def extract_seo_metadata(content):
     return seo if seo else None
 
 
-def extract_geo_metadata(content):
+def extract_geo_metadata(content: str) -> Optional[Dict[str, Any]]:
     """geo_seo 스타일 콘텐츠에서 GEO 메타데이터를 정규식으로 추출합니다.
 
     Args:
@@ -613,7 +619,7 @@ def extract_geo_metadata(content):
     return geo if geo else None
 
 
-def extract_faq_schema(content):
+def extract_faq_schema(content: str) -> Optional[Dict[str, Any]]:
     """마크다운 본문에서 FAQ Q&A를 파싱하여 JSON-LD FAQPage 스키마를 반환합니다.
 
     "### 자주 묻는 질문" 섹션의 **Q. ...?** / A. ... 패턴을 인식합니다.

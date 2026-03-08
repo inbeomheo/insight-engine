@@ -75,7 +75,7 @@ class TaskQueueService:
         self._num_workers = num_workers
         self._started = False
 
-    def start(self):
+    def start(self) -> None:
         """워커 스레드 시작"""
         if self._started:
             return
@@ -90,7 +90,7 @@ class TaskQueueService:
             self._workers.append(t)
         logger.info("TaskQueueService 시작 (워커 %d개)", self._num_workers)
 
-    def stop(self, timeout: float = 10.0):
+    def stop(self, timeout: float = 10.0) -> None:
         """그레이스풀 셧다운"""
         logger.info("TaskQueueService 종료 중...")
         self._shutdown_event.set()
