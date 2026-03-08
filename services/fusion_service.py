@@ -2,6 +2,7 @@
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional
 
 from services import ai_service, content_service
 from services import comment_analyzer_service, web_research_service
@@ -15,8 +16,8 @@ MIN_URLS = 2
 MAX_COMMENTS_PER_VIDEO = 50
 
 
-def generate_fusion(urls, style_id, model, modifiers,
-                    enable_web_research=True, enable_deep_comments=True):
+def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[str, Any],
+                    enable_web_research: bool = True, enable_deep_comments: bool = True) -> Dict[str, Any]:
     """퓨전 파이프라인 실행: Phase 1(수집) → Phase 2(분석) → Phase 3(생성)
 
     Args:

@@ -6,6 +6,7 @@ import os
 import base64
 import hashlib
 from functools import wraps
+from typing import Callable
 from flask import request, jsonify, g
 from supabase import create_client, Client
 from cryptography.fernet import Fernet
@@ -169,7 +170,7 @@ def _validate_token(token: str) -> dict:
         return {'valid': False, 'error': '인증에 실패했습니다.', 'code': 'AUTH_FAILED'}
 
 
-def require_auth(f):
+def require_auth(f: Callable) -> Callable:
     """JWT 토큰 검증 데코레이터"""
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -189,7 +190,7 @@ def require_auth(f):
     return decorated
 
 
-def optional_auth(f):
+def optional_auth(f: Callable) -> Callable:
     """선택적 인증 (로그인 안해도 사용 가능)"""
     @wraps(f)
     def decorated(*args, **kwargs):

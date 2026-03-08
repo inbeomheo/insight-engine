@@ -1,6 +1,7 @@
 """댓글 심층 분석 서비스 — 댓글을 인사이트/질문/반론/감상으로 분류"""
 import json
 import logging
+from typing import Dict, List, Optional
 
 from services import ai_service
 from prompts.fusion.comment_analyzer import COMMENT_ANALYZER_PROMPT
@@ -8,7 +9,7 @@ from prompts.fusion.comment_analyzer import COMMENT_ANALYZER_PROMPT
 logger = logging.getLogger(__name__)
 
 
-def analyze_comments(comments, model):
+def analyze_comments(comments: List[str], model: str) -> Optional[Dict[str, list]]:
     """댓글 리스트를 AI로 심층 분석하여 4가지 카테고리로 분류
 
     Args:
