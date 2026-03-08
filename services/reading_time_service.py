@@ -26,64 +26,35 @@ _TYPE_MODIFIERS = {
 }
 
 
-def estimate_reading_time(content: str, content_type: str = 'general') -> dict:
-    """콘텐츠의 읽기 시간을 예측합니다.
+_EMPTY_RESULT = {
+    'reading_time': {'minutes': 0, 'seconds': 0, 'display': '0분', 'range': {'slow': '0분', 'fast': '0분'}},
+    'word_stats': {'char_count': 0, 'word_count': 0, 'sentence_count': 0, 'paragraph_count': 0},
+    'difficulty': {'level': 'easy', 'score': 1, 'factors': []},
+    'recommendations': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
-        content_type: 콘텐츠 유형 (general, technical, casual, academic)
 
-    Returns:
-        {
-            "reading_time": {
-                "minutes": int,
-                "seconds": int,
-                "display": str (예: "3분 20초"),
-                "range": {"slow": str, "fast": str},
-            },
-            "word_stats": {
-                "char_count": int,
-                "word_count": int,
-                "sentence_count": int,
-                "paragraph_count": int,
-            },
-            "difficulty": {
-                "level": "easy" | "medium" | "hard",
-                "score": int (1~10),
-                "factors": list[str],
-            },
-            "recommendations": list[str],
-        }
-    """
-    if not content or not content.strip():
-        return {
-            'reading_time': {'minutes': 0, 'seconds': 0, 'display': '0분', 'range': {'slow': '0분', 'fast': '0분'}},
-            'word_stats': {'char_count': 0, 'word_count': 0, 'sentence_count': 0, 'paragraph_count': 0},
-            'difficulty': {'level': 'easy', 'score': 1, 'factors': []},
-            'recommendations': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    if content_type not in _TYPE_MODIFIERS:
-        content_type = 'general'
-
-    plain = _strip_markdown(content)
-
-    # 통계
+def _compute_word_stats(plain: str) -> dict:
+    """텍스트의 글자/단어/문장/문단 통계를 계산합니다."""
     char_count = len(plain)
     words = plain.split()
-    word_count = len(words)
     sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', plain) if len(s.strip()) >= 3]
-    sentence_count = max(len(sentences), 1)
     paragraphs = [p.strip() for p in plain.split('\n\n') if p.strip()]
-    paragraph_count = max(len(paragraphs), 1)
+    return {
+        'char_count': char_count,
+        'word_count': len(words),
+        'sentence_count': max(len(sentences), 1),
+        'paragraph_count': max(len(paragraphs), 1),
+        '_sentences': sentences,
+    }
 
-    # 읽기 시간 계산
-    modifier = _TYPE_MODIFIERS[content_type]
+
+def _compute_reading_time(char_count: int, content_type: str) -> dict:
+    """읽기 시간을 계산합니다."""
+    modifier = _TYPE_MODIFIERS.get(content_type, 1.0)
     reading_times = {}
     for speed_name, cpm in _READING_SPEEDS.items():
-        adjusted_cpm = cpm * modifier
-        total_seconds = math.ceil(char_count / adjusted_cpm * 60)
-        reading_times[speed_name] = total_seconds
+        reading_times[speed_name] = math.ceil(char_count / (cpm * modifier) * 60)
 
     avg_seconds = reading_times['average']
     minutes = avg_seconds // 60
@@ -96,31 +67,42 @@ def estimate_reading_time(content: str, content_type: str = 'general') -> dict:
     else:
         display = f'{minutes}분 {seconds}초'
 
-    slow_min = math.ceil(reading_times['slow'] / 60)
-    fast_min = max(1, reading_times['fast'] // 60)
+    return {
+        'minutes': minutes,
+        'seconds': seconds,
+        'display': display,
+        'range': {
+            'slow': f'{math.ceil(reading_times["slow"] / 60)}분',
+            'fast': f'{max(1, reading_times["fast"] // 60)}분',
+        },
+    }
 
-    # 난이도 분석
-    difficulty = _analyze_difficulty(plain, sentences, char_count)
 
-    # 추천
-    recommendations = _generate_recommendations(char_count, minutes, difficulty)
+def estimate_reading_time(content: str, content_type: str = 'general') -> dict:
+    """콘텐츠의 읽기 시간을 예측합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+        content_type: 콘텐츠 유형 (general, technical, casual, academic)
+
+    Returns:
+        reading_time, word_stats, difficulty, recommendations를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'recommendations': ['콘텐츠가 비어 있습니다.']}
+
+    if content_type not in _TYPE_MODIFIERS:
+        content_type = 'general'
+
+    plain = _strip_markdown(content)
+    stats = _compute_word_stats(plain)
+    reading_time = _compute_reading_time(stats['char_count'], content_type)
+    difficulty = _analyze_difficulty(plain, stats['_sentences'], stats['char_count'])
+    recommendations = _generate_recommendations(stats['char_count'], reading_time['minutes'], difficulty)
 
     return {
-        'reading_time': {
-            'minutes': minutes,
-            'seconds': seconds,
-            'display': display,
-            'range': {
-                'slow': f'{slow_min}분',
-                'fast': f'{fast_min}분',
-            },
-        },
-        'word_stats': {
-            'char_count': char_count,
-            'word_count': word_count,
-            'sentence_count': sentence_count,
-            'paragraph_count': paragraph_count,
-        },
+        'reading_time': reading_time,
+        'word_stats': {k: v for k, v in stats.items() if not k.startswith('_')},
         'difficulty': difficulty,
         'recommendations': recommendations,
     }

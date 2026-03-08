@@ -55,44 +55,27 @@ def _has_qualifier(sentence: str) -> bool:
     return any(p.search(sentence) for p in _QUALIFIER_PATTERNS)
 
 
-def detect_absolute_claim_risk(content: str) -> dict:
-    """절대 표현의 위험도를 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_sentences': 0,
+        'absolute_count': 0,
+        'qualified_count': 0,
+        'unqualified_count': 0,
+        'risk_ratio': 0.0,
+        'level': 'none',
+    },
+    'risky_claims': [],
+    'suggestions': [],
+}
+
+
+def _scan_absolute_claims(sentences: List[str]) -> tuple:
+    """문장별 절대 표현과 한정 여부를 스캔합니다.
 
     Returns:
-        score, summary, risky_claims, suggestions를 포함하는 dict
+        (risky_claims, absolute_count, qualified_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'absolute_count': 0,
-                'qualified_count': 0,
-                'unqualified_count': 0,
-                'risk_ratio': 0.0,
-                'level': 'none',
-            },
-            'risky_claims': [],
-            'suggestions': [],
-        }
-
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'absolute_count': 0,
-                'qualified_count': 0,
-                'unqualified_count': 0,
-                'risk_ratio': 0.0,
-                'level': 'none',
-            },
-            'risky_claims': [],
-            'suggestions': [],
-        }
-
     risky_claims = []
     absolute_count = 0
     qualified_count = 0
@@ -109,11 +92,15 @@ def detect_absolute_claim_risk(content: str) -> dict:
                     'absolute_terms': absolutes[:3],
                 })
 
-    unqualified = absolute_count - qualified_count
-    total = len(sentences)
-    risk_ratio = round(unqualified / max(total, 1) * 100, 1)
+    return risky_claims, absolute_count, qualified_count
 
-    # 레벨 판정
+
+def _compute_claim_risk_score(risk_ratio: float, unqualified: int) -> tuple:
+    """위험 비율로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if unqualified == 0:
         level = 'safe'
     elif risk_ratio <= 5:
@@ -123,14 +110,31 @@ def detect_absolute_claim_risk(content: str) -> dict:
     else:
         level = 'high'
 
-    # 연속 점수 계산 — risk_ratio(0~100%)를 기반으로 감점
-    # risk_ratio 0% → 100점, 5% → 85점, 15% → 60점, 30%+ → 30점
     if risk_ratio == 0:
         score = 100.0
     else:
-        score = 100.0 - (risk_ratio * 2.3)  # 30% → ~31점, 15% → ~65.5점, 5% → ~88.5점
+        score = 100.0 - (risk_ratio * 2.3)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def detect_absolute_claim_risk(content: str) -> dict:
+    """절대 표현의 위험도를 분석합니다.
+
+    Returns:
+        score, summary, risky_claims, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 5]
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    risky_claims, absolute_count, qualified_count = _scan_absolute_claims(sentences)
+    unqualified = absolute_count - qualified_count
+    risk_ratio = round(unqualified / max(len(sentences), 1) * 100, 1)
+    score, level = _compute_claim_risk_score(risk_ratio, unqualified)
 
     suggestions = _generate_suggestions(
         absolute_count, qualified_count, unqualified,
@@ -140,7 +144,7 @@ def detect_absolute_claim_risk(content: str) -> dict:
     return {
         'score': score,
         'summary': {
-            'total_sentences': total,
+            'total_sentences': len(sentences),
             'absolute_count': absolute_count,
             'qualified_count': qualified_count,
             'unqualified_count': unqualified,

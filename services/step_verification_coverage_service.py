@@ -67,48 +67,30 @@ def _has_warning(text: str) -> bool:
     return any(p.search(text) for p in _WARNING_PATTERNS)
 
 
-def analyze_step_verification_coverage(content: str) -> dict:
-    """가이드 문서의 단계별 검증 기준 존재 여부를 점검합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_steps': 0,
+        'verified_steps': 0,
+        'unverified_steps': 0,
+        'coverage_ratio': 0.0,
+        'level': 'none',
+    },
+    'step_details': [],
+    'suggestions': [],
+}
+
+
+def _analyze_steps(steps: List[Dict], content: str) -> tuple:
+    """각 단계 뒤의 텍스트에서 검증/경고 표현을 탐색합니다.
 
     Returns:
-        score, summary, step_details, suggestions를 포함하는 dict
+        (step_details, verified_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_steps': 0,
-                'verified_steps': 0,
-                'unverified_steps': 0,
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'step_details': [],
-            'suggestions': [],
-        }
-
-    steps = _extract_steps(content)
-
-    if not steps:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_steps': 0,
-                'verified_steps': 0,
-                'unverified_steps': 0,
-                'coverage_ratio': 0.0,
-                'level': 'none',
-            },
-            'step_details': [],
-            'suggestions': [],
-        }
-
-    # 각 단계 뒤의 텍스트에서 검증 표현 탐색
     step_details = []
     verified_count = 0
 
     for i, step in enumerate(steps):
-        # 현재 단계와 다음 단계 사이의 텍스트
         start = step['position']
         end = steps[i + 1]['position'] if i + 1 < len(steps) else len(content)
         section_text = content[start:end]
@@ -125,11 +107,15 @@ def analyze_step_verification_coverage(content: str) -> dict:
             'has_warning': has_warn,
         })
 
-    total = len(steps)
-    unverified = total - verified_count
-    coverage = round(verified_count / max(total, 1) * 100, 1)
+    return step_details, verified_count
 
-    # 레벨 판정
+
+def _compute_verification_score(coverage: float) -> tuple:
+    """커버리지 비율로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if coverage >= 80:
         level = 'thorough'
     elif coverage >= 50:
@@ -139,10 +125,29 @@ def analyze_step_verification_coverage(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 연속 점수 — coverage 비율 기반
     score = 20.0 + (coverage / 100.0 * 75.0)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    score = round(max(0.0, min(100.0, score)), 1)
+
+def analyze_step_verification_coverage(content: str) -> dict:
+    """가이드 문서의 단계별 검증 기준 존재 여부를 점검합니다.
+
+    Returns:
+        score, summary, step_details, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    steps = _extract_steps(content)
+    if not steps:
+        return dict(_EMPTY_RESULT)
+
+    step_details, verified_count = _analyze_steps(steps, content)
+
+    total = len(steps)
+    unverified = total - verified_count
+    coverage = round(verified_count / max(total, 1) * 100, 1)
+    score, level = _compute_verification_score(coverage)
 
     suggestions = _generate_suggestions(
         total, verified_count, unverified, coverage, level, step_details
