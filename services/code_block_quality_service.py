@@ -35,22 +35,21 @@ _KNOWN_LANGUAGES = {
 _MAX_LINES = 50
 _WARNING_LINES = 30
 
+_EMPTY_RESULT = {
+    'code_blocks': [],
+    'summary': {'total_blocks': 0, 'missing_language': 0,
+                'long_blocks': 0, 'empty_blocks': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-def check_code_block_quality(content: str) -> dict:
-    """코드 블록 품질을 점검합니다.
+
+def _scan_code_blocks(content: str) -> tuple:
+    """코드 블록을 스캔하여 블록 정보와 이슈 카운트를 반환합니다.
 
     Returns:
-        code_blocks, summary, score, suggestions를 포함하는 dict
+        (blocks, missing_lang, long_blocks, empty_blocks)
     """
-    if not content or not content.strip():
-        return {
-            'code_blocks': [],
-            'summary': {'total_blocks': 0, 'missing_language': 0,
-                        'long_blocks': 0, 'empty_blocks': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     blocks = []
     missing_lang = 0
     long_blocks = 0
@@ -64,30 +63,24 @@ def check_code_block_quality(content: str) -> dict:
 
         issues = []
 
-        # 언어 태그 누락
         has_lang = bool(lang)
         if not has_lang:
             missing_lang += 1
             issues.append('언어 태그 누락')
 
-        # 알 수 없는 언어 태그
-        unknown_lang = has_lang and lang not in _KNOWN_LANGUAGES
-        if unknown_lang:
+        if has_lang and lang not in _KNOWN_LANGUAGES:
             issues.append(f'알 수 없는 언어 태그: "{lang}"')
 
-        # 빈 블록
         is_empty = line_count == 0
         if is_empty:
             empty_blocks += 1
             issues.append('빈 코드 블록')
 
-        # 긴 블록
         is_long = line_count > _MAX_LINES
-        is_warning = line_count > _WARNING_LINES and not is_long
         if is_long:
             long_blocks += 1
             issues.append(f'코드 {line_count}줄 (권장 {_MAX_LINES}줄 이내)')
-        elif is_warning:
+        elif line_count > _WARNING_LINES:
             issues.append(f'코드 {line_count}줄 (다소 김)')
 
         excerpt = code[:80].strip() if code.strip() else '(비어 있음)'
@@ -101,21 +94,25 @@ def check_code_block_quality(content: str) -> dict:
             'excerpt': excerpt,
         })
 
+    return blocks, missing_lang, long_blocks, empty_blocks
+
+
+def check_code_block_quality(content: str) -> dict:
+    """코드 블록 품질을 점검합니다.
+
+    Returns:
+        code_blocks, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    blocks, missing_lang, long_blocks, empty_blocks = _scan_code_blocks(content)
     total = len(blocks)
     if total == 0:
-        return {
-            'code_blocks': [],
-            'summary': {'total_blocks': 0, 'missing_language': 0,
-                        'long_blocks': 0, 'empty_blocks': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 점수
     issue_count = missing_lang + long_blocks + empty_blocks
     score = round(max(0.0, min(100.0, (1.0 - issue_count / (total * 1.5)) * 100.0)), 1)
-
-    suggestions = _generate_suggestions(total, missing_lang, long_blocks, empty_blocks)
 
     return {
         'code_blocks': blocks,
@@ -126,7 +123,7 @@ def check_code_block_quality(content: str) -> dict:
             'empty_blocks': empty_blocks,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(total, missing_lang, long_blocks, empty_blocks),
     }
 
 

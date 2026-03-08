@@ -38,6 +38,58 @@ _NEGATORS = {
 }
 
 
+_EMPTY_RESULT = {
+    'overall_sentiment': 'neutral',
+    'overall_score': 0.0,
+    'distribution': {'positive': 0.0, 'negative': 0.0, 'neutral': 1.0},
+    'paragraph_sentiments': [],
+    'top_positive_words': [],
+    'top_negative_words': [],
+    'tone_summary': '분석할 콘텐츠가 없습니다.',
+}
+
+
+def _analyze_paragraphs_sentiment(paragraphs: list) -> tuple:
+    """문단별 감성을 분석합니다.
+
+    Returns:
+        (para_results, all_pos_words, all_neg_words, scores)
+    """
+    para_results = []
+    all_pos_words = []
+    all_neg_words = []
+    scores = []
+
+    for para in paragraphs:
+        score, pos_words, neg_words = _score_paragraph(para)
+        scores.append(score)
+        all_pos_words.extend(pos_words)
+        all_neg_words.extend(neg_words)
+
+        sentiment = 'positive' if score > 0.1 else ('negative' if score < -0.1 else 'neutral')
+        preview = para[:80] + ('...' if len(para) > 80 else '')
+        para_results.append({
+            'text_preview': preview,
+            'sentiment': sentiment,
+            'score': round(score, 3),
+        })
+
+    return para_results, all_pos_words, all_neg_words, scores
+
+
+def _compute_distribution(scores: list) -> dict:
+    """감성 분포를 계산합니다."""
+    pos_count = sum(1 for s in scores if s > 0.1)
+    neg_count = sum(1 for s in scores if s < -0.1)
+    neu_count = len(scores) - pos_count - neg_count
+    total = max(len(scores), 1)
+    return {
+        'positive': round(pos_count / total, 2),
+        'negative': round(neg_count / total, 2),
+        'neutral': round(neu_count / total, 2),
+    }
+
+
 def analyze_sentiment(content: str) -> dict:
     """콘텐츠의 감성을 분석합니다.
 
@@ -56,79 +108,27 @@ def analyze_sentiment(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'overall_sentiment': 'neutral',
-            'overall_score': 0.0,
-            'distribution': {'positive': 0.0, 'negative': 0.0, 'neutral': 1.0},
-            'paragraph_sentiments': [],
-            'top_positive_words': [],
-            'top_negative_words': [],
-            'tone_summary': '분석할 콘텐츠가 없습니다.',
-        }
+        return dict(_EMPTY_RESULT)
 
     plain = _strip_markdown(content)
     paragraphs = [p.strip() for p in plain.split('\n\n') if len(p.strip()) >= 10]
     if not paragraphs:
         paragraphs = [plain]
 
-    # 문단별 감성 분석
-    para_results = []
-    all_pos_words = []
-    all_neg_words = []
-    scores = []
+    para_results, all_pos, all_neg, scores = _analyze_paragraphs_sentiment(paragraphs)
 
-    for para in paragraphs:
-        score, pos_words, neg_words = _score_paragraph(para)
-        scores.append(score)
-        all_pos_words.extend(pos_words)
-        all_neg_words.extend(neg_words)
-
-        sentiment = 'positive' if score > 0.1 else ('negative' if score < -0.1 else 'neutral')
-        preview = para[:80] + ('...' if len(para) > 80 else '')
-
-        para_results.append({
-            'text_preview': preview,
-            'sentiment': sentiment,
-            'score': round(score, 3),
-        })
-
-    # 전체 점수
-    overall_score = round(sum(scores) / len(scores), 3) if scores else 0.0
-    overall_score = max(-1.0, min(1.0, overall_score))
-
-    if overall_score > 0.1:
-        overall_sentiment = 'positive'
-    elif overall_score < -0.1:
-        overall_sentiment = 'negative'
-    else:
-        overall_sentiment = 'neutral'
-
-    # 분포 계산
-    pos_count = sum(1 for s in scores if s > 0.1)
-    neg_count = sum(1 for s in scores if s < -0.1)
-    neu_count = len(scores) - pos_count - neg_count
-    total = max(len(scores), 1)
-
-    distribution = {
-        'positive': round(pos_count / total, 2),
-        'negative': round(neg_count / total, 2),
-        'neutral': round(neu_count / total, 2),
-    }
-
-    # 상위 키워드 (빈도순, 중복 제거)
-    top_pos = _unique_top(all_pos_words, 5)
-    top_neg = _unique_top(all_neg_words, 5)
-
-    tone_summary = _generate_tone_summary(overall_sentiment, distribution)
+    overall_score = max(-1.0, min(1.0, round(sum(scores) / len(scores), 3))) if scores else 0.0
+    overall_sentiment = 'positive' if overall_score > 0.1 else ('negative' if overall_score < -0.1 else 'neutral')
+    distribution = _compute_distribution(scores)
 
     return {
         'overall_sentiment': overall_sentiment,
         'overall_score': overall_score,
         'distribution': distribution,
         'paragraph_sentiments': para_results[:10],
-        'top_positive_words': top_pos,
-        'top_negative_words': top_neg,
-        'tone_summary': tone_summary,
+        'top_positive_words': _unique_top(all_pos, 5),
+        'top_negative_words': _unique_top(all_neg, 5),
+        'tone_summary': _generate_tone_summary(overall_sentiment, distribution),
     }
 
 

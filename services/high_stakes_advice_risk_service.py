@@ -79,6 +79,55 @@ def _find_matches(content: str, patterns: list) -> List[str]:
     return matches
 
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_ymyl': False, 'ymyl_domains': [],
+        'has_disclaimer': False, 'has_authority': False, 'risk_level': 'none',
+    },
+    'risk_spans': [],
+    'missing_safety_signals': [],
+    'suggestions': [],
+}
+
+_DOMAIN_LABELS = {
+    'medical': '의료/건강',
+    'financial': '금융/투자',
+    'legal': '법률',
+    'safety': '안전',
+}
+
+
+def _assess_risk(is_ymyl: bool, has_disclaimer: bool, has_authority: bool,
+                 ymyl_domains: list) -> tuple:
+    """위험 수준, 누락 항목, 점수를 판정합니다.
+
+    Returns:
+        (risk_level, missing, score)
+    """
+    if not is_ymyl:
+        return 'none', [], 100.0
+
+    missing = []
+    if not has_disclaimer:
+        missing.append('면책문구(disclaimer) 누락')
+    if not has_authority:
+        missing.append('전문가 검토/감수 표시 누락')
+
+    if not has_disclaimer and not has_authority:
+        risk_level = 'high'
+    elif not has_disclaimer or not has_authority:
+        risk_level = 'medium'
+    else:
+        risk_level = 'low'
+
+    score = 30.0 + (sum([has_disclaimer, has_authority]) * 30.0)
+    if len(ymyl_domains) >= 2 and risk_level != 'low':
+        score -= 10.0
+
+    return risk_level, missing, round(max(0.0, min(100.0, score)), 1)
+
+
 def detect_high_stakes_advice_risk(content: str) -> dict:
     """고위험 조언 콘텐츠의 안전성을 점검합니다.
 
@@ -86,81 +135,20 @@ def detect_high_stakes_advice_risk(content: str) -> dict:
         score, summary, suggestions, risk_spans, missing_safety_signals를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_ymyl': False,
-                'ymyl_domains': [],
-                'has_disclaimer': False,
-                'has_authority': False,
-                'risk_level': 'none',
-            },
-            'risk_spans': [],
-            'missing_safety_signals': [],
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # YMYL 도메인 감지
     ymyl_domains = _detect_ymyl_domains(content)
     is_ymyl = len(ymyl_domains) > 0
-
-    # 면책문구 감지
-    disclaimers = _find_matches(content, _DISCLAIMER_PATTERNS)
-    has_disclaimer = len(disclaimers) > 0
-
-    # 전문가/권위 신호
-    authorities = _find_matches(content, _AUTHORITY_PATTERNS)
-    has_authority = len(authorities) > 0
-
-    # 위험 수준 판정
-    missing = []
-    if is_ymyl:
-        if not has_disclaimer:
-            missing.append('면책문구(disclaimer) 누락')
-        if not has_authority:
-            missing.append('전문가 검토/감수 표시 누락')
-
-        if not has_disclaimer and not has_authority:
-            risk_level = 'high'
-        elif not has_disclaimer or not has_authority:
-            risk_level = 'medium'
-        else:
-            risk_level = 'low'
-    else:
-        risk_level = 'none'
-
-    # 연속 점수 — 안전장치 충족 기반
-    if not is_ymyl:
-        score = 100.0
-    else:
-        safeguards = sum([has_disclaimer, has_authority])
-        score = 30.0 + (safeguards * 30.0)
-
-    # 다중 YMYL 도메인 감점
-    if len(ymyl_domains) >= 2 and risk_level != 'low':
-        score -= 10.0
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    # 도메인 라벨
-    domain_labels = {
-        'medical': '의료/건강',
-        'financial': '금융/투자',
-        'legal': '법률',
-        'safety': '안전',
-    }
-
-    suggestions = _generate_suggestions(
-        is_ymyl, ymyl_domains, has_disclaimer, has_authority,
-        risk_level, missing, domain_labels
-    )
+    has_disclaimer = len(_find_matches(content, _DISCLAIMER_PATTERNS)) > 0
+    has_authority = len(_find_matches(content, _AUTHORITY_PATTERNS)) > 0
+    risk_level, missing, score = _assess_risk(is_ymyl, has_disclaimer, has_authority, ymyl_domains)
 
     return {
         'score': score,
         'summary': {
             'is_ymyl': is_ymyl,
             'ymyl_domains': [
-                {'domain': d, 'label': domain_labels.get(d, d), 'count': c}
+                {'domain': d, 'label': _DOMAIN_LABELS.get(d, d), 'count': c}
                 for d, c in ymyl_domains
             ],
             'has_disclaimer': has_disclaimer,
@@ -169,7 +157,10 @@ def detect_high_stakes_advice_risk(content: str) -> dict:
         },
         'risk_spans': [{'domain': d, 'count': c} for d, c in ymyl_domains[:5]],
         'missing_safety_signals': missing,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            is_ymyl, ymyl_domains, has_disclaimer, has_authority,
+            risk_level, missing, _DOMAIN_LABELS
+        ),
     }
 
 
