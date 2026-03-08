@@ -56,6 +56,7 @@ export default function NpsSurvey({ onSubmit }: NpsSurveyProps) {
           <button
             key={i}
             onClick={() => setScore(i)}
+            aria-label={`${i}점 선택`}
             className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
               score === i
                 ? 'bg-indigo-600 text-white'
@@ -84,6 +85,7 @@ export default function NpsSurvey({ onSubmit }: NpsSurveyProps) {
           <button
             onClick={handleSubmit}
             disabled={loading}
+            aria-label="NPS 피드백 제출"
             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />

@@ -44,6 +44,7 @@ export const ChapterTimeline = memo(function ChapterTimeline({ chapters, videoUr
             <button
               key={i}
               onClick={() => handleClick(ch.start)}
+              aria-label={`${ch.title} 챕터 (${fmtTime(ch.start)})`}
               className={`${colors[i % colors.length]} hover:opacity-80 transition-opacity cursor-pointer`}
               style={{ width: `${width}%` }}
               title={`${ch.title} (${fmtTime(ch.start)})`}
@@ -57,6 +58,7 @@ export const ChapterTimeline = memo(function ChapterTimeline({ chapters, videoUr
           <button
             key={i}
             onClick={() => handleClick(ch.start)}
+            aria-label={`${ch.title} 챕터로 이동`}
             className="text-left p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
             <div className="flex items-center gap-2 mb-1">

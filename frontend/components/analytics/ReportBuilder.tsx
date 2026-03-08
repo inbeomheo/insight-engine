@@ -76,6 +76,7 @@ export function ReportBuilder() {
             <li key={m.key}>
               <button
                 onClick={() => addBlock(m)}
+                aria-label={`${m.label} 지표 추가`}
                 className="w-full text-left rounded px-2 py-1 text-sm hover:bg-muted transition-colors"
               >
                 + {m.label}
@@ -109,6 +110,7 @@ export function ReportBuilder() {
                   <span className="text-sm font-medium">{block.title}</span>
                   <button
                     onClick={() => removeBlock(block.id)}
+                    aria-label={`${block.title} 블록 제거`}
                     className="text-muted-foreground hover:text-destructive text-xs"
                   >
                     ✕
