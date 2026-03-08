@@ -51,34 +51,24 @@ def _is_thesis_signal(sentence: str) -> bool:
     return False
 
 
-def check_thesis_frontload(content: str) -> dict:
-    """핵심 주장이 도입부에 배치됐는지 점검합니다.
+_EMPTY_RESULT = {
+    'thesis_sentences': [],
+    'position_analysis': {'frontloaded': 0, 'mid_section': 0, 'back_loaded': 0},
+    'summary': {'total_thesis': 0, 'frontload_rate': 0.0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_thesis_positions(sentences: List[str]) -> tuple:
+    """문장에서 핵심 주장 신호를 찾고 위치를 분류합니다.
 
     Returns:
-        thesis_sentences, position_analysis, summary, score, suggestions를 포함하는 dict
+        (thesis_sentences, frontloaded, mid_section, back_loaded)
     """
-    if not content or not content.strip():
-        return {
-            'thesis_sentences': [],
-            'position_analysis': {'frontloaded': 0, 'mid_section': 0, 'back_loaded': 0},
-            'summary': {'total_thesis': 0, 'frontload_rate': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'thesis_sentences': [],
-            'position_analysis': {'frontloaded': 0, 'mid_section': 0, 'back_loaded': 0},
-            'summary': {'total_thesis': 0, 'frontload_rate': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     total = len(sentences)
-    front_boundary = max(1, int(total * 0.2))  # 첫 20%
-    mid_boundary = max(1, int(total * 0.6))    # 20-60%
+    front_boundary = max(1, int(total * 0.2))
+    mid_boundary = max(1, int(total * 0.6))
 
     thesis_sentences = []
     frontloaded = 0
@@ -104,16 +94,28 @@ def check_thesis_frontload(content: str) -> dict:
                 'relative_position': round(i / total * 100, 1),
             })
 
+    return thesis_sentences, frontloaded, mid_section, back_loaded
+
+
+def check_thesis_frontload(content: str) -> dict:
+    """핵심 주장이 도입부에 배치됐는지 점검합니다.
+
+    Returns:
+        thesis_sentences, position_analysis, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    thesis_sentences, frontloaded, mid_section, back_loaded = \
+        _scan_thesis_positions(sentences)
+
     total_thesis = len(thesis_sentences)
     frontload_rate = round((frontloaded / total_thesis * 100) if total_thesis > 0 else 0.0, 1)
-
-    # 점수: 프론트로드 비율 기반
-    if total_thesis == 0:
-        score = 50.0  # 핵심 주장 미발견
-    else:
-        score = round(min(100.0, frontload_rate), 1)
-
-    suggestions = _generate_suggestions(thesis_sentences, total_thesis, frontloaded, back_loaded, frontload_rate)
+    score = 50.0 if total_thesis == 0 else round(min(100.0, frontload_rate), 1)
 
     return {
         'thesis_sentences': thesis_sentences,
@@ -127,7 +129,8 @@ def check_thesis_frontload(content: str) -> dict:
             'frontload_rate': frontload_rate,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(thesis_sentences, total_thesis,
+                                              frontloaded, back_loaded, frontload_rate),
     }
 
 

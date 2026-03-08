@@ -102,60 +102,29 @@ class ModelRouter:
                 available.append(key)
         return available
 
-    def route(
-        self,
-        style_id: str,
-        transcript_length: int = 0,
-        mode: str = 'balanced',  # 'budget', 'quality', 'balanced', 'fast'
-        user_model_preference: Optional[str] = None,
-    ) -> RouterDecision:
-        """
-        최적 모델 선택
-
-        Args:
-            style_id: 콘텐츠 스타일
-            transcript_length: 자막 토큰 수 (컨텍스트 제한 확인용)
-            mode: 라우팅 모드
-            user_model_preference: 사용자가 명시적으로 지정한 모델
-
-        Returns:
-            RouterDecision
-        """
-        # 사용자 지정 모델 우선
-        if user_model_preference and user_model_preference in self._available_models:
-            spec = MODEL_CATALOG[user_model_preference]
-            return RouterDecision(
-                model_key=user_model_preference,
-                reason="사용자 지정 모델",
-                estimated_cost=self._estimate_cost(spec, transcript_length),
-                estimated_latency_s=spec.avg_latency_s,
-                fallback_models=self._get_fallbacks(user_model_preference),
-            )
-
-        # 후보 필터링
+    def _filter_candidates(self, style_id: str, transcript_length: int) -> List[str]:
+        """컨텍스트 윈도우와 스타일 적합성으로 후보 모델을 필터링합니다."""
         candidates = [
             k for k in self._available_models
             if MODEL_CATALOG[k].context_window >= transcript_length + 2000
         ]
 
         if not candidates:
-            # 컨텍스트 제한 완화 (최대 컨텍스트 모델)
             candidates = sorted(
                 self._available_models,
                 key=lambda k: MODEL_CATALOG[k].context_window,
                 reverse=True
             )[:1]
 
-        # 스타일 적합성 필터 (선호)
         style_preferred = [
             k for k in candidates
             if MODEL_CATALOG[k].suitable_styles is None
             or style_id in (MODEL_CATALOG[k].suitable_styles or [])
         ]
-        if style_preferred:
-            candidates = style_preferred
+        return style_preferred if style_preferred else candidates
 
-        # 모드별 정렬
+    def _sort_by_mode(self, candidates: List[str], mode: str) -> None:
+        """라우팅 모드에 따라 후보를 정렬합니다 (in-place)."""
         if mode == 'budget':
             candidates.sort(key=lambda k: MODEL_CATALOG[k].cost_per_1k_output)
         elif mode == 'quality':
@@ -170,6 +139,37 @@ class ModelRouter:
                     + MODEL_CATALOG[k].avg_latency_s / 60 * 0.2
                 )
             )
+
+    def route(
+        self,
+        style_id: str,
+        transcript_length: int = 0,
+        mode: str = 'balanced',
+        user_model_preference: Optional[str] = None,
+    ) -> RouterDecision:
+        """최적 모델을 선택합니다.
+
+        Args:
+            style_id: 콘텐츠 스타일
+            transcript_length: 자막 토큰 수 (컨텍스트 제한 확인용)
+            mode: 라우팅 모드 ('budget', 'quality', 'balanced', 'fast')
+            user_model_preference: 사용자가 명시적으로 지정한 모델
+
+        Returns:
+            RouterDecision
+        """
+        if user_model_preference and user_model_preference in self._available_models:
+            spec = MODEL_CATALOG[user_model_preference]
+            return RouterDecision(
+                model_key=user_model_preference,
+                reason="사용자 지정 모델",
+                estimated_cost=self._estimate_cost(spec, transcript_length),
+                estimated_latency_s=spec.avg_latency_s,
+                fallback_models=self._get_fallbacks(user_model_preference),
+            )
+
+        candidates = self._filter_candidates(style_id, transcript_length)
+        self._sort_by_mode(candidates, mode)
 
         selected = candidates[0]
         spec = MODEL_CATALOG[selected]
