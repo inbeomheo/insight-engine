@@ -52,47 +52,8 @@ def _find_definitions(content: str) -> Dict[str, str]:
     return definitions
 
 
-def check_acronym_consistency(content: str) -> dict:
-    """약어 일관성을 검사합니다.
-
-    Returns:
-        acronym_map, issues, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'acronym_map': [],
-            'issues': [],
-            'summary': {
-                'total_acronyms': 0,
-                'unique_acronyms': 0,
-                'defined_count': 0,
-                'undefined_count': 0,
-                'consistency_level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    cleaned = _HEADING_RE.sub('', content)
-    acronyms = _find_acronyms(cleaned)
-    definitions = _find_definitions(cleaned)
-
-    if not acronyms:
-        return {
-            'acronym_map': [],
-            'issues': [],
-            'summary': {
-                'total_acronyms': 0,
-                'unique_acronyms': 0,
-                'defined_count': 0,
-                'undefined_count': 0,
-                'consistency_level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 약어별 사용 횟수
+def _count_usage(acronyms: List[Dict]) -> tuple:
+    """약어별 사용 횟수와 첫 등장 위치를 집계합니다."""
     usage_count = defaultdict(int)
     first_occurrence = {}
     for item in acronyms:
@@ -100,15 +61,13 @@ def check_acronym_consistency(content: str) -> dict:
         usage_count[acr] += 1
         if acr not in first_occurrence:
             first_occurrence[acr] = item['position']
+    return usage_count, first_occurrence
 
-    unique_acronyms = set(usage_count.keys())
-    defined = set(definitions.keys())
-    undefined = unique_acronyms - defined
 
-    # 이슈 감지
+def _detect_issues(unique_acronyms: set, undefined: set, usage_count: dict) -> list:
+    """정의 없는 약어와 과다 사용을 감지합니다."""
     issues = []
 
-    # 1. 정의 없이 사용된 약어
     for acr in undefined:
         if usage_count[acr] >= 1:
             issues.append({
@@ -117,7 +76,6 @@ def check_acronym_consistency(content: str) -> dict:
                 'message': f'{acr}의 풀네임이 정의되지 않았습니다.',
             })
 
-    # 2. 과다 사용 (5회 이상이면서 정의 없는 경우)
     for acr in unique_acronyms:
         if usage_count[acr] >= 5 and acr in undefined:
             issues.append({
@@ -126,7 +84,12 @@ def check_acronym_consistency(content: str) -> dict:
                 'message': f'{acr}이(가) {usage_count[acr]}회 사용되었으나 풀네임 없음.',
             })
 
-    # 약어 맵 생성
+    return issues
+
+
+def _build_acronym_map(unique_acronyms: set, definitions: dict,
+                       usage_count: dict, defined: set) -> list:
+    """약어 맵을 생성합니다."""
     acronym_map = []
     for acr in sorted(unique_acronyms):
         acronym_map.append({
@@ -135,35 +98,80 @@ def check_acronym_consistency(content: str) -> dict:
             'count': usage_count[acr],
             'defined': acr in defined,
         })
+    return acronym_map
 
-    # 일관성 레벨
-    total_unique = len(unique_acronyms)
-    defined_count = len(defined & unique_acronyms)
-    undefined_count = len(undefined)
 
+def _determine_level(total_unique: int, undefined_count: int) -> str:
+    """약어 일관성 레벨을 판정합니다."""
     if total_unique == 0:
-        level = 'none'
+        return 'none'
     elif undefined_count == 0:
-        level = 'excellent'
+        return 'excellent'
     elif undefined_count <= total_unique * 0.3:
-        level = 'good'
+        return 'good'
     elif undefined_count <= total_unique * 0.6:
-        level = 'fair'
-    else:
-        level = 'poor'
+        return 'fair'
+    return 'poor'
 
-    # 점수 계산
+
+def _calculate_score(total_unique: int, defined_count: int, issues_count: int) -> float:
+    """약어 일관성 점수를 계산합니다."""
     if total_unique == 0:
         score = 100.0
     else:
         defined_ratio = defined_count / total_unique
         score = 100.0 * defined_ratio
-        # 이슈 수에 따른 감점
-        issue_penalty = min(30.0, len(issues) * 5.0)
+        issue_penalty = min(30.0, issues_count * 5.0)
         score -= issue_penalty
+    return round(max(0.0, min(100.0, score)), 1)
 
-    score = round(max(0.0, min(100.0, score)), 1)
 
+_EMPTY_RESULT = {
+    'acronym_map': [],
+    'issues': [],
+    'summary': {
+        'total_acronyms': 0,
+        'unique_acronyms': 0,
+        'defined_count': 0,
+        'undefined_count': 0,
+        'consistency_level': 'none',
+    },
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def check_acronym_consistency(content: str) -> dict:
+    """약어 일관성을 검사합니다.
+
+    Returns:
+        acronym_map, issues, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    cleaned = _HEADING_RE.sub('', content)
+    acronyms = _find_acronyms(cleaned)
+    definitions = _find_definitions(cleaned)
+
+    if not acronyms:
+        return dict(_EMPTY_RESULT)
+
+    usage_count, first_occurrence = _count_usage(acronyms)
+
+    unique_acronyms = set(usage_count.keys())
+    defined = set(definitions.keys())
+    undefined = unique_acronyms - defined
+
+    issues = _detect_issues(unique_acronyms, undefined, usage_count)
+    acronym_map = _build_acronym_map(unique_acronyms, definitions, usage_count, defined)
+
+    total_unique = len(unique_acronyms)
+    defined_count = len(defined & unique_acronyms)
+    undefined_count = len(undefined)
+
+    level = _determine_level(total_unique, undefined_count)
+    score = _calculate_score(total_unique, defined_count, len(issues))
     suggestions = _generate_suggestions(undefined, defined, usage_count, level)
 
     return {

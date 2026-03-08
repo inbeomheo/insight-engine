@@ -37,6 +37,130 @@ _STOPWORDS = {
 }
 
 
+def _index_contents(contents: list) -> tuple:
+    """각 콘텐츠에서 키워드를 추출하고 인덱스를 구축합니다."""
+    content_keywords: Dict[str, Set[str]] = {}
+    content_keyword_counts: Dict[str, Counter] = {}
+    content_map: Dict[str, Dict] = {}
+
+    for item in contents:
+        cid = item.get('id', '')
+        if not cid:
+            continue
+        content_map[cid] = item
+        text = item.get('content', '')
+        keywords, counts = _extract_keywords(text)
+        content_keywords[cid] = keywords
+        content_keyword_counts[cid] = counts
+
+    return content_keywords, content_keyword_counts, content_map
+
+
+def _find_opportunities_from_current(
+    current_content: str,
+    content_map: Dict[str, Dict],
+    content_keywords: Dict[str, Set[str]],
+    content_keyword_counts: Dict[str, Counter],
+) -> tuple:
+    """현재 콘텐츠 기준으로 다른 콘텐츠로의 링크 기회를 탐지합니다."""
+    opportunities = []
+    linked_ids: Set[str] = set()
+    current_kw, current_counts = _extract_keywords(current_content)
+
+    for cid, item in content_map.items():
+        target_kw = content_keywords[cid]
+        target_title = item.get('title', '')
+        title_kw = _extract_title_keywords(target_title)
+
+        opps = _find_pairwise_opportunities(
+            source_text=current_content,
+            source_keywords=current_kw,
+            target_id=cid,
+            target_title=target_title,
+            target_keywords=target_kw,
+            title_keywords=title_kw,
+            target_keyword_counts=content_keyword_counts[cid],
+        )
+        if opps:
+            linked_ids.add(cid)
+            opportunities.extend(opps)
+
+    return opportunities, linked_ids
+
+
+def _find_opportunities_all_pairs(
+    content_map: Dict[str, Dict],
+    content_keywords: Dict[str, Set[str]],
+    content_keyword_counts: Dict[str, Counter],
+) -> tuple:
+    """모든 콘텐츠 쌍 간 링크 기회를 양방향 분석합니다."""
+    opportunities = []
+    linked_ids: Set[str] = set()
+    cids = list(content_map.keys())
+
+    for i, src_id in enumerate(cids):
+        src_item = content_map[src_id]
+        src_text = src_item.get('content', '')
+        src_kw = content_keywords[src_id]
+
+        for j, tgt_id in enumerate(cids):
+            if i == j:
+                continue
+            tgt_item = content_map[tgt_id]
+            tgt_title = tgt_item.get('title', '')
+            tgt_kw = content_keywords[tgt_id]
+            title_kw = _extract_title_keywords(tgt_title)
+
+            opps = _find_pairwise_opportunities(
+                source_text=src_text,
+                source_keywords=src_kw,
+                target_id=tgt_id,
+                target_title=tgt_title,
+                target_keywords=tgt_kw,
+                title_keywords=title_kw,
+                target_keyword_counts=content_keyword_counts[tgt_id],
+            )
+            if opps:
+                linked_ids.add(src_id)
+                linked_ids.add(tgt_id)
+                opportunities.extend(opps)
+
+    return opportunities, linked_ids
+
+
+def _build_result(
+    opportunities: list,
+    linked_ids: Set[str],
+    content_map: Dict[str, Dict],
+) -> dict:
+    """기회 목록에서 최종 결과를 조립합니다."""
+    opportunities.sort(key=lambda x: x['relevance_score'], reverse=True)
+
+    all_ids = set(content_map.keys())
+    orphan_contents = sorted(all_ids - linked_ids)
+
+    high_relevance = sum(1 for o in opportunities if o['relevance_score'] >= 70)
+    linked_pairs = len(set(
+        (o.get('_source_id', ''), o['target_id']) for o in opportunities
+    ))
+
+    suggestions = _generate_suggestions(opportunities, orphan_contents, content_map)
+
+    for opp in opportunities:
+        opp.pop('_source_id', None)
+
+    return {
+        'opportunities': opportunities,
+        'summary': {
+            'total_opportunities': len(opportunities),
+            'high_relevance': high_relevance,
+            'linked_pairs': linked_pairs,
+        },
+        'orphan_contents': orphan_contents,
+        'suggestions': suggestions,
+    }
+
+
 def find_link_opportunities(contents: list, current_content: str = '') -> dict:
     """여러 콘텐츠를 분석하여 내부 링크 기회를 탐지합니다.
 
@@ -55,114 +179,24 @@ def find_link_opportunities(contents: list, current_content: str = '') -> dict:
             "suggestions": [...],    # 개선 제안 목록
         }
     """
-    # 빈 리스트 또는 1개 이하 → 기회 없음
     if not contents or len(contents) < 2:
         return _empty_result(contents)
 
-    # 각 콘텐츠에서 핵심 키워드 추출
-    content_keywords: Dict[str, Set[str]] = {}
-    content_keyword_counts: Dict[str, Counter] = {}
-    content_map: Dict[str, Dict] = {}
-
-    for item in contents:
-        cid = item.get('id', '')
-        if not cid:
-            continue
-        content_map[cid] = item
-        text = item.get('content', '')
-        keywords, counts = _extract_keywords(text)
-        content_keywords[cid] = keywords
-        content_keyword_counts[cid] = counts
+    content_keywords, content_keyword_counts, content_map = _index_contents(contents)
 
     if len(content_map) < 2:
         return _empty_result(contents)
 
-    opportunities = []
-    linked_ids: Set[str] = set()
-
     if current_content:
-        # current_content 기준으로 다른 콘텐츠로의 링크 기회 탐지
-        current_kw, current_counts = _extract_keywords(current_content)
-        for cid, item in content_map.items():
-            target_kw = content_keywords[cid]
-            target_title = item.get('title', '')
-            title_kw = _extract_title_keywords(target_title)
-
-            opps = _find_pairwise_opportunities(
-                source_text=current_content,
-                source_keywords=current_kw,
-                target_id=cid,
-                target_title=target_title,
-                target_keywords=target_kw,
-                title_keywords=title_kw,
-                target_keyword_counts=content_keyword_counts[cid],
-            )
-            if opps:
-                linked_ids.add(cid)
-                opportunities.extend(opps)
+        opportunities, linked_ids = _find_opportunities_from_current(
+            current_content, content_map, content_keywords, content_keyword_counts,
+        )
     else:
-        # contents 간 모든 쌍의 링크 기회 분석 (양방향)
-        cids = list(content_map.keys())
-        for i, src_id in enumerate(cids):
-            src_item = content_map[src_id]
-            src_text = src_item.get('content', '')
-            src_kw = content_keywords[src_id]
+        opportunities, linked_ids = _find_opportunities_all_pairs(
+            content_map, content_keywords, content_keyword_counts,
+        )
 
-            for j, tgt_id in enumerate(cids):
-                if i == j:
-                    continue
-                tgt_item = content_map[tgt_id]
-                tgt_title = tgt_item.get('title', '')
-                tgt_kw = content_keywords[tgt_id]
-                title_kw = _extract_title_keywords(tgt_title)
-
-                opps = _find_pairwise_opportunities(
-                    source_text=src_text,
-                    source_keywords=src_kw,
-                    target_id=tgt_id,
-                    target_title=tgt_title,
-                    target_keywords=tgt_kw,
-                    title_keywords=title_kw,
-                    target_keyword_counts=content_keyword_counts[tgt_id],
-                )
-                if opps:
-                    linked_ids.add(src_id)
-                    linked_ids.add(tgt_id)
-                    opportunities.extend(opps)
-
-    # 관련성 점수 내림차순 정렬
-    opportunities.sort(key=lambda x: x['relevance_score'], reverse=True)
-
-    # 고립 콘텐츠 탐지
-    all_ids = set(content_map.keys())
-    orphan_contents = sorted(all_ids - linked_ids)
-
-    # 요약 통계
-    high_relevance = sum(1 for o in opportunities if o['relevance_score'] >= 70)
-    # 고유한 (source→target) 쌍 수
-    linked_pairs = len(set(
-        (o.get('_source_id', ''), o['target_id']) for o in opportunities
-    ))
-
-    # 제안 생성
-    suggestions = _generate_suggestions(
-        opportunities, orphan_contents, content_map
-    )
-
-    # 내부 키 제거
-    for opp in opportunities:
-        opp.pop('_source_id', None)
-
-    return {
-        'opportunities': opportunities,
-        'summary': {
-            'total_opportunities': len(opportunities),
-            'high_relevance': high_relevance,
-            'linked_pairs': linked_pairs,
-        },
-        'orphan_contents': orphan_contents,
-        'suggestions': suggestions,
-    }
+    return _build_result(opportunities, linked_ids, content_map)
 
 
 # ============================================================

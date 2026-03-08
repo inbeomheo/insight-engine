@@ -40,6 +40,89 @@ _STORY_MARKERS = [
 ]
 
 
+def _score_questions(content: str) -> tuple:
+    """질문 사용 점수."""
+    count = len(re.findall(r'[?？]', content))
+    score = min(count * 3, _WEIGHTS['questions'])
+    return score, f'질문 {count}개 감지'
+
+
+def _score_emotional(content: str) -> tuple:
+    """감정 표현 점수."""
+    count = sum(1 for w in _EMOTIONAL_WORDS if w in content)
+    score = min(count * 3, _WEIGHTS['emotional'])
+    return score, f'감정 표현 {count}개'
+
+
+def _score_cta(content: str) -> tuple:
+    """행동 유도(CTA) 점수."""
+    patterns = [r'하세요', r'해보세요', r'확인', r'클릭', r'구독', r'공유', r'시작']
+    count = sum(1 for p in patterns if re.search(p, content))
+    score = min(count * 3, _WEIGHTS['cta'])
+    return score, f'CTA 패턴 {count}개'
+
+
+def _score_visuals(content: str) -> tuple:
+    """시각적 요소 점수."""
+    lists = len(re.findall(r'^\s*[-*•]\s', content, re.MULTILINE))
+    code_blocks = len(re.findall(r'```', content))
+    numbered = len(re.findall(r'^\s*\d+[.)]\s', content, re.MULTILINE))
+    total = lists + code_blocks + numbered
+    score = min(total * 2, _WEIGHTS['visuals'])
+    return score, f'리스트 {lists}개, 코드블록 {code_blocks // 2}개, 번호목록 {numbered}개'
+
+
+def _score_structure(content: str) -> tuple:
+    """구조(헤딩, 문단) 점수."""
+    headings = len(re.findall(r'^#{1,6}\s', content, re.MULTILINE))
+    paragraphs = len([p for p in content.split('\n\n') if p.strip()])
+    score = 0
+    if headings >= 3:
+        score += 8
+    elif headings >= 1:
+        score += 4
+    if paragraphs >= 5:
+        score += 7
+    elif paragraphs >= 3:
+        score += 4
+    score = min(score, _WEIGHTS['structure'])
+    return score, f'헤딩 {headings}개, 문단 {paragraphs}개'
+
+
+def _score_interaction(content: str) -> tuple:
+    """독자 참여 표현 점수."""
+    count = sum(1 for p in _INTERACTION_PHRASES if p in content)
+    score = min(count * 2, _WEIGHTS['interaction'])
+    return score, f'참여 표현 {count}개'
+
+
+def _score_storytelling(content: str) -> tuple:
+    """스토리텔링 요소 점수."""
+    count = sum(1 for m in _STORY_MARKERS if m in content)
+    score = min(count * 2, _WEIGHTS['storytelling'])
+    return score, f'스토리 마커 {count}개'
+
+
+def _score_specificity(content: str) -> tuple:
+    """구체성(숫자/통계) 점수."""
+    numbers = re.findall(r'\d+[%만억천개건]', content)
+    score = min(len(numbers) * 2, _WEIGHTS['specificity'])
+    return score, f'구체적 수치 {len(numbers)}개'
+
+
+# 채점 함수 디스패치 테이블
+_SCORERS = [
+    ('questions', _score_questions),
+    ('emotional', _score_emotional),
+    ('cta', _score_cta),
+    ('visuals', _score_visuals),
+    ('structure', _score_structure),
+    ('interaction', _score_interaction),
+    ('storytelling', _score_storytelling),
+    ('specificity', _score_specificity),
+]
+
+
 def score_engagement(content: str) -> dict:
     """콘텐츠의 참여 유도력을 종합 평가합니다.
 
@@ -69,100 +152,16 @@ def score_engagement(content: str) -> dict:
     breakdown = {}
     total = 0
 
-    # 1. 질문 사용
-    questions = re.findall(r'[?？]', content)
-    q_score = min(len(questions) * 3, _WEIGHTS['questions'])
-    breakdown['questions'] = {
-        'score': q_score, 'max': _WEIGHTS['questions'],
-        'details': f'질문 {len(questions)}개 감지',
-    }
-    total += q_score
+    for factor, scorer in _SCORERS:
+        factor_score, details = scorer(content)
+        breakdown[factor] = {
+            'score': factor_score, 'max': _WEIGHTS[factor], 'details': details,
+        }
+        total += factor_score
 
-    # 2. 감정 표현
-    emo_count = sum(1 for w in _EMOTIONAL_WORDS if w in content)
-    e_score = min(emo_count * 3, _WEIGHTS['emotional'])
-    breakdown['emotional'] = {
-        'score': e_score, 'max': _WEIGHTS['emotional'],
-        'details': f'감정 표현 {emo_count}개',
-    }
-    total += e_score
-
-    # 3. CTA
-    cta_patterns = [r'하세요', r'해보세요', r'확인', r'클릭', r'구독', r'공유', r'시작']
-    cta_count = sum(1 for p in cta_patterns if re.search(p, content))
-    c_score = min(cta_count * 3, _WEIGHTS['cta'])
-    breakdown['cta'] = {
-        'score': c_score, 'max': _WEIGHTS['cta'],
-        'details': f'CTA 패턴 {cta_count}개',
-    }
-    total += c_score
-
-    # 4. 시각적 요소
-    lists = len(re.findall(r'^\s*[-*•]\s', content, re.MULTILINE))
-    code_blocks = len(re.findall(r'```', content))
-    numbered = len(re.findall(r'^\s*\d+[.)]\s', content, re.MULTILINE))
-    visual_count = lists + code_blocks + numbered
-    v_score = min(visual_count * 2, _WEIGHTS['visuals'])
-    breakdown['visuals'] = {
-        'score': v_score, 'max': _WEIGHTS['visuals'],
-        'details': f'리스트 {lists}개, 코드블록 {code_blocks // 2}개, 번호목록 {numbered}개',
-    }
-    total += v_score
-
-    # 5. 구조
-    headings = len(re.findall(r'^#{1,6}\s', content, re.MULTILINE))
-    paragraphs = len([p for p in content.split('\n\n') if p.strip()])
-    s_score = 0
-    if headings >= 3:
-        s_score += 8
-    elif headings >= 1:
-        s_score += 4
-    if paragraphs >= 5:
-        s_score += 7
-    elif paragraphs >= 3:
-        s_score += 4
-    s_score = min(s_score, _WEIGHTS['structure'])
-    breakdown['structure'] = {
-        'score': s_score, 'max': _WEIGHTS['structure'],
-        'details': f'헤딩 {headings}개, 문단 {paragraphs}개',
-    }
-    total += s_score
-
-    # 6. 독자 참여 표현
-    inter_count = sum(1 for p in _INTERACTION_PHRASES if p in content)
-    i_score = min(inter_count * 2, _WEIGHTS['interaction'])
-    breakdown['interaction'] = {
-        'score': i_score, 'max': _WEIGHTS['interaction'],
-        'details': f'참여 표현 {inter_count}개',
-    }
-    total += i_score
-
-    # 7. 스토리텔링
-    story_count = sum(1 for m in _STORY_MARKERS if m in content)
-    st_score = min(story_count * 2, _WEIGHTS['storytelling'])
-    breakdown['storytelling'] = {
-        'score': st_score, 'max': _WEIGHTS['storytelling'],
-        'details': f'스토리 마커 {story_count}개',
-    }
-    total += st_score
-
-    # 8. 구체성 (숫자/통계)
-    numbers = re.findall(r'\d+[%만억천개건]', content)
-    spec_score = min(len(numbers) * 2, _WEIGHTS['specificity'])
-    breakdown['specificity'] = {
-        'score': spec_score, 'max': _WEIGHTS['specificity'],
-        'details': f'구체적 수치 {len(numbers)}개',
-    }
-    total += spec_score
-
-    # 등급
     grade = _score_to_grade(total)
-
-    # 강점/약점
     strengths = [k for k, v in breakdown.items() if v['score'] >= v['max'] * 0.6]
     weaknesses = [k for k, v in breakdown.items() if v['score'] <= v['max'] * 0.2]
-
-    # 제안
     suggestions = _generate_suggestions(breakdown, weaknesses)
 
     return {
