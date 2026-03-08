@@ -12,10 +12,7 @@ from supabase import create_client, Client
 from cryptography.fernet import Fernet
 
 from services.logging_config import supabase_logger as logger
-from services.exceptions import (
-    ConfigurationError, AuthenticationError,
-    TokenExpiredError, TokenInvalidError
-)
+from services.exceptions import ConfigurationError
 
 # Supabase 클라이언트 초기화
 _supabase_client: Client = None
