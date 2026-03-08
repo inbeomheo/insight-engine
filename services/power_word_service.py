@@ -69,85 +69,65 @@ for category, data in _POWER_WORDS.items():
         _ALL_POWER_WORDS[word] = category
 
 
-def analyze_power_words(content: str) -> dict:
-    """콘텐츠에서 파워워드를 분석합니다.
+_EMPTY_RESULT = {
+    'found': [],
+    'summary': {'total_found': 0, 'unique_count': 0, 'density': 0, 'categories': {}},
+    'score': 0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _scan_power_words(words: list) -> tuple:
+    """단어 목록에서 파워워드를 감지합니다.
 
     Returns:
-        {
-            "found": [{"word": str, "category": str, "category_label": str, "count": int}],
-            "summary": {"total_found": int, "unique_count": int,
-                        "density": float, "categories": dict},
-            "score": int (0~100),
-            "suggestions": list[str],
-        }
+        (found_list, found_map, category_counts)
     """
-    if not content or not content.strip():
-        return {
-            'found': [],
-            'summary': {'total_found': 0, 'unique_count': 0,
-                        'density': 0, 'categories': {}},
-            'score': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 단어 추출
-    words = re.findall(r'[가-힣]{2,}', content)
-    total_words = len(words)
-
-    # 파워워드 감지
-    found_map = {}  # word -> count
+    found_map = {}
     category_counts = {}
 
     for word in words:
-        # 부분 매칭 (한국어 활용형 고려)
         for pw, cat in _ALL_POWER_WORDS.items():
             if pw in word:
                 found_map[pw] = found_map.get(pw, 0) + 1
                 category_counts[cat] = category_counts.get(cat, 0) + 1
                 break
 
-    # 결과 정리
-    found = []
-    for pw, count in sorted(found_map.items(), key=lambda x: x[1], reverse=True):
-        cat = _ALL_POWER_WORDS[pw]
-        found.append({
-            'word': pw,
-            'category': cat,
-            'category_label': _POWER_WORDS[cat]['label'],
-            'count': count,
-        })
+    found_list = [
+        {'word': pw, 'category': _ALL_POWER_WORDS[pw],
+         'category_label': _POWER_WORDS[_ALL_POWER_WORDS[pw]]['label'], 'count': count}
+        for pw, count in sorted(found_map.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    return found_list, found_map, category_counts
+
+
+def analyze_power_words(content: str) -> dict:
+    """콘텐츠에서 파워워드를 분석합니다.
+
+    Returns:
+        found, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    words = re.findall(r'[가-힣]{2,}', content)
+    total_words = len(words)
+    found, found_map, category_counts = _scan_power_words(words)
 
     total_found = sum(found_map.values())
     unique_count = len(found_map)
     density = round((total_found / max(total_words, 1)) * 100, 2)
 
-    # 카테고리 요약
-    cat_summary = {}
-    for cat, count in category_counts.items():
-        cat_summary[cat] = {
-            'label': _POWER_WORDS[cat]['label'],
-            'count': count,
-        }
-
-    # 점수
-    score = _calculate_score(density, unique_count, category_counts)
-
-    # 제안
-    suggestions = _generate_suggestions(density, unique_count, category_counts, total_words)
+    cat_summary = {cat: {'label': _POWER_WORDS[cat]['label'], 'count': count}
+                   for cat, count in category_counts.items()}
 
     return {
         'found': found,
-        'summary': {
-            'total_found': total_found,
-            'unique_count': unique_count,
-            'density': density,
-            'categories': cat_summary,
-        },
-        'score': score,
-        'suggestions': suggestions,
+        'summary': {'total_found': total_found, 'unique_count': unique_count,
+                     'density': density, 'categories': cat_summary},
+        'score': _calculate_score(density, unique_count, category_counts),
+        'suggestions': _generate_suggestions(density, unique_count, category_counts, total_words),
     }
 
 

@@ -51,58 +51,47 @@ _EN_CLICHES = [
 ]
 
 
-def detect_cliches(content: str) -> dict:
-    """진부한 표현을 감지합니다.
+_EMPTY_RESULT = {
+    'cliches': [],
+    'summary': {'total_cliches': 0, 'categories': {}, 'level': 'none'},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_cliches(cleaned: str) -> tuple:
+    """한국어/영어 클리셰를 검색합니다.
 
     Returns:
-        cliches, summary, score, suggestions를 포함하는 dict
+        (found_cliches, category_count, total)
     """
-    if not content or not content.strip():
-        return {
-            'cliches': [],
-            'summary': {
-                'total_cliches': 0,
-                'categories': {},
-                'level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    cleaned = _HEADING_RE.sub('', content)
-    word_count = len(cleaned.split())
-
     found_cliches = []
     category_count = {}
 
-    # 한국어 클리셰 검사
     for category, patterns in _KO_CLICHES.items():
         for pattern, label in patterns:
             matches = pattern.findall(cleaned)
             if matches:
-                found_cliches.append({
-                    'text': label,
-                    'category': category,
-                    'language': 'ko',
-                    'count': len(matches),
-                })
+                found_cliches.append({'text': label, 'category': category,
+                                      'language': 'ko', 'count': len(matches)})
                 category_count[category] = category_count.get(category, 0) + len(matches)
 
-    # 영어 클리셰 검사
     for pattern, label in _EN_CLICHES:
         matches = pattern.findall(cleaned)
         if matches:
-            found_cliches.append({
-                'text': label,
-                'category': 'english',
-                'language': 'en',
-                'count': len(matches),
-            })
+            found_cliches.append({'text': label, 'category': 'english',
+                                  'language': 'en', 'count': len(matches)})
             category_count['english'] = category_count.get('english', 0) + len(matches)
 
-    total = sum(item['count'] for item in found_cliches)
+    return found_cliches, category_count, sum(item['count'] for item in found_cliches)
 
-    # 레벨
+
+def _compute_cliche_score(total: int) -> tuple:
+    """클리셰 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total == 0:
         level = 'clean'
     elif total <= 2:
@@ -112,25 +101,31 @@ def detect_cliches(content: str) -> dict:
     else:
         level = 'high'
 
-    # 연속 점수 — 클리셰 건수 기반 비선형 감점
     if total == 0:
         score = 100.0
     else:
         score = max(15.0, 100.0 - total ** 1.15 * 8.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(found_cliches, total, level)
+
+def detect_cliches(content: str) -> dict:
+    """진부한 표현을 감지합니다.
+
+    Returns:
+        cliches, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    found_cliches, category_count, total = _scan_cliches(_HEADING_RE.sub('', content))
+    score, level = _compute_cliche_score(total)
 
     return {
         'cliches': found_cliches[:20],
-        'summary': {
-            'total_cliches': total,
-            'categories': category_count,
-            'level': level,
-        },
+        'summary': {'total_cliches': total, 'categories': category_count, 'level': level},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(found_cliches, total, level),
     }
 
 

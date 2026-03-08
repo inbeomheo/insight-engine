@@ -93,51 +93,30 @@ def _check_deep_nesting(headings: List[Dict]) -> List[Dict]:
     return deep
 
 
-def check_heading_hierarchy(content: str) -> dict:
-    """마크다운 제목 계층 구조를 검사합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {'total_headings': 0, 'max_depth': 0, 'issue_count': 0, 'level': 'none'},
+    'hierarchy_issues': [],
+    'suggestions': [],
+}
 
-    Returns:
-        score, summary, hierarchy_issues, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_headings': 0,
-                'max_depth': 0,
-                'issue_count': 0,
-                'level': 'none',
-            },
-            'hierarchy_issues': [],
-            'suggestions': [],
-        }
 
-    headings = _extract_headings(content)
-
-    if not headings:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_headings': 0,
-                'max_depth': 0,
-                'issue_count': 0,
-                'level': 'none',
-            },
-            'hierarchy_issues': [],
-            'suggestions': [],
-        }
-
-    # 각종 검사
+def _collect_issues(content: str, headings: List[Dict]) -> List[Dict]:
+    """모든 계층 구조 이슈를 수집합니다."""
     issues = []
     issues.extend(_check_skip(headings))
     issues.extend(_check_duplicate_h1(headings))
     issues.extend(_check_empty_sections(content, headings))
     issues.extend(_check_deep_nesting(headings))
+    return issues
 
-    max_depth = max(h['level'] for h in headings)
-    issue_count = len(issues)
 
-    # 레벨 판정
+def _compute_hierarchy_score(issue_count: int, total_headings: int) -> tuple:
+    """계층 구조 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if issue_count == 0:
         level = 'clean'
     elif issue_count <= 2:
@@ -147,31 +126,38 @@ def check_heading_hierarchy(content: str) -> dict:
     else:
         level = 'problematic'
 
-    # 연속 점수 — 이슈 건수 기반
-    total_headings = len(headings)
     if issue_count == 0:
         score = 100.0
     else:
         issue_ratio = issue_count / max(1, total_headings)
-        score = 100.0 - (issue_count * 10.0) - (issue_ratio * 20.0)
-        score = max(10.0, score)
+        score = max(10.0, 100.0 - (issue_count * 10.0) - (issue_ratio * 20.0))
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        headings, max_depth, issues, level
-    )
+
+def check_heading_hierarchy(content: str) -> dict:
+    """마크다운 제목 계층 구조를 검사합니다.
+
+    Returns:
+        score, summary, hierarchy_issues, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    headings = _extract_headings(content)
+    if not headings:
+        return dict(_EMPTY_RESULT)
+
+    issues = _collect_issues(content, headings)
+    max_depth = max(h['level'] for h in headings)
+    score, level = _compute_hierarchy_score(len(issues), len(headings))
 
     return {
         'score': score,
-        'summary': {
-            'total_headings': len(headings),
-            'max_depth': max_depth,
-            'issue_count': issue_count,
-            'level': level,
-        },
+        'summary': {'total_headings': len(headings), 'max_depth': max_depth,
+                     'issue_count': len(issues), 'level': level},
         'hierarchy_issues': issues[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(headings, max_depth, issues, level),
     }
 
 
