@@ -6,7 +6,7 @@ Definition Gap Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict, Set
+from typing import List, Dict
 
 # 약어 패턴 (2~6자 대문자)
 _ACRONYM = re.compile(r'\b[A-Z]{2,6}(?![A-Za-z])')
