@@ -65,6 +65,35 @@ def _extract_key_terms(content: str, top_n: int = 10) -> List[str]:
     return [term for term, count in counter.most_common(top_n) if count >= 2]
 
 
+_EMPTY_RESULT = {
+    'key_terms': [],
+    'heading_analysis': [],
+    'summary': {'total_headings': 0, 'terms_in_headings': 0,
+                'total_key_terms': 0, 'placement_rate': 0.0},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _analyze_heading_terms(headings: List[Dict], key_terms: List[str]) -> tuple:
+    """각 헤딩에서 핵심 용어 매칭을 분석합니다.
+
+    Returns:
+        (heading_analysis, terms_found_set)
+    """
+    analysis = []
+    terms_found = set()
+    for h in headings:
+        heading_terms = _extract_terms(h['text'])
+        matched = [t for t in key_terms if t in heading_terms or t in h['text'].lower()]
+        terms_found.update(matched)
+        analysis.append({
+            'heading': h['text'], 'level': h['level'],
+            'matched_terms': matched, 'has_key_term': len(matched) > 0,
+        })
+    return analysis, terms_found
+
+
 def audit_heading_term_placement(content: str) -> dict:
     """핵심 용어의 헤딩 배치를 점검합니다.
 
@@ -75,85 +104,36 @@ def audit_heading_term_placement(content: str) -> dict:
         key_terms, heading_analysis, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'key_terms': [],
-            'heading_analysis': [],
-            'summary': {'total_headings': 0, 'terms_in_headings': 0,
-                        'total_key_terms': 0, 'placement_rate': 0.0},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 헤딩 추출
-    headings = []
-    for match in _HEADING_RE.finditer(content):
-        level = len(match.group(1))
-        text = match.group(2).strip()
-        headings.append({'level': level, 'text': text})
+    headings = [{'level': len(m.group(1)), 'text': m.group(2).strip()}
+                for m in _HEADING_RE.finditer(content)]
 
     if not headings:
-        return {
-            'key_terms': [],
-            'heading_analysis': [],
-            'summary': {'total_headings': 0, 'terms_in_headings': 0,
-                        'total_key_terms': 0, 'placement_rate': 0.0},
-            'score': 50.0,
-            'suggestions': ['헤딩이 없습니다. 마크다운 헤딩을 추가하여 구조를 개선하세요.'],
-        }
+        return {**_EMPTY_RESULT, 'score': 50.0,
+                'suggestions': ['헤딩이 없습니다. 마크다운 헤딩을 추가하여 구조를 개선하세요.']}
 
-    # 핵심 용어 추출
     key_terms = _extract_key_terms(content)
     if not key_terms:
-        return {
-            'key_terms': [],
-            'heading_analysis': [{'heading': h['text'], 'level': h['level'],
-                                   'matched_terms': [], 'has_key_term': False}
-                                  for h in headings],
-            'summary': {'total_headings': len(headings), 'terms_in_headings': 0,
-                        'total_key_terms': 0, 'placement_rate': 0.0},
-            'score': 50.0,
-            'suggestions': ['반복되는 핵심 용어가 없습니다. 주제를 명확히 하세요.'],
-        }
+        no_term_analysis = [{'heading': h['text'], 'level': h['level'],
+                             'matched_terms': [], 'has_key_term': False} for h in headings]
+        return {**_EMPTY_RESULT, 'heading_analysis': no_term_analysis,
+                'summary': {**_EMPTY_RESULT['summary'], 'total_headings': len(headings)},
+                'score': 50.0, 'suggestions': ['반복되는 핵심 용어가 없습니다. 주제를 명확히 하세요.']}
 
-    # 각 헤딩에서 핵심 용어 존재 여부 확인
-    heading_analysis = []
-    terms_found_in_headings = set()
-
-    for h in headings:
-        heading_terms = _extract_terms(h['text'])
-        matched = [t for t in key_terms if t in heading_terms or t in h['text'].lower()]
-        terms_found_in_headings.update(matched)
-
-        heading_analysis.append({
-            'heading': h['text'],
-            'level': h['level'],
-            'matched_terms': matched,
-            'has_key_term': len(matched) > 0,
-        })
-
-    terms_in_headings = len(terms_found_in_headings)
+    analysis, terms_found = _analyze_heading_terms(headings, key_terms)
+    terms_in_headings = len(terms_found)
     total_key_terms = len(key_terms)
     placement_rate = round((terms_in_headings / total_key_terms * 100)
                            if total_key_terms > 0 else 0.0, 1)
 
-    # 점수: 배치율 기반
-    score = round(min(100.0, placement_rate), 1)
-
-    suggestions = _generate_suggestions(
-        key_terms, terms_found_in_headings, heading_analysis, placement_rate
-    )
-
     return {
         'key_terms': key_terms,
-        'heading_analysis': heading_analysis,
-        'summary': {
-            'total_headings': len(headings),
-            'terms_in_headings': terms_in_headings,
-            'total_key_terms': total_key_terms,
-            'placement_rate': placement_rate,
-        },
-        'score': score,
-        'suggestions': suggestions,
+        'heading_analysis': analysis,
+        'summary': {'total_headings': len(headings), 'terms_in_headings': terms_in_headings,
+                    'total_key_terms': total_key_terms, 'placement_rate': placement_rate},
+        'score': round(min(100.0, placement_rate), 1),
+        'suggestions': _generate_suggestions(key_terms, terms_found, analysis, placement_rate),
     }
 
 

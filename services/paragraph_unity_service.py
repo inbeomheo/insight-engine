@@ -27,6 +27,16 @@ _STOPWORDS = {'그것', '이것', '저것', '하는', '되는', '있는', '없�
               'the', 'this', 'that', 'with', 'from', 'have', 'been',
               'and', 'for', 'are', 'was', 'not', 'can', 'will'}
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_paragraphs': 0, 'unified_count': 0,
+        'fragmented_count': 0, 'avg_coherence': 0.0, 'level': 'none',
+    },
+    'paragraph_details': [],
+    'suggestions': [],
+}
+
 
 def _split_paragraphs(content: str) -> List[str]:
     """빈 줄 기준으로 문단을 분리합니다."""
@@ -106,58 +116,32 @@ def _analyze_unity(paragraph: str) -> Dict:
     }
 
 
-def check_paragraph_unity(content: str) -> dict:
-    """문단별 주제 통일성을 검사합니다.
+def _aggregate_unity_stats(details: List[Dict]) -> tuple:
+    """문단 분석 결과를 집계합니다.
 
     Returns:
-        score, summary, paragraph_details, suggestions를 포함하는 dict
+        (analyzable, unified, fragmented, avg_coherence)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_paragraphs': 0,
-                'unified_count': 0,
-                'fragmented_count': 0,
-                'avg_coherence': 0.0,
-                'level': 'none',
-            },
-            'paragraph_details': [],
-            'suggestions': [],
-        }
-
-    paragraphs = _split_paragraphs(content)
-
-    if not paragraphs:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_paragraphs': 0,
-                'unified_count': 0,
-                'fragmented_count': 0,
-                'avg_coherence': 0.0,
-                'level': 'none',
-            },
-            'paragraph_details': [],
-            'suggestions': [],
-        }
-
-    details = [_analyze_unity(p) for p in paragraphs]
-
     analyzable = [d for d in details if d['unity'] != 'too_short']
     unified = sum(1 for d in analyzable if d['unity'] in ('unified', 'mostly_unified'))
     fragmented = sum(1 for d in analyzable if d['unity'] == 'fragmented')
-
     coherence_scores = [d['coherence_score'] for d in analyzable]
     avg_coherence = (sum(coherence_scores) / len(coherence_scores)
                      if coherence_scores else 0)
+    return analyzable, unified, fragmented, avg_coherence
 
-    total = len(paragraphs)
 
-    # 레벨 판정
+def _compute_unity_score(analyzable: List[Dict], unified: int,
+                          fragmented: int, avg_coherence: float) -> tuple:
+    """통일성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if not analyzable:
-        level = 'none'
-    elif fragmented == 0:
+        return 100.0, 'none'
+
+    if fragmented == 0:
         level = 'unified'
     elif fragmented <= 1:
         level = 'mostly_unified'
@@ -166,18 +150,33 @@ def check_paragraph_unity(content: str) -> dict:
     else:
         level = 'fragmented'
 
-    # 연속 점수 — 통일성 비율 + 평균 응집도 기반
-    if not analyzable:
-        score = 100.0
-    else:
-        unified_ratio = unified / len(analyzable) if analyzable else 1.0
-        score = (unified_ratio * 60.0) + (min(avg_coherence, 0.3) / 0.3 * 40.0)
-        # 분산 문단 추가 감점
-        if fragmented > 0:
-            score -= min(20.0, fragmented * 6.0)
-
+    unified_ratio = unified / len(analyzable) if analyzable else 1.0
+    score = (unified_ratio * 60.0) + (min(avg_coherence, 0.3) / 0.3 * 40.0)
+    if fragmented > 0:
+        score -= min(20.0, fragmented * 6.0)
     score = round(max(0.0, min(100.0, score)), 1)
 
+    return score, level
+
+
+def check_paragraph_unity(content: str) -> dict:
+    """문단별 주제 통일성을 검사합니다.
+
+    Returns:
+        score, summary, paragraph_details, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    paragraphs = _split_paragraphs(content)
+    if not paragraphs:
+        return dict(_EMPTY_RESULT)
+
+    details = [_analyze_unity(p) for p in paragraphs]
+    analyzable, unified, fragmented, avg_coherence = _aggregate_unity_stats(details)
+    score, level = _compute_unity_score(analyzable, unified, fragmented, avg_coherence)
+
+    total = len(paragraphs)
     suggestions = _generate_suggestions(
         total, unified, fragmented, avg_coherence, level, details
     )
@@ -185,11 +184,9 @@ def check_paragraph_unity(content: str) -> dict:
     return {
         'score': score,
         'summary': {
-            'total_paragraphs': total,
-            'unified_count': unified,
+            'total_paragraphs': total, 'unified_count': unified,
             'fragmented_count': fragmented,
-            'avg_coherence': round(avg_coherence, 3),
-            'level': level,
+            'avg_coherence': round(avg_coherence, 3), 'level': level,
         },
         'paragraph_details': [d for d in details[:10]
                                if d['unity'] != 'too_short'],

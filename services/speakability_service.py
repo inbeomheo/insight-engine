@@ -32,6 +32,33 @@ _CODE_BLOCK_RE = re.compile(r'```[\s\S]*?```|`[^`]+`')  # 코드 블록
 # 문장 분리 패턴 (한국어 + 영어)
 _SENTENCE_SPLIT_RE = re.compile(r'(?<=[.!?。])\s+|\n+')
 
+_EMPTY_RESULT = {
+    'factors': {
+        'sentence_length': {'score': 100.0, 'avg_length': 0.0},
+        'abbreviation_density': {'score': 100.0, 'count': 0, 'density': 0.0},
+        'number_density': {'score': 100.0, 'count': 0, 'density': 0.0},
+        'parenthetical_density': {'score': 100.0, 'count': 0},
+        'complex_structure': {'score': 100.0, 'issues': []},
+    },
+    'speakability_score': 100.0,
+    'problem_sentences': [],
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
+
+_FACTOR_WEIGHTS = {
+    'sentence_length': 0.25,
+    'abbreviation_density': 0.20,
+    'number_density': 0.20,
+    'parenthetical_density': 0.15,
+    'complex_structure': 0.20,
+}
+
+
+def _compute_speakability_score(factors: dict) -> float:
+    """요소별 점수의 가중 평균으로 종합 점수를 계산합니다."""
+    score = sum(factors[k]['score'] * _FACTOR_WEIGHTS[k] for k in _FACTOR_WEIGHTS)
+    return round(max(0.0, min(100.0, score)), 1)
+
 
 def analyze_speakability(content: str) -> dict:
     """콘텐츠의 음성 적합성을 분석합니다.
@@ -54,18 +81,7 @@ def analyze_speakability(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'factors': {
-                'sentence_length': {'score': 100.0, 'avg_length': 0.0},
-                'abbreviation_density': {'score': 100.0, 'count': 0, 'density': 0.0},
-                'number_density': {'score': 100.0, 'count': 0, 'density': 0.0},
-                'parenthetical_density': {'score': 100.0, 'count': 0},
-                'complex_structure': {'score': 100.0, 'issues': []},
-            },
-            'speakability_score': 100.0,
-            'problem_sentences': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return dict(_EMPTY_RESULT)
 
     # 문장 분리
     sentences = [s.strip() for s in _SENTENCE_SPLIT_RE.split(content) if len(s.strip()) >= 5]
@@ -97,18 +113,7 @@ def analyze_speakability(content: str) -> dict:
         'complex_structure': complex_factor,
     }
 
-    # 종합 점수 (가중 평균)
-    weights = {
-        'sentence_length': 0.25,
-        'abbreviation_density': 0.20,
-        'number_density': 0.20,
-        'parenthetical_density': 0.15,
-        'complex_structure': 0.20,
-    }
-    speakability_score = sum(
-        factors[k]['score'] * weights[k] for k in weights
-    )
-    speakability_score = round(max(0.0, min(100.0, speakability_score)), 1)
+    speakability_score = _compute_speakability_score(factors)
 
     # 문제 문장 식별
     problem_sentences = _identify_problem_sentences(sentences, content)
