@@ -98,6 +98,59 @@ _EN_PATTERNS = {
 }
 
 
+_EMPTY_RESULT = {
+    'findings': [],
+    'summary': {'total_complex': 0, 'korean_complex': 0, 'english_complex': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_complex_words(content: str) -> list:
+    """한국어/영어 고난도 어휘를 탐색합니다."""
+    findings = []
+    seen = set()
+
+    for word, (pattern, alternative) in _KO_PATTERNS.items():
+        matches = pattern.findall(content)
+        if matches and word not in seen:
+            seen.add(word)
+            findings.append({
+                'word': word, 'language': 'korean',
+                'count': len(matches), 'alternative': alternative,
+            })
+
+    for word, (pattern, alternative) in _EN_PATTERNS.items():
+        matches = pattern.findall(content)
+        if matches and word not in seen:
+            seen.add(word)
+            findings.append({
+                'word': word, 'language': 'english',
+                'count': len(matches), 'alternative': alternative,
+            })
+
+    findings.sort(key=lambda f: f['count'], reverse=True)
+    return findings
+
+
+def _compute_complexity_score(total: int, word_count: int) -> tuple:
+    """복잡 어휘 비율 기반 점수를 계산합니다.
+
+    Returns:
+        (score, complex_ratio)
+    """
+    complex_ratio = (total / word_count * 100) if word_count > 0 else 0.0
+
+    if complex_ratio <= 1.0:
+        score = 100.0
+    elif complex_ratio <= 3.0:
+        score = 100.0 - (complex_ratio - 1.0) * 15.0
+    else:
+        score = max(0.0, 70.0 - (complex_ratio - 3.0) * 10.0)
+
+    return round(max(0.0, min(100.0, score)), 1), complex_ratio
+
+
 def find_simple_alternatives(content: str) -> dict:
     """콘텐츠에서 고난도 어휘를 찾아 쉬운 대체어를 제안합니다.
 
@@ -108,58 +161,15 @@ def find_simple_alternatives(content: str) -> dict:
         findings, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'findings': [],
-            'summary': {'total_complex': 0, 'korean_complex': 0, 'english_complex': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    findings = []
-    seen = set()
-
-    # 한국어 고난도 어휘 탐색
-    for word, (pattern, alternative) in _KO_PATTERNS.items():
-        matches = pattern.findall(content)
-        if matches and word not in seen:
-            seen.add(word)
-            findings.append({
-                'word': word,
-                'language': 'korean',
-                'count': len(matches),
-                'alternative': alternative,
-            })
-
-    # 영어 고난도 어휘 탐색
-    for word, (pattern, alternative) in _EN_PATTERNS.items():
-        matches = pattern.findall(content)
-        if matches and word not in seen:
-            seen.add(word)
-            findings.append({
-                'word': word,
-                'language': 'english',
-                'count': len(matches),
-                'alternative': alternative,
-            })
-
-    findings.sort(key=lambda f: f['count'], reverse=True)
-
+    findings = _scan_complex_words(content)
+    total = len(findings)
     ko_count = sum(1 for f in findings if f['language'] == 'korean')
     en_count = sum(1 for f in findings if f['language'] == 'english')
-    total = len(findings)
 
-    # 단어 수 계산
     word_count = len(re.findall(r'[A-Za-z]+|[가-힣]+', content))
-    complex_ratio = (total / word_count * 100) if word_count > 0 else 0.0
-
-    # 점수: 복잡 어휘 비율이 낮을수록 높음
-    if complex_ratio <= 1.0:
-        score = 100.0
-    elif complex_ratio <= 3.0:
-        score = 100.0 - (complex_ratio - 1.0) * 15.0
-    else:
-        score = max(0.0, 70.0 - (complex_ratio - 3.0) * 10.0)
-    score = round(max(0.0, min(100.0, score)), 1)
+    score, complex_ratio = _compute_complexity_score(total, word_count)
 
     suggestions = _generate_suggestions(findings, total, complex_ratio)
 

@@ -68,26 +68,26 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def check_methodology_transparency(content: str) -> dict:
-    """방법론 투명성을 검사합니다.
+_EMPTY_RESULT = {
+    'score': 50.0,
+    'summary': {
+        'categories_found': 0,
+        'found_list': [],
+        'missing_list': [],
+        'transparency_ratio': 0.0,
+        'level': 'none',
+    },
+    'transparency_details': [],
+    'suggestions': [],
+}
+
+
+def _scan_categories(content: str) -> tuple:
+    """카테고리별 방법론 패턴을 스캔합니다.
 
     Returns:
-        score, summary, transparency_details, suggestions를 포함하는 dict
+        (found_list, missing_list, details)
     """
-    if not content or not content.strip():
-        return {
-            'score': 50.0,
-            'summary': {
-                'categories_found': 0,
-                'found_list': [],
-                'missing_list': [],
-                'transparency_ratio': 0.0,
-                'level': 'none',
-            },
-            'transparency_details': [],
-            'suggestions': [],
-        }
-
     found_list = []
     missing_list = []
     details = []
@@ -104,11 +104,17 @@ def check_methodology_transparency(content: str) -> dict:
         else:
             missing_list.append(cat_name)
 
-    total = len(_METHODOLOGY_CATEGORIES)
-    found_count = len(found_list)
+    return found_list, missing_list, details
+
+
+def _compute_transparency_level(found_count: int, total: int) -> tuple:
+    """투명성 레벨과 점수를 계산합니다.
+
+    Returns:
+        (level, score, ratio)
+    """
     ratio = round(found_count / total * 100, 1)
 
-    # 레벨 판정
     if found_count >= 5:
         level = 'transparent'
     elif found_count >= 3:
@@ -120,26 +126,36 @@ def check_methodology_transparency(content: str) -> dict:
     else:
         level = 'opaque'
 
-    # 연속 점수 — 카테고리 충족 비율 기반
-    score = 15.0 + (found_count / total * 85.0)
+    score = round(max(0.0, min(100.0, 15.0 + (found_count / total * 85.0))), 1)
+    return level, score, ratio
 
-    score = round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(
-        found_list, missing_list, ratio, level, details
-    )
+def check_methodology_transparency(content: str) -> dict:
+    """방법론 투명성을 검사합니다.
+
+    Returns:
+        score, summary, transparency_details, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    found_list, missing_list, details = _scan_categories(content)
+    total = len(_METHODOLOGY_CATEGORIES)
+    level, score, ratio = _compute_transparency_level(len(found_list), total)
 
     return {
         'score': score,
         'summary': {
-            'categories_found': found_count,
+            'categories_found': len(found_list),
             'found_list': found_list,
             'missing_list': missing_list,
             'transparency_ratio': ratio,
             'level': level,
         },
         'transparency_details': details,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            found_list, missing_list, ratio, level, details
+        ),
     }
 
 

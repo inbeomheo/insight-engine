@@ -50,31 +50,21 @@ def _count_linking_verbs(sentence: str) -> Dict[str, int]:
     return counts
 
 
-def detect_linking_verb_overuse(content: str) -> dict:
-    """연결 동사 과다 사용을 감지합니다.
+_EMPTY_RESULT = {
+    'sentences': [],
+    'summary': {'total_linking_verbs': 0, 'total_sentences': 0,
+                'linking_verb_ratio': 0.0, 'density': 0.0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_linking_verbs(sentences: list) -> tuple:
+    """문장별 연결 동사를 스캔합니다.
 
     Returns:
-        sentences, summary, score, suggestions를 포함하는 dict
+        (result_sentences, total_linking, sentences_with_linking)
     """
-    if not content or not content.strip():
-        return {
-            'sentences': [],
-            'summary': {'total_linking_verbs': 0, 'total_sentences': 0,
-                        'linking_verb_ratio': 0.0, 'density': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'sentences': [],
-            'summary': {'total_linking_verbs': 0, 'total_sentences': 0,
-                        'linking_verb_ratio': 0.0, 'density': 0.0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     total_linking = 0
     sentences_with_linking = 0
     result_sentences = []
@@ -83,24 +73,19 @@ def detect_linking_verb_overuse(content: str) -> dict:
         counts = _count_linking_verbs(sent)
         total = counts['korean'] + counts['english']
         total_linking += total
-        has_linking = total > 0
-        if has_linking:
+        if total > 0:
             sentences_with_linking += 1
-
-        if has_linking:
             result_sentences.append({
                 'text': sent if len(sent) <= 100 else sent[:97] + '...',
                 'linking_count': total,
                 'types': {k: v for k, v in counts.items() if v > 0},
             })
 
-    total_sents = len(sentences)
-    ratio = round((sentences_with_linking / total_sents * 100) if total_sents > 0 else 0.0, 1)
+    return result_sentences, total_linking, sentences_with_linking
 
-    word_count = _count_words(content)
-    density = round((total_linking / word_count * 100) if word_count > 0 else 0.0, 2)
 
-    # 점수: 연결 동사 비율 기반 (적정: 30-50%)
+def _compute_linking_score(ratio: float) -> float:
+    """연결 동사 비율 기반 점수를 계산합니다."""
     if ratio <= 40:
         score = 100.0
     elif ratio <= 60:
@@ -109,9 +94,29 @@ def detect_linking_verb_overuse(content: str) -> dict:
         score = 70.0 - (ratio - 60) * 1.5
     else:
         score = max(0.0, 40.0 - (ratio - 80) * 2.0)
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(ratio, density, total_linking, sentences_with_linking)
+
+def detect_linking_verb_overuse(content: str) -> dict:
+    """연결 동사 과다 사용을 감지합니다.
+
+    Returns:
+        sentences, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    result_sentences, total_linking, sentences_with_linking = _scan_linking_verbs(sentences)
+
+    total_sents = len(sentences)
+    ratio = round((sentences_with_linking / total_sents * 100) if total_sents > 0 else 0.0, 1)
+    word_count = _count_words(content)
+    density = round((total_linking / word_count * 100) if word_count > 0 else 0.0, 2)
+    score = _compute_linking_score(ratio)
 
     return {
         'sentences': result_sentences,
@@ -122,7 +127,7 @@ def detect_linking_verb_overuse(content: str) -> dict:
             'density': density,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(ratio, density, total_linking, sentences_with_linking),
     }
 
 
