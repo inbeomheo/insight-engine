@@ -44,6 +44,16 @@ _CONTEXT_WINDOW = 30
 _TOPIC_PARTICLES = re.compile(r'(은|는|이|가|을|를|의|에|와|과|도|로|으로)$')
 
 
+_EMPTY_RESULT = {
+    'conflicts': [],
+    'consistency_score': 100.0,
+    'suggestions': [],
+}
+
+# 충돌 감지 함수 목록 (함수 정의 이후 _DETECTORS에서 참조)
+_DETECTORS = None  # 아래에서 초기화
+
+
 def check_consistency(content: str) -> dict:
     """콘텐츠 내부의 모순/불일치를 감지합니다.
 
@@ -59,37 +69,25 @@ def check_consistency(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'conflicts': [],
-            'consistency_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 문장 분리
     sentences = _split_sentences(content)
-
-    conflicts = []
-
-    # 4가지 유형 감지
-    conflicts.extend(_detect_number_conflicts(sentences))
-    conflicts.extend(_detect_date_conflicts(sentences))
-    conflicts.extend(_detect_comparison_conflicts(sentences))
-    conflicts.extend(_detect_name_conflicts(sentences))
-
-    # 중복 제거
-    conflicts = _deduplicate(conflicts)
-
-    # 일관성 점수 계산
-    score = _calculate_score(conflicts, len(sentences))
-
-    # 개선 제안 생성
-    suggestions = _build_suggestions(conflicts)
+    conflicts = _collect_all_conflicts(sentences)
 
     return {
         'conflicts': conflicts,
-        'consistency_score': score,
-        'suggestions': suggestions,
+        'consistency_score': _calculate_score(conflicts, len(sentences)),
+        'suggestions': _build_suggestions(conflicts),
     }
+
+
+def _collect_all_conflicts(sentences: list) -> list:
+    """4가지 유형의 충돌을 수집하고 중복을 제거합니다."""
+    conflicts = []
+    for detector in (_detect_number_conflicts, _detect_date_conflicts,
+                     _detect_comparison_conflicts, _detect_name_conflicts):
+        conflicts.extend(detector(sentences))
+    return _deduplicate(conflicts)
 
 
 # --- 문장 분리 ---

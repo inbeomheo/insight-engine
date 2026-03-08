@@ -30,34 +30,31 @@ def parse_bookmarks(html_content: str) -> List[Dict]:
         raise ValueError("빈 파일입니다.")
 
     soup = BeautifulSoup(html_content, 'html.parser')
-
-    # 북마크 HTML은 <DT><A HREF="...">제목</A> 형식
     links = soup.find_all('a')
     if not links:
         raise ValueError("북마크를 찾을 수 없습니다. Chrome 또는 Firefox에서 내보낸 HTML 파일인지 확인해주세요.")
 
+    bookmarks = _extract_bookmark_links(links)
+    if not bookmarks:
+        raise ValueError("유효한 북마크 URL을 찾을 수 없습니다.")
+
+    return bookmarks
+
+
+def _extract_bookmark_links(links) -> List[Dict]:
+    """BS4 링크 요소에서 유효한 HTTP 북마크만 추출합니다."""
     bookmarks = []
-    seen_urls = set()
+    seen_urls: set = set()
 
     for link in links:
         url = (link.get('href') or '').strip()
-        title = (link.get_text() or '').strip()
-
-        # URL이 없거나 비HTTP 프로토콜은 건너뜀
         if not url or not url.startswith(('http://', 'https://')):
             continue
-
-        # 중복 URL 제거
         if url in seen_urls:
             continue
         seen_urls.add(url)
 
-        bookmarks.append({
-            'url': url,
-            'title': title or url,
-        })
-
-    if not bookmarks:
-        raise ValueError("유효한 북마크 URL을 찾을 수 없습니다.")
+        title = (link.get_text() or '').strip()
+        bookmarks.append({'url': url, 'title': title or url})
 
     return bookmarks
