@@ -78,27 +78,19 @@ def _check_filename_quality(url: str) -> Dict:
     return {'status': 'good', 'issue': None}
 
 
-def audit_image_seo(content: str) -> dict:
-    """이미지 SEO 속성을 점검합니다.
+_EMPTY_RESULT = {
+    'images': [],
+    'summary': {'total_images': 0, 'missing_alt': 0, 'generic_alt': 0,
+                'good_alt': 0, 'meaningless_filename': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 마크다운/HTML 콘텐츠
 
-    Returns:
-        images, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'images': [],
-            'summary': {'total_images': 0, 'missing_alt': 0, 'generic_alt': 0,
-                        'good_alt': 0, 'meaningless_filename': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
+def _extract_images(content: str) -> List[Dict]:
+    """마크다운과 HTML에서 이미지를 추출하고 품질을 평가합니다."""
     images = []
 
-    # 마크다운 이미지
     for match in _MD_IMAGE_RE.finditer(content):
         alt = match.group(1)
         url = match.group(2)
@@ -106,17 +98,11 @@ def audit_image_seo(content: str) -> dict:
         alt_check = _check_alt_quality(alt)
         fname_check = _check_filename_quality(url)
         images.append({
-            'src': url,
-            'alt': alt,
-            'title': title,
-            'format': 'markdown',
-            'alt_status': alt_check['status'],
-            'alt_issue': alt_check['issue'],
-            'filename_status': fname_check['status'],
-            'filename_issue': fname_check['issue'],
+            'src': url, 'alt': alt, 'title': title, 'format': 'markdown',
+            'alt_status': alt_check['status'], 'alt_issue': alt_check['issue'],
+            'filename_status': fname_check['status'], 'filename_issue': fname_check['issue'],
         })
 
-    # HTML img 태그
     for tag_match in _HTML_IMG_RE.finditer(content):
         tag = tag_match.group(0)
         src_m = _SRC_RE.search(tag)
@@ -128,26 +114,20 @@ def audit_image_seo(content: str) -> dict:
         alt_check = _check_alt_quality(alt)
         fname_check = _check_filename_quality(url) if url else {'status': 'unknown', 'issue': None}
         images.append({
-            'src': url,
-            'alt': alt,
-            'title': title,
-            'format': 'html',
-            'alt_status': alt_check['status'],
-            'alt_issue': alt_check['issue'],
-            'filename_status': fname_check['status'],
-            'filename_issue': fname_check['issue'],
+            'src': url, 'alt': alt, 'title': title, 'format': 'html',
+            'alt_status': alt_check['status'], 'alt_issue': alt_check['issue'],
+            'filename_status': fname_check['status'], 'filename_issue': fname_check['issue'],
         })
 
-    if not images:
-        return {
-            'images': [],
-            'summary': {'total_images': 0, 'missing_alt': 0, 'generic_alt': 0,
-                        'good_alt': 0, 'meaningless_filename': 0},
-            'score': 100.0,
-            'suggestions': ['이미지가 없습니다. 시각 자료를 추가하면 콘텐츠 품질이 향상됩니다.'],
-        }
+    return images
 
-    # 집계
+
+def _compute_image_seo_score(images: List[Dict]) -> tuple:
+    """이미지 SEO 통계와 점수를 계산합니다.
+
+    Returns:
+        (missing_alt, generic_alt, good_alt, meaningless_fn, score)
+    """
     missing_alt = sum(1 for img in images if img['alt_status'] == 'missing')
     generic_alt = sum(1 for img in images if img['alt_status'] == 'generic')
     short_alt = sum(1 for img in images if img['alt_status'] == 'too_short')
@@ -157,17 +137,39 @@ def audit_image_seo(content: str) -> dict:
 
     total = len(images)
     issues = missing_alt + generic_alt + short_alt + long_alt + meaningless_fn
-    score = round(max(0.0, (1.0 - issues / (total * 2)) * 100.0), 1)
-    score = max(0.0, min(100.0, score))
+    score = round(max(0.0, min(100.0, (1.0 - issues / (total * 2)) * 100.0)), 1)
+
+    return missing_alt, generic_alt, short_alt, long_alt, good_alt, meaningless_fn, score
+
+
+def audit_image_seo(content: str) -> dict:
+    """이미지 SEO 속성을 점검합니다.
+
+    Args:
+        content: 분석할 마크다운/HTML 콘텐츠
+
+    Returns:
+        images, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    images = _extract_images(content)
+    if not images:
+        return {**_EMPTY_RESULT, 'suggestions': ['이미지가 없습니다. 시각 자료를 추가하면 콘텐츠 품질이 향상됩니다.']}
+
+    missing_alt, generic_alt, short_alt, long_alt, good_alt, meaningless_fn, score = (
+        _compute_image_seo_score(images)
+    )
 
     suggestions = _generate_suggestions(
-        total, missing_alt, generic_alt, short_alt, long_alt, meaningless_fn
+        len(images), missing_alt, generic_alt, short_alt, long_alt, meaningless_fn
     )
 
     return {
         'images': images,
         'summary': {
-            'total_images': total,
+            'total_images': len(images),
             'missing_alt': missing_alt,
             'generic_alt': generic_alt,
             'good_alt': good_alt,

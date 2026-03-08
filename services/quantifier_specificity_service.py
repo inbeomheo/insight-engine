@@ -55,43 +55,26 @@ def _has_specific(sentence: str) -> bool:
     return any(p.search(sentence) for p in _SPECIFIC_PATTERNS)
 
 
-def analyze_quantifier_specificity(content: str) -> dict:
-    """수량 표현의 구체성을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_sentences': 0,
+        'vague_count': 0,
+        'specific_count': 0,
+        'specificity_ratio': 0.0,
+        'level': 'none',
+    },
+    'vague_quantifiers': [],
+    'suggestions': [],
+}
+
+
+def _scan_quantifiers(sentences: List[str]) -> tuple:
+    """문장별 모호/구체적 수량 표현을 스캔합니다.
 
     Returns:
-        score, summary, vague_quantifiers, suggestions를 포함하는 dict
+        (vague_items, vague_count, specific_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'vague_count': 0,
-                'specific_count': 0,
-                'specificity_ratio': 0.0,
-                'level': 'none',
-            },
-            'vague_quantifiers': [],
-            'suggestions': [],
-        }
-
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'vague_count': 0,
-                'specific_count': 0,
-                'specificity_ratio': 0.0,
-                'level': 'none',
-            },
-            'vague_quantifiers': [],
-            'suggestions': [],
-        }
-
     vague_items = []
     vague_count = 0
     specific_count = 0
@@ -110,14 +93,15 @@ def analyze_quantifier_specificity(content: str) -> dict:
         if has_spec:
             specific_count += 1
 
-    total_quantified = vague_count + specific_count
-    if total_quantified == 0:
-        specificity_ratio = 100.0
-    else:
-        specificity_ratio = round(specific_count / total_quantified * 100, 1)
+    return vague_items, vague_count, specific_count
 
-    # 레벨 판정
-    pure_vague = len(vague_items)  # 수치 없는 모호 표현
+
+def _compute_specificity_score(pure_vague: int, specificity_ratio: float) -> tuple:
+    """구체성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if pure_vague == 0:
         level = 'specific'
     elif specificity_ratio >= 70:
@@ -127,17 +111,40 @@ def analyze_quantifier_specificity(content: str) -> dict:
     else:
         level = 'vague'
 
-    # 연속 점수 — 구체성 비율 기반
     if pure_vague == 0:
         score = 100.0
     else:
         score = max(15.0, specificity_ratio * 0.85 + 15.0)
         score -= min(15.0, pure_vague * 3.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def analyze_quantifier_specificity(content: str) -> dict:
+    """수량 표현의 구체성을 분석합니다.
+
+    Returns:
+        score, summary, vague_quantifiers, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                 if s.strip() and len(s.strip()) >= 5]
+
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    vague_items, vague_count, specific_count = _scan_quantifiers(sentences)
+
+    total_quantified = vague_count + specific_count
+    specificity_ratio = (round(specific_count / total_quantified * 100, 1)
+                         if total_quantified > 0 else 100.0)
+
+    score, level = _compute_specificity_score(len(vague_items), specificity_ratio)
 
     suggestions = _generate_suggestions(
-        vague_count, specific_count, pure_vague,
+        vague_count, specific_count, len(vague_items),
         specificity_ratio, level, vague_items
     )
 

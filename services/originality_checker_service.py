@@ -208,6 +208,55 @@ def _generate_suggestions(
     return suggestions
 
 
+def _analyze_all_overlaps(sentences: list, content: str,
+                           reference_contents: list) -> tuple:
+    """내부 반복, 외부 중복, 클리셰를 분석합니다.
+
+    Returns:
+        (self_repetition, self_flagged, external_overlap, external_flagged,
+         common_phrases, cliche_flagged, unique_ratio)
+    """
+    self_repetition, self_flagged = _detect_self_repetition(sentences)
+
+    external_overlap = None
+    external_flagged = []
+    if reference_contents:
+        external_overlap, external_flagged = _detect_external_overlap(
+            sentences, reference_contents
+        )
+
+    common_phrases, cliche_flagged = _detect_common_phrases(content)
+
+    flagged_sentence_texts = set()
+    for f in self_flagged:
+        flagged_sentence_texts.add(f["sentence"])
+    for f in external_flagged:
+        flagged_sentence_texts.add(f["sentence"])
+    unique_count = sum(1 for s in sentences if s not in flagged_sentence_texts)
+    unique_ratio = round((unique_count / len(sentences)) * 100, 2)
+
+    return (self_repetition, self_flagged, external_overlap, external_flagged,
+            common_phrases, cliche_flagged, unique_ratio)
+
+
+def _compute_originality_score(unique_ratio: float, self_repetition: float,
+                                common_phrases: list) -> tuple:
+    """독창성 점수와 등급을 계산합니다.
+
+    Returns:
+        (score, grade)
+    """
+    common_phrases_penalty = min(len(common_phrases) * 5, 50)
+    score = (
+        unique_ratio * 0.5
+        + (100 - self_repetition) * 0.3
+        + (100 - common_phrases_penalty) * 0.2
+    )
+    score = round(max(0.0, min(100.0, score)), 2)
+    grade = _calculate_grade(score)
+    return score, grade
+
+
 def check_originality(content: str, reference_contents: list = None) -> dict:
     """콘텐츠의 독창성을 분석한다.
 
@@ -220,78 +269,34 @@ def check_originality(content: str, reference_contents: list = None) -> dict:
     Returns:
         독창성 점수, 등급, 중복 분석, 플래그된 문장, 클리셰, 제안 목록
     """
-    # 빈 콘텐츠 처리
     if not content or not content.strip():
         return {
-            "originality_score": 0.0,
-            "grade": "F",
-            "overlap_analysis": {
-                "self_repetition": 0.0,
-                "external_overlap": None,
-                "unique_ratio": 0.0,
-            },
-            "flagged_sentences": [],
-            "common_phrases": [],
+            "originality_score": 0.0, "grade": "F",
+            "overlap_analysis": {"self_repetition": 0.0, "external_overlap": None, "unique_ratio": 0.0},
+            "flagged_sentences": [], "common_phrases": [],
             "suggestions": ["분석할 콘텐츠가 없습니다."],
         }
 
     sentences = _split_sentences(content)
-
-    # 문장이 너무 적으면 최소 분석
     if not sentences:
         return {
-            "originality_score": 50.0,
-            "grade": "C",
-            "overlap_analysis": {
-                "self_repetition": 0.0,
-                "external_overlap": None if not reference_contents else 0.0,
-                "unique_ratio": 100.0,
-            },
-            "flagged_sentences": [],
-            "common_phrases": [],
+            "originality_score": 50.0, "grade": "C",
+            "overlap_analysis": {"self_repetition": 0.0,
+                                 "external_overlap": None if not reference_contents else 0.0,
+                                 "unique_ratio": 100.0},
+            "flagged_sentences": [], "common_phrases": [],
             "suggestions": ["문장이 너무 짧아 정밀 분석이 어렵습니다."],
         }
 
-    # 1. 내부 반복 분석
-    self_repetition, self_flagged = _detect_self_repetition(sentences)
-
-    # 2. 외부 중복 분석
-    external_overlap = None
-    external_flagged = []
-    if reference_contents:
-        external_overlap, external_flagged = _detect_external_overlap(
-            sentences, reference_contents
-        )
-
-    # 3. 클리셰 감지
-    common_phrases, cliche_flagged = _detect_common_phrases(content)
-
-    # 4. 고유 문장 비율 계산
-    flagged_sentence_texts = set()
-    for f in self_flagged:
-        flagged_sentence_texts.add(f["sentence"])
-    for f in external_flagged:
-        flagged_sentence_texts.add(f["sentence"])
-    unique_count = sum(1 for s in sentences if s not in flagged_sentence_texts)
-    unique_ratio = round((unique_count / len(sentences)) * 100, 2)
-
-    # 5. 독창성 점수 계산
-    common_phrases_penalty = min(len(common_phrases) * 5, 50)
-    effective_external = external_overlap if external_overlap is not None else 0.0
-    originality_score = (
-        unique_ratio * 0.5
-        + (100 - self_repetition) * 0.3
-        + (100 - common_phrases_penalty) * 0.2
+    (self_repetition, self_flagged, external_overlap, external_flagged,
+     common_phrases, cliche_flagged, unique_ratio) = (
+        _analyze_all_overlaps(sentences, content, reference_contents)
     )
-    originality_score = round(max(0.0, min(100.0, originality_score)), 2)
 
-    # 6. 등급
-    grade = _calculate_grade(originality_score)
+    originality_score, grade = _compute_originality_score(
+        unique_ratio, self_repetition, common_phrases
+    )
 
-    # 7. 플래그된 문장 통합
-    all_flagged = self_flagged + external_flagged + cliche_flagged
-
-    # 8. 제안 생성
     suggestions = _generate_suggestions(
         self_repetition, external_overlap, common_phrases, unique_ratio
     )
@@ -304,7 +309,7 @@ def check_originality(content: str, reference_contents: list = None) -> dict:
             "external_overlap": external_overlap,
             "unique_ratio": unique_ratio,
         },
-        "flagged_sentences": all_flagged,
+        "flagged_sentences": self_flagged + external_flagged + cliche_flagged,
         "common_phrases": common_phrases,
         "suggestions": suggestions,
     }
