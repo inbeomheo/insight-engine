@@ -115,37 +115,18 @@ def optimize_prompt(style_id: str) -> dict:
     """
     stats = get_feedback_stats(style_id)
 
-    suggestions = []
-    adjusted_temperature = None
-
     if stats['total'] < _MIN_FEEDBACK_FOR_OPTIMIZATION:
-        suggestions.append(
-            f"최적화를 위해 최소 {_MIN_FEEDBACK_FOR_OPTIMIZATION}개 피드백이 필요합니다 "
-            f"(현재: {stats['total']}개)"
-        )
         return {
             'style_id': style_id,
             'stats': stats,
-            'suggestions': suggestions,
+            'suggestions': [
+                f"최적화를 위해 최소 {_MIN_FEEDBACK_FOR_OPTIMIZATION}개 피드백이 필요합니다 "
+                f"(현재: {stats['total']}개)"
+            ],
             'adjusted_temperature': None,
         }
 
-    like_ratio = stats['like_ratio']
-
-    # 만족도가 낮으면 temperature 낮춰서 안정적인 출력 유도
-    if like_ratio < 0.4:
-        adjusted_temperature = -0.1
-        suggestions.append('만족도가 낮습니다. temperature를 낮춰 안정적인 출력을 유도합니다.')
-        suggestions.append('프롬프트에 구체적인 예시를 추가하는 것을 권장합니다.')
-    elif like_ratio < 0.6:
-        suggestions.append('만족도가 보통입니다. 프롬프트 구조 개선을 검토하세요.')
-    else:
-        suggestions.append('만족도가 높습니다. 현재 설정을 유지합니다.')
-
-    # 싫어요에 코멘트가 있으면 수집
-    dislike_comments = _get_dislike_comments(style_id, limit=10)
-    if dislike_comments:
-        suggestions.append(f'최근 부정 피드백 키워드: {", ".join(dislike_comments[:5])}')
+    suggestions, adjusted_temperature = _compute_suggestions(style_id, stats)
 
     return {
         'style_id': style_id,
@@ -153,6 +134,40 @@ def optimize_prompt(style_id: str) -> dict:
         'suggestions': suggestions,
         'adjusted_temperature': adjusted_temperature,
     }
+
+
+# 만족도 구간별 제안 (threshold, temperature_offset, messages)
+_SATISFACTION_TIERS = [
+    (0.4, -0.1, [
+        '만족도가 낮습니다. temperature를 낮춰 안정적인 출력을 유도합니다.',
+        '프롬프트에 구체적인 예시를 추가하는 것을 권장합니다.',
+    ]),
+    (0.6, None, ['만족도가 보통입니다. 프롬프트 구조 개선을 검토하세요.']),
+]
+_HIGH_SATISFACTION_MSG = '만족도가 높습니다. 현재 설정을 유지합니다.'
+
+
+def _compute_suggestions(style_id: str, stats: dict) -> tuple:
+    """만족도 기반 제안과 temperature 조정을 계산합니다."""
+    suggestions = []
+    adjusted_temperature = None
+    like_ratio = stats['like_ratio']
+
+    matched = False
+    for threshold, temp_offset, messages in _SATISFACTION_TIERS:
+        if like_ratio < threshold:
+            adjusted_temperature = temp_offset
+            suggestions.extend(messages)
+            matched = True
+            break
+    if not matched:
+        suggestions.append(_HIGH_SATISFACTION_MSG)
+
+    dislike_comments = _get_dislike_comments(style_id, limit=10)
+    if dislike_comments:
+        suggestions.append(f'최근 부정 피드백 키워드: {", ".join(dislike_comments[:5])}')
+
+    return suggestions, adjusted_temperature
 
 
 def _get_dislike_comments(style_id: str, limit: int = 10) -> list:

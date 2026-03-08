@@ -41,6 +41,14 @@ _PERSPECTIVE_FRAMES = {
 }
 
 
+_EMPTY_RESULT = {
+    'topic': '',
+    'perspectives': [],
+    'discussion_questions': [],
+    'conclusion': '',
+}
+
+
 def generate_debate(topic: str, content: str = '') -> dict:
     """주제에 대한 다각적 관점을 생성합니다.
 
@@ -65,31 +73,19 @@ def generate_debate(topic: str, content: str = '') -> dict:
         }
     """
     if not topic or not topic.strip():
-        return {
-            'topic': '',
-            'perspectives': [],
-            'discussion_questions': [],
-            'conclusion': '',
-        }
+        return dict(_EMPTY_RESULT)
 
     topic = topic.strip()
-
-    # 콘텐츠에서 키 포인트 추출
     content_points = _extract_points(content) if content else []
-
-    perspectives = []
-    for stance in ('pro', 'con', 'neutral'):
-        perspective = _build_perspective(topic, stance, content_points)
-        perspectives.append(perspective)
-
-    discussion_questions = _generate_questions(topic)
-    conclusion = _generate_conclusion(topic)
 
     return {
         'topic': topic,
-        'perspectives': perspectives,
-        'discussion_questions': discussion_questions,
-        'conclusion': conclusion,
+        'perspectives': [
+            _build_perspective(topic, stance, content_points)
+            for stance in ('pro', 'con', 'neutral')
+        ],
+        'discussion_questions': _generate_questions(topic),
+        'conclusion': _generate_conclusion(topic),
     }
 
 
