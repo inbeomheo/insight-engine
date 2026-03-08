@@ -45,32 +45,18 @@ def _parse_sections(content: str) -> List[Dict]:
     return sections
 
 
-def analyze_bullet_density(content: str) -> dict:
-    """불릿 리스트 밀도를 분석합니다.
+_EMPTY_RESULT = {
+    'section_analysis': [],
+    'list_groups': [],
+    'summary': {'total_list_items': 0, 'total_content_lines': 0,
+                'bullet_density': 0.0, 'list_group_count': 0},
+    'score': 50.0,
+    'suggestions': [],
+}
 
-    Returns:
-        section_analysis, list_groups, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'section_analysis': [],
-            'list_groups': [],
-            'summary': {'total_list_items': 0, 'total_content_lines': 0,
-                        'bullet_density': 0.0, 'list_group_count': 0},
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
 
-    # 전체 리스트 항목 수
-    bullet_items = _BULLET_RE.findall(content)
-    numbered_items = _NUMBERED_RE.findall(content)
-    html_items = _HTML_LI_RE.findall(content)
-    total_list_items = len(bullet_items) + len(numbered_items) + len(html_items)
-
-    content_lines = _count_content_lines(content)
-    density = round((total_list_items / content_lines * 100) if content_lines > 0 else 0.0, 1)
-
-    # 리스트 그룹 감지 (연속된 리스트 항목)
+def _detect_list_groups(content: str) -> List[Dict]:
+    """연속된 리스트 항목을 그룹으로 감지합니다."""
     list_groups = []
     lines = content.split('\n')
     in_list = False
@@ -99,23 +85,11 @@ def analyze_bullet_density(content: str) -> dict:
             'item_count': group_items,
             'is_long': group_items > 10,
         })
+    return list_groups
 
-    # 섹션별 분석
-    sections = _parse_sections(content)
-    section_analysis = []
-    for sec in sections:
-        text = '\n'.join(sec['lines'])
-        sec_bullets = len(_BULLET_RE.findall(text)) + len(_NUMBERED_RE.findall(text))
-        sec_lines = sum(1 for l in sec['lines'] if l.strip())
-        sec_density = round((sec_bullets / sec_lines * 100) if sec_lines > 0 else 0.0, 1)
-        section_analysis.append({
-            'section': sec['section'],
-            'list_items': sec_bullets,
-            'content_lines': sec_lines,
-            'density': sec_density,
-        })
 
-    # 점수 계산: 적정 밀도 15-40%
+def _compute_bullet_score(density: float, list_groups: List[Dict]) -> float:
+    """밀도와 긴 리스트 그룹 기반으로 점수를 계산합니다."""
     if density == 0:
         score = 40.0
     elif density < 10:
@@ -131,6 +105,45 @@ def analyze_bullet_density(content: str) -> dict:
     long_groups = [g for g in list_groups if g['is_long']]
     if long_groups:
         score = round(max(0.0, score - len(long_groups) * 10), 1)
+
+    return score
+
+
+def analyze_bullet_density(content: str) -> dict:
+    """불릿 리스트 밀도를 분석합니다.
+
+    Returns:
+        section_analysis, list_groups, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    bullet_items = _BULLET_RE.findall(content)
+    numbered_items = _NUMBERED_RE.findall(content)
+    html_items = _HTML_LI_RE.findall(content)
+    total_list_items = len(bullet_items) + len(numbered_items) + len(html_items)
+
+    content_lines = _count_content_lines(content)
+    density = round((total_list_items / content_lines * 100) if content_lines > 0 else 0.0, 1)
+
+    list_groups = _detect_list_groups(content)
+
+    sections = _parse_sections(content)
+    section_analysis = []
+    for sec in sections:
+        text = '\n'.join(sec['lines'])
+        sec_bullets = len(_BULLET_RE.findall(text)) + len(_NUMBERED_RE.findall(text))
+        sec_lines = sum(1 for l in sec['lines'] if l.strip())
+        sec_density = round((sec_bullets / sec_lines * 100) if sec_lines > 0 else 0.0, 1)
+        section_analysis.append({
+            'section': sec['section'],
+            'list_items': sec_bullets,
+            'content_lines': sec_lines,
+            'density': sec_density,
+        })
+
+    score = _compute_bullet_score(density, list_groups)
+    long_groups = [g for g in list_groups if g['is_long']]
 
     suggestions = _generate_suggestions(
         total_list_items, density, list_groups, long_groups, content_lines

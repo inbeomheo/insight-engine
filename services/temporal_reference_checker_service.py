@@ -54,44 +54,27 @@ def _classify_tense(sentence: str) -> str:
     return max_tense
 
 
-def check_temporal_references(content: str) -> dict:
-    """시제/시간 참조 일관성을 검사합니다.
+_EMPTY_RESULT = {
+    'tense_data': [],
+    'vague_references': [],
+    'summary': {
+        'total_sentences': 0,
+        'tense_distribution': {},
+        'vague_count': 0,
+        'consistency': 0.0,
+        'level': 'none',
+    },
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _classify_all_tenses(sentences: List[str]) -> tuple:
+    """모든 문장의 시제를 분류합니다.
 
     Returns:
-        tense_data, vague_references, summary, score, suggestions를 포함하는 dict
+        (tense_data, tense_counter)
     """
-    if not content or not content.strip():
-        return {
-            'tense_data': [],
-            'vague_references': [],
-            'summary': {
-                'total_sentences': 0,
-                'tense_distribution': {},
-                'vague_count': 0,
-                'consistency': 0.0,
-                'level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {
-            'tense_data': [],
-            'vague_references': [],
-            'summary': {
-                'total_sentences': 0,
-                'tense_distribution': {},
-                'vague_count': 0,
-                'consistency': 0.0,
-                'level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 시제 분류
     tense_data = []
     tense_counter = Counter()
     for sent in sentences:
@@ -101,16 +84,25 @@ def check_temporal_references(content: str) -> dict:
             'text': sent if len(sent) <= 50 else sent[:47] + '...',
             'tense': tense,
         })
+    return tense_data, tense_counter
 
-    # 모호한 시간 표현
+
+def _find_vague_references(content: str) -> List[Dict]:
+    """모호한 시간 표현을 감지합니다."""
     cleaned = _HEADING_RE.sub('', content)
     vague_ko = _VAGUE_TIME.findall(cleaned)
     vague_en = _EN_VAGUE_TIME.findall(cleaned)
-    vague_references = [{'text': v, 'language': 'ko'} for v in vague_ko]
-    vague_references += [{'text': v, 'language': 'en'} for v in vague_en]
-    vague_count = len(vague_references)
+    refs = [{'text': v, 'language': 'ko'} for v in vague_ko]
+    refs += [{'text': v, 'language': 'en'} for v in vague_en]
+    return refs
 
-    # 일관성 계산 (주요 시제 비율)
+
+def _compute_temporal_score(tense_counter: Counter, vague_count: int) -> tuple:
+    """시제 일관성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level, consistency)
+    """
     non_neutral = {k: v for k, v in tense_counter.items() if k != 'neutral'}
     total_tensed = sum(non_neutral.values())
     if total_tensed > 0:
@@ -119,10 +111,6 @@ def check_temporal_references(content: str) -> dict:
     else:
         consistency = 100.0
 
-    # 시제 분포
-    distribution = dict(tense_counter)
-
-    # 레벨
     if consistency >= 80:
         level = 'consistent'
     elif consistency >= 60:
@@ -130,17 +118,31 @@ def check_temporal_references(content: str) -> dict:
     else:
         level = 'inconsistent'
 
-    # 점수
-    score = consistency
-
-    # 모호한 표현 감점
-    vague_penalty = min(20.0, vague_count * 3.0)
-    score -= vague_penalty
-
+    score = consistency - min(20.0, vague_count * 3.0)
     score = round(max(0.0, min(100.0, score)), 1)
 
+    return score, level, consistency
+
+
+def check_temporal_references(content: str) -> dict:
+    """시제/시간 참조 일관성을 검사합니다.
+
+    Returns:
+        tense_data, vague_references, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    tense_data, tense_counter = _classify_all_tenses(sentences)
+    vague_references = _find_vague_references(content)
+    score, level, consistency = _compute_temporal_score(tense_counter, len(vague_references))
+
     suggestions = _generate_suggestions(
-        tense_counter, consistency, level, vague_count, vague_references
+        tense_counter, consistency, level, len(vague_references), vague_references
     )
 
     return {
@@ -148,8 +150,8 @@ def check_temporal_references(content: str) -> dict:
         'vague_references': vague_references[:15],
         'summary': {
             'total_sentences': len(sentences),
-            'tense_distribution': distribution,
-            'vague_count': vague_count,
+            'tense_distribution': dict(tense_counter),
+            'vague_count': len(vague_references),
             'consistency': consistency,
             'level': level,
         },

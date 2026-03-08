@@ -41,70 +41,45 @@ def _extract_emojis(text: str) -> List[str]:
     return emojis
 
 
-def analyze_emoji_usage(content: str) -> dict:
-    """이모지 사용 패턴을 분석합니다.
+_EMPTY_RESULT = {
+    'emoji_list': [],
+    'summary': {
+        'total_emojis': 0, 'unique_emojis': 0, 'emoji_density': 0.0,
+        'level': 'none', 'in_headings': 0, 'in_body': 0,
+    },
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _analyze_distribution(content: str, all_emojis: List[str]) -> tuple:
+    """이모지의 빈도, 위치(제목/본문)를 분석합니다.
 
     Returns:
-        emoji_list, summary, score, suggestions를 포함하는 dict
+        (emoji_list, density, unique_emojis, heading_emojis, body_emojis)
     """
-    if not content or not content.strip():
-        return {
-            'emoji_list': [],
-            'summary': {
-                'total_emojis': 0,
-                'unique_emojis': 0,
-                'emoji_density': 0.0,
-                'level': 'none',
-                'in_headings': 0,
-                'in_body': 0,
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    all_emojis = _extract_emojis(content)
-    total_emojis = len(all_emojis)
-
-    if total_emojis == 0:
-        word_count = len(content.split())
-        return {
-            'emoji_list': [],
-            'summary': {
-                'total_emojis': 0,
-                'unique_emojis': 0,
-                'emoji_density': 0.0,
-                'level': 'none',
-                'in_headings': 0,
-                'in_body': 0,
-            },
-            'score': 100.0,
-            'suggestions': ['이모지가 없습니다. 필요에 따라 적절히 사용하면 가독성을 높일 수 있습니다.'] if word_count > 50 else [],
-        }
-
-    # 단어 수
     word_count = len(content.split())
-    density = round(total_emojis / max(word_count, 1) * 100, 1)
+    density = round(len(all_emojis) / max(word_count, 1) * 100, 1)
 
-    # 고유 이모지
     emoji_counter = Counter(all_emojis)
-    unique_emojis = len(emoji_counter)
-
-    # 이모지 빈도 목록
     emoji_list = [
         {'emoji': emoji, 'count': count}
         for emoji, count in emoji_counter.most_common(20)
     ]
 
-    # 제목 vs 본문 분류
     headings = _HEADING_RE.findall(content)
-    heading_text = ' '.join(headings)
-    heading_emojis = len(_extract_emojis(heading_text))
+    heading_emojis = len(_extract_emojis(' '.join(headings)))
+    body_emojis = len(_extract_emojis(_HEADING_RE.sub('', content)))
 
-    # 본문에서 제목 제거
-    body_text = _HEADING_RE.sub('', content)
-    body_emojis = len(_extract_emojis(body_text))
+    return emoji_list, density, len(emoji_counter), heading_emojis, body_emojis
 
-    # 레벨 판정
+
+def _compute_emoji_score(density: float, total: int, unique: int) -> tuple:
+    """밀도 기반으로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if density <= 1.0:
         level = 'minimal'
     elif density <= 3.0:
@@ -114,7 +89,6 @@ def analyze_emoji_usage(content: str) -> dict:
     else:
         level = 'excessive'
 
-    # 점수 계산
     if density <= 2.0:
         score = 100.0
     elif density <= 4.0:
@@ -124,23 +98,39 @@ def analyze_emoji_usage(content: str) -> dict:
     else:
         score = max(0.0, 50.0 - (density - 8.0) * 5.0)
 
-    # 다양성 보너스: 같은 이모지만 반복하면 감점
-    if total_emojis >= 3 and unique_emojis == 1:
+    if total >= 3 and unique == 1:
         score -= 10.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(density, level, total_emojis, unique_emojis, heading_emojis)
+
+def analyze_emoji_usage(content: str) -> dict:
+    """이모지 사용 패턴을 분석합니다.
+
+    Returns:
+        emoji_list, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    all_emojis = _extract_emojis(content)
+    if not all_emojis:
+        word_count = len(content.split())
+        suggestions = ['이모지가 없습니다. 필요에 따라 적절히 사용하면 가독성을 높일 수 있습니다.'] if word_count > 50 else []
+        return {**_EMPTY_RESULT, 'suggestions': suggestions}
+
+    emoji_list, density, unique_emojis, heading_emojis, body_emojis = (
+        _analyze_distribution(content, all_emojis)
+    )
+    score, level = _compute_emoji_score(density, len(all_emojis), unique_emojis)
+    suggestions = _generate_suggestions(density, level, len(all_emojis), unique_emojis, heading_emojis)
 
     return {
         'emoji_list': emoji_list,
         'summary': {
-            'total_emojis': total_emojis,
-            'unique_emojis': unique_emojis,
-            'emoji_density': density,
-            'level': level,
-            'in_headings': heading_emojis,
-            'in_body': body_emojis,
+            'total_emojis': len(all_emojis), 'unique_emojis': unique_emojis,
+            'emoji_density': density, 'level': level,
+            'in_headings': heading_emojis, 'in_body': body_emojis,
         },
         'score': score,
         'suggestions': suggestions,
