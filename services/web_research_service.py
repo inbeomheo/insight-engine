@@ -89,6 +89,50 @@ def crawl_article(url: str) -> Optional[str]:
         return None
 
 
+def _crawl_articles(search_results: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """검색 결과에서 기사 본문을 병렬 크롤링합니다."""
+    articles = []
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_map = {
+            executor.submit(crawl_article, sr['url']): sr
+            for sr in search_results
+        }
+        for future in as_completed(future_map):
+            sr = future_map[future]
+            text = future.result()
+            if text:
+                articles.append({**sr, 'text': text})
+    return articles
+
+
+def _summarize_articles(articles: List[Dict], model: str) -> List[Dict[str, str]]:
+    """크롤링된 기사들을 병렬 AI 요약합니다."""
+    sources = []
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_map = {}
+        for art in articles:
+            prompt = f'다음 기사를 200자 이내로 핵심만 요약하세요:\n\n{art["text"][:3000]}'
+            fut = executor.submit(
+                ai_service.create_content,
+                content=prompt, model=model,
+                style_prompt='200자 이내 핵심 요약만 출력하세요.',
+                style_id='summary',
+            )
+            future_map[fut] = art
+
+        for future in as_completed(future_map):
+            art = future_map[future]
+            try:
+                result = future.result()
+                sources.append({
+                    'title': art['title'], 'url': art['url'],
+                    'summary': result.get('content', ''),
+                })
+            except Exception as e:
+                logger.warning('기사 요약 실패 (%s): %s', art['url'], e)
+    return sources
+
+
 def research_topic(transcripts: List[str], model: str, max_sources: int = MAX_SEARCH_RESULTS) -> List[Dict[str, str]]:
     """전체 웹 리서치 파이프라인: 키워드 추출 → 검색 → 크롤링 → 요약
 
@@ -108,48 +152,8 @@ def research_topic(transcripts: List[str], model: str, max_sources: int = MAX_SE
     if not search_results:
         return []
 
-    # 기사 크롤링 (병렬)
-    articles = []
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_map = {
-            executor.submit(crawl_article, sr['url']): sr
-            for sr in search_results
-        }
-        for future in as_completed(future_map):
-            sr = future_map[future]
-            text = future.result()
-            if text:
-                articles.append({**sr, 'text': text})
-
+    articles = _crawl_articles(search_results)
     if not articles:
         return []
 
-    # 각 기사 AI 요약 (병렬)
-    sources = []
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_map = {}
-        for art in articles:
-            prompt = (
-                f'다음 기사를 200자 이내로 핵심만 요약하세요:\n\n{art["text"][:3000]}'
-            )
-            fut = executor.submit(
-                ai_service.create_content,
-                content=prompt, model=model,
-                style_prompt='200자 이내 핵심 요약만 출력하세요.',
-                style_id='summary'
-            )
-            future_map[fut] = art
-
-        for future in as_completed(future_map):
-            art = future_map[future]
-            try:
-                result = future.result()
-                sources.append({
-                    'title': art['title'],
-                    'url': art['url'],
-                    'summary': result.get('content', '')
-                })
-            except Exception as e:
-                logger.warning('기사 요약 실패 (%s): %s', art['url'], e)
-
-    return sources
+    return _summarize_articles(articles, model)

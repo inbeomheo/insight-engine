@@ -6,6 +6,7 @@ import json
 import os
 import secrets
 from datetime import datetime, timezone
+from typing import Optional
 
 from services.supabase_service import is_supabase_enabled, get_supabase
 from services.logging_config import ServiceLogger
@@ -103,49 +104,27 @@ class ReferralService:
         }
 
     @staticmethod
-    def apply_referral(new_user_id: str, referral_code: str) -> dict:
-        """
-        추천 코드 적용 — 양측에 크레딧 지급
-
-        Args:
-            new_user_id: 신규 사용자 ID
-            referral_code: 추천 코드
-
-        Returns:
-            {'success': bool, 'referrer_id': str, 'credits_given': int}
-        """
-        from services.usage.credit_service import credit_service
-
-        # 추천인 찾기
-        referrer_id = None
-
+    def _find_referrer(referral_code: str) -> Optional[str]:
+        """추천 코드로 추천인 ID를 검색합니다."""
         if is_supabase_enabled():
             try:
                 client = get_supabase()
                 result = client.table('ie_referrals').select('user_id') \
                     .eq('code', referral_code).maybe_single().execute()
                 if result.data:
-                    referrer_id = result.data['user_id']
+                    return result.data['user_id']
             except Exception as e:
                 logger.error(f"추천 코드 조회 실패: {e}")
         else:
             data = _load_local()
             for uid, info in data.get('codes', {}).items():
                 if info.get('code') == referral_code:
-                    referrer_id = uid
-                    break
+                    return uid
+        return None
 
-        if not referrer_id:
-            return {'success': False, 'error': '유효하지 않은 추천 코드입니다.'}
-
-        if referrer_id == new_user_id:
-            return {'success': False, 'error': '본인의 추천 코드는 사용할 수 없습니다.'}
-
-        # 양측 크레딧 지급
-        credit_service.add_credits(referrer_id, REFERRAL_REWARD_CREDITS, reason='referral_reward')
-        credit_service.add_credits(new_user_id, REFERRAL_REWARD_CREDITS, reason='referral_bonus')
-
-        # 추천 횟수 증가
+    @staticmethod
+    def _increment_count(referrer_id: str) -> None:
+        """추천 횟수를 1 증가시킵니다."""
         if is_supabase_enabled():
             try:
                 client = get_supabase()
@@ -159,6 +138,29 @@ class ReferralService:
                 codes[referrer_id]['referral_count'] = codes[referrer_id].get('referral_count', 0) + 1
                 data['codes'] = codes
                 _save_local(data)
+
+    @staticmethod
+    def apply_referral(new_user_id: str, referral_code: str) -> dict:
+        """추천 코드 적용 — 양측에 크레딧 지급
+
+        Args:
+            new_user_id: 신규 사용자 ID
+            referral_code: 추천 코드
+
+        Returns:
+            {'success': bool, 'referrer_id': str, 'credits_given': int}
+        """
+        from services.usage.credit_service import credit_service
+
+        referrer_id = ReferralService._find_referrer(referral_code)
+        if not referrer_id:
+            return {'success': False, 'error': '유효하지 않은 추천 코드입니다.'}
+        if referrer_id == new_user_id:
+            return {'success': False, 'error': '본인의 추천 코드는 사용할 수 없습니다.'}
+
+        credit_service.add_credits(referrer_id, REFERRAL_REWARD_CREDITS, reason='referral_reward')
+        credit_service.add_credits(new_user_id, REFERRAL_REWARD_CREDITS, reason='referral_bonus')
+        ReferralService._increment_count(referrer_id)
 
         logger.info(f"추천 적용: {new_user_id[:8]}... → 추천인 {referrer_id[:8]}... (+{REFERRAL_REWARD_CREDITS})")
         return {

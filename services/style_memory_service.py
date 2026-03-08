@@ -104,17 +104,40 @@ def get_profile(user_id: str) -> dict:
     return _db_op('get_profile', dict(DEFAULT_PROFILE), operation)
 
 
+def _build_update_data(row: dict, style_id: str, length: str, writing_style: str) -> dict:
+    """기존 프로필에서 업데이트할 데이터를 구성합니다."""
+    existing_styles = row.get('preferred_styles') or []
+    updated_styles = _increment_style_count(existing_styles, style_id)
+    return {
+        'preferred_styles': updated_styles,
+        'preferred_length': _get_dominant_value(updated_styles, 'length', length),
+        'preferred_writing_style': _get_dominant_value(updated_styles, 'writing_style', writing_style),
+        'generation_count': (row.get('generation_count') or 0) + 1,
+        'last_updated': 'now()',
+    }
+
+
+def _build_new_profile_data(user_id: str, style_id: str, length: str, writing_style: str) -> dict:
+    """신규 프로필 데이터를 구성합니다."""
+    return {
+        'user_id': user_id,
+        'preferred_styles': _increment_style_count([], style_id),
+        'preferred_length': length,
+        'preferred_writing_style': writing_style,
+        'tone_keywords': [],
+        'avoid_keywords': [],
+        'custom_instructions': '',
+        'style_memory_enabled': True,
+        'generation_count': 1,
+    }
+
+
 def update_profile(user_id: str, generation_params: dict) -> None:
     """생성 완료 시 사용자 스타일 프로필을 업데이트합니다.
-
-    사용한 스타일/길이/문체 빈도를 추적하여 선호도를 자동 갱신합니다.
-    fire-and-forget 패턴으로 호출해야 합니다 (응답 블로킹 금지).
 
     Args:
         user_id: 업데이트할 사용자 ID
         generation_params: 생성에 사용된 파라미터
-            - style: 사용한 스타일 ID
-            - modifiers: {length, writing_style} 딕셔너리
     """
     if not is_supabase_enabled():
         return
@@ -129,46 +152,35 @@ def update_profile(user_id: str, generation_params: dict) -> None:
     writing_style = modifiers.get('writing_style', 'conversational')
 
     def operation():
-        # 기존 프로필 조회
         result = (
-            supabase.table('ie_style_profiles')
-            .select('*')
-            .eq('user_id', user_id)
-            .limit(1)
-            .execute()
+            supabase.table('ie_style_profiles').select('*')
+            .eq('user_id', user_id).limit(1).execute()
         )
-
         if result.data:
-            # 기존 프로필 업데이트
-            row = result.data[0]
-            existing_styles = row.get('preferred_styles') or []
-            updated_styles = _increment_style_count(existing_styles, style_id)
-            dominant_length = _get_dominant_value(updated_styles, 'length', length)
-            dominant_ws = _get_dominant_value(updated_styles, 'writing_style', writing_style)
-
-            supabase.table('ie_style_profiles').update({
-                'preferred_styles': updated_styles,
-                'preferred_length': dominant_length,
-                'preferred_writing_style': dominant_ws,
-                'generation_count': (row.get('generation_count') or 0) + 1,
-                'last_updated': 'now()',
-            }).eq('user_id', user_id).execute()
+            data = _build_update_data(result.data[0], style_id, length, writing_style)
+            supabase.table('ie_style_profiles').update(data).eq('user_id', user_id).execute()
         else:
-            # 신규 프로필 생성
-            initial_styles = _increment_style_count([], style_id)
-            supabase.table('ie_style_profiles').insert({
-                'user_id': user_id,
-                'preferred_styles': initial_styles,
-                'preferred_length': length,
-                'preferred_writing_style': writing_style,
-                'tone_keywords': [],
-                'avoid_keywords': [],
-                'custom_instructions': '',
-                'style_memory_enabled': True,
-                'generation_count': 1,
-            }).execute()
+            supabase.table('ie_style_profiles').insert(
+                _build_new_profile_data(user_id, style_id, length, writing_style)
+            ).execute()
 
     _db_op('update_profile', None, operation)
+
+
+def _sanitize_preferences(preferences: dict) -> dict:
+    """선호도 입력을 검증하고 허용된 필드만 추출합니다."""
+    update_data = {}
+    if 'avoid_keywords' in preferences:
+        keywords = preferences['avoid_keywords']
+        if isinstance(keywords, list):
+            update_data['avoid_keywords'] = [str(k)[:20] for k in keywords if k][:20]
+    if 'custom_instructions' in preferences:
+        instructions = preferences['custom_instructions']
+        if isinstance(instructions, str):
+            update_data['custom_instructions'] = instructions.strip()[:500]
+    if 'style_memory_enabled' in preferences:
+        update_data['style_memory_enabled'] = bool(preferences['style_memory_enabled'])
+    return update_data
 
 
 def save_user_preferences(user_id: str, preferences: dict) -> bool:
@@ -177,9 +189,6 @@ def save_user_preferences(user_id: str, preferences: dict) -> bool:
     Args:
         user_id: 저장할 사용자 ID
         preferences: 변경할 필드
-            - avoid_keywords: list[str] — 피하고 싶은 표현
-            - custom_instructions: str — 커스텀 지시사항
-            - style_memory_enabled: bool — 기능 활성화 여부
 
     Returns:
         bool: 저장 성공 여부
@@ -191,48 +200,21 @@ def save_user_preferences(user_id: str, preferences: dict) -> bool:
     if not supabase:
         return False
 
-    # 허용된 필드만 업데이트
-    allowed_fields = {'avoid_keywords', 'custom_instructions', 'style_memory_enabled'}
-    update_data = {}
-
-    if 'avoid_keywords' in preferences:
-        keywords = preferences['avoid_keywords']
-        if isinstance(keywords, list):
-            # 각 키워드: 문자열, 최대 20자, 최대 20개
-            update_data['avoid_keywords'] = [
-                str(k)[:20] for k in keywords if k
-            ][:20]
-
-    if 'custom_instructions' in preferences:
-        instructions = preferences['custom_instructions']
-        if isinstance(instructions, str):
-            update_data['custom_instructions'] = instructions.strip()[:500]
-
-    if 'style_memory_enabled' in preferences:
-        update_data['style_memory_enabled'] = bool(preferences['style_memory_enabled'])
-
+    update_data = _sanitize_preferences(preferences)
     if not update_data:
         return False
 
     def operation():
-        # upsert: 없으면 생성, 있으면 업데이트
         check = (
-            supabase.table('ie_style_profiles')
-            .select('user_id')
-            .eq('user_id', user_id)
-            .limit(1)
-            .execute()
+            supabase.table('ie_style_profiles').select('user_id')
+            .eq('user_id', user_id).limit(1).execute()
         )
-
         if check.data:
             supabase.table('ie_style_profiles').update(update_data).eq('user_id', user_id).execute()
         else:
             supabase.table('ie_style_profiles').insert({
-                **DEFAULT_PROFILE,
-                'user_id': user_id,
-                **update_data,
+                **DEFAULT_PROFILE, 'user_id': user_id, **update_data,
             }).execute()
-
         return True
 
     return _db_op('save_user_preferences', False, operation) or False
