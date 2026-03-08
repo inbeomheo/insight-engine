@@ -138,6 +138,34 @@ def _find_drifts(sections: List[Dict]) -> List[Dict]:
     return drifts
 
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {'total_sections': 0, 'drift_count': 0, 'level': 'none'},
+    'drift_items': [],
+    'suggestions': [],
+}
+
+
+def _classify_drift_level(drift_count: int) -> str:
+    """드리프트 건수에서 레벨을 분류합니다."""
+    if drift_count == 0:
+        return 'consistent'
+    elif drift_count <= 2:
+        return 'minor'
+    elif drift_count <= 5:
+        return 'moderate'
+    return 'drifting'
+
+
+def _compute_drift_score(drift_count: int, section_count: int) -> float:
+    """드리프트 건수와 섹션 수로 점수를 계산합니다 (0~100)."""
+    if drift_count == 0:
+        return 100.0
+    drift_ratio = drift_count / max(1, section_count)
+    score = 100.0 - (drift_count * 12.0) - (drift_ratio * 20.0)
+    return round(max(0.0, min(100.0, max(10.0, score))), 1)
+
+
 def analyze_terminology_drift(content: str) -> dict:
     """섹션 간 용어 혼용(드리프트)을 분석합니다.
 
@@ -145,65 +173,27 @@ def analyze_terminology_drift(content: str) -> dict:
         score, summary, drift_items, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sections': 0,
-                'drift_count': 0,
-                'level': 'none',
-            },
-            'drift_items': [],
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     sections = _split_sections(content)
-
     if len(sections) < 2:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sections': len(sections),
-                'drift_count': 0,
-                'level': 'none',
-            },
-            'drift_items': [],
-            'suggestions': [],
-        }
+        return {**_EMPTY_RESULT, 'summary': {
+            'total_sections': len(sections), 'drift_count': 0, 'level': 'none',
+        }}
 
     drifts = _find_drifts(sections)
     drift_count = len(drifts)
-
-    # 레벨 판정
-    if drift_count == 0:
-        level = 'consistent'
-    elif drift_count <= 2:
-        level = 'minor'
-    elif drift_count <= 5:
-        level = 'moderate'
-    else:
-        level = 'drifting'
-
-    # 연속 점수 — 드리프트 건수 및 섹션 수 기반
-    if drift_count == 0:
-        score = 100.0
-    else:
-        drift_ratio = drift_count / max(1, len(sections))
-        score = 100.0 - (drift_count * 12.0) - (drift_ratio * 20.0)
-        score = max(10.0, score)
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(drifts, level, len(sections))
+    level = _classify_drift_level(drift_count)
 
     return {
-        'score': score,
+        'score': _compute_drift_score(drift_count, len(sections)),
         'summary': {
             'total_sections': len(sections),
             'drift_count': drift_count,
             'level': level,
         },
         'drift_items': drifts[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(drifts, level, len(sections)),
     }
 
 

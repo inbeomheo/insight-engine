@@ -81,6 +81,26 @@ _ANSWER_SIGNAL_PATTERNS = [
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 
 
+_EMPTY_RESULT = {
+    'questions': [],
+    'summary': {'total_questions': 0, 'answered': 0, 'unanswered': 0},
+    'closure_score': 100.0,
+    'suggestions': [],
+}
+
+
+def _deduplicate_questions(questions: list) -> list:
+    """질문 목록에서 동일 텍스트 중복을 제거합니다."""
+    seen = set()
+    unique = []
+    for q in questions:
+        key = q['question'].strip()
+        if key not in seen:
+            seen.add(key)
+            unique.append(q)
+    return unique
+
+
 def check_qa_closure(content: str) -> dict:
     """콘텐츠 내 질문-답변 완결성을 검사합니다.
 
@@ -88,66 +108,28 @@ def check_qa_closure(content: str) -> dict:
         content: 분석할 마크다운/텍스트 콘텐츠
 
     Returns:
-        {
-            "questions": [{"question": str, "source": str, "has_answer": bool,
-                           "answer_excerpt": str, "status": str}],
-            "summary": {"total_questions": int, "answered": int, "unanswered": int},
-            "closure_score": float,  # 0-100
-            "suggestions": list[str],
-        }
+        questions, summary, closure_score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'questions': [],
-            'summary': {'total_questions': 0, 'answered': 0, 'unanswered': 0},
-            'closure_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     lines = content.split('\n')
-    questions = []
+    questions = _deduplicate_questions(
+        _detect_heading_questions(lines) + _detect_body_questions(lines)
+    )
 
-    # 1단계: 헤딩에서 질문 감지
-    heading_questions = _detect_heading_questions(lines)
-    questions.extend(heading_questions)
-
-    # 2단계: 본문에서 질문 감지
-    body_questions = _detect_body_questions(lines)
-    questions.extend(body_questions)
-
-    # 중복 제거 (동일 질문 텍스트)
-    seen = set()
-    unique_questions = []
-    for q in questions:
-        key = q['question'].strip()
-        if key not in seen:
-            seen.add(key)
-            unique_questions.append(q)
-    questions = unique_questions
-
-    # 3단계: 각 질문에 대해 답변 존재 여부 확인
     for q_info in questions:
         _check_answer_exists(q_info, lines)
 
-    # 4단계: 요약 및 점수 계산
     total = len(questions)
     answered = sum(1 for q in questions if q['has_answer'])
     unanswered = total - answered
 
-    closure_score = (answered / total * 100.0) if total > 0 else 100.0
-    closure_score = round(closure_score, 1)
-
-    suggestions = _generate_suggestions(questions, total, answered, unanswered)
-
     return {
         'questions': questions,
-        'summary': {
-            'total_questions': total,
-            'answered': answered,
-            'unanswered': unanswered,
-        },
-        'closure_score': closure_score,
-        'suggestions': suggestions,
+        'summary': {'total_questions': total, 'answered': answered, 'unanswered': unanswered},
+        'closure_score': round((answered / total * 100.0) if total > 0 else 100.0, 1),
+        'suggestions': _generate_suggestions(questions, total, answered, unanswered),
     }
 
 

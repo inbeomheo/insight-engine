@@ -60,6 +60,18 @@ def _compute_speakability_score(factors: dict) -> float:
     return round(max(0.0, min(100.0, score)), 1)
 
 
+def _collect_factors(content: str, sentences: list) -> dict:
+    """5가지 음성 적합성 요소를 수집합니다."""
+    total_chars = len(content.strip())
+    return {
+        'sentence_length': _analyze_sentence_length(sentences),
+        'abbreviation_density': _analyze_abbreviations(content, total_chars),
+        'number_density': _analyze_numbers(content, total_chars),
+        'parenthetical_density': _analyze_parentheticals(content, sentences),
+        'complex_structure': _analyze_complex_structure(content, sentences),
+    }
+
+
 def analyze_speakability(content: str) -> dict:
     """콘텐츠의 음성 적합성을 분석합니다.
 
@@ -67,65 +79,23 @@ def analyze_speakability(content: str) -> dict:
         content: 분석할 콘텐츠
 
     Returns:
-        {
-            "factors": {
-                "sentence_length": {"score": float, "avg_length": float},
-                "abbreviation_density": {"score": float, "count": int, "density": float},
-                "number_density": {"score": float, "count": int, "density": float},
-                "parenthetical_density": {"score": float, "count": int},
-                "complex_structure": {"score": float, "issues": list}
-            },
-            "speakability_score": float,
-            "problem_sentences": [{"sentence": str, "reason": str}],
-            "suggestions": list[str]
-        }
+        factors, speakability_score, problem_sentences, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
 
-    # 문장 분리
     sentences = [s.strip() for s in _SENTENCE_SPLIT_RE.split(content) if len(s.strip()) >= 5]
     if not sentences:
         sentences = [content.strip()]
 
-    total_chars = len(content.strip())
-
-    # 1. 문장 평균 길이 분석
-    sentence_length_factor = _analyze_sentence_length(sentences)
-
-    # 2. 약어 밀도 분석
-    abbreviation_factor = _analyze_abbreviations(content, total_chars)
-
-    # 3. 숫자 밀도 분석
-    number_factor = _analyze_numbers(content, total_chars)
-
-    # 4. 괄호 표현 밀도 분석
-    parenthetical_factor = _analyze_parentheticals(content, sentences)
-
-    # 5. 복잡한 구조 분석
-    complex_factor = _analyze_complex_structure(content, sentences)
-
-    factors = {
-        'sentence_length': sentence_length_factor,
-        'abbreviation_density': abbreviation_factor,
-        'number_density': number_factor,
-        'parenthetical_density': parenthetical_factor,
-        'complex_structure': complex_factor,
-    }
-
-    speakability_score = _compute_speakability_score(factors)
-
-    # 문제 문장 식별
+    factors = _collect_factors(content, sentences)
     problem_sentences = _identify_problem_sentences(sentences, content)
-
-    # 개선 제안
-    suggestions = _generate_suggestions(factors, problem_sentences)
 
     return {
         'factors': factors,
-        'speakability_score': speakability_score,
+        'speakability_score': _compute_speakability_score(factors),
         'problem_sentences': problem_sentences,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(factors, problem_sentences),
     }
 
 
