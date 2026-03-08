@@ -446,40 +446,46 @@ def _generate_suggestions(opportunities: list[dict], format_analysis: dict) -> l
     return suggestions
 
 
-def analyze_serp_features(content: str, target_keyword: str = '') -> dict:
-    """
-    콘텐츠의 SERP Feature 노출 가능성을 분석한다.
+_EMPTY_FORMAT = {
+    "has_definition": False,
+    "has_lists": False,
+    "has_tables": False,
+    "has_steps": False,
+    "has_faq": False,
+    "has_how_to": False,
+}
 
-    Args:
-        content: 분석할 콘텐츠 텍스트 (마크다운 지원)
-        target_keyword: 타겟 키워드 (선택)
+_EMPTY_RESULT = {
+    "opportunities": [],
+    "overall_serp_score": 0.0,
+    "best_opportunity": "",
+    "content_format_analysis": _EMPTY_FORMAT,
+    "suggestions": ["콘텐츠가 비어 있습니다. 분석할 내용을 입력하세요."],
+}
+
+
+def _compute_serp_summary(opportunities: list[dict]) -> tuple:
+    """SERP 기회 목록에서 전체 점수와 최적 기회를 계산합니다.
 
     Returns:
-        SERP 기회 분석 결과 딕셔너리
+        (overall_score, best_opportunity)
     """
-    # 빈 콘텐츠 / None 처리
+    readiness_values = [o["current_readiness"] for o in opportunities]
+    overall_score = sum(readiness_values) / len(readiness_values) if readiness_values else 0.0
+    overall_score = round(_clamp(overall_score), 1)
+
+    best_opp = max(opportunities, key=lambda o: o["current_readiness"])
+    return overall_score, best_opp["feature"]
+
+
+def analyze_serp_features(content: str, target_keyword: str = '') -> dict:
+    """콘텐츠의 SERP Feature 노출 가능성을 분석한다."""
     if not content or not content.strip():
-        return {
-            "opportunities": [],
-            "overall_serp_score": 0.0,
-            "best_opportunity": "",
-            "content_format_analysis": {
-                "has_definition": False,
-                "has_lists": False,
-                "has_tables": False,
-                "has_steps": False,
-                "has_faq": False,
-                "has_how_to": False,
-            },
-            "suggestions": ["콘텐츠가 비어 있습니다. 분석할 내용을 입력하세요."],
-        }
+        return dict(_EMPTY_RESULT)
 
     content = content.strip()
-
-    # 문장 분리 (마침표, 느낌표, 물음표 기준)
     sentences = [s.strip() for s in re.split(r'[.!?]\s+', content) if s.strip()]
 
-    # 7가지 SERP 기능 분석
     opportunities = [
         _analyze_featured_snippet(content, sentences),
         _analyze_paa(content),
@@ -490,19 +496,8 @@ def analyze_serp_features(content: str, target_keyword: str = '') -> dict:
         _analyze_faq(content),
     ]
 
-    # overall_serp_score: 모든 기회의 readiness 평균
-    readiness_values = [o["current_readiness"] for o in opportunities]
-    overall_score = sum(readiness_values) / len(readiness_values) if readiness_values else 0.0
-    overall_score = round(_clamp(overall_score), 1)
-
-    # best_opportunity: 가장 높은 readiness의 feature
-    best_opp = max(opportunities, key=lambda o: o["current_readiness"])
-    best_opportunity = best_opp["feature"]
-
-    # 콘텐츠 형식 분석
+    overall_score, best_opportunity = _compute_serp_summary(opportunities)
     format_analysis = _analyze_content_format(content)
-
-    # 종합 제안
     suggestions = _generate_suggestions(opportunities, format_analysis)
 
     logger.debug(

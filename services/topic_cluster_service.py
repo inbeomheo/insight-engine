@@ -245,6 +245,59 @@ def _extract_all_keywords(
     return content_keywords, topic_to_contents, pillar_candidates
 
 
+def _collect_supporting(
+    contents: list,
+    available_cids: Dict[str, int],
+    pillar_content_id: str,
+    pillar_kws: set,
+    content_keywords: Dict[str, Counter],
+) -> List[Dict]:
+    """pillar 콘텐츠에 대한 supporting 콘텐츠 목록을 수집합니다."""
+    supporting = []
+    for cid, freq in available_cids.items():
+        if cid == pillar_content_id:
+            continue
+        support_kws = set(content_keywords.get(cid, {}).keys())
+        shared_kws = sorted(pillar_kws & support_kws)
+        total_support_kws = len(support_kws) if support_kws else 1
+        relevance = min(round(len(shared_kws) / total_support_kws, 2), 1.0)
+
+        title = ""
+        for item in contents:
+            if item.get("id") == cid:
+                title = item.get("title", "")
+                break
+
+        supporting.append({
+            "id": cid, "title": title,
+            "relevance": relevance, "shared_keywords": shared_kws,
+        })
+    return supporting
+
+
+def _compute_cluster_strength(
+    contents: list,
+    supporting: List[Dict],
+    pillar_content_id: str,
+    pillar_topic: str,
+) -> float:
+    """클러스터 결합 강도를 계산합니다 (0~100)."""
+    all_shared_kws: set = set()
+    for s in supporting:
+        all_shared_kws.update(s["shared_keywords"])
+    kw_score = min(len(all_shared_kws) * 10, 50)
+    support_score = min(len(supporting) * 10, 30)
+
+    title_bonus = 0
+    for item in contents:
+        if item.get("id") == pillar_content_id:
+            if pillar_topic in item.get("title", ""):
+                title_bonus = 20
+            break
+
+    return float(max(min(kw_score + support_score + title_bonus, 100), 0))
+
+
 def _build_clusters_greedy(
     contents: list,
     content_keywords: Dict[str, Counter],
@@ -269,47 +322,18 @@ def _build_clusters_greedy(
         pillar_content_id = max(available_cids, key=available_cids.get)
         pillar_kws = set(content_keywords.get(pillar_content_id, {}).keys())
 
-        supporting = []
-        for cid, freq in available_cids.items():
-            if cid == pillar_content_id:
-                continue
-            support_kws = set(content_keywords.get(cid, {}).keys())
-            shared_kws = sorted(pillar_kws & support_kws)
-            total_support_kws = len(support_kws) if support_kws else 1
-            relevance = min(round(len(shared_kws) / total_support_kws, 2), 1.0)
-
-            title = ""
-            for item in contents:
-                if item.get("id") == cid:
-                    title = item.get("title", "")
-                    break
-
-            supporting.append({
-                "id": cid, "title": title,
-                "relevance": relevance, "shared_keywords": shared_kws,
-            })
-
-        # cluster_strength 계산
-        all_shared_kws: set = set()
-        for s in supporting:
-            all_shared_kws.update(s["shared_keywords"])
-        kw_score = min(len(all_shared_kws) * 10, 50)
-        support_score = min(len(supporting) * 10, 30)
-
-        title_bonus = 0
-        for item in contents:
-            if item.get("id") == pillar_content_id:
-                if pillar_topic in item.get("title", ""):
-                    title_bonus = 20
-                break
-
-        cluster_strength = max(min(kw_score + support_score + title_bonus, 100), 0)
+        supporting = _collect_supporting(
+            contents, available_cids, pillar_content_id, pillar_kws, content_keywords,
+        )
+        strength = _compute_cluster_strength(
+            contents, supporting, pillar_content_id, pillar_topic,
+        )
 
         clusters.append({
             "pillar_topic": pillar_topic,
             "pillar_content_id": pillar_content_id,
             "supporting_contents": supporting,
-            "cluster_strength": float(cluster_strength),
+            "cluster_strength": strength,
         })
         clustered_content_ids.add(pillar_content_id)
         for s in supporting:

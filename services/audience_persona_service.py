@@ -388,6 +388,50 @@ def _generate_suggestions(
 # 공개 API
 # ---------------------------------------------------------------------------
 
+_EMPTY_RESULT = {
+    "persona": {
+        "expertise_level": "beginner",
+        "interests": [],
+        "reading_style": "scanner",
+        "age_group": "middle",
+        "professional_field": "일반 직장인",
+    },
+    "confidence": 0.0,
+    "content_alignment": {
+        "complexity_match": 0.0,
+        "vocabulary_match": 0.0,
+        "format_match": 0.0,
+    },
+    "indicators": ["콘텐츠가 비어 있어 기본값 사용"],
+    "suggestions": ["분석할 콘텐츠를 제공해주세요"],
+}
+
+
+def _detect_all_traits(content: str) -> tuple:
+    """모든 페르소나 특성을 감지합니다.
+
+    Returns:
+        (expertise, interests, reading_style, age_group, field, all_indicators)
+    """
+    all_indicators: list[str] = []
+
+    expertise, exp_ind = _detect_expertise_level(content)
+    all_indicators.extend(exp_ind)
+
+    interests = _extract_interests(content)
+
+    reading_style, rs_ind = _detect_reading_style(content)
+    all_indicators.extend(rs_ind)
+
+    age_group, ag_ind = _detect_age_group(content)
+    all_indicators.extend(ag_ind)
+
+    field, pf_ind = _detect_professional_field(content)
+    all_indicators.extend(pf_ind)
+
+    return expertise, interests, reading_style, age_group, field, all_indicators
+
+
 def build_persona(content: str) -> dict:
     """콘텐츠를 분석하여 타겟 독자 페르소나를 규칙 기반으로 추론한다.
 
@@ -397,55 +441,10 @@ def build_persona(content: str) -> dict:
     Returns:
         페르소나 정보, 신뢰도, 콘텐츠 정합성, 추론 근거, 제안 사항을 담은 dict.
     """
-    # None / 빈 문자열 방어
     if not content or not content.strip():
-        return {
-            "persona": {
-                "expertise_level": "beginner",
-                "interests": [],
-                "reading_style": "scanner",
-                "age_group": "middle",
-                "professional_field": "일반 직장인",
-            },
-            "confidence": 0.0,
-            "content_alignment": {
-                "complexity_match": 0.0,
-                "vocabulary_match": 0.0,
-                "format_match": 0.0,
-            },
-            "indicators": ["콘텐츠가 비어 있어 기본값 사용"],
-            "suggestions": ["분석할 콘텐츠를 제공해주세요"],
-        }
+        return dict(_EMPTY_RESULT)
 
-    all_indicators: list[str] = []
-
-    # 1. 전문성 수준
-    expertise, exp_ind = _detect_expertise_level(content)
-    all_indicators.extend(exp_ind)
-
-    # 2. 관심사
-    interests = _extract_interests(content)
-
-    # 3. 독서 스타일
-    reading_style, rs_ind = _detect_reading_style(content)
-    all_indicators.extend(rs_ind)
-
-    # 4. 연령대
-    age_group, ag_ind = _detect_age_group(content)
-    all_indicators.extend(ag_ind)
-
-    # 5. 직업군
-    field, pf_ind = _detect_professional_field(content)
-    all_indicators.extend(pf_ind)
-
-    # 6. 신뢰도
-    confidence = _calculate_confidence(content, expertise, field, reading_style)
-
-    # 7. 콘텐츠 정합성
-    alignment = _calculate_content_alignment(content, expertise, reading_style)
-
-    # 8. 제안 사항
-    suggestions = _generate_suggestions(expertise, reading_style, age_group, field)
+    expertise, interests, reading_style, age_group, field, indicators = _detect_all_traits(content)
 
     return {
         "persona": {
@@ -455,8 +454,8 @@ def build_persona(content: str) -> dict:
             "age_group": age_group,
             "professional_field": field,
         },
-        "confidence": confidence,
-        "content_alignment": alignment,
-        "indicators": all_indicators,
-        "suggestions": suggestions,
+        "confidence": _calculate_confidence(content, expertise, field, reading_style),
+        "content_alignment": _calculate_content_alignment(content, expertise, reading_style),
+        "indicators": indicators,
+        "suggestions": _generate_suggestions(expertise, reading_style, age_group, field),
     }
