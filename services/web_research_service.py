@@ -1,6 +1,7 @@
 """웹 리서치 서비스 — 주제 키워드 검색 → 기사 크롤링 → AI 요약"""
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional
 
 import trafilatura
 from duckduckgo_search import DDGS
@@ -13,7 +14,7 @@ MAX_SEARCH_RESULTS = 5
 MAX_ARTICLE_LENGTH = 5000
 
 
-def extract_keywords(transcripts, model):
+def extract_keywords(transcripts: List[str], model: str) -> List[str]:
     """자막들에서 핵심 검색 키워드 3~5개 추출
 
     Args:
@@ -43,7 +44,7 @@ def extract_keywords(transcripts, model):
         return []
 
 
-def search_web(keywords, max_results=MAX_SEARCH_RESULTS):
+def search_web(keywords: List[str], max_results: int = MAX_SEARCH_RESULTS) -> List[Dict[str, str]]:
     """DuckDuckGo로 키워드 검색
 
     Args:
@@ -66,7 +67,7 @@ def search_web(keywords, max_results=MAX_SEARCH_RESULTS):
         return []
 
 
-def crawl_article(url):
+def crawl_article(url: str) -> Optional[str]:
     """trafilatura로 기사 본문 추출
 
     Args:
@@ -88,7 +89,7 @@ def crawl_article(url):
         return None
 
 
-def research_topic(transcripts, model, max_sources=MAX_SEARCH_RESULTS):
+def research_topic(transcripts: List[str], model: str, max_sources: int = MAX_SEARCH_RESULTS) -> List[Dict[str, str]]:
     """전체 웹 리서치 파이프라인: 키워드 추출 → 검색 → 크롤링 → 요약
 
     Args:

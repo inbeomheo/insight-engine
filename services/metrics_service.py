@@ -5,6 +5,7 @@ prometheus_client 미설치 시 노옵(no-op) 폴백
 import time
 import logging
 from functools import wraps
+from typing import Any, Callable, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ else:
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
 
-def record_http_request(method: str, endpoint: str, status_code: int, duration_s: float):
+def record_http_request(method: str, endpoint: str, status_code: int, duration_s: float) -> None:
     """HTTP 요청 메트릭 기록"""
     HTTP_REQUESTS_TOTAL.labels(
         method=method, endpoint=endpoint, status_code=str(status_code)
@@ -122,34 +123,34 @@ def record_http_request(method: str, endpoint: str, status_code: int, duration_s
     HTTP_REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration_s)
 
 
-def record_ai_generation(style: str, provider: str, status: str, duration_s: float):
+def record_ai_generation(style: str, provider: str, status: str, duration_s: float) -> None:
     """AI 생성 메트릭 기록"""
     AI_GENERATION_TOTAL.labels(style=style, provider=provider, status=status).inc()
     if status == 'success':
         AI_GENERATION_DURATION.labels(style=style, provider=provider).observe(duration_s)
 
 
-def record_cache_hit(cache_type: str = 'ai'):
+def record_cache_hit(cache_type: str = 'ai') -> None:
     """캐시 히트 카운터 증가"""
     CACHE_HITS.labels(cache_type=cache_type).inc()
 
 
-def record_cache_miss(cache_type: str = 'ai'):
+def record_cache_miss(cache_type: str = 'ai') -> None:
     """캐시 미스 카운터 증가"""
     CACHE_MISSES.labels(cache_type=cache_type).inc()
 
 
-def record_error(error_type: str, service: str = 'unknown'):
+def record_error(error_type: str, service: str = 'unknown') -> None:
     """에러 카운터 증가"""
     ERRORS_TOTAL.labels(error_type=error_type, service=service).inc()
 
 
-def record_transcript_source(source: str):
+def record_transcript_source(source: str) -> None:
     """자막 추출 소스별 카운터 증가"""
     TRANSCRIPT_SOURCE.labels(source=source).inc()
 
 
-def get_metrics_output():
+def get_metrics_output() -> Tuple[bytes, str]:
     """Prometheus 텍스트 포맷 메트릭 반환"""
     if _PROMETHEUS_AVAILABLE:
         return generate_latest(REGISTRY), CONTENT_TYPE_LATEST
@@ -158,7 +159,7 @@ def get_metrics_output():
 
 # ── Flask 미들웨어 데코레이터 ─────────────────────────────────────────────────
 
-def track_request_metrics(f):
+def track_request_metrics(f: Callable) -> Callable:
     """Flask 라우트에 HTTP 메트릭 자동 기록 데코레이터"""
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -189,7 +190,7 @@ def track_request_metrics(f):
     return wrapper
 
 
-def init_metrics_endpoint(app):
+def init_metrics_endpoint(app: Any) -> None:
     """Flask 앱에 /metrics 엔드포인트 등록"""
     @app.route('/metrics')
     def metrics_endpoint():

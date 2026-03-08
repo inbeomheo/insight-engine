@@ -7,12 +7,13 @@ import json
 import os
 import sqlite3
 import time
+from typing import Any, Dict, Optional
 
 
 class AICacheService:
     """SQLite 기반 AI 생성 결과 캐시"""
 
-    def __init__(self, db_path, ttl_days=30, max_size_mb=512):
+    def __init__(self, db_path: str, ttl_days: int = 30, max_size_mb: int = 512) -> None:
         self.db_path = db_path
         self.ttl_seconds = ttl_days * 86400
         self.max_size_bytes = max_size_mb * 1024 * 1024
@@ -20,14 +21,14 @@ class AICacheService:
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self._init_db()
 
-    def _get_conn(self):
+    def _get_conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=5000")
         return conn
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         with self._get_conn() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS ai_cache (
@@ -47,12 +48,12 @@ class AICacheService:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ai_cache_accessed ON ai_cache(accessed_at)")
 
     @staticmethod
-    def make_key(video_id, style_id, model, length='medium', writing_style='conversational'):
+    def make_key(video_id: str, style_id: str, model: str, length: str = 'medium', writing_style: str = 'conversational') -> str:
         """캐시 키 생성 (SHA256)"""
         raw = f"{video_id}|{style_id}|{model}|{length}|{writing_style}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
-    def get(self, cache_key):
+    def get(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """캐시에서 결과 조회. TTL 만료 시 None 반환."""
         now = time.time()
         with self._get_conn() as conn:
@@ -76,7 +77,7 @@ class AICacheService:
             )
             return json.loads(row['result_json'])
 
-    def put(self, cache_key, video_id, style_id, model, length, writing_style, result):
+    def put(self, cache_key: str, video_id: str, style_id: str, model: str, length: str, writing_style: str, result: Dict[str, Any]) -> None:
         """캐시에 결과 저장. 용량 초과 시 LRU eviction."""
         now = time.time()
         result_json = json.dumps(result, ensure_ascii=False)
@@ -93,7 +94,7 @@ class AICacheService:
 
         self._evict_if_needed()
 
-    def _evict_if_needed(self):
+    def _evict_if_needed(self) -> None:
         """총 용량이 max_size_bytes 초과 시 오래된 항목 20% 삭제"""
         with self._get_conn() as conn:
             total = conn.execute("SELECT COALESCE(SUM(size_bytes), 0) AS total FROM ai_cache").fetchone()['total']
@@ -108,7 +109,7 @@ class AICacheService:
                 )
             """, (delete_count,))
 
-    def get_stats(self):
+    def get_stats(self) -> Dict[str, Any]:
         """캐시 통계 반환"""
         with self._get_conn() as conn:
             row = conn.execute("""
@@ -124,7 +125,7 @@ class AICacheService:
                 'ttl_days': self.ttl_seconds // 86400,
             }
 
-    def clear(self, video_id=None):
+    def clear(self, video_id: Optional[str] = None) -> int:
         """캐시 삭제. video_id 지정 시 해당 영상만."""
         with self._get_conn() as conn:
             if video_id:
@@ -133,7 +134,7 @@ class AICacheService:
                 cursor = conn.execute("DELETE FROM ai_cache")
             return cursor.rowcount
 
-    def purge_expired(self):
+    def purge_expired(self) -> int:
         """만료된 항목 정리"""
         cutoff = time.time() - self.ttl_seconds
         with self._get_conn() as conn:
