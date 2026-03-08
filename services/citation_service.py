@@ -5,7 +5,7 @@
 실제 자막 범위와 대조 검증하며, YouTube 타임스탬프 링크로 변환합니다.
 """
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 
 # [MM:SS] 또는 [HH:MM:SS] 패턴

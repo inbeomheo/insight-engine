@@ -2,7 +2,6 @@
 Zapier 웹훅 강화 서비스 (F6-22)
 기존 WebhookService를 확장 — 이벤트별 웹훅 URL 분리 및 필터링 지원
 """
-import threading
 from typing import Any
 
 from services.webhook_service import WebhookService, _validate_webhook_url
