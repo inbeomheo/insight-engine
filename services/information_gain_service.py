@@ -7,7 +7,7 @@ AI API 호출 없이 규칙 기반으로 동작합니다.
 """
 import re
 import logging
-from collections import Counter
+
 
 logger = logging.getLogger(__name__)
 

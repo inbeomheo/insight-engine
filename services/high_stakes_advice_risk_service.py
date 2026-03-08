@@ -6,7 +6,7 @@ High-Stakes Advice Risk Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 # YMYL 도메인별 키워드
 _YMYL_DOMAINS = {

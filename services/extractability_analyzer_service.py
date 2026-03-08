@@ -6,7 +6,7 @@ AI 답변/요약에 인용되기 쉬운 "독립형 설명" 비율을 평가합�
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 
