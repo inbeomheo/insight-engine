@@ -71,52 +71,50 @@ def export_to_gdocs(title: str, content: str, access_token: str) -> dict:
     }
 
 
+def _parse_md_line(stripped: str) -> tuple:
+    """마크다운 한 줄을 파싱하여 (text, heading_level)을 반환합니다."""
+    heading_level = 0
+    text = stripped
+
+    if stripped.startswith('### '):
+        heading_level = 3
+        text = stripped[4:]
+    elif stripped.startswith('## '):
+        heading_level = 2
+        text = stripped[3:]
+    elif stripped.startswith('# '):
+        heading_level = 1
+        text = stripped[2:]
+    elif stripped.startswith('> '):
+        text = stripped[2:]
+    elif stripped.startswith(('- ', '* ', '+ ')):
+        text = '• ' + stripped[2:]
+    elif re.match(r'^\d+\.\s', stripped):
+        text = stripped
+
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    return text, heading_level
+
+
 def _markdown_to_docs_requests(md: str) -> list[dict]:
     """마크다운을 Google Docs batchUpdate 요청으로 변환합니다.
 
-    Google Docs API는 인덱스 기반으로 동작하므로,
-    콘텐츠를 역순으로 삽입해야 인덱스가 밀리지 않습니다.
-    여기서는 단순화를 위해 순차 삽입 + 인덱스 추적 방식을 사용합니다.
+    순차 삽입 + 인덱스 추적 방식을 사용합니다.
     """
-    # 마크다운 인라인 서식 제거 후 순수 텍스트로 삽입
     lines = md.split('\n')
     requests_list = []
     index = 1  # Google Docs는 1부터 시작
 
     for line in lines:
         stripped = line.strip()
-
         if stripped.startswith('```'):
-            # 코드 블록 시작/끝은 건너뜀 (내용은 일반 텍스트로)
             continue
 
-        # 헤딩 레벨 감지
-        heading_level = 0
-        text = stripped
-        if stripped.startswith('### '):
-            heading_level = 3
-            text = stripped[4:]
-        elif stripped.startswith('## '):
-            heading_level = 2
-            text = stripped[3:]
-        elif stripped.startswith('# '):
-            heading_level = 1
-            text = stripped[2:]
-        elif stripped.startswith('> '):
-            text = stripped[2:]
-        elif stripped.startswith(('- ', '* ', '+ ')):
-            text = '• ' + stripped[2:]
-        elif re.match(r'^\d+\.\s', stripped):
-            text = stripped  # 번호 목록 유지
-
-        # 인라인 서식 제거
-        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-        text = re.sub(r'\*(.+?)\*', r'\1', text)
-        text = re.sub(r'`(.+?)`', r'\1', text)
-
+        text, heading_level = _parse_md_line(stripped)
         insert_text = text + '\n'
 
-        # 텍스트 삽입
         requests_list.append({
             'insertText': {
                 'location': {'index': index},
@@ -124,7 +122,6 @@ def _markdown_to_docs_requests(md: str) -> list[dict]:
             }
         })
 
-        # 헤딩 스타일 적용
         if heading_level > 0:
             heading_map = {1: 'HEADING_1', 2: 'HEADING_2', 3: 'HEADING_3'}
             requests_list.append({

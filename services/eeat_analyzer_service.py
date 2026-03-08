@@ -231,9 +231,49 @@ def _build_suggestions(
     return suggestions
 
 
-def analyze_eeat(content: str, author_info: str = '') -> dict:
+_EMPTY_RESULT = {
+    'eeat_score': 0.0,
+    'grade': 'F',
+    'dimensions': {
+        'experience': 0.0,
+        'expertise': 0.0,
+        'authoritativeness': 0.0,
+        'trustworthiness': 0.0,
+    },
+    'signals_found': [],
+    'signals_missing': [],
+    'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력하세요.'],
+}
+
+
+def _evaluate_all_dimensions(content: str, author_info: str) -> tuple:
+    """4개 E-E-A-T 차원을 모두 평가합니다.
+
+    Returns:
+        (dimensions, all_found, all_missing)
     """
-    콘텐츠의 E-E-A-T 신뢰 신호를 분석한다.
+    checks_map = [
+        ('experience', _EXPERIENCE_CHECKS),
+        ('expertise', _EXPERTISE_CHECKS),
+        ('authoritativeness', _AUTHORITY_CHECKS),
+        ('trustworthiness', _TRUST_CHECKS),
+    ]
+
+    dimensions = {}
+    all_found = []
+    all_missing = []
+
+    for dim_key, checks in checks_map:
+        score, found, missing = _evaluate_dimension(content, author_info, checks)
+        dimensions[dim_key] = score
+        all_found.extend(found)
+        all_missing.extend(missing)
+
+    return dimensions, all_found, all_missing
+
+
+def analyze_eeat(content: str, author_info: str = '') -> dict:
+    """콘텐츠의 E-E-A-T 신뢰 신호를 분석합니다.
 
     Args:
         content: 분석할 콘텐츠 텍스트
@@ -242,53 +282,12 @@ def analyze_eeat(content: str, author_info: str = '') -> dict:
     Returns:
         eeat_score, grade, dimensions, signals_found, signals_missing, suggestions
     """
-    # 빈 콘텐츠 처리
     if not content or not isinstance(content, str) or not content.strip():
-        return {
-            'eeat_score': 0.0,
-            'grade': 'F',
-            'dimensions': {
-                'experience': 0.0,
-                'expertise': 0.0,
-                'authoritativeness': 0.0,
-                'trustworthiness': 0.0,
-            },
-            'signals_found': [],
-            'signals_missing': [],
-            'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력하세요.'],
-        }
+        return dict(_EMPTY_RESULT)
 
-    all_found: List[str] = []
-    all_missing: List[str] = []
-
-    # 4개 차원 평가
-    exp_score, exp_found, exp_missing = _evaluate_dimension(
-        content, author_info, _EXPERIENCE_CHECKS,
-    )
-    ext_score, ext_found, ext_missing = _evaluate_dimension(
-        content, author_info, _EXPERTISE_CHECKS,
-    )
-    auth_score, auth_found, auth_missing = _evaluate_dimension(
-        content, author_info, _AUTHORITY_CHECKS,
-    )
-    trust_score, trust_found, trust_missing = _evaluate_dimension(
-        content, author_info, _TRUST_CHECKS,
-    )
-
-    all_found.extend(exp_found + ext_found + auth_found + trust_found)
-    all_missing.extend(exp_missing + ext_missing + auth_missing + trust_missing)
-
-    dimensions = {
-        'experience': exp_score,
-        'expertise': ext_score,
-        'authoritativeness': auth_score,
-        'trustworthiness': trust_score,
-    }
-
+    dimensions, all_found, all_missing = _evaluate_all_dimensions(content, author_info)
     eeat_score = sum(dimensions.values()) / 4.0
     grade = _score_to_grade(eeat_score)
-
-    suggestions = _build_suggestions(dimensions, all_missing)
 
     logger.debug(
         'E-E-A-T 분석 완료: score=%.1f, grade=%s, found=%d, missing=%d',
@@ -301,5 +300,5 @@ def analyze_eeat(content: str, author_info: str = '') -> dict:
         'dimensions': dimensions,
         'signals_found': all_found,
         'signals_missing': all_missing,
-        'suggestions': suggestions,
+        'suggestions': _build_suggestions(dimensions, all_missing),
     }

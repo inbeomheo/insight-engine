@@ -28,32 +28,25 @@ def _split_sentences(content: str) -> List[str]:
     return [s.strip() for s in raw if s.strip() and len(s.strip()) >= 5]
 
 
-def check_parenthetical_overuse(content: str) -> dict:
-    """괄호 과다 사용을 점검합니다.
+_EMPTY_RESULT = {
+    'parentheticals': [],
+    'summary': {'total_parentheticals': 0, 'total_sentences': 0,
+                'paren_ratio': 0.0, 'long_parens': 0, 'nested_parens': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_parentheticals(clean_content: str) -> tuple:
+    """괄호 표현을 스캔합니다.
 
     Returns:
-        parentheticals, summary, score, suggestions를 포함하는 dict
+        (parentheticals, long_parens, nested)
     """
-    if not content or not content.strip():
-        return {
-            'parentheticals': [],
-            'summary': {'total_parentheticals': 0, 'total_sentences': 0,
-                        'paren_ratio': 0.0, 'long_parens': 0, 'nested_parens': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 마크다운 링크 제거 (괄호 오탐 방지)
-    clean_content = _MD_LINK_RE.sub('LINK', content)
-
-    sentences = _split_sentences(content)
-    total_sentences = len(sentences)
-
-    # 괄호 추출
     parentheticals = []
     for match in _PAREN_RE.finditer(clean_content):
         text = match.group(1).strip()
-        if len(text) >= 2:  # 최소 2자
+        if len(text) >= 2:
             is_long = len(text) > _LONG_PAREN_THRESHOLD
             parentheticals.append({
                 'text': text if len(text) <= 60 else text[:57] + '...',
@@ -61,16 +54,13 @@ def check_parenthetical_overuse(content: str) -> dict:
                 'is_long': is_long,
             })
 
-    total_parens = len(parentheticals)
     long_parens = sum(1 for p in parentheticals if p['is_long'])
-
-    # 중첩 괄호 감지
     nested = len(re.findall(r'\([^)]*\([^)]*\)[^)]*\)', clean_content))
+    return parentheticals, long_parens, nested
 
-    # 비율
-    paren_ratio = round((total_parens / total_sentences * 100) if total_sentences > 0 else 0.0, 1)
 
-    # 점수: 비율 기반 (적정: 문장당 0-20%)
+def _compute_paren_score(paren_ratio: float, long_parens: int, nested: int) -> float:
+    """괄호 비율 기반 점수를 계산합니다."""
     if paren_ratio <= 15:
         score = 100.0
     elif paren_ratio <= 30:
@@ -80,13 +70,26 @@ def check_parenthetical_overuse(content: str) -> dict:
     else:
         score = max(0.0, 40.0 - (paren_ratio - 50) * 1.0)
 
-    # 긴 괄호 페널티
-    score = max(0.0, score - long_parens * 5.0)
-    # 중첩 괄호 페널티
-    score = max(0.0, score - nested * 10.0)
-    score = round(max(0.0, min(100.0, score)), 1)
+    score = max(0.0, score - long_parens * 5.0 - nested * 10.0)
+    return round(max(0.0, min(100.0, score)), 1)
 
-    suggestions = _generate_suggestions(total_parens, paren_ratio, long_parens, nested)
+
+def check_parenthetical_overuse(content: str) -> dict:
+    """괄호 과다 사용을 점검합니다.
+
+    Returns:
+        parentheticals, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    clean_content = _MD_LINK_RE.sub('LINK', content)
+    total_sentences = len(_split_sentences(content))
+
+    parentheticals, long_parens, nested = _scan_parentheticals(clean_content)
+    total_parens = len(parentheticals)
+    paren_ratio = round((total_parens / total_sentences * 100) if total_sentences > 0 else 0.0, 1)
+    score = _compute_paren_score(paren_ratio, long_parens, nested)
 
     return {
         'parentheticals': parentheticals,
@@ -98,7 +101,7 @@ def check_parenthetical_overuse(content: str) -> dict:
             'nested_parens': nested,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(total_parens, paren_ratio, long_parens, nested),
     }
 
 
