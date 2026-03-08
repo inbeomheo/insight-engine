@@ -25,6 +25,7 @@ function FaqItem({ question, answer }: FaqItemProps) {
         className="w-full flex items-center gap-2 py-3 text-left text-sm hover:text-primary transition-colors"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
+        aria-label={`FAQ: ${question}`}
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
         <span className="font-medium">{question}</span>
