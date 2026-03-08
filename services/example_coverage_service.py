@@ -77,56 +77,21 @@ _COMPILED_CLAIM_EN = [re.compile(p, re.IGNORECASE) for p in _CLAIM_PATTERNS_EN]
 _COMPILED_EVIDENCE = [(re.compile(p, re.IGNORECASE), etype) for p, etype in _EVIDENCE_PATTERNS]
 
 
-def analyze_example_coverage(content: str) -> dict:
-    """콘텐츠의 주장/조언에 대한 예시·근거 커버리지를 분석합니다.
+_EMPTY_RESULT = {
+    'claims': [],
+    'summary': {'total_claims': 0, 'supported': 0, 'unsupported': 0},
+    'coverage_score': 0.0,
+    'weak_sections': [],
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠 텍스트
+
+def _verify_claims(sentences: list, claim_indices: list) -> tuple:
+    """각 주장의 근거 여부를 검증합니다.
 
     Returns:
-        {
-            "claims": [{"claim_sentence": str, "has_evidence": bool,
-                         "evidence_type": str|None, "status": str}],
-            "summary": {"total_claims": int, "supported": int, "unsupported": int},
-            "coverage_score": float,  # 0-100
-            "weak_sections": list[str],
-            "suggestions": list[str],
-        }
+        (claims, supported, unsupported)
     """
-    if not content or not content.strip():
-        return {
-            'claims': [],
-            'summary': {'total_claims': 0, 'supported': 0, 'unsupported': 0},
-            'coverage_score': 0.0,
-            'weak_sections': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 문장 분리
-    sentences = _split_sentences(content)
-
-    if not sentences:
-        return {
-            'claims': [],
-            'summary': {'total_claims': 0, 'supported': 0, 'unsupported': 0},
-            'coverage_score': 0.0,
-            'weak_sections': [],
-            'suggestions': ['분석할 문장이 없습니다.'],
-        }
-
-    # 주장 문장 탐지
-    claim_indices = _detect_claims(sentences)
-
-    if not claim_indices:
-        return {
-            'claims': [],
-            'summary': {'total_claims': 0, 'supported': 0, 'unsupported': 0},
-            'coverage_score': 100.0,
-            'weak_sections': [],
-            'suggestions': ['주장/조언 문장이 없습니다. 근거 분석이 불필요합니다.'],
-        }
-
-    # 각 주장에 대한 근거 확인
     claims = []
     for idx in claim_indices:
         evidence = _find_evidence(sentences, idx)
@@ -137,26 +102,38 @@ def analyze_example_coverage(content: str) -> dict:
             'status': 'supported' if evidence else 'unsupported',
         })
 
-    # 요약 통계
     supported = sum(1 for c in claims if c['has_evidence'])
-    unsupported = len(claims) - supported
+    return claims, supported, len(claims) - supported
+
+
+def analyze_example_coverage(content: str) -> dict:
+    """콘텐츠의 주장/조언에 대한 예시·근거 커버리지를 분석합니다.
+
+    Returns:
+        claims, summary, coverage_score, weak_sections, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    if not sentences:
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
+
+    claim_indices = _detect_claims(sentences)
+    if not claim_indices:
+        return {**_EMPTY_RESULT, 'coverage_score': 100.0,
+                'suggestions': ['주장/조언 문장이 없습니다. 근거 분석이 불필요합니다.']}
+
+    claims, supported, unsupported = _verify_claims(sentences, claim_indices)
     total = len(claims)
-
-    # 커버리지 점수 (0-100)
     coverage_score = round((supported / total) * 100, 1) if total > 0 else 0.0
-
-    # 약한 구간 (근거 없는 주장 문장)
-    weak_sections = [c['claim_sentence'] for c in claims if not c['has_evidence']]
-
-    # 개선 제안
-    suggestions = _generate_suggestions(claims, coverage_score)
 
     return {
         'claims': claims,
         'summary': {'total_claims': total, 'supported': supported, 'unsupported': unsupported},
         'coverage_score': coverage_score,
-        'weak_sections': weak_sections,
-        'suggestions': suggestions,
+        'weak_sections': [c['claim_sentence'] for c in claims if not c['has_evidence']],
+        'suggestions': _generate_suggestions(claims, coverage_score),
     }
 
 

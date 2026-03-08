@@ -39,57 +39,46 @@ _EN_GENDERED = [
 ]
 
 
-def check_gender_neutral(content: str) -> dict:
-    """성별 포용적 언어 사용을 검사합니다.
+_EMPTY_RESULT = {
+    'findings': [],
+    'summary': {'total_issues': 0, 'ko_issues': 0, 'en_issues': 0, 'level': 'none'},
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _scan_gendered_terms(cleaned: str) -> tuple:
+    """성별 편향 표현을 검색합니다.
 
     Returns:
-        findings, summary, score, suggestions를 포함하는 dict
+        (findings, ko_count, en_count)
     """
-    if not content or not content.strip():
-        return {
-            'findings': [],
-            'summary': {
-                'total_issues': 0,
-                'ko_issues': 0,
-                'en_issues': 0,
-                'level': 'none',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    cleaned = _HEADING_RE.sub('', content)
     findings = []
-
-    # 한국어 검사
     ko_count = 0
     for pattern, label, alternative in _KO_GENDERED:
         matches = pattern.findall(cleaned)
         if matches:
             ko_count += len(matches)
-            findings.append({
-                'text': label,
-                'alternative': alternative,
-                'language': 'ko',
-                'count': len(matches),
-            })
+            findings.append({'text': label, 'alternative': alternative,
+                             'language': 'ko', 'count': len(matches)})
 
-    # 영어 검사
     en_count = 0
     for pattern, label, alternative in _EN_GENDERED:
         matches = pattern.findall(cleaned)
         if matches:
             en_count += len(matches)
-            findings.append({
-                'text': label,
-                'alternative': alternative,
-                'language': 'en',
-                'count': len(matches),
-            })
+            findings.append({'text': label, 'alternative': alternative,
+                             'language': 'en', 'count': len(matches)})
 
-    total = ko_count + en_count
+    return findings, ko_count, en_count
 
-    # 레벨
+
+def _compute_gender_score(total: int) -> tuple:
+    """성별 포용성 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total == 0:
         level = 'inclusive'
     elif total <= 2:
@@ -99,26 +88,33 @@ def check_gender_neutral(content: str) -> dict:
     else:
         level = 'significant'
 
-    # 연속 점수 — 이슈 건수 기반 비선형 감점
     if total == 0:
         score = 100.0
     else:
         score = max(15.0, 100.0 - total ** 1.1 * 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(findings, total, level)
+
+def check_gender_neutral(content: str) -> dict:
+    """성별 포용적 언어 사용을 검사합니다.
+
+    Returns:
+        findings, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    findings, ko_count, en_count = _scan_gendered_terms(_HEADING_RE.sub('', content))
+    total = ko_count + en_count
+    score, level = _compute_gender_score(total)
 
     return {
         'findings': findings[:20],
-        'summary': {
-            'total_issues': total,
-            'ko_issues': ko_count,
-            'en_issues': en_count,
-            'level': level,
-        },
+        'summary': {'total_issues': total, 'ko_issues': ko_count,
+                     'en_issues': en_count, 'level': level},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(findings, total, level),
     }
 
 

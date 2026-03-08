@@ -72,40 +72,32 @@ def _find_matches(content: str, patterns: list) -> List[str]:
     return matches
 
 
-def detect_geo_scope_assumptions(content: str) -> dict:
-    """지역 의존 정보의 범위 라벨 누락을 탐지합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {'geo_sensitive_found': [], 'has_geo_label': False,
+                'unlabeled_count': 0, 'level': 'none'},
+    'geo_sensitive_terms': [],
+    'unlabeled_scope_issues': [],
+    'suggestions': [],
+}
+
+
+def _scan_sensitive_categories(content: str) -> tuple:
+    """지역 의존 카테고리를 탐지합니다.
 
     Returns:
-        score, summary, unlabeled_scope_issues, suggestions를 포함하는 dict
+        (sensitive_found, sensitive_terms, unlabeled)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'geo_sensitive_found': [],
-                'has_geo_label': False,
-                'unlabeled_count': 0,
-                'level': 'none',
-            },
-            'geo_sensitive_terms': [],
-            'unlabeled_scope_issues': [],
-            'suggestions': [],
-        }
-
-    # 지역 의존 카테고리 탐지
     sensitive_found = []
     sensitive_terms = []
     for cat_name, cat_info in _GEO_SENSITIVE_CATEGORIES.items():
         if _has_pattern(content, cat_info['patterns']):
             sensitive_found.append(cat_name)
-            terms = _find_matches(content, cat_info['patterns'])
-            for t in terms[:3]:
+            for t in _find_matches(content, cat_info['patterns'])[:3]:
                 sensitive_terms.append({'category': cat_name, 'label': cat_info['label'], 'text': t})
 
-    # 지역 라벨 존재 여부
     has_geo_label = _has_pattern(content, _GEO_LABEL_PATTERNS)
 
-    # 라벨 없는 민감 항목
     unlabeled = []
     if sensitive_found and not has_geo_label:
         for cat in sensitive_found:
@@ -115,7 +107,15 @@ def detect_geo_scope_assumptions(content: str) -> dict:
                 'issue': '지역/국가 라벨 없이 사용됨',
             })
 
-    # 레벨 판정
+    return sensitive_found, sensitive_terms, has_geo_label, unlabeled
+
+
+def _compute_geo_score(sensitive_found: list, has_geo_label: bool, unlabeled: list) -> tuple:
+    """지역 범위 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if not sensitive_found:
         level = 'none'
     elif has_geo_label and not unlabeled:
@@ -125,7 +125,6 @@ def detect_geo_scope_assumptions(content: str) -> dict:
     else:
         level = 'unlabeled'
 
-    # 연속 점수 — 라벨 충족 비율 기반
     if not sensitive_found:
         score = 100.0
     elif has_geo_label and not unlabeled:
@@ -135,11 +134,20 @@ def detect_geo_scope_assumptions(content: str) -> dict:
         score = 35.0 + (labeled_ratio * 55.0)
         score -= min(15.0, len(sensitive_found) * 3.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
-    suggestions = _generate_suggestions(
-        sensitive_found, has_geo_label, unlabeled, level
-    )
+
+def detect_geo_scope_assumptions(content: str) -> dict:
+    """지역 의존 정보의 범위 라벨 누락을 탐지합니다.
+
+    Returns:
+        score, summary, unlabeled_scope_issues, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sensitive_found, sensitive_terms, has_geo_label, unlabeled = _scan_sensitive_categories(content)
+    score, level = _compute_geo_score(sensitive_found, has_geo_label, unlabeled)
 
     return {
         'score': score,
@@ -151,7 +159,7 @@ def detect_geo_scope_assumptions(content: str) -> dict:
         },
         'geo_sensitive_terms': sensitive_terms[:10],
         'unlabeled_scope_issues': unlabeled[:5],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(sensitive_found, has_geo_label, unlabeled, level),
     }
 
 
