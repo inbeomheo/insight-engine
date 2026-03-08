@@ -59,46 +59,25 @@ def _has_explanation(sentence: str) -> bool:
     return any(p.search(sentence) for p in _EXPLANATION_PATTERNS)
 
 
-def analyze_concept_load(content: str) -> dict:
-    """구간별 인지부하를 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_sentences': 0, 'max_concepts_in_window': 0,
+        'overloaded_windows': 0, 'level': 'none',
+    },
+    'overloaded_segments': [],
+    'suggestions': [],
+}
+
+
+def _detect_overloaded_windows(sentences: List[str],
+                                sentence_concepts: List[Set],
+                                sentence_explanations: List[bool]) -> tuple:
+    """슬라이딩 윈도우로 과부하 구간을 탐지합니다.
 
     Returns:
-        score, summary, overloaded_segments, suggestions를 포함하는 dict
+        (overloaded, max_concepts)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'max_concepts_in_window': 0,
-                'overloaded_windows': 0,
-                'level': 'none',
-            },
-            'overloaded_segments': [],
-            'suggestions': [],
-        }
-
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_sentences': 0,
-                'max_concepts_in_window': 0,
-                'overloaded_windows': 0,
-                'level': 'none',
-            },
-            'overloaded_segments': [],
-            'suggestions': [],
-        }
-
-    # 문장별 개념 추출
-    sentence_concepts = [_extract_concepts(s) for s in sentences]
-    sentence_explanations = [_has_explanation(s) for s in sentences]
-
-    # 슬라이딩 윈도우로 과부하 구간 탐지
     overloaded = []
     max_concepts = 0
 
@@ -110,7 +89,6 @@ def analyze_concept_load(content: str) -> dict:
             if sentence_explanations[j]:
                 has_expl = True
 
-        # 설명이 있으면 임계값 완화
         threshold = _OVERLOAD_THRESHOLD + (2 if has_expl else 0)
         concept_count = len(window_concepts)
         max_concepts = max(max_concepts, concept_count)
@@ -125,9 +103,16 @@ def analyze_concept_load(content: str) -> dict:
                 'has_explanation': has_expl,
             })
 
-    overloaded_count = len(overloaded)
+    return overloaded, max_concepts
 
-    # 레벨 판정
+
+def _compute_load_score(overloaded_count: int, max_concepts: int,
+                         sentence_count: int) -> tuple:
+    """과부하 비율로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if overloaded_count == 0:
         level = 'manageable'
     elif overloaded_count <= 2:
@@ -137,19 +122,40 @@ def analyze_concept_load(content: str) -> dict:
     else:
         level = 'heavy_overload'
 
-    # 연속 점수 — 과부하 비율 기반
-    total_windows = max(1, len(sentences) - _WINDOW_SIZE + 1)
-    overload_ratio = overloaded_count / total_windows
     if overloaded_count == 0:
         score = 100.0
     else:
-        score = 100.0 - (overload_ratio * 80.0) - (min(max_concepts, 15) * 1.5)
-        score = max(10.0, score)
+        total_windows = max(1, sentence_count - _WINDOW_SIZE + 1)
+        overload_ratio = overloaded_count / total_windows
+        score = max(10.0, 100.0 - (overload_ratio * 80.0) - (min(max_concepts, 15) * 1.5))
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def analyze_concept_load(content: str) -> dict:
+    """구간별 인지부하를 분석합니다.
+
+    Returns:
+        score, summary, overloaded_segments, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                 if s.strip() and len(s.strip()) >= 5]
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    sentence_concepts = [_extract_concepts(s) for s in sentences]
+    sentence_explanations = [_has_explanation(s) for s in sentences]
+
+    overloaded, max_concepts = _detect_overloaded_windows(
+        sentences, sentence_concepts, sentence_explanations
+    )
+    score, level = _compute_load_score(len(overloaded), max_concepts, len(sentences))
 
     suggestions = _generate_suggestions(
-        len(sentences), max_concepts, overloaded_count, level, overloaded
+        len(sentences), max_concepts, len(overloaded), level, overloaded
     )
 
     return {
@@ -157,7 +163,7 @@ def analyze_concept_load(content: str) -> dict:
         'summary': {
             'total_sentences': len(sentences),
             'max_concepts_in_window': max_concepts,
-            'overloaded_windows': overloaded_count,
+            'overloaded_windows': len(overloaded),
             'level': level,
         },
         'overloaded_segments': overloaded[:10],

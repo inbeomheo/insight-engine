@@ -17,60 +17,22 @@ _IDEAL_MIN = 80
 _IDEAL_MAX = 200
 
 
-def analyze_balance(content: str) -> dict:
-    """문단 길이 균형을 분석합니다.
+_EMPTY_RESULT = {
+    'paragraphs': [],
+    'stats': {'count': 0, 'avg_length': 0, 'min_length': 0,
+              'max_length': 0, 'std_dev': 0},
+    'balance_score': 0,
+    'issues': [],
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _classify_paragraphs(paragraphs: list, lengths: list) -> tuple:
+    """문단별 상태를 분류하고 이슈를 수집합니다.
 
     Returns:
-        {
-            "paragraphs": [{"index": int, "length": int, "status": str, "preview": str}],
-            "stats": {"count": int, "avg_length": float, "min_length": int,
-                      "max_length": int, "std_dev": float},
-            "balance_score": int (0~100),
-            "issues": [{"type": str, "paragraph": int, "message": str}],
-            "suggestions": list[str],
-        }
+        (para_results, issues)
     """
-    if not content or not content.strip():
-        return {
-            'paragraphs': [],
-            'stats': {'count': 0, 'avg_length': 0, 'min_length': 0,
-                      'max_length': 0, 'std_dev': 0},
-            'balance_score': 0,
-            'issues': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 마크다운 헤딩 제거 후 문단 분리
-    clean = re.sub(r'#{1,6}\s+', '', content)
-    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', clean) if len(p.strip()) >= 3]
-
-    if len(paragraphs) == 0:
-        # 줄바꿈 단일로도 분리 시도
-        paragraphs = [p.strip() for p in clean.split('\n') if len(p.strip()) >= 3]
-
-    if len(paragraphs) == 0:
-        return {
-            'paragraphs': [],
-            'stats': {'count': 0, 'avg_length': 0, 'min_length': 0,
-                      'max_length': 0, 'std_dev': 0},
-            'balance_score': 0,
-            'issues': [],
-            'suggestions': ['문단을 감지할 수 없습니다.'],
-        }
-
-    lengths = [len(p) for p in paragraphs]
-    avg_len = sum(lengths) / len(lengths)
-    min_len = min(lengths)
-    max_len = max(lengths)
-
-    # 표준편차
-    variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
-    std_dev = round(math.sqrt(variance), 1)
-
-    # 문단별 분석
     para_results = []
     issues = []
 
@@ -80,15 +42,13 @@ def analyze_balance(content: str) -> dict:
         if length < _OPTIMAL_MIN:
             status = 'too_short'
             issues.append({
-                'type': 'too_short',
-                'paragraph': idx,
+                'type': 'too_short', 'paragraph': idx,
                 'message': f'{idx+1}번째 문단이 너무 짧습니다 ({length}자). 앞뒤 문단과 병합을 고려하세요.',
             })
         elif length > _OPTIMAL_MAX:
             status = 'too_long'
             issues.append({
-                'type': 'too_long',
-                'paragraph': idx,
+                'type': 'too_long', 'paragraph': idx,
                 'message': f'{idx+1}번째 문단이 너무 깁니다 ({length}자). 분할을 고려하세요.',
             })
         elif _IDEAL_MIN <= length <= _IDEAL_MAX:
@@ -97,25 +57,45 @@ def analyze_balance(content: str) -> dict:
             status = 'acceptable'
 
         para_results.append({
-            'index': idx,
-            'length': length,
-            'status': status,
-            'preview': preview,
+            'index': idx, 'length': length,
+            'status': status, 'preview': preview,
         })
 
-    # 균형 점수 계산
-    balance_score = _calculate_balance_score(lengths, avg_len, std_dev, issues)
+    return para_results, issues
 
-    # 제안
+
+def analyze_balance(content: str) -> dict:
+    """문단 길이 균형을 분석합니다.
+
+    Returns:
+        paragraphs, stats, balance_score, issues, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    clean = re.sub(r'#{1,6}\s+', '', content)
+    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', clean) if len(p.strip()) >= 3]
+
+    if not paragraphs:
+        paragraphs = [p.strip() for p in clean.split('\n') if len(p.strip()) >= 3]
+
+    if not paragraphs:
+        return {**_EMPTY_RESULT, 'suggestions': ['문단을 감지할 수 없습니다.']}
+
+    lengths = [len(p) for p in paragraphs]
+    avg_len = sum(lengths) / len(lengths)
+    variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
+    std_dev = round(math.sqrt(variance), 1)
+
+    para_results, issues = _classify_paragraphs(paragraphs, lengths)
+    balance_score = _calculate_balance_score(lengths, avg_len, std_dev, issues)
     suggestions = _generate_suggestions(lengths, avg_len, std_dev, issues, len(paragraphs))
 
     return {
         'paragraphs': para_results,
         'stats': {
-            'count': len(paragraphs),
-            'avg_length': round(avg_len, 1),
-            'min_length': min_len,
-            'max_length': max_len,
+            'count': len(paragraphs), 'avg_length': round(avg_len, 1),
+            'min_length': min(lengths), 'max_length': max(lengths),
             'std_dev': std_dev,
         },
         'balance_score': balance_score,

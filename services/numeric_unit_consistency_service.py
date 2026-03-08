@@ -66,79 +66,62 @@ def _check_format_consistency(content: str, patterns: Dict[str, re.Pattern]) -> 
     }
 
 
-def check_numeric_unit_consistency(content: str) -> dict:
-    """숫자/단위 표기 일관성을 검사합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {'categories_checked': 0, 'inconsistent_count': 0, 'level': 'none'},
+    'consistency_issues': [],
+    'suggestions': [],
+}
+
+# 카테고리별 검사 정의: (category, label, patterns, message, special_rule)
+_CATEGORIES = [
+    ('currency', '통화 표기', _CURRENCY_PATTERNS, '통화 표기가 혼용됨', False),
+    ('percent', '퍼센트 표기', _PERCENT_PATTERNS, '퍼센트 표기가 혼용됨 (% vs 퍼센트)', False),
+    ('date', '날짜 형식', _DATE_PATTERNS, '날짜 형식이 혼용됨', False),
+    ('number_format', '숫자 구분자', _NUMBER_FORMAT, '숫자 구분자 사용이 혼용됨 (쉼표 vs 없음)', True),
+]
+
+
+def _check_all_categories(content: str) -> tuple:
+    """모든 카테고리의 표기 일관성을 검사합니다.
 
     Returns:
-        score, summary, consistency_issues, suggestions를 포함하는 dict
+        (issues, categories_checked)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'categories_checked': 0,
-                'inconsistent_count': 0,
-                'level': 'none',
-            },
-            'consistency_issues': [],
-            'suggestions': [],
-        }
-
     issues = []
     categories_checked = 0
 
-    # 통화 표기 검사
-    currency_check = _check_format_consistency(content, _CURRENCY_PATTERNS)
-    if currency_check['formats_used']:
-        categories_checked += 1
-        if not currency_check['is_consistent']:
-            issues.append({
-                'category': 'currency',
-                'label': '통화 표기',
-                'formats': currency_check['formats_used'],
-                'message': '통화 표기가 혼용됨',
-            })
+    for category, label, patterns, message, is_number_format in _CATEGORIES:
+        check = _check_format_consistency(content, patterns)
+        if is_number_format:
+            if len(check['formats_used']) >= 2:
+                categories_checked += 1
+                issues.append({
+                    'category': category, 'label': label,
+                    'formats': check['formats_used'], 'message': message,
+                })
+            elif check['formats_used']:
+                categories_checked += 1
+        else:
+            if check['formats_used']:
+                categories_checked += 1
+                if not check['is_consistent']:
+                    issues.append({
+                        'category': category, 'label': label,
+                        'formats': check['formats_used'], 'message': message,
+                    })
 
-    # 퍼센트 표기 검사
-    percent_check = _check_format_consistency(content, _PERCENT_PATTERNS)
-    if percent_check['formats_used']:
-        categories_checked += 1
-        if not percent_check['is_consistent']:
-            issues.append({
-                'category': 'percent',
-                'label': '퍼센트 표기',
-                'formats': percent_check['formats_used'],
-                'message': '퍼센트 표기가 혼용됨 (% vs 퍼센트)',
-            })
+    return issues, categories_checked
 
-    # 날짜 표기 검사
-    date_check = _check_format_consistency(content, _DATE_PATTERNS)
-    if date_check['formats_used']:
-        categories_checked += 1
-        if not date_check['is_consistent']:
-            issues.append({
-                'category': 'date',
-                'label': '날짜 형식',
-                'formats': date_check['formats_used'],
-                'message': '날짜 형식이 혼용됨',
-            })
 
-    # 숫자 구분자 검사
-    number_check = _check_format_consistency(content, _NUMBER_FORMAT)
-    if len(number_check['formats_used']) >= 2:
-        categories_checked += 1
-        issues.append({
-            'category': 'number_format',
-            'label': '숫자 구분자',
-            'formats': number_check['formats_used'],
-            'message': '숫자 구분자 사용이 혼용됨 (쉼표 vs 없음)',
-        })
-    elif number_check['formats_used']:
-        categories_checked += 1
+def _compute_consistency_score(issues: list, categories_checked: int) -> tuple:
+    """비일관 건수로 점수와 레벨을 계산합니다.
 
+    Returns:
+        (score, level)
+    """
     inconsistent_count = len(issues)
 
-    # 레벨 판정
     if categories_checked == 0:
         level = 'none'
     elif inconsistent_count == 0:
@@ -150,22 +133,33 @@ def check_numeric_unit_consistency(content: str) -> dict:
     else:
         level = 'inconsistent'
 
-    # 연속 점수 — 비일관 건수 대비 검사 카테고리 기반
     if categories_checked == 0 or inconsistent_count == 0:
         score = 100.0
     else:
         ratio = inconsistent_count / max(1, categories_checked)
         score = max(15.0, 100.0 - ratio * 70.0 - inconsistent_count * 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
 
+
+def check_numeric_unit_consistency(content: str) -> dict:
+    """숫자/단위 표기 일관성을 검사합니다.
+
+    Returns:
+        score, summary, consistency_issues, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    issues, categories_checked = _check_all_categories(content)
+    score, level = _compute_consistency_score(issues, categories_checked)
     suggestions = _generate_suggestions(issues, level, categories_checked)
 
     return {
         'score': score,
         'summary': {
             'categories_checked': categories_checked,
-            'inconsistent_count': inconsistent_count,
+            'inconsistent_count': len(issues),
             'level': level,
         },
         'consistency_issues': issues[:10],
