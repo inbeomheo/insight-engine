@@ -24,56 +24,25 @@ _PARTICLES = re.compile(
     r'(은|는|이|가|을|를|의|에|와|과|도|로|으로|에서|까지|부터|만|라|며|들|에게|한테|께)$'
 )
 
+_EMPTY_RESULT = {
+    'promises': [],
+    'fulfillment_score': 0.0,
+    'suggestions': [],
+}
 
-def audit_promise_match(content: str) -> dict:
-    """제목/소제목의 약속 키워드가 본문에서 이행되는지 검증합니다.
 
-    Args:
-        content: 분석할 마크다운/텍스트 콘텐츠
-
-    Returns:
-        {
-            "promises": [{"keyword", "source", "found_in_body", "frequency",
-                          "in_intro", "in_conclusion", "status"}],
-            "fulfillment_score": float,  # 0-100
-            "suggestions": list[str],
-        }
-    """
-    if not content or not content.strip():
-        return {
-            'promises': [],
-            'fulfillment_score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    lines = content.strip().split('\n')
-
-    # 제목/소제목 추출
-    title_keywords = _extract_title_keywords(lines)
-    heading_keywords = _extract_heading_keywords(lines)
-
-    all_keywords = title_keywords + heading_keywords
-
-    if not all_keywords:
-        return {
-            'promises': [],
-            'fulfillment_score': 0.0,
-            'suggestions': ['제목이나 소제목을 찾을 수 없습니다. 마크다운 헤딩(#)을 사용해 주세요.'],
-        }
-
-    # 본문 추출 (제목/소제목 라인 제외)
+def _verify_promises(all_keywords: list, lines: list) -> list:
+    """각 약속 키워드의 본문 이행 여부를 검증합니다."""
     body_text = _extract_body(lines)
     body_len = len(body_text)
 
-    # 도입부(첫 20%)와 결론(마지막 20%) 분할
     intro_end = max(1, int(body_len * 0.2))
     conclusion_start = max(intro_end, int(body_len * 0.8))
     intro_text = body_text[:intro_end]
     conclusion_text = body_text[conclusion_start:]
 
-    # 각 약속 키워드 검증
     promises = []
-    seen = set()  # 중복 키워드 방지
+    seen = set()
 
     for keyword, source in all_keywords:
         if keyword in seen:
@@ -85,8 +54,6 @@ def audit_promise_match(content: str) -> dict:
         in_intro = _count_occurrences(keyword, intro_text) > 0
         in_conclusion = _count_occurrences(keyword, conclusion_text) > 0
 
-        status = _determine_status(found_in_body, frequency, in_intro, in_conclusion)
-
         promises.append({
             'keyword': keyword,
             'source': source,
@@ -94,19 +61,34 @@ def audit_promise_match(content: str) -> dict:
             'frequency': frequency,
             'in_intro': in_intro,
             'in_conclusion': in_conclusion,
-            'status': status,
+            'status': _determine_status(found_in_body, frequency, in_intro, in_conclusion),
         })
 
-    # 이행 점수 계산
-    fulfillment_score = _calculate_score(promises)
+    return promises
 
-    # 제안 생성
-    suggestions = _generate_suggestions(promises, fulfillment_score)
+
+def audit_promise_match(content: str) -> dict:
+    """제목/소제목의 약속 키워드가 본문에서 이행되는지 검증합니다.
+
+    Returns:
+        promises, fulfillment_score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    lines = content.strip().split('\n')
+    all_keywords = _extract_title_keywords(lines) + _extract_heading_keywords(lines)
+
+    if not all_keywords:
+        return {**_EMPTY_RESULT, 'suggestions': ['제목이나 소제목을 찾을 수 없습니다. 마크다운 헤딩(#)을 사용해 주세요.']}
+
+    promises = _verify_promises(all_keywords, lines)
+    fulfillment_score = _calculate_score(promises)
 
     return {
         'promises': promises,
         'fulfillment_score': fulfillment_score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(promises, fulfillment_score),
     }
 
 

@@ -32,6 +32,14 @@ _CTA_WORDS = re.compile(
 # 숫자/구체성
 _SPECIFICITY = re.compile(r'\d+')
 
+_EMPTY_RESULT = {
+    'description': '',
+    'checks': {},
+    'summary': {'length': 0, 'quality_level': 'none'},
+    'score': 0.0,
+    'suggestions': [],
+}
+
 
 def _extract_description(content: str) -> str:
     """메타 디스크립션 또는 첫 문단을 추출합니다."""
@@ -60,67 +68,29 @@ def _extract_description(content: str) -> str:
     return ''
 
 
-def check_meta_description_quality(content: str) -> dict:
-    """메타 디스크립션 품질을 점검합니다.
+def _evaluate_description(desc: str) -> tuple:
+    """디스크립션 품질을 평가합니다.
 
     Returns:
-        description, checks, summary, score, suggestions를 포함하는 dict
+        (checks, score, quality)
     """
-    if not content or not content.strip():
-        return {
-            'description': '',
-            'checks': {},
-            'summary': {'length': 0, 'quality_level': 'none'},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    desc = _extract_description(content)
-    if not desc:
-        return {
-            'description': '',
-            'checks': {},
-            'summary': {'length': 0, 'quality_level': 'none'},
-            'score': 0.0,
-            'suggestions': ['메타 디스크립션이나 도입 문단을 추가하세요.'],
-        }
-
     length = len(desc)
-
-    # 길이 체크 (권장: 120-160자)
-    length_ok = 120 <= length <= 160
-    length_short = length < 80
-    length_long = length > 200
-
-    # CTA 포함
-    has_cta = bool(_CTA_WORDS.search(desc))
-
-    # 구체적 숫자 포함
-    has_numbers = bool(_SPECIFICITY.search(desc))
-
-    # 마침표로 끝남
-    ends_properly = desc.rstrip().endswith(('.', '!', '?', '다', '요'))
-
-    # 중복 단어 체크
     words = re.findall(r'[가-힣]{2,}|[A-Za-z]{3,}', desc.lower())
     unique_ratio = len(set(words)) / len(words) if words else 1.0
-    no_repetition = unique_ratio >= 0.7
 
     checks = {
-        'optimal_length': length_ok,
-        'has_cta': has_cta,
-        'has_specificity': has_numbers,
-        'ends_properly': ends_properly,
-        'no_repetition': no_repetition,
+        'optimal_length': 120 <= length <= 160,
+        'has_cta': bool(_CTA_WORDS.search(desc)),
+        'has_specificity': bool(_SPECIFICITY.search(desc)),
+        'ends_properly': desc.rstrip().endswith(('.', '!', '?', '다', '요')),
+        'no_repetition': unique_ratio >= 0.7,
     }
 
-    passed = sum(1 for v in checks.values() if v)
-    score = round(min(100.0, passed * 20.0), 1)
+    score = round(min(100.0, sum(1 for v in checks.values() if v) * 20.0), 1)
 
-    # 길이 보너스/페널티
-    if length_short:
+    if length < 80:
         score = max(0.0, score - 15.0)
-    elif length_long:
+    elif length > 200:
         score = max(0.0, score - 10.0)
 
     score = round(max(0.0, min(100.0, score)), 1)
@@ -134,14 +104,33 @@ def check_meta_description_quality(content: str) -> dict:
     else:
         quality = 'poor'
 
-    suggestions = _generate_suggestions(checks, length, length_ok, length_short, length_long)
+    return checks, score, quality
+
+
+def check_meta_description_quality(content: str) -> dict:
+    """메타 디스크립션 품질을 점검합니다.
+
+    Returns:
+        description, checks, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    desc = _extract_description(content)
+    if not desc:
+        return {**_EMPTY_RESULT, 'suggestions': ['메타 디스크립션이나 도입 문단을 추가하세요.']}
+
+    checks, score, quality = _evaluate_description(desc)
+    length = len(desc)
 
     return {
         'description': desc if len(desc) <= 200 else desc[:197] + '...',
         'checks': checks,
         'summary': {'length': length, 'quality_level': quality},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            checks, length, checks['optimal_length'], length < 80, length > 200
+        ),
     }
 
 

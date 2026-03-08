@@ -32,32 +32,17 @@ def _get_prefix(sentence: str, n: int = _PREFIX_WORDS) -> str:
     return ' '.join(words[:n]).lower()
 
 
-def detect_anaphora_repetition(content: str) -> dict:
-    """연속 문장 시작부 반복(anaphora)을 감지합니다.
+_EMPTY_RESULT = {
+    'anaphora_groups': [],
+    'summary': {'total_sentences': 0, 'groups_found': 0,
+                'repeated_sentences': 0, 'intentional_count': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-    Returns:
-        anaphora_groups, summary, score, suggestions를 포함하는 dict
-    """
-    if not content or not content.strip():
-        return {
-            'anaphora_groups': [],
-            'summary': {'total_sentences': 0, 'groups_found': 0,
-                        'repeated_sentences': 0, 'intentional_count': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
 
-    sentences = _split_sentences(content)
-    if len(sentences) < _MIN_REPEAT:
-        return {
-            'anaphora_groups': [],
-            'summary': {'total_sentences': len(sentences), 'groups_found': 0,
-                        'repeated_sentences': 0, 'intentional_count': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    # 연속 동일 접두사 그룹 찾기
+def _scan_anaphora_groups(sentences: List[str]) -> List[Dict]:
+    """연속 동일 접두사 그룹을 찾습니다."""
     groups = []
     i = 0
     while i < len(sentences):
@@ -66,42 +51,62 @@ def detect_anaphora_repetition(content: str) -> dict:
             i += 1
             continue
 
-        # 연속 동일 접두사 문장 수집
         group_sentences = [sentences[i]]
         j = i + 1
         while j < len(sentences):
-            next_prefix = _get_prefix(sentences[j])
-            if next_prefix == prefix:
+            if _get_prefix(sentences[j]) == prefix:
                 group_sentences.append(sentences[j])
                 j += 1
             else:
                 break
 
         if len(group_sentences) >= _MIN_REPEAT:
-            # 의도적 수사법 판별: 3개 이상 연속 + 구조적 유사성
-            is_intentional = _is_intentional_anaphora(group_sentences)
             groups.append({
                 'prefix': prefix,
                 'count': len(group_sentences),
                 'sentences': [s if len(s) <= 60 else s[:57] + '...' for s in group_sentences],
-                'is_intentional': is_intentional,
+                'is_intentional': _is_intentional_anaphora(group_sentences),
             })
 
         i = j if j > i + 1 else i + 1
 
-    total_repeated = sum(g['count'] for g in groups)
-    intentional = sum(1 for g in groups if g['is_intentional'])
+    return groups
 
-    # 점수: 비의도적 반복이 많을수록 감점
+
+def _compute_anaphora_score(groups: List[Dict]) -> tuple:
+    """반복 점수를 계산합니다.
+
+    Returns:
+        (score, intentional, unintentional)
+    """
+    intentional = sum(1 for g in groups if g['is_intentional'])
     unintentional = len(groups) - intentional
+
     if unintentional == 0:
         score = 100.0
     else:
-        penalty = unintentional * 15.0
-        score = max(0.0, 100.0 - penalty)
-    score = round(min(100.0, score), 1)
+        score = max(0.0, 100.0 - unintentional * 15.0)
 
-    suggestions = _generate_suggestions(groups, intentional, unintentional)
+    return round(min(100.0, score), 1), intentional, unintentional
+
+
+def detect_anaphora_repetition(content: str) -> dict:
+    """연속 문장 시작부 반복(anaphora)을 감지합니다.
+
+    Returns:
+        anaphora_groups, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sentences = _split_sentences(content)
+    if len(sentences) < _MIN_REPEAT:
+        return {**_EMPTY_RESULT, 'summary': {**_EMPTY_RESULT['summary'],
+                'total_sentences': len(sentences)}}
+
+    groups = _scan_anaphora_groups(sentences)
+    total_repeated = sum(g['count'] for g in groups)
+    score, intentional, unintentional = _compute_anaphora_score(groups)
 
     return {
         'anaphora_groups': groups,
@@ -112,7 +117,7 @@ def detect_anaphora_repetition(content: str) -> dict:
             'intentional_count': intentional,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(groups, intentional, unintentional),
     }
 
 
