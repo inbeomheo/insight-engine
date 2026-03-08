@@ -122,4 +122,5 @@ class ZapierWebhookService:
         return result
 
     def get_supported_events(self) -> list[str]:
+        """지원되는 이벤트 타입 목록 반환"""
         return list(SUPPORTED_EVENTS)

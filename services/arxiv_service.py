@@ -29,6 +29,7 @@ def _ns(tag: str) -> str:
 def _parse_entry(entry: ElementTree.Element) -> Dict:
     """Atom <entry> 요소를 딕셔너리로 변환합니다."""
     def text(tag: str) -> str:
+        """태그에서 텍스트 추출 (없으면 빈 문자열)"""
         el = entry.find(_ns(tag))
         return (el.text or "").strip() if el is not None else ""
 

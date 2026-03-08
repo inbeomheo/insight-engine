@@ -28,6 +28,7 @@ class ThumbnailVariant:
     created_at: float = field(default_factory=time.time)
 
     def update_ctr(self):
+        """노출 대비 클릭률(CTR) 재계산"""
         self.ctr = self.clicks / max(1, self.impressions)
 
 

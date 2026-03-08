@@ -22,6 +22,7 @@ class PaddleService:
 
     @property
     def is_configured(self) -> bool:
+        """Paddle API 키 설정 여부"""
         return bool(PADDLE_API_KEY)
 
     def verify_webhook(self, payload: bytes, signature: str) -> bool:
@@ -77,6 +78,7 @@ class PaddleService:
         return {'status': 'canceled', 'subscription_id': sub_id}
 
     def get_subscription(self, subscription_id: str) -> dict | None:
+        """구독 정보 단건 조회"""
         return self._subscriptions.get(subscription_id)
 
 

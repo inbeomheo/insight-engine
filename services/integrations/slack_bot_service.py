@@ -114,6 +114,7 @@ class SlackBotService:
 
     @property
     def is_configured(self) -> bool:
+        """Slack 봇 토큰 및 서명 시크릿 설정 여부"""
         return bool(self.bot_token and self.signing_secret)
 
 

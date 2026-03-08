@@ -86,10 +86,19 @@ if _PROMETHEUS_AVAILABLE:
 else:
     # 노옵 클래스 — prometheus 없어도 코드 동작
     class _Noop:
-        def labels(self, **kwargs): return self
-        def inc(self, *a, **k): pass
-        def observe(self, *a, **k): pass
-        def set(self, *a, **k): pass
+        """Prometheus 미설치 시 노옵 대체 객체"""
+        def labels(self, **kwargs):
+            """레이블 선택 (노옵)"""
+            return self
+        def inc(self, *a, **k):
+            """카운터 증가 (노옵)"""
+            pass
+        def observe(self, *a, **k):
+            """히스토그램 관측 (노옵)"""
+            pass
+        def set(self, *a, **k):
+            """게이지 설정 (노옵)"""
+            pass
 
     HTTP_REQUESTS_TOTAL = _Noop()
     HTTP_REQUEST_DURATION = _Noop()
@@ -121,18 +130,22 @@ def record_ai_generation(style: str, provider: str, status: str, duration_s: flo
 
 
 def record_cache_hit(cache_type: str = 'ai'):
+    """캐시 히트 카운터 증가"""
     CACHE_HITS.labels(cache_type=cache_type).inc()
 
 
 def record_cache_miss(cache_type: str = 'ai'):
+    """캐시 미스 카운터 증가"""
     CACHE_MISSES.labels(cache_type=cache_type).inc()
 
 
 def record_error(error_type: str, service: str = 'unknown'):
+    """에러 카운터 증가"""
     ERRORS_TOTAL.labels(error_type=error_type, service=service).inc()
 
 
 def record_transcript_source(source: str):
+    """자막 추출 소스별 카운터 증가"""
     TRANSCRIPT_SOURCE.labels(source=source).inc()
 
 
@@ -180,6 +193,7 @@ def init_metrics_endpoint(app):
     """Flask 앱에 /metrics 엔드포인트 등록"""
     @app.route('/metrics')
     def metrics_endpoint():
+        """Prometheus 메트릭 엔드포인트 핸들러"""
         from flask import Response
         data, content_type = get_metrics_output()
         return Response(data, mimetype=content_type)

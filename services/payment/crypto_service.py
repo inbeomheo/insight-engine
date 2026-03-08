@@ -23,6 +23,7 @@ class CryptoService:
 
     @property
     def is_configured(self) -> bool:
+        """Coinbase Commerce API 키 설정 여부"""
         return bool(COINBASE_API_KEY)
 
     def create_charge(self, user_id: str, amount: float, currency: str = 'USD', description: str = '') -> dict:
@@ -73,6 +74,7 @@ class CryptoService:
         return {'status': 'ignored', 'event_type': event_type}
 
     def get_charge(self, charge_id: str) -> dict | None:
+        """결제 요청 단건 조회"""
         return self._charges.get(charge_id)
 
 

@@ -117,6 +117,7 @@ class AirtableService:
 
     @property
     def is_configured(self) -> bool:
+        """Airtable API 키 및 Base ID 설정 여부"""
         return bool(self.api_key and self.base_id)
 
 

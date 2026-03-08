@@ -123,20 +123,25 @@ def clear_cache():
 # ── 사전 정의 시크릿 헬퍼 ─────────────────────────────────────────────────────
 
 def get_gemini_api_key() -> str:
+    """Gemini API 키 조회"""
     return get_secret('GEMINI_API_KEY', 'GEMINI_API_KEY')
 
 
 def get_deepseek_api_key() -> str:
+    """DeepSeek API 키 조회"""
     return get_secret('DEEPSEEK_API_KEY', 'DEEPSEEK_API_KEY')
 
 
 def get_supabase_url() -> str:
+    """Supabase URL 조회"""
     return get_secret('SUPABASE_URL', 'SUPABASE_URL')
 
 
 def get_supabase_anon_key() -> str:
+    """Supabase Anonymous 키 조회"""
     return get_secret('SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY')
 
 
 def get_stripe_secret_key() -> str:
+    """Stripe Secret 키 조회"""
     return get_secret('STRIPE_SECRET_KEY', 'STRIPE_SECRET_KEY')

@@ -130,6 +130,7 @@ class EncryptionService:
 
     @property
     def available(self) -> bool:
+        """암호화 기능 사용 가능 여부"""
         return self._available
 
 
@@ -138,6 +139,7 @@ _encryption_service: Optional['EncryptionService'] = None
 
 
 def get_encryption_service() -> 'EncryptionService':
+    """EncryptionService 싱글톤 인스턴스 반환"""
     global _encryption_service
     if _encryption_service is None:
         _encryption_service = EncryptionService()

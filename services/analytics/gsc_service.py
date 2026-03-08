@@ -41,6 +41,7 @@ class GSCService:
         return self._service
 
     def is_enabled(self) -> bool:
+        """GSC 연동 가능 여부 (사이트 URL + 인증 정보 확인)"""
         return bool(self.site_url and GOOGLE_APPLICATION_CREDENTIALS)
 
     def get_search_analytics(self, days: int = 30, row_limit: int = 25) -> dict[str, Any]:

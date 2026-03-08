@@ -22,6 +22,7 @@ class SlackService:
         self.webhook_url = webhook_url or SLACK_WEBHOOK_URL
 
     def is_enabled(self) -> bool:
+        """Slack 웹훅 URL 설정 여부"""
         return bool(self.webhook_url)
 
     def send(self, text: str, channel: str = '', username: str = 'Insight Engine',

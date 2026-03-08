@@ -63,6 +63,7 @@ class MarketplaceService:
         return sorted(results, key=lambda t: t['downloads'], reverse=True)
 
     def get_template(self, template_id: str) -> dict | None:
+        """ID로 템플릿 단건 조회"""
         return self._templates.get(template_id)
 
     def download_template(self, template_id: str, user_id: str) -> dict:

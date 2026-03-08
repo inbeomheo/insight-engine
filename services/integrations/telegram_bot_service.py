@@ -28,6 +28,7 @@ class TelegramBotService:
 
     @property
     def api_url(self) -> str:
+        """Telegram Bot API 엔드포인트 URL"""
         return f'{TELEGRAM_API_BASE}{self.bot_token}'
 
     def handle_update(self, update: dict) -> dict:
@@ -204,6 +205,7 @@ class TelegramBotService:
 
     @property
     def is_configured(self) -> bool:
+        """Telegram 봇 토큰 설정 여부"""
         return bool(self.bot_token)
 
 

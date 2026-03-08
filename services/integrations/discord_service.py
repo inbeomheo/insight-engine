@@ -22,6 +22,7 @@ class DiscordService:
         self.webhook_url = webhook_url or DISCORD_WEBHOOK_URL
 
     def is_enabled(self) -> bool:
+        """Discord 웹훅 URL 설정 여부"""
         return bool(self.webhook_url)
 
     def send(self, content: str, username: str = 'Insight Engine') -> dict[str, Any]:

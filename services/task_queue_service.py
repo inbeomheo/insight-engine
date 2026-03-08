@@ -39,6 +39,7 @@ class Task:
     priority: int = 0  # 높을수록 우선 처리
 
     def to_dict(self) -> Dict[str, Any]:
+        """태스크 정보를 딕셔너리로 변환"""
         return {
             'task_id': self.task_id,
             'status': self.status.value,
@@ -216,6 +217,7 @@ _task_queue: Optional[TaskQueueService] = None
 
 
 def get_task_queue() -> TaskQueueService:
+    """TaskQueueService 싱글톤 인스턴스 반환 (최초 호출 시 워커 시작)"""
     global _task_queue
     if _task_queue is None:
         _task_queue = TaskQueueService(num_workers=3)

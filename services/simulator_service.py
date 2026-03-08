@@ -25,6 +25,7 @@ class SimulationResult:
     recommendations: list            # 성과 향상 추천
 
     def to_dict(self) -> Dict[str, Any]:
+        """시뮬레이션 결과를 딕셔너리로 변환"""
         return {
             'predicted_views_30d': self.predicted_views_30d,
             'predicted_clicks_30d': self.predicted_clicks_30d,

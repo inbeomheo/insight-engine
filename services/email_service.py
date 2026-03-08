@@ -31,6 +31,7 @@ class EmailService:
         self._use_smtp = bool(SMTP_USER and SMTP_PASSWORD)
 
     def is_enabled(self) -> bool:
+        """이메일 발송 가능 여부 (SendGrid 또는 SMTP 설정 확인)"""
         return self._use_sendgrid or self._use_smtp
 
     def send(self, to: str | list[str], subject: str,

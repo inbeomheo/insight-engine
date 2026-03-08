@@ -165,6 +165,7 @@ class DiscordBotService:
 
     @property
     def is_configured(self) -> bool:
+        """Discord 봇 토큰 및 Public Key 설정 여부"""
         return bool(self.bot_token and self.public_key)
 
 

@@ -43,6 +43,7 @@ class ComplexityReport:
     expertise_level: str            # 전문성 수준 (beginner/intermediate/expert)
 
     def to_dict(self) -> Dict[str, Any]:
+        """분석 결과를 딕셔너리로 변환"""
         return {
             'readability_score': round(self.readability_score, 1),
             'complexity_score': round(self.complexity_score, 1),

@@ -134,6 +134,7 @@ class GoogleSheetsService:
 
     @property
     def is_configured(self) -> bool:
+        """Google Sheets API 키 및 스프레드시트 ID 설정 여부"""
         return bool(self.api_key and self.spreadsheet_id)
 
 

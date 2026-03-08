@@ -32,6 +32,7 @@ class PromptVersion:
 
     @staticmethod
     def make_version_id(content: str) -> str:
+        """프롬프트 내용 기반 SHA256 버전 ID 생성 (16자)"""
         return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
 
 
@@ -223,6 +224,7 @@ _service: Optional[PromptVersionService] = None
 
 
 def get_prompt_version_service() -> PromptVersionService:
+    """PromptVersionService 싱글톤 인스턴스 반환"""
     global _service
     if _service is None:
         _service = PromptVersionService()

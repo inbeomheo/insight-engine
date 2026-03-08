@@ -35,6 +35,7 @@ class TrendMonitorService:
             self._keywords.remove(keyword)
 
     def get_keywords(self) -> list[str]:
+        """현재 추적 중인 키워드 목록 반환"""
         return list(self._keywords)
 
     def fetch_trends(self, keywords: list[str] | None = None,

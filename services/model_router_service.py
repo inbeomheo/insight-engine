@@ -213,6 +213,7 @@ _router: Optional[ModelRouter] = None
 
 
 def get_model_router() -> ModelRouter:
+    """ModelRouter 싱글톤 인스턴스 반환"""
     global _router
     if _router is None:
         _router = ModelRouter()
