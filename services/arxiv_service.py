@@ -26,53 +26,10 @@ def _ns(tag: str) -> str:
     return f"{{{_ATOM_NS}}}{tag}"
 
 
-def _parse_entry(entry: ElementTree.Element) -> Dict:
-    """Atom <entry> 요소를 딕셔너리로 변환합니다."""
-    def text(tag: str) -> str:
-        """태그에서 텍스트 추출 (없으면 빈 문자열)"""
-        el = entry.find(_ns(tag))
-        return (el.text or "").strip() if el is not None else ""
-
-    # 논문 ID (URL 형식에서 순수 ID 추출)
-    id_raw = text("id")
-    arxiv_id = re.sub(r".*arxiv\.org/abs/", "", id_raw).strip()
-
-    # 저자 목록
-    authors = [
-        (a.find(_ns("name")).text or "").strip()
-        for a in entry.findall(_ns("author"))
-        if a.find(_ns("name")) is not None
-    ]
-
-    # 초록 정리
-    abstract = re.sub(r"\s+", " ", text("summary")).strip()
-
-    # PDF 링크
-    pdf_url = ""
-    for link in entry.findall(_ns("link")):
-        if link.get("title") == "pdf":
-            pdf_url = link.get("href", "")
-            break
-
-    title = re.sub(r"\s+", " ", text("title")).strip()
-    published = text("published")  # ISO 8601
-
-    # 카테고리
-    categories = [
-        c.get("term", "")
-        for c in entry.findall(f"{{{_ARXIV_NS}}}primary_category")
-    ]
-    cat_el = entry.find(f"{{{_ARXIV_NS}}}primary_category")
-    primary_category = cat_el.get("term", "") if cat_el is not None else ""
-
-    # 모든 카테고리 수집
-    all_categories = [
-        c.get("term", "")
-        for c in entry.findall(_ns("category"))
-        if c.get("term")
-    ]
-
-    # 콘텐츠: 제목 + 초록 (AI 생성 입력용)
+def _build_content_text(title: str, abstract: str, authors: List[str],
+                        published: str, primary_category: str,
+                        all_categories: List[str]) -> str:
+    """AI 생성 입력용 콘텐츠 텍스트를 조합합니다."""
     content = f"제목: {title}\n\n초록:\n{abstract}"
     if authors:
         content = f"저자: {', '.join(authors)}\n" + content
@@ -82,10 +39,48 @@ def _parse_entry(entry: ElementTree.Element) -> Dict:
         content += f"\n분야: {primary_category}"
     if all_categories:
         content += f"\n카테고리: {', '.join(all_categories)}"
+    return content
+
+
+def _parse_entry(entry: ElementTree.Element) -> Dict:
+    """Atom <entry> 요소를 딕셔너리로 변환합니다."""
+    def text(tag: str) -> str:
+        el = entry.find(_ns(tag))
+        return (el.text or "").strip() if el is not None else ""
+
+    arxiv_id = re.sub(r".*arxiv\.org/abs/", "", text("id")).strip()
+
+    authors = [
+        (a.find(_ns("name")).text or "").strip()
+        for a in entry.findall(_ns("author"))
+        if a.find(_ns("name")) is not None
+    ]
+
+    abstract = re.sub(r"\s+", " ", text("summary")).strip()
+
+    pdf_url = ""
+    for link in entry.findall(_ns("link")):
+        if link.get("title") == "pdf":
+            pdf_url = link.get("href", "")
+            break
+
+    title = re.sub(r"\s+", " ", text("title")).strip()
+    published = text("published")
+
+    cat_el = entry.find(f"{{{_ARXIV_NS}}}primary_category")
+    primary_category = cat_el.get("term", "") if cat_el is not None else ""
+
+    all_categories = [
+        c.get("term", "")
+        for c in entry.findall(_ns("category"))
+        if c.get("term")
+    ]
 
     return {
         "title": title,
-        "content": content,
+        "content": _build_content_text(
+            title, abstract, authors, published, primary_category, all_categories
+        ),
         "abstract": abstract,
         "authors": authors,
         "url": f"https://arxiv.org/abs/{arxiv_id}",

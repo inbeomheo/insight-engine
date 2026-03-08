@@ -63,38 +63,20 @@ _PASSIVE_TO_ACTIVE = {
 }
 
 
-def detect_passive(content: str) -> dict:
-    """콘텐츠에서 피동 표현을 감지합니다.
+_EMPTY_RESULT = {
+    'passive_expressions': [],
+    'summary': {'total': 0, 'sentence_count': 0, 'passive_ratio': 0},
+    'score': 100,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 콘텐츠
+
+def _scan_passive_expressions(sentences: list) -> tuple:
+    """문장 목록에서 피동 표현을 스캔합니다.
 
     Returns:
-        {
-            "passive_expressions": [{"text": str, "sentence": str, "suggestion": str}],
-            "summary": {"total": int, "sentence_count": int, "passive_ratio": float},
-            "score": int (0~100, 높을수록 능동적),
-            "suggestions": list[str],
-        }
+        (passives, passive_sentence_count)
     """
-    if not content or not content.strip():
-        return {
-            'passive_expressions': [],
-            'summary': {'total': 0, 'sentence_count': 0, 'passive_ratio': 0},
-            'score': 100,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content)
-                 if len(s.strip()) >= 5]
-    if not sentences:
-        return {
-            'passive_expressions': [],
-            'summary': {'total': 0, 'sentence_count': 0, 'passive_ratio': 0},
-            'score': 100,
-            'suggestions': ['분석할 문장이 없습니다.'],
-        }
-
     passives = []
     passive_sentence_count = 0
 
@@ -102,25 +84,40 @@ def detect_passive(content: str) -> dict:
         found_in_sentence = False
         for kw in _PASSIVE_KEYWORDS:
             if kw in sent:
-                suggestion = _suggest_active(kw, sent)
                 passives.append({
                     'text': kw,
                     'sentence': sent[:80] + '...' if len(sent) > 80 else sent,
-                    'suggestion': suggestion,
+                    'suggestion': _suggest_active(kw, sent),
                 })
                 found_in_sentence = True
-                break  # 문장당 1개만
+                break
 
         if found_in_sentence:
             passive_sentence_count += 1
 
+    return passives, passive_sentence_count
+
+
+def detect_passive(content: str) -> dict:
+    """콘텐츠에서 피동 표현을 감지합니다.
+
+    Args:
+        content: 분석할 콘텐츠
+
+    Returns:
+        passive_expressions, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content)
+                 if len(s.strip()) >= 5]
+    if not sentences:
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
+
+    passives, passive_sentence_count = _scan_passive_expressions(sentences)
     total_sentences = len(sentences)
     passive_ratio = round(passive_sentence_count / total_sentences * 100, 1)
-
-    # 점수: 피동 비율이 낮을수록 높은 점수
-    score = max(0, min(100, 100 - int(passive_ratio * 1.5)))
-
-    suggestions = _generate_suggestions(passive_ratio, len(passives), total_sentences)
 
     return {
         'passive_expressions': passives,
@@ -129,8 +126,8 @@ def detect_passive(content: str) -> dict:
             'sentence_count': total_sentences,
             'passive_ratio': passive_ratio,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': max(0, min(100, 100 - int(passive_ratio * 1.5))),
+        'suggestions': _generate_suggestions(passive_ratio, len(passives), total_sentences),
     }
 
 
