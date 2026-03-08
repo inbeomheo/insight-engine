@@ -8,7 +8,7 @@ AI 에디터 Copilot 서비스 (F10-16)
 """
 import logging
 import os
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger(__name__)
 

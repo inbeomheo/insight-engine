@@ -2,8 +2,6 @@
 사용량 관리 서비스
 비즈니스 로직 캡슐화
 """
-from flask import g
-
 from services.supabase_service import (
     is_supabase_enabled, get_usage, decrement_usage, is_admin,
     get_supabase, MAX_USAGE_COUNT
