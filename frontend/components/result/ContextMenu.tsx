@@ -122,6 +122,7 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
             onClick={item.onClick}
             role="menuitem"
+            aria-label={item.label}
           >
             <Icon className="h-3.5 w-3.5 text-muted-foreground" />
             {item.label}

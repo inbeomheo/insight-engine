@@ -22,6 +22,7 @@ export default function InsertedLinksSection({ links }: InsertedLinksSectionProp
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label="SEO 삽입 링크 섹션 펼치기/접기"
         className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
       >
         <span className="flex items-center gap-2">

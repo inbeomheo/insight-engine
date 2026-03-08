@@ -25,6 +25,7 @@ function AccordionItem({ question, answer, index }: AccordionItemProps) {
         className="w-full flex items-center justify-between px-3 py-2 text-left text-sm font-medium hover:bg-muted/50 transition-colors"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
+        aria-label={`FAQ Q${index + 1}: ${question}`}
       >
         <span className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground shrink-0">Q{index + 1}</span>
