@@ -126,13 +126,15 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   filteredReports: () => {
     const { reports, searchQuery, styleFilter } = get();
+    if (!searchQuery && !styleFilter) return reports;
+    const lowerQuery = searchQuery?.toLowerCase();
     return reports.filter((r) => {
-      const matchStyle = !styleFilter || r.style === styleFilter;
-      const matchSearch =
-        !searchQuery ||
-        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.content.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchStyle && matchSearch;
+      if (styleFilter && r.style !== styleFilter) return false;
+      if (!lowerQuery) return true;
+      return (
+        r.title.toLowerCase().includes(lowerQuery) ||
+        r.content.toLowerCase().includes(lowerQuery)
+      );
     });
   },
 

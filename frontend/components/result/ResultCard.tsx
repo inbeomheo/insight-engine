@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useReducer } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -80,24 +80,49 @@ const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string
   D: { badge: 'border-red-500/50 text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400', label: 'D등급' },
 };
 
+// 패널 상태 리듀서 — 13개 useState → 단일 리듀서 (상태 변경 시 1회 리렌더)
+interface PanelState {
+  collapsed: boolean;
+  hasExpanded: boolean;
+  copiedField: string | null;
+  chatOpen: boolean;
+  showTranscript: boolean;
+  audioBlob: Blob | null;
+  ttsLoading: boolean;
+  eventOpen: boolean;
+  eventLoading: boolean;
+  extractedEvents: VideoEvent[] | null;
+  eventSummary: EventSummary | null;
+  rewriteOpen: boolean;
+}
+type PanelAction =
+  | { type: 'SET'; key: keyof PanelState; value: PanelState[keyof PanelState] }
+  | { type: 'BATCH'; updates: Partial<PanelState> };
+
+const panelInitial: PanelState = {
+  collapsed: false, hasExpanded: true, copiedField: null,
+  chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
+  eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
+  rewriteOpen: false,
+};
+
+function panelReducer(state: PanelState, action: PanelAction): PanelState {
+  if (action.type === 'SET') {
+    if (state[action.key] === action.value) return state;
+    return { ...state, [action.key]: action.value };
+  }
+  // BATCH: 여러 상태를 한 번에 업데이트 (리렌더 1회)
+  return { ...state, ...action.updates };
+}
+
 const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
-  const [collapsed, setCollapsed] = useState(false);
-  // 한번이라도 펼쳤으면 DOM 유지 (display:none으로만 숨김 → 토글 즉시 반응)
-  const [hasExpanded, setHasExpanded] = useState(true);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [ttsLoading, setTtsLoading] = useState(false);
+  const [panel, dispatch] = useReducer(panelReducer, panelInitial);
+  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
-  // 이벤트 추출 상태
-  const [eventOpen, setEventOpen] = useState(false);
-  const [eventLoading, setEventLoading] = useState(false);
-  const [extractedEvents, setExtractedEvents] = useState<VideoEvent[] | null>(null);
-  const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
-
-  // 플랫폼 리라이트 모달
-  const [rewriteOpen, setRewriteOpen] = useState(false);
+  // 간편 setter
+  const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
+    dispatch({ type: 'SET', key, value });
+  }, []);
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
@@ -109,9 +134,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
 
   async function copyText(text: string, field: string) {
     await navigator.clipboard.writeText(text);
-    setCopiedField(field);
+    setPanel('copiedField', field);
     toast.success(t('result.copied'));
-    setTimeout(() => setCopiedField(null), 2000);
+    setTimeout(() => setPanel('copiedField', null), 2000);
   }
 
   async function copyRich() {
@@ -125,9 +150,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
           'text/plain': textBlob,
         }),
       ]);
-      setCopiedField('rich');
+      setPanel('copiedField', 'rich');
       toast.success(t('result.richCopied'));
-      setTimeout(() => setCopiedField(null), 2000);
+      setTimeout(() => setPanel('copiedField', null), 2000);
     } catch {
       await copyText(report.content, 'content');
     }
@@ -201,14 +226,14 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
   async function handleTts() {
     if (ttsLoading) return;
-    setTtsLoading(true);
+    setPanel('ttsLoading', true);
     try {
       const blob = await synthesizeTts(report.content);
-      setAudioBlob(blob);
+      setPanel('audioBlob', blob);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '오디오 생성에 실패했습니다.');
     } finally {
-      setTtsLoading(false);
+      setPanel('ttsLoading', false);
     }
   }
 
@@ -232,25 +257,23 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   async function handleExtractEvents() {
     // 이미 추출된 경우 패널 토글만
     if (extractedEvents !== null) {
-      setEventOpen((v) => !v);
+      setPanel('eventOpen', !eventOpen);
       return;
     }
 
-    setEventLoading(true);
-    setEventOpen(true);
+    dispatch({ type: 'BATCH', updates: { eventLoading: true, eventOpen: true } });
 
     try {
       const res = await extractEvents({
         url: report.url,
         transcript: report.transcript,
       });
-      setExtractedEvents(res.events);
-      setEventSummary(res.summary);
+      dispatch({ type: 'BATCH', updates: { extractedEvents: res.events, eventSummary: res.summary } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '이벤트 추출에 실패했습니다.');
-      setEventOpen(false);
+      setPanel('eventOpen', false);
     } finally {
-      setEventLoading(false);
+      setPanel('eventLoading', false);
     }
   }
 
@@ -322,12 +345,12 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       <VideoChatPanel
         videoUrl={report.url}
         videoTitle={report.youtube_title || report.title}
-        onClose={() => setChatOpen(false)}
+        onClose={() => setPanel('chatOpen', false)}
       />
     )}
     <PlatformRewriteModal
       open={rewriteOpen}
-      onOpenChange={setRewriteOpen}
+      onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
     <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow">
@@ -403,7 +426,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => setShowTranscript((v) => !v)}
+                    onClick={() => setPanel('showTranscript', !showTranscript)}
                   >
                     <FileText className="h-3.5 w-3.5" />
                   </Button>
@@ -434,8 +457,11 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               className="h-8 w-8"
               aria-label={collapsed ? '카드 펼치기' : '카드 접기'}
               onClick={() => {
-                if (collapsed) setHasExpanded(true);
-                setCollapsed(!collapsed);
+                if (collapsed) {
+                  dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
+                } else {
+                  setPanel('collapsed', true);
+                }
               }}
             >
               {collapsed ? (
@@ -586,7 +612,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             <AudioPlayer
               audioBlob={audioBlob}
               title={report.title}
-              onClose={() => setAudioBlob(null)}
+              onClose={() => setPanel('audioBlob', null)}
             />
           )}
 
@@ -600,7 +626,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 </span>
                 <button
                   type="button"
-                  onClick={() => setEventOpen(false)}
+                  onClick={() => setPanel('eventOpen', false)}
                   aria-label="이벤트 패널 닫기"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -658,7 +684,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <Brain className="h-3.5 w-3.5 mr-2" />
                 {t('result.mindmap')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setRewriteOpen(true)}>
+              <DropdownMenuItem onClick={() => setPanel('rewriteOpen', true)}>
                 <RefreshCw className="h-3.5 w-3.5 mr-2" />
                 플랫폼 변환
               </DropdownMenuItem>
@@ -673,7 +699,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 </DropdownMenuItem>
               )}
               {report.url && (
-                <DropdownMenuItem onClick={() => setChatOpen(true)}>
+                <DropdownMenuItem onClick={() => setPanel('chatOpen', true)}>
                   <Bot className="h-3.5 w-3.5 mr-2" />
                   영상에 질문하기
                 </DropdownMenuItem>

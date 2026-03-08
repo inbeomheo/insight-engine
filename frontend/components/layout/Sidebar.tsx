@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,53 @@ import { cn } from '@/lib/utils';
 import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
 import { useTranslation } from '@/hooks/useTranslation';
 import WorkspaceSelector from './WorkspaceSelector';
+
+/** 히스토리 항목 — memo로 불필요한 리렌더 방지 */
+const HistoryItem = memo(function HistoryItem({
+  report,
+  isActive,
+  onClick,
+  onDelete,
+}: {
+  report: { id: string; title: string; time: string; style: string };
+  isActive: boolean;
+  onClick: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-150',
+        isActive ? 'bg-primary/10 shadow-sm' : 'hover:bg-white hover:shadow-sm'
+      )}
+      onClick={() => onClick(report.id)}
+    >
+      <span className="text-sm shrink-0 mt-0.5">{getStyleEmoji(report.style)}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate text-foreground/90 leading-snug">
+          {report.title}
+        </div>
+        <div className="flex items-center gap-1 text-muted-foreground/50 mt-1">
+          <Clock className="h-3 w-3" />
+          <span>{report.time}</span>
+          <span>·</span>
+          <span>{getStyleLabel(report.style)}</span>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(report.id);
+        }}
+      >
+        <Trash2 className="h-3 w-3 text-destructive/60" />
+      </Button>
+    </div>
+  );
+});
 
 export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId, activeView, setActiveView } = useUIStore();
@@ -42,6 +89,11 @@ export default function Sidebar() {
     if (isMobile) setSidebarOpen(false);
   }, [setActiveReportId, isMobile, setSidebarOpen]);
 
+  const handleDelete = useCallback((id: string) => {
+    removeReport(id);
+    if (useUIStore.getState().activeReportId === id) setActiveReportId(null);
+  }, [removeReport, setActiveReportId]);
+
   const handleNewAnalysis = useCallback(() => {
     setActiveReportId(null);
 
@@ -64,13 +116,18 @@ export default function Sidebar() {
 
   const grouped = useMemo(() => {
     const groups: Record<string, typeof filtered> = {};
+    const dateCache = new Map<string, string>();
     for (const r of filtered) {
-      const date = new Date(r.createdAt).toLocaleDateString('ko-KR', {
-        month: 'long',
-        day: 'numeric',
-      });
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(r);
+      // createdAt(timestamp)에서 날짜 부분만 캐시 키로 사용 (toLocaleDateString 호출 최소화)
+      const d = new Date(r.createdAt);
+      const dayKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      let label = dateCache.get(dayKey);
+      if (!label) {
+        label = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+        dateCache.set(dayKey, label);
+      }
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(r);
     }
     return groups;
   }, [filtered]);
@@ -137,41 +194,13 @@ export default function Sidebar() {
                     {date}
                   </div>
                   {items.map((r) => (
-                    <div
+                    <HistoryItem
                       key={r.id}
-                      className={cn(
-                        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-150',
-                        activeReportId === r.id
-                          ? 'bg-primary/10 shadow-sm'
-                          : 'hover:bg-white hover:shadow-sm'
-                      )}
-                      onClick={() => handleHistoryClick(r.id)}
-                    >
-                      <span className="text-sm shrink-0 mt-0.5">{getStyleEmoji(r.style)}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate text-foreground/90 leading-snug">
-                          {r.title}
-                        </div>
-                        <div className="flex items-center gap-1 text-muted-foreground/50 mt-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{r.time}</span>
-                          <span>·</span>
-                          <span>{getStyleLabel(r.style)}</span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeReport(r.id);
-                          if (activeReportId === r.id) setActiveReportId(null);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive/60" />
-                      </Button>
-                    </div>
+                      report={r}
+                      isActive={activeReportId === r.id}
+                      onClick={handleHistoryClick}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </div>
               ))}

@@ -114,6 +114,7 @@ export default function MarketplaceBrowser() {
               </div>
               <button
                 onClick={() => handleDownload(t.id)}
+                aria-label={`${t.title} 템플릿 다운로드`}
                 className="w-full rounded-lg bg-indigo-600 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
               >
                 {t.price > 0 ? '구매' : '무료 다운로드'}
