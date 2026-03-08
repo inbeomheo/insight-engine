@@ -6,7 +6,7 @@ Acronym Consistency Checker 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from collections import defaultdict
 
 # 약어 패턴: 2글자 이상 대문자 (숫자 포함 가능)

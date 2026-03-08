@@ -4,7 +4,6 @@
 Whisper 로컬 + YouTube 자막 + 번역 파이프라인
 """
 import logging
-import os
 import re
 from typing import Any, Dict, List, Optional
 
