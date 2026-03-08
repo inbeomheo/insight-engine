@@ -73,6 +73,41 @@ _CTA_TEMPLATES = {
 }
 
 
+_EMPTY_RESULT = {
+    'ctas': [],
+    'summary': {'total': 0, 'types': {}, 'avg_strength': 0},
+    'position_distribution': {'top': 0, 'middle': 0, 'bottom': 0},
+    'suggestions': [],
+}
+
+
+def _scan_ctas(sentences: list) -> tuple:
+    """문장 목록에서 CTA를 스캔합니다.
+
+    Returns:
+        (ctas, type_counts, position_counts)
+    """
+    ctas = []
+    type_counts = {}
+    position_counts = {'top': 0, 'middle': 0, 'bottom': 0}
+    total = len(sentences)
+
+    for idx, sentence in enumerate(sentences):
+        cta_type = _detect_cta_type(sentence)
+        if cta_type:
+            position = _get_position(idx, total)
+            ctas.append({
+                'text': sentence,
+                'type': cta_type,
+                'position': position,
+                'strength': _calculate_strength(sentence),
+            })
+            type_counts[cta_type] = type_counts.get(cta_type, 0) + 1
+            position_counts[position] += 1
+
+    return ctas, type_counts, position_counts
+
+
 def analyze_ctas(content: str) -> dict:
     """콘텐츠에서 CTA를 감지하고 분석합니다.
 
@@ -80,51 +115,17 @@ def analyze_ctas(content: str) -> dict:
         content: 분석할 콘텐츠
 
     Returns:
-        {
-            "ctas": [{"text": str, "type": str, "position": str, "strength": int}],
-            "summary": {"total": int, "types": dict, "avg_strength": float},
-            "position_distribution": {"top": int, "middle": int, "bottom": int},
-            "suggestions": list[str],
-        }
+        ctas, summary, position_distribution, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'ctas': [],
-            'summary': {'total': 0, 'types': {}, 'avg_strength': 0},
-            'position_distribution': {'top': 0, 'middle': 0, 'bottom': 0},
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content) if len(s.strip()) >= 3]
     if not sentences:
-        return {
-            'ctas': [],
-            'summary': {'total': 0, 'types': {}, 'avg_strength': 0},
-            'position_distribution': {'top': 0, 'middle': 0, 'bottom': 0},
-            'suggestions': ['분석할 문장이 없습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
 
-    total_sentences = len(sentences)
-    ctas = []
-    type_counts = {}
-    position_counts = {'top': 0, 'middle': 0, 'bottom': 0}
-
-    for idx, sentence in enumerate(sentences):
-        cta_type = _detect_cta_type(sentence)
-        if cta_type:
-            position = _get_position(idx, total_sentences)
-            strength = _calculate_strength(sentence)
-            ctas.append({
-                'text': sentence,
-                'type': cta_type,
-                'position': position,
-                'strength': strength,
-            })
-            type_counts[cta_type] = type_counts.get(cta_type, 0) + 1
-            position_counts[position] += 1
-
+    ctas, type_counts, position_counts = _scan_ctas(sentences)
     avg_strength = sum(c['strength'] for c in ctas) / max(len(ctas), 1)
-    suggestions = _generate_suggestions(ctas, position_counts, total_sentences)
 
     return {
         'ctas': ctas,
@@ -134,7 +135,7 @@ def analyze_ctas(content: str) -> dict:
             'avg_strength': round(avg_strength, 1),
         },
         'position_distribution': position_counts,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(ctas, position_counts, len(sentences)),
     }
 
 

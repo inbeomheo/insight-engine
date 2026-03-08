@@ -231,6 +231,39 @@ def _map_prediction(score: float) -> str:
     return "low"
 
 
+_EMPTY_RESULT = {
+    "overall_score": 0.0,
+    "grade": "F",
+    "category_scores": {
+        "readability": 0.0, "engagement": 0.0,
+        "seo_signals": 0.0, "structure": 0.0, "shareability": 0.0,
+    },
+    "prediction": "low",
+    "strengths": [],
+    "weaknesses": [f"{_CATEGORY_NAMES[c]}이(가) 부족합니다" for c in _CATEGORY_NAMES],
+    "suggestions": list(_SUGGESTIONS.values()),
+}
+
+
+def _classify_strengths_weaknesses(category_scores: dict) -> tuple:
+    """카테고리 점수에서 강점/약점/제안을 분류합니다.
+
+    Returns:
+        (strengths, weaknesses, suggestions)
+    """
+    strengths = []
+    weaknesses = []
+    suggestions = []
+    for cat, score in category_scores.items():
+        name = _CATEGORY_NAMES[cat]
+        if score >= 70:
+            strengths.append(f"{name}이(가) 우수합니다")
+        if score < 50:
+            weaknesses.append(f"{name}이(가) 부족합니다")
+            suggestions.append(_SUGGESTIONS[cat])
+    return strengths, weaknesses, suggestions
+
+
 def predict_performance(content: str, title: str = '') -> dict:
     """콘텐츠 성과를 규칙 기반으로 예측한다.
 
@@ -241,31 +274,9 @@ def predict_performance(content: str, title: str = '') -> dict:
     Returns:
         성과 예측 결과 딕셔너리
     """
-    # 빈 콘텐츠 또는 None 처리
     if not content or not content.strip():
-        return {
-            "overall_score": 0.0,
-            "grade": "F",
-            "category_scores": {
-                "readability": 0.0,
-                "engagement": 0.0,
-                "seo_signals": 0.0,
-                "structure": 0.0,
-                "shareability": 0.0,
-            },
-            "prediction": "low",
-            "strengths": [],
-            "weaknesses": [
-                "가독성이 부족합니다",
-                "참여도가 부족합니다",
-                "SEO 신호가 부족합니다",
-                "구조가 부족합니다",
-                "공유 가능성이 부족합니다",
-            ],
-            "suggestions": list(_SUGGESTIONS.values()),
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 각 카테고리 점수 계산
     category_scores = {
         "readability": _score_readability(content),
         "engagement": _score_engagement(content),
@@ -274,24 +285,8 @@ def predict_performance(content: str, title: str = '') -> dict:
         "shareability": _score_shareability(content),
     }
 
-    # 전체 점수 (5개 카테고리 평균)
     overall_score = sum(category_scores.values()) / len(category_scores)
-
-    # 강점/약점 분류
-    strengths = []
-    weaknesses = []
-    for cat, score in category_scores.items():
-        name = _CATEGORY_NAMES[cat]
-        if score >= 70:
-            strengths.append(f"{name}이(가) 우수합니다")
-        if score < 50:
-            weaknesses.append(f"{name}이(가) 부족합니다")
-
-    # 약점 기반 개선 제안
-    suggestions = []
-    for cat, score in category_scores.items():
-        if score < 50:
-            suggestions.append(_SUGGESTIONS[cat])
+    strengths, weaknesses, suggestions = _classify_strengths_weaknesses(category_scores)
 
     return {
         "overall_score": round(overall_score, 1),

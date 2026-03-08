@@ -62,6 +62,37 @@ def _get_conclusion_section(content: str) -> str:
     return content[int(total_len * 0.8):]
 
 
+_EMPTY_RESULT = {
+    'elements': {},
+    'summary': {'has_conclusion_heading': False, 'element_count': 0,
+                'strength_level': 'none'},
+    'score': 0.0,
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
+
+
+def _detect_elements(content: str, conclusion: str) -> Dict:
+    """결론부에서 구성 요소를 감지합니다."""
+    return {
+        'conclusion_heading': bool(_CONCLUSION_HEADING.search(content)),
+        'summary_statement': any(p.search(conclusion) for p in _SUMMARY_SIGNALS),
+        'call_to_action': any(p.search(conclusion) for p in _CTA_SIGNALS),
+        'forward_looking': any(p.search(conclusion) for p in _FORWARD_SIGNALS),
+        'key_reaffirmation': any(p.search(conclusion) for p in _REAFFIRM_SIGNALS),
+    }
+
+
+def _strength_level(element_count: int) -> str:
+    """요소 수에 따른 강도 레벨을 반환합니다."""
+    if element_count >= 4:
+        return 'strong'
+    elif element_count >= 2:
+        return 'moderate'
+    elif element_count >= 1:
+        return 'weak'
+    return 'none'
+
+
 def analyze_conclusion_strength(content: str) -> dict:
     """결론부의 강도를 분석합니다.
 
@@ -69,59 +100,22 @@ def analyze_conclusion_strength(content: str) -> dict:
         elements, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'elements': {},
-            'summary': {'has_conclusion_heading': False, 'element_count': 0,
-                        'strength_level': 'none'},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return dict(_EMPTY_RESULT)
 
     conclusion = _get_conclusion_section(content)
-
-    # 결론 헤딩 존재 여부
-    has_heading = bool(_CONCLUSION_HEADING.search(content))
-
-    # 결론 요소 감지
-    has_summary = any(p.search(conclusion) for p in _SUMMARY_SIGNALS)
-    has_cta = any(p.search(conclusion) for p in _CTA_SIGNALS)
-    has_forward = any(p.search(conclusion) for p in _FORWARD_SIGNALS)
-    has_reaffirm = any(p.search(conclusion) for p in _REAFFIRM_SIGNALS)
-
-    elements = {
-        'conclusion_heading': has_heading,
-        'summary_statement': has_summary,
-        'call_to_action': has_cta,
-        'forward_looking': has_forward,
-        'key_reaffirmation': has_reaffirm,
-    }
-
+    elements = _detect_elements(content, conclusion)
     element_count = sum(1 for v in elements.values() if v)
-
-    # 점수: 요소 수 기반 (5개 만점)
-    score = round(min(100.0, element_count * 20.0), 1)
-
-    # 강도 레벨
-    if element_count >= 4:
-        level = 'strong'
-    elif element_count >= 2:
-        level = 'moderate'
-    elif element_count >= 1:
-        level = 'weak'
-    else:
-        level = 'none'
-
-    suggestions = _generate_suggestions(elements, level, element_count)
+    level = _strength_level(element_count)
 
     return {
         'elements': elements,
         'summary': {
-            'has_conclusion_heading': has_heading,
+            'has_conclusion_heading': elements['conclusion_heading'],
             'element_count': element_count,
             'strength_level': level,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': round(min(100.0, element_count * 20.0), 1),
+        'suggestions': _generate_suggestions(elements, level, element_count),
     }
 
 
