@@ -5,12 +5,10 @@ Discord Interactions Endpoint (webhook 기반)를 통해
 /generate 슬래시 명령어로 콘텐츠를 생성합니다.
 DISCORD_BOT_TOKEN, DISCORD_PUBLIC_KEY 환경변수 필요.
 """
-import hashlib
 import json
 import logging
 import os
 import re
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

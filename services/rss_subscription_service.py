@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 import feedparser as _feedparser
 
 from services.logging_config import get_logger
-from services.rss_service import parse_feed, _parse_published_dt
+from services.rss_service import parse_feed
 
 logger = get_logger('rss_subscription')
 
