@@ -29,6 +29,14 @@ _SKIP_PATTERNS = [
 ]
 
 
+_EMPTY_RESULT = {
+    'quiz_id': '',
+    'title': '',
+    'questions': [],
+    'total_questions': 0,
+}
+
+
 def generate_quiz(content: str, count: int = 5) -> dict:
     """콘텐츠에서 퀴즈를 자동 생성합니다.
 
@@ -54,31 +62,11 @@ def generate_quiz(content: str, count: int = 5) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'quiz_id': '',
-            'title': '',
-            'questions': [],
-            'total_questions': 0,
-        }
+        return dict(_EMPTY_RESULT)
 
     count = max(1, min(count, 10))
-    plain = _strip_markdown(content)
-    sentences = _extract_key_sentences(plain)
-
-    questions = []
-    used_sentences = set()
-
-    for sentence in sentences:
-        if len(questions) >= count:
-            break
-        if sentence in used_sentences:
-            continue
-
-        q = _create_question(sentence, len(questions) + 1)
-        if q:
-            questions.append(q)
-            used_sentences.add(sentence)
-
+    sentences = _extract_key_sentences(_strip_markdown(content))
+    questions = _build_questions(sentences, count)
     quiz_id = hashlib.md5(content[:200].encode()).hexdigest()[:8]
 
     return {
@@ -87,6 +75,22 @@ def generate_quiz(content: str, count: int = 5) -> dict:
         'questions': questions,
         'total_questions': len(questions),
     }
+
+
+def _build_questions(sentences: List[str], count: int) -> List[dict]:
+    """문장 목록에서 중복 없이 최대 count개의 문제를 생성합니다."""
+    questions = []
+    used_sentences = set()
+    for sentence in sentences:
+        if len(questions) >= count:
+            break
+        if sentence in used_sentences:
+            continue
+        q = _create_question(sentence, len(questions) + 1)
+        if q:
+            questions.append(q)
+            used_sentences.add(sentence)
+    return questions
 
 
 def _strip_markdown(text: str) -> str:

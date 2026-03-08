@@ -10,6 +10,39 @@ from services.logging_config import ServiceLogger
 logger = ServiceLogger('DigestService')
 
 
+def _count_by_key(items: list[dict], key: str) -> dict[str, int]:
+    """리스트 내 dict들의 특정 키 값별 빈도를 집계합니다."""
+    counts: dict[str, int] = {}
+    for item in items:
+        val = item.get(key, 'unknown')
+        counts[val] = counts.get(val, 0) + 1
+    return counts
+
+
+def _compute_digest(recent: list[dict], cutoff: datetime, period_days: int) -> dict[str, Any]:
+    """필터된 생성 기록으로 다이제스트 dict를 구성합니다."""
+    total = len(recent)
+    success = sum(1 for g in recent if g.get('success', True))
+    total_tokens = sum(g.get('tokens', 0) for g in recent)
+
+    style_counts = _count_by_key(recent, 'style')
+    model_counts = _count_by_key(recent, 'model')
+    top_styles = sorted(style_counts.items(), key=lambda x: -x[1])[:5]
+
+    return {
+        'period': f'{cutoff.strftime("%Y-%m-%d")} ~ {datetime.now(timezone.utc).strftime("%Y-%m-%d")}',
+        'period_days': period_days,
+        'total_generations': total,
+        'success_count': success,
+        'failure_count': total - success,
+        'success_rate': round(success / total * 100, 1) if total else 0.0,
+        'total_tokens': total_tokens,
+        'top_styles': [{'style': s, 'count': c} for s, c in top_styles],
+        'model_usage': [{'model': m, 'count': c} for m, c in sorted(model_counts.items(), key=lambda x: -x[1])],
+        'generated_at': datetime.now(timezone.utc).isoformat(),
+    }
+
+
 class DigestService:
     """주간 콘텐츠 다이제스트 생성"""
 
@@ -37,42 +70,9 @@ class DigestService:
             if self._parse_ts(g.get('created_at', '')) >= cutoff
         ]
 
-        total = len(recent)
-        success = sum(1 for g in recent if g.get('success', True))
-        total_tokens = sum(g.get('tokens', 0) for g in recent)
-
-        # 스타일별 집계
-        style_counts: dict[str, int] = {}
-        for g in recent:
-            style = g.get('style', 'unknown')
-            style_counts[style] = style_counts.get(style, 0) + 1
-
-        top_styles = sorted(style_counts.items(), key=lambda x: -x[1])[:5]
-
-        # 모델별 집계
-        model_counts: dict[str, int] = {}
-        for g in recent:
-            model = g.get('model', 'unknown')
-            model_counts[model] = model_counts.get(model, 0) + 1
-
-        week_start = cutoff.strftime('%Y-%m-%d')
-        week_end = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-
-        digest = {
-            'period': f'{week_start} ~ {week_end}',
-            'period_days': period_days,
-            'total_generations': total,
-            'success_count': success,
-            'failure_count': total - success,
-            'success_rate': round(success / total * 100, 1) if total else 0.0,
-            'total_tokens': total_tokens,
-            'top_styles': [{'style': s, 'count': c} for s, c in top_styles],
-            'model_usage': [{'model': m, 'count': c} for m, c in sorted(model_counts.items(), key=lambda x: -x[1])],
-            'generated_at': datetime.now(timezone.utc).isoformat(),
-        }
-
+        digest = _compute_digest(recent, cutoff, period_days)
         self._digest_history.append(digest)
-        logger.info(f'주간 다이제스트 생성 완료: {total}건')
+        logger.info(f'주간 다이제스트 생성 완료: {len(recent)}건')
         return digest
 
     def to_text(self, digest: dict) -> str:

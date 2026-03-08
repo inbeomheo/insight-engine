@@ -43,6 +43,15 @@ def _fetch_competitor_text(url: str) -> str:
         return ''
 
 
+_EMPTY_RESULT = {
+    'my_keywords': [],
+    'competitor_keywords': [],
+    'missing_keywords': [],
+    'unique_keywords': [],
+    'common_keywords': [],
+}
+
+
 def analyze_keyword_gap(
     content: str,
     competitor_urls: List[str],
@@ -63,17 +72,26 @@ def analyze_keyword_gap(
         }
     """
     if not content:
-        return {
-            'my_keywords': [],
-            'competitor_keywords': [],
-            'missing_keywords': [],
-            'unique_keywords': [],
-            'common_keywords': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     my_keywords = set(_extract_keywords(content))
+    competitor_all = _collect_competitor_keywords(competitor_urls)
+    competitor_keywords = set(word for word, _ in competitor_all.most_common(50))
 
-    # 경쟁 콘텐츠 키워드 수집
+    missing = competitor_keywords - my_keywords
+    missing_sorted = sorted(missing, key=lambda w: competitor_all.get(w, 0), reverse=True)
+
+    return {
+        'my_keywords': sorted(my_keywords),
+        'competitor_keywords': sorted(competitor_keywords),
+        'missing_keywords': missing_sorted[:20],
+        'unique_keywords': sorted(my_keywords - competitor_keywords)[:20],
+        'common_keywords': sorted(my_keywords & competitor_keywords),
+    }
+
+
+def _collect_competitor_keywords(competitor_urls: List[str]) -> Counter:
+    """경쟁 URL들에서 키워드를 수집하여 빈도 카운터를 반환합니다."""
     competitor_all = Counter()
     for url in (competitor_urls or []):
         text = _fetch_competitor_text(url)
@@ -81,23 +99,4 @@ def analyze_keyword_gap(
             words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', text.lower())
             filtered = [w for w in words if w not in _STOPWORDS]
             competitor_all.update(filtered)
-
-    # 경쟁 상위 키워드
-    competitor_keywords = set(
-        word for word, _ in competitor_all.most_common(50)
-    )
-
-    missing = competitor_keywords - my_keywords
-    unique = my_keywords - competitor_keywords
-    common = my_keywords & competitor_keywords
-
-    # 누락 키워드: 경쟁에서 빈도 높은 순서대로 정렬
-    missing_sorted = sorted(missing, key=lambda w: competitor_all.get(w, 0), reverse=True)
-
-    return {
-        'my_keywords': sorted(my_keywords),
-        'competitor_keywords': sorted(competitor_keywords),
-        'missing_keywords': missing_sorted[:20],
-        'unique_keywords': sorted(unique)[:20],
-        'common_keywords': sorted(common),
-    }
+    return competitor_all
