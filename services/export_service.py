@@ -7,7 +7,6 @@ import re
 
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 
 # 한글 폰트 설정 (Windows: Malgun Gothic, Linux: Noto Sans KR)

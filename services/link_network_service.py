@@ -3,9 +3,8 @@
 콘텐츠 간 의미적 연관성을 분석하여 내부 링크 자동 추천
 """
 import logging
-import math
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -3,12 +3,11 @@
 
 콘텐츠를 2인 대화체 스크립트로 변환 후 TTS로 MP3를 생성합니다.
 """
-import io
 import logging
 from typing import Dict
 
 from services import ai_service
-from services.tts_service import TTSService, EDGE_VOICE_KO, EDGE_VOICE_EN
+from services.tts_service import TTSService, EDGE_VOICE_KO
 
 logger = logging.getLogger(__name__)
 
