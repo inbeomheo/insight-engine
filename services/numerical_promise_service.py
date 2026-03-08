@@ -56,6 +56,13 @@ _KOREAN_ORDINAL_PATTERN = re.compile(
 )
 
 
+_EMPTY_RESULT = {
+    'promises': [],
+    'integrity_score': 100.0,
+    'suggestions': [],
+}
+
+
 def check_numerical_promises(content: str) -> dict:
     """콘텐츠의 수치 약속 이행 여부를 검증합니다.
 
@@ -71,38 +78,22 @@ def check_numerical_promises(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'promises': [],
-            'integrity_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    # 1. 제목/소제목에서 수치 약속 감지
     promises = _detect_promises(content)
-
     if not promises:
-        return {
-            'promises': [],
-            'integrity_score': 100.0,
-            'suggestions': ['수치 약속이 감지되지 않았습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['수치 약속이 감지되지 않았습니다.']}
 
-    # 2. 각 약속에 대해 이행 여부 검증
+    # 각 약속에 대해 이행 여부 검증
     for promise in promises:
         actual = _count_fulfillment(content, promise)
         promise['actual_count'] = actual
         promise['status'] = _determine_status(promise['promised_number'], actual)
 
-    # 3. 무결성 점수 계산
-    integrity_score = _calculate_integrity_score(promises)
-
-    # 4. 개선 제안 생성
-    suggestions = _generate_suggestions(promises)
-
     return {
         'promises': promises,
-        'integrity_score': integrity_score,
-        'suggestions': suggestions,
+        'integrity_score': _calculate_integrity_score(promises),
+        'suggestions': _generate_suggestions(promises),
     }
 
 

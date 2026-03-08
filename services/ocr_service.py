@@ -90,30 +90,10 @@ def _call_vision_api(image_base64: str, mime_type: str) -> Dict:
         ValueError: 텍스트 추출 실패
     """
     model = os.getenv('OCR_MODEL', 'gemini/gemini-2.5-flash-lite-preview-09-2025')
-
-    messages = [{
-        "role": "user",
-        "content": [
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{image_base64}"
-                }
-            },
-            {
-                "type": "text",
-                "text": _OCR_PROMPT
-            }
-        ]
-    }]
+    messages = _build_vision_messages(image_base64, mime_type)
 
     try:
-        response = completion(
-            model=model,
-            messages=messages,
-            max_tokens=4000,
-            timeout=60,
-        )
+        response = completion(model=model, messages=messages, max_tokens=4000, timeout=60)
         content = response.choices[0].message.content or ""
     except Exception as e:
         logger.error("Vision API OCR 실패: %s", e)
@@ -122,8 +102,15 @@ def _call_vision_api(image_base64: str, mime_type: str) -> Dict:
     if not content.strip():
         raise ValueError("이미지에서 텍스트를 찾을 수 없습니다.")
 
-    return {
-        "title": "OCR 추출",
-        "content": content.strip(),
-        "source_type": "ocr",
-    }
+    return {"title": "OCR 추출", "content": content.strip(), "source_type": "ocr"}
+
+
+def _build_vision_messages(image_base64: str, mime_type: str) -> list:
+    """Vision API 요청용 메시지를 구성합니다."""
+    return [{
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_base64}"}},
+            {"type": "text", "text": _OCR_PROMPT},
+        ],
+    }]

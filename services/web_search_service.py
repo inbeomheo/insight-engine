@@ -32,35 +32,31 @@ def search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
     try:
         resp = requests.post(
             TAVILY_API_URL,
-            json={
-                'api_key': api_key,
-                'query': query,
-                'max_results': max_results,
-                'search_depth': 'basic',
-            },
+            json={'api_key': api_key, 'query': query, 'max_results': max_results, 'search_depth': 'basic'},
             timeout=10,
         )
         resp.raise_for_status()
-        data = resp.json()
-        results = data.get('results', [])
-
-        # 필요한 필드만 추출
-        return [
-            {
-                'title': r.get('title', ''),
-                'url': r.get('url', ''),
-                'content': r.get('content', ''),
-                'score': r.get('score', 0.0),
-            }
-            for r in results
-            if r.get('url')  # URL 없는 결과 제외
-        ]
+        return _parse_search_results(resp.json())
     except requests.exceptions.RequestException as e:
         logger.warning(f"Tavily 웹 검색 실패 (무시): {e}")
         return []
     except Exception as e:
         logger.warning(f"Tavily 응답 파싱 실패 (무시): {e}")
         return []
+
+
+def _parse_search_results(data: dict) -> List[Dict[str, Any]]:
+    """Tavily API 응답에서 필요한 필드만 추출합니다."""
+    return [
+        {
+            'title': r.get('title', ''),
+            'url': r.get('url', ''),
+            'content': r.get('content', ''),
+            'score': r.get('score', 0.0),
+        }
+        for r in data.get('results', [])
+        if r.get('url')
+    ]
 
 
 def extract_grounding_context(transcript_summary: str) -> Dict[str, Any]:
