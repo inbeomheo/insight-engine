@@ -169,6 +169,55 @@ def _detect_in_sentence(sentence: str) -> list[dict]:
     return detections
 
 
+_EMPTY_RESULT = {
+    'detections': [],
+    'summary': {
+        'total_fillers': 0,
+        'total_hedges': 0,
+        'filler_ratio': 0.0,
+        'hedge_ratio': 0.0,
+        'clarity_score': 100.0,
+    },
+    'worst_sentences': [],
+    'suggestions': [],
+}
+
+
+def _aggregate_detections(all_detections: list, total_sentences: int) -> tuple:
+    """감지 결과를 집계하여 통계와 최악의 문장을 반환합니다.
+
+    Returns:
+        (total_fillers, total_hedges, filler_ratio, hedge_ratio, clarity_score, worst_sentences)
+    """
+    total_fillers = sum(1 for d in all_detections if d['category'] == 'filler')
+    total_hedges = sum(1 for d in all_detections if d['category'] == 'hedge')
+
+    filler_sentences = set()
+    hedge_sentences = set()
+    sentence_hit_count: Counter = Counter()
+
+    for d in all_detections:
+        sentence_hit_count[d['sentence']] += 1
+        if d['category'] == 'filler':
+            filler_sentences.add(d['sentence'])
+        else:
+            hedge_sentences.add(d['sentence'])
+
+    filler_ratio = round(len(filler_sentences) / total_sentences, 4) if total_sentences else 0.0
+    hedge_ratio = round(len(hedge_sentences) / total_sentences, 4) if total_sentences else 0.0
+
+    total_issues = total_fillers + total_hedges
+    if total_sentences > 0:
+        avg_issues = total_issues / total_sentences
+        clarity_score = max(0.0, min(100.0, round(100.0 - (avg_issues * 25.0), 1)))
+    else:
+        clarity_score = 100.0
+
+    worst_sentences = [sent for sent, _ in sentence_hit_count.most_common(3)]
+
+    return total_fillers, total_hedges, filler_ratio, hedge_ratio, clarity_score, worst_sentences
+
+
 def detect_fillers(content: str) -> dict:
     """콘텐츠에서 군더더기(filler)와 헤지(hedge) 표현을 감지합니다.
 
@@ -184,75 +233,20 @@ def detect_fillers(content: str) -> dict:
         }
     """
     if not content or not content.strip():
-        return {
-            'detections': [],
-            'summary': {
-                'total_fillers': 0,
-                'total_hedges': 0,
-                'filler_ratio': 0.0,
-                'hedge_ratio': 0.0,
-                'clarity_score': 100.0,
-            },
-            'worst_sentences': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     sentences = _split_sentences(content)
     if not sentences:
-        return {
-            'detections': [],
-            'summary': {
-                'total_fillers': 0,
-                'total_hedges': 0,
-                'filler_ratio': 0.0,
-                'hedge_ratio': 0.0,
-                'clarity_score': 100.0,
-            },
-            'worst_sentences': [],
-            'suggestions': ['유효한 문장이 없습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['유효한 문장이 없습니다.']}
 
-    # 전체 감지 실행
     all_detections = []
     for sent in sentences:
         all_detections.extend(_detect_in_sentence(sent))
 
-    # 카테고리별 집계
-    total_fillers = sum(1 for d in all_detections if d['category'] == 'filler')
-    total_hedges = sum(1 for d in all_detections if d['category'] == 'hedge')
+    total_fillers, total_hedges, filler_ratio, hedge_ratio, clarity_score, worst_sentences = (
+        _aggregate_detections(all_detections, len(sentences))
+    )
 
-    # 문장별 감지 수 집계 (filler/hedge 포함 문장 비율)
-    filler_sentences = set()
-    hedge_sentences = set()
-    sentence_hit_count: Counter = Counter()
-
-    for d in all_detections:
-        sentence_hit_count[d['sentence']] += 1
-        if d['category'] == 'filler':
-            filler_sentences.add(d['sentence'])
-        else:
-            hedge_sentences.add(d['sentence'])
-
-    total_sentences = len(sentences)
-    filler_ratio = round(len(filler_sentences) / total_sentences, 4) if total_sentences else 0.0
-    hedge_ratio = round(len(hedge_sentences) / total_sentences, 4) if total_sentences else 0.0
-
-    # 명확성 점수 (clarity_score): 0-100
-    # 감지된 총 문제 수를 문장 수 대비로 감점
-    total_issues = total_fillers + total_hedges
-    if total_sentences > 0:
-        # 문장당 평균 이슈 수 기반 감점 (이슈가 많을수록 점수 하락)
-        avg_issues = total_issues / total_sentences
-        clarity_score = max(0.0, min(100.0, round(100.0 - (avg_issues * 25.0), 1)))
-    else:
-        clarity_score = 100.0
-
-    # 최악의 문장 top 3 (filler+hedge가 가장 많은 문장)
-    worst_sentences = [
-        sent for sent, _ in sentence_hit_count.most_common(3)
-    ]
-
-    # 개선 제안 생성
     suggestions = _generate_suggestions(total_fillers, total_hedges, clarity_score, all_detections)
 
     return {

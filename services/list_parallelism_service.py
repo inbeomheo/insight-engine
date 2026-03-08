@@ -81,40 +81,25 @@ def _check_length_consistency(items: List[str]) -> Dict:
     }
 
 
-def check_list_parallelism(content: str) -> dict:
-    """목록 항목의 병렬 구조 일관성을 검사합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_lists': 0,
+        'parallel_lists': 0,
+        'non_parallel_lists': 0,
+        'level': 'none',
+    },
+    'parallelism_issues': [],
+    'suggestions': [],
+}
+
+
+def _analyze_list_parallelism(lists: List[List[str]]) -> tuple:
+    """각 목록의 병렬 구조를 분석합니다.
 
     Returns:
-        score, summary, parallelism_issues, suggestions를 포함하는 dict
+        (issues, parallel_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_lists': 0,
-                'parallel_lists': 0,
-                'non_parallel_lists': 0,
-                'level': 'none',
-            },
-            'parallelism_issues': [],
-            'suggestions': [],
-        }
-
-    lists = _extract_lists(content)
-
-    if not lists:
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_lists': 0,
-                'parallel_lists': 0,
-                'non_parallel_lists': 0,
-                'level': 'none',
-            },
-            'parallelism_issues': [],
-            'suggestions': [],
-        }
-
     issues = []
     parallel_count = 0
 
@@ -122,7 +107,6 @@ def check_list_parallelism(content: str) -> dict:
         endings = [_classify_ending(item) for item in lst]
         length_check = _check_length_consistency(lst)
 
-        # 종결 유형 일관성 체크
         unique_endings = set(endings)
         dominant = max(set(endings), key=endings.count)
         dominant_ratio = endings.count(dominant) / len(endings)
@@ -142,10 +126,16 @@ def check_list_parallelism(content: str) -> dict:
                 issue['length_deviation'] = length_check['ratio']
             issues.append(issue)
 
-    total = len(lists)
-    non_parallel = total - parallel_count
+    return issues, parallel_count
 
-    # 레벨 판정
+
+def _compute_parallelism_score(total: int, non_parallel: int,
+                                parallel_count: int) -> tuple:
+    """병렬 비율 기반 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total == 0:
         level = 'none'
     elif non_parallel == 0:
@@ -157,14 +147,32 @@ def check_list_parallelism(content: str) -> dict:
     else:
         level = 'inconsistent'
 
-    # 연속 점수 — 병렬 비율 기반
     if total == 0 or non_parallel == 0:
         score = 100.0
     else:
         parallel_ratio = parallel_count / total
         score = max(15.0, parallel_ratio * 90.0 + 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def check_list_parallelism(content: str) -> dict:
+    """목록 항목의 병렬 구조 일관성을 검사합니다.
+
+    Returns:
+        score, summary, parallelism_issues, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    lists = _extract_lists(content)
+    if not lists:
+        return dict(_EMPTY_RESULT)
+
+    issues, parallel_count = _analyze_list_parallelism(lists)
+    total = len(lists)
+    non_parallel = total - parallel_count
+    score, level = _compute_parallelism_score(total, non_parallel, parallel_count)
 
     suggestions = _generate_suggestions(
         total, parallel_count, non_parallel, level, issues

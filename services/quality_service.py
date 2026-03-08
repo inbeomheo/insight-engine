@@ -192,6 +192,74 @@ def should_regenerate(quality_result: Dict, threshold: str = "C") -> bool:
     return grade_order < threshold_order
 
 
+_CLICHE_WORDS = ['놀라운', '혁신적', '획기적', '최고의', '게임체인저', '압도적', '경이로운']
+
+
+def _score_seo(headings: list, char_count: int, content: str) -> int:
+    """SEO 점수를 계산합니다 (0~100)."""
+    seo = 50
+    if headings:
+        seo += min(20, len(headings) * 5)
+    if char_count >= 500:
+        seo += 10
+    if char_count >= 1500:
+        seo += 10
+    if re.search(r'\[.+?\]\(.+?\)', content) or re.search(r'https?://', content):
+        seo += 10
+    return min(100, seo)
+
+
+def _score_readability(text_lines: list, headings: list) -> int:
+    """가독성 점수를 계산합니다 (0~100)."""
+    readability = 50
+    paragraphs = [l for l in text_lines if not l.strip().startswith('#')]
+    if paragraphs:
+        avg_para_len = sum(len(p) for p in paragraphs) / len(paragraphs)
+        if avg_para_len < 200:
+            readability += 20
+        elif avg_para_len < 400:
+            readability += 10
+    list_items = len([l for l in text_lines if re.match(r'^\s*[-*•\d]+[.)]\s', l.strip())])
+    if list_items > 0:
+        readability += min(15, list_items * 3)
+    if len(headings) >= 2:
+        readability += 15
+    return min(100, readability), list_items
+
+
+def _score_originality(content: str) -> int:
+    """독창성 점수를 계산합니다 (0~100)."""
+    originality = 50
+    words = re.findall(r'[가-힣]{2,}|[a-zA-Z]{3,}', content.lower())
+    if words:
+        unique_ratio = len(set(words)) / len(words)
+        if unique_ratio > 0.6:
+            originality += 25
+        elif unique_ratio > 0.4:
+            originality += 15
+        elif unique_ratio > 0.3:
+            originality += 5
+    cliche_count = sum(1 for w in _CLICHE_WORDS if w in content)
+    originality -= cliche_count * 5
+    return max(0, min(100, originality))
+
+
+def _score_structure(headings: list, list_items: int, char_count: int) -> int:
+    """구조 점수를 계산합니다 (0~100)."""
+    structure = 40
+    if len(headings) >= 1:
+        structure += 15
+    if len(headings) >= 3:
+        structure += 10
+    if list_items >= 2:
+        structure += 10
+    if char_count >= 300:
+        structure += 10
+    if len(headings) >= 3:
+        structure += 15
+    return min(100, structure)
+
+
 def calculate_comprehensive_score(content: str) -> Dict:
     """콘텐츠 종합 점수를 로컬에서 계산합니다.
 
@@ -220,74 +288,12 @@ def calculate_comprehensive_score(content: str) -> Dict:
     lines = content.split('\n')
     text_lines = [l for l in lines if l.strip()]
     char_count = len(content)
-    word_count = len(content.split())
-
-    # --- SEO 점수 (0~100) ---
-    seo = 50  # 기본 50점
     headings = [l for l in text_lines if l.strip().startswith('#')]
-    if headings:
-        seo += min(20, len(headings) * 5)  # 소제목 있으면 가산
-    if char_count >= 500:
-        seo += 10
-    if char_count >= 1500:
-        seo += 10
-    # 링크 포함 여부
-    if re.search(r'\[.+?\]\(.+?\)', content) or re.search(r'https?://', content):
-        seo += 10
-    seo = min(100, seo)
 
-    # --- 가독성 점수 (0~100) ---
-    readability = 50
-    # 평균 문단 길이 (짧을수록 좋음)
-    paragraphs = [l for l in text_lines if not l.strip().startswith('#')]
-    if paragraphs:
-        avg_para_len = sum(len(p) for p in paragraphs) / len(paragraphs)
-        if avg_para_len < 200:
-            readability += 20
-        elif avg_para_len < 400:
-            readability += 10
-    # 리스트 아이템 사용
-    list_items = len([l for l in text_lines if re.match(r'^\s*[-*•\d]+[.)]\s', l.strip())])
-    if list_items > 0:
-        readability += min(15, list_items * 3)
-    # 소제목으로 구조화
-    if len(headings) >= 2:
-        readability += 15
-    readability = min(100, readability)
-
-    # --- 독창성 점수 (0~100) ---
-    # 규칙 기반 근사: 다양한 어휘 사용도 측정
-    originality = 50
-    words = re.findall(r'[가-힣]{2,}|[a-zA-Z]{3,}', content.lower())
-    if words:
-        unique_ratio = len(set(words)) / len(words)
-        if unique_ratio > 0.6:
-            originality += 25
-        elif unique_ratio > 0.4:
-            originality += 15
-        elif unique_ratio > 0.3:
-            originality += 5
-    # 금지 표현 감점
-    _CLICHE_WORDS = ['놀라운', '혁신적', '획기적', '최고의', '게임체인저', '압도적', '경이로운']
-    cliche_count = sum(1 for w in _CLICHE_WORDS if w in content)
-    originality -= cliche_count * 5
-    originality = max(0, min(100, originality))
-
-    # --- 구조 점수 (0~100) ---
-    structure = 40  # 기본
-    if len(headings) >= 1:
-        structure += 15
-    if len(headings) >= 3:
-        structure += 10
-    if list_items >= 2:
-        structure += 10
-    if char_count >= 300:
-        structure += 10
-    # 서론-본론-결론 패턴 (소제목 3개 이상)
-    if len(headings) >= 3:
-        structure += 15
-    structure = min(100, structure)
-
+    seo = _score_seo(headings, char_count, content)
+    readability, list_items = _score_readability(text_lines, headings)
+    originality = _score_originality(content)
+    structure = _score_structure(headings, list_items, char_count)
     total = round((seo + readability + originality + structure) / 4)
 
     return {
@@ -298,7 +304,7 @@ def calculate_comprehensive_score(content: str) -> Dict:
         "structure": structure,
         "details": {
             "char_count": char_count,
-            "word_count": word_count,
+            "word_count": len(content.split()),
             "heading_count": len(headings),
             "list_items": list_items,
         },
