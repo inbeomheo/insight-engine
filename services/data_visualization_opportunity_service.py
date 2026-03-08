@@ -94,48 +94,25 @@ def _analyze_sentence(sentence: str) -> List[Dict]:
     return opportunities
 
 
-def find_visualization_opportunities(content: str) -> dict:
-    """데이터 시각화 기회를 찾습니다.
+_EMPTY_RESULT = {
+    'opportunities': [],
+    'summary': {
+        'total_opportunities': 0,
+        'chart_types': {},
+        'number_density': 0.0,
+        'level': 'none',
+    },
+    'score': 50.0,
+    'suggestions': [],
+}
+
+
+def _collect_opportunities(sentences: List[str], cleaned: str) -> tuple:
+    """문장별 시각화 기회와 목록 데이터를 수집합니다.
 
     Returns:
-        opportunities, summary, score, suggestions를 포함하는 dict
+        (all_opportunities, chart_type_counter)
     """
-    if not content or not content.strip():
-        return {
-            'opportunities': [],
-            'summary': {
-                'total_opportunities': 0,
-                'chart_types': {},
-                'number_density': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    cleaned = _HEADING_RE.sub('', content)
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(cleaned)
-                 if s.strip() and len(s.strip()) >= 5]
-
-    if not sentences:
-        return {
-            'opportunities': [],
-            'summary': {
-                'total_opportunities': 0,
-                'chart_types': {},
-                'number_density': 0.0,
-                'level': 'none',
-            },
-            'score': 50.0,
-            'suggestions': [],
-        }
-
-    # 숫자 밀도
-    all_numbers = _NUMBER_RE.findall(cleaned)
-    word_count = len(cleaned.split())
-    number_density = round(len(all_numbers) / max(word_count, 1) * 100, 1)
-
-    # 문장별 기회 분석
     all_opportunities = []
     chart_type_counter = {}
 
@@ -147,7 +124,6 @@ def find_visualization_opportunities(content: str) -> dict:
             ct = opp['type']
             chart_type_counter[ct] = chart_type_counter.get(ct, 0) + 1
 
-    # 목록 데이터 검사 (전체 텍스트)
     list_matches = _LIST_PATTERN.findall(cleaned)
     if list_matches:
         chart_type_counter['list_data'] = len(list_matches)
@@ -159,9 +135,15 @@ def find_visualization_opportunities(content: str) -> dict:
                 'text': match[:60] if len(match) <= 60 else match[:57] + '...',
             })
 
-    total = len(all_opportunities)
+    return all_opportunities, chart_type_counter
 
-    # 레벨
+
+def _compute_viz_score(total: int) -> tuple:
+    """시각화 기회 수로 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total >= 5:
         level = 'rich'
     elif total >= 3:
@@ -171,13 +153,36 @@ def find_visualization_opportunities(content: str) -> dict:
     else:
         level = 'none'
 
-    # 점수 (시각화 기회가 많고 활용하면 좋은 콘텐츠)
     if total == 0:
-        score = 50.0  # 데이터가 없으면 중립
+        score = 50.0
     else:
         score = min(100.0, 50.0 + total * 10.0)
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def find_visualization_opportunities(content: str) -> dict:
+    """데이터 시각화 기회를 찾습니다.
+
+    Returns:
+        opportunities, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    cleaned = _HEADING_RE.sub('', content)
+    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(cleaned)
+                 if s.strip() and len(s.strip()) >= 5]
+
+    if not sentences:
+        return dict(_EMPTY_RESULT)
+
+    all_numbers = _NUMBER_RE.findall(cleaned)
+    word_count = len(cleaned.split())
+    number_density = round(len(all_numbers) / max(word_count, 1) * 100, 1)
+
+    all_opportunities, chart_type_counter = _collect_opportunities(sentences, cleaned)
+    score, level = _compute_viz_score(len(all_opportunities))
 
     suggestions = _generate_suggestions(
         all_opportunities, chart_type_counter, number_density, level
@@ -186,7 +191,7 @@ def find_visualization_opportunities(content: str) -> dict:
     return {
         'opportunities': all_opportunities[:20],
         'summary': {
-            'total_opportunities': total,
+            'total_opportunities': len(all_opportunities),
             'chart_types': chart_type_counter,
             'number_density': number_density,
             'level': level,

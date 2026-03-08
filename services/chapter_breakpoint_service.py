@@ -75,36 +75,22 @@ def _count_transitions(text: str) -> int:
     return count
 
 
-def detect_chapter_breakpoints(content: str) -> dict:
-    """챕터 분할이 필요한 지점을 감지합니다.
+_EMPTY_RESULT = {
+    'breakpoints': [],
+    'section_analysis': [],
+    'summary': {'total_sections': 0, 'long_sections': 0,
+                'suggested_breaks': 0, 'avg_section_length': 0},
+    'score': 100.0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 마크다운 콘텐츠
+
+def _analyze_sections_and_breakpoints(sections: List[Dict]) -> tuple:
+    """섹션별 분석과 분할점을 감지합니다.
 
     Returns:
-        breakpoints, section_analysis, summary, score, suggestions를 포함하는 dict
+        (breakpoints, section_analysis, long_sections)
     """
-    if not content or not content.strip():
-        return {
-            'breakpoints': [],
-            'section_analysis': [],
-            'summary': {'total_sections': 0, 'long_sections': 0,
-                        'suggested_breaks': 0, 'avg_section_length': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sections = _parse_sections(content)
-    if not sections:
-        return {
-            'breakpoints': [],
-            'section_analysis': [],
-            'summary': {'total_sections': 0, 'long_sections': 0,
-                        'suggested_breaks': 0, 'avg_section_length': 0},
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     breakpoints = []
     section_analysis = []
     long_sections = 0
@@ -148,17 +134,41 @@ def detect_chapter_breakpoints(content: str) -> dict:
                 'reason': reason,
             })
 
+    return breakpoints, section_analysis, long_sections
+
+
+def _compute_breakpoint_score(suggested_breaks: int, total_sections: int) -> float:
+    """분할 필요 비율로 점수를 계산합니다."""
+    if total_sections > 0:
+        break_ratio = suggested_breaks / total_sections
+        return round(max(0.0, min(100.0, (1.0 - break_ratio) * 100.0)), 1)
+    return 100.0
+
+
+def detect_chapter_breakpoints(content: str) -> dict:
+    """챕터 분할이 필요한 지점을 감지합니다.
+
+    Args:
+        content: 분석할 마크다운 콘텐츠
+
+    Returns:
+        breakpoints, section_analysis, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sections = _parse_sections(content)
+    if not sections:
+        return dict(_EMPTY_RESULT)
+
+    breakpoints, section_analysis, long_sections = (
+        _analyze_sections_and_breakpoints(sections)
+    )
+
     total_sections = len(sections)
     total_chars = sum(s['char_count'] for s in sections)
     avg_length = round(total_chars / total_sections) if total_sections > 0 else 0
-    suggested_breaks = len(breakpoints)
-
-    # 점수: 분할 필요 비율 반비례
-    if total_sections > 0:
-        break_ratio = suggested_breaks / total_sections
-        score = round(max(0.0, min(100.0, (1.0 - break_ratio) * 100.0)), 1)
-    else:
-        score = 100.0
+    score = _compute_breakpoint_score(len(breakpoints), total_sections)
 
     suggestions = _generate_suggestions(
         breakpoints, long_sections, avg_length, total_sections
@@ -170,7 +180,7 @@ def detect_chapter_breakpoints(content: str) -> dict:
         'summary': {
             'total_sections': total_sections,
             'long_sections': long_sections,
-            'suggested_breaks': suggested_breaks,
+            'suggested_breaks': len(breakpoints),
             'avg_section_length': avg_length,
         },
         'score': score,

@@ -92,57 +92,50 @@ def _has_pattern(content: str, patterns: list) -> bool:
     return any(p.search(content) for p in patterns)
 
 
-def check_prerequisite_disclosure(content: str) -> dict:
-    """튜토리얼/가이드의 사전조건 공시를 점검합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'is_tutorial_content': False,
+        'has_prereq_section': False,
+        'prereqs_found': [],
+        'prereqs_implied': [],
+        'completeness_ratio': 0.0,
+        'level': 'none',
+    },
+    'missing_prereqs': [],
+    'suggestions': [],
+}
+
+
+def _scan_prereq_categories(content: str) -> tuple:
+    """카테고리별 사전조건 존재 여부와 암시적 조건을 탐지합니다.
 
     Returns:
-        score, summary, suggestions, missing_prereqs를 포함하는 dict
+        (prereqs_found, prereqs_implied)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'is_tutorial_content': False,
-                'has_prereq_section': False,
-                'prereqs_found': [],
-                'prereqs_implied': [],
-                'completeness_ratio': 0.0,
-                'level': 'none',
-            },
-            'missing_prereqs': [],
-            'suggestions': [],
-        }
-
-    # 튜토리얼 콘텐츠 여부
-    is_tutorial = _count_matches(content, _TUTORIAL_SIGNALS) >= 2
-
-    # 사전조건 섹션 존재 여부
-    headings = _HEADING_RE.findall(content)
-    has_prereq_section = any(
-        _has_pattern(h, _PREREQ_HEADING_PATTERNS) for h in headings
-    )
-
-    # 각 카테고리 존재 여부 확인
     prereqs_found = []
-    prereqs_implied = []  # 본문에서 언급되나 명시적 공시가 아닌 것
+    prereqs_implied = []
 
     for cat_name, cat_info in _PREREQ_CATEGORIES.items():
         if _has_pattern(content, cat_info['patterns']):
             prereqs_found.append(cat_name)
 
-    # 본문에서 암시적으로 필요한 사전조건 탐지
-    # 코드 블록에 설치 명령이 있으면 version/tools가 암시됨
     if re.search(r'```[\s\S]*?(?:pip install|npm install|apt install|brew install)[\s\S]*?```', content):
         if 'version' not in prereqs_found:
             prereqs_implied.append('version')
         if 'tools' not in prereqs_found:
             prereqs_implied.append('tools')
 
-    # 완성도 비율 (찾은 / 전체)
-    total_cats = len(_PREREQ_CATEGORIES)
-    completeness = round(len(prereqs_found) / max(total_cats, 1) * 100, 1)
+    return prereqs_found, prereqs_implied
 
-    # 레벨 판정
+
+def _compute_prereq_score(is_tutorial: bool, has_prereq_section: bool,
+                           prereqs_found: List[str], completeness: float) -> tuple:
+    """사전조건 공시 점수와 레벨을 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if not is_tutorial:
         level = 'none'
     elif has_prereq_section and completeness >= 50:
@@ -154,7 +147,37 @@ def check_prerequisite_disclosure(content: str) -> dict:
     else:
         level = 'missing'
 
-    # 누락된 사전조건
+    if not is_tutorial:
+        score = 100.0
+    else:
+        score = 30.0 + (completeness / 100.0 * 60.0)
+        if has_prereq_section:
+            score += 10.0
+
+    score = round(max(0.0, min(100.0, score)), 1)
+    return score, level
+
+
+def check_prerequisite_disclosure(content: str) -> dict:
+    """튜토리얼/가이드의 사전조건 공시를 점검합니다.
+
+    Returns:
+        score, summary, suggestions, missing_prereqs를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    is_tutorial = _count_matches(content, _TUTORIAL_SIGNALS) >= 2
+
+    headings = _HEADING_RE.findall(content)
+    has_prereq_section = any(
+        _has_pattern(h, _PREREQ_HEADING_PATTERNS) for h in headings
+    )
+
+    prereqs_found, prereqs_implied = _scan_prereq_categories(content)
+    completeness = round(len(prereqs_found) / max(len(_PREREQ_CATEGORIES), 1) * 100, 1)
+    score, level = _compute_prereq_score(is_tutorial, has_prereq_section, prereqs_found, completeness)
+
     missing = []
     if is_tutorial:
         for cat_name, cat_info in _PREREQ_CATEGORIES.items():
@@ -164,16 +187,6 @@ def check_prerequisite_disclosure(content: str) -> dict:
                     'label': cat_info['label'],
                     'reason': '본문에 암시되어 있으나 명시적 공시 없음',
                 })
-
-    # 연속 점수 — completeness 비율 기반
-    if not is_tutorial:
-        score = 100.0
-    else:
-        score = 30.0 + (completeness / 100.0 * 60.0)
-        if has_prereq_section:
-            score += 10.0
-
-    score = round(max(0.0, min(100.0, score)), 1)
 
     suggestions = _generate_suggestions(
         is_tutorial, has_prereq_section, prereqs_found,
