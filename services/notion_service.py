@@ -109,37 +109,8 @@ def _block_to_markdown(block: dict) -> Optional[str]:
     return None
 
 
-def extract_notion_page(page_url: str, api_key: str) -> Dict:
-    """Notion 페이지에서 콘텐츠를 추출합니다.
-
-    Args:
-        page_url: Notion 페이지 URL
-        api_key: Notion Integration API 키
-
-    Returns:
-        {"title": str, "content": str, "url": str, "source_type": "notion"}
-
-    Raises:
-        ValueError: URL 파싱 실패 또는 API 오류
-    """
-    if not api_key:
-        raise ValueError('Notion API 키가 설정되지 않았습니다.')
-
-    page_id = _extract_page_id(page_url)
-    hdrs = _headers(api_key)
-
-    # 1. 페이지 메타데이터 → 제목
-    resp = requests.get(
-        f'{_NOTION_API_BASE}/pages/{page_id}',
-        headers=hdrs,
-        timeout=_REQUEST_TIMEOUT,
-    )
-    if resp.status_code != 200:
-        raise ValueError(f'Notion 페이지 조회 실패: {resp.status_code} {resp.text[:200]}')
-
-    title = _get_page_title(resp.json())
-
-    # 2. 블록 조회 (페이지네이션)
+def _fetch_page_blocks(page_id: str, hdrs: Dict) -> List[dict]:
+    """Notion 페이지의 블록을 페이지네이션으로 조회합니다."""
     blocks: List[dict] = []
     cursor = None
     while True:
@@ -162,15 +133,49 @@ def extract_notion_page(page_url: str, api_key: str) -> Dict:
         if not data.get('has_more'):
             break
         cursor = data.get('next_cursor')
+    return blocks
 
-    # 3. 블록 → 마크다운 변환
+
+def _blocks_to_markdown(blocks: List[dict]) -> str:
+    """블록 목록을 마크다운으로 변환합니다."""
     lines = []
     for block in blocks:
         md = _block_to_markdown(block)
         if md is not None:
             lines.append(md)
+    return '\n\n'.join(lines)
 
-    content = '\n\n'.join(lines)
+
+def extract_notion_page(page_url: str, api_key: str) -> Dict:
+    """Notion 페이지에서 콘텐츠를 추출합니다.
+
+    Args:
+        page_url: Notion 페이지 URL
+        api_key: Notion Integration API 키
+
+    Returns:
+        title, content, url, source_type를 포함하는 dict
+
+    Raises:
+        ValueError: URL 파싱 실패 또는 API 오류
+    """
+    if not api_key:
+        raise ValueError('Notion API 키가 설정되지 않았습니다.')
+
+    page_id = _extract_page_id(page_url)
+    hdrs = _headers(api_key)
+
+    resp = requests.get(
+        f'{_NOTION_API_BASE}/pages/{page_id}',
+        headers=hdrs,
+        timeout=_REQUEST_TIMEOUT,
+    )
+    if resp.status_code != 200:
+        raise ValueError(f'Notion 페이지 조회 실패: {resp.status_code} {resp.text[:200]}')
+
+    title = _get_page_title(resp.json())
+    content = _blocks_to_markdown(_fetch_page_blocks(page_id, hdrs))
+
     if not content.strip():
         raise ValueError('Notion 페이지에서 텍스트를 추출할 수 없습니다.')
 

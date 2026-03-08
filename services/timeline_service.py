@@ -9,6 +9,27 @@ from typing import List, Dict
 logger = logging.getLogger(__name__)
 
 
+def _render_timeline_items(events: List[Dict[str, str]]) -> str:
+    """이벤트 목록을 타임라인 아이템 HTML로 렌더링합니다."""
+    items_html = []
+    for i, ev in enumerate(events):
+        date = ev.get('date', '')
+        title = ev.get('title', '')
+        desc = ev.get('description', '')
+        side = 'left' if i % 2 == 0 else 'right'
+
+        items_html.append(f"""
+    <div class="tl-item tl-{side}">
+      <div class="tl-dot"></div>
+      <div class="tl-content">
+        {f'<span class="tl-date">{date}</span>' if date else ''}
+        <h3 class="tl-title">{title}</h3>
+        {f'<p class="tl-desc">{desc}</p>' if desc else ''}
+      </div>
+    </div>""")
+    return ''.join(items_html)
+
+
 def generate_timeline(events: List[Dict[str, str]]) -> str:
     """이벤트 목록을 시각적 타임라인 HTML로 변환합니다.
 
@@ -27,23 +48,6 @@ def generate_timeline(events: List[Dict[str, str]]) -> str:
     for i, ev in enumerate(events):
         if 'title' not in ev:
             raise ValueError(f'이벤트 {i+1}에 title 필드가 필요합니다.')
-
-    items_html = []
-    for i, ev in enumerate(events):
-        date = ev.get('date', '')
-        title = ev.get('title', '')
-        desc = ev.get('description', '')
-        side = 'left' if i % 2 == 0 else 'right'
-
-        items_html.append(f"""
-    <div class="tl-item tl-{side}">
-      <div class="tl-dot"></div>
-      <div class="tl-content">
-        {f'<span class="tl-date">{date}</span>' if date else ''}
-        <h3 class="tl-title">{title}</h3>
-        {f'<p class="tl-desc">{desc}</p>' if desc else ''}
-      </div>
-    </div>""")
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -75,7 +79,7 @@ body{{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#f
 </head>
 <body>
 <div class="tl-container">
-{''.join(items_html)}
+{_render_timeline_items(events)}
 </div>
 </body>
 </html>"""

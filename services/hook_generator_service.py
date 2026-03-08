@@ -45,42 +45,16 @@ _HOOK_TEMPLATES = {
 }
 
 
-def generate_hooks(topic: str, content: str = '', count: int = 5) -> dict:
-    """주제에 대한 훅 문장을 생성합니다.
+_EMPTY_RESULT = {
+    'topic': '',
+    'hooks': [],
+    'total': 0,
+    'recommendation': '',
+}
 
-    Args:
-        topic: 주제 또는 제목
-        content: 참고 콘텐츠 (선택, 통계/수치 추출용)
-        count: 생성할 훅 수 (기본 5, 최대 12)
 
-    Returns:
-        {
-            "topic": str,
-            "hooks": [
-                {
-                    "type": str (패턴 유형),
-                    "text": str (훅 문장),
-                    "effectiveness": str ("high" | "medium"),
-                }
-            ],
-            "total": int,
-            "recommendation": str,
-        }
-    """
-    if not topic or not topic.strip():
-        return {
-            'topic': '',
-            'hooks': [],
-            'total': 0,
-            'recommendation': '',
-        }
-
-    topic = topic.strip()
-    count = max(1, min(count, 12))
-
-    # 콘텐츠에서 통계/수치 추출
-    stats = _extract_stats(content) if content else []
-
+def _build_hooks(topic: str, stats: list, count: int) -> list:
+    """템플릿에서 훅 문장 목록을 생성합니다."""
     hooks = []
     for pattern_type, templates in _HOOK_TEMPLATES.items():
         if len(hooks) >= count:
@@ -93,26 +67,43 @@ def generate_hooks(topic: str, content: str = '', count: int = 5) -> dict:
             if '{stat}' in template:
                 if stats:
                     text = template.format(stat=stats[0])
-                    stats = stats[1:]  # 다음 통계 사용
+                    stats = stats[1:]
                 else:
                     continue
             else:
                 text = template.format(topic=topic)
 
-            effectiveness = _rate_effectiveness(pattern_type)
             hooks.append({
                 'type': pattern_type,
                 'text': text,
-                'effectiveness': effectiveness,
+                'effectiveness': _rate_effectiveness(pattern_type),
             })
+    return hooks
 
-    recommendation = _recommend_best(hooks)
+
+def generate_hooks(topic: str, content: str = '', count: int = 5) -> dict:
+    """주제에 대한 훅 문장을 생성합니다.
+
+    Args:
+        topic: 주제 또는 제목
+        content: 참고 콘텐츠 (선택, 통계/수치 추출용)
+        count: 생성할 훅 수 (기본 5, 최대 12)
+
+    Returns:
+        topic, hooks, total, recommendation을 포함하는 dict
+    """
+    if not topic or not topic.strip():
+        return dict(_EMPTY_RESULT)
+
+    topic = topic.strip()
+    stats = _extract_stats(content) if content else []
+    hooks = _build_hooks(topic, stats, max(1, min(count, 12)))
 
     return {
         'topic': topic,
         'hooks': hooks,
         'total': len(hooks),
-        'recommendation': recommendation,
+        'recommendation': _recommend_best(hooks),
     }
 
 
