@@ -81,23 +81,21 @@ def _score_sentiment(text: str) -> Dict:
             'sentiment': sentiment, 'tone': tone}
 
 
-def map_emotional_arc(content: str) -> dict:
-    """콘텐츠의 감정 흐름을 매핑합니다.
+_EMPTY_RESULT = {
+    'arc': [],
+    'summary': {'total_sections': 0, 'overall_tone': 'neutral',
+                'overall_sentiment': 0.0, 'arc_pattern': 'flat'},
+    'score': 50.0,
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
+
+
+def _build_arc(sections: List[Dict]) -> tuple:
+    """각 섹션의 감정을 분석하여 아크 데이터를 구성합니다.
 
     Returns:
-        arc, summary, score, suggestions를 포함하는 dict
+        (arc, sentiments)
     """
-    if not content or not content.strip():
-        return {
-            'arc': [],
-            'summary': {'total_sections': 0, 'overall_tone': 'neutral',
-                        'overall_sentiment': 0.0, 'arc_pattern': 'flat'},
-            'score': 50.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    sections = _split_sections(content)
-
     arc = []
     sentiments = []
     for i, section in enumerate(sections):
@@ -112,34 +110,44 @@ def map_emotional_arc(content: str) -> dict:
             'tone': scores['tone'],
         })
         sentiments.append(scores['sentiment'])
+    return arc, sentiments
 
-    # 전체 감정
-    avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else 0.0
+
+def _overall_tone(avg_sentiment: float) -> str:
+    """평균 감정 점수에서 전체 톤을 반환합니다."""
     if avg_sentiment > 0.3:
-        overall_tone = 'positive'
+        return 'positive'
     elif avg_sentiment < -0.3:
-        overall_tone = 'negative'
-    else:
-        overall_tone = 'neutral'
+        return 'negative'
+    return 'neutral'
 
-    # 아크 패턴 감지
+
+def map_emotional_arc(content: str) -> dict:
+    """콘텐츠의 감정 흐름을 매핑합니다.
+
+    Returns:
+        arc, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sections = _split_sections(content)
+    arc, sentiments = _build_arc(sections)
+
+    avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else 0.0
     arc_pattern = _detect_pattern(sentiments)
-
-    # 점수: 감정 변화의 역동성
-    score = _calculate_score(sentiments, arc_pattern)
-
-    suggestions = _generate_suggestions(arc, overall_tone, arc_pattern, sentiments)
+    tone = _overall_tone(avg_sentiment)
 
     return {
         'arc': arc,
         'summary': {
             'total_sections': len(sections),
-            'overall_tone': overall_tone,
+            'overall_tone': tone,
             'overall_sentiment': avg_sentiment,
             'arc_pattern': arc_pattern,
         },
-        'score': score,
-        'suggestions': suggestions,
+        'score': _calculate_score(sentiments, arc_pattern),
+        'suggestions': _generate_suggestions(arc, tone, arc_pattern, sentiments),
     }
 
 

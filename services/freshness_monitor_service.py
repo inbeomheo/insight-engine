@@ -93,6 +93,51 @@ def check_freshness(content: str, published_date: str) -> dict:
     }
 
 
+def _assess_date_risks(content: str, risk_factors: list) -> int:
+    """날짜 참조 위험을 평가하고 점수를 반환합니다."""
+    date_refs = _find_date_references(content)
+    score = 100
+    for ref in date_refs:
+        risk_factors.append({
+            'type': 'outdated_date_reference',
+            'severity': ref['severity'],
+            'detail': ref['detail'],
+        })
+        if ref['severity'] == 'high':
+            score -= 30
+        elif ref['severity'] == 'medium':
+            score -= 15
+    return max(0, score)
+
+
+def _assess_stat_risks(content: str, days_elapsed: int, risk_factors: list) -> int:
+    """통계/수치 노후화 위험을 평가하고 점수를 반환합니다."""
+    stat_refs = _find_stat_references(content)
+    score = 100
+    if stat_refs and days_elapsed > 90:
+        severity = 'medium' if days_elapsed < 365 else 'high'
+        for ref in stat_refs:
+            risk_factors.append({
+                'type': 'outdated_statistics', 'severity': severity, 'detail': ref,
+            })
+            score -= 10
+    return max(0, score)
+
+
+def _assess_tech_risks(content: str, days_elapsed: int, risk_factors: list) -> int:
+    """기술 용어 변동성 위험을 평가하고 점수를 반환합니다."""
+    tech_refs = _find_volatile_tech(content)
+    score = 100
+    if tech_refs and days_elapsed > 60:
+        for ref in tech_refs:
+            risk_factors.append({
+                'type': 'volatile_technology', 'severity': 'medium',
+                'detail': f'빠르게 변하는 기술 언급: {ref}',
+            })
+            score -= 8
+    return max(0, score)
+
+
 def _collect_risk_factors(content: str, days_elapsed: int) -> tuple:
     """콘텐츠에서 신선도 위험 요소를 수집합니다.
 
@@ -101,7 +146,6 @@ def _collect_risk_factors(content: str, days_elapsed: int) -> tuple:
     """
     risk_factors = []
 
-    # 시간 경과 기반 감점
     time_score = _score_time_decay(days_elapsed)
     if days_elapsed > 180:
         risk_factors.append({
@@ -110,46 +154,9 @@ def _collect_risk_factors(content: str, days_elapsed: int) -> tuple:
             'detail': f'발행 후 {days_elapsed}일 경과',
         })
 
-    # 날짜 참조 감지
-    date_refs = _find_date_references(content)
-    date_score = 100
-    for ref in date_refs:
-        risk_factors.append({
-            'type': 'outdated_date_reference',
-            'severity': ref['severity'],
-            'detail': ref['detail'],
-        })
-        if ref['severity'] == 'high':
-            date_score -= 30
-        elif ref['severity'] == 'medium':
-            date_score -= 15
-    date_score = max(0, date_score)
-
-    # 통계/수치 노후화 위험
-    stat_refs = _find_stat_references(content)
-    stat_score = 100
-    if stat_refs and days_elapsed > 90:
-        for ref in stat_refs:
-            risk_factors.append({
-                'type': 'outdated_statistics',
-                'severity': 'medium' if days_elapsed < 365 else 'high',
-                'detail': ref,
-            })
-            stat_score -= 10
-    stat_score = max(0, stat_score)
-
-    # 기술 용어 변동성
-    tech_score = 100
-    tech_refs = _find_volatile_tech(content)
-    if tech_refs and days_elapsed > 60:
-        for ref in tech_refs:
-            risk_factors.append({
-                'type': 'volatile_technology',
-                'severity': 'medium',
-                'detail': f'빠르게 변하는 기술 언급: {ref}',
-            })
-            tech_score -= 8
-    tech_score = max(0, tech_score)
+    date_score = _assess_date_risks(content, risk_factors)
+    stat_score = _assess_stat_risks(content, days_elapsed, risk_factors)
+    tech_score = _assess_tech_risks(content, days_elapsed, risk_factors)
 
     return risk_factors, time_score, date_score, stat_score, tech_score
 

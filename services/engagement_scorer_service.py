@@ -123,6 +123,33 @@ _SCORERS = [
 ]
 
 
+_EMPTY_RESULT = {
+    'score': 0,
+    'grade': 'F',
+    'breakdown': {},
+    'strengths': [],
+    'weaknesses': [],
+    'suggestions': ['콘텐츠가 비어 있습니다.'],
+}
+
+
+def _evaluate_factors(content: str) -> tuple:
+    """모든 참여 요소를 평가합니다.
+
+    Returns:
+        (breakdown, total_score)
+    """
+    breakdown = {}
+    total = 0
+    for factor, scorer in _SCORERS:
+        factor_score, details = scorer(content)
+        breakdown[factor] = {
+            'score': factor_score, 'max': _WEIGHTS[factor], 'details': details,
+        }
+        total += factor_score
+    return breakdown, total
+
+
 def score_engagement(content: str) -> dict:
     """콘텐츠의 참여 유도력을 종합 평가합니다.
 
@@ -130,47 +157,22 @@ def score_engagement(content: str) -> dict:
         content: 분석할 콘텐츠
 
     Returns:
-        {
-            "score": int (0~100),
-            "grade": str (A~F),
-            "breakdown": {factor: {"score": int, "max": int, "details": str}},
-            "strengths": list[str],
-            "weaknesses": list[str],
-            "suggestions": list[str],
-        }
+        score, grade, breakdown, strengths, weaknesses, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 0,
-            'grade': 'F',
-            'breakdown': {},
-            'strengths': [],
-            'weaknesses': [],
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return dict(_EMPTY_RESULT)
 
-    breakdown = {}
-    total = 0
-
-    for factor, scorer in _SCORERS:
-        factor_score, details = scorer(content)
-        breakdown[factor] = {
-            'score': factor_score, 'max': _WEIGHTS[factor], 'details': details,
-        }
-        total += factor_score
-
-    grade = _score_to_grade(total)
+    breakdown, total = _evaluate_factors(content)
     strengths = [k for k, v in breakdown.items() if v['score'] >= v['max'] * 0.6]
     weaknesses = [k for k, v in breakdown.items() if v['score'] <= v['max'] * 0.2]
-    suggestions = _generate_suggestions(breakdown, weaknesses)
 
     return {
         'score': total,
-        'grade': grade,
+        'grade': _score_to_grade(total),
         'breakdown': breakdown,
         'strengths': strengths,
         'weaknesses': weaknesses,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(breakdown, weaknesses),
     }
 
 
