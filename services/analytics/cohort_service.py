@@ -16,7 +16,7 @@ class CohortService:
         # 사용자 이벤트 저장: [{user_id, event, timestamp, revenue?}]
         self._events: list[dict] = []
 
-    def record_event(self, user_id: str, event: str, timestamp: str | None = None, revenue: float = 0.0):
+    def record_event(self, user_id: str, event: str, timestamp: str | None = None, revenue: float = 0.0) -> None:
         """이벤트 기록 (signup, active, purchase 등)"""
         self._events.append({
             'user_id': user_id,

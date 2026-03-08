@@ -158,7 +158,7 @@ class PromptVersionService:
         self._cache[prompt_key] = versions
         return versions
 
-    def record_metric(self, prompt_key: str, version_id: str, metric_name: str, value: float):
+    def record_metric(self, prompt_key: str, version_id: str, metric_name: str, value: float) -> None:
         """버전별 성능 메트릭 기록 (예: quality_score, user_rating)"""
         versions = self.get_history(prompt_key)
         for v in versions:

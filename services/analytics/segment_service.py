@@ -39,7 +39,7 @@ class SegmentService:
     def __init__(self):
         self._user_stats: dict[str, dict] = {}
 
-    def update_stats(self, user_id: str, stats: dict):
+    def update_stats(self, user_id: str, stats: dict) -> None:
         """사용자 통계 업데이트
 
         Args:
