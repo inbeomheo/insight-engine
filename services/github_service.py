@@ -25,21 +25,12 @@ _GITHUB_REPO_RE = re.compile(
 )
 
 
-def extract_github_readme(url: str) -> Dict:
-    """GitHub 리포지토리 URL에서 README를 추출합니다.
-
-    Args:
-        url: GitHub 리포지토리 URL (예: https://github.com/owner/repo)
-
-    Returns:
-        {"title": str, "content": str, "url": str, "source_type": "github"}
+def _fetch_readme_raw(owner: str, repo: str) -> str:
+    """GitHub API로 README를 가져와 디코딩합니다.
 
     Raises:
-        ValueError: URL이 유효하지 않거나 README를 찾을 수 없는 경우
+        ValueError: API 오류, 디코딩 실패, 빈 README
     """
-    owner, repo = _parse_github_url(url)
-
-    # README 가져오기
     api_url = f"{_GITHUB_API_BASE}/repos/{owner}/{repo}/readme"
     try:
         resp = requests.get(
@@ -56,34 +47,42 @@ def extract_github_readme(url: str) -> Dict:
     except requests.RequestException as e:
         raise ValueError(f"GitHub에 연결할 수 없습니다: {e}")
 
-    # base64 디코드
-    content_b64 = data.get("content", "")
-    encoding = data.get("encoding", "base64")
-
-    if encoding != "base64":
-        raise ValueError(f"지원하지 않는 인코딩: {encoding}")
+    if data.get("encoding", "base64") != "base64":
+        raise ValueError(f"지원하지 않는 인코딩: {data.get('encoding')}")
 
     try:
-        content = base64.b64decode(content_b64).decode("utf-8")
+        content = base64.b64decode(data.get("content", "")).decode("utf-8")
     except Exception as e:
         raise ValueError(f"README 디코딩 실패: {e}")
 
     if not content.strip():
         raise ValueError(f"README가 비어 있습니다: {owner}/{repo}")
+    return content
 
-    # 리포지토리 정보를 제목에 포함
-    title = f"{owner}/{repo}"
 
-    # 리포지토리 설명 가져오기 (선택적)
+def extract_github_readme(url: str) -> Dict:
+    """GitHub 리포지토리 URL에서 README를 추출합니다.
+
+    Args:
+        url: GitHub 리포지토리 URL (예: https://github.com/owner/repo)
+
+    Returns:
+        {"title": str, "content": str, "url": str, "source_type": "github"}
+
+    Raises:
+        ValueError: URL이 유효하지 않거나 README를 찾을 수 없는 경우
+    """
+    owner, repo = _parse_github_url(url)
+    content = _fetch_readme_raw(owner, repo)
+
     repo_desc = _get_repo_description(owner, repo)
+    header = f"리포지토리: {owner}/{repo}"
     if repo_desc:
-        content = f"리포지토리: {owner}/{repo}\n설명: {repo_desc}\n\n{content}"
-    else:
-        content = f"리포지토리: {owner}/{repo}\n\n{content}"
+        header += f"\n설명: {repo_desc}"
 
     return {
-        "title": title,
-        "content": content,
+        "title": f"{owner}/{repo}",
+        "content": f"{header}\n\n{content}",
         "url": url,
         "source_type": "github",
     }

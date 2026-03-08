@@ -69,6 +69,14 @@ _SUGGESTIONS = {
 }
 
 
+_EMPTY_RESULT = {
+    'issues': [],
+    'summary': {'total': 0, 'by_severity': {}},
+    'clarity_score': 100.0,
+    'suggestions': [],
+}
+
+
 def check_pronoun_clarity(content: str) -> dict:
     """콘텐츠의 지시어 모호성을 검사합니다.
 
@@ -76,59 +84,30 @@ def check_pronoun_clarity(content: str) -> dict:
         content: 검사할 텍스트
 
     Returns:
-        {
-            "issues": [{"pronoun": str, "sentence": str, "position": str, "severity": str, "suggestion": str}],
-            "summary": {"total": int, "by_severity": dict},
-            "clarity_score": float,
-            "suggestions": list[str],
-        }
+        issues, summary, clarity_score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'issues': [],
-            'summary': {'total': 0, 'by_severity': {}},
-            'clarity_score': 100.0,
-            'suggestions': ['검사할 콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
 
-    # 문장 분리
     sentences = _split_sentences(content)
     if not sentences:
-        return {
-            'issues': [],
-            'summary': {'total': 0, 'by_severity': {}},
-            'clarity_score': 100.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     issues = []
     for i, sentence in enumerate(sentences):
         prev_sentence = sentences[i - 1] if i > 0 else ''
-        found = _check_sentence(sentence, prev_sentence)
-        issues.extend(found)
+        issues.extend(_check_sentence(sentence, prev_sentence))
 
-    # 요약 생성
     by_severity = {}
     for issue in issues:
         sev = issue['severity']
         by_severity[sev] = by_severity.get(sev, 0) + 1
 
-    summary = {
-        'total': len(issues),
-        'by_severity': by_severity,
-    }
-
-    # 명확성 점수 (100점 기준, 이슈당 감점)
-    clarity_score = _calculate_score(issues, len(sentences))
-
-    # 전체 제안
-    suggestions = _generate_suggestions(issues, len(sentences))
-
     return {
         'issues': issues,
-        'summary': summary,
-        'clarity_score': clarity_score,
-        'suggestions': suggestions,
+        'summary': {'total': len(issues), 'by_severity': by_severity},
+        'clarity_score': _calculate_score(issues, len(sentences)),
+        'suggestions': _generate_suggestions(issues, len(sentences)),
     }
 
 
@@ -139,58 +118,48 @@ def _split_sentences(content: str) -> list:
     return [s.strip() for s in raw if len(s.strip()) >= 3]
 
 
-def _check_sentence(sentence: str, prev_sentence: str) -> list:
-    """단일 문장에서 모호한 지시어를 찾습니다."""
+def _check_ko_pronouns(sentence: str, prev_sentence: str) -> list:
+    """한국어 지시어의 모호성을 검사합니다."""
     issues = []
-
-    # 문장의 단어 목록 (공백 기준)
-    words = sentence.split()
-    if not words:
-        return issues
-
-    # --- 한국어 지시어 검사 ---
     for pronoun in _KO_PRONOUNS:
         if pronoun not in sentence:
             continue
-
-        # 지시어 + 명사 결합 확인 (예: "이런 방법" → 명확)
         if _has_following_noun_ko(sentence, pronoun):
             continue
-
         position = _get_position(sentence, pronoun)
         severity = _determine_severity(position, prev_sentence, is_korean=True)
-        suggestion = _SUGGESTIONS[severity].format(pronoun=pronoun)
-
         issues.append({
-            'pronoun': pronoun,
-            'sentence': sentence,
-            'position': position,
-            'severity': severity,
-            'suggestion': suggestion,
+            'pronoun': pronoun, 'sentence': sentence,
+            'position': position, 'severity': severity,
+            'suggestion': _SUGGESTIONS[severity].format(pronoun=pronoun),
         })
+    return issues
 
-    # --- 영어 지시어 검사 (사전 컴파일 패턴 사용) ---
+
+def _check_en_pronouns(sentence: str, prev_sentence: str, words: list) -> list:
+    """영어 지시어의 모호성을 검사합니다."""
+    issues = []
     for pronoun in _EN_PRONOUNS:
         if not _EN_PRONOUN_PATTERNS[pronoun].search(sentence):
             continue
-
-        # "this/that/these/those + 명사" 패턴은 명확 → 건너뜀
         if pronoun in ('this', 'that', 'these', 'those') and _has_following_noun_en(sentence, pronoun):
             continue
-
         position = _get_position_en(words, pronoun)
         severity = _determine_severity(position, prev_sentence, is_korean=False)
-        suggestion = _SUGGESTIONS[severity].format(pronoun=pronoun)
-
         issues.append({
-            'pronoun': pronoun,
-            'sentence': sentence,
-            'position': position,
-            'severity': severity,
-            'suggestion': suggestion,
+            'pronoun': pronoun, 'sentence': sentence,
+            'position': position, 'severity': severity,
+            'suggestion': _SUGGESTIONS[severity].format(pronoun=pronoun),
         })
-
     return issues
+
+
+def _check_sentence(sentence: str, prev_sentence: str) -> list:
+    """단일 문장에서 모호한 지시어를 찾습니다."""
+    words = sentence.split()
+    if not words:
+        return []
+    return _check_ko_pronouns(sentence, prev_sentence) + _check_en_pronouns(sentence, prev_sentence, words)
 
 
 def _has_following_noun_ko(sentence: str, pronoun: str) -> bool:

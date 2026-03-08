@@ -83,33 +83,16 @@ _ARTIFACT_PATTERNS = {
 }
 
 
-def detect_transcript_artifacts(content: str) -> dict:
-    """자막 전사에서 아티팩트를 감지합니다.
+_EMPTY_RESULT = {
+    'artifacts': [],
+    'summary': {'total': 0, 'by_type': {}, 'artifact_ratio': 0.0},
+    'clean_score': 100.0,
+    'suggestions': [],
+}
 
-    Args:
-        content: 분석할 자막 텍스트
 
-    Returns:
-        {
-            "artifacts": [{"type": str, "text": str, "sentence": str, "removable": bool}],
-            "summary": {"total": int, "by_type": dict, "artifact_ratio": float},
-            "clean_score": float,  # 0-100 (높을수록 깨끗)
-            "suggestions": list[str],
-        }
-    """
-    if not content or not content.strip():
-        return {
-            'artifacts': [],
-            'summary': {'total': 0, 'by_type': {}, 'artifact_ratio': 0.0},
-            'clean_score': 100.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    # 문장 분리
-    sentences = _split_sentences(content)
-    total_sentences = len(sentences) if sentences else 1
-
-    # 아티팩트 감지
+def _scan_artifacts(sentences: list) -> list:
+    """문장 목록에서 아티팩트를 감지합니다."""
     artifacts = []
     for sentence in sentences:
         for artifact_type, config in _ARTIFACT_PATTERNS.items():
@@ -122,29 +105,37 @@ def detect_transcript_artifacts(content: str) -> dict:
                         'sentence': sentence,
                         'removable': config['removable'],
                     })
-                    break  # 같은 타입의 다른 패턴은 건너뜀
+                    break
+    return artifacts
 
-    # 요약 통계
+
+def detect_transcript_artifacts(content: str) -> dict:
+    """자막 전사에서 아티팩트를 감지합니다.
+
+    Args:
+        content: 분석할 자막 텍스트
+
+    Returns:
+        artifacts, summary, clean_score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    sentences = _split_sentences(content)
+    total_sentences = len(sentences) if sentences else 1
+    artifacts = _scan_artifacts(sentences)
     type_counts = Counter(a['type'] for a in artifacts)
-    artifact_ratio = len(artifacts) / total_sentences if total_sentences > 0 else 0.0
-
-    summary = {
-        'total': len(artifacts),
-        'by_type': dict(type_counts),
-        'artifact_ratio': round(artifact_ratio, 4),
-    }
-
-    # 클린 스코어 계산 (0~100)
     clean_score = _calculate_clean_score(artifacts, total_sentences)
-
-    # 개선 제안
-    suggestions = _generate_suggestions(artifacts, type_counts, clean_score)
 
     return {
         'artifacts': artifacts,
-        'summary': summary,
+        'summary': {
+            'total': len(artifacts),
+            'by_type': dict(type_counts),
+            'artifact_ratio': round(len(artifacts) / total_sentences, 4),
+        },
         'clean_score': clean_score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(artifacts, type_counts, clean_score),
     }
 
 
