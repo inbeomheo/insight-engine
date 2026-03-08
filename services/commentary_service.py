@@ -4,11 +4,8 @@ AI 코멘터리 서비스
 원본 콘텐츠에 [해설] 주석을 추가합니다.
 전문 용어 설명, 배경 정보, 관련 사례를 주석으로 삽입합니다.
 """
-import json
 import re
 from typing import Dict, Optional
-
-from flask import current_app
 
 
 _COMMENTARY_PROMPT = """당신은 전문 해설자입니다. 아래 콘텐츠를 읽고, 독자 이해를 돕기 위해 핵심 부분에 [해설] 주석을 추가하세요.

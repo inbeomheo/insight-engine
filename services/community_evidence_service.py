@@ -6,7 +6,7 @@ Reddit, 포럼, 리뷰, Q&A 같은 사용자 발화 기반 근거가
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 # 커뮤니티 소스 타입별 패턴
 _COMMUNITY_SOURCES = {
