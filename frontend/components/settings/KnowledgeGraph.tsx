@@ -107,6 +107,7 @@ export default function KnowledgeGraph() {
             <button
               key={node.name}
               onClick={() => handleNodeClick(node.name)}
+              aria-label={`${node.name} 엔티티 선택`}
               className={cn(
                 'rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer',
                 TYPE_COLORS[node.type] ?? TYPE_COLORS.concept,

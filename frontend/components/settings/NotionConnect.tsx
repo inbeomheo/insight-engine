@@ -79,6 +79,7 @@ export default function NotionConnect() {
           <button
             onClick={handleTest}
             disabled={saving}
+            aria-label="Notion 연결 테스트"
             className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {saving ? '확인 중...' : '연결 테스트'}

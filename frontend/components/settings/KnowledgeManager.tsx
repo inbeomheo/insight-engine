@@ -89,6 +89,7 @@ export default function KnowledgeManager() {
               <button
                 onClick={() => remove(doc.id)}
                 disabled={isDeleting}
+                aria-label={`${doc.filename} 문서 삭제`}
                 className="ml-2 text-xs text-red-500 hover:text-red-600 disabled:opacity-50 shrink-0"
               >
                 삭제
