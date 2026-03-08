@@ -7,7 +7,6 @@ import json
 import re
 from typing import Dict, List, Optional
 
-from flask import current_app
 
 
 _BRIEF_PROMPT = """당신은 콘텐츠 전략가입니다. 주어진 주제에 대해 콘텐츠 브리프를 JSON으로 작성하세요.

@@ -6,7 +6,7 @@ Average Words Per Sentence 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
