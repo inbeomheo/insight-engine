@@ -59,30 +59,24 @@ def _classify_url(url: str) -> str:
     return 'unknown'
 
 
-def check_primary_source_preference(content: str) -> dict:
-    """인용 출처의 1차/2차 비율을 분석합니다.
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'total_urls': 0, 'primary_count': 0, 'secondary_count': 0,
+        'unknown_count': 0, 'primary_ratio': 0.0,
+        'citation_mentions': 0, 'academic_citations': 0, 'level': 'none',
+    },
+    'source_tiers': [],
+    'suggestions': [],
+}
+
+
+def _extract_and_classify_urls(content: str) -> tuple:
+    """URL을 추출하고 1차/2차/불분명으로 분류합니다.
 
     Returns:
-        score, summary, suggestions, source_tiers를 포함하는 dict
+        (source_tiers, primary_count, secondary_count, unknown_count)
     """
-    if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'total_urls': 0,
-                'primary_count': 0,
-                'secondary_count': 0,
-                'unknown_count': 0,
-                'primary_ratio': 0.0,
-                'citation_mentions': 0,
-                'academic_citations': 0,
-                'level': 'none',
-            },
-            'source_tiers': [],
-            'suggestions': [],
-        }
-
-    # URL 추출 및 분류
     urls = _URL_RE.findall(content)
     source_tiers = []
     primary_count = 0
@@ -91,7 +85,6 @@ def check_primary_source_preference(content: str) -> dict:
 
     seen = set()
     for url in urls:
-        # 중복 제거 (쿼리 파라미터 무시)
         base = url.split('?')[0].rstrip('/')
         if base in seen:
             continue
@@ -107,25 +100,32 @@ def check_primary_source_preference(content: str) -> dict:
         else:
             unknown_count += 1
 
-    total_urls = primary_count + secondary_count + unknown_count
+    return source_tiers, primary_count, secondary_count, unknown_count
 
-    # 텍스트 인용 패턴
+
+def _count_citations(content: str) -> tuple:
+    """텍스트 인용 및 학술 인용 패턴을 카운트합니다.
+
+    Returns:
+        (citation_mentions, academic_citations)
+    """
     citation_mentions = sum(
         len(pat.findall(content)) for pat in _CITATION_PATTERNS
     )
-
-    # 학술 인용 패턴
     academic_citations = sum(
         len(pat.findall(content)) for pat in _ACADEMIC_PATTERNS
     )
+    return citation_mentions, academic_citations
 
-    # 1차 출처 비율
-    classified = primary_count + secondary_count
-    primary_ratio = round(
-        primary_count / max(classified, 1) * 100, 1
-    )
 
-    # 레벨 판정
+def _compute_source_score(total_urls: int, primary_ratio: float,
+                           citation_mentions: int, academic_citations: int,
+                           content: str) -> tuple:
+    """출처 비율 기반으로 레벨과 점수를 계산합니다.
+
+    Returns:
+        (score, level)
+    """
     if total_urls == 0 and citation_mentions == 0:
         level = 'none'
     elif primary_ratio >= 60:
@@ -137,11 +137,9 @@ def check_primary_source_preference(content: str) -> dict:
     else:
         level = 'poor'
 
-    # 학술 인용 보정
     if academic_citations >= 3 and level == 'fair':
         level = 'good'
 
-    # 연속 점수 — primary_ratio 기반
     if level == 'none':
         word_count = len(content.split())
         score = 80.0 if word_count < 200 else 50.0
@@ -152,7 +150,30 @@ def check_primary_source_preference(content: str) -> dict:
         if citation_mentions >= 3:
             score += 5.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1), level
+
+
+def check_primary_source_preference(content: str) -> dict:
+    """인용 출처의 1차/2차 비율을 분석합니다.
+
+    Returns:
+        score, summary, suggestions, source_tiers를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    source_tiers, primary_count, secondary_count, unknown_count = (
+        _extract_and_classify_urls(content)
+    )
+    total_urls = primary_count + secondary_count + unknown_count
+    citation_mentions, academic_citations = _count_citations(content)
+
+    classified = primary_count + secondary_count
+    primary_ratio = round(primary_count / max(classified, 1) * 100, 1)
+
+    score, level = _compute_source_score(
+        total_urls, primary_ratio, citation_mentions, academic_citations, content
+    )
 
     suggestions = _generate_suggestions(
         total_urls, primary_count, secondary_count,

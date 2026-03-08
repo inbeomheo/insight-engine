@@ -74,10 +74,34 @@ def check_freshness(content: str, published_date: str) -> dict:
     now = datetime.now(timezone.utc)
     days_elapsed = max(0, (now - pub_date).days)
 
-    # 위험 요소 수집
+    risk_factors, time_score, date_score, stat_score, tech_score = (
+        _collect_risk_factors(content, days_elapsed)
+    )
+    freshness_score, status = _compute_freshness_score(
+        time_score, date_score, stat_score, tech_score
+    )
+    refresh_suggestions = _generate_refresh_suggestions(
+        risk_factors, days_elapsed, status
+    )
+
+    return {
+        'freshness_score': freshness_score,
+        'status': status,
+        'days_since_published': days_elapsed,
+        'risk_factors': risk_factors,
+        'refresh_suggestions': refresh_suggestions,
+    }
+
+
+def _collect_risk_factors(content: str, days_elapsed: int) -> tuple:
+    """콘텐츠에서 신선도 위험 요소를 수집합니다.
+
+    Returns:
+        (risk_factors, time_score, date_score, stat_score, tech_score)
+    """
     risk_factors = []
 
-    # 1) 시간 경과 기반 감점
+    # 시간 경과 기반 감점
     time_score = _score_time_decay(days_elapsed)
     if days_elapsed > 180:
         risk_factors.append({
@@ -86,7 +110,7 @@ def check_freshness(content: str, published_date: str) -> dict:
             'detail': f'발행 후 {days_elapsed}일 경과',
         })
 
-    # 2) 날짜 참조 감지
+    # 날짜 참조 감지
     date_refs = _find_date_references(content)
     date_score = 100
     for ref in date_refs:
@@ -101,7 +125,7 @@ def check_freshness(content: str, published_date: str) -> dict:
             date_score -= 15
     date_score = max(0, date_score)
 
-    # 3) 통계/수치 노후화 위험
+    # 통계/수치 노후화 위험
     stat_refs = _find_stat_references(content)
     stat_score = 100
     if stat_refs and days_elapsed > 90:
@@ -114,7 +138,7 @@ def check_freshness(content: str, published_date: str) -> dict:
             stat_score -= 10
     stat_score = max(0, stat_score)
 
-    # 4) 기술 용어 변동성
+    # 기술 용어 변동성
     tech_score = 100
     tech_refs = _find_volatile_tech(content)
     if tech_refs and days_elapsed > 60:
@@ -127,16 +151,22 @@ def check_freshness(content: str, published_date: str) -> dict:
             tech_score -= 8
     tech_score = max(0, tech_score)
 
-    # 종합 점수
+    return risk_factors, time_score, date_score, stat_score, tech_score
+
+
+def _compute_freshness_score(time_score: int, date_score: int,
+                              stat_score: int, tech_score: int) -> tuple:
+    """가중 합산으로 종합 점수와 상태를 계산합니다.
+
+    Returns:
+        (freshness_score, status)
+    """
     freshness_score = round(
-        time_score * 0.40
-        + date_score * 0.25
-        + stat_score * 0.20
-        + tech_score * 0.15
+        time_score * 0.40 + date_score * 0.25
+        + stat_score * 0.20 + tech_score * 0.15
     )
     freshness_score = max(0, min(100, freshness_score))
 
-    # 상태 판정
     if freshness_score >= 70:
         status = 'fresh'
     elif freshness_score >= 40:
@@ -144,18 +174,7 @@ def check_freshness(content: str, published_date: str) -> dict:
     else:
         status = 'stale'
 
-    # 리프레시 제안
-    refresh_suggestions = _generate_refresh_suggestions(
-        risk_factors, days_elapsed, status
-    )
-
-    return {
-        'freshness_score': freshness_score,
-        'status': status,
-        'days_since_published': days_elapsed,
-        'risk_factors': risk_factors,
-        'refresh_suggestions': refresh_suggestions,
-    }
+    return freshness_score, status
 
 
 def _score_time_decay(days: int) -> int:

@@ -61,39 +61,23 @@ def _split_sections(content: str) -> List[Dict]:
     return sections
 
 
-def analyze_passive_active_trend(content: str) -> dict:
-    """섹션별 능동/피동 비율 추이를 분석합니다.
+_EMPTY_RESULT = {
+    'section_data': [],
+    'summary': {
+        'total_sections': 0, 'overall_passive_ratio': 0.0,
+        'trend': 'none', 'hotspot_section': '',
+    },
+    'score': 100.0,
+    'suggestions': [],
+}
+
+
+def _analyze_sections(sections: List[Dict]) -> tuple:
+    """섹션별 능동/피동 비율을 분석합니다.
 
     Returns:
-        section_data, summary, score, suggestions를 포함하는 dict
+        (section_data, total_sentences, total_passive, hotspot, max_passive_ratio)
     """
-    if not content or not content.strip():
-        return {
-            'section_data': [],
-            'summary': {
-                'total_sections': 0,
-                'overall_passive_ratio': 0.0,
-                'trend': 'none',
-                'hotspot_section': '',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
-    sections = _split_sections(content)
-    if not sections:
-        return {
-            'section_data': [],
-            'summary': {
-                'total_sections': 0,
-                'overall_passive_ratio': 0.0,
-                'trend': 'none',
-                'hotspot_section': '',
-            },
-            'score': 100.0,
-            'suggestions': [],
-        }
-
     section_data = []
     total_sentences = 0
     total_passive = 0
@@ -125,30 +109,29 @@ def analyze_passive_active_trend(content: str) -> dict:
             'passive_ratio': ratio,
         })
 
-    overall_ratio = round(total_passive / max(total_sentences, 1) * 100, 1)
+    return section_data, total_sentences, total_passive, hotspot, max_passive_ratio
 
-    # 추이 판별
-    if len(section_data) >= 2:
-        ratios = [s['passive_ratio'] for s in section_data]
-        all_equal = all(ratios[i] == ratios[i + 1] for i in range(len(ratios) - 1))
-        if all_equal:
-            trend = 'stable'
-        elif all(ratios[i] <= ratios[i + 1] for i in range(len(ratios) - 1)):
-            trend = 'increasing'
-        elif all(ratios[i] >= ratios[i + 1] for i in range(len(ratios) - 1)):
-            trend = 'decreasing'
-        else:
-            # 편차 확인
-            avg = sum(ratios) / len(ratios)
-            max_dev = max(abs(r - avg) for r in ratios)
-            if max_dev > 20:
-                trend = 'uneven'
-            else:
-                trend = 'stable'
-    else:
-        trend = 'single'
 
-    # 점수
+def _determine_trend(section_data: List[Dict]) -> str:
+    """섹션별 피동 비율의 추이를 판별합니다."""
+    if len(section_data) < 2:
+        return 'single'
+
+    ratios = [s['passive_ratio'] for s in section_data]
+    if all(ratios[i] == ratios[i + 1] for i in range(len(ratios) - 1)):
+        return 'stable'
+    if all(ratios[i] <= ratios[i + 1] for i in range(len(ratios) - 1)):
+        return 'increasing'
+    if all(ratios[i] >= ratios[i + 1] for i in range(len(ratios) - 1)):
+        return 'decreasing'
+
+    avg = sum(ratios) / len(ratios)
+    max_dev = max(abs(r - avg) for r in ratios)
+    return 'uneven' if max_dev > 20 else 'stable'
+
+
+def _compute_passive_score(overall_ratio: float, trend: str) -> float:
+    """전체 피동 비율과 추이로 점수를 계산합니다."""
     if overall_ratio <= 20:
         score = 100.0
     elif overall_ratio <= 35:
@@ -156,11 +139,31 @@ def analyze_passive_active_trend(content: str) -> dict:
     else:
         score = max(20.0, 70.0 - (overall_ratio - 35) * 2.0)
 
-    # 불균일 감점
     if trend == 'uneven':
         score -= 10.0
 
-    score = round(max(0.0, min(100.0, score)), 1)
+    return round(max(0.0, min(100.0, score)), 1)
+
+
+def analyze_passive_active_trend(content: str) -> dict:
+    """섹션별 능동/피동 비율 추이를 분석합니다.
+
+    Returns:
+        section_data, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return dict(_EMPTY_RESULT)
+
+    sections = _split_sections(content)
+    if not sections:
+        return dict(_EMPTY_RESULT)
+
+    section_data, total_sentences, total_passive, hotspot, max_passive_ratio = (
+        _analyze_sections(sections)
+    )
+    overall_ratio = round(total_passive / max(total_sentences, 1) * 100, 1)
+    trend = _determine_trend(section_data)
+    score = _compute_passive_score(overall_ratio, trend)
 
     suggestions = _generate_suggestions(
         section_data, overall_ratio, trend, hotspot, max_passive_ratio
