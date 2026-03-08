@@ -8,7 +8,7 @@ Sentence Ending Variety 서비스
 """
 import re
 from collections import Counter
-from typing import List, Dict
+from typing import List
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)

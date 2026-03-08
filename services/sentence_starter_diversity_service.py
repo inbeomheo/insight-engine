@@ -6,7 +6,7 @@ Sentence Starter Diversity 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
-from typing import List, Dict
+from typing import List
 from collections import Counter
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
