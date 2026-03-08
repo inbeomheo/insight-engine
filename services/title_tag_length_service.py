@@ -59,62 +59,34 @@ def _is_korean_dominant(text: str) -> bool:
     return ko_chars > len(text) * 0.3
 
 
-def check_title_tag_length(content: str) -> dict:
-    """제목 태그 길이를 점검합니다.
+_EMPTY_RESULT = {
+    'title': '',
+    'checks': {},
+    'summary': {'length': 0, 'language': '', 'quality_level': 'none'},
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _evaluate_title(title: str, is_korean: bool) -> tuple:
+    """제목 품질을 평가합니다.
 
     Returns:
-        title, checks, summary, score, suggestions를 포함하는 dict
+        (checks, score, quality)
     """
-    if not content or not content.strip():
-        return {
-            'title': '',
-            'checks': {},
-            'summary': {'length': 0, 'language': '', 'quality_level': 'none'},
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
-
-    title = _extract_title(content)
-    if not title:
-        return {
-            'title': '',
-            'checks': {},
-            'summary': {'length': 0, 'language': '', 'quality_level': 'none'},
-            'score': 20.0,
-            'suggestions': ['제목이 없습니다. H1 또는 title 태그를 추가하세요.'],
-        }
-
     length = len(title)
-    is_korean = _is_korean_dominant(title)
-    language = 'ko' if is_korean else 'en'
-
-    # 최적 길이 범위
-    if is_korean:
-        optimal_min, optimal_max = 15, 30
-        pixel_limit = 30  # 바이트가 아닌 글자수 기준 근사
-    else:
-        optimal_min, optimal_max = 30, 60
-        pixel_limit = 60
-
-    # 체크 항목
-    length_optimal = optimal_min <= length <= optimal_max
-    not_too_short = length >= (10 if is_korean else 15)
-    not_too_long = length <= (40 if is_korean else 70)
-    has_keyword_position = _check_keyword_front(title)
-    no_pipe_abuse = title.count('|') <= 1 and title.count('-') <= 2
-    proper_capitalization = not title.isupper() if not is_korean else True
+    opt_min, opt_max = (15, 30) if is_korean else (30, 60)
 
     checks = {
-        'optimal_length': length_optimal,
-        'not_too_short': not_too_short,
-        'not_too_long': not_too_long,
-        'keyword_front_loaded': has_keyword_position,
-        'no_separator_abuse': no_pipe_abuse,
-        'proper_case': proper_capitalization,
+        'optimal_length': opt_min <= length <= opt_max,
+        'not_too_short': length >= (10 if is_korean else 15),
+        'not_too_long': length <= (40 if is_korean else 70),
+        'keyword_front_loaded': _check_keyword_front(title),
+        'no_separator_abuse': title.count('|') <= 1 and title.count('-') <= 2,
+        'proper_case': not title.isupper() if not is_korean else True,
     }
 
-    passed = sum(1 for v in checks.values() if v)
-    score = round(min(100.0, passed / len(checks) * 100), 1)
+    score = round(min(100.0, sum(1 for v in checks.values() if v) / len(checks) * 100), 1)
 
     if score >= 80:
         quality = 'excellent'
@@ -125,20 +97,37 @@ def check_title_tag_length(content: str) -> dict:
     else:
         quality = 'poor'
 
-    suggestions = _generate_suggestions(
-        title, length, is_korean, optimal_min, optimal_max, checks
-    )
+    return checks, score, quality
+
+
+def check_title_tag_length(content: str) -> dict:
+    """제목 태그 길이를 점검합니다.
+
+    Returns:
+        title, checks, summary, score, suggestions를 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+
+    title = _extract_title(content)
+    if not title:
+        return {**_EMPTY_RESULT, 'score': 20.0,
+                'suggestions': ['제목이 없습니다. H1 또는 title 태그를 추가하세요.']}
+
+    is_korean = _is_korean_dominant(title)
+    checks, score, quality = _evaluate_title(title, is_korean)
+    length = len(title)
+    opt_min, opt_max = (15, 30) if is_korean else (30, 60)
 
     return {
         'title': title,
         'checks': checks,
-        'summary': {
-            'length': length,
-            'language': language,
-            'quality_level': quality,
-        },
+        'summary': {'length': length, 'language': 'ko' if is_korean else 'en',
+                     'quality_level': quality},
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            title, length, is_korean, opt_min, opt_max, checks
+        ),
     }
 
 

@@ -56,73 +56,73 @@ def _find_matches(content: str, patterns: list) -> List[Dict]:
     return matches
 
 
+_EMPTY_RESULT = {
+    'score': 100.0,
+    'summary': {
+        'has_material_connection': False, 'disclosure_found': False,
+        'review_content': False, 'placement_ok': True, 'material_markers': 0,
+    },
+    'material_markers': [],
+    'disclosure_markers': [],
+    'suggestions': [],
+}
+
+
+def _detect_signals(content: str) -> tuple:
+    """이해관계/공시/리뷰 신호를 탐지합니다.
+
+    Returns:
+        (material_markers, disclosure_markers, is_review)
+    """
+    material_markers = _find_matches(content, _KO_MATERIAL) + _find_matches(content, _EN_MATERIAL)
+    disclosure_markers = _find_matches(content, _DISCLOSURE_PATTERNS)
+    is_review = len(_find_matches(content, _REVIEW_SIGNALS)) > 0
+    return material_markers, disclosure_markers, is_review
+
+
+def _evaluate_placement(disclosure_markers: list) -> tuple:
+    """공시 위치를 평가합니다.
+
+    Returns:
+        (placement_ok, placement_issues)
+    """
+    placement_issues = []
+    for d in disclosure_markers:
+        if d['position_ratio'] > 50:
+            placement_issues.append(
+                f"공시 문구 \"{d['text'][:20]}...\"가 글의 {d['position_ratio']}% 위치에 있습니다. "
+                f"상단(20% 이내)에 배치하세요."
+            )
+    return len(placement_issues) == 0, placement_issues
+
+
+def _compute_disclosure_score(has_material: bool, has_disclosure: bool,
+                               is_review: bool, placement_ok: bool) -> float:
+    """공시 점수를 계산합니다."""
+    score = 100.0
+    if has_material and not has_disclosure:
+        score -= 50.0
+    elif has_material and has_disclosure and not placement_ok:
+        score -= 20.0
+    elif is_review and not has_material and not has_disclosure:
+        score -= 5.0
+    return round(max(0.0, min(100.0, score)), 1)
+
+
 def check_material_connection_disclosure(content: str) -> dict:
     """제휴/협찬 공시 누락 및 위치를 점검합니다.
 
     Returns:
-        score, summary, suggestions, disclosure_found, placement_issues를 포함하는 dict
+        score, summary, suggestions, material_markers, disclosure_markers를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'score': 100.0,
-            'summary': {
-                'has_material_connection': False,
-                'disclosure_found': False,
-                'review_content': False,
-                'placement_ok': True,
-                'material_markers': 0,
-            },
-            'material_markers': [],
-            'disclosure_markers': [],
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
-    # 이해관계 신호 탐지
-    ko_matches = _find_matches(content, _KO_MATERIAL)
-    en_matches = _find_matches(content, _EN_MATERIAL)
-    material_markers = ko_matches + en_matches
-
-    # 공시 문구 탐지
-    disclosure_markers = _find_matches(content, _DISCLOSURE_PATTERNS)
-
-    # 리뷰/추천 콘텐츠 여부
-    review_matches = _find_matches(content, _REVIEW_SIGNALS)
-    is_review = len(review_matches) > 0
-
+    material_markers, disclosure_markers, is_review = _detect_signals(content)
     has_material = len(material_markers) > 0
     has_disclosure = len(disclosure_markers) > 0
-
-    # 공시 위치 평가 (상단 20% 이내가 이상적)
-    placement_ok = True
-    placement_issues = []
-    if has_disclosure:
-        for d in disclosure_markers:
-            if d['position_ratio'] > 50:
-                placement_ok = False
-                placement_issues.append(
-                    f"공시 문구 \"{d['text'][:20]}...\"가 글의 {d['position_ratio']}% 위치에 있습니다. "
-                    f"상단(20% 이내)에 배치하세요."
-                )
-
-    # 점수 계산
-    score = 100.0
-
-    if has_material and not has_disclosure:
-        # 이해관계 있는데 공시 없음 — 큰 감점
-        score -= 50.0
-    elif has_material and has_disclosure and not placement_ok:
-        # 공시는 있지만 위치 부적절
-        score -= 20.0
-    elif is_review and not has_material and not has_disclosure:
-        # 리뷰 콘텐츠이지만 이해관계 표시 없음 — 경고만
-        score -= 5.0
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(
-        has_material, has_disclosure, is_review,
-        placement_ok, placement_issues, material_markers, score
-    )
+    placement_ok, placement_issues = _evaluate_placement(disclosure_markers)
+    score = _compute_disclosure_score(has_material, has_disclosure, is_review, placement_ok)
 
     return {
         'score': score,
@@ -135,7 +135,10 @@ def check_material_connection_disclosure(content: str) -> dict:
         },
         'material_markers': material_markers[:10],
         'disclosure_markers': disclosure_markers[:10],
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(
+            has_material, has_disclosure, is_review,
+            placement_ok, placement_issues, material_markers, score
+        ),
     }
 
 

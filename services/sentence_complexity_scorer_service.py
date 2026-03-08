@@ -89,6 +89,58 @@ def _score_sentence(sentence: str) -> Dict:
     }
 
 
+_EMPTY_RESULT = {
+    'sentences': [],
+    'summary': {
+        'total_sentences': 0, 'avg_complexity': 0.0,
+        'distribution': {}, 'level': 'none',
+    },
+    'score': 0.0,
+    'suggestions': [],
+}
+
+
+def _compute_complexity_stats(scored: list) -> tuple:
+    """복잡도 분포와 레벨을 계산합니다.
+
+    Returns:
+        (distribution, avg_complexity, level)
+    """
+    distribution = {'simple': 0, 'moderate': 0, 'complex': 0, 'very_complex': 0}
+    total_complexity = 0.0
+    for s in scored:
+        distribution[s['category']] += 1
+        total_complexity += s['complexity']
+
+    avg = round(total_complexity / len(scored), 1)
+
+    if avg <= 25:
+        level = 'easy'
+    elif avg <= 45:
+        level = 'balanced'
+    elif avg <= 65:
+        level = 'complex'
+    else:
+        level = 'very_complex'
+
+    return distribution, avg, level
+
+
+def _compute_complexity_score(avg: float, distribution: dict) -> float:
+    """복잡도 점수를 계산합니다."""
+    if 20 <= avg <= 45:
+        score = 100.0
+    elif avg < 20:
+        score = 70.0 + avg * 1.5
+    else:
+        score = max(20.0, 100.0 - (avg - 45) * 2.0)
+
+    if sum(1 for v in distribution.values() if v > 0) >= 3:
+        score += 5.0
+
+    return round(max(0.0, min(100.0, score)), 1)
+
+
 def score_sentence_complexity(content: str) -> dict:
     """문장 복잡도를 평가합니다.
 
@@ -96,69 +148,15 @@ def score_sentence_complexity(content: str) -> dict:
         sentences, summary, score, suggestions를 포함하는 dict
     """
     if not content or not content.strip():
-        return {
-            'sentences': [],
-            'summary': {
-                'total_sentences': 0,
-                'avg_complexity': 0.0,
-                'distribution': {},
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
-        }
+        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
     sentences = _split_sentences(content)
     if not sentences:
-        return {
-            'sentences': [],
-            'summary': {
-                'total_sentences': 0,
-                'avg_complexity': 0.0,
-                'distribution': {},
-                'level': 'none',
-            },
-            'score': 0.0,
-            'suggestions': [],
-        }
+        return dict(_EMPTY_RESULT)
 
     scored = [_score_sentence(s) for s in sentences]
-
-    # 분포
-    distribution = {'simple': 0, 'moderate': 0, 'complex': 0, 'very_complex': 0}
-    total_complexity = 0.0
-    for s in scored:
-        distribution[s['category']] += 1
-        total_complexity += s['complexity']
-
-    avg_complexity = round(total_complexity / len(scored), 1)
-
-    # 레벨
-    if avg_complexity <= 25:
-        level = 'easy'
-    elif avg_complexity <= 45:
-        level = 'balanced'
-    elif avg_complexity <= 65:
-        level = 'complex'
-    else:
-        level = 'very_complex'
-
-    # 점수 (균형 잡힌 복잡도가 최고)
-    if 20 <= avg_complexity <= 45:
-        score = 100.0
-    elif avg_complexity < 20:
-        score = 70.0 + avg_complexity * 1.5
-    else:
-        score = max(20.0, 100.0 - (avg_complexity - 45) * 2.0)
-
-    # 다양성 보너스
-    non_zero = sum(1 for v in distribution.values() if v > 0)
-    if non_zero >= 3:
-        score += 5.0
-
-    score = round(max(0.0, min(100.0, score)), 1)
-
-    suggestions = _generate_suggestions(avg_complexity, level, distribution, len(scored))
+    distribution, avg_complexity, level = _compute_complexity_stats(scored)
+    score = _compute_complexity_score(avg_complexity, distribution)
 
     return {
         'sentences': scored[:30],
@@ -169,7 +167,7 @@ def score_sentence_complexity(content: str) -> dict:
             'level': level,
         },
         'score': score,
-        'suggestions': suggestions,
+        'suggestions': _generate_suggestions(avg_complexity, level, distribution, len(scored)),
     }
 
 
