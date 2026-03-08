@@ -56,7 +56,7 @@ export default function CampaignPackSelector({
               key={packId}
               type="button"
               onClick={() => onSelect(isSelected ? null : packId)}
-              aria-label={`${pack.label} 캠페인 팩 선택`}
+              aria-label={`${pack.name} 캠페인 팩 선택`}
               className={`rounded-lg border p-3 text-left transition-all ${
                 isSelected
                   ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 ring-1 ring-[var(--accent-primary)]'

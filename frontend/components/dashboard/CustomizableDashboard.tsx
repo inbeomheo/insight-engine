@@ -66,7 +66,7 @@ export default function CustomizableDashboard() {
           {widgets.map((w) => (
             <button
               key={w.id}
-              aria-label={`${w.label} 위젯 ${w.visible ? '숨기기' : '표시'}`}
+              aria-label={`${w.title} 위젯 ${w.visible ? '숨기기' : '표시'}`}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors border ${
                 w.visible
                   ? 'bg-primary/8 border-primary/20 text-primary'
