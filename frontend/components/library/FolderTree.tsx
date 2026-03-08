@@ -98,6 +98,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
           size="icon"
           className="h-5 w-5 text-muted-foreground/40 hover:text-foreground"
           onClick={() => setShowNewFolder(!showNewFolder)}
+          aria-label="새 폴더 추가"
         >
           <Plus className="h-3 w-3" />
         </Button>
@@ -130,6 +131,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
             : 'text-foreground/70 hover:bg-accent/50'
         }`}
         onClick={() => onSelectFolder?.(null)}
+        aria-label="전체 폴더 보기"
       >
         <FileText className="h-3.5 w-3.5" />
         <span className="flex-1 text-left">전체</span>
@@ -149,6 +151,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
                   : 'text-foreground/70 hover:bg-accent/50'
               }`}
               onClick={() => onSelectFolder?.(folder.id)}
+              aria-label={`${folder.name} 폴더 선택`}
             >
               <FolderIcon className="h-3.5 w-3.5 shrink-0" />
               <span className="flex-1 text-left truncate">{folder.name}</span>
@@ -156,6 +159,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
               <button
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-destructive"
                 onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
+                aria-label={`${folder.name} 폴더 삭제`}
               >
                 <Trash2 className="h-3 w-3" />
               </button>

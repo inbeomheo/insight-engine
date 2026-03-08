@@ -70,6 +70,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
       <button
         disabled={loading}
         onClick={() => runAction('delete')}
+        aria-label="선택 항목 삭제"
         className="flex items-center gap-1 text-xs px-2 py-1 bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50"
       >
         <Trash2 className="w-3 h-3" />
@@ -80,6 +81,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
       <button
         disabled={loading}
         onClick={() => runAction('archive')}
+        aria-label="선택 항목 아카이브"
         className="flex items-center gap-1 text-xs px-2 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
       >
         <Archive className="w-3 h-3" />
@@ -109,6 +111,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
         <button
           disabled={loading}
           onClick={() => setShowTagInput(true)}
+          aria-label="선택 항목에 태그 추가"
           className="flex items-center gap-1 text-xs px-2 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
         >
           <Tag className="w-3 h-3" />
@@ -135,6 +138,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
         <button
           disabled={loading}
           onClick={() => setShowStatusSelect(true)}
+          aria-label="선택 항목 상태 변경"
           className="flex items-center gap-1 text-xs px-2 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50"
         >
           <RefreshCw className="w-3 h-3" />
@@ -145,6 +149,7 @@ export default function BulkActions({ selectedIds, onClearSelection, onSuccess, 
       {/* 선택 해제 */}
       <button
         onClick={onClearSelection}
+        aria-label="선택 해제"
         className="ml-auto text-xs px-2 py-1 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
       >
         선택 해제

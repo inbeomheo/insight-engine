@@ -57,6 +57,7 @@ export function ContentCalendarEnhanced({
             <button
               key={m}
               onClick={() => setViewMode(m)}
+              aria-label={`${m === 'month' ? '월간' : m === 'week' ? '주간' : '일간'} 뷰 전환`}
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 viewMode === m
                   ? 'bg-primary text-primary-foreground'
@@ -68,12 +69,13 @@ export function ContentCalendarEnhanced({
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={prevPeriod} className="px-2 hover:bg-muted rounded">‹</button>
+          <button onClick={prevPeriod} aria-label="이전 기간" className="px-2 hover:bg-muted rounded">‹</button>
           <span className="text-sm font-medium">{formatYearMonth(currentDate)}</span>
-          <button onClick={nextPeriod} className="px-2 hover:bg-muted rounded">›</button>
+          <button onClick={nextPeriod} aria-label="다음 기간" className="px-2 hover:bg-muted rounded">›</button>
         </div>
         <button
           onClick={() => onAdd?.(currentDate.toISOString().slice(0, 10))}
+          aria-label="예약 추가"
           className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded"
         >
           + 예약 추가
