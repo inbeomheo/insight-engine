@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { apiUrl } from '@/lib/api';
 
 // ── 타입 정의 ─────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ export function PipelineMonitor({
       eventSourceRef.current.close();
     }
 
-    const es = new EventSource(`/api/pipeline/${id}/stream`);
+    const es = new EventSource(apiUrl(`/api/pipeline/${id}/stream`));
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {

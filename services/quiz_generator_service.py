@@ -1,100 +1,46 @@
 """
-인터랙티브 퀴즈 생성 서비스
+퀴즈 생성 서비스 — 콘텐츠에서 자동으로 퀴즈 문항 추출
 
-콘텐츠에서 핵심 정보를 추출하여 퀴즈/설문을 자동 생성합니다.
-규칙 기반으로 객관식, OX, 빈칸 채우기 문제를 생성합니다.
+규칙 기반으로 객관식, T/F, 단답형 문제를 생성합니다.
 """
+
 import re
+import uuid
 import hashlib
-import logging
-from typing import List
-
-logger = logging.getLogger(__name__)
-
-# 문장에서 핵심 정보 추출용 패턴
-_FACT_PATTERNS = [
-    # "X는 Y이다" 패턴
-    re.compile(r'([가-힣a-zA-Z0-9\s]{3,20})[은는이가]\s+(.{5,40})[이다입니다]'),
-    # 숫자 포함 사실
-    re.compile(r'(.{5,30}?)\s*(\d+[%％만억원개건명][\w\s]{0,15})'),
-    # "X를 통해 Y" 패턴
-    re.compile(r'(.{5,25})[을를]\s*통해\s*(.{5,30})'),
-]
-
-# 불용 문장 필터
-_SKIP_PATTERNS = [
-    re.compile(r'^(참고|주의|출처|이미지|사진|그림)\s*[:：]'),
-    re.compile(r'^[-*•]'),
-    re.compile(r'^\d+\.\s*$'),
-]
+from dataclasses import dataclass, field
 
 
-_EMPTY_RESULT = {
-    'quiz_id': '',
-    'title': '',
-    'questions': [],
-    'total_questions': 0,
-}
+VALID_TYPES = {"multiple_choice", "true_false", "short_answer"}
+VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
 
-def generate_quiz(content: str, count: int = 5) -> dict:
-    """콘텐츠에서 퀴즈를 자동 생성합니다.
-
-    Args:
-        content: 퀴즈 원본 콘텐츠
-        count: 생성할 문제 수 (기본 5, 최대 10)
-
-    Returns:
-        {
-            "quiz_id": str,
-            "title": str,
-            "questions": [
-                {
-                    "id": int,
-                    "type": "multiple_choice" | "true_false" | "fill_blank",
-                    "question": str,
-                    "options": list[str] | None,
-                    "answer": str,
-                    "explanation": str,
-                }
-            ],
-            "total_questions": int,
-        }
-    """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
-
-    count = max(1, min(count, 10))
-    sentences = _extract_key_sentences(_strip_markdown(content))
-    questions = _build_questions(sentences, count)
-    quiz_id = hashlib.md5(content[:200].encode()).hexdigest()[:8]
-
-    return {
-        'quiz_id': quiz_id,
-        'title': '콘텐츠 이해도 퀴즈',
-        'questions': questions,
-        'total_questions': len(questions),
-    }
+@dataclass
+class QuizQuestion:
+    """퀴즈 문항"""
+    question_id: str
+    question_text: str
+    question_type: str  # multiple_choice / true_false / short_answer
+    options: list = field(default_factory=list)     # list[str]
+    correct_answer: str = ""
+    explanation: str = ""
+    difficulty: str = "medium"  # easy / medium / hard
 
 
-def _build_questions(sentences: List[str], count: int) -> List[dict]:
-    """문장 목록에서 중복 없이 최대 count개의 문제를 생성합니다."""
-    questions = []
-    used_sentences = set()
-    for sentence in sentences:
-        if len(questions) >= count:
-            break
-        if sentence in used_sentences:
-            continue
-        q = _create_question(sentence, len(questions) + 1)
-        if q:
-            questions.append(q)
-            used_sentences.add(sentence)
-    return questions
+@dataclass
+class Quiz:
+    """퀴즈"""
+    quiz_id: str
+    title: str
+    questions: list = field(default_factory=list)  # list[QuizQuestion]
+    passing_score: float = 0.7
+
+
+def _new_id(prefix: str = "q") -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
 def _strip_markdown(text: str) -> str:
-    """마크다운 문법을 제거합니다."""
+    """마크다운 문법 제거"""
     text = re.sub(r'#{1,6}\s+', '', text)
     text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
     text = re.sub(r'\*(.+?)\*', r'\1', text)
@@ -104,119 +50,213 @@ def _strip_markdown(text: str) -> str:
     return text.strip()
 
 
-def _extract_key_sentences(text: str) -> List[str]:
-    """핵심 문장을 추출합니다."""
-    raw_sentences = re.split(r'[.!。]\s*|\n+', text)
+def _extract_sentences(content: str) -> list:
+    """콘텐츠에서 유효 문장 추출"""
+    clean = _strip_markdown(content)
+    raw = re.split(r'[.!?。]\s*|\n+', clean)
     sentences = []
-
-    for s in raw_sentences:
+    for s in raw:
         s = s.strip()
-        if len(s) < 15 or len(s) > 150:
-            continue
-        if any(pat.search(s) for pat in _SKIP_PATTERNS):
-            continue
-        sentences.append(s)
-
+        if len(s) > 10:
+            sentences.append(s)
     return sentences
 
 
-def _create_question(sentence: str, qid: int) -> dict | None:
-    """문장에서 문제를 생성합니다. 3가지 유형을 순환."""
-    q_type = ['multiple_choice', 'true_false', 'fill_blank'][qid % 3]
+def _extract_keywords(sentence: str) -> list:
+    """문장에서 키워드 추출 (3글자 이상 단어)"""
+    return re.findall(r'[가-힣a-zA-Z]{3,}', sentence)
 
-    if q_type == 'true_false':
-        return _create_true_false(sentence, qid)
-    elif q_type == 'fill_blank':
-        return _create_fill_blank(sentence, qid)
+
+def _make_multiple_choice(sentence: str, keywords: list, difficulty: str) -> QuizQuestion:
+    """객관식 문항 생성"""
+    if not keywords:
+        return _make_true_false(sentence, difficulty)
+
+    target = max(keywords, key=len)
+    question_text = sentence.replace(target, "______", 1)
+
+    wrong_options = [kw for kw in keywords if kw != target][:3]
+    while len(wrong_options) < 3:
+        suffix = f"_{len(wrong_options)}"
+        wrong_options.append(f"{target}{suffix}")
+
+    options = [target] + wrong_options
+    options.sort(key=lambda x: hashlib.md5(x.encode()).hexdigest())
+
+    return QuizQuestion(
+        question_id=_new_id(),
+        question_text=f"다음 빈칸에 알맞은 것은? {question_text}",
+        question_type="multiple_choice",
+        options=options,
+        correct_answer=target,
+        explanation=f"원문: {sentence}",
+        difficulty=difficulty,
+    )
+
+
+def _make_true_false(sentence: str, difficulty: str) -> QuizQuestion:
+    """T/F 문항 생성"""
+    return QuizQuestion(
+        question_id=_new_id(),
+        question_text=f"다음 문장이 맞으면 O, 틀리면 X: {sentence}",
+        question_type="true_false",
+        options=["O", "X"],
+        correct_answer="O",
+        explanation="원문 그대로이므로 참입니다.",
+        difficulty=difficulty,
+    )
+
+
+def _make_short_answer(sentence: str, keywords: list, difficulty: str) -> QuizQuestion:
+    """단답형 문항 생성"""
+    if not keywords:
+        target = sentence.split()[0] if sentence.split() else ""
     else:
-        return _create_multiple_choice(sentence, qid)
+        target = keywords[0]
+
+    question_text = sentence.replace(target, "______", 1)
+
+    return QuizQuestion(
+        question_id=_new_id(),
+        question_text=f"빈칸을 채우세요: {question_text}",
+        question_type="short_answer",
+        options=[],
+        correct_answer=target,
+        explanation=f"원문: {sentence}",
+        difficulty=difficulty,
+    )
 
 
-def _create_true_false(sentence: str, qid: int) -> dict:
-    """OX 문제 생성."""
+def generate_quiz(
+    content: str,
+    num_questions: int = 5,
+    difficulty: str = "medium",
+) -> Quiz:
+    """콘텐츠 기반 퀴즈 생성
+
+    Args:
+        content: 콘텐츠 텍스트
+        num_questions: 생성할 문항 수
+        difficulty: 난이도 (easy/medium/hard)
+
+    Returns:
+        Quiz: 생성된 퀴즈
+    """
+    if difficulty not in VALID_DIFFICULTIES:
+        raise ValueError(f"유효하지 않은 난이도: {difficulty}")
+    if num_questions < 1:
+        raise ValueError("문항 수는 1 이상이어야 합니다.")
+
+    sentences = _extract_sentences(content)
+    if not sentences:
+        return Quiz(
+            quiz_id=_new_id("quiz"),
+            title="퀴즈",
+            questions=[],
+            passing_score=0.7,
+        )
+
+    questions = []
+    type_cycle = ["multiple_choice", "true_false", "short_answer"]
+
+    for i in range(min(num_questions, len(sentences))):
+        sentence = sentences[i % len(sentences)]
+        keywords = _extract_keywords(sentence)
+        q_type = type_cycle[i % len(type_cycle)]
+
+        if q_type == "multiple_choice":
+            q = _make_multiple_choice(sentence, keywords, difficulty)
+        elif q_type == "true_false":
+            q = _make_true_false(sentence, difficulty)
+        else:
+            q = _make_short_answer(sentence, keywords, difficulty)
+
+        questions.append(q)
+
+    passing = {"easy": 0.6, "medium": 0.7, "hard": 0.8}.get(difficulty, 0.7)
+
+    return Quiz(
+        quiz_id=_new_id("quiz"),
+        title=f"자동 생성 퀴즈 ({difficulty})",
+        questions=questions,
+        passing_score=passing,
+    )
+
+
+def grade_answer(question: QuizQuestion, user_answer: str) -> dict:
+    """답안 채점
+
+    Args:
+        question: 퀴즈 문항
+        user_answer: 사용자 답안
+
+    Returns:
+        dict: {correct, score, correct_answer, explanation}
+    """
+    normalized_user = user_answer.strip().lower()
+    normalized_correct = question.correct_answer.strip().lower()
+
+    is_correct = normalized_user == normalized_correct
+
+    score = 1.0 if is_correct else 0.0
+    # 단답형은 부분 점수 허용 (정답 포함 시 0.5점)
+    if not is_correct and question.question_type == "short_answer":
+        if normalized_correct in normalized_user or normalized_user in normalized_correct:
+            score = 0.5
+
     return {
-        'id': qid,
-        'type': 'true_false',
-        'question': f'다음 설명이 맞으면 O, 틀리면 X를 선택하세요: "{sentence}"',
-        'options': ['O', 'X'],
-        'answer': 'O',
-        'explanation': f'본문에 따르면 이 설명은 사실입니다.',
+        "correct": is_correct,
+        "score": score,
+        "correct_answer": question.correct_answer,
+        "explanation": question.explanation,
     }
 
 
-def _create_fill_blank(sentence: str, qid: int) -> dict | None:
-    """빈칸 채우기 문제 생성."""
-    words = re.findall(r'[가-힣a-zA-Z0-9]+', sentence)
-    # 3글자 이상 단어 중 가장 긴 것을 빈칸으로
-    candidates = [w for w in words if len(w) >= 3]
-    if not candidates:
-        return _create_true_false(sentence, qid)
+def calculate_results(quiz: Quiz, answers: list) -> dict:
+    """결과 집계
 
-    blank_word = max(candidates, key=len)
-    blanked = sentence.replace(blank_word, '______', 1)
+    Args:
+        quiz: 퀴즈
+        answers: [{question_id: str, answer: str}]
+
+    Returns:
+        dict: {total, correct, score, passed, passing_score, details}
+    """
+    if not quiz.questions:
+        return {
+            "total": 0,
+            "correct": 0,
+            "score": 0.0,
+            "passed": False,
+            "details": [],
+        }
+
+    answer_map = {a["question_id"]: a["answer"] for a in answers}
+
+    total_score = 0.0
+    correct_count = 0
+    details = []
+
+    for q in quiz.questions:
+        user_answer = answer_map.get(q.question_id, "")
+        result = grade_answer(q, user_answer)
+        total_score += result["score"]
+        if result["correct"]:
+            correct_count += 1
+        details.append({
+            "question_id": q.question_id,
+            "question_type": q.question_type,
+            **result,
+        })
+
+    total = len(quiz.questions)
+    final_score = total_score / total if total > 0 else 0.0
 
     return {
-        'id': qid,
-        'type': 'fill_blank',
-        'question': f'다음 빈칸에 들어갈 단어는? "{blanked}"',
-        'options': None,
-        'answer': blank_word,
-        'explanation': f'정답은 "{blank_word}"입니다.',
+        "total": total,
+        "correct": correct_count,
+        "score": round(final_score, 3),
+        "passed": final_score >= quiz.passing_score,
+        "passing_score": quiz.passing_score,
+        "details": details,
     }
-
-
-def _create_multiple_choice(sentence: str, qid: int) -> dict:
-    """객관식 문제 생성."""
-    # 문장을 질문 형태로 변환
-    question_text = f'다음 중 본문의 내용과 일치하는 것은?'
-
-    # 정답 옵션
-    correct = sentence if len(sentence) <= 60 else sentence[:57] + '...'
-
-    # 오답 생성 (문장 변형)
-    wrong_options = _generate_wrong_options(sentence)
-
-    options = [correct] + wrong_options[:3]
-    # 순서 섞기 (결정적: qid 기반)
-    import random
-    rng = random.Random(qid)
-    rng.shuffle(options)
-
-    return {
-        'id': qid,
-        'type': 'multiple_choice',
-        'question': question_text,
-        'options': options,
-        'answer': correct,
-        'explanation': f'본문에 "{correct}" 내용이 있습니다.',
-    }
-
-
-def _generate_wrong_options(sentence: str) -> List[str]:
-    """오답 선택지를 생성합니다."""
-    wrong = []
-
-    # 부정 변환
-    if '있다' in sentence or '있습니다' in sentence:
-        wrong.append(sentence.replace('있다', '없다').replace('있습니다', '없습니다'))
-    elif '이다' in sentence or '입니다' in sentence:
-        wrong.append(sentence.replace('이다', '이 아니다').replace('입니다', '이 아닙니다'))
-
-    # 숫자 변형
-    numbers = re.findall(r'\d+', sentence)
-    if numbers:
-        for num in numbers[:1]:
-            n = int(num)
-            wrong.append(sentence.replace(num, str(n * 2), 1))
-            wrong.append(sentence.replace(num, str(max(1, n // 2)), 1))
-
-    # 기본 오답
-    if len(wrong) < 3:
-        wrong.append('위의 내용은 본문에 언급되지 않았다')
-    if len(wrong) < 3:
-        wrong.append('본문에서 정확한 정보를 확인할 수 없다')
-    if len(wrong) < 3:
-        wrong.append('해당 내용은 본문과 반대되는 설명이다')
-
-    # 길이 제한
-    return [w[:60] if len(w) > 60 else w for w in wrong[:3]]

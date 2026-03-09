@@ -1,85 +1,211 @@
-"""quiz_generator_service 단위 테스트"""
-import unittest
+"""퀴즈 생성 서비스 테스트"""
 
+import unittest
 from services.quiz_generator_service import (
-    generate_quiz,
-    _extract_key_sentences,
-    _generate_wrong_options,
+    QuizQuestion, Quiz,
+    generate_quiz, grade_answer, calculate_results,
+    VALID_DIFFICULTIES,
 )
 
 
 class TestGenerateQuiz(unittest.TestCase):
+    """generate_quiz 테스트"""
 
-    def test_empty_content(self):
-        result = generate_quiz('')
-        self.assertEqual(result['total_questions'], 0)
-        self.assertEqual(result['questions'], [])
+    def setUp(self):
+        self.content = (
+            "인공지능은 컴퓨터 과학의 한 분야로 기계가 학습하는 것을 연구합니다.\n"
+            "머신러닝은 데이터에서 패턴을 찾아 자동으로 학습하는 기술입니다.\n"
+            "딥러닝은 신경망을 여러 층으로 쌓아 복잡한 패턴을 인식합니다.\n"
+            "자연어처리는 컴퓨터가 인간의 언어를 이해하고 생성하는 기술입니다.\n"
+            "컴퓨터 비전은 이미지와 영상을 분석하여 정보를 추출합니다."
+        )
 
-    def test_none_content(self):
-        result = generate_quiz(None)
-        self.assertEqual(result['total_questions'], 0)
+    def test_generate_returns_quiz(self):
+        """Quiz 객체 반환"""
+        quiz = generate_quiz(self.content, 3, "medium")
+        self.assertIsInstance(quiz, Quiz)
+        self.assertTrue(quiz.quiz_id.startswith("quiz_"))
 
-    def test_generates_questions(self):
-        content = """
-        # 파이썬 프로그래밍 가이드
+    def test_generate_question_count(self):
+        """요청한 문항 수 생성"""
+        quiz = generate_quiz(self.content, 3, "medium")
+        self.assertEqual(len(quiz.questions), 3)
 
-        파이썬은 1991년에 귀도 반 로섬이 개발한 프로그래밍 언어입니다.
-        파이썬의 문법은 간결하고 읽기 쉬워서 초보자에게 적합합니다.
-        전 세계 개발자의 약 30%가 파이썬을 주력 언어로 사용합니다.
-        데이터 과학, 웹 개발, 인공지능 분야에서 널리 활용됩니다.
-        파이썬 생태계에는 20만개 이상의 패키지가 등록되어 있습니다.
-        최신 버전은 성능이 크게 향상되었고 타입 힌트를 지원합니다.
-        """
-        result = generate_quiz(content, count=5)
-        self.assertGreater(result['total_questions'], 0)
-        self.assertLessEqual(result['total_questions'], 5)
-        self.assertIsInstance(result['quiz_id'], str)
-        self.assertTrue(len(result['quiz_id']) > 0)
+    def test_generate_question_types_cycle(self):
+        """문항 타입 순환 (MC → TF → SA)"""
+        quiz = generate_quiz(self.content, 3, "easy")
+        types = [q.question_type for q in quiz.questions]
+        self.assertEqual(types[0], "multiple_choice")
+        self.assertEqual(types[1], "true_false")
+        self.assertEqual(types[2], "short_answer")
 
-    def test_question_structure(self):
-        content = '파이썬은 간결한 문법을 가진 프로그래밍 언어입니다. 데이터 분석에 널리 사용됩니다.'
-        result = generate_quiz(content, count=3)
-        for q in result['questions']:
-            self.assertIn('id', q)
-            self.assertIn('type', q)
-            self.assertIn('question', q)
-            self.assertIn('answer', q)
-            self.assertIn(q['type'], ('multiple_choice', 'true_false', 'fill_blank'))
+    def test_passing_score_by_difficulty(self):
+        """난이도별 합격 점수"""
+        easy = generate_quiz(self.content, 1, "easy")
+        hard = generate_quiz(self.content, 1, "hard")
+        self.assertEqual(easy.passing_score, 0.6)
+        self.assertEqual(hard.passing_score, 0.8)
 
-    def test_count_limit(self):
-        content = '문장1입니다 내용이 풍부합니다. ' * 20
-        result = generate_quiz(content, count=3)
-        self.assertLessEqual(result['total_questions'], 3)
+    def test_invalid_difficulty_raises(self):
+        """유효하지 않은 난이도는 ValueError"""
+        with self.assertRaises(ValueError):
+            generate_quiz(self.content, 3, "impossible")
 
-    def test_max_count_cap(self):
-        content = '문장입니다 길이를 맞추기 위한 내용입니다. ' * 30
-        result = generate_quiz(content, count=20)
-        self.assertLessEqual(result['total_questions'], 10)
+    def test_zero_questions_raises(self):
+        """0 문항은 ValueError"""
+        with self.assertRaises(ValueError):
+            generate_quiz(self.content, 0, "medium")
 
+    def test_empty_content_returns_empty(self):
+        """빈 콘텐츠는 빈 퀴즈"""
+        quiz = generate_quiz("", 5, "medium")
+        self.assertEqual(len(quiz.questions), 0)
 
-class TestExtractKeySentences(unittest.TestCase):
-
-    def test_filters_short_sentences(self):
-        sentences = _extract_key_sentences('짧다. 이것은 충분히 긴 문장으로 핵심 정보를 담고 있습니다.')
-        self.assertTrue(all(len(s) >= 15 for s in sentences))
-
-    def test_filters_skip_patterns(self):
-        text = '참고: 이것은 참고입니다. 이것은 중요한 핵심 내용을 담은 문장입니다.'
-        sentences = _extract_key_sentences(text)
-        self.assertTrue(all(not s.startswith('참고:') for s in sentences))
-
-
-class TestGenerateWrongOptions(unittest.TestCase):
-
-    def test_generates_options(self):
-        options = _generate_wrong_options('파이썬은 인기 있는 프로그래밍 언어입니다')
-        self.assertGreater(len(options), 0)
-        self.assertLessEqual(len(options), 3)
-
-    def test_number_variant(self):
-        options = _generate_wrong_options('사용자가 100명 참여했습니다')
-        self.assertGreater(len(options), 0)
+    def test_questions_have_ids(self):
+        """모든 문항에 고유 ID"""
+        quiz = generate_quiz(self.content, 3, "medium")
+        ids = [q.question_id for q in quiz.questions]
+        self.assertEqual(len(ids), len(set(ids)))
 
 
-if __name__ == '__main__':
+class TestGradeAnswer(unittest.TestCase):
+    """grade_answer 테스트"""
+
+    def test_correct_answer(self):
+        """정답 채점"""
+        q = QuizQuestion(
+            question_id="q1",
+            question_text="질문",
+            question_type="multiple_choice",
+            options=["A", "B"],
+            correct_answer="A",
+        )
+        result = grade_answer(q, "A")
+        self.assertTrue(result["correct"])
+        self.assertEqual(result["score"], 1.0)
+
+    def test_wrong_answer(self):
+        """오답 채점"""
+        q = QuizQuestion(
+            question_id="q1",
+            question_text="질문",
+            question_type="multiple_choice",
+            options=["A", "B"],
+            correct_answer="A",
+        )
+        result = grade_answer(q, "B")
+        self.assertFalse(result["correct"])
+        self.assertEqual(result["score"], 0.0)
+
+    def test_case_insensitive(self):
+        """대소문자 무시"""
+        q = QuizQuestion(
+            question_id="q1",
+            question_text="질문",
+            question_type="true_false",
+            options=["O", "X"],
+            correct_answer="O",
+        )
+        result = grade_answer(q, "o")
+        self.assertTrue(result["correct"])
+
+    def test_short_answer_partial_score(self):
+        """단답형 부분 점수"""
+        q = QuizQuestion(
+            question_id="q1",
+            question_text="빈칸을 채우세요",
+            question_type="short_answer",
+            correct_answer="인공지능",
+        )
+        # 정답 포함 시 부분 점수
+        result = grade_answer(q, "인공지능 기술")
+        self.assertEqual(result["score"], 0.5)
+
+    def test_grade_returns_explanation(self):
+        """설명 포함"""
+        q = QuizQuestion(
+            question_id="q1",
+            question_text="질문",
+            question_type="true_false",
+            correct_answer="O",
+            explanation="설명 텍스트",
+        )
+        result = grade_answer(q, "O")
+        self.assertEqual(result["explanation"], "설명 텍스트")
+
+
+class TestCalculateResults(unittest.TestCase):
+    """calculate_results 테스트"""
+
+    def test_all_correct(self):
+        """전부 정답"""
+        quiz = Quiz(
+            quiz_id="quiz1",
+            title="테스트",
+            questions=[
+                QuizQuestion("q1", "질문1", "true_false", ["O", "X"], "O"),
+                QuizQuestion("q2", "질문2", "true_false", ["O", "X"], "X"),
+            ],
+            passing_score=0.7,
+        )
+        answers = [
+            {"question_id": "q1", "answer": "O"},
+            {"question_id": "q2", "answer": "X"},
+        ]
+        results = calculate_results(quiz, answers)
+        self.assertEqual(results["correct"], 2)
+        self.assertEqual(results["score"], 1.0)
+        self.assertTrue(results["passed"])
+
+    def test_all_wrong(self):
+        """전부 오답"""
+        quiz = Quiz(
+            quiz_id="quiz1",
+            title="테스트",
+            questions=[
+                QuizQuestion("q1", "질문1", "true_false", ["O", "X"], "O"),
+            ],
+            passing_score=0.7,
+        )
+        answers = [{"question_id": "q1", "answer": "X"}]
+        results = calculate_results(quiz, answers)
+        self.assertEqual(results["correct"], 0)
+        self.assertFalse(results["passed"])
+
+    def test_empty_quiz(self):
+        """빈 퀴즈"""
+        quiz = Quiz(quiz_id="q", title="빈", questions=[], passing_score=0.7)
+        results = calculate_results(quiz, [])
+        self.assertEqual(results["total"], 0)
+
+    def test_missing_answer_treated_as_wrong(self):
+        """답안 누락은 오답 처리"""
+        quiz = Quiz(
+            quiz_id="quiz1",
+            title="테스트",
+            questions=[
+                QuizQuestion("q1", "질문", "true_false", ["O", "X"], "O"),
+            ],
+            passing_score=0.7,
+        )
+        results = calculate_results(quiz, [])  # 답안 없음
+        self.assertEqual(results["correct"], 0)
+
+    def test_details_included(self):
+        """상세 결과 포함"""
+        quiz = Quiz(
+            quiz_id="quiz1",
+            title="테스트",
+            questions=[
+                QuizQuestion("q1", "질문", "true_false", ["O", "X"], "O"),
+            ],
+            passing_score=0.5,
+        )
+        answers = [{"question_id": "q1", "answer": "O"}]
+        results = calculate_results(quiz, answers)
+        self.assertEqual(len(results["details"]), 1)
+        self.assertTrue(results["details"][0]["correct"])
+
+
+if __name__ == "__main__":
     unittest.main()
