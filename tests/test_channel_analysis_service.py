@@ -32,14 +32,14 @@ class TestExtractChannelId(unittest.TestCase):
 
     def test_handle_url(self):
         """/@handle 패턴 → _resolve_channel_id 호출"""
-        with patch('services.channel_analysis_service._resolve_channel_id', return_value='UC_resolved') as mock:
+        with patch('services.content.channel_analysis_service._resolve_channel_id', return_value='UC_resolved') as mock:
             result = _extract_channel_id('https://www.youtube.com/@testhandle')
         self.assertEqual(result, 'UC_resolved')
         mock.assert_called_once_with('testhandle')
 
     def test_custom_url(self):
         """/c/customname 패턴"""
-        with patch('services.channel_analysis_service._resolve_channel_id', return_value='UC_custom') as mock:
+        with patch('services.content.channel_analysis_service._resolve_channel_id', return_value='UC_custom') as mock:
             result = _extract_channel_id('https://www.youtube.com/c/MyChannel')
         self.assertEqual(result, 'UC_custom')
         mock.assert_called_once_with('MyChannel')
@@ -129,26 +129,26 @@ class TestClusterTopics(unittest.TestCase):
 
 class TestAnalyzeChannel(unittest.TestCase):
 
-    @patch('services.channel_analysis_service.YOUTUBE_API_KEY', '')
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', '')
     def test_no_api_key(self):
         """API 키 없음 → ValueError"""
         with self.assertRaises(ValueError) as ctx:
             analyze_channel('https://youtube.com/channel/UCtest')
         self.assertIn('YOUTUBE_API_KEY', str(ctx.exception))
 
-    @patch('services.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
-    @patch('services.channel_analysis_service._extract_channel_id', return_value=None)
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service._extract_channel_id', return_value=None)
     def test_invalid_url(self, mock_extract):
         """유효하지 않은 URL → ValueError"""
         with self.assertRaises(ValueError) as ctx:
             analyze_channel('https://invalid.com')
         self.assertIn('유효하지 않은', str(ctx.exception))
 
-    @patch('services.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
-    @patch('services.channel_analysis_service._cluster_topics', return_value=[])
-    @patch('services.channel_analysis_service._get_recent_videos', return_value=[])
-    @patch('services.channel_analysis_service._get_channel_info', return_value={'title': '테스트 채널', 'video_count': 10, 'view_count': 1000, 'subscriber_count': 100})
-    @patch('services.channel_analysis_service._extract_channel_id', return_value='UC_test')
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service._cluster_topics', return_value=[])
+    @patch('services.content.channel_analysis_service._get_recent_videos', return_value=[])
+    @patch('services.content.channel_analysis_service._get_channel_info', return_value={'title': '테스트 채널', 'video_count': 10, 'view_count': 1000, 'subscriber_count': 100})
+    @patch('services.content.channel_analysis_service._extract_channel_id', return_value='UC_test')
     def test_success(self, mock_extract, mock_info, mock_videos, mock_cluster):
         """정상 분석"""
         result = analyze_channel('https://youtube.com/channel/UC_test')

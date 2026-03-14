@@ -8,56 +8,56 @@ from unittest.mock import patch, MagicMock
 class TestWorkspaceServiceDisabled(unittest.TestCase):
     """Supabase 비활성화 시 동작 테스트"""
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_create_returns_error_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.create_workspace('팀A', 'user-1')
         self.assertIn('error', result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_list_returns_empty_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.list_workspaces('user-1')
         self.assertEqual(result, [])
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_get_workspace_returns_none_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.get_workspace('ws-1')
         self.assertIsNone(result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_get_members_returns_empty_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.get_members('ws-1')
         self.assertEqual(result, [])
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_invite_returns_error_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.invite_member('ws-1', 'user-2')
         self.assertIn('error', result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_remove_returns_false_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.remove_member('ws-1', 'user-2')
         self.assertFalse(result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_update_role_returns_false_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.update_role('ws-1', 'user-2', 'viewer')
         self.assertFalse(result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=False)
     def test_delete_returns_false_when_disabled(self, _):
         from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
@@ -73,8 +73,8 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         mock_client = MagicMock()
         return mock_client
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_create_workspace(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client
@@ -91,8 +91,8 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         self.assertEqual(result['id'], 'ws-123')
         self.assertEqual(result['name'], '팀A')
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_list_workspaces(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client
@@ -128,8 +128,8 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         self.assertEqual(result[0]['my_role'], 'owner')
         self.assertEqual(result[1]['my_role'], 'editor')
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_invite_duplicate_member(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client
@@ -147,8 +147,8 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         self.assertIn('error', result)
         self.assertIn('이미', result['error'])
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_remove_owner_prevented(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client
@@ -165,8 +165,8 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         result = ws.remove_member('ws-1', 'owner-user')
         self.assertFalse(result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_update_role_owner_prevented(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client
@@ -185,7 +185,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
 
     def test_update_role_invalid_role(self):
         """유효하지 않은 역할은 Supabase 호출 없이 False 반환"""
-        with patch('services.workspace_service.is_supabase_enabled', return_value=True):
+        with patch('services.data.workspace_service.is_supabase_enabled', return_value=True):
             from services.data.workspace_service import WorkspaceService
             ws = WorkspaceService()
             result = ws.update_role('ws-1', 'user-2', 'owner')
@@ -193,14 +193,14 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
 
     def test_invite_invalid_role(self):
         """owner 역할로 초대 시도 시 에러"""
-        with patch('services.workspace_service.is_supabase_enabled', return_value=True):
+        with patch('services.data.workspace_service.is_supabase_enabled', return_value=True):
             from services.data.workspace_service import WorkspaceService
             ws = WorkspaceService()
             result = ws.invite_member('ws-1', 'user-2', 'owner')
             self.assertIn('error', result)
 
-    @patch('services.workspace_service.is_supabase_enabled', return_value=True)
-    @patch('services.workspace_service.get_supabase')
+    @patch('services.data.workspace_service.is_supabase_enabled', return_value=True)
+    @patch('services.data.workspace_service.get_supabase')
     def test_delete_non_owner_prevented(self, mock_get_sb, _):
         mock_client = self._mock_supabase()
         mock_get_sb.return_value = mock_client

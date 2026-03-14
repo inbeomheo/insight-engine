@@ -3,7 +3,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from services import expiry_service
+from services.data import expiry_service
 
 
 class TestExpiryService(unittest.TestCase):
@@ -56,7 +56,7 @@ class TestExpiryService(unittest.TestCase):
         rules = expiry_service.get_all_rules()
         self.assertEqual(len(rules), 2)
 
-    @patch('services.content_library_service.delete_item')
+    @patch('services.data.content_library_service.delete_item')
     def test_process_expired_delete(self, mock_delete):
         """만료 삭제 처리"""
         expiry_service.set_expiry('del1', time.time() - 100, action='delete')
@@ -64,7 +64,7 @@ class TestExpiryService(unittest.TestCase):
         self.assertEqual(result['deleted'], 1)
         mock_delete.assert_called_once_with('del1', soft=True)
 
-    @patch('services.content_library_service.update_item')
+    @patch('services.data.content_library_service.update_item')
     def test_process_expired_archive(self, mock_update):
         """만료 아카이브 처리"""
         expiry_service.set_expiry('arc1', time.time() - 100, action='archive')

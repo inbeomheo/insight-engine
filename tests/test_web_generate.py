@@ -32,7 +32,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 1. 웹 URL 성공 ────────────────────────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_webpage_success(self, _mock_supabase):
         """일반 웹 URL로 /generate 호출 시 200 + 콘텐츠 반환"""
         fake_scraped = {
@@ -48,7 +48,7 @@ class TestWebGenerate(unittest.TestCase):
                 return fake_result, 'PROMPT_TEXT'
             return fake_result
 
-        with patch('services.multi_source_collector._collect_webpage', return_value=fake_scraped), \
+        with patch('services.content.multi_source_collector._collect_webpage', return_value=fake_scraped), \
              patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _: t):
 
@@ -66,7 +66,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 2. source_type 명시 ────────────────────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_with_explicit_source_type_webpage(self, _mock_supabase):
         """source_type='webpage' 명시 시 정상 처리"""
         fake_scraped = {
@@ -82,7 +82,7 @@ class TestWebGenerate(unittest.TestCase):
                 return fake_result, 'PROMPT'
             return fake_result
 
-        with patch('services.multi_source_collector._collect_webpage', return_value=fake_scraped), \
+        with patch('services.content.multi_source_collector._collect_webpage', return_value=fake_scraped), \
              patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _: t):
 
@@ -100,10 +100,10 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 3. 본문 추출 실패 → 400 ──────────────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_webpage_scraping_failure_returns_400(self, _mock_supabase):
         """웹 스크래핑 실패 시 400 에러 반환"""
-        with patch('services.multi_source_collector._collect_webpage',
+        with patch('services.content.multi_source_collector._collect_webpage',
                    side_effect=ValueError("웹페이지에서 본문을 추출할 수 없습니다: https://empty.example.com")):
 
             res = self._post_generate({
@@ -118,7 +118,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 4. 빈 URL → 400 ──────────────────────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_empty_url_returns_400(self, _mock_supabase):
         """URL 없이 호출 시 400 에러 반환"""
         res = self._post_generate({
@@ -133,7 +133,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 5. 자동 감지: 비유튜브 URL ────────────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_auto_detect_non_youtube_as_webpage(self, _mock_supabase):
         """비유튜브 URL은 자동으로 웹페이지로 처리됨"""
         fake_scraped = {
@@ -149,7 +149,7 @@ class TestWebGenerate(unittest.TestCase):
                 return fake_result, 'PROMPT'
             return fake_result
 
-        with patch('services.multi_source_collector._collect_webpage', return_value=fake_scraped) as mock_scrape, \
+        with patch('services.content.multi_source_collector._collect_webpage', return_value=fake_scraped) as mock_scrape, \
              patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _: t):
 
@@ -165,7 +165,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 6. source_title이 응답에 포함됨 ──────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_webpage_includes_source_title(self, _mock_supabase):
         """응답에 스크래핑된 페이지 제목(source_title)이 포함됨"""
         fake_scraped = {
@@ -181,7 +181,7 @@ class TestWebGenerate(unittest.TestCase):
                 return fake_result, 'PROMPT'
             return fake_result
 
-        with patch('services.multi_source_collector._collect_webpage', return_value=fake_scraped), \
+        with patch('services.content.multi_source_collector._collect_webpage', return_value=fake_scraped), \
              patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _: t):
 
@@ -198,7 +198,7 @@ class TestWebGenerate(unittest.TestCase):
 
     # ── 7. Wikipedia URL → 제목 접미사 제거 ────────────────────
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_generate_wikipedia_url_success(self, _mock_supabase):
         """Wikipedia URL로 /generate 호출 시 200 + 콘텐츠 반환"""
         fake_scraped = {
@@ -214,7 +214,7 @@ class TestWebGenerate(unittest.TestCase):
                 return fake_result, 'PROMPT'
             return fake_result
 
-        with patch('services.multi_source_collector._collect_webpage', return_value=fake_scraped), \
+        with patch('services.content.multi_source_collector._collect_webpage', return_value=fake_scraped), \
              patch('routes.blog_routes.ai_service.create_content', side_effect=fake_create_content), \
              patch('routes.blog_routes.content_service.truncate_text', side_effect=lambda t, _: t):
 

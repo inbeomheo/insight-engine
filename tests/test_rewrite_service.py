@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services import rewrite_service
+from services.content import rewrite_service
 
 
 MOCK_PRESETS = {

@@ -5,10 +5,10 @@ from unittest.mock import patch, MagicMock
 
 class TestFusionService(unittest.TestCase):
 
-    @patch('services.fusion_service.ai_service')
-    @patch('services.fusion_service.comment_analyzer_service')
-    @patch('services.fusion_service.web_research_service')
-    @patch('services.fusion_service.content_service')
+    @patch('services.core.fusion_service.ai_service')
+    @patch('services.core.fusion_service.comment_analyzer_service')
+    @patch('services.core.fusion_service.web_research_service')
+    @patch('services.core.fusion_service.content_service')
     def test_generate_fusion_full(self, mock_cs, mock_wr, mock_ca, mock_ai):
         mock_cs.get_video_id.return_value = 'vid1'
         mock_cs.get_transcript.return_value = {'text': '자막1', 'source': 'api'}
@@ -29,7 +29,7 @@ class TestFusionService(unittest.TestCase):
             {'title': 'Art1', 'url': 'http://ex.com', 'summary': '요약1'}
         ]
 
-        from services.fusion_service import generate_fusion
+        from services.core.fusion_service import generate_fusion
         result = generate_fusion(
             urls=['https://youtube.com/watch?v=vid1', 'https://youtube.com/watch?v=vid2'],
             style_id='blog_seo',
@@ -43,8 +43,8 @@ class TestFusionService(unittest.TestCase):
         self.assertIn('fusion_meta', result)
         self.assertIn('videos_analyzed', result['fusion_meta'])
 
-    @patch('services.fusion_service.ai_service')
-    @patch('services.fusion_service.content_service')
+    @patch('services.core.fusion_service.ai_service')
+    @patch('services.core.fusion_service.content_service')
     def test_generate_fusion_without_optional(self, mock_cs, mock_ai):
         mock_cs.get_video_id.return_value = 'vid1'
         mock_cs.get_transcript.return_value = {'text': '자막1', 'source': 'api'}
@@ -54,7 +54,7 @@ class TestFusionService(unittest.TestCase):
             'usage': {'prompt_tokens': 50, 'completion_tokens': 100, 'total_tokens': 150}
         }
 
-        from services.fusion_service import generate_fusion
+        from services.core.fusion_service import generate_fusion
         result = generate_fusion(
             urls=['https://youtube.com/watch?v=vid1', 'https://youtube.com/watch?v=vid2'],
             style_id='blog_seo',
@@ -66,7 +66,7 @@ class TestFusionService(unittest.TestCase):
         self.assertIn('title', result)
 
     def test_generate_fusion_too_few_urls(self):
-        from services.fusion_service import generate_fusion
+        from services.core.fusion_service import generate_fusion
         with self.assertRaises(ValueError):
             generate_fusion(
                 urls=['https://youtube.com/watch?v=vid1'],

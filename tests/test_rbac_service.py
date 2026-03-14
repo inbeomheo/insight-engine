@@ -1,7 +1,7 @@
 """rbac_service 단위 테스트"""
 import unittest
 
-from services import rbac_service
+from services.data import rbac_service
 
 
 class TestRbacService(unittest.TestCase):

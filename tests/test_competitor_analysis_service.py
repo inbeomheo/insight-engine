@@ -15,7 +15,7 @@ class TestAnalyzeCompetitors(unittest.TestCase):
         with self.assertRaises(ValueError):
             analyze_competitors("   ")
 
-    @patch('services.competitor_analysis_service._search_urls', return_value=[])
+    @patch('services.seo.competitor_analysis_service._search_urls', return_value=[])
     def test_no_results(self, mock_search):
         from services.seo.competitor_analysis_service import analyze_competitors
         result = analyze_competitors("매우 희귀한 키워드 xyz123")
@@ -23,8 +23,8 @@ class TestAnalyzeCompetitors(unittest.TestCase):
         self.assertEqual(result["keyword"], "매우 희귀한 키워드 xyz123")
         self.assertIn("differentiation_tips", result)
 
-    @patch('services.web_scraper_service.scrape_webpage')
-    @patch('services.competitor_analysis_service._search_urls')
+    @patch('services.data.web_scraper_service.scrape_webpage')
+    @patch('services.seo.competitor_analysis_service._search_urls')
     def test_with_competitors(self, mock_search, mock_scrape):
         mock_search.return_value = [
             {"url": "https://example.com/1", "title": "제목1"},
@@ -39,8 +39,8 @@ class TestAnalyzeCompetitors(unittest.TestCase):
         self.assertEqual(result["competitor_count"], 2)
         self.assertGreater(result["avg_stats"]["avg_char_count"], 0)
 
-    @patch('services.web_scraper_service.scrape_webpage')
-    @patch('services.competitor_analysis_service._search_urls')
+    @patch('services.data.web_scraper_service.scrape_webpage')
+    @patch('services.seo.competitor_analysis_service._search_urls')
     def test_with_my_content(self, mock_search, mock_scrape):
         mock_search.return_value = [
             {"url": "https://example.com/1", "title": "경쟁글"},
@@ -54,8 +54,8 @@ class TestAnalyzeCompetitors(unittest.TestCase):
         self.assertIsNotNone(result["my_analysis"])
         self.assertIn("structure", result["my_analysis"])
 
-    @patch('services.web_scraper_service.scrape_webpage')
-    @patch('services.competitor_analysis_service._search_urls')
+    @patch('services.data.web_scraper_service.scrape_webpage')
+    @patch('services.seo.competitor_analysis_service._search_urls')
     def test_scrape_failure_graceful(self, mock_search, mock_scrape):
         mock_search.return_value = [{"url": "https://fail.com", "title": "실패"}]
         mock_scrape.side_effect = Exception("스크래핑 실패")

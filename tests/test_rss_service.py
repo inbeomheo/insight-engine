@@ -44,7 +44,7 @@ class TestParsePublishedDt(unittest.TestCase):
 class TestParseFeed(unittest.TestCase):
     """parse_feed 테스트"""
 
-    @patch('services.rss_service.feedparser.parse')
+    @patch('services.platform.rss_service.feedparser.parse')
     def test_success(self, mock_parse):
         """정상 파싱"""
         entry = MagicMock()
@@ -59,14 +59,14 @@ class TestParseFeed(unittest.TestCase):
         self.assertEqual(result[0]['title'], '제목')
         self.assertEqual(result[0]['source_type'], 'rss')
 
-    @patch('services.rss_service.feedparser.parse')
+    @patch('services.platform.rss_service.feedparser.parse')
     def test_bozo_no_entries_raises(self, mock_parse):
         """bozo + 엔트리 없으면 ValueError"""
         mock_parse.return_value = MagicMock(bozo=True, entries=[], bozo_exception='bad')
         with self.assertRaises(ValueError):
             parse_feed('https://bad.com/feed')
 
-    @patch('services.rss_service.feedparser.parse')
+    @patch('services.platform.rss_service.feedparser.parse')
     def test_max_items(self, mock_parse):
         """max_items 제한"""
         entries = [MagicMock(content=[], summary='s', published='', get=lambda k, d='': d) for _ in range(20)]
@@ -82,7 +82,7 @@ class TestParseFeed(unittest.TestCase):
 class TestGetLatestEntries(unittest.TestCase):
     """get_latest_entries 테스트"""
 
-    @patch('services.rss_service.parse_feed')
+    @patch('services.platform.rss_service.parse_feed')
     def test_filters_old_entries(self, mock_parse):
         """오래된 엔트리 필터링"""
         now = datetime.now(timezone.utc)
@@ -98,7 +98,7 @@ class TestGetLatestEntries(unittest.TestCase):
         self.assertIn('recent', titles)
         self.assertNotIn('old', titles)
 
-    @patch('services.rss_service.parse_feed')
+    @patch('services.platform.rss_service.parse_feed')
     def test_includes_unparseable_dates(self, mock_parse):
         """날짜 파싱 불가 엔트리 포함"""
         mock_parse.return_value = [

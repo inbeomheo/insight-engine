@@ -21,8 +21,8 @@ class TestVideoClipService(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_clips('https://youtube.com/watch?v=test', [{'start': '0:00'}])
 
-    @patch('services.video_clip_service._extract_clip')
-    @patch('services.video_clip_service._download_video')
+    @patch('services.media.video_clip_service._extract_clip')
+    @patch('services.media.video_clip_service._download_video')
     def test_extract_clips_success(self, mock_download, mock_extract):
         mock_download.return_value = '/tmp/source.mp4'
         mock_extract.return_value = '/tmp/clip_0.mp4'
@@ -41,13 +41,13 @@ class TestVideoClipService(unittest.TestCase):
 
 class TestExtractClip(unittest.TestCase):
 
-    @patch('services.video_clip_service.subprocess.run')
+    @patch('services.media.video_clip_service.subprocess.run')
     def test_extract_clip_ffmpeg_failure(self, mock_run):
         mock_run.return_value = MagicMock(returncode=1, stderr='error')
         with self.assertRaises(RuntimeError):
             _extract_clip('/tmp/source.mp4', '0:00', '0:30', 0)
 
-    @patch('services.video_clip_service.subprocess.run')
+    @patch('services.media.video_clip_service.subprocess.run')
     def test_extract_clip_ffmpeg_not_found(self, mock_run):
         mock_run.side_effect = FileNotFoundError()
         with self.assertRaises(RuntimeError) as ctx:

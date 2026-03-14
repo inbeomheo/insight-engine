@@ -11,8 +11,8 @@ import requests
 class TestExtractGithubReadme(unittest.TestCase):
     """extract_github_readme 단위 테스트"""
 
-    @patch("services.github_service._get_repo_description", return_value="테스트 설명")
-    @patch("services.github_service.requests.get")
+    @patch("services.platform.github_service._get_repo_description", return_value="테스트 설명")
+    @patch("services.platform.github_service.requests.get")
     def test_extracts_readme_successfully(self, mock_get, mock_desc):
         """README를 정상적으로 추출"""
         readme_content = "# My Project\n\nThis is a test README."
@@ -42,7 +42,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_github_readme("https://example.com/not-github")
 
-    @patch("services.github_service.requests.get")
+    @patch("services.platform.github_service.requests.get")
     def test_raises_on_404(self, mock_get):
         """README가 없는 리포지토리에서 ValueError 발생"""
         mock_resp = MagicMock()
@@ -57,8 +57,8 @@ class TestExtractGithubReadme(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_github_readme("https://github.com/owner/norepo")
 
-    @patch("services.github_service._get_repo_description", return_value="")
-    @patch("services.github_service.requests.get")
+    @patch("services.platform.github_service._get_repo_description", return_value="")
+    @patch("services.platform.github_service.requests.get")
     def test_strips_git_suffix(self, mock_get, mock_desc):
         """.git 접미사가 자동으로 제거됨"""
         encoded = base64.b64encode(b"# README content here").decode()
@@ -72,8 +72,8 @@ class TestExtractGithubReadme(unittest.TestCase):
 
         self.assertEqual(result["title"], "owner/repo")
 
-    @patch("services.github_service._get_repo_description", return_value="")
-    @patch("services.github_service.requests.get")
+    @patch("services.platform.github_service._get_repo_description", return_value="")
+    @patch("services.platform.github_service.requests.get")
     def test_raises_on_empty_readme(self, mock_get, mock_desc):
         """빈 README에서 ValueError 발생"""
         encoded = base64.b64encode(b"").decode()

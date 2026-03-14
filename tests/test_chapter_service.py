@@ -32,7 +32,7 @@ class TestSplitChapters(unittest.TestCase):
         result = split_chapters('짧은 텍스트', 'model1')
         self.assertEqual(result, [])
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_success_with_json(self, mock_ai):
         """정상적인 JSON 응답 파싱"""
         mock_ai.create_content.return_value = {
@@ -43,7 +43,7 @@ class TestSplitChapters(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['title'], '서론')
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_filters_invalid_chapters(self, mock_ai):
         """title/start/end 없는 챕터 필터링"""
         mock_ai.create_content.return_value = {
@@ -52,21 +52,21 @@ class TestSplitChapters(unittest.TestCase):
         result = split_chapters('A' * 600, 'model1')
         self.assertEqual(len(result), 1)
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_ai_error_returns_empty(self, mock_ai):
         """AI 호출 실패 시 빈 리스트"""
         mock_ai.create_content.side_effect = Exception('API error')
         result = split_chapters('A' * 600, 'model1')
         self.assertEqual(result, [])
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_non_json_response(self, mock_ai):
         """JSON 아닌 응답 시 빈 리스트"""
         mock_ai.create_content.return_value = {'content': '챕터를 나눌 수 없습니다.'}
         result = split_chapters('A' * 600, 'model1')
         self.assertEqual(result, [])
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_with_segments(self, mock_ai):
         """세그먼트 포함 시 타임스탬프 텍스트 구성"""
         mock_ai.create_content.return_value = {
@@ -82,7 +82,7 @@ class TestSplitChapters(unittest.TestCase):
         call_args = mock_ai.create_content.call_args[0][0]
         self.assertIn('[0:00]', call_args)
 
-    @patch('services.chapter_service.ai_service')
+    @patch('services.transcript.chapter_service.ai_service')
     def test_float_start_end_accepted(self, mock_ai):
         """start/end가 float여도 유효"""
         mock_ai.create_content.return_value = {

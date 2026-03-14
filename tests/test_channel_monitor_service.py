@@ -64,7 +64,7 @@ class TestCheckMonitors(unittest.TestCase):
         """기본 인자 → 빈 리스트"""
         self.assertEqual(check_monitors(), [])
 
-    @patch('services.channel_monitor_service.get_latest_video')
+    @patch('services.platform.channel_monitor_service.get_latest_video')
     def test_new_video_detected(self, mock_latest):
         """신규 영상 감지"""
         mock_latest.return_value = {
@@ -92,7 +92,7 @@ class TestCheckMonitors(unittest.TestCase):
         self.assertEqual(result[0]['channel_id'], 'UC_ch1')
         self.assertEqual(result[0]['style_id'], 'blog_seo')
 
-    @patch('services.channel_monitor_service.get_latest_video')
+    @patch('services.platform.channel_monitor_service.get_latest_video')
     def test_same_video_skipped(self, mock_latest):
         """동일 영상 → 스킵"""
         mock_latest.return_value = {
@@ -117,7 +117,7 @@ class TestCheckMonitors(unittest.TestCase):
         result = check_monitors(mock_client)
         self.assertEqual(len(result), 0)
 
-    @patch('services.channel_monitor_service.get_latest_video', return_value=None)
+    @patch('services.platform.channel_monitor_service.get_latest_video', return_value=None)
     def test_latest_video_none(self, mock_latest):
         """최신 영상 조회 실패 → 스킵"""
         mock_client = MagicMock()

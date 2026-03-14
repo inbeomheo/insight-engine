@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services import data_migration_service
+from services.data import data_migration_service
 
 
 class TestExportJson(unittest.TestCase):

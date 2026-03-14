@@ -1,6 +1,6 @@
 """콘텐츠 라이브러리 서비스 테스트 (F8-01)"""
 import pytest
-from services import content_library_service as svc
+from services.data import content_library_service as svc
 
 
 @pytest.fixture(autouse=True)

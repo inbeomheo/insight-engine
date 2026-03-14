@@ -53,15 +53,15 @@ class TestGenerateThumbnail(unittest.TestCase):
         result = generate_thumbnail('   ')
         self.assertFalse(result['success'])
 
-    @patch('services.thumbnail_service.IMAGE_GEN_API_KEY', '')
+    @patch('services.media.thumbnail_service.IMAGE_GEN_API_KEY', '')
     def test_no_api_key(self):
         """API 키 없음 → 실패"""
         result = generate_thumbnail('테스트 제목')
         self.assertFalse(result['success'])
         self.assertIn('API 키', result['error'])
 
-    @patch('services.thumbnail_service.generate_image')
-    @patch('services.thumbnail_service.IMAGE_GEN_API_KEY', 'test-key')
+    @patch('services.media.thumbnail_service.generate_image')
+    @patch('services.media.thumbnail_service.IMAGE_GEN_API_KEY', 'test-key')
     def test_success(self, mock_gen):
         """정상 생성"""
         mock_gen.return_value = b'\x89PNG\r\n\x1a\nfake'
@@ -73,8 +73,8 @@ class TestGenerateThumbnail(unittest.TestCase):
         decoded = base64.b64decode(result['image_base64'])
         self.assertEqual(decoded, b'\x89PNG\r\n\x1a\nfake')
 
-    @patch('services.thumbnail_service.generate_image', side_effect=RuntimeError('API 오류'))
-    @patch('services.thumbnail_service.IMAGE_GEN_API_KEY', 'test-key')
+    @patch('services.media.thumbnail_service.generate_image', side_effect=RuntimeError('API 오류'))
+    @patch('services.media.thumbnail_service.IMAGE_GEN_API_KEY', 'test-key')
     def test_api_error(self, mock_gen):
         """API 오류 → 실패"""
         result = generate_thumbnail('테스트')

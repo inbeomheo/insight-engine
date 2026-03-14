@@ -119,34 +119,34 @@ class TestDbOp(unittest.TestCase):
 
 class TestSupabaseDisabled(unittest.TestCase):
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_get_templates(self, mock_sb):
         """Supabase 비활성 → 빈 페이지"""
         result = get_templates('user1')
         self.assertEqual(result['templates'], [])
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_get_template_by_id(self, mock_sb):
         """Supabase 비활성 → None"""
         self.assertIsNone(get_template_by_id('tpl1', 'user1'))
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_create_template_local(self, mock_sb):
         """Supabase 비활성 → 로컬 템플릿"""
         result = create_template('user1', {'name': 'test', 'prompt_text': 'p'})
         self.assertTrue(result['id'].startswith('local_'))
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_update_template(self, mock_sb):
         """Supabase 비활성 → None"""
         self.assertIsNone(update_template('tpl1', 'user1', {'name': 'new'}))
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_delete_template(self, mock_sb):
         """Supabase 비활성 → False"""
         self.assertFalse(delete_template('tpl1', 'user1'))
 
-    @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_increment_usage(self, mock_sb):
         """Supabase 비활성 → False"""
         self.assertFalse(increment_usage('tpl1'))

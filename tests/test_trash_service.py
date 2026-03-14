@@ -2,8 +2,8 @@
 import unittest
 from unittest.mock import patch
 
-from services import trash_service
-from services import content_library_service
+from services.data import trash_service
+from services.data import content_library_service
 
 
 class TestTrashService(unittest.TestCase):
@@ -21,14 +21,14 @@ class TestTrashService(unittest.TestCase):
             content_library_service._items[item_id] = item
         return item
 
-    @patch('services.trash_service.content_library_service.delete_item')
+    @patch('services.data.trash_service.content_library_service.delete_item')
     def test_move_to_trash_success(self, mock_delete):
         """소프트 삭제 성공"""
         mock_delete.return_value = True
         self.assertTrue(trash_service.move_to_trash('item1', user_id='u1'))
         mock_delete.assert_called_once_with('item1', soft=True)
 
-    @patch('services.trash_service.content_library_service.delete_item')
+    @patch('services.data.trash_service.content_library_service.delete_item')
     def test_move_to_trash_failure(self, mock_delete):
         """소프트 삭제 실패"""
         mock_delete.return_value = False
@@ -50,7 +50,7 @@ class TestTrashService(unittest.TestCase):
         """없는 항목 복구 시 None"""
         self.assertIsNone(trash_service.restore_from_trash('nonexistent'))
 
-    @patch('services.trash_service.content_library_service.delete_item')
+    @patch('services.data.trash_service.content_library_service.delete_item')
     def test_permanently_delete(self, mock_delete):
         """영구 삭제"""
         mock_delete.return_value = True

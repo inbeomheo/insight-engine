@@ -64,7 +64,7 @@ class TestConstants(unittest.TestCase):
 
 class TestExtractWithTrafilatura(unittest.TestCase):
 
-    @patch('services.web_scraper_service.trafilatura')
+    @patch('services.data.web_scraper_service.trafilatura')
     def test_success(self, mock_traf):
         """정상 추출"""
         mock_traf.fetch_url.return_value = '<html><body>content</body></html>'
@@ -77,7 +77,7 @@ class TestExtractWithTrafilatura(unittest.TestCase):
         self.assertEqual(title, '페이지 제목')
         self.assertIn('본문', content)
 
-    @patch('services.web_scraper_service.trafilatura')
+    @patch('services.data.web_scraper_service.trafilatura')
     def test_fetch_fails(self, mock_traf):
         """fetch 실패 → 빈 결과"""
         mock_traf.fetch_url.return_value = None
@@ -85,7 +85,7 @@ class TestExtractWithTrafilatura(unittest.TestCase):
         self.assertEqual(title, '')
         self.assertEqual(content, '')
 
-    @patch('services.web_scraper_service.trafilatura')
+    @patch('services.data.web_scraper_service.trafilatura')
     def test_exception(self, mock_traf):
         """예외 → 빈 결과"""
         mock_traf.fetch_url.side_effect = Exception('network')
@@ -96,7 +96,7 @@ class TestExtractWithTrafilatura(unittest.TestCase):
 
 class TestScrapeWebpage(unittest.TestCase):
 
-    @patch('services.web_scraper_service._extract_with_trafilatura')
+    @patch('services.data.web_scraper_service._extract_with_trafilatura')
     def test_trafilatura_success(self, mock_traf):
         """trafilatura 성공 → 즉시 반환"""
         mock_traf.return_value = ('제목', 'A' * 100)
@@ -105,8 +105,8 @@ class TestScrapeWebpage(unittest.TestCase):
         self.assertEqual(result['source_type'], 'webpage')
         self.assertEqual(result['url'], 'https://example.com')
 
-    @patch('services.web_scraper_service._extract_with_scrapling')
-    @patch('services.web_scraper_service._extract_with_trafilatura')
+    @patch('services.data.web_scraper_service._extract_with_scrapling')
+    @patch('services.data.web_scraper_service._extract_with_trafilatura')
     def test_scrapling_fallback(self, mock_traf, mock_scrap):
         """trafilatura 실패 → scrapling 폴백"""
         mock_traf.return_value = ('', '')
@@ -114,8 +114,8 @@ class TestScrapeWebpage(unittest.TestCase):
         result = scrape_webpage('https://spa-site.com')
         self.assertEqual(result['title'], '폴백 제목')
 
-    @patch('services.web_scraper_service._extract_with_scrapling')
-    @patch('services.web_scraper_service._extract_with_trafilatura')
+    @patch('services.data.web_scraper_service._extract_with_scrapling')
+    @patch('services.data.web_scraper_service._extract_with_trafilatura')
     def test_both_fail(self, mock_traf, mock_scrap):
         """둘 다 실패 → ValueError"""
         mock_traf.return_value = ('', '')
@@ -124,14 +124,14 @@ class TestScrapeWebpage(unittest.TestCase):
             scrape_webpage('https://empty.com')
         self.assertIn('본문을 추출할 수 없습니다', str(ctx.exception))
 
-    @patch('services.web_scraper_service._extract_with_trafilatura')
+    @patch('services.data.web_scraper_service._extract_with_trafilatura')
     def test_wikipedia_title_cleaned(self, mock_traf):
         """위키피디아 URL → 제목 정리"""
         mock_traf.return_value = ('파이썬 - 위키백과, 우리 모두의 백과사전', 'C' * 100)
         result = scrape_webpage('https://ko.wikipedia.org/wiki/파이썬')
         self.assertEqual(result['title'], '파이썬')
 
-    @patch('services.web_scraper_service._extract_with_trafilatura')
+    @patch('services.data.web_scraper_service._extract_with_trafilatura')
     def test_no_title_uses_url(self, mock_traf):
         """제목 없음 → URL 사용"""
         mock_traf.return_value = ('', 'D' * 100)

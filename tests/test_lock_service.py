@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services import lock_service
+from services.data import lock_service
 
 
 class TestLockService(unittest.TestCase):

@@ -79,18 +79,18 @@ class TestLocalStorage(unittest.TestCase):
             os.remove(self.tmp_file)
         os.rmdir(self.tmpdir)
 
-    @patch('services.api_key_service._LOCAL_API_KEYS_FILE')
+    @patch('services.data.api_key_service._LOCAL_API_KEYS_FILE')
     def test_load_nonexistent(self, mock_path):
         """파일 없음 → 빈 dict"""
         mock_path.__str__ = lambda s: '/nonexistent/path.json'
-        with patch('services.api_key_service.os.path.exists', return_value=False):
+        with patch('services.data.api_key_service.os.path.exists', return_value=False):
             result = _load_local()
         self.assertEqual(result, {})
 
     def test_save_and_load(self):
         """저장 후 로드"""
         test_data = {'user1': [{'name': 'key1'}]}
-        with patch('services.api_key_service._LOCAL_API_KEYS_FILE', self.tmp_file):
+        with patch('services.data.api_key_service._LOCAL_API_KEYS_FILE', self.tmp_file):
             _save_local(test_data)
             result = _load_local()
         self.assertEqual(result, test_data)
@@ -101,8 +101,8 @@ class TestApiKeyServiceLocal(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.tmp_file = os.path.join(self.tmpdir, 'keys.json')
-        self.patcher_file = patch('services.api_key_service._LOCAL_API_KEYS_FILE', self.tmp_file)
-        self.patcher_supabase = patch('services.api_key_service.is_supabase_enabled', return_value=False)
+        self.patcher_file = patch('services.data.api_key_service._LOCAL_API_KEYS_FILE', self.tmp_file)
+        self.patcher_supabase = patch('services.data.api_key_service.is_supabase_enabled', return_value=False)
         self.patcher_file.start()
         self.patcher_supabase.start()
 

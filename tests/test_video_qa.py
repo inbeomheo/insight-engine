@@ -24,14 +24,14 @@ class TestIndexVideoTranscript(unittest.TestCase):
         result = index_video_transcript("test_id", "   ")
         self.assertFalse(result)
 
-    @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
+    @patch("services.media.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_실패(self):
         """ChromaDB 미설치 시 False 반환"""
         from services.media.video_qa_service import index_video_transcript
         result = index_video_transcript("test_id", "자막 내용")
         self.assertFalse(result)
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_정상_인덱싱(self, mock_client_fn):
         """정상 자막을 ChromaDB에 저장하면 True 반환"""
         # ChromaDB 모킹
@@ -41,14 +41,14 @@ class TestIndexVideoTranscript(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import index_video_transcript
             result = index_video_transcript("abc123", "이것은 테스트 자막입니다. " * 50)
 
         self.assertTrue(result)
         mock_collection.add.assert_called_once()
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_기존_인덱스_재인덱싱(self, mock_client_fn):
         """기존 데이터 있으면 삭제 후 재인덱싱"""
         mock_collection = MagicMock()
@@ -58,7 +58,7 @@ class TestIndexVideoTranscript(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import index_video_transcript
             result = index_video_transcript("abc123", "새로운 자막 내용입니다. " * 50)
 
@@ -70,12 +70,12 @@ class TestIndexVideoTranscript(unittest.TestCase):
 class TestIsVideoIndexed(unittest.TestCase):
     """is_video_indexed 함수 테스트"""
 
-    @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
+    @patch("services.media.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_False(self):
         from services.media.video_qa_service import is_video_indexed
         self.assertFalse(is_video_indexed("test_id"))
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_컬렉션_비어있으면_False(self, mock_client_fn):
         mock_collection = MagicMock()
         mock_collection.count.return_value = 0
@@ -83,11 +83,11 @@ class TestIsVideoIndexed(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import is_video_indexed
             self.assertFalse(is_video_indexed("test_id"))
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_컬렉션_있으면_True(self, mock_client_fn):
         mock_collection = MagicMock()
         mock_collection.count.return_value = 10
@@ -95,7 +95,7 @@ class TestIsVideoIndexed(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import is_video_indexed
             self.assertTrue(is_video_indexed("test_id"))
 
@@ -103,13 +103,13 @@ class TestIsVideoIndexed(unittest.TestCase):
 class TestSearchRelevantChunks(unittest.TestCase):
     """search_relevant_chunks 함수 테스트"""
 
-    @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
+    @patch("services.media.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_빈_리스트(self):
         from services.media.video_qa_service import search_relevant_chunks
         result = search_relevant_chunks("test_id", "질문")
         self.assertEqual(result, [])
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_컬렉션_비어있으면_빈_리스트(self, mock_client_fn):
         mock_collection = MagicMock()
         mock_collection.count.return_value = 0
@@ -117,12 +117,12 @@ class TestSearchRelevantChunks(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import search_relevant_chunks
             result = search_relevant_chunks("test_id", "질문")
         self.assertEqual(result, [])
 
-    @patch("services.video_qa_service._get_chroma_client")
+    @patch("services.media.video_qa_service._get_chroma_client")
     def test_검색_결과_반환_형식(self, mock_client_fn):
         """검색 결과가 올바른 형식으로 반환되는지 확인"""
         mock_collection = MagicMock()
@@ -139,7 +139,7 @@ class TestSearchRelevantChunks(unittest.TestCase):
         mock_client.get_or_create_collection.return_value = mock_collection
         mock_client_fn.return_value = mock_client
 
-        with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
+        with patch("services.media.video_qa_service._CHROMA_AVAILABLE", True):
             from services.media.video_qa_service import search_relevant_chunks
             result = search_relevant_chunks("abc", "테스트 질문", top_k=5)
 
@@ -154,7 +154,7 @@ class TestSearchRelevantChunks(unittest.TestCase):
 class TestAnswerQuestion(unittest.TestCase):
     """answer_question 함수 테스트"""
 
-    @patch("services.video_qa_service._LITELLM_AVAILABLE", False)
+    @patch("services.media.video_qa_service._LITELLM_AVAILABLE", False)
     def test_litellm_없으면_오류_메시지(self):
         from services.media.video_qa_service import answer_question
         result = answer_question("test_id", "질문")
@@ -162,18 +162,18 @@ class TestAnswerQuestion(unittest.TestCase):
         self.assertIn("sources", result)
         self.assertEqual(result["sources"], [])
 
-    @patch("services.video_qa_service.search_relevant_chunks")
+    @patch("services.media.video_qa_service.search_relevant_chunks")
     def test_청크_없으면_안내_메시지(self, mock_search):
         """인덱싱이 안 된 상태 — 자막 데이터 없음 안내"""
         mock_search.return_value = []
-        with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
+        with patch("services.media.video_qa_service._LITELLM_AVAILABLE", True):
             from services.media.video_qa_service import answer_question
             result = answer_question("test_id", "질문")
         self.assertIn("answer", result)
         self.assertIn("찾을 수 없습니다", result["answer"])
 
-    @patch("services.video_qa_service.litellm_completion")
-    @patch("services.video_qa_service.search_relevant_chunks")
+    @patch("services.media.video_qa_service.litellm_completion")
+    @patch("services.media.video_qa_service.search_relevant_chunks")
     def test_정상_답변_생성(self, mock_search, mock_completion):
         """정상 흐름 — LiteLLM 호출하여 답변 생성"""
         mock_search.return_value = [
@@ -183,7 +183,7 @@ class TestAnswerQuestion(unittest.TestCase):
         mock_response.choices[0].message.content = "테스트 답변입니다."
         mock_completion.return_value = mock_response
 
-        with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
+        with patch("services.media.video_qa_service._LITELLM_AVAILABLE", True):
             from services.media.video_qa_service import answer_question
             result = answer_question("test_id", "질문", history=[])
 
@@ -192,8 +192,8 @@ class TestAnswerQuestion(unittest.TestCase):
         # 관련도 = 1 - distance (0.15) = 0.85
         self.assertAlmostEqual(result["sources"][0]["relevance"], 0.85, places=2)
 
-    @patch("services.video_qa_service.litellm_completion")
-    @patch("services.video_qa_service.search_relevant_chunks")
+    @patch("services.media.video_qa_service.litellm_completion")
+    @patch("services.media.video_qa_service.search_relevant_chunks")
     def test_대화_히스토리_전달(self, mock_search, mock_completion):
         """히스토리 메시지가 LiteLLM에 올바르게 전달되는지 확인"""
         mock_search.return_value = [
@@ -208,7 +208,7 @@ class TestAnswerQuestion(unittest.TestCase):
             {"role": "assistant", "content": "이전 답변"},
         ]
 
-        with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
+        with patch("services.media.video_qa_service._LITELLM_AVAILABLE", True):
             from services.media.video_qa_service import answer_question
             answer_question("test_id", "새 질문", history=history)
 
@@ -232,12 +232,12 @@ class TestVideoQaRoute(unittest.TestCase):
         os.environ["SUPABASE_URL"] = ""
         os.environ["SUPABASE_ANON_KEY"] = ""
 
-    @patch("services.supabase_service.is_supabase_enabled", return_value=False)
+    @patch("services.data.supabase_service.is_supabase_enabled", return_value=False)
     def _get_client(self, mock_enabled):
         import app as flask_app
         return flask_app.app.test_client()
 
-    @patch("services.supabase_service.is_supabase_enabled", return_value=False)
+    @patch("services.data.supabase_service.is_supabase_enabled", return_value=False)
     def test_video_url_없으면_400(self, mock_enabled):
         import app as flask_app
         client = flask_app.app.test_client()
@@ -249,7 +249,7 @@ class TestVideoQaRoute(unittest.TestCase):
         # Supabase 비활성화 시 인증 우회 — 400이거나 인증 에러
         self.assertIn(res.status_code, [400, 401])
 
-    @patch("services.supabase_service.is_supabase_enabled", return_value=False)
+    @patch("services.data.supabase_service.is_supabase_enabled", return_value=False)
     def test_비_유튜브_url은_400(self, mock_enabled):
         import app as flask_app
         client = flask_app.app.test_client()

@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services import share_service
+from services.platform import share_service
 
 
 class TestShareService(unittest.TestCase):

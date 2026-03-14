@@ -429,7 +429,7 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
         """API 키 없음 → None"""
         self.assertIsNone(get_transcript_via_supadata('vid1', ''))
 
-    @patch('services.content_service.requests.get')
+    @patch('services.core.content_service.requests.get')
     def test_success_content(self, mock_get):
         """content 필드 성공"""
         mock_resp = MagicMock()
@@ -440,7 +440,7 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
         result = get_transcript_via_supadata('vid1', 'test-key')
         self.assertEqual(result, '자막 내용입니다')
 
-    @patch('services.content_service.requests.get')
+    @patch('services.core.content_service.requests.get')
     def test_success_transcript_list(self, mock_get):
         """transcript 리스트 성공"""
         mock_resp = MagicMock()
@@ -454,7 +454,7 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
         result = get_transcript_via_supadata('vid1', 'test-key')
         self.assertEqual(result, '첫째 둘째')
 
-    @patch('services.content_service.requests.get')
+    @patch('services.core.content_service.requests.get')
     def test_401_error(self, mock_get):
         """401 → API 키 오류"""
         mock_resp = MagicMock()
@@ -465,14 +465,14 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIn('유효하지 않', result['error'])
 
-    @patch('services.content_service.requests.get')
+    @patch('services.core.content_service.requests.get')
     def test_timeout(self, mock_get):
         """타임아웃 → None"""
         mock_get.side_effect = requests.exceptions.Timeout('timeout')
         result = get_transcript_via_supadata('vid1', 'key')
         self.assertIsNone(result)
 
-    @patch('services.content_service.requests.get')
+    @patch('services.core.content_service.requests.get')
     def test_request_error(self, mock_get):
         """네트워크 오류 → None"""
         mock_get.side_effect = requests.exceptions.RequestException('network')

@@ -1,7 +1,7 @@
 """search_service 단위 테스트"""
 import unittest
 
-from services import search_service
+from services.seo import search_service
 
 
 class TestSearchService(unittest.TestCase):

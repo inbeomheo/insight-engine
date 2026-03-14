@@ -16,7 +16,7 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.svc = ScheduleService()
         self.user_id = 'test-user-001'
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_create(self, _):
         post = self.svc.create(
             user_id=self.user_id,
@@ -31,7 +31,7 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.assertEqual(post['status'], 'pending')
         self.assertEqual(post['user_id'], self.user_id)
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_list_by_user(self, _):
         self.svc.create(self.user_id, '제목1', '내용1', None, 'wp', '2026-03-01T09:00:00+00:00')
         self.svc.create(self.user_id, '제목2', '내용2', None, 'wp', '2026-03-02T09:00:00+00:00')
@@ -42,14 +42,14 @@ class TestScheduleServiceMemory(unittest.TestCase):
         # 다른 사용자 것은 포함 안 됨
         self.assertTrue(all(p['user_id'] == self.user_id for p in posts))
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_delete_own_post(self, _):
         post = self.svc.create(self.user_id, '삭제할 것', '내용', None, 'wp', '2026-03-01T09:00:00+00:00')
         result = self.svc.delete(post['id'], self.user_id)
         self.assertTrue(result)
         self.assertEqual(len(self.svc.list_by_user(self.user_id)), 0)
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_delete_other_user_post_fails(self, _):
         post = self.svc.create(self.user_id, '내 것', '내용', None, 'wp', '2026-03-01T09:00:00+00:00')
         result = self.svc.delete(post['id'], 'other-user')
@@ -57,7 +57,7 @@ class TestScheduleServiceMemory(unittest.TestCase):
         # 삭제 안 됨
         self.assertEqual(len(self.svc.list_by_user(self.user_id)), 1)
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_get_due_posts(self, _):
         past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
@@ -69,7 +69,7 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.assertEqual(len(due), 1)
         self.assertEqual(due[0]['title'], '과거')
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_update_status(self, _):
         post = self.svc.create(self.user_id, '제목', '내용', None, 'wp', '2026-03-01T09:00:00+00:00')
         self.svc.update_status(post['id'], 'published', published_url='https://blog.example.com/1')
@@ -78,7 +78,7 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.assertEqual(updated['status'], 'published')
         self.assertEqual(updated['published_url'], 'https://blog.example.com/1')
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_update_status_failed(self, _):
         post = self.svc.create(self.user_id, '제목', '내용', None, 'wp', '2026-03-01T09:00:00+00:00')
         self.svc.update_status(post['id'], 'failed', error_message='연결 실패')
@@ -94,7 +94,7 @@ class TestCheckAndPublish(unittest.TestCase):
     def setUp(self):
         _memory_store.clear()
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry')
     def test_check_and_publish_success(self, mock_registry, _):
         from services.data.scheduler_worker import check_and_publish
@@ -112,7 +112,7 @@ class TestCheckAndPublish(unittest.TestCase):
         self.assertEqual(_memory_store[post['id']]['status'], 'published')
         self.assertEqual(_memory_store[post['id']]['published_url'], 'https://example.com/1')
 
-    @patch('services.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry')
     def test_check_and_publish_failure(self, mock_registry, _):
         from services.data.scheduler_worker import check_and_publish

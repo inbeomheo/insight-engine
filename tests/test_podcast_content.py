@@ -65,8 +65,8 @@ class TestPodcastDetection(unittest.TestCase):
 class TestPodcastCollector(unittest.TestCase):
     """팟캐스트 콘텐츠 수집 테스트"""
 
-    @patch('services.spotify_service.is_spotify_episode_url', return_value=True)
-    @patch('services.spotify_service.get_episode_info')
+    @patch('services.platform.spotify_service.is_spotify_episode_url', return_value=True)
+    @patch('services.platform.spotify_service.get_episode_info')
     def test_collect_spotify_episode(self, mock_info, mock_is_spotify):
         """Spotify 에피소드 수집 — oEmbed 메타데이터 사용"""
         mock_info.return_value = {
@@ -84,11 +84,11 @@ class TestPodcastCollector(unittest.TestCase):
         self.assertEqual(result['provider'], 'spotify')
         self.assertIn('AI 기술', result['content'])
 
-    @patch('services.whisper_service._cleanup_file')
-    @patch('services.whisper_service.transcribe_audio', return_value='전사된 텍스트입니다.')
-    @patch('services.whisper_service.download_audio', return_value='/tmp/audio.wav')
+    @patch('services.transcript.whisper_service._cleanup_file')
+    @patch('services.transcript.whisper_service.transcribe_audio', return_value='전사된 텍스트입니다.')
+    @patch('services.transcript.whisper_service.download_audio', return_value='/tmp/audio.wav')
     @patch.dict('os.environ', {'WHISPER_ENABLED': 'true', 'WHISPER_MODEL_SIZE': 'base'})
-    @patch('services.spotify_service.is_spotify_episode_url', return_value=False)
+    @patch('services.platform.spotify_service.is_spotify_episode_url', return_value=False)
     def test_collect_audio_url_whisper(self, mock_is_spotify, mock_download, mock_transcribe, mock_cleanup):
         """일반 오디오 URL → Whisper 전사"""
         from services.content.multi_source_collector import _collect_podcast
@@ -101,7 +101,7 @@ class TestPodcastCollector(unittest.TestCase):
         mock_cleanup.assert_called_once()
 
     @patch.dict('os.environ', {'WHISPER_ENABLED': 'false'})
-    @patch('services.spotify_service.is_spotify_episode_url', return_value=False)
+    @patch('services.platform.spotify_service.is_spotify_episode_url', return_value=False)
     def test_collect_audio_whisper_disabled(self, mock_is_spotify):
         """Whisper 비활성화 시 에러"""
         from services.content.multi_source_collector import _collect_podcast

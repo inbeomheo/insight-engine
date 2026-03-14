@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 class TestExtractKeywords(unittest.TestCase):
 
-    @patch('services.web_research_service.ai_service')
+    @patch('services.data.web_research_service.ai_service')
     def test_extract_keywords(self, mock_ai):
         mock_ai.create_content.return_value = {
             'content': 'React, 상태관리, Zustand, 성능최적화',
@@ -22,7 +22,7 @@ class TestExtractKeywords(unittest.TestCase):
 
 class TestSearchWeb(unittest.TestCase):
 
-    @patch('services.web_research_service.DDGS')
+    @patch('services.data.web_research_service.DDGS')
     def test_search_web(self, mock_ddgs_cls):
         mock_instance = MagicMock()
         mock_instance.text.return_value = [
@@ -39,7 +39,7 @@ class TestSearchWeb(unittest.TestCase):
 
 class TestCrawlArticle(unittest.TestCase):
 
-    @patch('services.web_research_service.trafilatura')
+    @patch('services.data.web_research_service.trafilatura')
     def test_crawl_article_success(self, mock_traf):
         mock_traf.fetch_url.return_value = '<html>...</html>'
         mock_traf.extract.return_value = '기사 본문 내용입니다.'
@@ -47,7 +47,7 @@ class TestCrawlArticle(unittest.TestCase):
         text = crawl_article('http://example.com/article')
         self.assertEqual(text, '기사 본문 내용입니다.')
 
-    @patch('services.web_research_service.trafilatura')
+    @patch('services.data.web_research_service.trafilatura')
     def test_crawl_article_failure(self, mock_traf):
         mock_traf.fetch_url.return_value = None
         from services.data.web_research_service import crawl_article
@@ -57,10 +57,10 @@ class TestCrawlArticle(unittest.TestCase):
 
 class TestResearchTopic(unittest.TestCase):
 
-    @patch('services.web_research_service.crawl_article')
-    @patch('services.web_research_service.search_web')
-    @patch('services.web_research_service.extract_keywords')
-    @patch('services.web_research_service.ai_service')
+    @patch('services.data.web_research_service.crawl_article')
+    @patch('services.data.web_research_service.search_web')
+    @patch('services.data.web_research_service.extract_keywords')
+    @patch('services.data.web_research_service.ai_service')
     def test_research_topic_full_pipeline(self, mock_ai, mock_kw, mock_search, mock_crawl):
         mock_kw.return_value = ['React', '상태관리']
         mock_search.return_value = [
@@ -82,7 +82,7 @@ class TestResearchTopic(unittest.TestCase):
         self.assertIn('summary', result[0])
         self.assertIn('url', result[0])
 
-    @patch('services.web_research_service.extract_keywords')
+    @patch('services.data.web_research_service.extract_keywords')
     def test_research_topic_no_keywords(self, mock_kw):
         mock_kw.return_value = []
         from services.data.web_research_service import research_topic

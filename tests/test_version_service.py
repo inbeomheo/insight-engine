@@ -1,7 +1,7 @@
 """version_service 단위 테스트"""
 import unittest
 
-from services import version_service
+from services.data import version_service
 
 
 class TestVersionService(unittest.TestCase):

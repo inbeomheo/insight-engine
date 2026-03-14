@@ -10,8 +10,8 @@ from unittest.mock import patch, MagicMock
 
 def _fresh_import():
     """모듈 캐시 문제 방지를 위해 style_memory_service를 신선하게 import합니다."""
-    if 'services.style_memory_service' in sys.modules:
-        del sys.modules['services.style_memory_service']
+    if 'services.data.style_memory_service' in sys.modules:
+        del sys.modules['services.data.style_memory_service']
     import services.data.style_memory_service as m
     return m
 
@@ -21,8 +21,8 @@ class TestStyleMemoryService(unittest.TestCase):
 
     def test_get_profile_supabase_disabled_returns_default(self):
         """Supabase 비활성화 시 기본 프로필 반환"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
-             patch('services.supabase_service.get_supabase', return_value=None):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('services.data.supabase_service.get_supabase', return_value=None):
             m = _fresh_import()
             profile = m.get_profile('user-123')
 
@@ -35,8 +35,8 @@ class TestStyleMemoryService(unittest.TestCase):
 
     def test_get_profile_no_supabase_client_returns_default(self):
         """Supabase 활성화지만 클라이언트 없을 때 기본 프로필 반환"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=None):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=None):
             m = _fresh_import()
             profile = m.get_profile('user-123')
 
@@ -47,8 +47,8 @@ class TestStyleMemoryService(unittest.TestCase):
         mock_supabase = MagicMock()
         mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             profile = m.get_profile('user-123')
 
@@ -69,8 +69,8 @@ class TestStyleMemoryService(unittest.TestCase):
         mock_supabase = MagicMock()
         mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [mock_row]
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             profile = m.get_profile('user-123')
 
@@ -81,8 +81,8 @@ class TestStyleMemoryService(unittest.TestCase):
 
     def test_update_profile_supabase_disabled_noop(self):
         """Supabase 비활성화 시 update_profile은 아무 것도 하지 않음"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
-             patch('services.supabase_service.get_supabase', return_value=None):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('services.data.supabase_service.get_supabase', return_value=None):
             m = _fresh_import()
             # 예외 없이 실행되어야 함
             m.update_profile('user-123', {'style': 'blog_seo', 'modifiers': {'length': 'medium'}})
@@ -93,8 +93,8 @@ class TestStyleMemoryService(unittest.TestCase):
         # 기존 행 없음
         mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = []
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             m.update_profile('user-123', {'style': 'summary', 'modifiers': {'length': 'short', 'writing_style': 'casual'}})
 
@@ -115,8 +115,8 @@ class TestStyleMemoryService(unittest.TestCase):
         mock_supabase = MagicMock()
         mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [existing_row]
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             m.update_profile('user-123', {'style': 'blog_seo', 'modifiers': {}})
 
@@ -127,8 +127,8 @@ class TestStyleMemoryService(unittest.TestCase):
 
     def test_reset_profile_supabase_disabled_returns_false(self):
         """Supabase 비활성화 시 reset_profile은 False 반환"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
-             patch('services.supabase_service.get_supabase', return_value=None):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('services.data.supabase_service.get_supabase', return_value=None):
             m = _fresh_import()
             result = m.reset_profile('user-123')
 
@@ -139,8 +139,8 @@ class TestStyleMemoryService(unittest.TestCase):
         mock_supabase = MagicMock()
         mock_supabase.table.return_value.upsert.return_value.execute.return_value = MagicMock()
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             m.reset_profile('user-123')
 
@@ -151,8 +151,8 @@ class TestStyleMemoryService(unittest.TestCase):
 
     def test_save_user_preferences_supabase_disabled_returns_false(self):
         """Supabase 비활성화 시 save_user_preferences는 False 반환"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=False), \
-             patch('services.supabase_service.get_supabase', return_value=None):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=False), \
+             patch('services.data.supabase_service.get_supabase', return_value=None):
             m = _fresh_import()
             result = m.save_user_preferences('user-123', {'avoid_keywords': ['혁신적']})
 
@@ -163,8 +163,8 @@ class TestStyleMemoryService(unittest.TestCase):
         mock_supabase = MagicMock()
         mock_supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = [{'user_id': 'user-123'}]
 
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True), \
-             patch('services.supabase_service.get_supabase', return_value=mock_supabase):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True), \
+             patch('services.data.supabase_service.get_supabase', return_value=mock_supabase):
             m = _fresh_import()
             # 25개 키워드, 각 30자 → 20개 + 각 20자 제한
             long_keywords = [f'keyword_{i}' * 3 for i in range(25)]
@@ -327,13 +327,13 @@ class TestStyleMemoryApiRoute(unittest.TestCase):
 
     def test_get_style_memory_no_auth_returns_401(self):
         """미인증 시 401 반환 (Supabase 활성화 환경)"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=True):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=True):
             res = self.client.get('/api/user/style-memory')
         self.assertEqual(res.status_code, 401)
 
     def test_get_style_memory_no_supabase_returns_401_or_200(self):
         """Supabase 비활성화 시 401 또는 200"""
-        with patch('services.supabase_service.is_supabase_enabled', return_value=False):
+        with patch('services.data.supabase_service.is_supabase_enabled', return_value=False):
             res = self.client.get('/api/user/style-memory')
         self.assertIn(res.status_code, [200, 401])
 

@@ -13,7 +13,7 @@ class TestSearch(unittest.TestCase):
         result = search('test query')
         self.assertEqual(result, [])
 
-    @patch('services.web_search_service.requests.post')
+    @patch('services.data.web_search_service.requests.post')
     @patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}, clear=False)
     def test_success(self, mock_post):
         """정상 검색"""
@@ -32,7 +32,7 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(result[0]['title'], '결과1')
         self.assertEqual(result[0]['url'], 'https://a.com')
 
-    @patch('services.web_search_service.requests.post')
+    @patch('services.data.web_search_service.requests.post')
     @patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}, clear=False)
     def test_excludes_no_url(self, mock_post):
         """URL 없는 결과 제외"""
@@ -49,7 +49,7 @@ class TestSearch(unittest.TestCase):
         result = search('test')
         self.assertEqual(len(result), 1)
 
-    @patch('services.web_search_service.requests.post', side_effect=Exception('network'))
+    @patch('services.data.web_search_service.requests.post', side_effect=Exception('network'))
     @patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}, clear=False)
     def test_request_error(self, mock_post):
         """네트워크 오류 → 빈 리스트"""
@@ -63,7 +63,7 @@ class TestSearch(unittest.TestCase):
 
 class TestExtractGroundingContext(unittest.TestCase):
 
-    @patch('services.web_search_service.search', return_value=[])
+    @patch('services.data.web_search_service.search', return_value=[])
     def test_no_results(self, mock_search):
         """검색 결과 없음 → enabled=False"""
         result = extract_grounding_context('요약 텍스트')
@@ -71,7 +71,7 @@ class TestExtractGroundingContext(unittest.TestCase):
         self.assertEqual(result['results'], [])
         self.assertEqual(result['context_text'], '')
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_with_results(self, mock_search):
         """검색 결과 있음 → context_text 생성"""
         mock_search.return_value = [
@@ -83,7 +83,7 @@ class TestExtractGroundingContext(unittest.TestCase):
         self.assertIn('웹 결과', result['context_text'])
         self.assertIn('https://x.com', result['context_text'])
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_context_text_format(self, mock_search):
         """context_text 번호 매기기"""
         mock_search.return_value = [

@@ -32,8 +32,8 @@ class TestGeneratePodcastEpisode(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_podcast_episode('', 'test')
 
-    @patch('services.podcast_service._synthesize_podcast')
-    @patch('services.podcast_service._generate_script')
+    @patch('services.media.podcast_service._synthesize_podcast')
+    @patch('services.media.podcast_service._generate_script')
     def test_success(self, mock_gen, mock_synth):
         mock_gen.return_value = "Host: Hello\nGuest: Hi\nHost: Bye"
         mock_synth.return_value = b'\x00' * 100

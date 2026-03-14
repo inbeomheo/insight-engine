@@ -15,8 +15,8 @@ class TestGenerateBrief(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_brief("   ")
 
-    @patch('services.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_successful_brief(self, mock_create, mock_model):
         mock_create.return_value = {
             'content': '{"title_suggestions": ["AI 입문"], "overview": "개요", '
@@ -29,8 +29,8 @@ class TestGenerateBrief(unittest.TestCase):
         self.assertIn("overview", result)
         self.assertEqual(result["target_audience"], "개발자")
 
-    @patch('services.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_parse_failure_fallback(self, mock_create, mock_model):
         mock_create.return_value = {'content': '유효하지 않은 JSON 응답입니다'}
         from services.content.brief_service import generate_brief
@@ -39,8 +39,8 @@ class TestGenerateBrief(unittest.TestCase):
         self.assertIn("title_suggestions", result)
         self.assertIn("overview", result)
 
-    @patch('services.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.brief_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_with_keywords(self, mock_create, mock_model):
         mock_create.return_value = {
             'content': '{"title_suggestions": ["제목"], "overview": "개요", '

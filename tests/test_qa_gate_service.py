@@ -59,7 +59,7 @@ class TestCheckQuality(unittest.TestCase):
 
     # ── 금칙어 체크 ──
 
-    @patch('services.qa_gate_service.QA_FORBIDDEN_WORDS', ['금지단어', '나쁜말'])
+    @patch('services.quality.qa_gate_service.QA_FORBIDDEN_WORDS', ['금지단어', '나쁜말'])
     def test_forbidden_words_detected(self):
         """금칙어 포함 시 warning 이슈"""
         content = self._make_content() + ' 금지단어가 포함됨'

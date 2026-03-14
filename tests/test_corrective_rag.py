@@ -210,7 +210,7 @@ class TestReformulateQuery(unittest.TestCase):
 class TestWebSearchFallback(unittest.TestCase):
     """웹 검색 폴백 함수 단위 테스트"""
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_converts_results_to_chunk_format(self, mock_search):
         """웹 검색 결과가 청크 형식으로 변환됨"""
         mock_search.return_value = [
@@ -229,7 +229,7 @@ class TestWebSearchFallback(unittest.TestCase):
         self.assertEqual(result[0]["metadata"]["source"], "web")
         self.assertEqual(result[0].get("source"), "web")
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_text_contains_title_and_content(self, mock_search):
         """변환된 텍스트에 제목 + 내용이 포함됨"""
         mock_search.return_value = [
@@ -241,7 +241,7 @@ class TestWebSearchFallback(unittest.TestCase):
         self.assertIn("테스트 제목", result[0]["text"])
         self.assertIn("테스트 내용", result[0]["text"])
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_empty_results_returns_empty_list(self, mock_search):
         """웹 검색 결과 없음 → 빈 리스트"""
         mock_search.return_value = []
@@ -249,7 +249,7 @@ class TestWebSearchFallback(unittest.TestCase):
         result = web_search_fallback("검색어")
         self.assertEqual(result, [])
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_search_failure_returns_empty_list(self, mock_search):
         """웹 검색 서비스 예외 → 빈 리스트 (예외 전파 없음)"""
         mock_search.side_effect = Exception("Tavily 오류")
@@ -257,7 +257,7 @@ class TestWebSearchFallback(unittest.TestCase):
         result = web_search_fallback("검색어")
         self.assertEqual(result, [])
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_high_score_maps_to_low_distance(self, mock_search):
         """높은 검색 점수 → 낮은 distance (관련성 표현)"""
         mock_search.return_value = [
@@ -268,7 +268,7 @@ class TestWebSearchFallback(unittest.TestCase):
         # score=1.0 → distance=0.0
         self.assertAlmostEqual(result[0]["distance"], 0.0, places=1)
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_url_stored_in_metadata(self, mock_search):
         """URL이 metadata에 저장됨"""
         mock_search.return_value = [
@@ -311,7 +311,7 @@ class TestCorrectiveSearch(unittest.TestCase):
         self.assertEqual(result, original_chunks)
         mock_vs.search.assert_not_called()  # 재검색 없음
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     @patch('services.rag.corrective_rag.evaluate_retrieval_quality')
     def test_incorrect_decision_uses_web_fallback(self, mock_eval, mock_web_search):
         """incorrect 결정 → 웹 검색 폴백 사용"""
@@ -370,7 +370,7 @@ class TestCorrectiveSearch(unittest.TestCase):
         # 재검색 결과 반환
         self.assertEqual(result, new_chunks)
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     @patch('services.rag.corrective_rag.evaluate_retrieval_quality')
     def test_incorrect_no_web_results_returns_original(self, mock_eval, mock_web_search):
         """incorrect + 웹 검색도 없음 → 원본 청크 반환"""
@@ -530,7 +530,7 @@ class TestContextBuilderWithCRAG(unittest.TestCase):
         context = builder.build_context(self.uid, "검색어", top_k=5)
         self.assertEqual(context, "")
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     @patch('services.rag.corrective_rag.evaluate_retrieval_quality')
     def test_crag_web_fallback_included_in_context(self, mock_eval, mock_web_search):
         """CRAG incorrect → 웹 검색 결과가 컨텍스트에 포함됨"""

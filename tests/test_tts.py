@@ -106,19 +106,19 @@ class TestTtsServiceSynthesize(unittest.TestCase):
             TTSService.synthesize('')
         self.assertIn('입력', str(ctx.exception))
 
-    @patch('services.tts_service._synthesize_edge')
-    @patch('services.tts_service._select_backend', return_value='edge')
+    @patch('services.media.tts_service._synthesize_edge')
+    @patch('services.media.tts_service._select_backend', return_value='edge')
     def test_long_text_splits_into_chunks(self, _mock_select, mock_edge):
         """장문은 에러 대신 청크 분할 후 합성한다."""
         mock_edge.return_value = self.DUMMY_AUDIO
         TTSService = self._make_service()
-        with patch('services.tts_service.TTS_MAX_CHARS', 10):
+        with patch('services.media.tts_service.TTS_MAX_CHARS', 10):
             result = TTSService.synthesize('A' * 11)
         self.assertIsNotNone(result)
         self.assertTrue(mock_edge.call_count >= 2)
 
-    @patch('services.tts_service._synthesize_edge')
-    @patch('services.tts_service._select_backend', return_value='edge')
+    @patch('services.media.tts_service._synthesize_edge')
+    @patch('services.media.tts_service._select_backend', return_value='edge')
     def test_edge_backend_called(self, _mock_select, mock_edge):
         mock_edge.return_value = self.DUMMY_AUDIO
         TTSService = self._make_service()
@@ -126,8 +126,8 @@ class TestTtsServiceSynthesize(unittest.TestCase):
         mock_edge.assert_called_once()
         self.assertEqual(result, self.DUMMY_AUDIO)
 
-    @patch('services.tts_service._synthesize_openai')
-    @patch('services.tts_service._select_backend', return_value='openai')
+    @patch('services.media.tts_service._synthesize_openai')
+    @patch('services.media.tts_service._select_backend', return_value='openai')
     def test_openai_backend_called(self, _mock_select, mock_openai):
         mock_openai.return_value = self.DUMMY_AUDIO
         TTSService = self._make_service()
@@ -135,9 +135,9 @@ class TestTtsServiceSynthesize(unittest.TestCase):
         mock_openai.assert_called_once()
         self.assertEqual(result, self.DUMMY_AUDIO)
 
-    @patch('services.tts_service._synthesize_edge')
-    @patch('services.tts_service._synthesize_openai', side_effect=RuntimeError('OpenAI 오류'))
-    @patch('services.tts_service._select_backend', return_value='openai')
+    @patch('services.media.tts_service._synthesize_edge')
+    @patch('services.media.tts_service._synthesize_openai', side_effect=RuntimeError('OpenAI 오류'))
+    @patch('services.media.tts_service._select_backend', return_value='openai')
     def test_openai_failure_falls_back_to_edge(self, _mock_select, _mock_openai, mock_edge):
         """OpenAI 실패 시 Edge TTS로 자동 폴백"""
         mock_edge.return_value = self.DUMMY_AUDIO
@@ -146,8 +146,8 @@ class TestTtsServiceSynthesize(unittest.TestCase):
         mock_edge.assert_called_once()
         self.assertEqual(result, self.DUMMY_AUDIO)
 
-    @patch('services.tts_service._synthesize_edge')
-    @patch('services.tts_service._select_backend', return_value='edge')
+    @patch('services.media.tts_service._synthesize_edge')
+    @patch('services.media.tts_service._select_backend', return_value='edge')
     def test_preprocess_is_applied_by_default(self, _mock_select, mock_edge):
         """preprocess=True(기본값)이면 마크다운이 제거된 텍스트가 전달됨"""
         mock_edge.return_value = self.DUMMY_AUDIO
@@ -161,8 +161,8 @@ class TestTtsServiceSynthesize(unittest.TestCase):
         self.assertNotIn('**', called_text)
         self.assertNotIn('`', called_text)
 
-    @patch('services.tts_service._synthesize_edge')
-    @patch('services.tts_service._select_backend', return_value='edge')
+    @patch('services.media.tts_service._synthesize_edge')
+    @patch('services.media.tts_service._select_backend', return_value='edge')
     def test_preprocess_false_skips_cleanup(self, _mock_select, mock_edge):
         """preprocess=False이면 원본 텍스트를 그대로 전달"""
         mock_edge.return_value = self.DUMMY_AUDIO
@@ -183,7 +183,7 @@ class TestTtsEndpoint(unittest.TestCase):
     def setUp(self):
         # Supabase 비활성화 패치
         self._patch_supabase = patch(
-            'services.supabase_service.is_supabase_enabled', return_value=False
+            'services.data.supabase_service.is_supabase_enabled', return_value=False
         )
         self._patch_supabase.start()
 
@@ -202,7 +202,7 @@ class TestTtsEndpoint(unittest.TestCase):
             content_type='application/json',
         )
 
-    @patch('services.tts_service.TTSService.synthesize')
+    @patch('services.media.tts_service.TTSService.synthesize')
     def test_success_returns_audio(self, mock_synth):
         mock_synth.return_value = self.DUMMY_AUDIO
         resp = self._post_tts({'text': '안녕하세요 팟캐스트 테스트입니다.'})
@@ -226,14 +226,14 @@ class TestTtsEndpoint(unittest.TestCase):
         body = json.loads(resp.data)
         self.assertIn('최대', body['error'])
 
-    @patch('services.tts_service.TTSService.synthesize', side_effect=RuntimeError('백엔드 오류'))
+    @patch('services.media.tts_service.TTSService.synthesize', side_effect=RuntimeError('백엔드 오류'))
     def test_backend_error_returns_500(self, _mock):
         resp = self._post_tts({'text': '정상 텍스트'})
         self.assertEqual(resp.status_code, 500)
         body = json.loads(resp.data)
         self.assertIn('error', body)
 
-    @patch('services.tts_service.TTSService.synthesize')
+    @patch('services.media.tts_service.TTSService.synthesize')
     def test_custom_voice_and_speed(self, mock_synth):
         mock_synth.return_value = self.DUMMY_AUDIO
         self._post_tts({'text': '속도 테스트', 'voice': 'nova', 'speed': 1.5})
@@ -241,7 +241,7 @@ class TestTtsEndpoint(unittest.TestCase):
         # synthesize(text, voice=..., speed=..., preprocess=True) 형태 확인
         self.assertEqual(kwargs.get('voice') or mock_synth.call_args[0][1], 'nova')
 
-    @patch('services.tts_service.TTSService.synthesize')
+    @patch('services.media.tts_service.TTSService.synthesize')
     def test_speed_clamped_to_valid_range(self, mock_synth):
         """속도는 0.5~2.0 사이로 클램핑됩니다."""
         mock_synth.return_value = self.DUMMY_AUDIO
@@ -256,12 +256,12 @@ class TestSelectBackend(unittest.TestCase):
 
     def test_auto_with_openai_key_selects_openai(self):
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'sk-test'}):
-            with patch('services.tts_service.TTS_BACKEND', 'auto'):
+            with patch('services.media.tts_service.TTS_BACKEND', 'auto'):
                 from services.media.tts_service import _select_backend
                 import importlib
                 import services.media.tts_service as tts_mod
                 # 환경변수를 직접 검사하는 함수를 재검사
-                with patch('services.tts_service.TTS_BACKEND', 'auto'):
+                with patch('services.media.tts_service.TTS_BACKEND', 'auto'):
                     # os.getenv를 통해 선택 로직 직접 테스트
                     result = 'openai' if os.getenv('OPENAI_API_KEY') else 'edge'
                     self.assertEqual(result, 'openai')
@@ -273,12 +273,12 @@ class TestSelectBackend(unittest.TestCase):
             self.assertEqual(result, 'edge')
 
     def test_explicit_edge_backend(self):
-        with patch('services.tts_service.TTS_BACKEND', 'edge'):
+        with patch('services.media.tts_service.TTS_BACKEND', 'edge'):
             from services.media.tts_service import _select_backend
             self.assertEqual(_select_backend(), 'edge')
 
     def test_explicit_openai_backend(self):
-        with patch('services.tts_service.TTS_BACKEND', 'openai'):
+        with patch('services.media.tts_service.TTS_BACKEND', 'openai'):
             from services.media.tts_service import _select_backend
             self.assertEqual(_select_backend(), 'openai')
 

@@ -201,7 +201,7 @@ class TestMCPAppsRoutes(unittest.TestCase):
         self.app_ctx = create_app({'TESTING': True})
         self.client = self.app_ctx.test_client()
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_list_apps(self, _mock):
         res = self.client.get('/api/mcp-apps')
         self.assertEqual(res.status_code, 200)
@@ -211,7 +211,7 @@ class TestMCPAppsRoutes(unittest.TestCase):
         self.assertIn("content_preview", app_names)
         self.assertIn("inline_editor", app_names)
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_render_content_preview(self, _mock):
         res = self.client.post('/api/mcp-apps/content_preview/render', json={
             "title": "API 테스트",
@@ -223,7 +223,7 @@ class TestMCPAppsRoutes(unittest.TestCase):
         self.assertIn("html", data)
         self.assertIn("actions", data)
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_render_inline_editor(self, _mock):
         res = self.client.post('/api/mcp-apps/inline_editor/render', json={
             "title": "편집 테스트",
@@ -233,12 +233,12 @@ class TestMCPAppsRoutes(unittest.TestCase):
         data = res.get_json()
         self.assertIn("html", data)
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_render_unknown_app(self, _mock):
         res = self.client.post('/api/mcp-apps/nonexistent/render', json={"title": "T"})
         self.assertEqual(res.status_code, 404)
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_action_switch_platform(self, _mock):
         res = self.client.post('/api/mcp-apps/content_preview/action', json={
             "action": "switch_platform:wordpress",
@@ -247,12 +247,12 @@ class TestMCPAppsRoutes(unittest.TestCase):
         data = res.get_json()
         self.assertTrue(data["success"])
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_action_missing_action_field(self, _mock):
         res = self.client.post('/api/mcp-apps/content_preview/action', json={})
         self.assertEqual(res.status_code, 400)
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_action_unknown_app(self, _mock):
         res = self.client.post('/api/mcp-apps/nonexistent/action', json={"action": "noop"})
         self.assertEqual(res.status_code, 404)

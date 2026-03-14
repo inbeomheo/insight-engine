@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services import source_recommender_service
+from services.content import source_recommender_service
 
 
 class TestSourceRecommenderService(unittest.TestCase):

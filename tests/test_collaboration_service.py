@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services import collaboration_service
+from services.data import collaboration_service
 
 
 class TestCollaborationService(unittest.TestCase):

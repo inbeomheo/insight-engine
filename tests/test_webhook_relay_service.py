@@ -17,7 +17,7 @@ class TestWebhookRelayService(unittest.TestCase):
         self.assertEqual(result['total'], 0)
         self.assertEqual(result['results'], [])
 
-    @patch('services.webhook_relay_service.urllib.request.urlopen')
+    @patch('services.platform.webhook_relay_service.urllib.request.urlopen')
     def test_success(self, mock_urlopen):
         """전송 성공"""
         mock_resp = MagicMock()
@@ -31,7 +31,7 @@ class TestWebhookRelayService(unittest.TestCase):
         self.assertEqual(result['success'], 1)
         self.assertEqual(result['failed'], 0)
 
-    @patch('services.webhook_relay_service.urllib.request.urlopen')
+    @patch('services.platform.webhook_relay_service.urllib.request.urlopen')
     def test_failure(self, mock_urlopen):
         """전송 실패"""
         import urllib.error
@@ -42,7 +42,7 @@ class TestWebhookRelayService(unittest.TestCase):
         self.assertEqual(result['failed'], 1)
         self.assertFalse(result['results'][0]['success'])
 
-    @patch('services.webhook_relay_service.urllib.request.urlopen')
+    @patch('services.platform.webhook_relay_service.urllib.request.urlopen')
     def test_multiple_urls(self, mock_urlopen):
         """다중 URL 전송"""
         mock_resp = MagicMock()
@@ -56,7 +56,7 @@ class TestWebhookRelayService(unittest.TestCase):
         self.assertEqual(result['total'], 5)
         self.assertEqual(result['success'], 5)
 
-    @patch('services.webhook_relay_service.urllib.request.urlopen')
+    @patch('services.platform.webhook_relay_service.urllib.request.urlopen')
     def test_relay_content_generated(self, mock_urlopen):
         """콘텐츠 생성 이벤트 릴레이"""
         mock_resp = MagicMock()
@@ -70,7 +70,7 @@ class TestWebhookRelayService(unittest.TestCase):
         )
         self.assertEqual(result['success'], 1)
 
-    @patch('services.webhook_relay_service.urllib.request.urlopen')
+    @patch('services.platform.webhook_relay_service.urllib.request.urlopen')
     def test_connection_error(self, mock_urlopen):
         """연결 오류"""
         mock_urlopen.side_effect = ConnectionError('refused')

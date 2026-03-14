@@ -1,7 +1,7 @@
 """custom_field_service 단위 테스트"""
 import unittest
 
-from services import custom_field_service
+from services.data import custom_field_service
 
 
 class TestCustomFieldService(unittest.TestCase):

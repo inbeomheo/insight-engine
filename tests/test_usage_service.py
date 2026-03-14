@@ -71,7 +71,7 @@ class TestUsageService(unittest.TestCase):
 class TestUsageDecorator(unittest.TestCase):
     """사용량 데코레이터 테스트"""
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_check_usage_decorator_bypasses_when_disabled(self, mock_enabled):
         """Supabase 비활성화 시 데코레이터 통과"""
         from services.usage.usage_decorator import check_usage
@@ -87,7 +87,7 @@ class TestUsageDecorator(unittest.TestCase):
             result = test_route()
             self.assertEqual(result, {'success': True})
 
-    @patch('services.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_require_usage_decorator_bypasses_when_disabled(self, mock_enabled):
         """Supabase 비활성화 시 require_usage 통과"""
         from services.usage.usage_decorator import require_usage

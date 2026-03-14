@@ -17,7 +17,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         with self.assertRaises(ValueError):
             scrape_stackoverflow("https://example.com/not-so")
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_extracts_question_and_answers(self, mock_get):
         """질문 + 답변 추출 성공"""
         def side_effect(url, **kwargs):
@@ -66,7 +66,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         self.assertIn("votes: 42", result["content"])
         self.assertIn("✓", result["content"])
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_question_only_when_answers_fail(self, mock_get):
         """답변 조회 실패 시 질문만 반환"""
         call_count = [0]
@@ -97,7 +97,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         self.assertEqual(result["source_type"], "stackoverflow")
         self.assertIn("질문 본문", result["content"])
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_raises_when_question_not_found(self, mock_get):
         """질문을 찾을 수 없을 때 ValueError 발생"""
         mock_resp = MagicMock()
@@ -112,7 +112,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
             )
         self.assertIn("찾을 수 없습니다", str(ctx.exception))
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_raises_on_network_error(self, mock_get):
         """네트워크 오류 시 ValueError 발생"""
         import requests as req_lib

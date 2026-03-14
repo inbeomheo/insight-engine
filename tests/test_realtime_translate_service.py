@@ -26,19 +26,19 @@ class TestConstants(unittest.TestCase):
 
 class TestTranslateWithDeepL(unittest.TestCase):
 
-    @patch('services.realtime_translate_service.DEEPL_API_KEY', '')
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', '')
     def test_no_api_key(self):
         """API 키 없음 → None"""
         result = _translate_with_deepl('hello', 'ko')
         self.assertIsNone(result)
 
-    @patch('services.realtime_translate_service.DEEPL_API_KEY', 'test-key')
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', 'test-key')
     def test_unsupported_lang(self):
         """지원하지 않는 언어 → None"""
         result = _translate_with_deepl('hello', 'xx')
         self.assertIsNone(result)
 
-    @patch('services.realtime_translate_service.DEEPL_API_KEY', 'test-key:fx')
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', 'test-key:fx')
     def test_free_api_url(self):
         """무료 API 키(:fx) → api-free.deepl.com"""
         mock_httpx = MagicMock()
@@ -79,7 +79,7 @@ class TestRealtimeTranslateService(unittest.TestCase):
             svc.translate('hello', 'xx')
         self.assertIn('지원하지 않는', str(ctx.exception))
 
-    @patch('services.realtime_translate_service._translate_with_deepl', return_value='번역 결과')
+    @patch('services.transcript.realtime_translate_service._translate_with_deepl', return_value='번역 결과')
     def test_deepl_priority(self, mock_deepl):
         """DeepL 우선 사용"""
         svc = RealtimeTranslateService()
@@ -87,8 +87,8 @@ class TestRealtimeTranslateService(unittest.TestCase):
         self.assertEqual(result['translated'], '번역 결과')
         self.assertEqual(result['source'], 'deepl')
 
-    @patch('services.realtime_translate_service._translate_with_ai', return_value='AI 번역')
-    @patch('services.realtime_translate_service._translate_with_deepl', return_value=None)
+    @patch('services.transcript.realtime_translate_service._translate_with_ai', return_value='AI 번역')
+    @patch('services.transcript.realtime_translate_service._translate_with_deepl', return_value=None)
     def test_ai_fallback(self, mock_deepl, mock_ai):
         """DeepL 실패 → AI 폴백"""
         svc = RealtimeTranslateService()
@@ -96,15 +96,15 @@ class TestRealtimeTranslateService(unittest.TestCase):
         self.assertEqual(result['translated'], 'AI 번역')
         self.assertEqual(result['source'], 'ai')
 
-    @patch('services.realtime_translate_service._translate_with_ai', return_value='AI only')
+    @patch('services.transcript.realtime_translate_service._translate_with_ai', return_value='AI only')
     def test_use_ai_only(self, mock_ai):
         """use_ai_only=True → DeepL 건너뜀"""
         svc = RealtimeTranslateService()
         result = svc.translate('hello', 'ko', use_ai_only=True)
         self.assertEqual(result['source'], 'ai')
 
-    @patch('services.realtime_translate_service._translate_with_ai', side_effect=Exception('fail'))
-    @patch('services.realtime_translate_service._translate_with_deepl', return_value=None)
+    @patch('services.transcript.realtime_translate_service._translate_with_ai', side_effect=Exception('fail'))
+    @patch('services.transcript.realtime_translate_service._translate_with_deepl', return_value=None)
     def test_both_fail(self, mock_deepl, mock_ai):
         """둘 다 실패 → RuntimeError"""
         svc = RealtimeTranslateService()

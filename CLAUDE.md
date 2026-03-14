@@ -77,24 +77,26 @@ JSON 응답 {title, content, html, usage}
 | 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA, 캠페인 |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
 | 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증, 스키마 |
-| 서비스 | `services/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
-| 서비스 | `services/content_service.py` | YouTube 자막/댓글 추출, 4단계 폴백 (Whisper 포함) |
-| 서비스 | `services/whisper_service.py` | faster-whisper 로컬 음성인식 (yt-dlp 오디오 다운로드) |
-| 서비스 | `services/pipeline_service.py` | 파이프라인 자동화 엔진 (SSE 이벤트 스트리밍) |
-| 서비스 | `services/webhook_service.py` | 웹훅 알림 (fire-and-forget, 1회 재시도) |
-| 서비스 | `services/schedule_service.py` | 예약 발행 CRUD |
-| 서비스 | `services/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
-| 서비스 | `services/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
-| 서비스 | `services/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
-| 서비스 | `services/rewrite_service.py` | 플랫폼별 카피 리라이트 (Twitter/LinkedIn/Instagram/Threads) |
-| 서비스 | `services/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
-| 서비스 | `services/qa_gate_service.py` | 발행 전 QA 게이트 (금칙어/구조/중복/링크 검증) |
-| 서비스 | `services/transcript_workspace_service.py` | 자막 문장 분리 + 편집 적용 |
-| 서비스 | `services/publish_queue_service.py` | 발행 큐 + 재시도 정책 (3회, 지수 백오프) |
-| 서비스 | `services/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
+| 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
+| 서비스 | `services/core/content_service.py` | YouTube 자막/댓글 추출, 4단계 폴백 (Whisper 포함) |
+| 서비스 | `services/core/pipeline_service.py` | 파이프라인 자동화 엔진 (SSE 이벤트 스트리밍) |
+| 서비스 | `services/core/fusion_service.py` | 다중 소스 퓨전 콘텐츠 생성 |
+| 서비스 | `services/transcript/whisper_service.py` | faster-whisper 로컬 음성인식 (yt-dlp 오디오 다운로드) |
+| 서비스 | `services/transcript/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
+| 서비스 | `services/transcript/transcript_workspace_service.py` | 자막 문장 분리 + 편집 적용 |
+| 서비스 | `services/platform/webhook_service.py` | 웹훅 알림 (SSRF 검증 + 재시도) |
+| 서비스 | `services/platform/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
+| 서비스 | `services/data/schedule_service.py` | 예약 발행 CRUD |
+| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
+| 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
+| 서비스 | `services/data/publish_queue_service.py` | 발행 큐 + 재시도 정책 (3회, 지수 백오프) |
+| 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
+| 서비스 | `services/content/rewrite_service.py` | 플랫폼별 카피 리라이트 (Twitter/LinkedIn/Instagram/Threads) |
+| 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
+| 서비스 | `services/quality/qa_gate_service.py` | 발행 전 QA 게이트 (금칙어/구조/중복/링크 검증) |
+| 서비스 | `services/agents/` | 멀티에이전트 파이프라인 (Research → Writer → Editor → SEO) |
 | 서비스 | `services/mcp/` | MCP 플러그인 시스템 (인터페이스 + 레지스트리 + Naver Blog/WordPress) |
 | 서비스 | `services/rag/` | RAG: ChromaDB 벡터 스토어, 텍스트 청킹, 컨텍스트 빌더 |
-| 서비스 | `services/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
 | 설정 | `config.py` | 토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens, RAG 설정 |
 | 프롬프트 | `prompts/` | 프롬프트 시스템 v3.4 + GEO/Shorts/Course/Citation 스타일 |
@@ -120,6 +122,36 @@ JSON 응답 {title, content, html, usage}
 
 - `build_full_prompt(style_id, modifiers)`: 최종 프롬프트 조합 함수
 - `prompts/styles/comment_summary.py`: 병렬 댓글 요약 전용 프롬프트 (UI 비노출)
+
+### 서비스 도메인 구조 (`services/`)
+
+서비스는 도메인별 서브디렉토리로 구성됨. **루트에 직접 .py 파일 없음**.
+
+```
+services/
+├── core/           # AI, 콘텐츠 생성, 파이프라인, 캐시 (6개)
+├── analysis/       # 텍스트/NLP 분석 — 가독성, 구조, 문장, 감정 (95개)
+├── seo/            # 검색 최적화 — 키워드, 메타, SERP, E-E-A-T (28개)
+├── quality/        # 품질 검증 — QA, 표절, 팩트체크 (14개)
+├── content/        # 콘텐츠 관리 — 인용, 리라이트, FAQ, 요약 (27개)
+├── media/          # 미디어 — 썸네일, 이미지, 비디오, TTS (15개)
+├── transcript/     # 자막/음성 — Whisper, 챕터, 번역 (6개)
+├── export/         # 내보내기 — DOCX, EPUB, Google Docs (5개)
+├── platform/       # 외부 플랫폼 — 웹훅, RSS, GitHub, SNS (11개)
+├── data/           # 데이터/인프라 — Supabase, 스케줄, 알림 (33개)
+├── agents/         # 멀티에이전트 파이프라인 (12개)
+├── analytics/      # 분석 대시보드 (17개)
+├── auth/           # 인증/OAuth (2개)
+├── integrations/   # 외부 서비스 연동 — Slack, Discord (7개)
+├── mcp/            # MCP 플러그인 (6개)
+├── payment/        # 결제/구독 (9개)
+├── rag/            # RAG 벡터 스토어 (9개)
+├── usage/          # 사용량 관리 (5개)
+├── finetune/       # AI 파인튜닝 (3개)
+└── exceptions/     # 에러 처리
+```
+
+**import 패턴**: `from services.core import ai_service` 또는 `from services.core.ai_service import create_content`
 
 ### Frontend Module Communication (EventBus)
 

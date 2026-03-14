@@ -1,7 +1,7 @@
 """notification_service 단위 테스트"""
 import unittest
 
-from services import notification_service
+from services.data import notification_service
 
 
 class TestNotificationService(unittest.TestCase):

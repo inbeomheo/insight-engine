@@ -15,8 +15,8 @@ class TestProgressiveSummary(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_progressive_summary("   ")
 
-    @patch('services.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_successful_summary(self, mock_create, mock_model):
         mock_create.return_value = {
             'content': '{"one_line": "한 줄 요약", "three_lines": "세 줄 요약입니다.", "full_summary": "전체 요약 내용"}'
@@ -27,8 +27,8 @@ class TestProgressiveSummary(unittest.TestCase):
         self.assertEqual(result["three_lines"], "세 줄 요약입니다.")
         self.assertEqual(result["full_summary"], "전체 요약 내용")
 
-    @patch('services.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_parse_failure_fallback(self, mock_create, mock_model):
         mock_create.return_value = {'content': '유효하지 않은 응답입니다'}
         from services.content.progressive_summary_service import generate_progressive_summary
@@ -38,8 +38,8 @@ class TestProgressiveSummary(unittest.TestCase):
         self.assertIn("three_lines", result)
         self.assertIn("full_summary", result)
 
-    @patch('services.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
-    @patch('services.ai_service.create_content')
+    @patch('services.content.progressive_summary_service._get_model', return_value='gemini/gemini-3-flash-preview')
+    @patch('services.core.ai_service.create_content')
     def test_long_content_truncated(self, mock_create, mock_model):
         mock_create.return_value = {
             'content': '{"one_line": "요약", "three_lines": "세 줄", "full_summary": "전체"}'

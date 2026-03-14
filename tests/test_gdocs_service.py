@@ -24,7 +24,7 @@ class TestExtractDocId(unittest.TestCase):
 class TestExtractGoogleDoc(unittest.TestCase):
     """Google Docs 추출 통합 테스트"""
 
-    @patch('services.gdocs_service.requests.get')
+    @patch('services.export.gdocs_service.requests.get')
     def test_public_export_success(self, mock_get):
         resp = MagicMock()
         resp.status_code = 200
@@ -39,7 +39,7 @@ class TestExtractGoogleDoc(unittest.TestCase):
         self.assertIn('본문 내용', result['content'])
         self.assertEqual(result['source_type'], 'gdocs')
 
-    @patch('services.gdocs_service.requests.get')
+    @patch('services.export.gdocs_service.requests.get')
     def test_fallback_to_api(self, mock_get):
         # 공개 export 실패
         export_resp = MagicMock()
@@ -75,7 +75,7 @@ class TestExtractGoogleDoc(unittest.TestCase):
         self.assertIn('API로 가져온', result['content'])
         self.assertEqual(result['source_type'], 'gdocs')
 
-    @patch('services.gdocs_service.requests.get')
+    @patch('services.export.gdocs_service.requests.get')
     def test_no_access_no_key(self, mock_get):
         resp = MagicMock()
         resp.status_code = 403
@@ -88,7 +88,7 @@ class TestExtractGoogleDoc(unittest.TestCase):
             )
         self.assertIn('접근할 수 없습니다', str(ctx.exception))
 
-    @patch('services.gdocs_service.requests.get')
+    @patch('services.export.gdocs_service.requests.get')
     def test_export_short_content_fallback(self, mock_get):
         """본문이 50자 미만이면 유효하지 않은 것으로 간주"""
         export_resp = MagicMock()

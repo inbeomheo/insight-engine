@@ -20,8 +20,8 @@ class TestRecommendSources(unittest.TestCase):
         with self.assertRaises(ValueError):
             recommend_sources("   ")
 
-    @patch("services.source_recommender_service._search_web")
-    @patch("services.source_recommender_service._search_youtube")
+    @patch("services.content.source_recommender_service._search_web")
+    @patch("services.content.source_recommender_service._search_youtube")
     def test_combines_youtube_and_web(self, mock_yt, mock_web):
         """YouTube + 웹 검색 결과 통합"""
         mock_yt.return_value = [
@@ -42,8 +42,8 @@ class TestRecommendSources(unittest.TestCase):
         self.assertEqual(results[0]["relevance_score"], 1.0)
         self.assertEqual(results[1]["relevance_score"], 0.9)
 
-    @patch("services.source_recommender_service._search_web")
-    @patch("services.source_recommender_service._search_youtube")
+    @patch("services.content.source_recommender_service._search_web")
+    @patch("services.content.source_recommender_service._search_youtube")
     def test_graceful_when_youtube_fails(self, mock_yt, mock_web):
         """YouTube 검색 실패 시에도 웹 결과 반환"""
         mock_yt.return_value = []
@@ -71,7 +71,7 @@ class TestSearchYoutube(unittest.TestCase):
         results = _search_youtube("테스트")
         self.assertEqual(results, [])
 
-    @patch("services.source_recommender_service.os.getenv", return_value="fake-key")
+    @patch("services.content.source_recommender_service.os.getenv", return_value="fake-key")
     @patch("googleapiclient.discovery.build")
     def test_returns_youtube_results(self, mock_build, mock_getenv):
         """YouTube 검색 결과 반환"""

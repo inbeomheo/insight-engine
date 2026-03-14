@@ -135,7 +135,7 @@ class TestCreateContent(unittest.TestCase):
         """앱 컨텍스트 정리"""
         self.ctx.pop()
 
-    @patch('services.ai_service.completion')
+    @patch('services.core.ai_service.completion')
     def test_create_content_success(self, mock_completion):
         """콘텐츠 생성 성공 케이스"""
         mock_response = MagicMock()
@@ -155,7 +155,7 @@ class TestCreateContent(unittest.TestCase):
         self.assertIn('content', result)
         self.assertIn('html', result)
 
-    @patch('services.ai_service.completion')
+    @patch('services.core.ai_service.completion')
     def test_create_content_returns_prompt(self, mock_completion):
         """프롬프트 반환 옵션 테스트"""
         mock_response = MagicMock()

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from services import prompt_optimizer_service
+from services.data import prompt_optimizer_service
 
 
 class TestPromptOptimizerService(unittest.TestCase):

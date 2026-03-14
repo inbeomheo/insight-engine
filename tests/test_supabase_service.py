@@ -22,13 +22,13 @@ class TestIsSupabaseEnabled(unittest.TestCase):
 
 class TestEncryptDecryptApiKey(unittest.TestCase):
 
-    @patch('services.supabase_service._is_encryption_enabled', return_value=False)
+    @patch('services.data.supabase_service._is_encryption_enabled', return_value=False)
     def test_encrypt_disabled(self, mock_enc):
         """암호화 비활성 → 원본 반환"""
         result = encrypt_api_key('my-secret-key')
         self.assertEqual(result, 'my-secret-key')
 
-    @patch('services.supabase_service._is_encryption_enabled', return_value=False)
+    @patch('services.data.supabase_service._is_encryption_enabled', return_value=False)
     def test_decrypt_disabled(self, mock_enc):
         """암호화 비활성 → 원본 반환"""
         result = decrypt_api_key('my-secret-key')
@@ -57,7 +57,7 @@ class TestEncryptDecryptApiKey(unittest.TestCase):
 
 class TestIsEncryptionEnabled(unittest.TestCase):
 
-    @patch('services.supabase_service._encryption_enabled', None)
+    @patch('services.data.supabase_service._encryption_enabled', None)
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': ''}, clear=False)
     def test_no_secret(self):
         """시크릿 없음 → False"""
@@ -66,7 +66,7 @@ class TestIsEncryptionEnabled(unittest.TestCase):
         result = _is_encryption_enabled()
         self.assertFalse(result)
 
-    @patch('services.supabase_service._encryption_enabled', None)
+    @patch('services.data.supabase_service._encryption_enabled', None)
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': 'my-secret'}, clear=False)
     def test_with_secret(self):
         """시크릿 있음 → True"""
@@ -91,13 +91,13 @@ class TestDbOperation(unittest.TestCase):
 
 class TestSaveHistory(unittest.TestCase):
 
-    @patch('services.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_supabase', return_value=None)
     def test_no_client(self, mock_sb):
         """클라이언트 없음 → None"""
         result = save_history('user1', {'title': 'test'})
         self.assertIsNone(result)
 
-    @patch('services.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_supabase', return_value=None)
     def test_no_user_id(self, mock_sb):
         """user_id 없음 → None"""
         result = save_history(None, {'title': 'test'})
@@ -106,14 +106,14 @@ class TestSaveHistory(unittest.TestCase):
 
 class TestGetHistories(unittest.TestCase):
 
-    @patch('services.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_supabase', return_value=None)
     def test_no_client(self, mock_sb):
         """클라이언트 없음 → 빈 결과"""
         result = get_histories('user1')
         self.assertEqual(result['histories'], [])
         self.assertEqual(result['total'], 0)
 
-    @patch('services.supabase_service.get_supabase', return_value=None)
+    @patch('services.data.supabase_service.get_supabase', return_value=None)
     def test_no_user_id(self, mock_sb):
         """user_id 없음 → 빈 결과"""
         result = get_histories(None)

@@ -44,7 +44,7 @@ class TestSpotifyUrlParsing(unittest.TestCase):
 class TestSpotifyEpisodeInfo(unittest.TestCase):
     """Spotify oEmbed 메타데이터 추출 테스트"""
 
-    @patch('services.spotify_service.requests.get')
+    @patch('services.platform.spotify_service.requests.get')
     def test_get_episode_info_success(self, mock_get):
         """oEmbed 성공 응답"""
         mock_resp = MagicMock()
@@ -64,7 +64,7 @@ class TestSpotifyEpisodeInfo(unittest.TestCase):
         self.assertIn('thumbnail_url', result)
         mock_get.assert_called_once()
 
-    @patch('services.spotify_service.requests.get')
+    @patch('services.platform.spotify_service.requests.get')
     def test_get_episode_info_network_error(self, mock_get):
         """네트워크 오류 시 ValueError"""
         import requests as req_lib

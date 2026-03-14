@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 class TestScrapeTwitterThread(unittest.TestCase):
     """scrape_twitter_thread 단위 테스트"""
 
-    @patch("services.social_scraper_service._extract_with_trafilatura")
+    @patch("services.platform.social_scraper_service._extract_with_trafilatura")
     def test_extracts_via_nitter(self, mock_extract):
         """nitter 인스턴스를 통해 본문 추출 성공"""
         # 첫 번째 nitter 인스턴스에서 성공
@@ -26,7 +26,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
         first_call_url = mock_extract.call_args_list[0][0][0]
         self.assertIn("nitter", first_call_url)
 
-    @patch("services.social_scraper_service._extract_with_trafilatura")
+    @patch("services.platform.social_scraper_service._extract_with_trafilatura")
     def test_fallback_to_original_url(self, mock_extract):
         """nitter 실패 시 원본 URL로 폴백"""
         # nitter 인스턴스 실패 (2번) + 원본 URL 성공 (1번)
@@ -42,7 +42,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
         self.assertEqual(result["source_type"], "twitter")
         self.assertIn("원본 URL에서 추출", result["content"])
 
-    @patch("services.social_scraper_service._extract_with_trafilatura")
+    @patch("services.platform.social_scraper_service._extract_with_trafilatura")
     def test_raises_when_all_fail(self, mock_extract):
         """모든 추출 실패 시 ValueError 발생"""
         mock_extract.return_value = ("", "")
@@ -51,7 +51,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
         with self.assertRaises(ValueError):
             scrape_twitter_thread("https://twitter.com/user/status/999")
 
-    @patch("services.social_scraper_service._extract_with_trafilatura")
+    @patch("services.platform.social_scraper_service._extract_with_trafilatura")
     def test_generates_title_from_url(self, mock_extract):
         """제목이 없으면 URL에서 기본 제목 생성"""
         mock_extract.return_value = ("", "이것은 제목 없이 본문만 추출된 충분히 긴 콘텐츠입니다. 최소 30자 이상의 텍스트가 필요합니다.")
@@ -65,7 +65,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
 class TestScrapeRedditPost(unittest.TestCase):
     """scrape_reddit_post 단위 테스트"""
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_extracts_post_and_comments(self, mock_get):
         """포스트 본문 + 상위 댓글 추출"""
         mock_resp = MagicMock()
@@ -101,7 +101,7 @@ class TestScrapeRedditPost(unittest.TestCase):
         self.assertIn("첫 번째 댓글", result["content"])
         self.assertEqual(result["source_type"], "reddit")
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_post_without_comments(self, mock_get):
         """댓글 없는 포스트"""
         mock_resp = MagicMock()
@@ -117,7 +117,7 @@ class TestScrapeRedditPost(unittest.TestCase):
         self.assertEqual(result["title"], "제목만")
         self.assertNotIn("상위 댓글", result["content"])
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_raises_on_network_error(self, mock_get):
         """네트워크 오류 시 ValueError 발생"""
         import requests as req_lib
@@ -132,7 +132,7 @@ class TestScrapeRedditPost(unittest.TestCase):
 class TestScrapeHackernews(unittest.TestCase):
     """scrape_hackernews 단위 테스트"""
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_extracts_item_and_comments(self, mock_get):
         """아이템 + 상위 댓글 추출"""
         def side_effect(url, **kwargs):
@@ -168,7 +168,7 @@ class TestScrapeHackernews(unittest.TestCase):
         with self.assertRaises(ValueError):
             scrape_hackernews("https://example.com/not-hn")
 
-    @patch("services.social_scraper_service.requests.get")
+    @patch("services.platform.social_scraper_service.requests.get")
     def test_raises_when_item_not_found(self, mock_get):
         """아이템을 찾을 수 없을 때 ValueError 발생"""
         mock_resp = MagicMock()

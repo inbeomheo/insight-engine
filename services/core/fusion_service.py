@@ -6,7 +6,6 @@ from typing import Any, Dict, List
 
 from services.core import ai_service, content_service
 from services.data import web_research_service
-from services import comment_analyzer_service
 from prompts import build_full_prompt
 from prompts.fusion.fusion_prompt import FUSION_PROMPT, build_fusion_context
 
@@ -89,7 +88,7 @@ def _phase2_analyze(
             futures[fut] = ('summary', t)
 
         if enable_deep_comments and all_comments:
-            fut = executor.submit(comment_analyzer_service.analyze_comments, all_comments, model)
+            fut = executor.submit(_analyze_comments, all_comments, model)
             futures[fut] = ('comments', None)
 
         if enable_web_research:
@@ -188,6 +187,26 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
             'failed_urls': failed_urls,
         },
         'usage': final_result.get('usage', {}),
+    }
+
+
+def _analyze_comments(comments: list, model: str) -> dict:
+    """댓글 목록을 AI로 분석하여 핵심 인사이트를 추출합니다."""
+    comments_text = "\n".join(comments[:100])
+    prompt = (
+        "다음 YouTube 댓글을 분석하여 주요 의견, 팩트체크 필요 항목, "
+        "시청자 감정을 JSON 형식으로 정리하세요.\n\n"
+        f"{comments_text[:5000]}"
+    )
+    result = ai_service.create_content(
+        content=prompt, model=model,
+        style_prompt="댓글 분석 요약. JSON 형식.",
+        style_id="summary"
+    )
+    return {
+        'content': result.get('content', ''),
+        'fact_checks': [],
+        'usage': result.get('usage', {}),
     }
 
 

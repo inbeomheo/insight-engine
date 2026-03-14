@@ -31,7 +31,7 @@ class TestSentimentFlow(unittest.TestCase):
         self.assertEqual(result['flow'], [])
         self.assertEqual(result['overall_arc'], 'stable')
 
-    @patch('services.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
+    @patch('services.analysis.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
     @patch('litellm.completion')
     def test_returns_flow(self, mock_llm, mock_model):
         """정상 응답 시 flow 목록 반환"""
@@ -44,7 +44,7 @@ class TestSentimentFlow(unittest.TestCase):
         self.assertEqual(result['overall_arc'], 'fluctuating')
         self.assertEqual(result['dominant_emotion'], '기대')
 
-    @patch('services.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
+    @patch('services.analysis.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
     @patch('litellm.completion')
     def test_flow_item_structure(self, mock_llm, mock_model):
         """flow 항목 구조 검증"""
@@ -61,7 +61,7 @@ class TestSentimentFlow(unittest.TestCase):
         self.assertIn('emotion', item)
         self.assertIn(item['sentiment'], ('positive', 'neutral', 'negative'))
 
-    @patch('services.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
+    @patch('services.analysis.nlp_analysis_service._get_analysis_model', return_value='zhipuai/GLM-4.5-Air')
     @patch('litellm.completion', side_effect=Exception("API 오류"))
     def test_llm_failure_graceful(self, mock_llm, mock_model):
         """LLM 실패 시 빈 결과"""

@@ -7,21 +7,21 @@ from services.media.image_gen_service import generate_image, IMAGE_GEN_PROVIDER
 
 class TestGenerateImage(unittest.TestCase):
 
-    @patch('services.image_gen_service.IMAGE_GEN_API_KEY', '')
+    @patch('services.media.image_gen_service.IMAGE_GEN_API_KEY', '')
     def test_no_api_key(self):
         """API 키 없음 → ValueError"""
         with self.assertRaises(ValueError) as ctx:
             generate_image('test prompt')
         self.assertIn('API 키', str(ctx.exception))
 
-    @patch('services.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
+    @patch('services.media.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
     def test_invalid_size(self):
         """잘못된 이미지 크기 → ValueError"""
         with self.assertRaises(ValueError) as ctx:
             generate_image('test prompt', size='500x500')
         self.assertIn('지원하지 않는', str(ctx.exception))
 
-    @patch('services.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
+    @patch('services.media.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
     def test_valid_sizes(self):
         """유효한 크기 목록 검증"""
         valid = {'1024x1024', '1792x1024', '1024x1792'}
@@ -30,8 +30,8 @@ class TestGenerateImage(unittest.TestCase):
                 # API 호출 자체는 실패하지만 size 검증은 통과
                 generate_image('test', size=size)
 
-    @patch('services.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
-    @patch('services.image_gen_service.IMAGE_GEN_PROVIDER', 'unsupported')
+    @patch('services.media.image_gen_service.IMAGE_GEN_API_KEY', 'test-key')
+    @patch('services.media.image_gen_service.IMAGE_GEN_PROVIDER', 'unsupported')
     def test_unsupported_provider(self):
         """지원하지 않는 프로바이더 → ValueError"""
         with self.assertRaises(ValueError) as ctx:

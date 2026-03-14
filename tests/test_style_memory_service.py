@@ -154,24 +154,24 @@ class TestDbOp(unittest.TestCase):
 
 class TestSupabaseDisabled(unittest.TestCase):
 
-    @patch('services.style_memory_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.style_memory_service.is_supabase_enabled', return_value=False)
     def test_get_profile(self, mock_sb):
         """Supabase 비활성 → 기본 프로필"""
         result = get_profile('user1')
         self.assertEqual(result['preferred_length'], 'medium')
 
-    @patch('services.style_memory_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.style_memory_service.is_supabase_enabled', return_value=False)
     def test_update_profile(self, mock_sb):
         """Supabase 비활성 → None (무시)"""
         result = update_profile('user1', {'style': 'blog_seo'})
         self.assertIsNone(result)
 
-    @patch('services.style_memory_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.style_memory_service.is_supabase_enabled', return_value=False)
     def test_save_preferences(self, mock_sb):
         """Supabase 비활성 → False"""
         self.assertFalse(save_user_preferences('user1', {'avoid_keywords': ['test']}))
 
-    @patch('services.style_memory_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.style_memory_service.is_supabase_enabled', return_value=False)
     def test_reset_profile(self, mock_sb):
         """Supabase 비활성 → False"""
         self.assertFalse(reset_profile('user1'))

@@ -1,7 +1,7 @@
 """seo_checklist_service 단위 테스트"""
 import unittest
 
-from services.seo_checklist_service import run_checklist, PASS, WARN, FAIL
+from services.seo.seo_checklist_service import run_checklist, PASS, WARN, FAIL
 
 
 class TestSeoChecklist(unittest.TestCase):

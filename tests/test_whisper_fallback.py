@@ -13,7 +13,7 @@ class TestDownloadAudio(unittest.TestCase):
 
     def test_download_audio_success(self):
         """정상적으로 오디오를 다운로드하면 파일 경로를 반환"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         mock_yt_dlp = MagicMock()
         mock_ydl = MagicMock()
@@ -42,11 +42,11 @@ class TestDownloadAudio(unittest.TestCase):
         # yt_dlp import가 실패하면 None 반환하는 로직 검증
         # (실제 환경에서는 yt_dlp가 설치되어 있을 수 있으므로 mock 필요)
 
-    @patch('services.whisper_service.tempfile.mkstemp', return_value=(5, '/tmp/fail.wav'))
-    @patch('services.whisper_service.os.close')
+    @patch('services.transcript.whisper_service.tempfile.mkstemp', return_value=(5, '/tmp/fail.wav'))
+    @patch('services.transcript.whisper_service.os.close')
     def test_download_audio_exception_returns_none(self, mock_close, mock_mkstemp):
         """다운로드 중 예외 발생 시 None 반환 + 임시 파일 정리"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         with patch.object(ws, '_cleanup_file') as mock_cleanup:
             with patch.dict('sys.modules', {'yt_dlp': MagicMock(
@@ -116,7 +116,7 @@ class TestExtractTranscriptWhisper(unittest.TestCase):
 
     def test_full_pipeline_success(self):
         """다운로드 + 변환 성공 시 텍스트 반환"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         with patch.object(ws, 'download_audio', return_value='/tmp/audio.wav') as mock_dl, \
              patch.object(ws, 'transcribe_audio', return_value='변환된 텍스트') as mock_tr, \
@@ -130,7 +130,7 @@ class TestExtractTranscriptWhisper(unittest.TestCase):
 
     def test_pipeline_download_fails(self):
         """다운로드 실패 시 None 반환"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         with patch.object(ws, 'download_audio', return_value=None):
             result = ws.extract_transcript_whisper('https://www.youtube.com/watch?v=abc')
@@ -139,7 +139,7 @@ class TestExtractTranscriptWhisper(unittest.TestCase):
 
     def test_pipeline_transcribe_fails(self):
         """변환 실패 시 None 반환 + 임시 파일 정리"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         with patch.object(ws, 'download_audio', return_value='/tmp/audio.wav'), \
              patch.object(ws, 'transcribe_audio', return_value=None), \
@@ -151,7 +151,7 @@ class TestExtractTranscriptWhisper(unittest.TestCase):
 
     def test_pipeline_exception_cleans_up(self):
         """예외 발생 시에도 임시 파일 정리"""
-        from services import whisper_service as ws
+        from services.transcript import whisper_service as ws
 
         with patch.object(ws, 'download_audio', return_value='/tmp/audio.wav'), \
              patch.object(ws, 'transcribe_audio', side_effect=RuntimeError("boom")), \
@@ -166,11 +166,11 @@ class TestWhisperDisabledSkip(unittest.TestCase):
     """WHISPER_ENABLED=False일 때 폴백 체인에서 스킵 확인"""
 
     @patch.dict(os.environ, {'WHISPER_ENABLED': 'false'}, clear=False)
-    @patch('services.content_service._load_cache', return_value=None)
-    @patch('services.content_service._build_ytt_api')
-    @patch('services.content_service._fetch_transcript_with_api', return_value=None)
-    @patch('services.content_service._get_transcript_from_watch_page', return_value={'error': 'failed'})
-    @patch('services.content_service.get_transcript_via_supadata', return_value=None)
+    @patch('services.core.content_service._load_cache', return_value=None)
+    @patch('services.core.content_service._build_ytt_api')
+    @patch('services.core.content_service._fetch_transcript_with_api', return_value=None)
+    @patch('services.core.content_service._get_transcript_from_watch_page', return_value={'error': 'failed'})
+    @patch('services.core.content_service.get_transcript_via_supadata', return_value=None)
     def test_whisper_not_called_when_disabled(
         self, mock_supadata, mock_watch, mock_fetch, mock_ytt, mock_cache
     ):
@@ -180,7 +180,7 @@ class TestWhisperDisabledSkip(unittest.TestCase):
 
         with app.app_context(), \
              patch.dict(os.environ, {'SUPADATA_API_KEY': ''}, clear=False), \
-             patch('services.whisper_service.extract_transcript_whisper') as mock_whisper:
+             patch('services.transcript.whisper_service.extract_transcript_whisper') as mock_whisper:
             from services.core.content_service import get_transcript
             result = get_transcript('dQw4w9WgXcQ')
 
@@ -192,12 +192,12 @@ class TestWhisperInFallbackChain(unittest.TestCase):
     """content_service 폴백 체인에 Whisper가 포함되어 있는지 확인"""
 
     @patch.dict(os.environ, {'WHISPER_ENABLED': 'true', 'SUPADATA_API_KEY': ''}, clear=False)
-    @patch('services.content_service._load_cache', return_value=None)
-    @patch('services.content_service._build_ytt_api')
-    @patch('services.content_service._fetch_transcript_with_api', return_value=None)
-    @patch('services.content_service._get_transcript_from_watch_page', return_value={'error': 'failed'})
-    @patch('services.content_service.get_transcript_via_supadata', return_value=None)
-    @patch('services.whisper_service.extract_transcript_whisper', return_value='Whisper로 추출된 자막')
+    @patch('services.core.content_service._load_cache', return_value=None)
+    @patch('services.core.content_service._build_ytt_api')
+    @patch('services.core.content_service._fetch_transcript_with_api', return_value=None)
+    @patch('services.core.content_service._get_transcript_from_watch_page', return_value={'error': 'failed'})
+    @patch('services.core.content_service.get_transcript_via_supadata', return_value=None)
+    @patch('services.transcript.whisper_service.extract_transcript_whisper', return_value='Whisper로 추출된 자막')
     def test_whisper_called_as_4th_fallback(
         self, mock_whisper, mock_supadata, mock_watch, mock_fetch, mock_ytt, mock_cache
     ):
@@ -206,7 +206,7 @@ class TestWhisperInFallbackChain(unittest.TestCase):
         app = flask.Flask(__name__)
 
         with app.app_context(), \
-             patch('services.content_service._save_cache'):
+             patch('services.core.content_service._save_cache'):
             from services.core.content_service import get_transcript
             result = get_transcript('dQw4w9WgXcQ')
 

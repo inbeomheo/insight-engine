@@ -9,7 +9,7 @@ from unittest.mock import patch
 @pytest.fixture(autouse=True)
 def mock_supabase_disabled():
     """Supabase 비활성화 — 로컬 모드 테스트"""
-    with patch('services.supabase_service.is_supabase_enabled', return_value=False):
+    with patch('services.data.supabase_service.is_supabase_enabled', return_value=False):
         yield
 
 

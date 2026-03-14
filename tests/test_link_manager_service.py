@@ -1,7 +1,7 @@
 """link_manager_service 단위 테스트"""
 import unittest
 
-from services import link_manager_service
+from services.seo import link_manager_service
 
 
 class TestLinkManagerService(unittest.TestCase):

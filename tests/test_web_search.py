@@ -18,7 +18,7 @@ class TestWebSearchService(unittest.TestCase):
             result = ws.search("테스트 쿼리")
             self.assertEqual(result, [])
 
-    @patch('services.web_search_service.requests.post')
+    @patch('services.data.web_search_service.requests.post')
     def test_search_returns_results_on_success(self, mock_post):
         """API 성공 시 파싱된 결과 반환"""
         mock_resp = MagicMock()
@@ -45,7 +45,7 @@ class TestWebSearchService(unittest.TestCase):
         self.assertIn('content', results[0])
         self.assertIn('score', results[0])
 
-    @patch('services.web_search_service.requests.post')
+    @patch('services.data.web_search_service.requests.post')
     def test_search_returns_empty_on_request_error(self, mock_post):
         """네트워크 오류 시 빈 리스트 반환 (graceful degradation)"""
         import requests as req_lib
@@ -57,7 +57,7 @@ class TestWebSearchService(unittest.TestCase):
 
         self.assertEqual(result, [])
 
-    @patch('services.web_search_service.requests.post')
+    @patch('services.data.web_search_service.requests.post')
     def test_search_filters_results_without_url(self, mock_post):
         """URL이 없는 결과 항목 필터링"""
         mock_resp = MagicMock()
@@ -79,7 +79,7 @@ class TestWebSearchService(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['url'], 'https://valid.com')
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_extract_grounding_context_enabled(self, mock_search):
         """검색 결과가 있을 때 context_text 생성 및 enabled=True 반환"""
         mock_search.return_value = [
@@ -96,7 +96,7 @@ class TestWebSearchService(unittest.TestCase):
         self.assertIn('Python 기초', result['context_text'])
         self.assertIn('https://python.org', result['context_text'])
 
-    @patch('services.web_search_service.search')
+    @patch('services.data.web_search_service.search')
     def test_extract_grounding_context_disabled_when_no_results(self, mock_search):
         """검색 결과 없을 때 enabled=False 반환"""
         mock_search.return_value = []

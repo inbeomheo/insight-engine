@@ -31,7 +31,7 @@ def move_to_trash(item_id: str, user_id: str = '') -> bool:
 def restore_from_trash(item_id: str, user_id: str = '') -> Optional[dict]:
     """휴지통에서 항목을 복구합니다."""
     # 내부적으로 is_deleted 플래그를 제거
-    from services.content_library_service import _items, _lock as _items_lock
+    from services.data.content_library_service import _items, _lock as _items_lock
     with _items_lock:
         item = _items.get(item_id)
         if not item or not item.get('is_deleted'):
@@ -54,7 +54,7 @@ def permanently_delete(item_id: str, user_id: str = '') -> bool:
 
 def list_trash(workspace_id: str = '', user_id: str = '', page: int = 1, per_page: int = 20) -> dict:
     """휴지통 항목 목록을 반환합니다."""
-    from services.content_library_service import _items, _lock as _items_lock
+    from services.data.content_library_service import _items, _lock as _items_lock
     with _items_lock:
         items = [i for i in _items.values() if i.get('is_deleted')]
 
@@ -90,7 +90,7 @@ def purge_expired(retention_days: int = RETENTION_DAYS) -> int:
     import time as _time
     cutoff_ts = _time.time() - retention_days * 86400
 
-    from services.content_library_service import _items, _lock as _items_lock
+    from services.data.content_library_service import _items, _lock as _items_lock
     with _items_lock:
         expired_ids = []
         for item_id, item in _items.items():

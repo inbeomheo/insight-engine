@@ -1,7 +1,7 @@
 """media_library_service 단위 테스트"""
 import unittest
 
-from services import media_library_service
+from services.media import media_library_service
 
 
 class TestMediaLibraryService(unittest.TestCase):

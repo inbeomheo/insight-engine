@@ -42,7 +42,7 @@ class TestExtractText(unittest.TestCase):
             extract_text('/fake/path.txt', 'text/plain')
         self.assertIn('지원하지 않는', str(ctx.exception))
 
-    @patch('services.document_ingest_service._extract_pdf')
+    @patch('services.content.document_ingest_service._extract_pdf')
     def test_dispatch_pdf(self, mock_pdf):
         """PDF MIME → _extract_pdf 호출"""
         mock_pdf.return_value = {'title': 'T', 'content': 'C', 'source_type': 'document', 'page_count': 1}
@@ -50,7 +50,7 @@ class TestExtractText(unittest.TestCase):
         mock_pdf.assert_called_once_with('/fake/doc.pdf')
         self.assertEqual(result['title'], 'T')
 
-    @patch('services.document_ingest_service._extract_docx')
+    @patch('services.content.document_ingest_service._extract_docx')
     def test_dispatch_docx(self, mock_docx):
         """DOCX MIME → _extract_docx 호출"""
         mock_docx.return_value = {'title': 'D', 'content': 'X', 'source_type': 'document', 'page_count': 5}
@@ -61,7 +61,7 @@ class TestExtractText(unittest.TestCase):
         mock_docx.assert_called_once_with('/fake/doc.docx')
         self.assertEqual(result['title'], 'D')
 
-    @patch('services.document_ingest_service._extract_pptx')
+    @patch('services.content.document_ingest_service._extract_pptx')
     def test_dispatch_pptx(self, mock_pptx):
         """PPTX MIME → _extract_pptx 호출"""
         mock_pptx.return_value = {'title': 'P', 'content': 'S', 'source_type': 'document', 'page_count': 10}
@@ -75,7 +75,7 @@ class TestExtractText(unittest.TestCase):
 
 class TestExtractFromUpload(unittest.TestCase):
 
-    @patch('services.document_ingest_service.extract_text')
+    @patch('services.content.document_ingest_service.extract_text')
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=1024)
     @patch('os.close')

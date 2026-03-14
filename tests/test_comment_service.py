@@ -1,7 +1,7 @@
 """comment_service 단위 테스트"""
 import unittest
 
-from services import comment_service
+from services.content import comment_service
 
 
 class TestCommentService(unittest.TestCase):

@@ -1,7 +1,7 @@
 """workflow_service 단위 테스트"""
 import unittest
 
-from services import workflow_service
+from services.data import workflow_service
 
 
 class TestWorkflowService(unittest.TestCase):

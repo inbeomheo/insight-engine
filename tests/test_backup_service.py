@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from services import backup_service
+from services.data import backup_service
 
 
 class TestBackupService(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestBackupService(unittest.TestCase):
         backup_service.BACKUP_DIR = self._orig_dir
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    @patch('services.content_library_service.get_all_items_raw', return_value=[
+    @patch('services.data.content_library_service.get_all_items_raw', return_value=[
         {'id': '1', 'title': '제목1', 'content': '내용1'},
         {'id': '2', 'title': '제목2', 'content': '내용2'},
     ])
@@ -32,7 +32,7 @@ class TestBackupService(unittest.TestCase):
         self.assertGreater(result['size_bytes'], 0)
         self.assertIn('backup_id', result)
 
-    @patch('services.content_library_service.get_all_items_raw', return_value=[])
+    @patch('services.data.content_library_service.get_all_items_raw', return_value=[])
     def test_create_backup_empty(self, mock_items):
         """빈 라이브러리 백업"""
         result = backup_service.create_backup()
@@ -43,15 +43,15 @@ class TestBackupService(unittest.TestCase):
         result = backup_service.list_backups()
         self.assertEqual(len(result), 0)
 
-    @patch('services.content_library_service.get_all_items_raw', return_value=[{'id': '1', 'title': 'T'}])
+    @patch('services.data.content_library_service.get_all_items_raw', return_value=[{'id': '1', 'title': 'T'}])
     def test_list_backups_after_create(self, mock_items):
         """백업 생성 후 목록 조회"""
         backup_service.create_backup()
         result = backup_service.list_backups()
         self.assertEqual(len(result), 1)
 
-    @patch('services.content_library_service.get_item', return_value=None)
-    @patch('services.content_library_service.create_item')
+    @patch('services.data.content_library_service.get_item', return_value=None)
+    @patch('services.data.content_library_service.create_item')
     def test_restore_backup(self, mock_create, mock_get):
         """백업 복원 (신규 생성)"""
         # 백업 파일 수동 생성
@@ -92,7 +92,7 @@ class TestBackupService(unittest.TestCase):
         """없는 백업 메타데이터 → None"""
         self.assertIsNone(backup_service.get_backup_info('bad.json'))
 
-    @patch('services.content_library_service.get_all_items_raw', return_value=[{'id': '1'}])
+    @patch('services.data.content_library_service.get_all_items_raw', return_value=[{'id': '1'}])
     def test_prune_old_backups(self, mock_items):
         """오래된 백업 자동 삭제"""
         orig_max = backup_service.MAX_BACKUPS
@@ -105,7 +105,7 @@ class TestBackupService(unittest.TestCase):
         finally:
             backup_service.MAX_BACKUPS = orig_max
 
-    @patch('services.content_library_service.get_all_items_raw', return_value=[
+    @patch('services.data.content_library_service.get_all_items_raw', return_value=[
         {'id': '1', 'workspace_id': 'ws1'},
         {'id': '2', 'workspace_id': 'ws2'},
     ])

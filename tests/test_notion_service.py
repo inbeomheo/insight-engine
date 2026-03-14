@@ -101,7 +101,7 @@ class TestRichTextToStr(unittest.TestCase):
 class TestExtractNotionPage(unittest.TestCase):
     """Notion 페이지 추출 통합 테스트 (API 모킹)"""
 
-    @patch('services.notion_service.requests.get')
+    @patch('services.export.notion_service.requests.get')
     def test_successful_extraction(self, mock_get):
         # 페이지 메타데이터 응답
         page_resp = MagicMock()
@@ -153,7 +153,7 @@ class TestExtractNotionPage(unittest.TestCase):
             extract_notion_page('https://notion.so/test/Page-abcdef1234567890abcdef1234567890', '')
         self.assertIn('API 키', str(ctx.exception))
 
-    @patch('services.notion_service.requests.get')
+    @patch('services.export.notion_service.requests.get')
     def test_api_error(self, mock_get):
         resp = MagicMock()
         resp.status_code = 401
