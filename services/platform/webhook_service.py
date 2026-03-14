@@ -64,6 +64,8 @@ class WebhookService:
 
     def _send(self, event: str, data: dict):
         """실제 HTTP POST 전송 (5xx/네트워크 오류만 1회 재시도, 4xx는 즉시 중단)"""
+        import time as _time
+
         payload = {
             "event": event,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -81,7 +83,8 @@ class WebhookService:
                 return
             except Exception as e:
                 if attempt == 0:
-                    logger.warning(f"웹훅 전송 실패 (재시도): {e}")
+                    logger.warning(f"웹훅 전송 실패 (2초 후 재시도): {e}")
+                    _time.sleep(2)
                 else:
                     logger.error(f"웹훅 전송 최종 실패: {e}")
 

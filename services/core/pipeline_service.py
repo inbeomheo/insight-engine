@@ -39,7 +39,7 @@ class PipelineEngine:
 
         Args:
             context: 스텝 간 공유되는 데이터 딕셔너리.
-                     각 스텝의 handler가 반환한 dict로 업데이트됩니다.
+                     내부 복사본을 사용하므로 호출자의 원본은 변경되지 않습니다.
 
         Yields:
             dict: SSE 이벤트
@@ -48,12 +48,16 @@ class PipelineEngine:
                 - step_error: 스텝 에러 (step, error)
                 - pipeline_complete: 전체 완료 (progress, result)
         """
-        total = len(self.config.steps)
+        # M7: 호출자 딕셔너리 보호를 위해 복사본 사용
+        context = dict(context)
+        # M6: 실행 중 steps 변경 방지를 위해 스냅샷
+        steps = tuple(self.config.steps)
+        total = len(steps)
         if total == 0:
             yield {"type": "pipeline_complete", "progress": 1.0, "result": context}
             return
 
-        for i, step in enumerate(self.config.steps):
+        for i, step in enumerate(steps):
             progress = i / total
             yield {
                 "type": "step_start",

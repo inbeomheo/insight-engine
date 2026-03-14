@@ -136,9 +136,21 @@ def extract_transcript_whisper(video_url: str, model_size: str = 'base') -> str 
 
 
 def _cleanup_file(path: str) -> None:
-    """임시 파일을 안전하게 삭제합니다."""
+    """임시 파일 및 yt-dlp 관련 파생 파일을 안전하게 삭제합니다."""
+    if not path:
+        return
+    # 기본 파일 삭제
     try:
-        if path and os.path.exists(path):
+        if os.path.exists(path):
             os.remove(path)
     except OSError as e:
         logger.warning("임시 파일 삭제 실패: %s (%s)", path, str(e))
+    # yt-dlp가 생성하는 중간 파일 정리 (.part, .ytdl, 확장자 없는 원본 등)
+    base = os.path.splitext(path)[0]
+    for suffix in ('', '.part', '.ytdl', '.webm', '.m4a', '.mp3', '.opus', '.temp'):
+        candidate = base + suffix
+        try:
+            if candidate != path and os.path.exists(candidate):
+                os.remove(candidate)
+        except OSError:
+            pass

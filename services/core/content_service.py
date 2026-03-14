@@ -477,12 +477,29 @@ def _parse_timedtext_xml(xml_text: str) -> str:
     return " ".join(filter(None, texts))
 
 
+def _is_safe_caption_url(url: str) -> bool:
+    """자막 URL이 YouTube 도메인인지 검증합니다 (SSRF 방지)."""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return False
+        host = (parsed.hostname or '').lower()
+        return host.endswith('.youtube.com') or host.endswith('.google.com') or host.endswith('.googlevideo.com')
+    except Exception:
+        return False
+
+
 def _download_caption_from_url(base_url: str) -> str:
     """자막 URL에서 자막을 다운로드합니다.
 
     P2 버그 #8: 타임아웃 상수 사용 및 예외 처리 강화
     """
     if not isinstance(base_url, str) or not base_url:
+        return ""
+
+    if not _is_safe_caption_url(base_url):
+        _log_warning(f"안전하지 않은 자막 URL 차단: {base_url[:60]}")
         return ""
 
     url = base_url
@@ -495,7 +512,8 @@ def _download_caption_from_url(base_url: str) -> str:
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT))
+        response = requests.get(url, headers=headers, timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT),
+                                allow_redirects=False)
         response.raise_for_status()
         text = response.text or ""
 
