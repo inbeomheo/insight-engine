@@ -99,7 +99,7 @@ export const SnippetLibrary = memo(function SnippetLibrary() {
                     <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{snippet.content}</p>
                   </div>
                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleCopy(snippet)}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCopy(snippet)}>
                       {copiedId === snippet.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                     </Button>
                     <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => removeSnippet(snippet.id)}>

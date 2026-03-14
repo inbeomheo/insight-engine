@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { FileEdit, Star, Bookmark, Brain, Rocket } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +13,12 @@ import { toast } from 'sonner';
 import { createTemplate } from '@/lib/api';
 
 const ICON_OPTIONS = ['edit_note', 'star', 'bookmark', 'psychology', 'rocket_launch'];
-const ICON_EMOJIS: Record<string, string> = {
-  edit_note: '📝',
-  star: '⭐',
-  bookmark: '🔖',
-  psychology: '🧠',
-  rocket_launch: '🚀',
+const ICON_LABELS: Record<string, string> = {
+  edit_note: '편집',
+  star: '별',
+  bookmark: '북마크',
+  psychology: '분석',
+  rocket_launch: '로켓',
 };
 
 export default function CustomStyleModal() {
@@ -131,7 +132,10 @@ export default function CustomStyleModal() {
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  {ICON_EMOJIS[ic]}
+                  {(() => {
+                    const icons: Record<string, React.ElementType> = { edit_note: FileEdit, star: Star, bookmark: Bookmark, psychology: Brain, rocket_launch: Rocket };
+                    const I = icons[ic]; return I ? <I className="h-5 w-5 mx-auto" /> : <span>{ICON_LABELS[ic]}</span>;
+                  })()}
                 </button>
               ))}
             </div>

@@ -40,10 +40,10 @@ export default function SocialCardPreview({ title, description }: SocialCardPrev
       <div className="px-3 py-2 flex items-center justify-between">
         <span className="text-xs text-muted-foreground truncate">OG 이미지 · 1200×630</span>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy} title="URL 복사">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy} title="URL 복사">
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" asChild title="새 탭에서 보기">
+          <Button variant="ghost" size="icon" className="h-8 w-8" asChild title="새 탭에서 보기">
             <a href={ogUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3.5 w-3.5" />
             </a>

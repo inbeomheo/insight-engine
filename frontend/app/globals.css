@@ -97,6 +97,32 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
   }
+
+  /* 인터랙티브 요소에 cursor-pointer 자동 적용 */
+  button,
+  [role="button"],
+  a,
+  summary,
+  select,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  input[type="button"] {
+    cursor: pointer;
+  }
+}
+
+/* prefers-reduced-motion 지원 — 모션 감소 설정 시 애니메이션 비활성화 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 마크다운 콘텐츠 스타일 (Notion/Linear 스타일) */

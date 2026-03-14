@@ -112,18 +112,9 @@ export default function Home() {
     setVisibleCount(INITIAL_RENDER_COUNT);
   }, [searchQuery, styleFilter]);
 
-  useEffect(() => {
-    if (visibleCount >= deferredFiltered.length) return;
-    // Safari 호환 폴리필 (requestIdleCallback 미지원)
-    const rIC = typeof requestIdleCallback === 'function'
-      ? requestIdleCallback
-      : (cb: IdleRequestCallback, _opts?: IdleRequestOptions) => setTimeout(cb, 1) as unknown as number;
-    const cIC = typeof cancelIdleCallback === 'function' ? cancelIdleCallback : (id: number) => clearTimeout(id);
-    const id = rIC(() => {
-      setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
-    }, { timeout: 200 });
-    return () => cIC(id);
-  }, [visibleCount, deferredFiltered.length]);
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
+  }, [deferredFiltered.length]);
 
   // 도움말 패널 + 가이드 투어
   const [helpOpen, setHelpOpen] = useState(false);
@@ -396,9 +387,15 @@ export default function Home() {
                 ))}
                 {visibleCount < deferredFiltered.length && (
                   <div className="text-center py-4">
-                    <p className="text-xs text-muted-foreground">
-                      {deferredFiltered.length - visibleCount}개 카드 로딩 중...
-                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleLoadMore}
+                      className="gap-2 text-xs"
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      더 보기 ({deferredFiltered.length - visibleCount}개 남음)
+                    </Button>
                   </div>
                 )}
 

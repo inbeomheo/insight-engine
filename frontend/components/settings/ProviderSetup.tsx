@@ -8,15 +8,15 @@ import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Circle } from 'lucide-reac
 import { validateProvider } from '@/lib/api';
 import type { ProviderInfo } from '@/lib/types';
 
-// 프로바이더별 아이콘/이모지 매핑
-const PROVIDER_ICONS: Record<string, string> = {
-  gemini: '✨',
-  deepseek: '🔍',
-  zhipuai: '🧠',
-  ollama: '🦙',
-  openrouter: '🌐',
-  openai: '🤖',
-  anthropic: '🔮',
+// 프로바이더별 라벨 (SVG 아이콘 대신 텍스트 약어)
+const PROVIDER_LABELS: Record<string, string> = {
+  gemini: 'G',
+  deepseek: 'DS',
+  zhipuai: 'ZH',
+  ollama: 'OL',
+  openrouter: 'OR',
+  openai: 'AI',
+  anthropic: 'AN',
 };
 
 type ValidationStatus = 'untested' | 'testing' | 'valid' | 'invalid';
@@ -119,7 +119,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
               <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent-primary)] text-xs font-bold text-white">
                 {idx + 1}
               </span>
-              <span>{PROVIDER_ICONS[id] || '🔗'}</span>
+              <span>{PROVIDER_LABELS[id] || 'AI'}</span>
               <span>{providers[id].name}</span>
               {statusIcon(states[id]?.status ?? 'untested')}
             </li>
@@ -141,7 +141,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">{PROVIDER_ICONS[id] || '🔗'}</span>
+                  <span className="text-lg">{PROVIDER_LABELS[id] || 'AI'}</span>
                   <span className="text-sm font-medium text-[var(--text-primary)]">
                     {provider.name}
                   </span>

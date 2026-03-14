@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, memo } from 'react';
-import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays } from 'lucide-react';
+import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useIsClient } from '@/hooks/useIsClient';
 import WorkspaceSelector from './WorkspaceSelector';
 
 /** 히스토리 항목 — memo로 불필요한 리렌더 방지 */
@@ -65,7 +66,9 @@ export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId, activeView, setActiveView } = useUIStore();
   const reports = useResultStore((s) => s.reports);
   const removeReport = useResultStore((s) => s.removeReport);
+  const clearReports = useResultStore((s) => s.clearReports);
   const isMobile = useIsMobile();
+  const isClient = useIsClient();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
@@ -178,7 +181,7 @@ export default function Sidebar() {
         </div>
 
         {/* 히스토리 */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="px-3 py-12 text-center">
               <div className="w-10 h-10 mx-auto mb-3 bg-accent rounded-xl flex items-center justify-center">
@@ -210,8 +213,8 @@ export default function Sidebar() {
           )}
         </ScrollArea>
 
-        {/* 캘린더 바로가기 */}
-        <div className="px-3 pb-2">
+        {/* 전체 삭제 + 캘린더 */}
+        <div className="px-3 pb-2 flex flex-col gap-1">
           <Button
             variant={activeView === 'calendar' ? 'secondary' : 'ghost'}
             className="w-full justify-start gap-2 h-9 text-xs"
@@ -223,6 +226,21 @@ export default function Sidebar() {
             <CalendarDays className="h-4 w-4" />
             {t('sidebar.calendar')}
           </Button>
+          {isClient && reports.length > 0 && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 h-9 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/5"
+              onClick={() => {
+                if (window.confirm('모든 히스토리를 삭제하시겠습니까?')) {
+                  clearReports();
+                  setActiveReportId(null);
+                }
+              }}
+            >
+              <Eraser className="h-4 w-4" />
+              전체 삭제 ({reports.length})
+            </Button>
+          )}
         </div>
 
         {/* 하단 브랜딩 */}

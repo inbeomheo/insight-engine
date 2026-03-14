@@ -117,7 +117,7 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
                       style={{ height: `${height}%` }}
                       title={`${d.date}: ${d.count}건`}
                     />
-                    <span className="text-[10px] text-zinc-400">{d.date.slice(5)}</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{d.date.slice(5)}</span>
                   </div>
                 );
               })}

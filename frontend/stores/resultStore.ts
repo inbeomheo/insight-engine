@@ -70,7 +70,11 @@ export const useResultStore = create<ResultState>((set, get) => ({
   pinnedIds: new Set<string>(),
 
   addReport: (r) => {
-    const next = [r, ...get().reports];
+    const MAX_REPORTS = 20;
+    let next = [r, ...get().reports];
+    if (next.length > MAX_REPORTS) {
+      next = next.slice(0, MAX_REPORTS);
+    }
     if (!debouncedSave(next)) {
       toast.warning('저장 공간이 부족합니다. 오래된 결과를 삭제해주세요.');
     }

@@ -39,10 +39,10 @@ export default function SlidePreview({ html, title = '슬라이드' }: SlidePrev
       <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border/30">
         <span className="text-sm font-medium text-foreground/80 truncate">{title}</span>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDownload} title="HTML 다운로드">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDownload} title="HTML 다운로드">
             <Download className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleFullscreen} title={fullscreen ? '축소' : '전체화면'}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={fullscreen ? '축소' : '전체화면'}>
             {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           </Button>
         </div>

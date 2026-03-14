@@ -1,5 +1,6 @@
 'use client';
 
+import { Rocket, FileText, Smartphone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { CampaignPack } from '@/lib/types';
 
@@ -21,11 +22,11 @@ const STYLE_LABELS: Record<string, string> = {
   course: 'AI 코스',
 };
 
-// 팩 ID → 아이콘
-const PACK_ICONS: Record<string, string> = {
-  full: '🚀',
-  blog_focused: '📝',
-  social: '📱',
+// 팩 ID → 아이콘 컴포넌트
+const PACK_ICONS: Record<string, React.ElementType> = {
+  full: Rocket,
+  blog_focused: FileText,
+  social: Smartphone,
 };
 
 interface CampaignPackSelectorProps {
@@ -64,7 +65,7 @@ export default function CampaignPackSelector({
               }`}
             >
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-base">{PACK_ICONS[packId] || '📦'}</span>
+                {(() => { const Icon = PACK_ICONS[packId]; return Icon ? <Icon className="h-4 w-4 text-primary" /> : <Rocket className="h-4 w-4 text-muted-foreground" />; })()}
                 <span className="text-sm font-semibold text-[var(--text-primary)]">
                   {pack.name}
                 </span>
