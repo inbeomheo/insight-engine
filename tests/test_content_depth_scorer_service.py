@@ -1,6 +1,6 @@
 """Content Depth Scorer 서비스 테스트."""
 import unittest
-from services.content_depth_scorer_service import score_content_depth
+from services.analysis.content_depth_scorer_service import score_content_depth
 
 
 class TestContentDepthScorer(unittest.TestCase):

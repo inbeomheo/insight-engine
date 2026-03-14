@@ -10,10 +10,10 @@ import base64
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.infographic_service import generate_infographic, _extract_key_points, _extract_stats
-from services.card_news_service import generate_card_news, _split_content_to_points
-from services.summary_card_service import generate_summary_card
-from services.code_image_service import generate_code_image
+from services.media.infographic_service import generate_infographic, _extract_key_points, _extract_stats
+from services.media.card_news_service import generate_card_news, _split_content_to_points
+from services.content.summary_card_service import generate_summary_card
+from services.media.code_image_service import generate_code_image
 
 
 SAMPLE_CONTENT = """
@@ -167,7 +167,7 @@ class TestThumbnailService(unittest.TestCase):
     @patch('services.thumbnail_service.IMAGE_GEN_API_KEY', '')
     def test_no_api_key(self):
         """API 키 없을 때 에러"""
-        from services.thumbnail_service import generate_thumbnail
+        from services.media.thumbnail_service import generate_thumbnail
         result = generate_thumbnail('테스트')
         self.assertFalse(result['success'])
         self.assertIn('API 키', result['error'])
@@ -177,20 +177,20 @@ class TestThumbnailService(unittest.TestCase):
     def test_successful_generation(self, mock_gen):
         """정상 생성"""
         mock_gen.return_value = b'\x89PNG_fake_image_data'
-        from services.thumbnail_service import generate_thumbnail
+        from services.media.thumbnail_service import generate_thumbnail
         result = generate_thumbnail('테스트 제목', ['키워드1'])
         self.assertTrue(result['success'])
         self.assertIn('image_base64', result)
 
     def test_empty_title(self):
         """빈 제목"""
-        from services.thumbnail_service import generate_thumbnail
+        from services.media.thumbnail_service import generate_thumbnail
         result = generate_thumbnail('')
         self.assertFalse(result['success'])
 
     def test_build_image_prompt(self):
         """프롬프트 생성"""
-        from services.thumbnail_service import _build_image_prompt
+        from services.media.thumbnail_service import _build_image_prompt
         prompt = _build_image_prompt('AI 튜토리얼', ['파이썬', '머신러닝'])
         self.assertIn('AI', prompt)
         self.assertIn('thumbnail', prompt.lower())
@@ -201,20 +201,20 @@ class TestImageGenService(unittest.TestCase):
 
     def test_invalid_size(self):
         """잘못된 이미지 크기"""
-        from services.image_gen_service import generate_image
+        from services.media.image_gen_service import generate_image
         with self.assertRaises(ValueError):
             generate_image('test', size='999x999')
 
     @patch('services.image_gen_service.IMAGE_GEN_API_KEY', '')
     def test_no_api_key_raises(self):
         """API 키 없을 때 ValueError"""
-        from services.image_gen_service import generate_image
+        from services.media.image_gen_service import generate_image
         with self.assertRaises(ValueError):
             generate_image('test')
 
     def test_invalid_provider(self):
         """지원하지 않는 프로바이더"""
-        import services.image_gen_service as svc
+        import services.media.image_gen_service as svc
         original = svc.IMAGE_GEN_PROVIDER
         svc.IMAGE_GEN_API_KEY = 'fake-key'
         svc.IMAGE_GEN_PROVIDER = 'invalid_provider'

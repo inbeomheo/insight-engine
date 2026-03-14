@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.whisper_service import (
+from services.transcript.whisper_service import (
     _cleanup_file,
     download_audio,
     transcribe_audio,
@@ -42,7 +42,7 @@ class TestDownloadAudio(unittest.TestCase):
         """yt-dlp 미설치 → None"""
         # yt_dlp import 실패 시뮬레이션
         import importlib
-        import services.whisper_service as ws
+        import services.transcript.whisper_service as ws
         with patch.object(ws, 'download_audio', wraps=ws.download_audio):
             # 직접 ImportError를 시뮬레이션
             with patch('builtins.__import__', side_effect=ImportError('no yt_dlp')):

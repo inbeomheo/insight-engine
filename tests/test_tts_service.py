@@ -1,7 +1,7 @@
 """tts_service 단위 테스트 (내부 함수 위주)"""
 import unittest
 
-from services.tts_service import (
+from services.media.tts_service import (
     preprocess_for_tts,
     _split_text,
     OPENAI_VOICES,

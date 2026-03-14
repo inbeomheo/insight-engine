@@ -1,7 +1,7 @@
 """hook_generator_service 단위 테스트"""
 import unittest
 
-from services.hook_generator_service import (
+from services.content.hook_generator_service import (
     generate_hooks,
     _extract_stats,
     _rate_effectiveness,

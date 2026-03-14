@@ -65,7 +65,7 @@ class TestParseQualityJson(unittest.TestCase):
 
     def test_parse_clean_json(self):
         """순수 JSON 파싱"""
-        from services.quality_service import _parse_quality_json
+        from services.quality.quality_service import _parse_quality_json
         raw = '{"accuracy": 8, "coherence": 7, "readability": 9, "usefulness": 6, "overall": 7.5, "grade": "B", "feedback": "좋음"}'
         result = _parse_quality_json(raw)
         self.assertIsNotNone(result)
@@ -73,7 +73,7 @@ class TestParseQualityJson(unittest.TestCase):
 
     def test_parse_json_in_code_block(self):
         """```json ... ``` 블록 내 JSON 파싱"""
-        from services.quality_service import _parse_quality_json
+        from services.quality.quality_service import _parse_quality_json
         raw = '```json\n{"accuracy": 8, "coherence": 7, "readability": 9, "usefulness": 6, "overall": 7.5, "grade": "B", "feedback": "좋음"}\n```'
         result = _parse_quality_json(raw)
         self.assertIsNotNone(result)
@@ -81,14 +81,14 @@ class TestParseQualityJson(unittest.TestCase):
 
     def test_parse_json_with_surrounding_text(self):
         """전후 텍스트가 있는 JSON 파싱"""
-        from services.quality_service import _parse_quality_json
+        from services.quality.quality_service import _parse_quality_json
         raw = '평가 결과:\n{"accuracy": 5, "coherence": 5, "readability": 5, "usefulness": 5, "overall": 5.0, "grade": "C", "feedback": "보통"}\n감사합니다.'
         result = _parse_quality_json(raw)
         self.assertIsNotNone(result)
 
     def test_parse_invalid_json_returns_none(self):
         """잘못된 JSON은 None 반환"""
-        from services.quality_service import _parse_quality_json
+        from services.quality.quality_service import _parse_quality_json
         result = _parse_quality_json('이것은 JSON이 아닙니다')
         self.assertIsNone(result)
 
@@ -109,14 +109,14 @@ class TestValidateQualityResult(unittest.TestCase):
 
     def test_valid_data_passes(self):
         """유효한 데이터는 통과"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = self._make_valid_data()
         result = _validate_quality_result(data)
         self.assertEqual(result['grade'], 'B')
 
     def test_overall_recalculated(self):
         """overall이 LLM 오류 값이어도 재계산됨"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = self._make_valid_data(accuracy=8, coherence=8, readability=8, usefulness=8)
         data['overall'] = 99  # 잘못된 값
         result = _validate_quality_result(data)
@@ -124,28 +124,28 @@ class TestValidateQualityResult(unittest.TestCase):
 
     def test_grade_a_threshold(self):
         """overall 8.0 이상 → A등급"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = self._make_valid_data(accuracy=8, coherence=8, readability=9, usefulness=9)
         result = _validate_quality_result(data)
         self.assertEqual(result['grade'], 'A')
 
     def test_grade_d_threshold(self):
         """overall 4.0 미만 → D등급"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = self._make_valid_data(accuracy=2, coherence=3, readability=3, usefulness=2)
         result = _validate_quality_result(data)
         self.assertEqual(result['grade'], 'D')
 
     def test_missing_key_raises_error(self):
         """필수 키 누락 시 ValueError"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = {'accuracy': 8, 'coherence': 7}  # 나머지 키 없음
         with self.assertRaises(ValueError):
             _validate_quality_result(data)
 
     def test_score_out_of_range_raises_error(self):
         """점수 범위(1~10) 초과 시 ValueError"""
-        from services.quality_service import _validate_quality_result
+        from services.quality.quality_service import _validate_quality_result
         data = self._make_valid_data(accuracy=11)  # 10 초과
         with self.assertRaises(ValueError):
             _validate_quality_result(data)
@@ -159,23 +159,23 @@ class TestShouldRegenerate(unittest.TestCase):
 
     def test_grade_d_below_c_threshold(self):
         """D등급은 C 기준 미달 → True"""
-        from services.quality_service import should_regenerate
+        from services.quality.quality_service import should_regenerate
         self.assertTrue(should_regenerate(self._make_quality('D'), 'C'))
 
     def test_grade_c_meets_c_threshold(self):
         """C등급은 C 기준 충족 → False"""
-        from services.quality_service import should_regenerate
+        from services.quality.quality_service import should_regenerate
         self.assertFalse(should_regenerate(self._make_quality('C'), 'C'))
 
     def test_grade_a_meets_all_thresholds(self):
         """A등급은 모든 기준 충족 → False"""
-        from services.quality_service import should_regenerate
+        from services.quality.quality_service import should_regenerate
         for threshold in ('A', 'B', 'C', 'D'):
             self.assertFalse(should_regenerate(self._make_quality('A'), threshold))
 
     def test_grade_b_below_a_threshold(self):
         """B등급은 A 기준 미달 → True"""
-        from services.quality_service import should_regenerate
+        from services.quality.quality_service import should_regenerate
         self.assertTrue(should_regenerate(self._make_quality('B'), 'A'))
 
 
@@ -209,7 +209,7 @@ class TestEvaluateQuality(unittest.TestCase):
         mock_completion.return_value = self._make_mock_response('B', 7.0)
 
         with self._make_app_context():
-            from services.quality_service import evaluate_quality
+            from services.quality.quality_service import evaluate_quality
             result = evaluate_quality(
                 content='테스트 콘텐츠입니다.',
                 source_summary='테스트 자막 요약',
@@ -224,7 +224,7 @@ class TestEvaluateQuality(unittest.TestCase):
     def test_evaluate_quality_no_model_raises(self, mock_eval_model):
         """사용 가능한 모델 없으면 예외 발생"""
         with self._make_app_context():
-            from services.quality_service import evaluate_quality
+            from services.quality.quality_service import evaluate_quality
             with self.assertRaises(Exception) as ctx:
                 evaluate_quality('content', 'summary')
             self.assertIn('모델', str(ctx.exception))
@@ -262,7 +262,7 @@ class TestAutoRegenerate(unittest.TestCase):
             with patch('services.quality_service.evaluate_quality') as mock_eval:
                 mock_eval.return_value = self._make_quality('B', 7.0)
 
-                from services.quality_service import auto_regenerate
+                from services.quality.quality_service import auto_regenerate
                 result, quality = auto_regenerate(content_fn, '자막 요약', quality_threshold='C')
 
         self.assertEqual(call_count['n'], 1)
@@ -287,7 +287,7 @@ class TestAutoRegenerate(unittest.TestCase):
             with patch('services.quality_service.evaluate_quality') as mock_eval:
                 mock_eval.side_effect = qualities
 
-                from services.quality_service import auto_regenerate
+                from services.quality.quality_service import auto_regenerate
                 result, quality = auto_regenerate(
                     content_fn, '자막 요약', quality_threshold='C', max_retries=1
                 )
@@ -313,7 +313,7 @@ class TestAutoRegenerate(unittest.TestCase):
             with patch('services.quality_service.evaluate_quality') as mock_eval:
                 mock_eval.side_effect = qualities
 
-                from services.quality_service import auto_regenerate
+                from services.quality.quality_service import auto_regenerate
                 result, quality = auto_regenerate(
                     content_fn, '자막 요약', quality_threshold='A', max_retries=1
                 )

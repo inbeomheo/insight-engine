@@ -6,7 +6,7 @@ from flask import request, jsonify, g
 
 from routes.blog_routes import blog_bp
 from utils.responses import success_response, error_response
-from services.supabase_service import require_auth, is_supabase_enabled
+from services.data.supabase_service import require_auth, is_supabase_enabled
 
 
 # =============================================
@@ -216,7 +216,7 @@ def get_my_usage():
 @require_auth
 def get_referral_info():
     """내 추천 정보 (코드, 추천 횟수, 적립 크레딧)"""
-    from services.referral_service import referral_service
+    from services.platform.referral_service import referral_service
     info = referral_service.get_referral_info(g.user_id)
     return jsonify(info)
 
@@ -225,7 +225,7 @@ def get_referral_info():
 @require_auth
 def apply_referral():
     """추천 코드 적용"""
-    from services.referral_service import referral_service
+    from services.platform.referral_service import referral_service
 
     data = request.get_json(silent=True) or {}
     code = data.get('code', '').strip()
@@ -246,7 +246,7 @@ def apply_referral():
 @require_auth
 def list_api_keys():
     """사용자 API 키 목록"""
-    from services.api_key_service import api_key_service
+    from services.data.api_key_service import api_key_service
     keys = api_key_service.list_keys(g.user_id)
     return jsonify({'keys': keys})
 
@@ -255,7 +255,7 @@ def list_api_keys():
 @require_auth
 def create_api_key():
     """새 API 키 발급"""
-    from services.api_key_service import api_key_service
+    from services.data.api_key_service import api_key_service
 
     data = request.get_json(silent=True) or {}
     name = data.get('name', 'default').strip()
@@ -272,7 +272,7 @@ def create_api_key():
 @require_auth
 def revoke_api_key(key_id):
     """API 키 비활성화"""
-    from services.api_key_service import api_key_service
+    from services.data.api_key_service import api_key_service
 
     if api_key_service.revoke_key(g.user_id, key_id):
         return success_response()

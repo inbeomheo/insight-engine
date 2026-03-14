@@ -194,7 +194,7 @@ class TestExtractSegmentsFromTranscript:
 
     def test_dict_format(self):
         """딕셔너리 형식의 자막 세그먼트 처리"""
-        from services.content_service import _extract_segments_from_transcript
+        from services.core.content_service import _extract_segments_from_transcript
 
         class MockFetched:
             def __iter__(self):
@@ -211,7 +211,7 @@ class TestExtractSegmentsFromTranscript:
 
     def test_object_format(self):
         """객체 속성 형식의 자막 세그먼트 처리"""
-        from services.content_service import _extract_segments_from_transcript
+        from services.core.content_service import _extract_segments_from_transcript
 
         class Snippet:
             def __init__(self, start, text, duration):
@@ -233,7 +233,7 @@ class TestExtractSegmentsFromTranscript:
 
     def test_empty_text_skipped(self):
         """빈 텍스트 세그먼트는 무시"""
-        from services.content_service import _extract_segments_from_transcript
+        from services.core.content_service import _extract_segments_from_transcript
 
         class MockFetched:
             def __iter__(self):
@@ -248,7 +248,7 @@ class TestExtractSegmentsFromTranscript:
 
     def test_empty_fetched(self):
         """빈 자막 객체"""
-        from services.content_service import _extract_segments_from_transcript
+        from services.core.content_service import _extract_segments_from_transcript
 
         class MockFetched:
             def __iter__(self):
@@ -264,11 +264,11 @@ class TestFormatTranscriptWithTimestamps:
     """format_transcript_with_timestamps 함수 테스트"""
 
     def test_empty_segments(self):
-        from services.ai_service import format_transcript_with_timestamps
+        from services.core.ai_service import format_transcript_with_timestamps
         assert format_transcript_with_timestamps([]) == ""
 
     def test_basic_segments(self):
-        from services.ai_service import format_transcript_with_timestamps
+        from services.core.ai_service import format_transcript_with_timestamps
         segments = [
             {'start': 0.0, 'text': '안녕하세요', 'duration': 3.0},
             {'start': 125.0, 'text': '주요 내용', 'duration': 5.0},
@@ -280,7 +280,7 @@ class TestFormatTranscriptWithTimestamps:
         assert "주요 내용" in result
 
     def test_none_segments(self):
-        from services.ai_service import format_transcript_with_timestamps
+        from services.core.ai_service import format_transcript_with_timestamps
         assert format_transcript_with_timestamps(None) == ""
 
 

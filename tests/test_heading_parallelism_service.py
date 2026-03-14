@@ -5,7 +5,7 @@
 """
 import unittest
 
-from services.heading_parallelism_service import check_heading_parallelism
+from services.analysis.heading_parallelism_service import check_heading_parallelism
 
 
 class TestHeadingParallelism(unittest.TestCase):

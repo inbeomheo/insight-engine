@@ -1,6 +1,6 @@
 """Word Frequency Cloud Generator 서비스 테스트."""
 import unittest
-from services.word_frequency_cloud_service import generate_word_frequency
+from services.media.word_frequency_cloud_service import generate_word_frequency
 
 
 class TestWordFrequencyCloud(unittest.TestCase):

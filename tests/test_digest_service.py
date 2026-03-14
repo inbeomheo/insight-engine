@@ -3,7 +3,7 @@ DigestService 단위 테스트 (F6-23)
 """
 import unittest
 from datetime import datetime, timezone, timedelta
-from services.digest_service import DigestService
+from services.content.digest_service import DigestService
 
 
 class TestDigestService(unittest.TestCase):

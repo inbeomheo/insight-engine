@@ -5,7 +5,7 @@ Checkout Session 생성, Webhook 처리
 import os
 from typing import Optional
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('StripeService')
 

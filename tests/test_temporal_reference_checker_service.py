@@ -1,6 +1,6 @@
 """Temporal Reference Checker 서비스 테스트."""
 import unittest
-from services.temporal_reference_checker_service import check_temporal_references
+from services.analysis.temporal_reference_checker_service import check_temporal_references
 
 
 class TestTemporalReferenceChecker(unittest.TestCase):

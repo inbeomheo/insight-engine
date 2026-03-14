@@ -1,7 +1,7 @@
 """cta_optimizer_service 단위 테스트"""
 import unittest
 
-from services.cta_optimizer_service import (
+from services.seo.cta_optimizer_service import (
     analyze_ctas,
     suggest_ctas,
     _detect_cta_type,

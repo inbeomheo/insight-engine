@@ -6,12 +6,12 @@ from unittest.mock import patch
 class TestAddCommentary(unittest.TestCase):
 
     def test_empty_content_raises(self):
-        from services.commentary_service import add_commentary
+        from services.content.commentary_service import add_commentary
         with self.assertRaises(ValueError):
             add_commentary("")
 
     def test_whitespace_raises(self):
-        from services.commentary_service import add_commentary
+        from services.content.commentary_service import add_commentary
         with self.assertRaises(ValueError):
             add_commentary("   ")
 
@@ -27,7 +27,7 @@ class TestAddCommentary(unittest.TestCase):
         )
         mock_create.return_value = {'content': commented_text}
 
-        from services.commentary_service import add_commentary
+        from services.content.commentary_service import add_commentary
         result = add_commentary("인공지능은 머신러닝을 기반으로 합니다.")
         self.assertIn("commented_content", result)
         self.assertEqual(result["comment_count"], 2)
@@ -36,7 +36,7 @@ class TestAddCommentary(unittest.TestCase):
     @patch('services.ai_service.create_content')
     def test_no_comments_added(self, mock_create, mock_model):
         mock_create.return_value = {'content': '원본 그대로 반환'}
-        from services.commentary_service import add_commentary
+        from services.content.commentary_service import add_commentary
         result = add_commentary("원본 텍스트")
         self.assertEqual(result["comment_count"], 0)
 
@@ -44,7 +44,7 @@ class TestAddCommentary(unittest.TestCase):
     @patch('services.ai_service.create_content')
     def test_empty_response_fallback(self, mock_create, mock_model):
         mock_create.return_value = {'content': ''}
-        from services.commentary_service import add_commentary
+        from services.content.commentary_service import add_commentary
         result = add_commentary("원본 텍스트")
         # 빈 응답 시 원본 반환
         self.assertEqual(result["commented_content"], "원본 텍스트")

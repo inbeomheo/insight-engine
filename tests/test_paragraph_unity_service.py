@@ -1,6 +1,6 @@
 """Paragraph Unity Checker 서비스 테스트."""
 import unittest
-from services.paragraph_unity_service import check_paragraph_unity
+from services.analysis.paragraph_unity_service import check_paragraph_unity
 
 
 class TestParagraphUnity(unittest.TestCase):

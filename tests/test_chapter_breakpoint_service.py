@@ -1,6 +1,6 @@
 """Chapter Breakpoint Detector 서비스 테스트."""
 import unittest
-from services.chapter_breakpoint_service import detect_chapter_breakpoints
+from services.transcript.chapter_breakpoint_service import detect_chapter_breakpoints
 
 
 class TestChapterBreakpointDetector(unittest.TestCase):

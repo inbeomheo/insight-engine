@@ -7,7 +7,8 @@ import re as re_module
 from flask import request, jsonify, current_app, send_file
 
 from routes.blog_routes import blog_bp
-from services.supabase_service import require_auth
+from services.data.supabase_service import require_auth
+from utils.responses import handle_error
 
 
 @blog_bp.route('/api/export/docx', methods=['POST'])
@@ -202,7 +203,7 @@ def export_epub():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.epub_service import create_epub
+        from services.export.epub_service import create_epub
         epub_bytes = create_epub(title, content, author)
 
         buffer = io.BytesIO(epub_bytes)
@@ -233,7 +234,7 @@ def export_markdown():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.export_service import export_markdown as _export_md
+        from services.export.export_service import export_markdown as _export_md
         buffer = _export_md(title, content)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
@@ -254,7 +255,7 @@ def export_txt():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.export_service import export_txt as _export_txt
+        from services.export.export_service import export_txt as _export_txt
         buffer = _export_txt(title, content)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
@@ -275,7 +276,7 @@ def export_zip():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.export_service import export_zip as _export_zip
+        from services.export.export_service import export_zip as _export_zip
         buffer = _export_zip(title, content)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
@@ -298,7 +299,7 @@ def export_slides():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.slide_service import convert_to_slides
+        from services.media.slide_service import convert_to_slides
         html = convert_to_slides(content, theme)
 
         buf = io.BytesIO(html.encode('utf-8'))
@@ -308,7 +309,7 @@ def export_slides():
         return send_file(buf, mimetype='text/html', as_attachment=True, download_name=f'{safe_title}.html')
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Slide export failed: {e}")
         return jsonify({'error': '슬라이드 변환 중 오류가 발생했습니다.'}), 500
@@ -367,7 +368,7 @@ def export_infographic():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.infographic_service import generate_infographic
+        from services.media.infographic_service import generate_infographic
         html_content = generate_infographic(content, title)
 
         buffer = io.BytesIO(html_content.encode('utf-8'))
@@ -393,7 +394,7 @@ def export_card_news():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.card_news_service import generate_card_news
+        from services.media.card_news_service import generate_card_news
         cards = generate_card_news(content, title)
         if not cards:
             return jsonify({'error': '카드뉴스로 변환할 포인트가 없습니다.'}), 400
@@ -424,7 +425,7 @@ def export_summary_card():
         if not key_points:
             return jsonify({'error': '핵심 포인트가 필요합니다.'}), 400
 
-        from services.summary_card_service import generate_summary_card
+        from services.content.summary_card_service import generate_summary_card
         svg = generate_summary_card(title, key_points)
 
         buffer = io.BytesIO(svg.encode('utf-8'))
@@ -450,7 +451,7 @@ def export_code_image():
         if not code:
             return jsonify({'error': '코드가 필요합니다.'}), 400
 
-        from services.code_image_service import generate_code_image
+        from services.media.code_image_service import generate_code_image
         html_content = generate_code_image(code, language, title)
 
         buffer = io.BytesIO(html_content.encode('utf-8'))
@@ -475,12 +476,12 @@ def export_newsletter_html():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.newsletter_template_service import convert_to_newsletter
+        from services.content.newsletter_template_service import convert_to_newsletter
         html = convert_to_newsletter(content, title)
 
         return jsonify({'success': True, 'html': html})
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Newsletter export failed: {e}")
         return jsonify({'error': '뉴스레터 변환 실패'}), 500
@@ -497,12 +498,12 @@ def export_interactive_report():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
-        from services.interactive_report_service import generate_interactive_report
+        from services.content.interactive_report_service import generate_interactive_report
         html = generate_interactive_report(content, title)
 
         return jsonify({'success': True, 'html': html})
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Interactive report export failed: {e}")
         return jsonify({'error': '인터랙티브 보고서 변환 실패'}), 500

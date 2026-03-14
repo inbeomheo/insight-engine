@@ -2,7 +2,7 @@
 MarketplaceService 단위 테스트 (F4-14)
 """
 import unittest
-from services.marketplace_service import MarketplaceService
+from services.platform.marketplace_service import MarketplaceService
 
 
 class TestMarketplaceService(unittest.TestCase):

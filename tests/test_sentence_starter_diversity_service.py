@@ -1,6 +1,6 @@
 """Sentence Starter Diversity 서비스 테스트."""
 import unittest
-from services.sentence_starter_diversity_service import analyze_sentence_starter_diversity
+from services.analysis.sentence_analysis_service import analyze_sentence_starter_diversity
 
 
 class TestSentenceStarterDiversity(unittest.TestCase):

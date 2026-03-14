@@ -7,11 +7,11 @@ import uuid
 
 from flask import current_app, g, jsonify
 
-from services import ai_service, content_service
-from services.content_service import clear_cache
-from services.supabase_service import save_history
+from services.core import ai_service, content_service
+from services.core.content_service import clear_cache
+from services.data.supabase_service import save_history
 from services.usage.usage_decorator import get_usage_for_response
-from services.webhook_service import WebhookService
+from services.platform.webhook_service import WebhookService
 from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED
 from utils.responses import sanitize_error_for_client
 
@@ -366,7 +366,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     json_ld_schemas = None
     if params['style'] == 'geo_seo':
         try:
-            from services.seo_metadata_service import generate_all_schemas
+            from services.seo.seo_metadata_service import generate_all_schemas
             content_text = result.get('content', '')
             faq_pairs = []
             if faq_schema and faq_schema.get('mainEntity'):
@@ -390,7 +390,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     analysis = None
     if params.get('analyze'):
         try:
-            from services.nlp_analysis_service import analyze_content
+            from services.analysis.nlp_analysis_service import analyze_content
             analysis = analyze_content(result.get('content', ''))
         except Exception as analysis_err:
             current_app.logger.warning(f"NLP 분석 실패 (무시): {analysis_err}")
@@ -412,7 +412,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     if g.user_id:
         try:
             import threading
-            from services.style_memory_service import update_profile as _update_style_profile
+            from services.data.style_memory_service import update_profile as _update_style_profile
             threading.Thread(
                 target=_update_style_profile,
                 args=(g.user_id, {'style': params['style'], 'modifiers': params.get('modifiers')}),
@@ -425,7 +425,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     chapters = []
     if transcript_segments:
         try:
-            from services.chapter_service import split_chapters
+            from services.transcript.chapter_service import split_chapters
             chapters = split_chapters(raw_transcript, model, transcript_segments)
         except Exception as ch_err:
             current_app.logger.warning(f"챕터 분할 실패 (무시): {ch_err}")

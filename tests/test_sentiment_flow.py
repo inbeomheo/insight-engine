@@ -26,7 +26,7 @@ class TestSentimentFlow(unittest.TestCase):
 
     def test_empty_content(self):
         """빈 콘텐츠"""
-        from services.nlp_analysis_service import analyze_sentiment_flow
+        from services.analysis.nlp_analysis_service import analyze_sentiment_flow
         result = analyze_sentiment_flow("")
         self.assertEqual(result['flow'], [])
         self.assertEqual(result['overall_arc'], 'stable')
@@ -37,7 +37,7 @@ class TestSentimentFlow(unittest.TestCase):
         """정상 응답 시 flow 목록 반환"""
         mock_llm.return_value = self._mock_completion(self.MOCK_FLOW_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_sentiment_flow
+        from services.analysis.nlp_analysis_service import analyze_sentiment_flow
         result = analyze_sentiment_flow("인공지능은 미래 기술입니다.")
 
         self.assertEqual(len(result['flow']), 3)
@@ -50,7 +50,7 @@ class TestSentimentFlow(unittest.TestCase):
         """flow 항목 구조 검증"""
         mock_llm.return_value = self._mock_completion(self.MOCK_FLOW_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_sentiment_flow
+        from services.analysis.nlp_analysis_service import analyze_sentiment_flow
         result = analyze_sentiment_flow("테스트")
 
         item = result['flow'][0]
@@ -65,7 +65,7 @@ class TestSentimentFlow(unittest.TestCase):
     @patch('litellm.completion', side_effect=Exception("API 오류"))
     def test_llm_failure_graceful(self, mock_llm, mock_model):
         """LLM 실패 시 빈 결과"""
-        from services.nlp_analysis_service import analyze_sentiment_flow
+        from services.analysis.nlp_analysis_service import analyze_sentiment_flow
         result = analyze_sentiment_flow("테스트")
         self.assertEqual(result['flow'], [])
         self.assertEqual(result['overall_arc'], 'stable')
@@ -75,7 +75,7 @@ class TestParseSentimentFlow(unittest.TestCase):
     """_parse_sentiment_flow 파싱 테스트"""
 
     def setUp(self):
-        from services.nlp_analysis_service import _parse_sentiment_flow
+        from services.analysis.nlp_analysis_service import _parse_sentiment_flow
         self._parse = _parse_sentiment_flow
 
     def test_valid_json(self):

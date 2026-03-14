@@ -1,6 +1,6 @@
 """Gender-Neutral Language Checker 서비스 테스트."""
 import unittest
-from services.gender_neutral_language_service import check_gender_neutral
+from services.analysis.gender_neutral_language_service import check_gender_neutral
 
 
 class TestGenderNeutralLanguage(unittest.TestCase):

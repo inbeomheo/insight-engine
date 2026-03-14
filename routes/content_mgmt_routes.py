@@ -8,22 +8,22 @@ import time
 import uuid
 from flask import Blueprint, request, jsonify, Response
 
-from services.supabase_service import require_auth
-from services import content_library_service
-from services import archive_service
-from services import lock_service
-from services import expiry_service
-from services import media_library_service
-from services import custom_field_service
-from services import link_manager_service
-from services import seo_checklist_service
-from services import share_service
-from services import comment_service
-from services import workflow_service
-from services import rbac_service
-from services import backup_service
-from services import data_migration_service
-from services import trash_service
+from services.data.supabase_service import require_auth
+from services.data import content_library_service
+from services.data import archive_service
+from services.data import lock_service
+from services.data import expiry_service
+from services.media import media_library_service
+from services.data import custom_field_service
+from services.seo import link_manager_service
+from services.seo import seo_checklist_service
+from services.platform import share_service
+from services.content import comment_service
+from services.data import workflow_service
+from services.data import rbac_service
+from services.data import backup_service
+from services.data import data_migration_service
+from services.data import trash_service
 
 content_mgmt_bp = Blueprint('content_mgmt', __name__, url_prefix='/api/content')
 

@@ -2,7 +2,7 @@
 import json
 import unittest
 
-from services.nlp_analysis_service import (
+from services.analysis.nlp_analysis_service import (
     _parse_analysis_json, _validate_analysis,
     _parse_sentiment_flow, _EMPTY_ANALYSIS,
 )

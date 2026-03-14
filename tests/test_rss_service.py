@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone, timedelta
 
-from services.rss_service import parse_feed, get_latest_entries, _clean_html, _parse_published_dt
+from services.platform.rss_service import parse_feed, get_latest_entries, _clean_html, _parse_published_dt
 
 
 class TestCleanHtml(unittest.TestCase):

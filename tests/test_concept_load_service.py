@@ -1,6 +1,6 @@
 """Concept Load Analyzer 서비스 테스트."""
 import unittest
-from services.concept_load_service import analyze_concept_load
+from services.analysis.concept_load_service import analyze_concept_load
 
 
 class TestConceptLoad(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Context-Free Extractability Analyzer 서비스 테스트."""
 import unittest
-from services.extractability_analyzer_service import analyze_extractability
+from services.analysis.extractability_analyzer_service import analyze_extractability
 
 
 class TestExtractabilityAnalyzer(unittest.TestCase):

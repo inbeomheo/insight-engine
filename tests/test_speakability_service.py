@@ -3,7 +3,7 @@ Speakability Analyzer 서비스 테스트
 """
 import unittest
 
-from services.speakability_service import analyze_speakability
+from services.analysis.speakability_service import analyze_speakability
 
 
 class TestSpeakabilityService(unittest.TestCase):

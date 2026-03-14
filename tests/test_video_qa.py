@@ -14,20 +14,20 @@ class TestIndexVideoTranscript(unittest.TestCase):
 
     def test_빈_자막은_실패(self):
         """빈 자막 입력 시 False 반환"""
-        from services.video_qa_service import index_video_transcript
+        from services.media.video_qa_service import index_video_transcript
         result = index_video_transcript("test_id", "")
         self.assertFalse(result)
 
     def test_공백만_있는_자막은_실패(self):
         """공백만 있는 자막 입력 시 False 반환"""
-        from services.video_qa_service import index_video_transcript
+        from services.media.video_qa_service import index_video_transcript
         result = index_video_transcript("test_id", "   ")
         self.assertFalse(result)
 
     @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_실패(self):
         """ChromaDB 미설치 시 False 반환"""
-        from services.video_qa_service import index_video_transcript
+        from services.media.video_qa_service import index_video_transcript
         result = index_video_transcript("test_id", "자막 내용")
         self.assertFalse(result)
 
@@ -42,7 +42,7 @@ class TestIndexVideoTranscript(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import index_video_transcript
+            from services.media.video_qa_service import index_video_transcript
             result = index_video_transcript("abc123", "이것은 테스트 자막입니다. " * 50)
 
         self.assertTrue(result)
@@ -59,7 +59,7 @@ class TestIndexVideoTranscript(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import index_video_transcript
+            from services.media.video_qa_service import index_video_transcript
             result = index_video_transcript("abc123", "새로운 자막 내용입니다. " * 50)
 
         self.assertTrue(result)
@@ -72,7 +72,7 @@ class TestIsVideoIndexed(unittest.TestCase):
 
     @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_False(self):
-        from services.video_qa_service import is_video_indexed
+        from services.media.video_qa_service import is_video_indexed
         self.assertFalse(is_video_indexed("test_id"))
 
     @patch("services.video_qa_service._get_chroma_client")
@@ -84,7 +84,7 @@ class TestIsVideoIndexed(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import is_video_indexed
+            from services.media.video_qa_service import is_video_indexed
             self.assertFalse(is_video_indexed("test_id"))
 
     @patch("services.video_qa_service._get_chroma_client")
@@ -96,7 +96,7 @@ class TestIsVideoIndexed(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import is_video_indexed
+            from services.media.video_qa_service import is_video_indexed
             self.assertTrue(is_video_indexed("test_id"))
 
 
@@ -105,7 +105,7 @@ class TestSearchRelevantChunks(unittest.TestCase):
 
     @patch("services.video_qa_service._CHROMA_AVAILABLE", False)
     def test_chromadb_없으면_빈_리스트(self):
-        from services.video_qa_service import search_relevant_chunks
+        from services.media.video_qa_service import search_relevant_chunks
         result = search_relevant_chunks("test_id", "질문")
         self.assertEqual(result, [])
 
@@ -118,7 +118,7 @@ class TestSearchRelevantChunks(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import search_relevant_chunks
+            from services.media.video_qa_service import search_relevant_chunks
             result = search_relevant_chunks("test_id", "질문")
         self.assertEqual(result, [])
 
@@ -140,7 +140,7 @@ class TestSearchRelevantChunks(unittest.TestCase):
         mock_client_fn.return_value = mock_client
 
         with patch("services.video_qa_service._CHROMA_AVAILABLE", True):
-            from services.video_qa_service import search_relevant_chunks
+            from services.media.video_qa_service import search_relevant_chunks
             result = search_relevant_chunks("abc", "테스트 질문", top_k=5)
 
         self.assertEqual(len(result), 2)
@@ -156,7 +156,7 @@ class TestAnswerQuestion(unittest.TestCase):
 
     @patch("services.video_qa_service._LITELLM_AVAILABLE", False)
     def test_litellm_없으면_오류_메시지(self):
-        from services.video_qa_service import answer_question
+        from services.media.video_qa_service import answer_question
         result = answer_question("test_id", "질문")
         self.assertIn("answer", result)
         self.assertIn("sources", result)
@@ -167,7 +167,7 @@ class TestAnswerQuestion(unittest.TestCase):
         """인덱싱이 안 된 상태 — 자막 데이터 없음 안내"""
         mock_search.return_value = []
         with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
-            from services.video_qa_service import answer_question
+            from services.media.video_qa_service import answer_question
             result = answer_question("test_id", "질문")
         self.assertIn("answer", result)
         self.assertIn("찾을 수 없습니다", result["answer"])
@@ -184,7 +184,7 @@ class TestAnswerQuestion(unittest.TestCase):
         mock_completion.return_value = mock_response
 
         with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
-            from services.video_qa_service import answer_question
+            from services.media.video_qa_service import answer_question
             result = answer_question("test_id", "질문", history=[])
 
         self.assertEqual(result["answer"], "테스트 답변입니다.")
@@ -209,7 +209,7 @@ class TestAnswerQuestion(unittest.TestCase):
         ]
 
         with patch("services.video_qa_service._LITELLM_AVAILABLE", True):
-            from services.video_qa_service import answer_question
+            from services.media.video_qa_service import answer_question
             answer_question("test_id", "새 질문", history=history)
 
         # completion에 전달된 messages 확인

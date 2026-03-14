@@ -1,7 +1,7 @@
 """퀴즈 생성 서비스 테스트"""
 
 import unittest
-from services.quiz_generator_service import (
+from services.content.quiz_generator_service import (
     QuizQuestion, Quiz,
     generate_quiz, grade_answer, calculate_results,
     VALID_DIFFICULTIES,

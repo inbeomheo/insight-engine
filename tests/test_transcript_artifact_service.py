@@ -2,7 +2,7 @@
 자막 아티팩트 감지 서비스 테스트
 """
 import unittest
-from services.transcript_artifact_service import detect_transcript_artifacts
+from services.transcript.transcript_artifact_service import detect_transcript_artifacts
 
 
 class TestTranscriptArtifactService(unittest.TestCase):

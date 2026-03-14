@@ -1,6 +1,6 @@
 """List Parallelism Checker 서비스 테스트."""
 import unittest
-from services.list_parallelism_service import check_list_parallelism
+from services.analysis.list_parallelism_service import check_list_parallelism
 
 
 class TestListParallelism(unittest.TestCase):

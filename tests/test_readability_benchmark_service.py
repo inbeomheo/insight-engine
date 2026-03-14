@@ -1,7 +1,7 @@
 """readability_benchmark_service 단위 테스트"""
 import unittest
 
-from services.readability_benchmark_service import (
+from services.analysis.readability_benchmark_service import (
     benchmark_readability,
     get_categories,
     _calculate_metrics,

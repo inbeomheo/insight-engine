@@ -1,6 +1,6 @@
 """Tone Consistency Checker 서비스 테스트."""
 import unittest
-from services.tone_consistency_service import check_tone_consistency
+from services.analysis.tone_consistency_service import check_tone_consistency
 
 
 class TestToneConsistencyChecker(unittest.TestCase):

@@ -12,7 +12,7 @@ class TestRecommendSources(unittest.TestCase):
 
     def test_raises_on_empty_topic(self):
         """빈 주제에서 ValueError 발생"""
-        from services.source_recommender_service import recommend_sources
+        from services.content.source_recommender_service import recommend_sources
 
         with self.assertRaises(ValueError):
             recommend_sources("")
@@ -33,7 +33,7 @@ class TestRecommendSources(unittest.TestCase):
              "source_type": "webpage", "relevance_score": 0.9},
         ]
 
-        from services.source_recommender_service import recommend_sources
+        from services.content.source_recommender_service import recommend_sources
 
         results = recommend_sources("파이썬 웹 개발")
 
@@ -52,7 +52,7 @@ class TestRecommendSources(unittest.TestCase):
              "source_type": "webpage", "relevance_score": 0.9},
         ]
 
-        from services.source_recommender_service import recommend_sources
+        from services.content.source_recommender_service import recommend_sources
 
         results = recommend_sources("테스트 주제")
 
@@ -66,7 +66,7 @@ class TestSearchYoutube(unittest.TestCase):
     @patch.dict("os.environ", {"YOUTUBE_API_KEY": ""})
     def test_returns_empty_without_api_key(self):
         """API 키 없으면 빈 리스트 반환"""
-        from services.source_recommender_service import _search_youtube
+        from services.content.source_recommender_service import _search_youtube
 
         results = _search_youtube("테스트")
         self.assertEqual(results, [])
@@ -91,7 +91,7 @@ class TestSearchYoutube(unittest.TestCase):
             ]
         }
 
-        from services.source_recommender_service import _search_youtube
+        from services.content.source_recommender_service import _search_youtube
 
         results = _search_youtube("파이썬")
         self.assertEqual(len(results), 1)
@@ -115,7 +115,7 @@ class TestSearchWeb(unittest.TestCase):
         ]
         mock_ddgs_cls.return_value = mock_ddgs
 
-        from services.source_recommender_service import _search_web
+        from services.content.source_recommender_service import _search_web
 
         results = _search_web("파이썬 웹 개발")
 
@@ -128,7 +128,7 @@ class TestSearchWeb(unittest.TestCase):
         """검색 오류 시 빈 리스트 반환"""
         mock_ddgs_cls.side_effect = Exception("Search failed")
 
-        from services.source_recommender_service import _search_web
+        from services.content.source_recommender_service import _search_web
 
         results = _search_web("테스트")
         self.assertEqual(results, [])

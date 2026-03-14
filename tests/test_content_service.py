@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 import requests
 
-from services.content_service import (
+from services.core.content_service import (
     SUPADATA_API_URL,
     PREFERRED_LANGUAGES,
     MAX_RETRY_ATTEMPTS,

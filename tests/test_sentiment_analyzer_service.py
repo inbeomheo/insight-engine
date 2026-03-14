@@ -1,7 +1,7 @@
 """sentiment_analyzer_service 단위 테스트"""
 import unittest
 
-from services.sentiment_analyzer_service import (
+from services.analysis.sentiment_analyzer_service import (
     analyze_sentiment,
     _score_paragraph,
 )

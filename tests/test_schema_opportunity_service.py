@@ -4,7 +4,7 @@ Schema Opportunity Finder 서비스 테스트
 import unittest
 import json
 
-from services.schema_opportunity_service import find_schema_opportunities
+from services.seo.schema_opportunity_service import find_schema_opportunities
 
 
 class TestSchemaOpportunityService(unittest.TestCase):

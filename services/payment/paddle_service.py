@@ -5,7 +5,7 @@ Paddle API 연동 (웹훅 검증 + 구독 관리)
 import hashlib
 import hmac
 import os
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('PaddleService')
 

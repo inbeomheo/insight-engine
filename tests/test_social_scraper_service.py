@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 
 import requests
 
-from services.social_scraper_service import (
+from services.platform.social_scraper_service import (
     _make_twitter_title,
     _NITTER_INSTANCES,
     _REDDIT_COMMENT_RE,

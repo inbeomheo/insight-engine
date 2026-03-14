@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.gdocs_service import extract_google_doc, _extract_doc_id
+from services.export.gdocs_service import extract_google_doc, _extract_doc_id
 
 
 class TestExtractDocId(unittest.TestCase):

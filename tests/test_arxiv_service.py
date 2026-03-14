@@ -2,7 +2,7 @@
 import unittest
 from xml.etree import ElementTree
 
-from services.arxiv_service import _ns, _parse_entry, _ATOM_NS, _ARXIV_NS
+from services.data.arxiv_service import _ns, _parse_entry, _ATOM_NS, _ARXIV_NS
 
 
 def _make_entry_xml(

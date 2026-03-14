@@ -1,7 +1,7 @@
 """engagement_scorer_service 단위 테스트"""
 import unittest
 
-from services.engagement_scorer_service import (
+from services.seo.engagement_scorer_service import (
     score_engagement,
 )
 

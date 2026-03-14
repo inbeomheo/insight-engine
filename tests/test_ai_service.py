@@ -11,7 +11,7 @@ class TestBuildModifierInstructions(unittest.TestCase):
 
     def test_empty_modifiers_returns_default_language(self):
         """빈 모디파이어시 기본 언어 지시 반환"""
-        from services.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
+        from services.core.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
 
         result = _build_modifier_instructions(None, {})
 
@@ -19,7 +19,7 @@ class TestBuildModifierInstructions(unittest.TestCase):
 
     def test_with_length_modifier(self):
         """분량 모디파이어 적용"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         style_modifiers = {
             'length': {
@@ -37,7 +37,7 @@ class TestBuildModifierInstructions(unittest.TestCase):
 
     def test_with_writing_style_modifier(self):
         """문체 모디파이어 적용 (v3.0: language 대신 writing_style 사용)"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         style_modifiers = {
             'writing_style': {
@@ -56,7 +56,7 @@ class TestExtractTitleAndContent(unittest.TestCase):
 
     def test_extract_title_from_h1(self):
         """# 제목 추출"""
-        from services.ai_service import _extract_title_and_content
+        from services.core.ai_service import _extract_title_and_content
 
         markdown = "# 테스트 제목\n\n본문 내용입니다."
         title, content = _extract_title_and_content(markdown)
@@ -66,7 +66,7 @@ class TestExtractTitleAndContent(unittest.TestCase):
 
     def test_no_title_uses_default(self):
         """제목 없으면 기본값 사용"""
-        from services.ai_service import _extract_title_and_content
+        from services.core.ai_service import _extract_title_and_content
 
         markdown = "본문만 있는 내용"
         title, content = _extract_title_and_content(markdown)
@@ -75,7 +75,7 @@ class TestExtractTitleAndContent(unittest.TestCase):
 
     def test_multiple_h1_only_first(self):
         """첫 번째 # 만 제목으로 추출"""
-        from services.ai_service import _extract_title_and_content
+        from services.core.ai_service import _extract_title_and_content
 
         markdown = "# 첫 번째 제목\n## 두 번째\n내용"
         title, content = _extract_title_and_content(markdown)
@@ -88,7 +88,7 @@ class TestConvertErrorMessage(unittest.TestCase):
 
     def test_invalid_api_key_error(self):
         """API 키 오류 한국어 변환"""
-        from services.ai_service import _convert_error_message
+        from services.core.ai_service import _convert_error_message
 
         result = _convert_error_message("invalid_api_key: The API key provided is invalid")
 
@@ -97,7 +97,7 @@ class TestConvertErrorMessage(unittest.TestCase):
 
     def test_rate_limit_error(self):
         """Rate limit 오류 변환"""
-        from services.ai_service import _convert_error_message
+        from services.core.ai_service import _convert_error_message
 
         result = _convert_error_message("rate_limit_exceeded")
 
@@ -105,7 +105,7 @@ class TestConvertErrorMessage(unittest.TestCase):
 
     def test_model_not_found_error(self):
         """모델 미발견 오류 변환"""
-        from services.ai_service import _convert_error_message
+        from services.core.ai_service import _convert_error_message
 
         result = _convert_error_message("The model 'gpt-5' does not exist or not found")
 
@@ -113,7 +113,7 @@ class TestConvertErrorMessage(unittest.TestCase):
 
     def test_unknown_error_preserves_message(self):
         """알 수 없는 오류는 원본 메시지 포함"""
-        from services.ai_service import _convert_error_message
+        from services.core.ai_service import _convert_error_message
 
         original = "Some unknown error occurred"
         result = _convert_error_message(original)
@@ -143,7 +143,7 @@ class TestCreateContent(unittest.TestCase):
         mock_response.choices[0].message.content = "# 생성된 제목\n\n생성된 내용입니다."
         mock_completion.return_value = mock_response
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
 
         result = create_content(
             content="테스트 콘텐츠",
@@ -163,7 +163,7 @@ class TestCreateContent(unittest.TestCase):
         mock_response.choices[0].message.content = "# 제목\n내용"
         mock_completion.return_value = mock_response
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
 
         result, prompt = create_content(
             content="테스트",

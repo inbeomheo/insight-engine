@@ -1,6 +1,6 @@
 """Material Connection Disclosure Checker 서비스 테스트."""
 import unittest
-from services.material_connection_disclosure_service import check_material_connection_disclosure
+from services.analysis.material_connection_disclosure_service import check_material_connection_disclosure
 
 
 class TestMaterialConnectionDisclosure(unittest.TestCase):

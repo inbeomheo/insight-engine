@@ -1,6 +1,6 @@
 """Cliché Detector 서비스 테스트."""
 import unittest
-from services.cliche_detector_service import detect_cliches
+from services.analysis.cliche_detector_service import detect_cliches
 
 
 class TestClicheDetector(unittest.TestCase):

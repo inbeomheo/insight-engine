@@ -1,6 +1,6 @@
 """URL Health Checker 서비스 테스트."""
 import unittest
-from services.url_health_checker_service import check_url_health
+from services.seo.url_health_checker_service import check_url_health
 
 
 class TestUrlHealthChecker(unittest.TestCase):

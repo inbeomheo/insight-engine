@@ -10,56 +10,56 @@ class TestWorkspaceServiceDisabled(unittest.TestCase):
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_create_returns_error_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.create_workspace('팀A', 'user-1')
         self.assertIn('error', result)
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_list_returns_empty_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.list_workspaces('user-1')
         self.assertEqual(result, [])
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_get_workspace_returns_none_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.get_workspace('ws-1')
         self.assertIsNone(result)
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_get_members_returns_empty_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.get_members('ws-1')
         self.assertEqual(result, [])
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_invite_returns_error_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.invite_member('ws-1', 'user-2')
         self.assertIn('error', result)
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_remove_returns_false_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.remove_member('ws-1', 'user-2')
         self.assertFalse(result)
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_update_role_returns_false_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.update_role('ws-1', 'user-2', 'viewer')
         self.assertFalse(result)
 
     @patch('services.workspace_service.is_supabase_enabled', return_value=False)
     def test_delete_returns_false_when_disabled(self, _):
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.delete_workspace('ws-1', 'owner-1')
         self.assertFalse(result)
@@ -85,7 +85,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
             data=[workspace_data]
         )
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.create_workspace('팀A', 'user-1')
         self.assertEqual(result['id'], 'ws-123')
@@ -121,7 +121,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
 
         mock_client.table.side_effect = [member_chain, ws_chain]
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.list_workspaces('user-1')
         self.assertEqual(len(result), 2)
@@ -141,7 +141,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         )
         mock_client.table.return_value = chain
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.invite_member('ws-1', 'user-2')
         self.assertIn('error', result)
@@ -160,7 +160,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         )
         mock_client.table.return_value = chain
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.remove_member('ws-1', 'owner-user')
         self.assertFalse(result)
@@ -178,7 +178,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         )
         mock_client.table.return_value = chain
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.update_role('ws-1', 'owner-user', 'viewer')
         self.assertFalse(result)
@@ -186,7 +186,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
     def test_update_role_invalid_role(self):
         """유효하지 않은 역할은 Supabase 호출 없이 False 반환"""
         with patch('services.workspace_service.is_supabase_enabled', return_value=True):
-            from services.workspace_service import WorkspaceService
+            from services.data.workspace_service import WorkspaceService
             ws = WorkspaceService()
             result = ws.update_role('ws-1', 'user-2', 'owner')
             self.assertFalse(result)
@@ -194,7 +194,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
     def test_invite_invalid_role(self):
         """owner 역할로 초대 시도 시 에러"""
         with patch('services.workspace_service.is_supabase_enabled', return_value=True):
-            from services.workspace_service import WorkspaceService
+            from services.data.workspace_service import WorkspaceService
             ws = WorkspaceService()
             result = ws.invite_member('ws-1', 'user-2', 'owner')
             self.assertIn('error', result)
@@ -212,7 +212,7 @@ class TestWorkspaceServiceCRUD(unittest.TestCase):
         )
         mock_client.table.return_value = chain
 
-        from services.workspace_service import WorkspaceService
+        from services.data.workspace_service import WorkspaceService
         ws = WorkspaceService()
         result = ws.delete_workspace('ws-1', 'user-1')
         self.assertFalse(result)

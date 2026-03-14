@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-import services.rss_subscription_service as rss_sub_mod
+import services.platform.rss_subscription_service as rss_sub_mod
 
 
 class TestRssSubscriptionService(unittest.TestCase):

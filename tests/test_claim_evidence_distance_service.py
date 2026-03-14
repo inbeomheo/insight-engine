@@ -1,6 +1,6 @@
 """Claim-Evidence Distance Analyzer 서비스 테스트."""
 import unittest
-from services.claim_evidence_distance_service import analyze_claim_evidence_distance
+from services.analysis.claim_evidence_distance_service import analyze_claim_evidence_distance
 
 
 class TestClaimEvidenceDistance(unittest.TestCase):

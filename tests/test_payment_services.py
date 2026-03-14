@@ -107,14 +107,14 @@ class TestReferralService:
             yield f
 
     def test_get_or_create_code(self, tmp_referrals_file):
-        from services.referral_service import ReferralService
+        from services.platform.referral_service import ReferralService
         code1 = ReferralService.get_or_create_code('user-123')
         code2 = ReferralService.get_or_create_code('user-123')
         assert code1 == code2  # 동일 코드 반환
         assert len(code1) > 0
 
     def test_apply_referral(self, tmp_referrals_file):
-        from services.referral_service import ReferralService
+        from services.platform.referral_service import ReferralService
         # 크레딧 파일도 임시로 설정
         with patch('services.usage.credit_service._LOCAL_CREDITS_FILE',
                     str(tmp_referrals_file.parent / 'credits.json')):
@@ -124,12 +124,12 @@ class TestReferralService:
             assert result['credits_given'] == 5
 
     def test_apply_invalid_code(self, tmp_referrals_file):
-        from services.referral_service import ReferralService
+        from services.platform.referral_service import ReferralService
         result = ReferralService.apply_referral('new-user-1', 'invalid-code')
         assert result['success'] is False
 
     def test_apply_own_code_rejected(self, tmp_referrals_file):
-        from services.referral_service import ReferralService
+        from services.platform.referral_service import ReferralService
         code = ReferralService.get_or_create_code('user-123')
         result = ReferralService.apply_referral('user-123', code)
         assert result['success'] is False
@@ -144,21 +144,21 @@ class TestApiKeyService:
             yield f
 
     def test_create_key(self, tmp_keys_file):
-        from services.api_key_service import ApiKeyService
+        from services.data.api_key_service import ApiKeyService
         result = ApiKeyService.create_key('user-123', 'test-key')
         assert 'key' in result
         assert result['key'].startswith('ie_')
         assert result['name'] == 'test-key'
 
     def test_list_keys(self, tmp_keys_file):
-        from services.api_key_service import ApiKeyService
+        from services.data.api_key_service import ApiKeyService
         ApiKeyService.create_key('user-123', 'key-1')
         ApiKeyService.create_key('user-123', 'key-2')
         keys = ApiKeyService.list_keys('user-123')
         assert len(keys) == 2
 
     def test_revoke_key(self, tmp_keys_file):
-        from services.api_key_service import ApiKeyService
+        from services.data.api_key_service import ApiKeyService
         result = ApiKeyService.create_key('user-123', 'to-revoke')
         key_id = result['key_id']
         assert ApiKeyService.revoke_key('user-123', key_id) is True
@@ -166,7 +166,7 @@ class TestApiKeyService:
         assert len(keys) == 0
 
     def test_validate_key(self, tmp_keys_file):
-        from services.api_key_service import ApiKeyService
+        from services.data.api_key_service import ApiKeyService
         result = ApiKeyService.create_key('user-123', 'valid-key')
         raw_key = result['key']
 
@@ -175,6 +175,6 @@ class TestApiKeyService:
         assert validated['user_id'] == 'user-123'
 
     def test_validate_invalid_key(self, tmp_keys_file):
-        from services.api_key_service import ApiKeyService
+        from services.data.api_key_service import ApiKeyService
         result = ApiKeyService.validate_key('ie_invalid_key_xxx')
         assert result is None

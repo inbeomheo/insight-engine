@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('DiscordService')
 

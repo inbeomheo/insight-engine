@@ -6,7 +6,7 @@ analyze_search_intent 함수의 의도 감지, 신호 점수, 형식 매칭,
 """
 
 import unittest
-from services.search_intent_service import analyze_search_intent
+from services.seo.search_intent_service import analyze_search_intent
 
 
 class TestSearchIntentService(unittest.TestCase):

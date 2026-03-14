@@ -5,7 +5,7 @@ WebhookService 단위 테스트
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.webhook_service import WebhookService
+from services.platform.webhook_service import WebhookService
 
 
 class TestWebhookService(unittest.TestCase):

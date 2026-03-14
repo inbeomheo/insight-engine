@@ -1,6 +1,6 @@
 """Instruction Sequence Validator 서비스 테스트."""
 import unittest
-from services.instruction_sequence_service import validate_instruction_sequence
+from services.analysis.instruction_sequence_service import validate_instruction_sequence
 
 
 class TestInstructionSequenceValidator(unittest.TestCase):

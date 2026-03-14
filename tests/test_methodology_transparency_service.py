@@ -1,6 +1,6 @@
 """Methodology Transparency Checker 서비스 테스트."""
 import unittest
-from services.methodology_transparency_service import check_methodology_transparency
+from services.analysis.methodology_transparency_service import check_methodology_transparency
 
 
 class TestMethodologyTransparency(unittest.TestCase):

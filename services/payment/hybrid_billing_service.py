@@ -3,7 +3,7 @@
 기본 크레딧(플랜 포함) + 초과분 종량제
 """
 from datetime import datetime, timezone
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('HybridBillingService')
 

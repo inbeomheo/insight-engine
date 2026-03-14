@@ -2,7 +2,7 @@
 import unittest
 import json
 
-from services.faq_generator_service import (
+from services.content.faq_generator_service import (
     generate_faq,
     _extract_topics,
 )

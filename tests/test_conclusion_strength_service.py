@@ -1,6 +1,6 @@
 """Conclusion Strength Analyzer 서비스 테스트."""
 import unittest
-from services.conclusion_strength_service import analyze_conclusion_strength
+from services.analysis.conclusion_strength_service import analyze_conclusion_strength
 
 
 class TestConclusionStrengthAnalyzer(unittest.TestCase):

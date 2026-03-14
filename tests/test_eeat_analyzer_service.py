@@ -1,7 +1,7 @@
 """eeat_analyzer_service 단위 테스트"""
 import unittest
 
-from services.eeat_analyzer_service import analyze_eeat
+from services.seo.eeat_analyzer_service import analyze_eeat
 
 
 class TestAnalyzeEeat(unittest.TestCase):

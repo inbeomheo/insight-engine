@@ -1,7 +1,7 @@
 """quality_service 단위 테스트 (내부 함수 위주)"""
 import unittest
 
-from services.quality_service import (
+from services.quality.quality_service import (
     _parse_quality_json, _validate_quality_result,
     should_regenerate, calculate_comprehensive_score,
 )

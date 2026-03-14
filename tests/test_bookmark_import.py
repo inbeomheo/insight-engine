@@ -3,7 +3,7 @@
 """
 import unittest
 
-from services.bookmark_import_service import parse_bookmarks
+from services.data.bookmark_import_service import parse_bookmarks
 
 
 # Chrome 북마크 내보내기 샘플

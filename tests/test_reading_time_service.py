@@ -1,7 +1,7 @@
 """reading_time_service 단위 테스트"""
 import unittest
 
-from services.reading_time_service import (
+from services.analysis.reading_time_service import (
     estimate_reading_time,
     _analyze_difficulty,
 )

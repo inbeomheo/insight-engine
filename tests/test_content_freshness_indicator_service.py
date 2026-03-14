@@ -1,6 +1,6 @@
 """Content Freshness Indicator 서비스 테스트."""
 import unittest
-from services.content_freshness_indicator_service import check_content_freshness
+from services.seo.content_freshness_indicator_service import check_content_freshness
 
 
 class TestContentFreshnessIndicator(unittest.TestCase):

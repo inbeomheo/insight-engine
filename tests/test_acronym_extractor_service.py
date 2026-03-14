@@ -1,7 +1,7 @@
 """acronym_extractor_service 단위 테스트"""
 import unittest
 
-from services.acronym_extractor_service import (
+from services.analysis.acronym_extractor_service import (
     extract_acronyms,
 )
 

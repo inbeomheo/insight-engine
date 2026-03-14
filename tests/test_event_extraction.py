@@ -17,7 +17,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_parse_events_json_valid(self):
         """정상적인 JSON 배열을 올바르게 파싱합니다."""
-        from services.event_extraction_service import _parse_events_json
+        from services.content.event_extraction_service import _parse_events_json
 
         raw = json.dumps([
             {"type": "action_item", "content": "파이썬 설치하기", "timestamp": "00:01:00",
@@ -29,7 +29,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_parse_events_json_with_markdown_codeblock(self):
         """마크다운 코드블록이 포함된 응답도 파싱합니다."""
-        from services.event_extraction_service import _parse_events_json
+        from services.content.event_extraction_service import _parse_events_json
 
         raw = '```json\n[{"type": "key_point", "content": "중요 내용", "timestamp": "", "context": "배경"}]\n```'
         result = _parse_events_json(raw)
@@ -38,7 +38,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_parse_events_json_invalid(self):
         """파싱 불가한 텍스트는 빈 리스트를 반환합니다."""
-        from services.event_extraction_service import _parse_events_json
+        from services.content.event_extraction_service import _parse_events_json
 
         self.assertEqual(_parse_events_json(''), [])
         self.assertEqual(_parse_events_json('유효하지 않은 텍스트'), [])
@@ -46,7 +46,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_validate_events_removes_invalid(self):
         """유효하지 않은 이벤트를 제거합니다."""
-        from services.event_extraction_service import _validate_events
+        from services.content.event_extraction_service import _validate_events
 
         events = [
             # 유효: action_item
@@ -65,7 +65,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_validate_events_normalizes_priority(self):
         """잘못된 priority 값은 'medium'으로 정규화합니다."""
-        from services.event_extraction_service import _validate_events
+        from services.content.event_extraction_service import _validate_events
 
         events = [
             {"type": "action_item", "content": "할 일", "timestamp": "",
@@ -76,7 +76,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_validate_events_clamps_importance(self):
         """importance 값을 0.0~1.0 범위로 제한합니다."""
-        from services.event_extraction_service import _validate_events
+        from services.content.event_extraction_service import _validate_events
 
         events = [
             {"type": "key_point", "content": "핵심", "timestamp": "",
@@ -90,7 +90,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_categorize_events(self):
         """이벤트를 유형별로 올바르게 분류합니다."""
-        from services.event_extraction_service import categorize_events
+        from services.content.event_extraction_service import categorize_events
 
         events = [
             {"type": "action_item", "content": "A", "timestamp": "", "context": "", "priority": "high"},
@@ -106,7 +106,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_get_event_summary(self):
         """이벤트 요약 통계를 올바르게 반환합니다."""
-        from services.event_extraction_service import get_event_summary
+        from services.content.event_extraction_service import get_event_summary
 
         events = [
             {"type": "action_item", "content": "A", "timestamp": "", "context": "", "priority": "high"},
@@ -125,7 +125,7 @@ class TestEventExtractionService(unittest.TestCase):
 
     def test_extract_events_empty_transcript_raises(self):
         """빈 자막은 ValueError를 발생시킵니다."""
-        from services.event_extraction_service import extract_events
+        from services.content.event_extraction_service import extract_events
         with self.assertRaises(ValueError) as ctx:
             extract_events('')
         self.assertIn('자막', str(ctx.exception))
@@ -134,7 +134,7 @@ class TestEventExtractionService(unittest.TestCase):
     @patch('litellm.completion')
     def test_extract_events_with_mock_llm(self, mock_completion, mock_build_kwargs):
         """모킹된 LiteLLM으로 이벤트 추출 흐름을 검증합니다."""
-        from services.event_extraction_service import extract_events
+        from services.content.event_extraction_service import extract_events
 
         # LiteLLM 응답 모킹
         fake_events = [

@@ -1,6 +1,6 @@
 """Quotation Usage Analyzer 서비스 테스트."""
 import unittest
-from services.quotation_usage_analyzer_service import analyze_quotation_usage
+from services.analysis.quotation_usage_analyzer_service import analyze_quotation_usage
 
 
 class TestQuotationUsageAnalyzer(unittest.TestCase):

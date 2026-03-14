@@ -4,7 +4,7 @@
 """
 import uuid
 from datetime import datetime, timezone
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('InvoiceService')
 

@@ -21,7 +21,7 @@ class TestPreprocessForTts(unittest.TestCase):
     """preprocess_for_tts 단위 테스트"""
 
     def setUp(self):
-        from services.tts_service import preprocess_for_tts
+        from services.media.tts_service import preprocess_for_tts
         self.preprocess = preprocess_for_tts
 
     def test_removes_code_blocks(self):
@@ -97,7 +97,7 @@ class TestTtsServiceSynthesize(unittest.TestCase):
     DUMMY_AUDIO = b'ID3\x00\x00\x00\x00' + b'\x00' * 100  # 가짜 MP3 바이트
 
     def _make_service(self):
-        from services.tts_service import TTSService
+        from services.media.tts_service import TTSService
         return TTSService
 
     def test_raises_on_empty_text(self):
@@ -257,9 +257,9 @@ class TestSelectBackend(unittest.TestCase):
     def test_auto_with_openai_key_selects_openai(self):
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'sk-test'}):
             with patch('services.tts_service.TTS_BACKEND', 'auto'):
-                from services.tts_service import _select_backend
+                from services.media.tts_service import _select_backend
                 import importlib
-                import services.tts_service as tts_mod
+                import services.media.tts_service as tts_mod
                 # 환경변수를 직접 검사하는 함수를 재검사
                 with patch('services.tts_service.TTS_BACKEND', 'auto'):
                     # os.getenv를 통해 선택 로직 직접 테스트
@@ -274,12 +274,12 @@ class TestSelectBackend(unittest.TestCase):
 
     def test_explicit_edge_backend(self):
         with patch('services.tts_service.TTS_BACKEND', 'edge'):
-            from services.tts_service import _select_backend
+            from services.media.tts_service import _select_backend
             self.assertEqual(_select_backend(), 'edge')
 
     def test_explicit_openai_backend(self):
         with patch('services.tts_service.TTS_BACKEND', 'openai'):
-            from services.tts_service import _select_backend
+            from services.media.tts_service import _select_backend
             self.assertEqual(_select_backend(), 'openai')
 
 

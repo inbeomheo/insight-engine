@@ -7,7 +7,8 @@ import uuid
 from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
-from services.supabase_service import require_auth
+from services.data.supabase_service import require_auth
+from utils.responses import handle_error
 
 
 # ── Notion 연동 ──────────────────────────────────────
@@ -17,7 +18,7 @@ from services.supabase_service import require_auth
 @require_auth
 def notion_import():
     """Notion 페이지 URL → 콘텐츠 추출"""
-    from services.notion_service import extract_notion_page
+    from services.export.notion_service import extract_notion_page
 
     data = request.get_json(silent=True)
     if not data:
@@ -36,7 +37,7 @@ def notion_import():
         result = extract_notion_page(page_url, api_key)
         return jsonify(result)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Notion import failed: {e}')
         return jsonify({'error': 'Notion 페이지 가져오기 중 오류가 발생했습니다.'}), 500
@@ -56,7 +57,7 @@ def notion_status():
 @require_auth
 def gdocs_import():
     """Google Docs URL → 콘텐츠 추출"""
-    from services.gdocs_service import extract_google_doc
+    from services.export.gdocs_service import extract_google_doc
 
     data = request.get_json(silent=True)
     if not data:
@@ -72,7 +73,7 @@ def gdocs_import():
         result = extract_google_doc(doc_url, api_key or None)
         return jsonify(result)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Google Docs import failed: {e}')
         return jsonify({'error': 'Google Docs 가져오기 중 오류가 발생했습니다.'}), 500
@@ -85,7 +86,7 @@ def gdocs_import():
 @require_auth
 def rss_subscribe():
     """RSS 피드 구독 추가"""
-    from services.rss_subscription_service import subscribe
+    from services.platform.rss_subscription_service import subscribe
 
     data = request.get_json(silent=True)
     if not data:
@@ -102,14 +103,14 @@ def rss_subscribe():
         sub = subscribe(user_id, feed_url, title)
         return jsonify(sub), 201
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
 
 
 @blog_bp.route('/api/rss/list', methods=['GET'])
 @require_auth
 def rss_list():
     """구독 목록 조회"""
-    from services.rss_subscription_service import list_subscriptions
+    from services.platform.rss_subscription_service import list_subscriptions
 
     user_id = getattr(g, 'user_id', None) or 'anonymous'
     subs = list_subscriptions(user_id)
@@ -120,7 +121,7 @@ def rss_list():
 @require_auth
 def rss_unsubscribe(feed_id: str):
     """RSS 구독 해제"""
-    from services.rss_subscription_service import unsubscribe
+    from services.platform.rss_subscription_service import unsubscribe
 
     user_id = getattr(g, 'user_id', None) or 'anonymous'
     success = unsubscribe(user_id, feed_id)
@@ -136,7 +137,7 @@ def rss_unsubscribe(feed_id: str):
 @require_auth
 def bookmarks_parse():
     """북마크 HTML 파일 파싱"""
-    from services.bookmark_import_service import parse_bookmarks
+    from services.data.bookmark_import_service import parse_bookmarks
 
     if 'file' not in request.files:
         return jsonify({'error': '파일이 필요합니다.'}), 400
@@ -154,7 +155,7 @@ def bookmarks_parse():
         bookmarks = parse_bookmarks(html_content)
         return jsonify({'bookmarks': bookmarks, 'count': len(bookmarks)})
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Bookmark parse failed: {e}")
         return jsonify({'error': '북마크 파싱 중 오류가 발생했습니다.'}), 500
@@ -252,7 +253,7 @@ def mcp_app_action(app_name: str):
 @require_auth
 def publish_queue_list():
     """현재 사용자의 발행 큐 목록 조회"""
-    from services.publish_queue_service import publish_queue_service
+    from services.data.publish_queue_service import publish_queue_service
 
     user_id = getattr(g, 'user_id', None)
     items = publish_queue_service.get_queue_status(user_id=user_id)
@@ -263,7 +264,7 @@ def publish_queue_list():
 @require_auth
 def publish_queue_enqueue():
     """발행 큐에 새 항목 추가"""
-    from services.publish_queue_service import publish_queue_service
+    from services.data.publish_queue_service import publish_queue_service
 
     data = request.get_json(silent=True)
     if not data:
@@ -294,7 +295,7 @@ def publish_queue_enqueue():
 @require_auth
 def publish_queue_cancel(item_id: str):
     """큐 항목 취소"""
-    from services.publish_queue_service import publish_queue_service
+    from services.data.publish_queue_service import publish_queue_service
 
     result = publish_queue_service.cancel_item(item_id)
     status_code = 200 if result.get('success') else 400
@@ -305,7 +306,7 @@ def publish_queue_cancel(item_id: str):
 @require_auth
 def publish_queue_retry(item_id: str):
     """실패 항목 수동 재시도"""
-    from services.publish_queue_service import publish_queue_service
+    from services.data.publish_queue_service import publish_queue_service
 
     result = publish_queue_service.retry_item(item_id)
     status_code = 200 if result.get('success') else 400
@@ -319,7 +320,7 @@ def publish_queue_retry(item_id: str):
 @require_auth
 def schedule_create():
     """예약 발행 생성"""
-    from services.schedule_service import schedule_service
+    from services.data.schedule_service import schedule_service
 
     data = request.get_json(silent=True)
     if not data:
@@ -352,7 +353,7 @@ def schedule_create():
 @require_auth
 def schedule_list():
     """사용자 예약 목록 조회"""
-    from services.schedule_service import schedule_service
+    from services.data.schedule_service import schedule_service
 
     posts = schedule_service.list_by_user(g.user_id)
     return jsonify({'schedules': posts})
@@ -362,7 +363,7 @@ def schedule_list():
 @require_auth
 def schedule_delete(post_id):
     """예약 삭제"""
-    from services.schedule_service import schedule_service
+    from services.data.schedule_service import schedule_service
 
     success = schedule_service.delete(post_id, g.user_id)
     if not success:
@@ -425,7 +426,7 @@ def knowledge_upload():
         }), 201
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Knowledge upload failed: {e}")
         return jsonify({'error': '문서 업로드 중 오류가 발생했습니다.'}), 500
@@ -476,7 +477,7 @@ def email_ingest():
     - .eml 파일 업로드: multipart/form-data의 'file' 필드
     - 포워딩 텍스트: JSON의 'raw_text' 필드
     """
-    from services.email_ingest_service import parse_email_file, parse_forwarded_email
+    from services.content.email_ingest_service import parse_email_file, parse_forwarded_email
 
     # 파일 업로드 모드
     if 'file' in request.files:
@@ -490,7 +491,7 @@ def email_ingest():
             result = parse_email_file(file)
             return jsonify(result)
         except ValueError as e:
-            return jsonify({'error': str(e)}), 400
+            return handle_error(str(e))
         except Exception as e:
             current_app.logger.error(f'Email ingest failed: {e}')
             return jsonify({'error': '이메일 파싱 중 오류가 발생했습니다.'}), 500
@@ -508,7 +509,7 @@ def email_ingest():
         result = parse_forwarded_email(raw_text)
         return jsonify(result)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Email ingest (text) failed: {e}')
         return jsonify({'error': '이메일 텍스트 파싱 중 오류가 발생했습니다.'}), 500
@@ -520,14 +521,14 @@ def email_ingest():
 @blog_bp.route('/api/content/<content_id>/versions', methods=['GET'])
 def list_content_versions(content_id):
     """콘텐츠의 버전 목록을 반환합니다."""
-    from services.version_service import list_versions
+    from services.data.version_service import list_versions
     return jsonify({'versions': list_versions(content_id)})
 
 
 @blog_bp.route('/api/content/<content_id>/versions', methods=['POST'])
 def save_content_version(content_id):
     """콘텐츠의 새 버전을 저장합니다."""
-    from services.version_service import save_version
+    from services.data.version_service import save_version
     data = request.get_json(silent=True) or {}
     title = data.get('title', '')
     content = data.get('content', '')
@@ -548,7 +549,7 @@ def save_content_version(content_id):
 @blog_bp.route('/api/content/<content_id>/versions/<version_id>', methods=['GET'])
 def get_content_version(content_id, version_id):
     """특정 버전의 전체 데이터를 반환합니다."""
-    from services.version_service import get_version
+    from services.data.version_service import get_version
     ver = get_version(content_id, version_id)
     if not ver:
         return jsonify({'error': '버전을 찾을 수 없습니다.'}), 404
@@ -558,7 +559,7 @@ def get_content_version(content_id, version_id):
 @blog_bp.route('/api/content/<content_id>/versions/diff', methods=['GET'])
 def diff_content_versions(content_id):
     """두 버전의 차이를 반환합니다."""
-    from services.version_service import diff_versions
+    from services.data.version_service import diff_versions
     a = request.args.get('a', '')
     b = request.args.get('b', '')
     if not a or not b:
@@ -573,7 +574,7 @@ def diff_content_versions(content_id):
 @blog_bp.route('/api/content/<content_id>/versions/<version_id>/restore', methods=['POST'])
 def restore_content_version(content_id, version_id):
     """특정 버전을 복원합니다."""
-    from services.version_service import restore_version
+    from services.data.version_service import restore_version
     ver = restore_version(content_id, version_id)
     if not ver:
         return jsonify({'error': '버전을 찾을 수 없습니다.'}), 404
@@ -586,7 +587,7 @@ def restore_content_version(content_id, version_id):
 @blog_bp.route('/api/search', methods=['GET'])
 def search_content():
     """콘텐츠를 검색합니다."""
-    from services.search_service import search
+    from services.seo.search_service import search
     query = request.args.get('q', '')
     style = request.args.get('style', None)
     limit = min(int(request.args.get('limit', '20')), 50)
@@ -602,7 +603,7 @@ def search_content():
 @blog_bp.route('/api/folders', methods=['GET'])
 def list_content_folders():
     """폴더 목록을 반환합니다."""
-    from services.folder_service import list_folders
+    from services.data.folder_service import list_folders
     parent_id = request.args.get('parent_id', None)
     return jsonify({'folders': list_folders(parent_id=parent_id)})
 
@@ -610,7 +611,7 @@ def list_content_folders():
 @blog_bp.route('/api/folders', methods=['POST'])
 def create_content_folder():
     """폴더를 생성합니다."""
-    from services.folder_service import create_folder
+    from services.data.folder_service import create_folder
     data = request.get_json(silent=True) or {}
     name = data.get('name', '').strip()
     if not name:
@@ -623,7 +624,7 @@ def create_content_folder():
 @blog_bp.route('/api/folders/<folder_id>', methods=['PUT'])
 def update_content_folder(folder_id):
     """폴더를 수정합니다."""
-    from services.folder_service import update_folder
+    from services.data.folder_service import update_folder
     data = request.get_json(silent=True) or {}
     folder = update_folder(folder_id, name=data.get('name'))
     if not folder:
@@ -634,7 +635,7 @@ def update_content_folder(folder_id):
 @blog_bp.route('/api/folders/<folder_id>', methods=['DELETE'])
 def delete_content_folder(folder_id):
     """폴더를 삭제합니다."""
-    from services.folder_service import delete_folder
+    from services.data.folder_service import delete_folder
     if not delete_folder(folder_id):
         return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
     return jsonify({'success': True})
@@ -643,14 +644,14 @@ def delete_content_folder(folder_id):
 @blog_bp.route('/api/folders/<folder_id>/contents', methods=['GET'])
 def list_folder_content_ids(folder_id):
     """폴더의 콘텐츠 ID 목록을 반환합니다."""
-    from services.folder_service import list_folder_contents
+    from services.data.folder_service import list_folder_contents
     return jsonify({'content_ids': list_folder_contents(folder_id)})
 
 
 @blog_bp.route('/api/content/<content_id>/folder', methods=['PUT'])
 def move_content_to_folder(content_id):
     """콘텐츠를 폴더로 이동합니다."""
-    from services.folder_service import move_content
+    from services.data.folder_service import move_content
     data = request.get_json(silent=True) or {}
     folder_id = data.get('folder_id')  # None이면 미분류
     if not move_content(content_id, folder_id):
@@ -664,7 +665,7 @@ def move_content_to_folder(content_id):
 @blog_bp.route('/api/notifications', methods=['GET'])
 def get_notifications():
     """알림 목록을 반환합니다."""
-    from services.notification_service import list_notifications
+    from services.data.notification_service import list_notifications
     user_id = request.args.get('user_id', 'anonymous')
     unread_only = request.args.get('unread_only', 'false').lower() == 'true'
     limit = min(int(request.args.get('limit', '20')), 50)
@@ -678,7 +679,7 @@ def get_notifications():
 @blog_bp.route('/api/notifications/<notification_id>/read', methods=['POST'])
 def mark_notification_read(notification_id):
     """알림을 읽음으로 표시합니다."""
-    from services.notification_service import mark_read
+    from services.data.notification_service import mark_read
     user_id = request.args.get('user_id', 'anonymous')
     mark_read(user_id, notification_id)
     return jsonify({'success': True})
@@ -687,7 +688,7 @@ def mark_notification_read(notification_id):
 @blog_bp.route('/api/notifications/read-all', methods=['POST'])
 def mark_all_notifications_read():
     """모든 알림을 읽음으로 표시합니다."""
-    from services.notification_service import mark_all_read
+    from services.data.notification_service import mark_all_read
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id', 'anonymous')
     count = mark_all_read(user_id)
@@ -700,7 +701,7 @@ def mark_all_notifications_read():
 @blog_bp.route('/api/collab/session', methods=['POST'])
 def create_collab_session():
     """협업 세션을 생성하거나 참가합니다."""
-    from services.collaboration_service import create_session
+    from services.data.collaboration_service import create_session
     data = request.get_json(silent=True) or {}
     content_id = data.get('content_id', '')
     user_id = data.get('user_id', 'anonymous')
@@ -715,7 +716,7 @@ def create_collab_session():
 @blog_bp.route('/api/collab/session/<session_id>', methods=['GET'])
 def poll_collab_session(session_id):
     """협업 세션 상태를 폴링합니다."""
-    from services.collaboration_service import get_session
+    from services.data.collaboration_service import get_session
     result = get_session(session_id)
     if not result:
         return jsonify({'error': '세션을 찾을 수 없습니다.'}), 404
@@ -725,7 +726,7 @@ def poll_collab_session(session_id):
 @blog_bp.route('/api/collab/session/<session_id>/update', methods=['POST'])
 def update_collab_content(session_id):
     """협업 콘텐츠를 업데이트합니다."""
-    from services.collaboration_service import update_content
+    from services.data.collaboration_service import update_content
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id', 'anonymous')
     content = data.get('content', '')
@@ -740,7 +741,7 @@ def update_collab_content(session_id):
 @blog_bp.route('/api/collab/session/<session_id>/heartbeat', methods=['POST'])
 def collab_heartbeat(session_id):
     """협업 세션 하트비트."""
-    from services.collaboration_service import heartbeat
+    from services.data.collaboration_service import heartbeat
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id', 'anonymous')
     cursor = data.get('cursor_position', 0)
@@ -752,7 +753,7 @@ def collab_heartbeat(session_id):
 @blog_bp.route('/api/collab/session/<session_id>/leave', methods=['POST'])
 def leave_collab_session(session_id):
     """협업 세션에서 나갑니다."""
-    from services.collaboration_service import leave_session
+    from services.data.collaboration_service import leave_session
     data = request.get_json(silent=True) or {}
     user_id = data.get('user_id', 'anonymous')
     leave_session(session_id, user_id)
@@ -765,7 +766,7 @@ def leave_collab_session(session_id):
 @blog_bp.route('/api/openapi.json', methods=['GET'])
 def openapi_spec():
     """OpenAPI 3.0 스펙 JSON 반환"""
-    from services.openapi_service import build_openapi_spec
+    from services.data.openapi_service import build_openapi_spec
     server_url = request.host_url.rstrip('/')
     spec = build_openapi_spec(server_url=server_url)
     return jsonify(spec)
@@ -889,8 +890,8 @@ def zapier_trigger():
 
     # 동기 생성 (Zapier는 동기 응답 필요)
     try:
-        from services.content_service import get_transcript
-        from services.ai_service import create_content
+        from services.core.content_service import get_transcript
+        from services.core.ai_service import create_content
         transcript = get_transcript(url)
         if not transcript:
             return jsonify({'error': '자막을 가져올 수 없습니다.'}), 400
@@ -939,8 +940,8 @@ def make_webhook():
     def _process():
         with app.app_context():
             try:
-                from services.content_service import get_transcript
-                from services.ai_service import create_content
+                from services.core.content_service import get_transcript
+                from services.core.ai_service import create_content
                 transcript = get_transcript(url)
                 if not transcript:
                     return
@@ -989,8 +990,8 @@ def ifttt_trigger():
         return jsonify({'error': 'value1(URL)이 필요합니다.'}), 400
 
     try:
-        from services.content_service import get_transcript
-        from services.ai_service import create_content
+        from services.core.content_service import get_transcript
+        from services.core.ai_service import create_content
         transcript = get_transcript(url)
         if not transcript:
             return jsonify({'error': '자막을 가져올 수 없습니다.'}), 400
@@ -1104,7 +1105,7 @@ def cms_validate_config():
 @blog_bp.route('/api/webhook-relay', methods=['POST'])
 def webhook_relay():
     """다수의 웹훅 URL에 동시 발송"""
-    from services.webhook_relay_service import webhook_relay_service
+    from services.platform.webhook_relay_service import webhook_relay_service
 
     data = request.get_json(silent=True) or {}
     urls = data.get('urls', [])

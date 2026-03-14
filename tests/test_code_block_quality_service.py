@@ -1,6 +1,6 @@
 """Code Block Quality Checker 서비스 테스트."""
 import unittest
-from services.code_block_quality_service import check_code_block_quality
+from services.analysis.code_block_quality_service import check_code_block_quality
 
 
 class TestCodeBlockQualityChecker(unittest.TestCase):

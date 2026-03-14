@@ -7,7 +7,7 @@ import unittest
 from io import BytesIO
 from unittest.mock import patch, MagicMock, mock_open
 
-from services.document_ingest_service import (
+from services.content.document_ingest_service import (
     extract_text,
     extract_from_upload,
     _extract_pdf,

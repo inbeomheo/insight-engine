@@ -1,7 +1,7 @@
 """paragraph_balance_service 단위 테스트"""
 import unittest
 
-from services.paragraph_balance_service import (
+from services.analysis.paragraph_balance_service import (
     analyze_balance,
 )
 

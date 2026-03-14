@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.supabase_service import (
+from services.data.supabase_service import (
     is_supabase_enabled,
     encrypt_api_key,
     decrypt_api_key,
@@ -61,7 +61,7 @@ class TestIsEncryptionEnabled(unittest.TestCase):
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': ''}, clear=False)
     def test_no_secret(self):
         """시크릿 없음 → False"""
-        import services.supabase_service as mod
+        import services.data.supabase_service as mod
         mod._encryption_enabled = None
         result = _is_encryption_enabled()
         self.assertFalse(result)
@@ -70,7 +70,7 @@ class TestIsEncryptionEnabled(unittest.TestCase):
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': 'my-secret'}, clear=False)
     def test_with_secret(self):
         """시크릿 있음 → True"""
-        import services.supabase_service as mod
+        import services.data.supabase_service as mod
         mod._encryption_enabled = None
         result = _is_encryption_enabled()
         self.assertTrue(result)

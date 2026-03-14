@@ -1,7 +1,7 @@
 """passive_voice_service 단위 테스트"""
 import unittest
 
-from services.passive_voice_service import (
+from services.analysis.passive_voice_service import (
     detect_passive,
 )
 

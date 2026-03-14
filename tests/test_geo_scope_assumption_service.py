@@ -1,6 +1,6 @@
 """Geo Scope Assumption Detector 서비스 테스트."""
 import unittest
-from services.geo_scope_assumption_service import detect_geo_scope_assumptions
+from services.analysis.geo_scope_assumption_service import detect_geo_scope_assumptions
 
 
 class TestGeoScopeAssumption(unittest.TestCase):

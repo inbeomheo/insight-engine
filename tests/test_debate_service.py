@@ -1,7 +1,7 @@
 """debate_service 단위 테스트"""
 import unittest
 
-from services.debate_service import (
+from services.content.debate_service import (
     generate_debate,
     _extract_points,
     _generate_questions,

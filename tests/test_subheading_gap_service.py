@@ -3,7 +3,7 @@ Subheading Gap Detector 서비스 단위 테스트
 """
 import unittest
 
-from services.subheading_gap_service import detect_subheading_gaps
+from services.analysis.subheading_gap_service import detect_subheading_gaps
 
 
 class TestSubheadingGapService(unittest.TestCase):

@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.style_memory_service import (
+from services.data.style_memory_service import (
     STYLE_LABELS,
     WRITING_STYLE_LABELS,
     LENGTH_LABELS,

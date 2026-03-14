@@ -1,6 +1,6 @@
 """Definition Gap Detector 서비스 테스트."""
 import unittest
-from services.definition_gap_service import detect_definition_gaps
+from services.analysis.definition_gap_service import detect_definition_gaps
 
 
 class TestDefinitionGap(unittest.TestCase):

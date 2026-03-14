@@ -2,7 +2,7 @@
 Information Gain Analyzer 서비스 테스트
 """
 import unittest
-from services.information_gain_service import analyze_information_gain
+from services.analysis.information_gain_service import analyze_information_gain
 
 
 class TestInformationGainService(unittest.TestCase):

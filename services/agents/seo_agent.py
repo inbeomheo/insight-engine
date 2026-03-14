@@ -101,7 +101,7 @@ class SEOAgent(BaseAgent):
         json_ld = {}
         if url:
             try:
-                from services.seo_metadata_service import generate_video_object_schema
+                from services.seo.seo_metadata_service import generate_video_object_schema
                 json_ld = generate_video_object_schema(
                     video_url=url,
                     title=seo_data.get('meta_title', title),

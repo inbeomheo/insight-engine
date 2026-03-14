@@ -1,6 +1,6 @@
 """Question Density Analyzer 서비스 테스트."""
 import unittest
-from services.question_density_service import analyze_question_density
+from services.analysis.question_density_service import analyze_question_density
 
 
 class TestQuestionDensityAnalyzer(unittest.TestCase):

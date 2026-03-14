@@ -2,7 +2,7 @@
 import io
 import unittest
 
-from services.export_service import (
+from services.export.export_service import (
     markdown_to_docx, export_markdown, export_txt, export_zip,
     _add_formatted_text, DEFAULT_FONT,
 )

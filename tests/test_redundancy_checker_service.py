@@ -1,7 +1,7 @@
 """redundancy_checker_service 단위 테스트"""
 import unittest
 
-from services.redundancy_checker_service import (
+from services.analysis.redundancy_checker_service import (
     check_redundancy,
     _jaccard_similarity,
 )

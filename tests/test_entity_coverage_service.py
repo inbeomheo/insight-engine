@@ -5,7 +5,7 @@ Entity Coverage Analyzer 서비스 단위 테스트
 """
 import unittest
 
-from services.entity_coverage_service import analyze_entities
+from services.seo.entity_coverage_service import analyze_entities
 
 
 class TestEntityCoverageService(unittest.TestCase):

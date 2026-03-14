@@ -1,7 +1,7 @@
 """infographic_service 단위 테스트"""
 import unittest
 
-from services.infographic_service import (
+from services.media.infographic_service import (
     generate_infographic, _extract_key_points, _extract_stats
 )
 

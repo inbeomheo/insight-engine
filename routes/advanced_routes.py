@@ -13,11 +13,11 @@ from routes.generation_helpers import (
 )
 from extensions import limiter
 from config import get_model_max_tokens, CAMPAIGN_PACKS
-from services import ai_service, content_service, fusion_service
-from services.supabase_service import require_auth
+from services.core import ai_service, content_service, fusion_service
+from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error
+from utils.responses import handle_error, api_error_from_exception
 
 
 @blog_bp.route('/api/mindmap', methods=['POST'])
@@ -65,7 +65,7 @@ def generate_mindmap():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Mindmap generation failed: {e}")
         return handle_error(str(e))
@@ -159,7 +159,7 @@ def generate_multi():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate multi failed: {e}")
         return handle_error(str(e))
@@ -264,7 +264,7 @@ def generate_campaign():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Campaign generation failed: {e}")
         return handle_error(str(e))
@@ -304,10 +304,10 @@ def generate_fusion():
         return jsonify(result)
 
     except ValueError as e:
-        return jsonify({'error': f'[입력 오류] {str(e)}'}), 400
+        return handle_error(f'[입력 오류] {str(e)}')
     except Exception as e:
         current_app.logger.error('퓨전 생성 실패: %s', e, exc_info=True)
-        return handle_error(e)
+        return handle_error(str(e))
 
 
 @blog_bp.route('/api/rewrite', methods=['POST'])
@@ -326,7 +326,7 @@ def rewrite_content():
         if not platform:
             return jsonify({'error': '대상 플랫폼을 선택해주세요.'}), 400
 
-        from services.rewrite_service import rewrite_for_platform
+        from services.content.rewrite_service import rewrite_for_platform
         result = rewrite_for_platform(content, platform, model)
 
         if 'error' in result:
@@ -352,7 +352,7 @@ def qa_check():
         if not content:
             return jsonify({'error': '검증할 콘텐츠가 필요합니다.'}), 400
 
-        from services.qa_gate_service import check_quality
+        from services.quality.qa_gate_service import check_quality
         result = check_quality(content, rules)
         return jsonify(result)
     except Exception as e:
@@ -369,9 +369,9 @@ def run_pipeline():
     요청: { pipeline_id, url, model, style, modifiers }
     응답: text/event-stream (각 스텝 진행률 이벤트)
     """
-    from services.pipeline_service import PipelineEngine, PIPELINE_PRESETS
+    from services.core.pipeline_service import PipelineEngine, PIPELINE_PRESETS
     from services.usage.usage_service import UsageService
-    from services.supabase_service import is_supabase_enabled
+    from services.data.supabase_service import is_supabase_enabled
 
     try:
         params = _get_request_data(request)
@@ -453,12 +453,12 @@ def channel_analysis():
         if not channel_url:
             return jsonify({'error': '채널 URL이 필요합니다.'}), 400
 
-        from services.channel_analysis_service import analyze_channel
+        from services.content.channel_analysis_service import analyze_channel
         result = analyze_channel(channel_url)
         return jsonify({'success': True, **result})
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Channel analysis failed: {e}")
         return handle_error(str(e))
@@ -477,7 +477,7 @@ def generate_thumbnail():
         if not title:
             return jsonify({'error': '제목이 필요합니다.'}), 400
 
-        from services.thumbnail_service import generate_thumbnail as _gen_thumb
+        from services.media.thumbnail_service import generate_thumbnail as _gen_thumb
         result = _gen_thumb(title, keywords, size)
 
         if not result.get('success'):
@@ -506,7 +506,7 @@ def generate_clips():
         if not clips:
             return jsonify({'error': '추출할 클립 목록이 필요합니다.'}), 400
 
-        from services.video_clip_service import extract_clips
+        from services.media.video_clip_service import extract_clips
         clip_paths = extract_clips(video_url, clips)
 
         import base64
@@ -521,7 +521,7 @@ def generate_clips():
                 'end': clips[i].get('end', ''),
             })
 
-        from services.video_clip_service import cleanup_clips
+        from services.media.video_clip_service import cleanup_clips
         cleanup_clips(clip_paths)
 
         return jsonify({
@@ -531,7 +531,7 @@ def generate_clips():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Clip extraction failed: {e}")
         return handle_error(str(e))
@@ -552,7 +552,7 @@ def generate_podcast():
         if not content:
             return jsonify({'error': '팟캐스트로 변환할 콘텐츠가 필요합니다.'}), 400
 
-        from services.podcast_service import generate_podcast_episode
+        from services.media.podcast_service import generate_podcast_episode
         result = generate_podcast_episode(content, title, model)
 
         return jsonify({
@@ -562,7 +562,7 @@ def generate_podcast():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Podcast generation failed: {e}")
         return handle_error(str(e))
@@ -646,7 +646,7 @@ def generate_multilang():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Multilang generation failed: {e}")
         return handle_error(str(e))
@@ -704,7 +704,7 @@ def agent_research():
         if not topic:
             return jsonify({'error': '리서치 주제가 필요합니다.'}), 400
 
-        from services.agent.research_agent import ResearchAgent
+        from services.agents.web_research_agent import ResearchAgent
 
         def generate_events():
             agent = ResearchAgent(model=model, max_sources=max_sources)
@@ -786,9 +786,9 @@ def agent_pipeline():
         if not topic:
             return jsonify({'error': '콘텐츠 주제가 필요합니다.'}), 400
 
-        from services.agent.research_agent import ResearchAgent
-        from services.agent.content_pipeline_agent import WriterAgent, EditorAgent, SeoAgent
-        from services.agent.agent_orchestrator import AgentOrchestrator
+        from services.agents.web_research_agent import ResearchAgent
+        from services.agents.content_pipeline_agent import WriterAgent, EditorAgent, SeoAgent
+        from services.agents.pipeline_orchestrator import AgentOrchestrator
 
         # 에이전트 체인 구성
         agents = []
@@ -830,7 +830,7 @@ def agent_pipeline():
 def get_user_memory():
     """사용자 메모리를 조회합니다."""
     try:
-        from services.memory_service import memory_service
+        from services.data.memory_service import memory_service
         user_id = g.user_id
         memory = memory_service.get_memory(user_id)
         return jsonify({'memory': memory})
@@ -844,7 +844,7 @@ def get_user_memory():
 def update_user_memory():
     """사용자 메모리를 업데이트합니다."""
     try:
-        from services.memory_service import memory_service
+        from services.data.memory_service import memory_service
         user_id = g.user_id
         data = request.get_json(silent=True) or {}
         key = data.get('key', '').strip()
@@ -865,7 +865,7 @@ def update_user_memory():
 def clear_user_memory():
     """사용자 메모리를 초기화합니다."""
     try:
-        from services.memory_service import memory_service
+        from services.data.memory_service import memory_service
         user_id = g.user_id
         memory_service.clear(user_id)
         return jsonify({'success': True})
@@ -889,7 +889,7 @@ def auto_tags():
         if not content:
             return jsonify({'error': '태그를 추출할 콘텐츠가 필요합니다.'}), 400
 
-        from services.auto_tag_service import generate_tags
+        from services.data.auto_tag_service import generate_tags
         result = generate_tags(content)
         return jsonify(result)
 
@@ -915,12 +915,12 @@ def content_brief():
         if not topic:
             return jsonify({'error': '주제를 입력해주세요.'}), 400
 
-        from services.brief_service import generate_brief
+        from services.content.brief_service import generate_brief
         result = generate_brief(topic, keywords)
         return jsonify(result)
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Content brief failed: {e}")
         return handle_error(str(e))
@@ -942,12 +942,12 @@ def competitor_analysis():
         if not keyword:
             return jsonify({'error': '분석할 키워드를 입력해주세요.'}), 400
 
-        from services.competitor_analysis_service import analyze_competitors
+        from services.seo.competitor_analysis_service import analyze_competitors
         result = analyze_competitors(keyword, my_content)
         return jsonify(result)
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Competitor analysis failed: {e}")
         return handle_error(str(e))
@@ -968,7 +968,7 @@ def content_score():
         if not content:
             return jsonify({'error': '점수를 계산할 콘텐츠가 필요합니다.'}), 400
 
-        from services.quality_service import calculate_comprehensive_score
+        from services.quality.quality_service import calculate_comprehensive_score
         result = calculate_comprehensive_score(content)
         return jsonify(result)
 
@@ -994,12 +994,12 @@ def add_commentary():
         if not content:
             return jsonify({'error': '해설을 추가할 콘텐츠가 필요합니다.'}), 400
 
-        from services.commentary_service import add_commentary as _add_commentary
+        from services.content.commentary_service import add_commentary as _add_commentary
         result = _add_commentary(content, model)
         return jsonify(result)
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Commentary failed: {e}")
         return handle_error(str(e))
@@ -1022,12 +1022,12 @@ def progressive_summary():
         if not content:
             return jsonify({'error': '요약할 콘텐츠가 필요합니다.'}), 400
 
-        from services.progressive_summary_service import generate_progressive_summary
+        from services.content.progressive_summary_service import generate_progressive_summary
         result = generate_progressive_summary(content, model)
         return jsonify(result)
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Progressive summary failed: {e}")
         return handle_error(str(e))

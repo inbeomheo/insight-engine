@@ -3,7 +3,7 @@ SERP Feature Opportunity Analyzer 서비스 단위 테스트
 """
 import unittest
 
-from services.serp_feature_service import analyze_serp_features
+from services.seo.serp_feature_service import analyze_serp_features
 
 
 class TestSerpFeatureService(unittest.TestCase):

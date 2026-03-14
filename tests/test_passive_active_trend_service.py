@@ -1,6 +1,6 @@
 """Passive-to-Active Ratio Trend 서비스 테스트."""
 import unittest
-from services.passive_active_trend_service import analyze_passive_active_trend
+from services.analysis.passive_active_trend_service import analyze_passive_active_trend
 
 
 class TestPassiveActiveTrend(unittest.TestCase):

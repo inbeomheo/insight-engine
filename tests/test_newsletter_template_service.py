@@ -1,7 +1,7 @@
 """newsletter_template_service 단위 테스트"""
 import unittest
 
-from services.newsletter_template_service import convert_to_newsletter, _inline_format
+from services.content.newsletter_template_service import convert_to_newsletter, _inline_format
 
 
 class TestInlineFormat(unittest.TestCase):

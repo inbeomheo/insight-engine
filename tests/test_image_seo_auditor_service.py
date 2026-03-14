@@ -1,6 +1,6 @@
 """Image SEO Auditor 서비스 테스트."""
 import unittest
-from services.image_seo_auditor_service import audit_image_seo
+from services.seo.image_seo_auditor_service import audit_image_seo
 
 
 class TestImageSeoAuditor(unittest.TestCase):

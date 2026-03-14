@@ -1,6 +1,6 @@
 """Heading Term Placement Auditor 서비스 단위 테스트"""
 import unittest
-from services.heading_term_placement_service import audit_heading_term_placement
+from services.analysis.heading_term_placement_service import audit_heading_term_placement
 
 
 class TestHeadingTermPlacementService(unittest.TestCase):

@@ -6,7 +6,7 @@ class TestPromiseMatchService(unittest.TestCase):
     """audit_promise_match 함수의 핵심 동작을 검증합니다."""
 
     def _audit(self, content: str) -> dict:
-        from services.promise_match_service import audit_promise_match
+        from services.quality.promise_match_service import audit_promise_match
         return audit_promise_match(content)
 
     # --- 엣지 케이스 ---

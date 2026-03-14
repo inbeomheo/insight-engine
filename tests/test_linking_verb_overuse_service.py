@@ -1,6 +1,6 @@
 """Linking Verb Overuse Detector 서비스 테스트."""
 import unittest
-from services.linking_verb_overuse_service import detect_linking_verb_overuse
+from services.analysis.linking_verb_overuse_service import detect_linking_verb_overuse
 
 
 class TestLinkingVerbOveruseDetector(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Step Verification Coverage Analyzer 서비스 테스트."""
 import unittest
-from services.step_verification_coverage_service import analyze_step_verification_coverage
+from services.analysis.step_verification_coverage_service import analyze_step_verification_coverage
 
 
 class TestStepVerificationCoverage(unittest.TestCase):

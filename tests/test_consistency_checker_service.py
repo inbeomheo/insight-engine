@@ -2,7 +2,7 @@
 Consistency & Contradiction Checker 서비스 테스트
 """
 import unittest
-from services.consistency_checker_service import check_consistency
+from services.quality.consistency_checker_service import check_consistency
 
 
 class TestConsistencyCheckerService(unittest.TestCase):

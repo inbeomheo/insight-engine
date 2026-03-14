@@ -1,6 +1,6 @@
 """Average Words Per Sentence 서비스 테스트."""
 import unittest
-from services.avg_words_per_sentence_service import analyze_avg_words_per_sentence
+from services.analysis.sentence_analysis_service import analyze_avg_words_per_sentence
 
 
 class TestAvgWordsPerSentence(unittest.TestCase):

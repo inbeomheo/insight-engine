@@ -31,7 +31,7 @@ class TestDownloadAudio(unittest.TestCase):
 
     def test_download_audio_no_yt_dlp(self):
         """yt-dlp가 설치되지 않으면 None 반환"""
-        from services.whisper_service import download_audio
+        from services.transcript.whisper_service import download_audio
 
         with patch.dict('sys.modules', {'yt_dlp': None}):
             # import 실패를 시뮬레이션
@@ -65,7 +65,7 @@ class TestTranscribeAudio(unittest.TestCase):
 
     def test_transcribe_audio_success(self):
         """정상적으로 텍스트를 반환"""
-        from services.whisper_service import transcribe_audio
+        from services.transcript.whisper_service import transcribe_audio
 
         mock_segment1 = MagicMock()
         mock_segment1.text = "안녕하세요"
@@ -83,7 +83,7 @@ class TestTranscribeAudio(unittest.TestCase):
             WhisperModel=MagicMock(return_value=mock_model)
         )}):
             import importlib
-            import services.whisper_service as ws
+            import services.transcript.whisper_service as ws
             importlib.reload(ws)
             result = ws.transcribe_audio('/tmp/test.wav', 'base')
 
@@ -92,7 +92,7 @@ class TestTranscribeAudio(unittest.TestCase):
 
     def test_transcribe_audio_empty_result(self):
         """빈 결과 시 None 반환"""
-        from services.whisper_service import transcribe_audio
+        from services.transcript.whisper_service import transcribe_audio
 
         mock_info = MagicMock()
         mock_info.language = "ko"
@@ -104,7 +104,7 @@ class TestTranscribeAudio(unittest.TestCase):
             WhisperModel=MagicMock(return_value=mock_model)
         )}):
             import importlib
-            import services.whisper_service as ws
+            import services.transcript.whisper_service as ws
             importlib.reload(ws)
             result = ws.transcribe_audio('/tmp/test.wav')
 
@@ -181,7 +181,7 @@ class TestWhisperDisabledSkip(unittest.TestCase):
         with app.app_context(), \
              patch.dict(os.environ, {'SUPADATA_API_KEY': ''}, clear=False), \
              patch('services.whisper_service.extract_transcript_whisper') as mock_whisper:
-            from services.content_service import get_transcript
+            from services.core.content_service import get_transcript
             result = get_transcript('dQw4w9WgXcQ')
 
         mock_whisper.assert_not_called()
@@ -207,7 +207,7 @@ class TestWhisperInFallbackChain(unittest.TestCase):
 
         with app.app_context(), \
              patch('services.content_service._save_cache'):
-            from services.content_service import get_transcript
+            from services.core.content_service import get_transcript
             result = get_transcript('dQw4w9WgXcQ')
 
         mock_whisper.assert_called_once()
@@ -220,7 +220,7 @@ class TestCleanupFile(unittest.TestCase):
 
     def test_cleanup_existing_file(self):
         """존재하는 파일 삭제"""
-        from services.whisper_service import _cleanup_file
+        from services.transcript.whisper_service import _cleanup_file
 
         with patch('os.path.exists', return_value=True), \
              patch('os.remove') as mock_remove:
@@ -230,7 +230,7 @@ class TestCleanupFile(unittest.TestCase):
 
     def test_cleanup_nonexistent_file(self):
         """존재하지 않는 파일은 삭제 시도 안 함"""
-        from services.whisper_service import _cleanup_file
+        from services.transcript.whisper_service import _cleanup_file
 
         with patch('os.path.exists', return_value=False), \
              patch('os.remove') as mock_remove:
@@ -240,12 +240,12 @@ class TestCleanupFile(unittest.TestCase):
 
     def test_cleanup_none_path(self):
         """None 경로는 무시"""
-        from services.whisper_service import _cleanup_file
+        from services.transcript.whisper_service import _cleanup_file
         _cleanup_file(None)  # 에러 없이 통과해야 함
 
     def test_cleanup_empty_path(self):
         """빈 문자열 경로는 무시"""
-        from services.whisper_service import _cleanup_file
+        from services.transcript.whisper_service import _cleanup_file
         _cleanup_file('')  # 에러 없이 통과해야 함
 
 

@@ -7,7 +7,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from services.numerical_promise_service import check_numerical_promises
+from services.analysis.numerical_promise_service import check_numerical_promises
 
 
 class TestNumericalPromiseService(unittest.TestCase):

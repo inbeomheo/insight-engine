@@ -1,7 +1,7 @@
 """email_ingest_service 단위 테스트"""
 import unittest
 
-from services.email_ingest_service import parse_forwarded_email, _decode_header_value
+from services.content.email_ingest_service import parse_forwarded_email, _decode_header_value
 
 
 class TestDecodeHeaderValue(unittest.TestCase):

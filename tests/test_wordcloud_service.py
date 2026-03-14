@@ -1,7 +1,7 @@
 """wordcloud_service 단위 테스트"""
 import unittest
 
-from services.wordcloud_service import generate_wordcloud, _count_words
+from services.media.wordcloud_service import generate_wordcloud, _count_words
 
 
 class TestCountWords(unittest.TestCase):

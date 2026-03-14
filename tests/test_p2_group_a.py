@@ -7,9 +7,9 @@ F2-17 RSS, F2-19 SRT 내보내기
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.tts_service import _split_text, preprocess_for_tts
-from services.slide_service import convert_to_slides
-from services.wordcloud_service import generate_wordcloud, _count_words
+from services.media.tts_service import _split_text, preprocess_for_tts
+from services.media.slide_service import convert_to_slides
+from services.media.wordcloud_service import generate_wordcloud, _count_words
 
 
 class TestTTSSplitText(unittest.TestCase):

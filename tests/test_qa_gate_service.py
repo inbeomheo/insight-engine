@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.qa_gate_service import check_quality
+from services.quality.qa_gate_service import check_quality
 
 
 class TestCheckQuality(unittest.TestCase):

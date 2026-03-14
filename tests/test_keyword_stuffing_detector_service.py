@@ -1,6 +1,6 @@
 """Keyword Stuffing Detector 서비스 테스트."""
 import unittest
-from services.keyword_stuffing_detector_service import detect_keyword_stuffing
+from services.seo.keyword_stuffing_detector_service import detect_keyword_stuffing
 
 
 class TestKeywordStuffingDetector(unittest.TestCase):

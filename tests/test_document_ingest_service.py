@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.document_ingest_service import (
+from services.content.document_ingest_service import (
     ALLOWED_MIME_TYPES, EXTENSION_TO_MIME, MAX_FILE_SIZE,
     extract_text,
 )
@@ -83,7 +83,7 @@ class TestExtractFromUpload(unittest.TestCase):
     @patch('tempfile.mkstemp', return_value=(5, '/tmp/test.pdf'))
     def test_valid_pdf_upload(self, mock_mkstemp, mock_unlink, mock_close, mock_size, mock_exists, mock_extract):
         """유효한 PDF 업로드 처리"""
-        from services.document_ingest_service import extract_from_upload
+        from services.content.document_ingest_service import extract_from_upload
 
         mock_extract.return_value = {
             'title': 'test',
@@ -106,7 +106,7 @@ class TestExtractFromUpload(unittest.TestCase):
     @patch('tempfile.mkstemp', return_value=(5, '/tmp/test.pdf'))
     def test_file_too_large(self, mock_mkstemp, mock_unlink, mock_close, mock_size, mock_exists):
         """파일 크기 초과 → ValueError"""
-        from services.document_ingest_service import extract_from_upload
+        from services.content.document_ingest_service import extract_from_upload
 
         mock_file = MagicMock()
         mock_file.filename = 'big.pdf'
@@ -119,7 +119,7 @@ class TestExtractFromUpload(unittest.TestCase):
 
     def test_unsupported_extension(self):
         """지원하지 않는 확장자 → ValueError"""
-        from services.document_ingest_service import extract_from_upload
+        from services.content.document_ingest_service import extract_from_upload
 
         mock_file = MagicMock()
         mock_file.filename = 'readme.txt'
@@ -136,7 +136,7 @@ class TestExtractFromUpload(unittest.TestCase):
     @patch('tempfile.mkstemp', return_value=(5, '/tmp/test.pdf'))
     def test_empty_file(self, mock_mkstemp, mock_unlink, mock_close, mock_size, mock_exists):
         """빈 파일 → ValueError"""
-        from services.document_ingest_service import extract_from_upload
+        from services.content.document_ingest_service import extract_from_upload
 
         mock_file = MagicMock()
         mock_file.filename = 'empty.pdf'

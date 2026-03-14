@@ -2,7 +2,7 @@
 import unittest
 from datetime import datetime, timezone, timedelta
 
-from services.freshness_monitor_service import (
+from services.seo.freshness_monitor_service import (
     check_freshness,
     _score_time_decay,
     _find_date_references,

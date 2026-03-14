@@ -1,6 +1,6 @@
 """Absolute Claim Risk Detector 서비스 테스트."""
 import unittest
-from services.absolute_claim_risk_service import detect_absolute_claim_risk
+from services.analysis.absolute_claim_risk_service import detect_absolute_claim_risk
 
 
 class TestAbsoluteClaimRisk(unittest.TestCase):

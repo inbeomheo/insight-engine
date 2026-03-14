@@ -1,6 +1,6 @@
 """Sentence Connector Variety Analyzer 서비스 테스트."""
 import unittest
-from services.sentence_connector_variety_service import analyze_connector_variety
+from services.analysis.sentence_analysis_service import analyze_connector_variety
 
 
 class TestSentenceConnectorVariety(unittest.TestCase):

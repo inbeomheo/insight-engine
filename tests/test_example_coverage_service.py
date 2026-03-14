@@ -3,7 +3,7 @@ Example Coverage Analyzer 서비스 단위 테스트
 """
 import unittest
 
-from services.example_coverage_service import analyze_example_coverage
+from services.analysis.example_coverage_service import analyze_example_coverage
 
 
 class TestExampleCoverageService(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Community Evidence Coverage Analyzer 서비스 테스트."""
 import unittest
-from services.community_evidence_service import analyze_community_evidence
+from services.quality.community_evidence_service import analyze_community_evidence
 
 
 class TestCommunityEvidence(unittest.TestCase):

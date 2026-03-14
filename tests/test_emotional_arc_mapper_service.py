@@ -1,6 +1,6 @@
 """Emotional Arc Mapper 서비스 테스트."""
 import unittest
-from services.emotional_arc_mapper_service import map_emotional_arc
+from services.analysis.emotional_arc_mapper_service import map_emotional_arc
 
 
 class TestEmotionalArcMapper(unittest.TestCase):

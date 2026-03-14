@@ -1,6 +1,6 @@
 """Sentence Ending Variety 서비스 테스트."""
 import unittest
-from services.sentence_ending_variety_service import analyze_sentence_ending_variety
+from services.analysis.sentence_analysis_service import analyze_sentence_ending_variety
 
 
 class TestSentenceEndingVariety(unittest.TestCase):

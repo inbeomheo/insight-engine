@@ -1,6 +1,6 @@
 """Evaluation Criteria Disclosure Checker 서비스 테스트."""
 import unittest
-from services.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
+from services.analysis.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
 
 
 class TestEvaluationCriteriaDisclosure(unittest.TestCase):

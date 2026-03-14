@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.spotify_service import (
+from services.platform.spotify_service import (
     is_spotify_episode_url,
     get_episode_id,
     get_episode_info,

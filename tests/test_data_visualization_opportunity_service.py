@@ -1,6 +1,6 @@
 """Data Visualization Opportunity 서비스 테스트."""
 import unittest
-from services.data_visualization_opportunity_service import find_visualization_opportunities
+from services.analysis.data_visualization_opportunity_service import find_visualization_opportunities
 
 
 class TestDataVisualizationOpportunity(unittest.TestCase):

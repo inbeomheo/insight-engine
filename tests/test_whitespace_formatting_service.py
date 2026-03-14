@@ -1,6 +1,6 @@
 """Whitespace Formatting Auditor 서비스 테스트."""
 import unittest
-from services.whitespace_formatting_service import audit_whitespace_formatting
+from services.analysis.whitespace_formatting_service import audit_whitespace_formatting
 
 
 class TestWhitespaceFormattingAuditor(unittest.TestCase):

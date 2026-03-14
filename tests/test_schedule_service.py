@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone, timedelta
 
-from services.schedule_service import ScheduleService, _memory_store
+from services.data.schedule_service import ScheduleService, _memory_store
 
 
 class TestScheduleServiceMemory(unittest.TestCase):
@@ -97,8 +97,8 @@ class TestCheckAndPublish(unittest.TestCase):
     @patch('services.schedule_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry')
     def test_check_and_publish_success(self, mock_registry, _):
-        from services.scheduler_worker import check_and_publish
-        from services.schedule_service import schedule_service
+        from services.data.scheduler_worker import check_and_publish
+        from services.data.schedule_service import schedule_service
 
         # 과거 시간으로 예약 생성
         past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
@@ -115,8 +115,8 @@ class TestCheckAndPublish(unittest.TestCase):
     @patch('services.schedule_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry')
     def test_check_and_publish_failure(self, mock_registry, _):
-        from services.scheduler_worker import check_and_publish
-        from services.schedule_service import schedule_service
+        from services.data.scheduler_worker import check_and_publish
+        from services.data.schedule_service import schedule_service
 
         past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
         post = schedule_service.create('user1', '제목', '내용', None, 'wp', past)

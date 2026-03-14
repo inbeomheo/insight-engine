@@ -12,7 +12,7 @@ def _fresh_import():
     """모듈 캐시 문제 방지를 위해 style_memory_service를 신선하게 import합니다."""
     if 'services.style_memory_service' in sys.modules:
         del sys.modules['services.style_memory_service']
-    import services.style_memory_service as m
+    import services.data.style_memory_service as m
     return m
 
 

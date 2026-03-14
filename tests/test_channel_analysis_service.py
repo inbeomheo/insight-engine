@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.channel_analysis_service import (
+from services.content.channel_analysis_service import (
     _extract_channel_id,
     _compute_stats,
     _cluster_topics,

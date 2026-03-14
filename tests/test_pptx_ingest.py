@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.document_ingest_service import _extract_pptx, extract_text, ALLOWED_MIME_TYPES
+from services.content.document_ingest_service import _extract_pptx, extract_text, ALLOWED_MIME_TYPES
 
 
 PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'

@@ -8,7 +8,7 @@ class TestPipelineEngine(unittest.TestCase):
 
     def _make_engine(self, steps):
         """테스트용 PipelineEngine 생성"""
-        from services.pipeline_service import PipelineEngine, PipelineConfig, PipelineStep
+        from services.core.pipeline_service import PipelineEngine, PipelineConfig, PipelineStep
         config = PipelineConfig(
             id="test",
             name="테스트 파이프라인",
@@ -159,7 +159,7 @@ class TestPresets(unittest.TestCase):
 
     def test_blog_automation_preset_exists(self):
         """blog_automation 프리셋이 존재하고 3개 스텝을 가짐"""
-        from services.pipeline_service import PIPELINE_PRESETS
+        from services.core.pipeline_service import PIPELINE_PRESETS
 
         self.assertIn("blog_automation", PIPELINE_PRESETS)
         config = PIPELINE_PRESETS["blog_automation"]
@@ -168,7 +168,7 @@ class TestPresets(unittest.TestCase):
 
     def test_blog_automation_step_ids(self):
         """blog_automation 프리셋의 스텝 ID가 올바른지 확인"""
-        from services.pipeline_service import PIPELINE_PRESETS
+        from services.core.pipeline_service import PIPELINE_PRESETS
 
         config = PIPELINE_PRESETS["blog_automation"]
         step_ids = [s.id for s in config.steps]
@@ -176,7 +176,7 @@ class TestPresets(unittest.TestCase):
 
     def test_step_handlers_are_callable(self):
         """모든 프리셋 스텝의 handler가 호출 가능한지 확인"""
-        from services.pipeline_service import PIPELINE_PRESETS
+        from services.core.pipeline_service import PIPELINE_PRESETS
 
         for name, config in PIPELINE_PRESETS.items():
             for step in config.steps:
@@ -191,7 +191,7 @@ class TestStepElapsed(unittest.TestCase):
 
     def test_step_complete_has_elapsed(self):
         """step_complete 이벤트에 elapsed 필드가 있는지 확인"""
-        from services.pipeline_service import PipelineEngine, PipelineConfig, PipelineStep
+        from services.core.pipeline_service import PipelineEngine, PipelineConfig, PipelineStep
 
         config = PipelineConfig(
             id="test",

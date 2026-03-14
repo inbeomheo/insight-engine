@@ -198,7 +198,7 @@ class TestSimulatorService:
 class TestComplexityService:
 
     def test_analyze_structured_content(self):
-        from services.complexity_service import ComplexityService
+        from services.analysis.complexity_service import ComplexityService
 
         svc = ComplexityService()
         content = (
@@ -216,14 +216,14 @@ class TestComplexityService:
         assert 0 <= report.complexity_score <= 100
 
     def test_analyze_empty(self):
-        from services.complexity_service import ComplexityService
+        from services.analysis.complexity_service import ComplexityService
 
         svc = ComplexityService()
         report = svc.analyze('')
         assert report.readability_score == 0
 
     def test_analyze_to_dict(self):
-        from services.complexity_service import ComplexityService
+        from services.analysis.complexity_service import ComplexityService
 
         svc = ComplexityService()
         report = svc.analyze("테스트 콘텐츠 내용.")
@@ -277,7 +277,7 @@ class TestLinkNetworkService:
 class TestRepurposeService:
 
     def test_get_available_formats(self):
-        from services.repurpose_service import RepurposeService
+        from services.export.repurpose_service import RepurposeService
 
         formats = RepurposeService.get_available_formats()
         assert len(formats) > 0
@@ -285,7 +285,7 @@ class TestRepurposeService:
 
     @patch('services.repurpose_service.RepurposeService._call_ai' if False else 'builtins.open', create=True)
     def test_invalid_format(self, _):
-        from services.repurpose_service import RepurposeService
+        from services.export.repurpose_service import RepurposeService
 
         svc = RepurposeService()
         with pytest.raises(ValueError, match="지원하지 않는 포맷"):

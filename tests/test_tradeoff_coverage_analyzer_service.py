@@ -1,6 +1,6 @@
 """Trade-off Coverage Analyzer 서비스 테스트."""
 import unittest
-from services.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
+from services.analysis.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
 
 
 class TestTradeoffCoverage(unittest.TestCase):

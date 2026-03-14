@@ -3,7 +3,7 @@ import base64
 import unittest
 from unittest.mock import patch
 
-from services.thumbnail_service import _build_image_prompt, generate_thumbnail
+from services.media.thumbnail_service import _build_image_prompt, generate_thumbnail
 
 
 class TestBuildImagePrompt(unittest.TestCase):

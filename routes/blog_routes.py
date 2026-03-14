@@ -22,11 +22,11 @@ import uuid
 
 from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context
 from extensions import limiter
-from utils.responses import handle_error, sanitize_error_for_client
+from utils.responses import handle_error, sanitize_error_for_client, api_error_from_exception
 
 from config import get_model_max_tokens
-from services import ai_service, content_service
-from services.supabase_service import (
+from services.core import ai_service, content_service
+from services.data.supabase_service import (
     require_auth, is_supabase_enabled, save_history
 )
 from services.usage import require_usage
@@ -244,7 +244,7 @@ def generate():
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
-    from services.multi_source_collector import detect_source_type, collect_content, SOURCE_YOUTUBE
+    from services.content.multi_source_collector import detect_source_type, collect_content, SOURCE_YOUTUBE
 
     try:
         start_time = time.time()
@@ -289,7 +289,7 @@ def generate():
             if filename.endswith(_audio_extensions) or (uploaded_file.content_type or '').startswith('audio/'):
                 import os
                 import tempfile
-                from services.whisper_service import transcribe_audio, _cleanup_file
+                from services.transcript.whisper_service import transcribe_audio, _cleanup_file
 
                 whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
                 if not whisper_enabled:
@@ -343,12 +343,12 @@ def generate():
                 })
 
             # PDF/DOCX 문서
-            from services.document_ingest_service import extract_from_upload
+            from services.content.document_ingest_service import extract_from_upload
 
             try:
                 doc = extract_from_upload(uploaded_file)
             except ValueError as e:
-                return jsonify({'error': str(e)}), 400
+                return handle_error(str(e))
 
             source_title = doc.get('title') or uploaded_file.filename or '업로드 문서'
             source_content = doc['content']
@@ -395,7 +395,7 @@ def generate():
             try:
                 collected = collect_content(url, source_type=source_type)
             except ValueError as e:
-                return jsonify({'error': str(e)}), 400
+                return handle_error(str(e))
 
             source_title = collected.get('title') or url
             source_content = collected.get('content', '')
@@ -485,7 +485,7 @@ def generate():
             return bypass_resp
 
         # 캐시 체크
-        from services.cache_service import AICacheService
+        from services.core.cache_service import AICacheService
         force = (request.get_json(silent=True) or {}).get('force', False)
         modifiers = params['modifiers'] or {}
         cache_key = AICacheService.make_key(
@@ -552,7 +552,7 @@ def generate():
         # 인용 타임스탬프 처리 (enable_citations: true 요청 시)
         if params.get('enable_citations') and video_id:
             try:
-                from services.citation_service import (
+                from services.content.citation_service import (
                     parse_citations, validate_citations,
                     enrich_content_with_links, enrich_html_with_links,
                 )
@@ -577,7 +577,7 @@ def generate():
         request_data = request_data_all
         if request_data.get('quality_check'):
             try:
-                from services.quality_service import evaluate_quality
+                from services.quality.quality_service import evaluate_quality
                 quality_score = evaluate_quality(
                     content=result.get('content', ''),
                     source_summary=transcript_text[:500],
@@ -600,7 +600,7 @@ def generate():
         )
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate failed: {e}")
         return _handle_error_response(str(e))
@@ -632,7 +632,7 @@ def regenerate():
         return jsonify({**result, "prompt": used_prompt, "usage": get_usage_for_response()})
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Regenerate failed: {e}")
         return _handle_error_response(str(e))
@@ -791,7 +791,7 @@ def generate_batch():
 
             # 배치 INSERT (1회 DB 호출)
             if histories_to_save:
-                from services.supabase_service import get_supabase
+                from services.data.supabase_service import get_supabase
                 supabase = get_supabase()
                 if supabase:
                     try:
@@ -829,10 +829,10 @@ def generate_batch():
 
     except ValueError as e:
         current_app.logger.error(f"ValueError in batch generate: {e}")
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Batch generate failed: {e}", exc_info=True)
-        return _handle_error_response(f'배치 처리 중 오류: {str(e)}')
+        return api_error_from_exception(e, '배치 처리 중 오류가 발생했습니다.')
 
 
 @blog_bp.route('/api/generate-merged', methods=['POST'])
@@ -969,7 +969,7 @@ def generate_merged():
         })
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate merged failed: {e}")
         return _handle_error_response(str(e))
@@ -1115,7 +1115,7 @@ def list_templates():
         page: 페이지 번호 (기본 1)
         search: 이름/설명 검색어
     """
-    from services.prompt_template_service import get_templates
+    from services.data.prompt_template_service import get_templates
 
     user_id = getattr(g, 'user_id', None)
     page = max(1, int(request.args.get('page', 1)))
@@ -1129,7 +1129,7 @@ def list_templates():
 @require_auth
 def create_template():
     """새 템플릿 생성"""
-    from services.prompt_template_service import create_template as svc_create
+    from services.data.prompt_template_service import create_template as svc_create
 
     user_id = getattr(g, 'user_id', None)
     data = request.get_json(silent=True) or {}
@@ -1156,7 +1156,7 @@ def create_template():
             'is_public': bool(data.get('is_public', False)),
         })
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
 
     if template is None:
         return jsonify({'error': '템플릿 저장에 실패했습니다.'}), 500
@@ -1168,7 +1168,7 @@ def create_template():
 @require_auth
 def update_template(template_id: str):
     """템플릿 수정 (소유자만)"""
-    from services.prompt_template_service import update_template as svc_update
+    from services.data.prompt_template_service import update_template as svc_update
 
     user_id = getattr(g, 'user_id', None)
     data = request.get_json(silent=True) or {}
@@ -1211,7 +1211,7 @@ def update_template(template_id: str):
 @require_auth
 def delete_template(template_id: str):
     """템플릿 삭제 (소유자만)"""
-    from services.prompt_template_service import delete_template as svc_delete
+    from services.data.prompt_template_service import delete_template as svc_delete
 
     user_id = getattr(g, 'user_id', None)
     success = svc_delete(template_id=template_id, user_id=user_id)
@@ -1226,7 +1226,7 @@ def delete_template(template_id: str):
 @require_auth
 def use_template(template_id: str):
     """템플릿 사용 (사용 횟수 증가 + 내용 반환)"""
-    from services.prompt_template_service import get_template_by_id, increment_usage
+    from services.data.prompt_template_service import get_template_by_id, increment_usage
 
     user_id = getattr(g, 'user_id', None)
     template = get_template_by_id(template_id=template_id, user_id=user_id)
@@ -1254,7 +1254,7 @@ def video_qa():
     응답 형식:
         {"answer": str, "sources": [{"text": str, "relevance": float}]}
     """
-    from services.video_qa_service import (
+    from services.media.video_qa_service import (
         is_video_indexed,
         index_video_transcript,
         answer_question,
@@ -1323,7 +1323,7 @@ def text_to_speech():
         audio/mpeg 파일 스트림
     """
     from config import TTS_ENABLED, TTS_DEFAULT_VOICE, TTS_MAX_CHARS
-    from services.tts_service import TTSService
+    from services.media.tts_service import TTSService
 
     data = request.get_json(silent=True) or {}
 
@@ -1350,10 +1350,9 @@ def text_to_speech():
     try:
         audio_bytes = TTSService.synthesize(text, voice=voice, speed=speed, preprocess=True)
     except ValueError as exc:
-        return jsonify({'error': str(exc)}), 400
+        return handle_error(str(exc))
     except RuntimeError as exc:
-        current_app.logger.error(f'TTS 합성 오류: {exc}')
-        return jsonify({'error': f'오디오 생성에 실패했습니다: {exc}'}), 500
+        return api_error_from_exception(exc, '오디오 생성에 실패했습니다.')
 
     return Response(
         audio_bytes,
@@ -1408,18 +1407,17 @@ def extract_events_endpoint():
             # 자막 세그먼트 → 타임스탬프 포함 텍스트 변환 (이벤트 추출 품질 향상)
             segments = transcript_data.get('segments', [])
             if segments:
-                from services.ai_service import format_transcript_with_timestamps
+                from services.core.ai_service import format_transcript_with_timestamps
                 transcript_text = format_transcript_with_timestamps(segments)
             else:
                 transcript_text = transcript_data.get('transcript', '')
 
         except Exception as exc:
-            current_app.logger.error(f'자막 추출 오류: {exc}')
-            return jsonify({'error': f'자막 추출에 실패했습니다: {str(exc)}'}), 500
+            return api_error_from_exception(exc, '자막 추출에 실패했습니다.')
 
     # 이벤트 추출
     try:
-        from services.event_extraction_service import (
+        from services.content.event_extraction_service import (
             extract_events, categorize_events, get_event_summary
         )
         events = extract_events(transcript_text, model=model)
@@ -1433,13 +1431,11 @@ def extract_events_endpoint():
         })
 
     except ValueError as exc:
-        return jsonify({'error': str(exc)}), 400
+        return handle_error(str(exc))
     except RuntimeError as exc:
-        current_app.logger.error(f'이벤트 추출 오류: {exc}')
-        return jsonify({'error': str(exc)}), 500
+        return api_error_from_exception(exc, '이벤트 추출에 실패했습니다.')
     except Exception as exc:
-        current_app.logger.error(f'이벤트 추출 예상치 못한 오류: {exc}', exc_info=True)
-        return jsonify({'error': '이벤트 추출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'}), 500
+        return api_error_from_exception(exc, '이벤트 추출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
 
 
 # ==================== F13: 자막 워크스페이스 ====================
@@ -1489,7 +1485,7 @@ def get_structured_transcript(video_id):
         return jsonify({'error': '자막이 비어 있습니다.'}), 422
 
     # 문장 단위 분리
-    from services.transcript_workspace_service import parse_transcript_sentences
+    from services.transcript.transcript_workspace_service import parse_transcript_sentences
     sentences = parse_transcript_sentences(text, segments if segments else None)
 
     result = {

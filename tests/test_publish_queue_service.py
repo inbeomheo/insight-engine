@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.publish_queue_service import PublishQueueService
+from services.data.publish_queue_service import PublishQueueService
 
 
 class TestPublishQueueService(unittest.TestCase):

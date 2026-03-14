@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.multi_source_collector import (
+from services.content.multi_source_collector import (
     detect_source_type,
     SOURCE_PODCAST,
     SOURCE_YOUTUBE,
@@ -76,7 +76,7 @@ class TestPodcastCollector(unittest.TestCase):
             'provider': 'spotify',
         }
 
-        from services.multi_source_collector import _collect_podcast
+        from services.content.multi_source_collector import _collect_podcast
         result = _collect_podcast("https://open.spotify.com/episode/abc123")
 
         self.assertEqual(result['title'], '테스트 팟캐스트 에피소드')
@@ -91,7 +91,7 @@ class TestPodcastCollector(unittest.TestCase):
     @patch('services.spotify_service.is_spotify_episode_url', return_value=False)
     def test_collect_audio_url_whisper(self, mock_is_spotify, mock_download, mock_transcribe, mock_cleanup):
         """일반 오디오 URL → Whisper 전사"""
-        from services.multi_source_collector import _collect_podcast
+        from services.content.multi_source_collector import _collect_podcast
         result = _collect_podcast("https://example.com/podcast.mp3")
 
         mock_download.assert_called_once_with("https://example.com/podcast.mp3")
@@ -104,7 +104,7 @@ class TestPodcastCollector(unittest.TestCase):
     @patch('services.spotify_service.is_spotify_episode_url', return_value=False)
     def test_collect_audio_whisper_disabled(self, mock_is_spotify):
         """Whisper 비활성화 시 에러"""
-        from services.multi_source_collector import _collect_podcast
+        from services.content.multi_source_collector import _collect_podcast
         with self.assertRaises(ValueError) as ctx:
             _collect_podcast("https://example.com/podcast.mp3")
         self.assertIn('WHISPER_ENABLED', str(ctx.exception))

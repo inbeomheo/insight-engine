@@ -1,7 +1,7 @@
 """emotional_tone_service 단위 테스트"""
 import unittest
 
-from services.emotional_tone_service import (
+from services.analysis.emotional_tone_service import (
     map_emotional_tone,
     _score_paragraph,
     _calculate_valence,

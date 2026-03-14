@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.chapter_service import split_chapters, _format_time
+from services.transcript.chapter_service import split_chapters, _format_time
 
 
 class TestFormatTime(unittest.TestCase):

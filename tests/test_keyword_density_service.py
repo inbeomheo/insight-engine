@@ -1,7 +1,7 @@
 """keyword_density_service 단위 테스트"""
 import unittest
 
-from services.keyword_density_service import (
+from services.seo.keyword_density_service import (
     analyze_density,
     get_density_report,
     _tokenize,

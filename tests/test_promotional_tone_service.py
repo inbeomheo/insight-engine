@@ -1,7 +1,7 @@
 """Promotional Tone Saturation Checker 서비스 테스트"""
 import unittest
 
-from services.promotional_tone_service import check_promotional_tone
+from services.analysis.promotional_tone_service import check_promotional_tone
 
 
 class TestPromotionalToneService(unittest.TestCase):

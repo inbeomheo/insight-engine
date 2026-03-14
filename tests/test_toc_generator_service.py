@@ -1,6 +1,6 @@
 """Table of Contents Generator 서비스 테스트."""
 import unittest
-from services.toc_generator_service import generate_toc
+from services.content.toc_generator_service import generate_toc
 
 
 class TestTocGenerator(unittest.TestCase):

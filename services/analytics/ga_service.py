@@ -5,7 +5,7 @@ GA4 Data API를 통해 트래픽 / 이벤트 데이터 조회
 import os
 from typing import Any
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('GAService')
 

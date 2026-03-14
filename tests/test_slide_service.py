@@ -1,7 +1,7 @@
 """slide_service 단위 테스트"""
 import unittest
 
-from services.slide_service import convert_to_slides, _split_into_slides, _render_slide, _inline_format
+from services.media.slide_service import convert_to_slides, _split_into_slides, _render_slide, _inline_format
 
 
 class TestSplitIntoSlides(unittest.TestCase):

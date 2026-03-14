@@ -7,7 +7,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from services.jargon_analyzer_service import analyze_jargon_coverage
+from services.analysis.jargon_analyzer_service import analyze_jargon_coverage
 
 
 class TestJargonAnalyzerService(unittest.TestCase):

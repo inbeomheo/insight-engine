@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import unittest
 
-from services.memory_service import MemoryService, MAX_FEEDBACK_HISTORY
+from services.data.memory_service import MemoryService, MAX_FEEDBACK_HISTORY
 
 
 class TestMemoryService(unittest.TestCase):

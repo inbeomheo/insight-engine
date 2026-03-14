@@ -2,7 +2,7 @@
 AuditLogService 단위 테스트 (F4-25)
 """
 import unittest
-from services.audit_log_service import AuditLogService
+from services.data.audit_log_service import AuditLogService
 
 
 class TestAuditLogService(unittest.TestCase):

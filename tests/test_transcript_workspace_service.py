@@ -1,7 +1,7 @@
 """transcript_workspace_service 단위 테스트"""
 import unittest
 
-from services.transcript_workspace_service import parse_transcript_sentences, apply_edits
+from services.transcript.transcript_workspace_service import parse_transcript_sentences, apply_edits
 
 
 class TestParseTranscriptSentences(unittest.TestCase):

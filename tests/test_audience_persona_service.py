@@ -5,7 +5,7 @@
 
 import unittest
 
-from services.audience_persona_service import build_persona
+from services.content.audience_persona_service import build_persona
 
 
 class TestAudiencePersonaService(unittest.TestCase):

@@ -101,7 +101,7 @@ class ResearchAgent(BaseAgent):
         search_query = research_data.get('search_query', '')
         if search_query:
             try:
-                from services import web_search_service
+                from services.data import web_search_service
                 web_results = web_search_service.search(search_query, max_results=3)
                 if web_results:
                     web_context = self._format_web_context(web_results)

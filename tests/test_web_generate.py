@@ -234,28 +234,28 @@ class TestWikipediaTitleCleaning(unittest.TestCase):
     """web_scraper_service의 Wikipedia 제목 정리 단위 테스트"""
 
     def test_clean_korean_suffix(self):
-        from services.web_scraper_service import _clean_wikipedia_title
+        from services.data.web_scraper_service import _clean_wikipedia_title
         self.assertEqual(
             _clean_wikipedia_title('인공지능 - 위키백과, 우리 모두의 백과사전'),
             '인공지능',
         )
 
     def test_clean_english_suffix(self):
-        from services.web_scraper_service import _clean_wikipedia_title
+        from services.data.web_scraper_service import _clean_wikipedia_title
         self.assertEqual(
             _clean_wikipedia_title('Artificial intelligence - Wikipedia'),
             'Artificial intelligence',
         )
 
     def test_clean_japanese_suffix(self):
-        from services.web_scraper_service import _clean_wikipedia_title
+        from services.data.web_scraper_service import _clean_wikipedia_title
         self.assertEqual(
             _clean_wikipedia_title('人工知能 - ウィキペディア'),
             '人工知能',
         )
 
     def test_no_suffix_unchanged(self):
-        from services.web_scraper_service import _clean_wikipedia_title
+        from services.data.web_scraper_service import _clean_wikipedia_title
         self.assertEqual(
             _clean_wikipedia_title('인공지능'),
             '인공지능',

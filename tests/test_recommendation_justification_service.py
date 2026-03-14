@@ -1,6 +1,6 @@
 """Recommendation Justification Analyzer 서비스 테스트."""
 import unittest
-from services.recommendation_justification_service import analyze_recommendation_justification
+from services.quality.recommendation_justification_service import analyze_recommendation_justification
 
 
 class TestRecommendationJustification(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Update Delta Summary Checker 서비스 테스트."""
 import unittest
-from services.update_delta_summary_service import check_update_delta_summary
+from services.content.update_delta_summary_service import check_update_delta_summary
 
 
 class TestUpdateDeltaSummary(unittest.TestCase):

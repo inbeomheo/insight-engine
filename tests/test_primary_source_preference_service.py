@@ -1,6 +1,6 @@
 """Primary Source Preference Checker 서비스 테스트."""
 import unittest
-from services.primary_source_preference_service import check_primary_source_preference
+from services.analysis.primary_source_preference_service import check_primary_source_preference
 
 
 class TestPrimarySourcePreference(unittest.TestCase):

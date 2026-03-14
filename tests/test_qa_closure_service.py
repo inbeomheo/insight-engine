@@ -2,7 +2,7 @@
 질문-답변 완결성 검사 서비스 테스트
 """
 import unittest
-from services.qa_closure_service import check_qa_closure
+from services.quality.qa_closure_service import check_qa_closure
 
 
 class TestQaClosureService(unittest.TestCase):

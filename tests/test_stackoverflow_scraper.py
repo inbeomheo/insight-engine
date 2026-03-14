@@ -12,7 +12,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
 
     def test_raises_on_invalid_url(self):
         """유효하지 않은 SO URL에서 ValueError 발생"""
-        from services.social_scraper_service import scrape_stackoverflow
+        from services.platform.social_scraper_service import scrape_stackoverflow
 
         with self.assertRaises(ValueError):
             scrape_stackoverflow("https://example.com/not-so")
@@ -53,7 +53,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
 
         mock_get.side_effect = side_effect
 
-        from services.social_scraper_service import scrape_stackoverflow
+        from services.platform.social_scraper_service import scrape_stackoverflow
 
         result = scrape_stackoverflow(
             "https://stackoverflow.com/questions/12345/python-sort"
@@ -88,7 +88,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
 
         mock_get.side_effect = side_effect
 
-        from services.social_scraper_service import scrape_stackoverflow
+        from services.platform.social_scraper_service import scrape_stackoverflow
 
         result = scrape_stackoverflow(
             "https://stackoverflow.com/questions/99999/test"
@@ -104,7 +104,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         mock_resp.json.return_value = {"items": []}
         mock_get.return_value = mock_resp
 
-        from services.social_scraper_service import scrape_stackoverflow
+        from services.platform.social_scraper_service import scrape_stackoverflow
 
         with self.assertRaises(ValueError) as ctx:
             scrape_stackoverflow(
@@ -118,7 +118,7 @@ class TestScrapeStackoverflow(unittest.TestCase):
         import requests as req_lib
         mock_get.side_effect = req_lib.RequestException("Connection error")
 
-        from services.social_scraper_service import scrape_stackoverflow
+        from services.platform.social_scraper_service import scrape_stackoverflow
 
         with self.assertRaises(ValueError):
             scrape_stackoverflow(
@@ -130,14 +130,14 @@ class TestDetectStackOverflow(unittest.TestCase):
     """multi_source_collector에서 Stack Overflow URL 감지 테스트"""
 
     def test_detects_stackoverflow(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(
             detect_source_type("https://stackoverflow.com/questions/12345/how-to-sort"),
             "stackoverflow",
         )
 
     def test_detects_stackoverflow_with_www(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(
             detect_source_type("https://www.stackoverflow.com/questions/67890/test"),
             "stackoverflow",

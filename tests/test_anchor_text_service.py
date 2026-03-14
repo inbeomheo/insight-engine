@@ -1,7 +1,7 @@
 """anchor_text_service 단위 테스트"""
 import unittest
 
-from services.anchor_text_service import (
+from services.seo.anchor_text_service import (
     audit_anchor_texts,
     _classify_anchor,
     _extract_links,

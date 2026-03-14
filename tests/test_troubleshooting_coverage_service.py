@@ -1,6 +1,6 @@
 """Troubleshooting Coverage Analyzer 서비스 테스트."""
 import unittest
-from services.troubleshooting_coverage_service import analyze_troubleshooting_coverage
+from services.analysis.troubleshooting_coverage_service import analyze_troubleshooting_coverage
 
 
 class TestTroubleshootingCoverage(unittest.TestCase):

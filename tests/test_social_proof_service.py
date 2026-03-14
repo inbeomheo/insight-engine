@@ -1,7 +1,7 @@
 """social_proof_service 단위 테스트"""
 import unittest
 
-from services.social_proof_service import (
+from services.media.social_proof_service import (
     extract_snippets,
     _make_snippet,
     _select_best,

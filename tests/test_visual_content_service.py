@@ -5,7 +5,7 @@ suggest_visuals()의 규칙 기반 분석 로직을 검증합니다.
 """
 import unittest
 
-from services.visual_content_service import suggest_visuals
+from services.media.visual_content_service import suggest_visuals
 
 
 class TestVisualContentService(unittest.TestCase):

@@ -5,9 +5,9 @@ blog_routes.py의 중복 코드 제거
 from functools import wraps
 from flask import g, jsonify, make_response
 
-from services.supabase_service import is_supabase_enabled
+from services.data.supabase_service import is_supabase_enabled
 from services.usage.usage_service import UsageService, ADMIN_USAGE
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('UsageDecorator')
 

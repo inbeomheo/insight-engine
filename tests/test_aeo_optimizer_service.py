@@ -5,7 +5,7 @@ AI Answer Engine Optimizer의 규칙 기반 채점 로직을 검증한다.
 """
 import unittest
 
-from services.aeo_optimizer_service import analyze_aeo
+from services.seo.aeo_optimizer_service import analyze_aeo
 
 
 class TestAeoOptimizerService(unittest.TestCase):

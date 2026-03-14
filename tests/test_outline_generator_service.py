@@ -1,7 +1,7 @@
 """outline_generator_service 단위 테스트"""
 import unittest
 
-from services.outline_generator_service import (
+from services.content.outline_generator_service import (
     generate_outline,
     get_templates,
 )

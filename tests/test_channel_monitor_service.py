@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.channel_monitor_service import get_latest_video, check_monitors
+from services.platform.channel_monitor_service import get_latest_video, check_monitors
 
 
 class TestGetLatestVideo(unittest.TestCase):

@@ -1,7 +1,7 @@
 """seo_metadata_service 단위 테스트"""
 import unittest
 
-from services.seo_metadata_service import (
+from services.seo.seo_metadata_service import (
     _get_video_id, generate_video_object_schema,
     generate_faq_page_schema, generate_article_schema, generate_all_schemas
 )

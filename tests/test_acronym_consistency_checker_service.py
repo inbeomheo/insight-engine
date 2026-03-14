@@ -1,6 +1,6 @@
 """Acronym Consistency Checker 서비스 테스트."""
 import unittest
-from services.acronym_consistency_checker_service import check_acronym_consistency
+from services.analysis.acronym_consistency_checker_service import check_acronym_consistency
 
 
 class TestAcronymConsistencyChecker(unittest.TestCase):

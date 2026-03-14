@@ -71,7 +71,7 @@ def _extract_text_from_pdf(pdf_path: str) -> str:
 def _extract_text_from_audio(audio_path: str) -> str:
     """오디오에서 Whisper로 텍스트 추출"""
     try:
-        from services.whisper_service import WhisperService
+        from services.transcript.whisper_service import WhisperService
         svc = WhisperService()
         result = svc.transcribe(audio_path)
         return result.get('text', '')

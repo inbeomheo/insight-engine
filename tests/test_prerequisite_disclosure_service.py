@@ -1,6 +1,6 @@
 """Prerequisite Disclosure Checker 서비스 테스트."""
 import unittest
-from services.prerequisite_disclosure_service import check_prerequisite_disclosure
+from services.analysis.prerequisite_disclosure_service import check_prerequisite_disclosure
 
 
 class TestPrerequisiteDisclosure(unittest.TestCase):

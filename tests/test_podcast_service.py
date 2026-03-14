@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.podcast_service import _parse_script
+from services.media.podcast_service import _parse_script
 
 
 class TestParseScript(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestParseScript(unittest.TestCase):
 class TestGeneratePodcastEpisode(unittest.TestCase):
 
     def test_empty_content_raises(self):
-        from services.podcast_service import generate_podcast_episode
+        from services.media.podcast_service import generate_podcast_episode
         with self.assertRaises(ValueError):
             generate_podcast_episode('', 'test')
 
@@ -38,7 +38,7 @@ class TestGeneratePodcastEpisode(unittest.TestCase):
         mock_gen.return_value = "Host: Hello\nGuest: Hi\nHost: Bye"
         mock_synth.return_value = b'\x00' * 100
 
-        from services.podcast_service import generate_podcast_episode
+        from services.media.podcast_service import generate_podcast_episode
         result = generate_podcast_episode('test content', 'Test', 'gemini/test')
 
         self.assertIn('script', result)

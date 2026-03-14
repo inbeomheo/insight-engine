@@ -9,11 +9,11 @@ from typing import Dict
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp, _extract_client_id, _get_style_prompt, DEFAULT_MODEL
-from services import ai_service, content_service
-from services.content_service import clear_cache
-from services.supabase_service import require_auth
-from services.webhook_service import WebhookService
-from utils.responses import handle_error
+from services.core import ai_service, content_service
+from services.core.content_service import clear_cache
+from services.data.supabase_service import require_auth
+from services.platform.webhook_service import WebhookService
+from utils.responses import handle_error, sanitize_error_for_client
 
 _CLIENT_TRACKER: Dict[str, float] = {}
 
@@ -90,7 +90,7 @@ def api_ollama_health():
         models = [m.get('name', '') for m in data.get('models', [])]
         return jsonify({'ok': True, 'models': models, 'base_url': base_url})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e), 'base_url': base_url}), 503
+        return jsonify({'ok': False, 'error': sanitize_error_for_client(str(e)), 'base_url': base_url}), 503
 
 
 @blog_bp.route('/api/providers/validate', methods=['POST'])
@@ -124,7 +124,7 @@ def api_validate_provider():
             resp.raise_for_status()
             return jsonify({'valid': True, 'model_tested': test_model})
         except Exception as e:
-            return jsonify({'valid': False, 'model_tested': test_model, 'error': str(e)})
+            return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
     if not api_key:
         return jsonify({'valid': False, 'error': 'API 키가 필요합니다.'}), 400
@@ -146,7 +146,7 @@ def api_validate_provider():
         litellm.completion(**kwargs)
         return jsonify({'valid': True, 'model_tested': test_model})
     except Exception as e:
-        return jsonify({'valid': False, 'model_tested': test_model, 'error': str(e)})
+        return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
 
 @blog_bp.route('/api/providers/campaign-packs', methods=['GET'])
@@ -385,12 +385,12 @@ def api_recommend_sources():
         if not topic:
             return jsonify({'error': '주제를 입력해주세요.'}), 400
 
-        from services.source_recommender_service import recommend_sources
+        from services.content.source_recommender_service import recommend_sources
         sources = recommend_sources(topic)
         return jsonify({'sources': sources})
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Source recommendation failed: {e}")
         return jsonify({'error': '소스 추천에 실패했습니다.'}), 500
@@ -408,12 +408,12 @@ def api_wordcloud():
         if not text:
             return jsonify({'error': '텍스트가 필요합니다.'}), 400
 
-        from services.wordcloud_service import generate_wordcloud
+        from services.media.wordcloud_service import generate_wordcloud
         svg = generate_wordcloud(text, max_words=max_words)
         return jsonify({'svg': svg})
 
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Wordcloud failed: {e}")
         return jsonify({'error': '워드클라우드 생성에 실패했습니다.'}), 500
@@ -470,7 +470,7 @@ def rss_feed():
     """최근 생성 콘텐츠를 RSS 2.0 XML로 발행합니다."""
     from xml.etree.ElementTree import Element, SubElement, tostring
     from flask import Response
-    from services.supabase_service import is_supabase_enabled
+    from services.data.supabase_service import is_supabase_enabled
 
     channel_title = 'Insight Engine'
     channel_link = request.host_url.rstrip('/')
@@ -487,7 +487,7 @@ def rss_feed():
     items = []
     if is_supabase_enabled():
         try:
-            from services.supabase_service import SupabaseService
+            from services.data.supabase_service import SupabaseService
             result = SupabaseService.get_histories(limit=20)
             items = result.get('histories', [])
         except Exception:
@@ -540,7 +540,7 @@ def api_feedback():
     if not style_id or not content_id or rating not in ('like', 'dislike'):
         return jsonify({'error': 'style_id, content_id, rating(like/dislike) 필수'}), 400
 
-    from services.prompt_optimizer_service import save_feedback
+    from services.data.prompt_optimizer_service import save_feedback
     result = save_feedback(
         style_id=style_id,
         content_id=content_id,
@@ -553,7 +553,7 @@ def api_feedback():
 @blog_bp.route('/api/feedback/stats/<style_id>', methods=['GET'])
 def api_feedback_stats(style_id: str):
     """스타일별 피드백 통계를 반환합니다."""
-    from services.prompt_optimizer_service import get_feedback_stats
+    from services.data.prompt_optimizer_service import get_feedback_stats
     return jsonify(get_feedback_stats(style_id))
 
 
@@ -598,7 +598,7 @@ def api_plagiarism_check():
     if not content:
         return jsonify({'error': 'content 필수'}), 400
 
-    from services.plagiarism_service import check_plagiarism
+    from services.quality.plagiarism_service import check_plagiarism
     result = check_plagiarism(content)
     return jsonify(result)
 
@@ -613,7 +613,7 @@ def api_readability():
     if not text:
         return jsonify({'error': 'text 필수'}), 400
 
-    from services.readability_service import analyze_readability
+    from services.analysis.readability_service import analyze_readability
     result = analyze_readability(text)
     return jsonify(result)
 
@@ -628,7 +628,7 @@ def api_sentiment_flow():
     if not content:
         return jsonify({'error': 'content 필수'}), 400
 
-    from services.nlp_analysis_service import analyze_sentiment_flow
+    from services.analysis.nlp_analysis_service import analyze_sentiment_flow
     result = analyze_sentiment_flow(content)
     return jsonify(result)
 
@@ -667,7 +667,7 @@ def grade_content_route():
         if not content or not content.strip():
             return jsonify({'error': '평가할 콘텐츠가 필요합니다.'}), 400
 
-        from services.content_grader_service import grade_content
+        from services.quality.content_grader_service import grade_content
         result = grade_content(content)
         return jsonify(result)
 
@@ -688,7 +688,7 @@ def optimize_headline_route():
         if not title or not title.strip():
             return jsonify({'error': '분석할 제목이 필요합니다.'}), 400
 
-        from services.headline_optimizer_service import optimize_headline
+        from services.seo.headline_optimizer_service import optimize_headline
         result = optimize_headline(title, content)
         return jsonify(result)
 
@@ -711,7 +711,7 @@ def freshness_check_route():
         if not published_date:
             return jsonify({'error': '발행일(published_date)이 필요합니다. ISO 8601 형식 (예: 2025-06-15)'}), 400
 
-        from services.freshness_monitor_service import check_freshness
+        from services.seo.freshness_monitor_service import check_freshness
         result = check_freshness(content, published_date)
         return jsonify(result)
 
@@ -732,7 +732,7 @@ def generate_quiz_route():
         if not content or not content.strip():
             return jsonify({'error': '퀴즈를 생성할 콘텐츠가 필요합니다.'}), 400
 
-        from services.quiz_generator_service import generate_quiz
+        from services.content.quiz_generator_service import generate_quiz
         result = generate_quiz(content, count)
         return jsonify(result)
 
@@ -752,7 +752,7 @@ def check_cannibalization_route():
         if not contents or len(contents) < 2:
             return jsonify({'error': '최소 2개 콘텐츠가 필요합니다. contents: [{id, title, content}, ...]'}), 400
 
-        from services.cannibalization_service import detect_cannibalization
+        from services.seo.cannibalization_service import detect_cannibalization
         result = detect_cannibalization(contents)
         return jsonify(result)
 
@@ -773,7 +773,7 @@ def generate_debate_route():
         if not topic or not topic.strip():
             return jsonify({'error': '토론 주제가 필요합니다.'}), 400
 
-        from services.debate_service import generate_debate
+        from services.content.debate_service import generate_debate
         result = generate_debate(topic, content)
         return jsonify(result)
 
@@ -793,7 +793,7 @@ def analyze_sentiment_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.sentiment_analyzer_service import analyze_sentiment
+        from services.analysis.sentiment_analyzer_service import analyze_sentiment
         result = analyze_sentiment(content)
         return jsonify(result)
 
@@ -815,7 +815,7 @@ def generate_hooks_route():
         if not topic or not topic.strip():
             return jsonify({'error': '주제(topic)가 필요합니다.'}), 400
 
-        from services.hook_generator_service import generate_hooks
+        from services.content.hook_generator_service import generate_hooks
         result = generate_hooks(topic, content, count)
         return jsonify(result)
 
@@ -836,7 +836,7 @@ def extract_snippets_route():
         if not content or not content.strip():
             return jsonify({'error': '스니펫을 추출할 콘텐츠가 필요합니다.'}), 400
 
-        from services.social_proof_service import extract_snippets
+        from services.media.social_proof_service import extract_snippets
         result = extract_snippets(content, max_count)
         return jsonify(result)
 
@@ -857,7 +857,7 @@ def benchmark_readability_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.readability_benchmark_service import benchmark_readability
+        from services.analysis.readability_benchmark_service import benchmark_readability
         result = benchmark_readability(content, category)
         return jsonify(result)
 
@@ -879,7 +879,7 @@ def generate_outline_route():
         if not topic or not topic.strip():
             return jsonify({'error': '주제(topic)가 필요합니다.'}), 400
 
-        from services.outline_generator_service import generate_outline
+        from services.content.outline_generator_service import generate_outline
         result = generate_outline(topic, template, keywords)
         return jsonify(result)
 
@@ -900,7 +900,7 @@ def reading_time_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.reading_time_service import estimate_reading_time
+        from services.analysis.reading_time_service import estimate_reading_time
         result = estimate_reading_time(content, content_type)
         return jsonify(result)
 
@@ -921,7 +921,7 @@ def analyze_cta_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.cta_optimizer_service import analyze_ctas, suggest_ctas
+        from services.seo.cta_optimizer_service import analyze_ctas, suggest_ctas
         analysis = analyze_ctas(content)
         if goal:
             suggestions = suggest_ctas(content, goal)
@@ -946,10 +946,10 @@ def keyword_density_route():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
         if keywords:
-            from services.keyword_density_service import analyze_density
+            from services.seo.keyword_density_service import analyze_density
             result = analyze_density(content, keywords)
         else:
-            from services.keyword_density_service import get_density_report
+            from services.seo.keyword_density_service import get_density_report
             result = get_density_report(content)
         return jsonify(result)
 
@@ -970,7 +970,7 @@ def analyze_transitions_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.transition_analyzer_service import analyze_transitions, suggest_transitions
+        from services.analysis.transition_analyzer_service import analyze_transitions, suggest_transitions
         result = analyze_transitions(content)
         if suggest:
             result['recommendations'] = suggest_transitions(content)
@@ -992,7 +992,7 @@ def paragraph_balance_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.paragraph_balance_service import analyze_balance
+        from services.analysis.paragraph_balance_service import analyze_balance
         result = analyze_balance(content)
         return jsonify(result)
 
@@ -1013,7 +1013,7 @@ def power_words_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.power_word_service import analyze_power_words, suggest_power_words
+        from services.analysis.power_word_service import analyze_power_words, suggest_power_words
         result = analyze_power_words(content)
         if goal:
             result['recommended'] = suggest_power_words(content, goal)
@@ -1035,7 +1035,7 @@ def emotional_tone_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.emotional_tone_service import map_emotional_tone
+        from services.analysis.emotional_tone_service import map_emotional_tone
         result = map_emotional_tone(content)
         return jsonify(result)
 
@@ -1055,7 +1055,7 @@ def engagement_score_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.engagement_scorer_service import score_engagement
+        from services.seo.engagement_scorer_service import score_engagement
         result = score_engagement(content)
         return jsonify(result)
 
@@ -1075,7 +1075,7 @@ def sentence_variety_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.sentence_variety_service import analyze_variety
+        from services.analysis.sentence_analysis_service import analyze_variety
         result = analyze_variety(content)
         return jsonify(result)
 
@@ -1095,7 +1095,7 @@ def check_redundancy_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.redundancy_checker_service import check_redundancy
+        from services.analysis.redundancy_checker_service import check_redundancy
         result = check_redundancy(content)
         return jsonify(result)
 
@@ -1115,7 +1115,7 @@ def detect_passive_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.passive_voice_service import detect_passive
+        from services.analysis.passive_voice_service import detect_passive
         result = detect_passive(content)
         return jsonify(result)
 
@@ -1135,7 +1135,7 @@ def extract_acronyms_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.acronym_extractor_service import extract_acronyms
+        from services.analysis.acronym_extractor_service import extract_acronyms
         result = extract_acronyms(content)
         return jsonify(result)
 
@@ -1156,7 +1156,7 @@ def generate_faq_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.faq_generator_service import generate_faq
+        from services.content.faq_generator_service import generate_faq
         result = generate_faq(content, max_questions)
         return jsonify(result)
 
@@ -1177,7 +1177,7 @@ def predict_performance_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.content_performance_predictor_service import predict_performance
+        from services.seo.content_performance_predictor_service import predict_performance
         result = predict_performance(content, title)
         return jsonify(result)
 
@@ -1197,7 +1197,7 @@ def brand_voice_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.brand_voice_profiler_service import profile_brand_voice
+        from services.content.brand_voice_profiler_service import profile_brand_voice
         result = profile_brand_voice(content)
         return jsonify(result)
 
@@ -1217,7 +1217,7 @@ def audience_persona_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.audience_persona_service import build_persona
+        from services.content.audience_persona_service import build_persona
         result = build_persona(content)
         return jsonify(result)
 
@@ -1237,7 +1237,7 @@ def suggest_visuals_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.visual_content_service import suggest_visuals
+        from services.media.visual_content_service import suggest_visuals
         result = suggest_visuals(content)
         return jsonify(result)
 
@@ -1258,7 +1258,7 @@ def analyze_aeo_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.aeo_optimizer_service import analyze_aeo
+        from services.seo.aeo_optimizer_service import analyze_aeo
         result = analyze_aeo(content, target_query)
         return jsonify(result)
 
@@ -1279,7 +1279,7 @@ def search_intent_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.search_intent_service import analyze_search_intent
+        from services.seo.search_intent_service import analyze_search_intent
         result = analyze_search_intent(content, target_keyword)
         return jsonify(result)
 
@@ -1300,7 +1300,7 @@ def internal_links_route():
         if not contents or len(contents) < 2:
             return jsonify({'error': '최소 2개 콘텐츠가 필요합니다. contents: [{id, title, content}, ...]'}), 400
 
-        from services.internal_link_service import find_link_opportunities
+        from services.seo.internal_link_service import find_link_opportunities
         result = find_link_opportunities(contents, current_content)
         return jsonify(result)
 
@@ -1321,7 +1321,7 @@ def check_originality_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.originality_checker_service import check_originality
+        from services.quality.originality_checker_service import check_originality
         result = check_originality(content, reference_contents)
         return jsonify(result)
 
@@ -1342,7 +1342,7 @@ def topic_gaps_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.topic_gap_service import analyze_topic_gaps
+        from services.seo.topic_gap_service import analyze_topic_gaps
         result = analyze_topic_gaps(content, reference_contents)
         return jsonify(result)
 
@@ -1363,7 +1363,7 @@ def analyze_eeat_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.eeat_analyzer_service import analyze_eeat
+        from services.seo.eeat_analyzer_service import analyze_eeat
         result = analyze_eeat(content, author_info)
         return jsonify(result)
 
@@ -1384,7 +1384,7 @@ def serp_features_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.serp_feature_service import analyze_serp_features
+        from services.seo.serp_feature_service import analyze_serp_features
         result = analyze_serp_features(content, target_keyword)
         return jsonify(result)
 
@@ -1404,7 +1404,7 @@ def topic_clusters_route():
         if not contents or not isinstance(contents, list):
             return jsonify({'error': '분석할 콘텐츠 목록(contents)이 필요합니다.'}), 400
 
-        from services.topic_cluster_service import map_topic_clusters
+        from services.seo.topic_cluster_service import map_topic_clusters
         result = map_topic_clusters(contents)
         return jsonify(result)
 
@@ -1424,7 +1424,7 @@ def analyze_entities_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.entity_coverage_service import analyze_entities
+        from services.seo.entity_coverage_service import analyze_entities
         result = analyze_entities(content)
         return jsonify(result)
 
@@ -1444,7 +1444,7 @@ def verify_claims_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.claim_verifier_service import verify_claims
+        from services.quality.claim_verifier_service import verify_claims
         result = verify_claims(content)
         return jsonify(result)
 
@@ -1464,7 +1464,7 @@ def schema_opportunities_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.schema_opportunity_service import find_schema_opportunities
+        from services.seo.schema_opportunity_service import find_schema_opportunities
         result = find_schema_opportunities(content)
         return jsonify(result)
 
@@ -1484,7 +1484,7 @@ def detect_fillers_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.filler_detector_service import detect_fillers
+        from services.analysis.filler_detector_service import detect_fillers
         result = detect_fillers(content)
         return jsonify(result)
 
@@ -1505,7 +1505,7 @@ def information_gain_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.information_gain_service import analyze_information_gain
+        from services.analysis.information_gain_service import analyze_information_gain
         result = analyze_information_gain(content, reference_contents)
         return jsonify(result)
 
@@ -1525,7 +1525,7 @@ def detect_artifacts_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.transcript_artifact_service import detect_transcript_artifacts
+        from services.transcript.transcript_artifact_service import detect_transcript_artifacts
         result = detect_transcript_artifacts(content)
         return jsonify(result)
 
@@ -1545,7 +1545,7 @@ def check_inclusive_language_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.inclusive_language_service import check_inclusive_language
+        from services.analysis.inclusive_language_service import check_inclusive_language
         result = check_inclusive_language(content)
         return jsonify(result)
 
@@ -1565,7 +1565,7 @@ def check_promotional_tone_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.promotional_tone_service import check_promotional_tone
+        from services.analysis.promotional_tone_service import check_promotional_tone
         result = check_promotional_tone(content)
         return jsonify(result)
 
@@ -1585,7 +1585,7 @@ def check_numerical_promises_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.numerical_promise_service import check_numerical_promises
+        from services.analysis.numerical_promise_service import check_numerical_promises
         result = check_numerical_promises(content)
         return jsonify(result)
 
@@ -1605,7 +1605,7 @@ def audit_anchors_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.anchor_text_service import audit_anchor_texts
+        from services.seo.anchor_text_service import audit_anchor_texts
         result = audit_anchor_texts(content)
         return jsonify(result)
 
@@ -1625,7 +1625,7 @@ def audit_promises_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.promise_match_service import audit_promise_match
+        from services.quality.promise_match_service import audit_promise_match
         result = audit_promise_match(content)
         return jsonify(result)
 
@@ -1645,7 +1645,7 @@ def check_consistency_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.consistency_checker_service import check_consistency
+        from services.quality.consistency_checker_service import check_consistency
         result = check_consistency(content)
         return jsonify(result)
 
@@ -1665,7 +1665,7 @@ def analyze_jargon_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.jargon_analyzer_service import analyze_jargon_coverage
+        from services.analysis.jargon_analyzer_service import analyze_jargon_coverage
         result = analyze_jargon_coverage(content)
         return jsonify(result)
 
@@ -1685,7 +1685,7 @@ def analyze_speakability_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.speakability_service import analyze_speakability
+        from services.analysis.speakability_service import analyze_speakability
         result = analyze_speakability(content)
         return jsonify(result)
 
@@ -1705,7 +1705,7 @@ def detect_subheading_gaps_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.subheading_gap_service import detect_subheading_gaps
+        from services.analysis.subheading_gap_service import detect_subheading_gaps
         result = detect_subheading_gaps(content)
         return jsonify(result)
 
@@ -1725,7 +1725,7 @@ def check_heading_parallelism_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.heading_parallelism_service import check_heading_parallelism
+        from services.analysis.heading_parallelism_service import check_heading_parallelism
         result = check_heading_parallelism(content)
         return jsonify(result)
 
@@ -1745,7 +1745,7 @@ def detect_section_drift_route():
         if not content or not content.strip():
             return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-        from services.section_drift_service import detect_section_drift
+        from services.quality.section_drift_service import detect_section_drift
         result = detect_section_drift(content)
         return jsonify(result)
 
@@ -1762,7 +1762,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.pronoun_clarity_service import check_pronoun_clarity
+            from services.analysis.pronoun_clarity_service import check_pronoun_clarity
             result = check_pronoun_clarity(content)
             return jsonify(result)
 
@@ -1779,7 +1779,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.example_coverage_service import analyze_example_coverage
+            from services.analysis.example_coverage_service import analyze_example_coverage
             result = analyze_example_coverage(content)
             return jsonify(result)
 
@@ -1796,7 +1796,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.qa_closure_service import check_qa_closure
+            from services.quality.qa_closure_service import check_qa_closure
             result = check_qa_closure(content)
             return jsonify(result)
 
@@ -1813,7 +1813,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.adverb_overuse_service import detect_adverb_overuse
+            from services.analysis.adverb_overuse_service import detect_adverb_overuse
             result = detect_adverb_overuse(content)
             return jsonify(result)
 
@@ -1830,7 +1830,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.clause_overload_service import detect_clause_overload
+            from services.analysis.clause_overload_service import detect_clause_overload
             result = detect_clause_overload(content)
             return jsonify(result)
 
@@ -1847,7 +1847,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.statistics_coverage_service import analyze_statistics_coverage
+            from services.analysis.statistics_coverage_service import analyze_statistics_coverage
             result = analyze_statistics_coverage(content)
             return jsonify(result)
 
@@ -1864,7 +1864,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.simple_alternative_service import find_simple_alternatives
+            from services.analysis.simple_alternative_service import find_simple_alternatives
             result = find_simple_alternatives(content)
             return jsonify(result)
 
@@ -1881,7 +1881,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.heading_term_placement_service import audit_heading_term_placement
+            from services.analysis.heading_term_placement_service import audit_heading_term_placement
             result = audit_heading_term_placement(content)
             return jsonify(result)
 
@@ -1898,7 +1898,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.acronym_expansion_service import check_acronym_expansion
+            from services.analysis.acronym_expansion_service import check_acronym_expansion
             result = check_acronym_expansion(content)
             return jsonify(result)
 
@@ -1914,7 +1914,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.actionability_gap_service import detect_actionability_gaps
+            from services.analysis.actionability_gap_service import detect_actionability_gaps
             result = detect_actionability_gaps(content)
             return jsonify(result)
 
@@ -1930,7 +1930,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.thesis_frontload_service import check_thesis_frontload
+            from services.analysis.thesis_frontload_service import check_thesis_frontload
             result = check_thesis_frontload(content)
             return jsonify(result)
 
@@ -1946,7 +1946,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.list_table_opportunity_service import detect_list_table_opportunities
+            from services.analysis.list_table_opportunity_service import detect_list_table_opportunities
             result = detect_list_table_opportunities(content)
             return jsonify(result)
 
@@ -1962,7 +1962,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.image_seo_auditor_service import audit_image_seo
+            from services.seo.image_seo_auditor_service import audit_image_seo
             result = audit_image_seo(content)
             return jsonify(result)
 
@@ -1978,7 +1978,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.external_source_diversity_service import audit_external_source_diversity
+            from services.analysis.external_source_diversity_service import audit_external_source_diversity
             result = audit_external_source_diversity(content)
             return jsonify(result)
 
@@ -1994,7 +1994,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.chapter_breakpoint_service import detect_chapter_breakpoints
+            from services.transcript.chapter_breakpoint_service import detect_chapter_breakpoints
             result = detect_chapter_breakpoints(content)
             return jsonify(result)
 
@@ -2010,7 +2010,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.question_density_service import analyze_question_density
+            from services.analysis.question_density_service import analyze_question_density
             result = analyze_question_density(content)
             return jsonify(result)
 
@@ -2026,7 +2026,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.whitespace_formatting_service import audit_whitespace_formatting
+            from services.analysis.whitespace_formatting_service import audit_whitespace_formatting
             result = audit_whitespace_formatting(content)
             return jsonify(result)
 
@@ -2042,7 +2042,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.bullet_point_density_service import analyze_bullet_density
+            from services.analysis.bullet_point_density_service import analyze_bullet_density
             result = analyze_bullet_density(content)
             return jsonify(result)
 
@@ -2058,7 +2058,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.code_block_quality_service import check_code_block_quality
+            from services.analysis.code_block_quality_service import check_code_block_quality
             result = check_code_block_quality(content)
             return jsonify(result)
 
@@ -2074,7 +2074,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.paragraph_opening_variety_service import check_paragraph_opening_variety
+            from services.analysis.paragraph_opening_variety_service import check_paragraph_opening_variety
             result = check_paragraph_opening_variety(content)
             return jsonify(result)
 
@@ -2090,7 +2090,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.tone_consistency_service import check_tone_consistency
+            from services.analysis.tone_consistency_service import check_tone_consistency
             result = check_tone_consistency(content)
             return jsonify(result)
 
@@ -2106,7 +2106,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.linking_verb_overuse_service import detect_linking_verb_overuse
+            from services.analysis.linking_verb_overuse_service import detect_linking_verb_overuse
             result = detect_linking_verb_overuse(content)
             return jsonify(result)
 
@@ -2122,7 +2122,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.instruction_sequence_service import validate_instruction_sequence
+            from services.analysis.instruction_sequence_service import validate_instruction_sequence
             result = validate_instruction_sequence(content)
             return jsonify(result)
 
@@ -2138,7 +2138,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.content_depth_scorer_service import score_content_depth
+            from services.analysis.content_depth_scorer_service import score_content_depth
             result = score_content_depth(content)
             return jsonify(result)
 
@@ -2154,7 +2154,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.conclusion_strength_service import analyze_conclusion_strength
+            from services.analysis.conclusion_strength_service import analyze_conclusion_strength
             result = analyze_conclusion_strength(content)
             return jsonify(result)
 
@@ -2170,7 +2170,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.meta_description_quality_service import check_meta_description_quality
+            from services.seo.meta_description_quality_service import check_meta_description_quality
             result = check_meta_description_quality(content)
             return jsonify(result)
 
@@ -2186,7 +2186,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.parenthetical_overuse_service import check_parenthetical_overuse
+            from services.analysis.parenthetical_overuse_service import check_parenthetical_overuse
             result = check_parenthetical_overuse(content)
             return jsonify(result)
 
@@ -2202,7 +2202,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.word_frequency_cloud_service import generate_word_frequency
+            from services.media.word_frequency_cloud_service import generate_word_frequency
             top_n = data.get('top_n', 30)
             result = generate_word_frequency(content, top_n=top_n)
             return jsonify(result)
@@ -2219,7 +2219,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.anaphora_repetition_service import detect_anaphora_repetition
+            from services.analysis.anaphora_repetition_service import detect_anaphora_repetition
             result = detect_anaphora_repetition(content)
             return jsonify(result)
 
@@ -2235,7 +2235,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.toc_generator_service import generate_toc
+            from services.content.toc_generator_service import generate_toc
             max_depth = data.get('max_depth', 3)
             result = generate_toc(content, max_depth=max_depth)
             return jsonify(result)
@@ -2252,7 +2252,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.sentence_connector_variety_service import analyze_connector_variety
+            from services.analysis.sentence_analysis_service import analyze_connector_variety
             result = analyze_connector_variety(content)
             return jsonify(result)
 
@@ -2268,7 +2268,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.content_freshness_indicator_service import check_content_freshness
+            from services.seo.content_freshness_indicator_service import check_content_freshness
             result = check_content_freshness(content)
             return jsonify(result)
 
@@ -2284,7 +2284,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.article_format_template_service import check_article_format
+            from services.content.article_format_template_service import check_article_format
             result = check_article_format(content)
             return jsonify(result)
 
@@ -2300,7 +2300,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.emotional_arc_mapper_service import map_emotional_arc
+            from services.analysis.emotional_arc_mapper_service import map_emotional_arc
             result = map_emotional_arc(content)
             return jsonify(result)
 
@@ -2316,7 +2316,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.sentence_length_rhythm_service import analyze_sentence_rhythm
+            from services.analysis.sentence_analysis_service import analyze_sentence_rhythm
             result = analyze_sentence_rhythm(content)
             return jsonify(result)
 
@@ -2332,7 +2332,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.title_tag_length_service import check_title_tag_length
+            from services.seo.title_tag_length_service import check_title_tag_length
             result = check_title_tag_length(content)
             return jsonify(result)
 
@@ -2348,7 +2348,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.keyword_stuffing_detector_service import detect_keyword_stuffing
+            from services.seo.keyword_stuffing_detector_service import detect_keyword_stuffing
             result = detect_keyword_stuffing(content)
             return jsonify(result)
 
@@ -2364,7 +2364,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.sentence_ending_variety_service import analyze_sentence_ending_variety
+            from services.analysis.sentence_analysis_service import analyze_sentence_ending_variety
             result = analyze_sentence_ending_variety(content)
             return jsonify(result)
 
@@ -2380,7 +2380,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.url_health_checker_service import check_url_health
+            from services.seo.url_health_checker_service import check_url_health
             result = check_url_health(content)
             return jsonify(result)
 
@@ -2397,7 +2397,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.passive_construction_ratio_service import analyze_passive_ratio
+            from services.analysis.passive_construction_ratio_service import analyze_passive_ratio
             result = analyze_passive_ratio(content)
             return jsonify(result)
 
@@ -2414,7 +2414,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.avg_words_per_sentence_service import analyze_avg_words_per_sentence
+            from services.analysis.sentence_analysis_service import analyze_avg_words_per_sentence
             result = analyze_avg_words_per_sentence(content)
             return jsonify(result)
 
@@ -2431,7 +2431,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.emoji_usage_analyzer_service import analyze_emoji_usage
+            from services.analysis.emoji_usage_analyzer_service import analyze_emoji_usage
             result = analyze_emoji_usage(content)
             return jsonify(result)
 
@@ -2448,7 +2448,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.acronym_consistency_checker_service import check_acronym_consistency
+            from services.analysis.acronym_consistency_checker_service import check_acronym_consistency
             result = check_acronym_consistency(content)
             return jsonify(result)
 
@@ -2465,7 +2465,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.heading_keyword_density_service import analyze_heading_keyword_density
+            from services.analysis.heading_keyword_density_service import analyze_heading_keyword_density
             result = analyze_heading_keyword_density(content)
             return jsonify(result)
 
@@ -2482,7 +2482,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.content_symmetry_analyzer_service import analyze_content_symmetry
+            from services.analysis.content_symmetry_analyzer_service import analyze_content_symmetry
             result = analyze_content_symmetry(content)
             return jsonify(result)
 
@@ -2499,7 +2499,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.rhetorical_device_detector_service import detect_rhetorical_devices
+            from services.analysis.rhetorical_device_detector_service import detect_rhetorical_devices
             result = detect_rhetorical_devices(content)
             return jsonify(result)
 
@@ -2516,7 +2516,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.cliche_detector_service import detect_cliches
+            from services.analysis.cliche_detector_service import detect_cliches
             result = detect_cliches(content)
             return jsonify(result)
 
@@ -2533,7 +2533,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.sentence_complexity_scorer_service import score_sentence_complexity
+            from services.analysis.sentence_analysis_service import score_sentence_complexity
             result = score_sentence_complexity(content)
             return jsonify(result)
 
@@ -2550,7 +2550,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.gender_neutral_language_service import check_gender_neutral
+            from services.analysis.gender_neutral_language_service import check_gender_neutral
             result = check_gender_neutral(content)
             return jsonify(result)
 
@@ -2567,7 +2567,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.temporal_reference_checker_service import check_temporal_references
+            from services.analysis.temporal_reference_checker_service import check_temporal_references
             result = check_temporal_references(content)
             return jsonify(result)
 
@@ -2584,7 +2584,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.data_visualization_opportunity_service import find_visualization_opportunities
+            from services.analysis.data_visualization_opportunity_service import find_visualization_opportunities
             result = find_visualization_opportunities(content)
             return jsonify(result)
 
@@ -2601,7 +2601,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.sentence_starter_diversity_service import analyze_sentence_starter_diversity
+            from services.analysis.sentence_analysis_service import analyze_sentence_starter_diversity
             result = analyze_sentence_starter_diversity(content)
             return jsonify(result)
 
@@ -2618,7 +2618,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.avg_paragraph_length_service import analyze_avg_paragraph_length
+            from services.analysis.avg_paragraph_length_service import analyze_avg_paragraph_length
             result = analyze_avg_paragraph_length(content)
             return jsonify(result)
 
@@ -2635,7 +2635,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.quotation_usage_analyzer_service import analyze_quotation_usage
+            from services.analysis.quotation_usage_analyzer_service import analyze_quotation_usage
             result = analyze_quotation_usage(content)
             return jsonify(result)
 
@@ -2651,7 +2651,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.noun_verb_ratio_service import analyze_noun_verb_ratio
+            from services.analysis.noun_verb_ratio_service import analyze_noun_verb_ratio
             result = analyze_noun_verb_ratio(content)
             return jsonify(result)
 
@@ -2667,7 +2667,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.content_scanability_service import score_content_scanability
+            from services.analysis.content_scanability_service import score_content_scanability
             result = score_content_scanability(content)
             return jsonify(result)
 
@@ -2683,7 +2683,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.passive_active_trend_service import analyze_passive_active_trend
+            from services.analysis.passive_active_trend_service import analyze_passive_active_trend
             result = analyze_passive_active_trend(content)
             return jsonify(result)
 
@@ -2699,7 +2699,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.material_connection_disclosure_service import check_material_connection_disclosure
+            from services.analysis.material_connection_disclosure_service import check_material_connection_disclosure
             result = check_material_connection_disclosure(content)
             return jsonify(result)
 
@@ -2715,7 +2715,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.ai_disclosure_checker_service import check_ai_disclosure
+            from services.quality.ai_disclosure_checker_service import check_ai_disclosure
             result = check_ai_disclosure(content)
             return jsonify(result)
 
@@ -2731,7 +2731,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
+            from services.analysis.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
             result = analyze_tradeoff_coverage(content)
             return jsonify(result)
 
@@ -2747,7 +2747,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.primary_source_preference_service import check_primary_source_preference
+            from services.analysis.primary_source_preference_service import check_primary_source_preference
             result = check_primary_source_preference(content)
             return jsonify(result)
 
@@ -2763,7 +2763,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
+            from services.analysis.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
             result = detect_high_stakes_advice_risk(content)
             return jsonify(result)
 
@@ -2779,7 +2779,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
+            from services.analysis.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
             result = check_evaluation_criteria_disclosure(content)
             return jsonify(result)
 
@@ -2795,7 +2795,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.recommendation_justification_service import analyze_recommendation_justification
+            from services.quality.recommendation_justification_service import analyze_recommendation_justification
             result = analyze_recommendation_justification(content)
             return jsonify(result)
 
@@ -2811,7 +2811,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.prerequisite_disclosure_service import check_prerequisite_disclosure
+            from services.analysis.prerequisite_disclosure_service import check_prerequisite_disclosure
             result = check_prerequisite_disclosure(content)
             return jsonify(result)
 
@@ -2827,7 +2827,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.troubleshooting_coverage_service import analyze_troubleshooting_coverage
+            from services.analysis.troubleshooting_coverage_service import analyze_troubleshooting_coverage
             result = analyze_troubleshooting_coverage(content)
             return jsonify(result)
 
@@ -2843,7 +2843,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.extractability_analyzer_service import analyze_extractability
+            from services.analysis.extractability_analyzer_service import analyze_extractability
             result = analyze_extractability(content)
             return jsonify(result)
 
@@ -2859,7 +2859,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.community_evidence_service import analyze_community_evidence
+            from services.quality.community_evidence_service import analyze_community_evidence
             result = analyze_community_evidence(content)
             return jsonify(result)
 
@@ -2875,7 +2875,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.update_delta_summary_service import check_update_delta_summary
+            from services.content.update_delta_summary_service import check_update_delta_summary
             result = check_update_delta_summary(content)
             return jsonify(result)
 
@@ -2892,7 +2892,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.audience_fit_framing_service import analyze_audience_fit_framing
+            from services.quality.audience_fit_framing_service import analyze_audience_fit_framing
             result = analyze_audience_fit_framing(content)
             return jsonify(result)
 
@@ -2909,7 +2909,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.geo_scope_assumption_service import detect_geo_scope_assumptions
+            from services.analysis.geo_scope_assumption_service import detect_geo_scope_assumptions
             result = detect_geo_scope_assumptions(content)
             return jsonify(result)
 
@@ -2926,7 +2926,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.absolute_claim_risk_service import detect_absolute_claim_risk
+            from services.analysis.absolute_claim_risk_service import detect_absolute_claim_risk
             result = detect_absolute_claim_risk(content)
             return jsonify(result)
 
@@ -2943,7 +2943,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.quantifier_specificity_service import analyze_quantifier_specificity
+            from services.analysis.quantifier_specificity_service import analyze_quantifier_specificity
             result = analyze_quantifier_specificity(content)
             return jsonify(result)
 
@@ -2960,7 +2960,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.list_parallelism_service import check_list_parallelism
+            from services.analysis.list_parallelism_service import check_list_parallelism
             result = check_list_parallelism(content)
             return jsonify(result)
 
@@ -2977,7 +2977,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.heading_hierarchy_service import check_heading_hierarchy
+            from services.analysis.heading_hierarchy_service import check_heading_hierarchy
             result = check_heading_hierarchy(content)
             return jsonify(result)
 
@@ -2994,7 +2994,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.numeric_unit_consistency_service import check_numeric_unit_consistency
+            from services.analysis.numeric_unit_consistency_service import check_numeric_unit_consistency
             result = check_numeric_unit_consistency(content)
             return jsonify(result)
 
@@ -3011,7 +3011,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.step_verification_coverage_service import analyze_step_verification_coverage
+            from services.analysis.step_verification_coverage_service import analyze_step_verification_coverage
             result = analyze_step_verification_coverage(content)
             return jsonify(result)
 
@@ -3028,7 +3028,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.comparison_criteria_completeness_service import check_comparison_criteria_completeness
+            from services.analysis.comparison_criteria_completeness_service import check_comparison_criteria_completeness
             result = check_comparison_criteria_completeness(content)
             return jsonify(result)
 
@@ -3045,7 +3045,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.terminology_drift_service import analyze_terminology_drift
+            from services.analysis.terminology_drift_service import analyze_terminology_drift
             result = analyze_terminology_drift(content)
             return jsonify(result)
 
@@ -3062,7 +3062,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.topic_sentence_alignment_service import analyze_topic_sentence_alignment
+            from services.analysis.sentence_analysis_service import analyze_topic_sentence_alignment
             result = analyze_topic_sentence_alignment(content)
             return jsonify(result)
 
@@ -3079,7 +3079,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.paragraph_unity_service import check_paragraph_unity
+            from services.analysis.paragraph_unity_service import check_paragraph_unity
             result = check_paragraph_unity(content)
             return jsonify(result)
 
@@ -3096,7 +3096,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.original_evidence_signal_service import analyze_original_evidence
+            from services.analysis.original_evidence_signal_service import analyze_original_evidence
             result = analyze_original_evidence(content)
             return jsonify(result)
 
@@ -3113,7 +3113,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.adjacent_cohesion_service import analyze_adjacent_cohesion
+            from services.analysis.adjacent_cohesion_service import analyze_adjacent_cohesion
             result = analyze_adjacent_cohesion(content)
             return jsonify(result)
 
@@ -3130,7 +3130,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.claim_evidence_distance_service import analyze_claim_evidence_distance
+            from services.analysis.claim_evidence_distance_service import analyze_claim_evidence_distance
             result = analyze_claim_evidence_distance(content)
             return jsonify(result)
 
@@ -3147,7 +3147,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.definition_gap_service import detect_definition_gaps
+            from services.analysis.definition_gap_service import detect_definition_gaps
             result = detect_definition_gaps(content)
             return jsonify(result)
 
@@ -3164,7 +3164,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.methodology_transparency_service import check_methodology_transparency
+            from services.analysis.methodology_transparency_service import check_methodology_transparency
             result = check_methodology_transparency(content)
             return jsonify(result)
 
@@ -3181,7 +3181,7 @@ def detect_section_drift_route():
             if not content or not content.strip():
                 return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
 
-            from services.concept_load_service import analyze_concept_load
+            from services.analysis.concept_load_service import analyze_concept_load
             result = analyze_concept_load(content)
             return jsonify(result)
 

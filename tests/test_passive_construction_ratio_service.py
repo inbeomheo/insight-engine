@@ -1,6 +1,6 @@
 """Passive Construction Ratio 서비스 테스트."""
 import unittest
-from services.passive_construction_ratio_service import analyze_passive_ratio
+from services.analysis.passive_construction_ratio_service import analyze_passive_ratio
 
 
 class TestPassiveConstructionRatio(unittest.TestCase):

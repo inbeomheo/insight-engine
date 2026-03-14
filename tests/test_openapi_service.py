@@ -1,7 +1,7 @@
 """openapi_service 단위 테스트"""
 import unittest
 
-from services.openapi_service import build_openapi_spec
+from services.data.openapi_service import build_openapi_spec
 
 
 class TestBuildOpenapiSpec(unittest.TestCase):

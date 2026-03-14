@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-import services.referral_service as referral_mod
-from services.referral_service import ReferralService, REFERRAL_REWARD_CREDITS
+import services.platform.referral_service as referral_mod
+from services.platform.referral_service import ReferralService, REFERRAL_REWARD_CREDITS
 
 
 class TestReferralServiceLocal(unittest.TestCase):

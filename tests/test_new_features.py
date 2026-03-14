@@ -41,7 +41,7 @@ class TestSeoExtraction(unittest.TestCase):
 
     def test_extract_meta_description(self):
         """메타 설명 파싱 테스트"""
-        from services.ai_service import extract_seo_metadata
+        from services.core.ai_service import extract_seo_metadata
 
         content = '| **메타 설명** | AI 기술의 미래를 살펴봅니다 |\n'
         seo = extract_seo_metadata(content)
@@ -50,7 +50,7 @@ class TestSeoExtraction(unittest.TestCase):
 
     def test_extract_keywords(self):
         """키워드 파싱 테스트"""
-        from services.ai_service import extract_seo_metadata
+        from services.core.ai_service import extract_seo_metadata
 
         content = '| **타겟 키워드** | 메인: AI 기술, 연관: 머신러닝, 딥러닝 |\n'
         seo = extract_seo_metadata(content)
@@ -59,7 +59,7 @@ class TestSeoExtraction(unittest.TestCase):
 
     def test_extract_slug(self):
         """슬러그 파싱 테스트"""
-        from services.ai_service import extract_seo_metadata
+        from services.core.ai_service import extract_seo_metadata
 
         content = '| **추천 URL** | /ai-technology-future |\n'
         seo = extract_seo_metadata(content)
@@ -68,14 +68,14 @@ class TestSeoExtraction(unittest.TestCase):
 
     def test_no_seo_data_returns_none(self):
         """SEO 데이터 없으면 None 반환"""
-        from services.ai_service import extract_seo_metadata
+        from services.core.ai_service import extract_seo_metadata
 
         seo = extract_seo_metadata('일반 텍스트입니다.')
         self.assertIsNone(seo)
 
     def test_empty_content_returns_none(self):
         """빈 콘텐츠 None 반환"""
-        from services.ai_service import extract_seo_metadata
+        from services.core.ai_service import extract_seo_metadata
 
         self.assertIsNone(extract_seo_metadata(''))
         self.assertIsNone(extract_seo_metadata(None))
@@ -86,14 +86,14 @@ class TestPlaylistUrlDetection(unittest.TestCase):
 
     def test_playlist_url_detected(self):
         """재생목록 URL 감지"""
-        from services.content_service import is_playlist_url
+        from services.core.content_service import is_playlist_url
 
         self.assertTrue(is_playlist_url('https://www.youtube.com/playlist?list=PLxxxxxx'))
         self.assertTrue(is_playlist_url('https://www.youtube.com/watch?v=abc&list=PLxxxxxx'))
 
     def test_channel_url_detected(self):
         """채널 URL 감지"""
-        from services.content_service import is_channel_url
+        from services.core.content_service import is_channel_url
 
         self.assertTrue(is_channel_url('https://www.youtube.com/@channelname'))
         self.assertTrue(is_channel_url('https://www.youtube.com/channel/UCxxxxxxx'))
@@ -101,7 +101,7 @@ class TestPlaylistUrlDetection(unittest.TestCase):
 
     def test_normal_video_url_not_playlist(self):
         """일반 영상 URL은 재생목록/채널이 아님"""
-        from services.content_service import is_playlist_url, is_channel_url
+        from services.core.content_service import is_playlist_url, is_channel_url
 
         normal_url = 'https://www.youtube.com/watch?v=abc12345678'
         self.assertFalse(is_playlist_url(normal_url))

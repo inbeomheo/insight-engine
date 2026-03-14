@@ -1,6 +1,6 @@
 """Paragraph Opening Variety Checker 서비스 테스트."""
 import unittest
-from services.paragraph_opening_variety_service import check_paragraph_opening_variety
+from services.analysis.paragraph_opening_variety_service import check_paragraph_opening_variety
 
 
 class TestParagraphOpeningVariety(unittest.TestCase):

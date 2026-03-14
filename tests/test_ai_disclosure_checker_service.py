@@ -1,6 +1,6 @@
 """AI/Automation Disclosure Checker 서비스 테스트."""
 import unittest
-from services.ai_disclosure_checker_service import check_ai_disclosure
+from services.quality.ai_disclosure_checker_service import check_ai_disclosure
 
 
 class TestAIDisclosure(unittest.TestCase):

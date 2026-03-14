@@ -136,7 +136,7 @@ async def handle_search_knowledge(args: Dict[str, Any]) -> str:
 
 async def handle_analyze_complexity(args: Dict[str, Any]) -> str:
     """analyze_complexity 도구 핸들러"""
-    from services.complexity_service import ComplexityService
+    from services.analysis.complexity_service import ComplexityService
     svc = ComplexityService()
     report = svc.analyze(args['content'])
     result = report.to_dict()
@@ -145,7 +145,7 @@ async def handle_analyze_complexity(args: Dict[str, Any]) -> str:
 
 async def handle_repurpose_content(args: Dict[str, Any]) -> str:
     """repurpose_content 도구 핸들러"""
-    from services.repurpose_service import RepurposeService
+    from services.export.repurpose_service import RepurposeService
     svc = RepurposeService()
     result = svc.repurpose(args['content'], args['target_format'])
     return result.get('content', '변환 실패')
@@ -153,7 +153,7 @@ async def handle_repurpose_content(args: Dict[str, Any]) -> str:
 
 async def handle_translate_content(args: Dict[str, Any]) -> str:
     """translate_content 도구 핸들러"""
-    from services.realtime_translate_service import RealtimeTranslateService
+    from services.transcript.realtime_translate_service import RealtimeTranslateService
     svc = RealtimeTranslateService()
     result = svc.translate(args['text'], args['target_lang'])
     return result.get('translated', '번역 실패')

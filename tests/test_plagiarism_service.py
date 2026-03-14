@@ -9,14 +9,14 @@ class TestPlagiarismService(unittest.TestCase):
 
     def test_empty_content(self):
         """빈 콘텐츠"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         result = check_plagiarism("")
         self.assertEqual(result['score'], 0)
         self.assertEqual(result['verdict'], 'clean')
 
     def test_unique_content(self):
         """고유한 콘텐츠는 clean"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         content = (
             "인공지능은 현대 기술의 핵심입니다. "
             "머신러닝은 데이터에서 패턴을 학습합니다. "
@@ -28,7 +28,7 @@ class TestPlagiarismService(unittest.TestCase):
 
     def test_repeated_content_detected(self):
         """반복 콘텐츠 감지"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         # 같은 문장 반복
         sentence = "이것은 반복되는 테스트 문장입니다 예시로 작성된 것입니다"
         content = (sentence + ". ") * 10
@@ -38,26 +38,26 @@ class TestPlagiarismService(unittest.TestCase):
 
     def test_verdict_values(self):
         """verdict가 유효한 값"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         result = check_plagiarism("테스트 콘텐츠입니다. 다른 내용도 있습니다.")
         self.assertIn(result['verdict'], ('clean', 'minor', 'significant'))
 
     def test_score_range(self):
         """점수 0-100 범위"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         result = check_plagiarism("정상적인 텍스트입니다. 각 문장은 서로 다릅니다.")
         self.assertGreaterEqual(result['score'], 0)
         self.assertLessEqual(result['score'], 100)
 
     def test_duplicate_ratio_float(self):
         """duplicate_ratio가 float"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         result = check_plagiarism("테스트입니다. 다른 문장입니다.")
         self.assertIsInstance(result['duplicate_ratio'], float)
 
     def test_similar_sentences_structure(self):
         """similar_sentences 구조 검증"""
-        from services.plagiarism_service import check_plagiarism
+        from services.quality.plagiarism_service import check_plagiarism
         # 유사한 문장 쌍 생성
         content = (
             "인공지능 기술이 발전하고 있습니다. "
@@ -76,22 +76,22 @@ class TestJaccardSimilarity(unittest.TestCase):
     """_jaccard_similarity 테스트"""
 
     def test_identical_texts(self):
-        from services.plagiarism_service import _jaccard_similarity
+        from services.quality.plagiarism_service import _jaccard_similarity
         self.assertEqual(_jaccard_similarity("hello world", "hello world"), 1.0)
 
     def test_completely_different(self):
-        from services.plagiarism_service import _jaccard_similarity
+        from services.quality.plagiarism_service import _jaccard_similarity
         sim = _jaccard_similarity("hello world", "foo bar")
         self.assertEqual(sim, 0.0)
 
     def test_partial_overlap(self):
-        from services.plagiarism_service import _jaccard_similarity
+        from services.quality.plagiarism_service import _jaccard_similarity
         sim = _jaccard_similarity("hello world foo", "hello world bar")
         self.assertGreater(sim, 0.0)
         self.assertLess(sim, 1.0)
 
     def test_empty_text(self):
-        from services.plagiarism_service import _jaccard_similarity
+        from services.quality.plagiarism_service import _jaccard_similarity
         self.assertEqual(_jaccard_similarity("", "hello"), 0.0)
 
 

@@ -33,7 +33,7 @@ class TestProviderLive(unittest.TestCase):
         if not os.getenv('ZHIPUAI_API_KEY'):
             self.skipTest('ZHIPUAI_API_KEY 없음')
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
         result = create_content(
             SHORT_PROMPT,
             model='zhipuai/GLM-4.7',
@@ -49,7 +49,7 @@ class TestProviderLive(unittest.TestCase):
         if not os.getenv('ZHIPUAI_API_KEY'):
             self.skipTest('ZHIPUAI_API_KEY 없음')
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
         result = create_content(
             SHORT_PROMPT,
             model='zhipuai/GLM-4.5-Air',
@@ -65,7 +65,7 @@ class TestProviderLive(unittest.TestCase):
         if not os.getenv('DEEPSEEK_API_KEY'):
             self.skipTest('DEEPSEEK_API_KEY 없음')
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
         result = create_content(
             SHORT_PROMPT,
             model='deepseek/deepseek-chat',
@@ -81,7 +81,7 @@ class TestProviderLive(unittest.TestCase):
         if not os.getenv('DEEPSEEK_API_KEY'):
             self.skipTest('DEEPSEEK_API_KEY 없음')
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
         result = create_content(
             SHORT_PROMPT,
             model='deepseek/deepseek-reasoner',

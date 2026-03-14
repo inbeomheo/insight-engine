@@ -1,6 +1,6 @@
 """High-Stakes Advice Risk Detector 서비스 테스트."""
 import unittest
-from services.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
+from services.analysis.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
 
 
 class TestHighStakesAdviceRisk(unittest.TestCase):

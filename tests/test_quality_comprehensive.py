@@ -1,7 +1,7 @@
 """quality_service.calculate_comprehensive_score 단위 테스트"""
 import unittest
 
-from services.quality_service import calculate_comprehensive_score
+from services.quality.quality_service import calculate_comprehensive_score
 
 
 class TestComprehensiveScore(unittest.TestCase):

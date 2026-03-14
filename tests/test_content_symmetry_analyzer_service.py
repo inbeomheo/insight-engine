@@ -1,6 +1,6 @@
 """Content Symmetry Analyzer 서비스 테스트."""
 import unittest
-from services.content_symmetry_analyzer_service import analyze_content_symmetry
+from services.analysis.content_symmetry_analyzer_service import analyze_content_symmetry
 
 
 class TestContentSymmetryAnalyzer(unittest.TestCase):

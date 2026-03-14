@@ -1,7 +1,7 @@
 """sentence_variety_service 단위 테스트"""
 import unittest
 
-from services.sentence_variety_service import (
+from services.analysis.sentence_analysis_service import (
     analyze_variety,
     _categorize_length,
 )

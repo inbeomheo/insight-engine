@@ -15,7 +15,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_video_object_schema_basic(self):
         """VideoObject 스키마 필수 필드 포함 확인"""
-        from services.seo_metadata_service import generate_video_object_schema
+        from services.seo.seo_metadata_service import generate_video_object_schema
 
         schema = generate_video_object_schema(
             video_url='https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -32,7 +32,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_video_object_schema_no_url(self):
         """URL 없을 때 썸네일 없이 반환"""
-        from services.seo_metadata_service import generate_video_object_schema
+        from services.seo.seo_metadata_service import generate_video_object_schema
 
         schema = generate_video_object_schema(
             video_url='',
@@ -44,7 +44,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_faq_page_schema_basic(self):
         """FAQPage 스키마 mainEntity 구조 확인"""
-        from services.seo_metadata_service import generate_faq_page_schema
+        from services.seo.seo_metadata_service import generate_faq_page_schema
 
         faq_pairs = [
             {'question': 'RAG란 무엇인가?', 'answer': 'RAG는 검색 증강 생성 기술이다.'},
@@ -64,7 +64,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_faq_page_schema_empty(self):
         """빈 FAQ 리스트 처리"""
-        from services.seo_metadata_service import generate_faq_page_schema
+        from services.seo.seo_metadata_service import generate_faq_page_schema
 
         schema = generate_faq_page_schema([])
 
@@ -73,7 +73,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_faq_page_schema_skips_incomplete(self):
         """질문 또는 답변이 빈 항목은 건너뜀"""
-        from services.seo_metadata_service import generate_faq_page_schema
+        from services.seo.seo_metadata_service import generate_faq_page_schema
 
         faq_pairs = [
             {'question': '완전한 Q', 'answer': '완전한 A'},
@@ -85,7 +85,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_article_schema_basic(self):
         """Article 스키마 기본 필드 확인"""
-        from services.seo_metadata_service import generate_article_schema
+        from services.seo.seo_metadata_service import generate_article_schema
 
         schema = generate_article_schema(
             title='AI 검색 최적화 완벽 가이드',
@@ -100,7 +100,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_article_schema_headline_truncated(self):
         """제목이 110자를 초과하면 잘림"""
-        from services.seo_metadata_service import generate_article_schema
+        from services.seo.seo_metadata_service import generate_article_schema
 
         long_title = 'A' * 200
         schema = generate_article_schema(title=long_title)
@@ -108,7 +108,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_all_schemas_returns_list(self):
         """generate_all_schemas가 리스트를 반환하고 VideoObject + Article 포함"""
-        from services.seo_metadata_service import generate_all_schemas
+        from services.seo.seo_metadata_service import generate_all_schemas
 
         schemas = generate_all_schemas(
             video_url='https://www.youtube.com/watch?v=abc123abc12',
@@ -127,7 +127,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_all_schemas_includes_faq_when_present(self):
         """FAQ 쌍이 있으면 FAQPage 스키마 포함"""
-        from services.seo_metadata_service import generate_all_schemas
+        from services.seo.seo_metadata_service import generate_all_schemas
 
         faq_pairs = [
             {'question': 'Q1?', 'answer': 'A1.'},
@@ -144,7 +144,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_all_schemas_no_faq_when_empty(self):
         """FAQ가 없으면 FAQPage 스키마 미포함"""
-        from services.seo_metadata_service import generate_all_schemas
+        from services.seo.seo_metadata_service import generate_all_schemas
 
         schemas = generate_all_schemas(
             video_url='https://youtu.be/dQw4w9WgXcQ',
@@ -158,7 +158,7 @@ class TestSeoMetadataService(unittest.TestCase):
 
     def test_generate_all_schemas_valid_json(self):
         """생성된 스키마가 JSON 직렬화 가능 확인"""
-        from services.seo_metadata_service import generate_all_schemas
+        from services.seo.seo_metadata_service import generate_all_schemas
 
         schemas = generate_all_schemas(
             video_url='https://www.youtube.com/watch?v=abc123abc12',
@@ -180,7 +180,7 @@ class TestExtractFaqSchema(unittest.TestCase):
 
     def test_extracts_geo_seo_format(self):
         """geo_seo 형식의 **Q. ?** / A. 패턴 파싱"""
-        from services.ai_service import extract_faq_schema
+        from services.core.ai_service import extract_faq_schema
 
         content = """### 자주 묻는 질문
 
@@ -204,7 +204,7 @@ A. 벡터 DB와 임베딩 모델이 필요합니다.
 
     def test_returns_none_when_no_qa(self):
         """Q&A 패턴이 없으면 None 반환"""
-        from services.ai_service import extract_faq_schema
+        from services.core.ai_service import extract_faq_schema
 
         content = "일반 텍스트입니다. Q&A 형식이 아닙니다."
         result = extract_faq_schema(content)
@@ -212,14 +212,14 @@ A. 벡터 DB와 임베딩 모델이 필요합니다.
 
     def test_returns_none_for_empty(self):
         """빈 콘텐츠에 대해 None 반환"""
-        from services.ai_service import extract_faq_schema
+        from services.core.ai_service import extract_faq_schema
 
         self.assertIsNone(extract_faq_schema(''))
         self.assertIsNone(extract_faq_schema(None))
 
     def test_schema_is_json_serializable(self):
         """추출된 스키마가 JSON 직렬화 가능 확인"""
-        from services.ai_service import extract_faq_schema
+        from services.core.ai_service import extract_faq_schema
 
         content = """**Q. 테스트 질문?**
 A. 테스트 답변입니다. 정확한 답변을 제공합니다.
@@ -238,7 +238,7 @@ class TestExtractCta(unittest.TestCase):
 
     def test_extracts_primary_and_secondary(self):
         """CTA_PRIMARY, CTA_SECONDARY 모두 추출"""
-        from services.ai_service import extract_cta
+        from services.core.ai_service import extract_cta
 
         content = """### CTA (Call-to-Action)
 
@@ -252,7 +252,7 @@ class TestExtractCta(unittest.TestCase):
 
     def test_extracts_primary_only(self):
         """CTA_PRIMARY만 있을 때"""
-        from services.ai_service import extract_cta
+        from services.core.ai_service import extract_cta
 
         content = "**CTA_PRIMARY**: GitHub 저장소 방문하기"
         result = extract_cta(content)
@@ -262,7 +262,7 @@ class TestExtractCta(unittest.TestCase):
 
     def test_returns_none_when_no_cta(self):
         """CTA 패턴이 없으면 None 반환"""
-        from services.ai_service import extract_cta
+        from services.core.ai_service import extract_cta
 
         content = "CTA가 없는 일반 텍스트입니다."
         result = extract_cta(content)
@@ -270,7 +270,7 @@ class TestExtractCta(unittest.TestCase):
 
     def test_returns_none_for_empty(self):
         """빈 콘텐츠에 대해 None 반환"""
-        from services.ai_service import extract_cta
+        from services.core.ai_service import extract_cta
 
         self.assertIsNone(extract_cta(''))
         self.assertIsNone(extract_cta(None))
@@ -281,8 +281,8 @@ class TestJsonLdSchemaIntegration(unittest.TestCase):
 
     def test_full_geo_seo_flow(self):
         """geo_seo 스타일 콘텐츠에서 FAQ → JSON-LD 스키마 전체 흐름 검증"""
-        from services.ai_service import extract_faq_schema
-        from services.seo_metadata_service import generate_all_schemas
+        from services.core.ai_service import extract_faq_schema
+        from services.seo.seo_metadata_service import generate_all_schemas
 
         geo_content = """# RAG: AI 답변 정확도를 높이는 검색 증강 생성
 
@@ -333,7 +333,7 @@ A. 대형 언어 모델의 환각 현상을 줄이고 최신 정보를 반영하
 
     def test_video_id_extraction_various_urls(self):
         """다양한 YouTube URL 형식에서 video_id 추출"""
-        from services.seo_metadata_service import generate_video_object_schema
+        from services.seo.seo_metadata_service import generate_video_object_schema
 
         test_cases = [
             ('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ'),

@@ -1,6 +1,6 @@
 """Actionability Gap Detector 서비스 테스트."""
 import unittest
-from services.actionability_gap_service import detect_actionability_gaps
+from services.analysis.actionability_gap_service import detect_actionability_gaps
 
 
 class TestActionabilityGapDetector(unittest.TestCase):

@@ -48,7 +48,7 @@ class TestAnalyzeContent(unittest.TestCase):
         """정상 응답 시 올바른 구조 반환 확인"""
         mock_completion.return_value = self._make_mock_completion(self.MOCK_LLM_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트 콘텐츠입니다.")
 
         self.assertIn('keywords', result)
@@ -61,7 +61,7 @@ class TestAnalyzeContent(unittest.TestCase):
         """키워드 목록 구조 검증"""
         mock_completion.return_value = self._make_mock_completion(self.MOCK_LLM_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트 콘텐츠입니다.")
 
         self.assertIsInstance(result['keywords'], list)
@@ -77,7 +77,7 @@ class TestAnalyzeContent(unittest.TestCase):
         """감성 분석 구조 검증"""
         mock_completion.return_value = self._make_mock_completion(self.MOCK_LLM_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트 콘텐츠입니다.")
 
         sent = result['sentiment']
@@ -92,7 +92,7 @@ class TestAnalyzeContent(unittest.TestCase):
         """토픽 목록 구조 검증"""
         mock_completion.return_value = self._make_mock_completion(self.MOCK_LLM_RESPONSE)
 
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트 콘텐츠입니다.")
 
         self.assertIsInstance(result['topics'], list)
@@ -105,7 +105,7 @@ class TestAnalyzeContent(unittest.TestCase):
     @patch('litellm.completion')
     def test_returns_empty_on_empty_content(self, mock_completion, mock_model):
         """빈 콘텐츠 입력 시 빈 결과 반환 (LLM 호출 없음)"""
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("")
 
         self.assertEqual(result['keywords'], [])
@@ -121,7 +121,7 @@ class TestParseAnalysisJson(unittest.TestCase):
     """_parse_analysis_json() 상세 파싱 테스트"""
 
     def setUp(self):
-        from services.nlp_analysis_service import _parse_analysis_json
+        from services.analysis.nlp_analysis_service import _parse_analysis_json
         self._parse = _parse_analysis_json
 
     def test_valid_json_string(self):
@@ -220,7 +220,7 @@ class TestAnalyzeContentErrorHandling(unittest.TestCase):
     @patch('litellm.completion', side_effect=Exception("API 연결 실패"))
     def test_llm_failure_returns_empty_not_raises(self, mock_completion, mock_model):
         """LLM 호출 실패 시 예외 전파 없이 빈 결과 반환"""
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트 콘텐츠")
 
         # 예외가 전파되지 않고 빈 결과 반환
@@ -237,7 +237,7 @@ class TestAnalyzeContentErrorHandling(unittest.TestCase):
         mock_resp.choices[0].message.content = None
         mock_completion.return_value = mock_resp
 
-        from services.nlp_analysis_service import analyze_content
+        from services.analysis.nlp_analysis_service import analyze_content
         result = analyze_content("테스트")
         self.assertEqual(result['keywords'], [])
 

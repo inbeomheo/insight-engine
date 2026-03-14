@@ -19,7 +19,7 @@ def patch_supabase():
 
 # ── extract_faq_schema 테스트 ──────────────────────────────────
 
-from services.ai_service import extract_faq_schema, extract_cta
+from services.core.ai_service import extract_faq_schema, extract_cta
 
 
 SAMPLE_BLOG_SEO_CONTENT = """

@@ -3,7 +3,7 @@
 """
 import unittest
 
-from services.inclusive_language_service import check_inclusive_language
+from services.analysis.inclusive_language_service import check_inclusive_language
 
 
 class TestInclusiveLanguageService(unittest.TestCase):

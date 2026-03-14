@@ -3,7 +3,7 @@
 """
 import unittest
 
-from services.pronoun_clarity_service import check_pronoun_clarity
+from services.analysis.pronoun_clarity_service import check_pronoun_clarity
 
 
 class TestPronounClarityService(unittest.TestCase):

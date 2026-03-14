@@ -1,6 +1,6 @@
 """Adverb Overuse Detector 서비스 단위 테스트"""
 import unittest
-from services.adverb_overuse_service import detect_adverb_overuse
+from services.analysis.adverb_overuse_service import detect_adverb_overuse
 
 
 class TestAdverbOveruseService(unittest.TestCase):

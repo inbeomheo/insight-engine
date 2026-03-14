@@ -3,7 +3,7 @@
 행동 기반 사용자 분류
 """
 from datetime import datetime, timezone
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('SegmentService')
 

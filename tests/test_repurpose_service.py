@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.repurpose_service import RepurposeService, REPURPOSE_PROMPTS
+from services.export.repurpose_service import RepurposeService, REPURPOSE_PROMPTS
 
 
 class TestRepurposePrompts(unittest.TestCase):

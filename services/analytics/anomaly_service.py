@@ -6,7 +6,7 @@ import statistics
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('AnomalyService')
 

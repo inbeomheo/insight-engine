@@ -1,6 +1,6 @@
 """Audience-Fit Framing Analyzer 서비스 테스트."""
 import unittest
-from services.audience_fit_framing_service import analyze_audience_fit_framing
+from services.quality.audience_fit_framing_service import analyze_audience_fit_framing
 
 
 class TestAudienceFitFraming(unittest.TestCase):

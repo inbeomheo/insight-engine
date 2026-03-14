@@ -234,11 +234,11 @@ def web_search_fallback(
         웹 검색 불가(API 키 없음 등)이면 빈 리스트 반환.
     """
     try:
-        from services import web_search_service
+        from services.data import web_search_service
         results = web_search_service.search(query, max_results=max_results)
     except ImportError:
         try:
-            import services.web_search_service as web_search_service
+            import services.data.web_search_service as web_search_service
             results = web_search_service.search(query, max_results=max_results)
         except Exception as e:
             logger.warning(f"웹 검색 서비스 import 실패: {e}")

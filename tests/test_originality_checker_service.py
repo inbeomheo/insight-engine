@@ -1,7 +1,7 @@
 """독창성·출처 중복 검사 서비스 테스트"""
 import unittest
 
-from services.originality_checker_service import check_originality
+from services.quality.originality_checker_service import check_originality
 
 
 class TestOriginalityCheckerService(unittest.TestCase):

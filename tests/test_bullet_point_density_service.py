@@ -1,6 +1,6 @@
 """Bullet Point Density Analyzer 서비스 테스트."""
 import unittest
-from services.bullet_point_density_service import analyze_bullet_density
+from services.analysis.bullet_point_density_service import analyze_bullet_density
 
 
 class TestBulletPointDensityAnalyzer(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Thesis Frontload Checker 서비스 테스트."""
 import unittest
-from services.thesis_frontload_service import check_thesis_frontload
+from services.analysis.thesis_frontload_service import check_thesis_frontload
 
 
 class TestThesisFrontloadChecker(unittest.TestCase):

@@ -3,7 +3,7 @@
 팀 크레딧 공유 + 멤버별 사용량 추적
 """
 from datetime import datetime, timezone
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('TeamBillingService')
 

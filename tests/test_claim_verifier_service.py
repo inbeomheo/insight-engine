@@ -5,7 +5,7 @@ verify_claims 함수의 주장 감지, 출처 감지, 점수 계산을 검증합
 """
 import unittest
 
-from services.claim_verifier_service import verify_claims
+from services.quality.claim_verifier_service import verify_claims
 
 
 class TestClaimVerifierService(unittest.TestCase):

@@ -26,7 +26,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         }
         mock_get.return_value = mock_resp
 
-        from services.github_service import extract_github_readme
+        from services.platform.github_service import extract_github_readme
 
         result = extract_github_readme("https://github.com/testowner/testrepo")
 
@@ -37,7 +37,7 @@ class TestExtractGithubReadme(unittest.TestCase):
 
     def test_raises_on_invalid_url(self):
         """유효하지 않은 GitHub URL에서 ValueError 발생"""
-        from services.github_service import extract_github_readme
+        from services.platform.github_service import extract_github_readme
 
         with self.assertRaises(ValueError):
             extract_github_readme("https://example.com/not-github")
@@ -52,7 +52,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         )
         mock_get.return_value = mock_resp
 
-        from services.github_service import extract_github_readme
+        from services.platform.github_service import extract_github_readme
 
         with self.assertRaises(ValueError):
             extract_github_readme("https://github.com/owner/norepo")
@@ -66,7 +66,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         mock_resp.json.return_value = {"content": encoded, "encoding": "base64"}
         mock_get.return_value = mock_resp
 
-        from services.github_service import extract_github_readme
+        from services.platform.github_service import extract_github_readme
 
         result = extract_github_readme("https://github.com/owner/repo.git")
 
@@ -81,7 +81,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         mock_resp.json.return_value = {"content": encoded, "encoding": "base64"}
         mock_get.return_value = mock_resp
 
-        from services.github_service import extract_github_readme
+        from services.platform.github_service import extract_github_readme
 
         with self.assertRaises(ValueError):
             extract_github_readme("https://github.com/owner/emptyrepo")
@@ -91,18 +91,18 @@ class TestParseGithubUrl(unittest.TestCase):
     """_parse_github_url 단위 테스트"""
 
     def test_parses_standard_url(self):
-        from services.github_service import _parse_github_url
+        from services.platform.github_service import _parse_github_url
         owner, repo = _parse_github_url("https://github.com/facebook/react")
         self.assertEqual(owner, "facebook")
         self.assertEqual(repo, "react")
 
     def test_parses_url_with_git_suffix(self):
-        from services.github_service import _parse_github_url
+        from services.platform.github_service import _parse_github_url
         owner, repo = _parse_github_url("https://github.com/user/repo.git")
         self.assertEqual(repo, "repo")
 
     def test_raises_on_non_github(self):
-        from services.github_service import _parse_github_url
+        from services.platform.github_service import _parse_github_url
         with self.assertRaises(ValueError):
             _parse_github_url("https://gitlab.com/user/repo")
 

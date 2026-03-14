@@ -1,6 +1,6 @@
 """Emoji Usage Analyzer 서비스 테스트."""
 import unittest
-from services.emoji_usage_analyzer_service import analyze_emoji_usage
+from services.analysis.emoji_usage_analyzer_service import analyze_emoji_usage
 
 
 class TestEmojiUsageAnalyzer(unittest.TestCase):

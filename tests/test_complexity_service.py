@@ -1,7 +1,7 @@
 """complexity_service 단위 테스트"""
 import unittest
 
-from services.complexity_service import ComplexityService
+from services.analysis.complexity_service import ComplexityService
 
 
 class TestComplexityService(unittest.TestCase):

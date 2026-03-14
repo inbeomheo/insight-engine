@@ -1,6 +1,6 @@
 """Noun-to-Verb Ratio 서비스 테스트."""
 import unittest
-from services.noun_verb_ratio_service import analyze_noun_verb_ratio
+from services.analysis.noun_verb_ratio_service import analyze_noun_verb_ratio
 
 
 class TestNounVerbRatio(unittest.TestCase):

@@ -1,7 +1,7 @@
 """card_news_service 단위 테스트"""
 import unittest
 
-from services.card_news_service import (
+from services.media.card_news_service import (
     generate_card_news, _split_content_to_points, _wrap_text_svg
 )
 

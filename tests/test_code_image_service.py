@@ -1,7 +1,7 @@
 """code_image_service 단위 테스트"""
 import unittest
 
-from services.code_image_service import generate_code_image, _highlight_line
+from services.media.code_image_service import generate_code_image, _highlight_line
 
 
 class TestHighlightLine(unittest.TestCase):

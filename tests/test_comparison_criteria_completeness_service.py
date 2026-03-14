@@ -1,6 +1,6 @@
 """Comparison Criteria Completeness Checker 서비스 테스트."""
 import unittest
-from services.comparison_criteria_completeness_service import check_comparison_criteria_completeness
+from services.analysis.comparison_criteria_completeness_service import check_comparison_criteria_completeness
 
 
 class TestComparisonCriteriaCompleteness(unittest.TestCase):

@@ -44,7 +44,7 @@ class TestExtractGeoMetadata(unittest.TestCase):
 
     def test_extract_key_facts(self):
         """주요 팩트 추출 확인"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         content = """### 주요 팩트
 
@@ -59,7 +59,7 @@ class TestExtractGeoMetadata(unittest.TestCase):
 
     def test_extract_structured_data(self):
         """구조화된 데이터 테이블 추출 확인"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         content = """### 구조화 데이터
 
@@ -77,7 +77,7 @@ class TestExtractGeoMetadata(unittest.TestCase):
 
     def test_extract_entity_tags(self):
         """엔티티 태그 추출 확인"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         content = """### 엔티티 태그
 `RAG` `LLM` `벡터 DB` `임베딩` `검색 증강 생성`
@@ -90,7 +90,7 @@ class TestExtractGeoMetadata(unittest.TestCase):
 
     def test_extract_citations(self):
         """인용문 추출 확인 (한 줄 정의 + Q&A)"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         content = """### 한 줄 정의
 > RAG는 외부 데이터를 검색하여 AI 답변의 정확도를 높이는 기술이다.
@@ -110,14 +110,14 @@ A. 환각을 줄이고 최신 정보를 반영할 수 있으며 도메인 특화
 
     def test_empty_content_returns_none(self):
         """빈 콘텐츠는 None 반환"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         self.assertIsNone(extract_geo_metadata(''))
         self.assertIsNone(extract_geo_metadata(None))
 
     def test_no_geo_sections_returns_none(self):
         """GEO 관련 섹션이 없으면 None 반환"""
-        from services.ai_service import extract_geo_metadata
+        from services.core.ai_service import extract_geo_metadata
 
         content = "일반적인 블로그 글입니다. 특별한 구조 없이 작성되었습니다."
         self.assertIsNone(extract_geo_metadata(content))

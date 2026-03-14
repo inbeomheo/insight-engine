@@ -1,6 +1,6 @@
 """Heading Keyword Density 서비스 테스트."""
 import unittest
-from services.heading_keyword_density_service import analyze_heading_keyword_density
+from services.analysis.heading_keyword_density_service import analyze_heading_keyword_density
 
 
 class TestHeadingKeywordDensity(unittest.TestCase):

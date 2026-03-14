@@ -6,7 +6,7 @@ find_link_opportunities() 함수의 키워드 매칭, 관련성 점수,
 """
 import unittest
 
-from services.internal_link_service import find_link_opportunities
+from services.seo.internal_link_service import find_link_opportunities
 
 
 class TestInternalLinkService(unittest.TestCase):

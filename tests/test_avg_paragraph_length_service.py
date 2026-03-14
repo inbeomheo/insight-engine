@@ -1,6 +1,6 @@
 """Average Paragraph Length 서비스 테스트."""
 import unittest
-from services.avg_paragraph_length_service import analyze_avg_paragraph_length
+from services.analysis.avg_paragraph_length_service import analyze_avg_paragraph_length
 
 
 class TestAvgParagraphLength(unittest.TestCase):

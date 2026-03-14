@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from services.api_key_service import (
+from services.data.api_key_service import (
     _generate_api_key,
     _hash_key,
     _mask_key,

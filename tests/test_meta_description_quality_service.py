@@ -1,6 +1,6 @@
 """Meta Description Quality Checker 서비스 테스트."""
 import unittest
-from services.meta_description_quality_service import check_meta_description_quality
+from services.seo.meta_description_quality_service import check_meta_description_quality
 
 
 class TestMetaDescriptionQuality(unittest.TestCase):

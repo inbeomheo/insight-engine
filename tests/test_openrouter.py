@@ -166,7 +166,7 @@ class TestOpenRouterCompletionKwargs(unittest.TestCase):
 
     def test_openrouter_api_base_injected(self):
         """openrouter/ 모델 → api_base와 api_key가 kwargs에 주입됨"""
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
         import app as flask_app
 
         flask_application = flask_app.create_app()
@@ -181,7 +181,7 @@ class TestOpenRouterCompletionKwargs(unittest.TestCase):
 
     def test_openrouter_raises_without_api_key(self):
         """OPENROUTER_API_KEY 미설정 시 ValueError 발생"""
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
         import app as flask_app
         import os
 
@@ -201,7 +201,7 @@ class TestOpenRouterCompletionKwargs(unittest.TestCase):
 
     def test_non_openrouter_model_not_affected(self):
         """openrouter/ 아닌 모델은 api_base 미주입"""
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
         import app as flask_app
 
         flask_application = flask_app.create_app()
@@ -243,7 +243,7 @@ class TestOpenRouterLiteLLMCall(unittest.TestCase):
         )
         mock_completion.return_value = mock_response
 
-        from services.ai_service import create_content
+        from services.core.ai_service import create_content
         with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'sk-or-test-key'}):
             result = create_content(
                 content='테스트 자막 내용',

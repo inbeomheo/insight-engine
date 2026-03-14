@@ -1,7 +1,7 @@
 """topic_gap_service 단위 테스트"""
 import unittest
 
-from services.topic_gap_service import analyze_topic_gaps
+from services.seo.topic_gap_service import analyze_topic_gaps
 
 
 class TestTopicGapService(unittest.TestCase):

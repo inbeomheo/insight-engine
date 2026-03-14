@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.webhook_relay_service import WebhookRelayService
+from services.platform.webhook_relay_service import WebhookRelayService
 
 
 class TestWebhookRelayService(unittest.TestCase):

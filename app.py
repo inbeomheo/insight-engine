@@ -51,7 +51,7 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     # AI 결과 캐시 초기화
-    from services.cache_service import AICacheService
+    from services.core.cache_service import AICacheService
     app.ai_cache = AICacheService(
         db_path=config_module.AI_CACHE_DB,
         ttl_days=config_module.AI_CACHE_TTL_DAYS,
@@ -151,7 +151,7 @@ def create_app(test_config=None):
     app.register_blueprint(analytics_bp)
 
     # 예약 발행 스케줄러 시작
-    from services.scheduler_worker import start_scheduler
+    from services.data.scheduler_worker import start_scheduler
     start_scheduler(app)
 
     return app

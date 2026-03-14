@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.realtime_translate_service import (
+from services.transcript.realtime_translate_service import (
     _translate_with_deepl,
     _DEEPL_LANG_MAP,
     _TRANSLATE_PROMPTS,

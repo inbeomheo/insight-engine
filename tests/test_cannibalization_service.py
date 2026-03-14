@@ -1,7 +1,7 @@
 """cannibalization_service 단위 테스트"""
 import unittest
 
-from services.cannibalization_service import (
+from services.seo.cannibalization_service import (
     detect_cannibalization,
     check_pair,
     _extract_keywords,

@@ -102,13 +102,13 @@ class TestTaskQueueService:
 class TestLoggingConfig:
 
     def test_get_logger(self):
-        from services.logging_config import get_logger
+        from services.core.logging_config import get_logger
         logger = get_logger('test_logger')
         assert logger is not None
         assert logger.name == 'test_logger'
 
     def test_service_logger(self):
-        from services.logging_config import ServiceLogger
+        from services.core.logging_config import ServiceLogger
         slogger = ServiceLogger('TestService')
         # 예외 없이 로그 출력 가능해야 함
         slogger.info("테스트 메시지")

@@ -15,7 +15,7 @@ class TestDetectSourceType(unittest.TestCase):
     """detect_source_type() 소스 타입 자동 감지 검증"""
 
     def _detect(self, url):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         return detect_source_type(url)
 
     def test_youtube_watch(self):
@@ -64,7 +64,7 @@ class TestWebScraperService(unittest.TestCase):
         """trafilatura로 본문이 올바르게 추출되는지 검증"""
         mock_traf.return_value = ("테스트 페이지", "본문 제목\n테스트 본문입니다. 충분히 긴 내용을 위해 추가합니다. 웹페이지 스크래핑 서비스 검증을 위한 충분한 길이의 더미 텍스트입니다.")
 
-        from services.web_scraper_service import scrape_webpage
+        from services.data.web_scraper_service import scrape_webpage
         result = scrape_webpage('https://example.com/article')
 
         self.assertEqual(result['source_type'], 'webpage')
@@ -77,7 +77,7 @@ class TestWebScraperService(unittest.TestCase):
         """메타데이터에서 제목이 추출되는지 검증"""
         mock_traf.return_value = ("OG 제목", "긴 본문 내용입니다. 충분히 길어야 50자를 넘깁니다. 추가 내용을 더 넣어서 확실하게 기준을 넘기겠습니다. 더 넣겠습니다.")
 
-        from services.web_scraper_service import scrape_webpage
+        from services.data.web_scraper_service import scrape_webpage
         result = scrape_webpage('https://example.com')
 
         self.assertEqual(result['title'], 'OG 제목')
@@ -86,7 +86,7 @@ class TestWebScraperService(unittest.TestCase):
     @patch('services.web_scraper_service._extract_with_trafilatura', return_value=("", ""))
     def test_no_content_raises_value_error(self, _mock_traf, _mock_scrapling):
         """본문 추출 실패 시 ValueError 발생"""
-        from services.web_scraper_service import scrape_webpage
+        from services.data.web_scraper_service import scrape_webpage
         with self.assertRaises(ValueError):
             scrape_webpage('https://empty.example.com/page')
 
@@ -144,7 +144,7 @@ class TestRssService(unittest.TestCase):
         """parse_feed가 엔트리 목록을 반환하는지 검증"""
         mock_parse.return_value = self._make_mock_feed()
 
-        from services.rss_service import parse_feed
+        from services.platform.rss_service import parse_feed
         result = parse_feed('https://example.com/feed')
 
         self.assertIsInstance(result, list)
@@ -168,7 +168,7 @@ class TestRssService(unittest.TestCase):
         feed.entries = entries
         mock_parse.return_value = feed
 
-        from services.rss_service import parse_feed
+        from services.platform.rss_service import parse_feed
         result = parse_feed('https://example.com/feed', max_items=3)
 
         self.assertEqual(len(result), 3)
@@ -182,7 +182,7 @@ class TestRssService(unittest.TestCase):
         feed.entries = []
         mock_parse.return_value = feed
 
-        from services.rss_service import parse_feed
+        from services.platform.rss_service import parse_feed
         with self.assertRaises(ValueError):
             parse_feed('https://invalid.example.com/feed')
 
@@ -216,7 +216,7 @@ class TestArxivService(unittest.TestCase):
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
 
-        from services.arxiv_service import fetch_paper
+        from services.data.arxiv_service import fetch_paper
         result = fetch_paper('2303.08774')
 
         self.assertEqual(result['source_type'], 'arxiv')
@@ -237,7 +237,7 @@ class TestArxivService(unittest.TestCase):
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
 
-        from services.arxiv_service import fetch_paper
+        from services.data.arxiv_service import fetch_paper
         with self.assertRaises(ValueError):
             fetch_paper('9999.99999')
 
@@ -249,7 +249,7 @@ class TestArxivService(unittest.TestCase):
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
 
-        from services.arxiv_service import search_papers
+        from services.data.arxiv_service import search_papers
         result = search_papers('machine learning', max_results=5)
 
         self.assertIsInstance(result, list)
@@ -271,7 +271,7 @@ class TestCollectContent(unittest.TestCase):
             'title': '웹 제목', 'content': '웹 본문', 'url': 'https://example.com', 'source_type': 'webpage'
         }
 
-        from services.multi_source_collector import collect_content
+        from services.content.multi_source_collector import collect_content
         result = collect_content('https://example.com/article', source_type='webpage')
 
         mock_scrape.assert_called_once_with('https://example.com/article')
@@ -285,7 +285,7 @@ class TestCollectContent(unittest.TestCase):
             'authors': ['저자'], 'source_type': 'arxiv'
         }
 
-        from services.multi_source_collector import collect_content
+        from services.content.multi_source_collector import collect_content
         result = collect_content('https://arxiv.org/abs/2303.08774', source_type='arxiv')
 
         mock_arxiv.assert_called_once()
@@ -299,7 +299,7 @@ class TestCollectContent(unittest.TestCase):
             'source_type': 'rss'
         }
 
-        from services.multi_source_collector import collect_content
+        from services.content.multi_source_collector import collect_content
         result = collect_content('https://example.com/feed', source_type='rss')
 
         mock_rss.assert_called_once_with('https://example.com/feed')
@@ -307,13 +307,13 @@ class TestCollectContent(unittest.TestCase):
 
     def test_collect_content_empty_url_raises(self):
         """빈 URL은 ValueError 발생"""
-        from services.multi_source_collector import collect_content
+        from services.content.multi_source_collector import collect_content
         with self.assertRaises(ValueError):
             collect_content('')
 
     def test_collect_content_invalid_source_type_raises(self):
         """허용되지 않는 source_type은 ValueError 발생"""
-        from services.multi_source_collector import collect_content
+        from services.content.multi_source_collector import collect_content
         with self.assertRaises(ValueError):
             collect_content('https://example.com', source_type='unknown_type')
 

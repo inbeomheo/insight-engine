@@ -2,7 +2,7 @@
 Filler & Hedge Phrase Detector 서비스 테스트
 """
 import unittest
-from services.filler_detector_service import detect_fillers
+from services.analysis.filler_detector_service import detect_fillers
 
 
 class TestFillerDetectorService(unittest.TestCase):

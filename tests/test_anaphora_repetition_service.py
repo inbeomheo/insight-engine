@@ -1,6 +1,6 @@
 """Anaphora Repetition Detector 서비스 테스트."""
 import unittest
-from services.anaphora_repetition_service import detect_anaphora_repetition
+from services.analysis.anaphora_repetition_service import detect_anaphora_repetition
 
 
 class TestAnaphoraRepetition(unittest.TestCase):

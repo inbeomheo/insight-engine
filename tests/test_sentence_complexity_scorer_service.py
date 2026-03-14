@@ -1,6 +1,6 @@
 """Sentence Complexity Scorer 서비스 테스트."""
 import unittest
-from services.sentence_complexity_scorer_service import score_sentence_complexity
+from services.analysis.sentence_analysis_service import score_sentence_complexity
 
 
 class TestSentenceComplexityScorer(unittest.TestCase):

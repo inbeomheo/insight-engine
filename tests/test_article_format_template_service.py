@@ -1,6 +1,6 @@
 """Article Format Template Checker 서비스 테스트."""
 import unittest
-from services.article_format_template_service import check_article_format
+from services.content.article_format_template_service import check_article_format
 
 
 class TestArticleFormatTemplate(unittest.TestCase):

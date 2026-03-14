@@ -1,7 +1,7 @@
 """headline_optimizer_service 단위 테스트"""
 import unittest
 
-from services.headline_optimizer_service import (
+from services.seo.headline_optimizer_service import (
     optimize_headline,
     _score_length,
     _score_emotional,

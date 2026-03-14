@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.image_gen_service import generate_image, IMAGE_GEN_PROVIDER
+from services.media.image_gen_service import generate_image, IMAGE_GEN_PROVIDER
 
 
 class TestGenerateImage(unittest.TestCase):

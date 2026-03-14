@@ -1,6 +1,6 @@
 """Statistics Coverage Analyzer 서비스 단위 테스트"""
 import unittest
-from services.statistics_coverage_service import analyze_statistics_coverage
+from services.analysis.statistics_coverage_service import analyze_statistics_coverage
 
 
 class TestStatisticsCoverageService(unittest.TestCase):

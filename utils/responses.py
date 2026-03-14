@@ -1,5 +1,10 @@
 """
-HTTP 응답 헬퍼 — blog_routes와 auth_routes에서 공통 사용
+HTTP 응답 헬퍼 — routes 전체에서 공통 사용
+
+표준 에러 응답 패턴:
+  - api_error(message, status_code): 명시적 에러 메시지 반환
+  - api_error_from_exception(e, fallback): 예외에서 안전한 에러 응답 생성 (내부 정보 로깅만)
+  - handle_error(error_msg, log_detail): 에러 접두사 기반 HTTP 상태 코드 자동 결정
 """
 import logging
 
@@ -81,3 +86,36 @@ def handle_error(error_msg, log_detail=None):
 
     safe_msg = sanitize_error_for_client(error_msg)
     return jsonify({'error': safe_msg}), 500
+
+
+def api_error(message: str, status_code: int = 400, error_code: str = None) -> tuple:
+    """표준 에러 응답을 반환합니다.
+
+    Args:
+        message: 사용자에게 보여줄 에러 메시지 (한국어)
+        status_code: HTTP 상태 코드 (400, 401, 403, 404, 429, 500)
+        error_code: 선택적 에러 코드 (예: 'INVALID_INPUT', 'AUTH_REQUIRED')
+
+    Returns:
+        (Response, status_code) 튜플
+    """
+    body = {'error': message}
+    if error_code:
+        body['code'] = error_code
+    return jsonify(body), status_code
+
+
+def api_error_from_exception(e: Exception, fallback_message: str = '서버 오류가 발생했습니다.') -> tuple:
+    """예외에서 안전한 에러 응답을 생성합니다. 내부 정보는 로깅만 합니다.
+
+    str(e)를 클라이언트에 직접 노출하지 않고, fallback_message를 반환합니다.
+
+    Args:
+        e: 발생한 예외
+        fallback_message: 사용자에게 보여줄 기본 메시지
+
+    Returns:
+        (Response, 500) 튜플
+    """
+    logger.error(f"API 오류: {e}", exc_info=True)
+    return jsonify({'error': fallback_message}), 500

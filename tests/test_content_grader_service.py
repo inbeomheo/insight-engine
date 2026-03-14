@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.content_grader_service import grade_content, _predict_engagement, _score_to_grade
+from services.quality.content_grader_service import grade_content, _predict_engagement, _score_to_grade
 
 
 class TestGradeContent(unittest.TestCase):

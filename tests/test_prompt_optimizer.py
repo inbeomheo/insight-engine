@@ -26,33 +26,33 @@ class TestPromptOptimizer(unittest.TestCase):
 
     def test_save_feedback_like(self):
         """좋아요 피드백 저장"""
-        from services.prompt_optimizer_service import save_feedback
+        from services.data.prompt_optimizer_service import save_feedback
         result = save_feedback('blog_seo', 'content_001', 'like')
         self.assertTrue(result['ok'])
         self.assertIn('feedback_id', result)
 
     def test_save_feedback_dislike_with_comment(self):
         """싫어요 피드백 + 코멘트 저장"""
-        from services.prompt_optimizer_service import save_feedback
+        from services.data.prompt_optimizer_service import save_feedback
         result = save_feedback('blog_seo', 'content_002', 'dislike', comment='구성이 아쉬움')
         self.assertTrue(result['ok'])
 
     def test_save_feedback_invalid_rating(self):
         """유효하지 않은 rating 시 ValueError"""
-        from services.prompt_optimizer_service import save_feedback
+        from services.data.prompt_optimizer_service import save_feedback
         with self.assertRaises(ValueError):
             save_feedback('blog_seo', 'content_003', 'meh')
 
     def test_get_feedback_stats_empty(self):
         """피드백 없을 때 빈 통계"""
-        from services.prompt_optimizer_service import get_feedback_stats
+        from services.data.prompt_optimizer_service import get_feedback_stats
         stats = get_feedback_stats('nonexistent_style')
         self.assertEqual(stats['total'], 0)
         self.assertEqual(stats['like_ratio'], 0.0)
 
     def test_get_feedback_stats_counts(self):
         """피드백 저장 후 통계 확인"""
-        from services.prompt_optimizer_service import save_feedback, get_feedback_stats
+        from services.data.prompt_optimizer_service import save_feedback, get_feedback_stats
 
         save_feedback('summary', 'c1', 'like')
         save_feedback('summary', 'c2', 'like')
@@ -66,14 +66,14 @@ class TestPromptOptimizer(unittest.TestCase):
 
     def test_optimize_not_enough_feedback(self):
         """피드백 부족 시 최적화 불가 메시지"""
-        from services.prompt_optimizer_service import optimize_prompt
+        from services.data.prompt_optimizer_service import optimize_prompt
         result = optimize_prompt('tutorial')
         self.assertIsNone(result['adjusted_temperature'])
         self.assertTrue(any('최소' in s for s in result['suggestions']))
 
     def test_optimize_with_low_satisfaction(self):
         """만족도 낮을 때 temperature 조정 제안"""
-        from services.prompt_optimizer_service import save_feedback, optimize_prompt
+        from services.data.prompt_optimizer_service import save_feedback, optimize_prompt
 
         # 6개 피드백 (1 like, 5 dislike → 만족도 16.7%)
         save_feedback('qna', 'c1', 'like')
@@ -102,7 +102,7 @@ class TestFeedbackStatsIsolation(unittest.TestCase):
 
     def test_styles_isolated(self):
         """서로 다른 스타일의 피드백이 혼합되지 않음"""
-        from services.prompt_optimizer_service import save_feedback, get_feedback_stats
+        from services.data.prompt_optimizer_service import save_feedback, get_feedback_stats
 
         save_feedback('blog_seo', 'c1', 'like')
         save_feedback('summary', 'c2', 'dislike')

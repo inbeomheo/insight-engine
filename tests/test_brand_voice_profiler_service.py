@@ -5,7 +5,7 @@ profile_brand_voice 함수의 다양한 입력 시나리오를 검증합니다.
 
 import unittest
 
-from services.brand_voice_profiler_service import profile_brand_voice
+from services.content.brand_voice_profiler_service import profile_brand_voice
 
 
 class TestBrandVoiceProfilerService(unittest.TestCase):

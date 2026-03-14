@@ -6,7 +6,7 @@ import tempfile
 import time
 import unittest
 
-from services.cache_service import AICacheService
+from services.core.cache_service import AICacheService
 
 
 class TestAICacheService(unittest.TestCase):

@@ -1,7 +1,7 @@
 """handsfree_capture_service 단위 테스트"""
 import unittest
 
-from services.handsfree_capture_service import (
+from services.content.handsfree_capture_service import (
     capture_speech,
     merge_captures,
     CapturedText,

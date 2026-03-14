@@ -1,6 +1,6 @@
 """External Source Diversity Auditor 서비스 테스트."""
 import unittest
-from services.external_source_diversity_service import audit_external_source_diversity
+from services.analysis.external_source_diversity_service import audit_external_source_diversity
 
 
 class TestExternalSourceDiversity(unittest.TestCase):

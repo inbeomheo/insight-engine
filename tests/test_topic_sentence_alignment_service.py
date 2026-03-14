@@ -1,6 +1,6 @@
 """Topic Sentence Alignment Analyzer 서비스 테스트."""
 import unittest
-from services.topic_sentence_alignment_service import analyze_topic_sentence_alignment
+from services.analysis.sentence_analysis_service import analyze_topic_sentence_alignment
 
 
 class TestTopicSentenceAlignment(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Title Tag Length Checker 서비스 테스트."""
 import unittest
-from services.title_tag_length_service import check_title_tag_length
+from services.seo.title_tag_length_service import check_title_tag_length
 
 
 class TestTitleTagLength(unittest.TestCase):

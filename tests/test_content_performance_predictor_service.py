@@ -2,7 +2,7 @@
 
 import unittest
 
-from services.content_performance_predictor_service import predict_performance
+from services.seo.content_performance_predictor_service import predict_performance
 
 
 class TestContentPerformancePredictorService(unittest.TestCase):

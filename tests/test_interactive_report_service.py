@@ -1,7 +1,7 @@
 """interactive_report_service 단위 테스트"""
 import unittest
 
-from services.interactive_report_service import (
+from services.content.interactive_report_service import (
     generate_interactive_report,
     _extract_headings,
     _build_toc,

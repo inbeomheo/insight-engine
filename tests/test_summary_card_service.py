@@ -1,7 +1,7 @@
 """summary_card_service 단위 테스트"""
 import unittest
 
-from services.summary_card_service import generate_summary_card, _wrap_lines
+from services.content.summary_card_service import generate_summary_card, _wrap_lines
 
 
 class TestWrapLines(unittest.TestCase):

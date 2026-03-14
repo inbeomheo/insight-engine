@@ -36,7 +36,7 @@ class TestPromptTemplateService(unittest.TestCase):
     @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_get_templates_supabase_disabled(self, _mock):
         """Supabase 비활성화 시 빈 목록 반환"""
-        from services.prompt_template_service import get_templates
+        from services.data.prompt_template_service import get_templates
         result = get_templates(user_id=None)
         self.assertEqual(result['templates'], [])
         self.assertEqual(result['total'], 0)
@@ -45,7 +45,7 @@ class TestPromptTemplateService(unittest.TestCase):
     @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_create_template_supabase_disabled(self, _mock):
         """Supabase 비활성화 시 로컬 템플릿 반환"""
-        from services.prompt_template_service import create_template
+        from services.data.prompt_template_service import create_template
         result = create_template(
             user_id='user-1',
             data={
@@ -62,13 +62,13 @@ class TestPromptTemplateService(unittest.TestCase):
     @patch('services.prompt_template_service.is_supabase_enabled', return_value=False)
     def test_delete_template_supabase_disabled(self, _mock):
         """Supabase 비활성화 시 False 반환"""
-        from services.prompt_template_service import delete_template
+        from services.data.prompt_template_service import delete_template
         result = delete_template(template_id='some-id', user_id='user-1')
         self.assertFalse(result)
 
     def test_format_template_is_owner(self):
         """_format_template: 소유자 여부 올바르게 반환"""
-        from services.prompt_template_service import _format_template
+        from services.data.prompt_template_service import _format_template
         row = self._make_row()
         # 소유자인 경우
         formatted = _format_template(row, viewer_user_id='user-uuid-abcd')
@@ -82,7 +82,7 @@ class TestPromptTemplateService(unittest.TestCase):
 
     def test_format_template_fields(self):
         """_format_template: 필수 필드 포함 확인"""
-        from services.prompt_template_service import _format_template
+        from services.data.prompt_template_service import _format_template
         row = self._make_row()
         result = _format_template(row, viewer_user_id=None)
         required_keys = {'id', 'name', 'description', 'prompt_text', 'style_base',
@@ -91,7 +91,7 @@ class TestPromptTemplateService(unittest.TestCase):
 
     def test_empty_page_structure(self):
         """_empty_page: 빈 페이지 구조 확인"""
-        from services.prompt_template_service import _empty_page
+        from services.data.prompt_template_service import _empty_page
         result = _empty_page(page=2)
         self.assertEqual(result['page'], 2)
         self.assertEqual(result['templates'], [])
@@ -101,7 +101,7 @@ class TestPromptTemplateService(unittest.TestCase):
     @patch('services.prompt_template_service.get_supabase')
     def test_create_template_success(self, mock_get_supabase, _mock_enabled):
         """Supabase 활성화 시 템플릿 생성"""
-        from services.prompt_template_service import create_template
+        from services.data.prompt_template_service import create_template
 
         row = self._make_row()
         mock_sb = MagicMock()
@@ -138,7 +138,7 @@ class TestPromptTemplateService(unittest.TestCase):
     @patch('services.prompt_template_service.get_supabase')
     def test_create_template_limit_exceeded(self, mock_get_supabase, _mock_enabled):
         """최대 개수(50개) 초과 시 ValueError 발생 → None 반환"""
-        from services.prompt_template_service import create_template, MAX_TEMPLATES_PER_USER
+        from services.data.prompt_template_service import create_template, MAX_TEMPLATES_PER_USER
 
         mock_sb = MagicMock()
         mock_get_supabase.return_value = mock_sb

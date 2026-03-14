@@ -1,8 +1,8 @@
 """topic_cluster_service 단위 테스트"""
 import unittest
 
-from services.topic_cluster_service import cluster_contents, _tokenize, _cosine_similarity
-from services.topic_cluster_service import map_topic_clusters
+from services.seo.topic_cluster_service import cluster_contents, _tokenize, _cosine_similarity
+from services.seo.topic_cluster_service import map_topic_clusters
 
 
 class TestTokenize(unittest.TestCase):

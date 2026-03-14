@@ -1,6 +1,6 @@
 """Heading Hierarchy Integrity Checker 서비스 테스트."""
 import unittest
-from services.heading_hierarchy_service import check_heading_hierarchy
+from services.analysis.heading_hierarchy_service import check_heading_hierarchy
 
 
 class TestHeadingHierarchy(unittest.TestCase):

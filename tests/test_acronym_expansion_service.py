@@ -1,6 +1,6 @@
 """Acronym Expansion Compliance Checker 서비스 단위 테스트"""
 import unittest
-from services.acronym_expansion_service import check_acronym_expansion
+from services.analysis.acronym_expansion_service import check_acronym_expansion
 
 
 class TestAcronymExpansionService(unittest.TestCase):

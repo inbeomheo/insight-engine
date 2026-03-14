@@ -1,6 +1,6 @@
 """Content Scanability Score 서비스 테스트."""
 import unittest
-from services.content_scanability_service import score_content_scanability
+from services.analysis.content_scanability_service import score_content_scanability
 
 
 class TestContentScanability(unittest.TestCase):

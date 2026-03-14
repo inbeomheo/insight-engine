@@ -1,6 +1,6 @@
 """Clause Overload Detector 서비스 단위 테스트"""
 import unittest
-from services.clause_overload_service import detect_clause_overload
+from services.analysis.clause_overload_service import detect_clause_overload
 
 
 class TestClauseOverloadService(unittest.TestCase):

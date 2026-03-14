@@ -1,6 +1,6 @@
 """Quantifier Specificity Analyzer 서비스 테스트."""
 import unittest
-from services.quantifier_specificity_service import analyze_quantifier_specificity
+from services.analysis.quantifier_specificity_service import analyze_quantifier_specificity
 
 
 class TestQuantifierSpecificity(unittest.TestCase):

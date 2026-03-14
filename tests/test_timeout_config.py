@@ -8,7 +8,7 @@ class TestTimeoutConfig(unittest.TestCase):
 
     @patch('services.supabase_service.is_supabase_enabled', return_value=False)
     def test_completion_kwargs_timeout_is_300(self, _mock):
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
 
         kwargs = _build_completion_kwargs('gemini/gemini-3-flash-preview', 'test prompt')
         self.assertEqual(kwargs['timeout'], 300)
@@ -17,14 +17,14 @@ class TestTimeoutConfig(unittest.TestCase):
     def test_glm_model_timeout_is_300(self, _mock):
         import os
         os.environ.setdefault('ZHIPUAI_API_KEY', 'test-key')
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
 
         kwargs = _build_completion_kwargs('zhipuai/GLM-4.7', 'test prompt')
         self.assertEqual(kwargs['timeout'], 300)
 
     @patch('services.supabase_service.is_supabase_enabled', return_value=False)
     def test_deepseek_model_timeout_is_300(self, _mock):
-        from services.ai_service import _build_completion_kwargs
+        from services.core.ai_service import _build_completion_kwargs
 
         kwargs = _build_completion_kwargs('deepseek/deepseek-chat', 'test prompt')
         self.assertEqual(kwargs['timeout'], 300)

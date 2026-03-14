@@ -13,7 +13,7 @@ class TestWebSearchService(unittest.TestCase):
         """TAVILY_API_KEY 미설정 시 빈 리스트 반환"""
         with patch.dict('os.environ', {}, clear=True):
             import importlib
-            import services.web_search_service as ws
+            import services.data.web_search_service as ws
             importlib.reload(ws)
             result = ws.search("테스트 쿼리")
             self.assertEqual(result, [])
@@ -36,7 +36,7 @@ class TestWebSearchService(unittest.TestCase):
         mock_post.return_value = mock_resp
 
         with patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}):
-            from services.web_search_service import search
+            from services.data.web_search_service import search
             results = search("Python 튜토리얼")
 
         self.assertEqual(len(results), 1)
@@ -52,7 +52,7 @@ class TestWebSearchService(unittest.TestCase):
         mock_post.side_effect = req_lib.exceptions.ConnectionError("연결 실패")
 
         with patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}):
-            from services.web_search_service import search
+            from services.data.web_search_service import search
             result = search("쿼리")
 
         self.assertEqual(result, [])
@@ -72,7 +72,7 @@ class TestWebSearchService(unittest.TestCase):
         mock_post.return_value = mock_resp
 
         with patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}):
-            from services.web_search_service import search
+            from services.data.web_search_service import search
             results = search("쿼리")
 
         # URL이 있는 항목만 반환
@@ -87,7 +87,7 @@ class TestWebSearchService(unittest.TestCase):
         ]
 
         with patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key', 'WEB_SEARCH_MAX_RESULTS': '5'}):
-            from services.web_search_service import extract_grounding_context
+            from services.data.web_search_service import extract_grounding_context
             result = extract_grounding_context("Python 프로그래밍 기초 강좌")
 
         self.assertTrue(result['enabled'])
@@ -101,7 +101,7 @@ class TestWebSearchService(unittest.TestCase):
         """검색 결과 없을 때 enabled=False 반환"""
         mock_search.return_value = []
 
-        from services.web_search_service import extract_grounding_context
+        from services.data.web_search_service import extract_grounding_context
         result = extract_grounding_context("쿼리")
 
         self.assertFalse(result['enabled'])
@@ -125,7 +125,7 @@ class TestAiServiceWebSearchIntegration(unittest.TestCase):
 
     def test_build_prompt_includes_web_context(self):
         """_build_prompt에 web_context 전달 시 프롬프트에 포함"""
-        from services.ai_service import _build_prompt
+        from services.core.ai_service import _build_prompt
         prompt = _build_prompt(
             content="자막 내용입니다.",
             style_prompt="블로그 스타일",
@@ -138,7 +138,7 @@ class TestAiServiceWebSearchIntegration(unittest.TestCase):
 
     def test_build_prompt_without_web_context(self):
         """web_context 미전달 시 [웹 참고 자료] 섹션 없음"""
-        from services.ai_service import _build_prompt
+        from services.core.ai_service import _build_prompt
         prompt = _build_prompt(
             content="자막 내용입니다.",
             style_prompt="블로그 스타일",

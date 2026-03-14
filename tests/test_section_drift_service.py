@@ -1,7 +1,7 @@
 """section_drift_service 단위 테스트"""
 import unittest
 
-from services.section_drift_service import (
+from services.quality.section_drift_service import (
     detect_section_drift,
     _extract_keywords,
 )

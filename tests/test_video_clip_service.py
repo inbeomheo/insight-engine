@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.video_clip_service import extract_clips, cleanup_clips, _extract_clip
+from services.media.video_clip_service import extract_clips, cleanup_clips, _extract_clip
 
 
 class TestVideoClipService(unittest.TestCase):

@@ -154,7 +154,7 @@ class TestTelegramBotService(unittest.TestCase):
 
 class TestOpenAPIService(unittest.TestCase):
     def setUp(self):
-        from services.openapi_service import build_openapi_spec
+        from services.data.openapi_service import build_openapi_spec
         self.spec = build_openapi_spec()
 
     def test_openapi_version(self):
@@ -323,7 +323,7 @@ class TestPluginInterfaces(unittest.TestCase):
 
 class TestWebhookRelayService(unittest.TestCase):
     def setUp(self):
-        from services.webhook_relay_service import WebhookRelayService
+        from services.platform.webhook_relay_service import WebhookRelayService
         self.service = WebhookRelayService()
 
     def test_empty_urls(self):

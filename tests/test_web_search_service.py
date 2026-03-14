@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.web_search_service import search, extract_grounding_context, TAVILY_API_URL
+from services.data.web_search_service import search, extract_grounding_context, TAVILY_API_URL
 
 
 class TestSearch(unittest.TestCase):

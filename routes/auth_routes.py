@@ -6,7 +6,7 @@ import os
 
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response
-from services.supabase_service import (
+from services.data.supabase_service import (
     get_supabase, is_supabase_enabled, require_auth,
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
@@ -17,7 +17,7 @@ from services.supabase_service import (
     update_user_profile, update_user_password,
     get_user_snippets, create_snippet, delete_snippet
 )
-from services.workspace_service import workspace_service, content_approval_service
+from services.data.workspace_service import workspace_service, content_approval_service
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -700,7 +700,7 @@ def remove_workspace_member(workspace_id, user_id):
 @require_auth
 def get_style_memory():
     """사용자 스타일 메모리 프로필 조회"""
-    from services.style_memory_service import get_profile
+    from services.data.style_memory_service import get_profile
     profile = get_profile(g.user_id)
     return jsonify({'profile': profile})
 
@@ -712,7 +712,7 @@ def update_style_memory():
 
     Body: {avoid_keywords?, custom_instructions?, style_memory_enabled?}
     """
-    from services.style_memory_service import save_user_preferences
+    from services.data.style_memory_service import save_user_preferences
     data = _get_json_data()
     ok = save_user_preferences(g.user_id, data)
     if ok:
@@ -725,7 +725,7 @@ def update_style_memory():
 @require_auth
 def reset_style_memory():
     """사용자 스타일 메모리 초기화"""
-    from services.style_memory_service import reset_profile
+    from services.data.style_memory_service import reset_profile
     reset_profile(g.user_id)
     return _success_response({'message': '스타일 메모리가 초기화되었습니다.'})
 
@@ -1046,8 +1046,8 @@ def revert_content_to_draft(content_id):
 @require_auth
 def get_audit_logs():
     """감사 로그 조회 (관리자 전용)"""
-    from services.audit_log_service import audit_log_service
-    from services.supabase_service import is_admin
+    from services.data.audit_log_service import audit_log_service
+    from services.data.supabase_service import is_admin
 
     if not is_admin(g.user_id):
         return _error_response('관리자 권한이 필요합니다.', 403)
@@ -1074,7 +1074,7 @@ def get_audit_logs():
 @require_auth
 def get_workspace_activity(workspace_id):
     """워크스페이스 활동 피드 조회"""
-    from services.activity_feed_service import activity_feed_service
+    from services.data.activity_feed_service import activity_feed_service
 
     limit = int(request.args.get('limit', 50))
     offset = int(request.args.get('offset', 0))

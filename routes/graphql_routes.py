@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from flask import Blueprint, request, jsonify, current_app, g
 
-from services.supabase_service import require_auth
+from services.data.supabase_service import require_auth
 from services.usage.usage_service import UsageService
 
 graphql_bp = Blueprint('graphql', __name__)
@@ -67,7 +67,7 @@ def resolve_plugins() -> list:
 
 def resolve_schedules() -> list:
     try:
-        from services.schedule_service import schedule_service
+        from services.data.schedule_service import schedule_service
         # 모든 예약 조회 (관리자 용도)
         return schedule_service._store if hasattr(schedule_service, '_store') else []
     except Exception as e:
@@ -83,8 +83,8 @@ def resolve_generate_content(url: str, style_id: str, language: str = 'ko') -> O
         return {'errors': [{'message': '사용량이 초과되었습니다.'}]}
 
     try:
-        from services.content_service import get_transcript
-        from services.ai_service import create_content
+        from services.core.content_service import get_transcript
+        from services.core.ai_service import create_content
         transcript = get_transcript(url)
         if not transcript:
             return None

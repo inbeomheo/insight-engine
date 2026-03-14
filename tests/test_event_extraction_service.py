@@ -1,7 +1,7 @@
 """event_extraction_service 단위 테스트 (내부 함수 위주)"""
 import unittest
 
-from services.event_extraction_service import (
+from services.content.event_extraction_service import (
     _parse_events_json, _validate_events, categorize_events, get_event_summary,
     EVENT_TYPES
 )

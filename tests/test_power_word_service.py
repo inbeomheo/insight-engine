@@ -1,7 +1,7 @@
 """power_word_service 단위 테스트"""
 import unittest
 
-from services.power_word_service import (
+from services.analysis.power_word_service import (
     analyze_power_words,
     suggest_power_words,
     get_power_word_categories,

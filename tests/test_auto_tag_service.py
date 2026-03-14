@@ -1,7 +1,7 @@
 """auto_tag_service 단위 테스트"""
 import unittest
 
-from services.auto_tag_service import generate_tags, _tokenize, _compute_tfidf
+from services.data.auto_tag_service import generate_tags, _tokenize, _compute_tfidf
 
 
 class TestTokenize(unittest.TestCase):

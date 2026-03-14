@@ -1,6 +1,6 @@
 """Parenthetical Overuse Checker 서비스 테스트."""
 import unittest
-from services.parenthetical_overuse_service import check_parenthetical_overuse
+from services.analysis.parenthetical_overuse_service import check_parenthetical_overuse
 
 
 class TestParentheticalOveruse(unittest.TestCase):

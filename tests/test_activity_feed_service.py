@@ -2,7 +2,7 @@
 활동 피드 서비스 단위 테스트
 """
 import unittest
-from services.activity_feed_service import ActivityFeedService
+from services.data.activity_feed_service import ActivityFeedService
 
 
 class TestActivityFeedService(unittest.TestCase):

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.rss_subscription_service import (
+from services.platform.rss_subscription_service import (
     subscribe,
     unsubscribe,
     list_subscriptions,

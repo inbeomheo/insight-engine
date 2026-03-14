@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.prompt_template_service import (
+from services.data.prompt_template_service import (
     _format_template,
     _empty_page,
     _local_template,

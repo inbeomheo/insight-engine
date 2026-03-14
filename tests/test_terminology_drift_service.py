@@ -1,6 +1,6 @@
 """Terminology Drift Analyzer 서비스 테스트."""
 import unittest
-from services.terminology_drift_service import analyze_terminology_drift
+from services.analysis.terminology_drift_service import analyze_terminology_drift
 
 
 class TestTerminologyDrift(unittest.TestCase):

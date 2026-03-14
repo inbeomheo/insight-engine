@@ -1,6 +1,6 @@
 """Rhetorical Device Detector 서비스 테스트."""
 import unittest
-from services.rhetorical_device_detector_service import detect_rhetorical_devices
+from services.analysis.rhetorical_device_detector_service import detect_rhetorical_devices
 
 
 class TestRhetoricalDeviceDetector(unittest.TestCase):

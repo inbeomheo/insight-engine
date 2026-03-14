@@ -1,6 +1,6 @@
 """Original Evidence Signal Analyzer 서비스 테스트."""
 import unittest
-from services.original_evidence_signal_service import analyze_original_evidence
+from services.analysis.original_evidence_signal_service import analyze_original_evidence
 
 
 class TestOriginalEvidence(unittest.TestCase):

@@ -1,7 +1,7 @@
 """transition_analyzer_service 단위 테스트"""
 import unittest
 
-from services.transition_analyzer_service import (
+from services.analysis.transition_analyzer_service import (
     analyze_transitions,
     suggest_transitions,
     get_transition_categories,

@@ -1,7 +1,7 @@
 """citation_service 단위 테스트"""
 import unittest
 
-from services.citation_service import (
+from services.content.citation_service import (
     _timestamp_to_seconds, parse_citations,
     validate_citations, enrich_content_with_links, enrich_html_with_links
 )

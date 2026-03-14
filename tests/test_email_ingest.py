@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from unittest.mock import patch
 
-from services.email_ingest_service import parse_email_file, parse_forwarded_email
+from services.content.email_ingest_service import parse_email_file, parse_forwarded_email
 
 
 class _FakeFileStorage:

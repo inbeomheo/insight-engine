@@ -15,7 +15,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
         """nitter 인스턴스를 통해 본문 추출 성공"""
         # 첫 번째 nitter 인스턴스에서 성공
         mock_extract.return_value = ("테스트 트윗", "이것은 테스트 트윗 본문입니다. 충분히 긴 콘텐츠를 포함하고 있어야 합니다. 최소 30자 이상.")
-        from services.social_scraper_service import scrape_twitter_thread
+        from services.platform.social_scraper_service import scrape_twitter_thread
 
         result = scrape_twitter_thread("https://twitter.com/user/status/123456")
 
@@ -35,7 +35,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
             ("", ""),  # nitter.privacydev.net 실패
             ("원본 트윗", "원본 URL에서 추출된 충분히 긴 본문 콘텐츠입니다. 최소 30자 이상의 텍스트가 필요합니다."),
         ]
-        from services.social_scraper_service import scrape_twitter_thread
+        from services.platform.social_scraper_service import scrape_twitter_thread
 
         result = scrape_twitter_thread("https://x.com/user/status/789")
 
@@ -46,7 +46,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
     def test_raises_when_all_fail(self, mock_extract):
         """모든 추출 실패 시 ValueError 발생"""
         mock_extract.return_value = ("", "")
-        from services.social_scraper_service import scrape_twitter_thread
+        from services.platform.social_scraper_service import scrape_twitter_thread
 
         with self.assertRaises(ValueError):
             scrape_twitter_thread("https://twitter.com/user/status/999")
@@ -55,7 +55,7 @@ class TestScrapeTwitterThread(unittest.TestCase):
     def test_generates_title_from_url(self, mock_extract):
         """제목이 없으면 URL에서 기본 제목 생성"""
         mock_extract.return_value = ("", "이것은 제목 없이 본문만 추출된 충분히 긴 콘텐츠입니다. 최소 30자 이상의 텍스트가 필요합니다.")
-        from services.social_scraper_service import scrape_twitter_thread
+        from services.platform.social_scraper_service import scrape_twitter_thread
 
         result = scrape_twitter_thread("https://twitter.com/testuser/status/123")
 
@@ -92,7 +92,7 @@ class TestScrapeRedditPost(unittest.TestCase):
         ]
         mock_get.return_value = mock_resp
 
-        from services.social_scraper_service import scrape_reddit_post
+        from services.platform.social_scraper_service import scrape_reddit_post
 
         result = scrape_reddit_post("https://reddit.com/r/test/comments/abc123/title")
 
@@ -110,7 +110,7 @@ class TestScrapeRedditPost(unittest.TestCase):
         ]
         mock_get.return_value = mock_resp
 
-        from services.social_scraper_service import scrape_reddit_post
+        from services.platform.social_scraper_service import scrape_reddit_post
 
         result = scrape_reddit_post("https://reddit.com/r/test/comments/xyz/title")
 
@@ -123,7 +123,7 @@ class TestScrapeRedditPost(unittest.TestCase):
         import requests as req_lib
         mock_get.side_effect = req_lib.RequestException("Connection error")
 
-        from services.social_scraper_service import scrape_reddit_post
+        from services.platform.social_scraper_service import scrape_reddit_post
 
         with self.assertRaises(ValueError):
             scrape_reddit_post("https://reddit.com/r/test/comments/bad/title")
@@ -152,7 +152,7 @@ class TestScrapeHackernews(unittest.TestCase):
 
         mock_get.side_effect = side_effect
 
-        from services.social_scraper_service import scrape_hackernews
+        from services.platform.social_scraper_service import scrape_hackernews
 
         result = scrape_hackernews("https://news.ycombinator.com/item?id=123")
 
@@ -163,7 +163,7 @@ class TestScrapeHackernews(unittest.TestCase):
 
     def test_raises_on_invalid_url(self):
         """유효하지 않은 HN URL에서 ValueError 발생"""
-        from services.social_scraper_service import scrape_hackernews
+        from services.platform.social_scraper_service import scrape_hackernews
 
         with self.assertRaises(ValueError):
             scrape_hackernews("https://example.com/not-hn")
@@ -175,7 +175,7 @@ class TestScrapeHackernews(unittest.TestCase):
         mock_resp.json.return_value = None
         mock_get.return_value = mock_resp
 
-        from services.social_scraper_service import scrape_hackernews
+        from services.platform.social_scraper_service import scrape_hackernews
 
         with self.assertRaises(ValueError):
             scrape_hackernews("https://news.ycombinator.com/item?id=999999")
@@ -185,26 +185,26 @@ class TestDetectSourceType(unittest.TestCase):
     """multi_source_collector.detect_source_type 소셜 URL 감지 테스트"""
 
     def test_detects_twitter(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(detect_source_type("https://twitter.com/user/status/123"), "twitter")
         self.assertEqual(detect_source_type("https://x.com/user/status/456"), "twitter")
 
     def test_detects_reddit(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(
             detect_source_type("https://www.reddit.com/r/python/comments/abc123/title"),
             "reddit",
         )
 
     def test_detects_hackernews(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(
             detect_source_type("https://news.ycombinator.com/item?id=12345"),
             "hackernews",
         )
 
     def test_detects_github(self):
-        from services.multi_source_collector import detect_source_type
+        from services.content.multi_source_collector import detect_source_type
         self.assertEqual(
             detect_source_type("https://github.com/owner/repo"),
             "github",

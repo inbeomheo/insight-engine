@@ -29,7 +29,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_default_korean_when_no_modifiers(self):
         """modifiers가 None이면 기본 한국어 instruction 반환"""
-        from services.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
+        from services.core.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
 
         result = _build_modifier_instructions(None, self._get_style_modifiers())
 
@@ -37,7 +37,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_default_korean_when_language_not_specified(self):
         """language 키 미지정 시 기본 한국어 instruction 사용"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         modifiers = {'length': 'short'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())
@@ -46,7 +46,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_korean_explicit(self):
         """language='ko' 명시 시 한국어 instruction"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         modifiers = {'language': 'ko'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())
@@ -55,7 +55,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_english_language(self):
         """language='en' 시 영어 instruction"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         modifiers = {'language': 'en', 'length': 'medium'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())
@@ -64,7 +64,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_japanese_language(self):
         """language='ja' 시 일본어 instruction"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         modifiers = {'language': 'ja'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())
@@ -73,7 +73,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_language_with_other_modifiers(self):
         """language + length + writing_style 모두 포함"""
-        from services.ai_service import _build_modifier_instructions
+        from services.core.ai_service import _build_modifier_instructions
 
         modifiers = {'language': 'en', 'length': 'long', 'writing_style': 'explanatory'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())
@@ -86,7 +86,7 @@ class TestLanguageModifier(unittest.TestCase):
 
     def test_unknown_language_falls_back_to_default(self):
         """알 수 없는 language 값이면 기본 한국어 fallback"""
-        from services.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
+        from services.core.ai_service import _build_modifier_instructions, DEFAULT_LANGUAGE_INSTRUCTION
 
         modifiers = {'language': 'fr'}
         result = _build_modifier_instructions(modifiers, self._get_style_modifiers())

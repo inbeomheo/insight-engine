@@ -1,6 +1,6 @@
 """Simple Alternative Finder 서비스 단위 테스트"""
 import unittest
-from services.simple_alternative_service import find_simple_alternatives
+from services.analysis.simple_alternative_service import find_simple_alternatives
 
 
 class TestSimpleAlternativeService(unittest.TestCase):

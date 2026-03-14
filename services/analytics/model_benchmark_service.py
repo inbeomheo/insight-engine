@@ -5,7 +5,7 @@
 from collections import defaultdict
 from typing import Any
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('ModelBenchmarkService')
 

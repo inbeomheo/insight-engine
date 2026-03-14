@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.web_scraper_service import (
+from services.data.web_scraper_service import (
     _clean_wikipedia_title,
     scrape_webpage,
     _extract_with_trafilatura,

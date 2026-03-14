@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
-from services.logging_config import ServiceLogger
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('QualityTrendService')
 

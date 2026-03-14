@@ -1,6 +1,6 @@
 """List/Table Opportunity Detector 서비스 테스트."""
 import unittest
-from services.list_table_opportunity_service import detect_list_table_opportunities
+from services.analysis.list_table_opportunity_service import detect_list_table_opportunities
 
 
 class TestListTableOpportunityDetector(unittest.TestCase):

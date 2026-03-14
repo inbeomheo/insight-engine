@@ -6,8 +6,8 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from services.supabase_service import is_supabase_enabled, get_supabase
-from services.logging_config import ServiceLogger
+from services.data.supabase_service import is_supabase_enabled, get_supabase
+from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('TrialService')
 

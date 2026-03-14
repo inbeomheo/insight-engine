@@ -1,6 +1,6 @@
 """Numeric & Unit Consistency Checker 서비스 테스트."""
 import unittest
-from services.numeric_unit_consistency_service import check_numeric_unit_consistency
+from services.analysis.numeric_unit_consistency_service import check_numeric_unit_consistency
 
 
 class TestNumericUnitConsistency(unittest.TestCase):

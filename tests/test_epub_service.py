@@ -3,7 +3,7 @@ import zipfile
 import io
 import unittest
 
-from services.epub_service import create_epub
+from services.export.epub_service import create_epub
 
 
 class TestEpubService(unittest.TestCase):

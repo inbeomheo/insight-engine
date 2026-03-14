@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.notion_service import (
+from services.export.notion_service import (
     extract_notion_page,
     _extract_page_id,
     _block_to_markdown,

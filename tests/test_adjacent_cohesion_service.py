@@ -1,6 +1,6 @@
 """Adjacent Paragraph Cohesion Analyzer 서비스 테스트."""
 import unittest
-from services.adjacent_cohesion_service import analyze_adjacent_cohesion
+from services.analysis.adjacent_cohesion_service import analyze_adjacent_cohesion
 
 
 class TestAdjacentCohesion(unittest.TestCase):

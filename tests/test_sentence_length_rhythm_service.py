@@ -1,6 +1,6 @@
 """Sentence Length Rhythm Analyzer 서비스 테스트."""
 import unittest
-from services.sentence_length_rhythm_service import analyze_sentence_rhythm
+from services.analysis.sentence_analysis_service import analyze_sentence_rhythm
 
 
 class TestSentenceLengthRhythm(unittest.TestCase):
