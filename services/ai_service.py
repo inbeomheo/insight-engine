@@ -233,7 +233,7 @@ def _convert_error_message(error_msg, model=None):
         return f"[연결 실패] AI 서버에 연결할 수 없습니다{model_info}. 네트워크 상태를 확인하거나 다시 시도해주세요."
 
     # 서비스 불가
-    if 'service' in error_lower and 'unavailable' in error_lower or '503' in error_lower:
+    if ('service' in error_lower and 'unavailable' in error_lower) or '503' in error_lower:
         return f"[서비스 불가] AI 서비스가 일시적으로 불가합니다{model_info}. 잠시 후 다시 시도해주세요."
 
     if '500' in error_lower or 'internal' in error_lower:

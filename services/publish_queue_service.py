@@ -4,6 +4,8 @@
 상태 흐름: queued → publishing → success | failed → retry (back to queued)
 개발 모드(Supabase 비활성)에서는 인메모리 리스트로 동작합니다.
 """
+import json
+import os
 import time
 import uuid
 from threading import Lock
@@ -11,6 +13,8 @@ from threading import Lock
 from services.logging_config import get_logger
 
 logger = get_logger('publish_queue')
+
+QUEUE_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'publish_queue.json')
 
 
 class PublishQueueService:
@@ -23,6 +27,25 @@ class PublishQueueService:
     def __init__(self):
         self._queue: list[dict] = []
         self._lock = Lock()
+        self._load_queue()
+
+    def _save_queue(self):
+        """큐 상태를 파일로 저장."""
+        try:
+            os.makedirs(os.path.dirname(QUEUE_FILE), exist_ok=True)
+            with open(QUEUE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self._queue, f, ensure_ascii=False, default=str)
+        except Exception:
+            pass  # 파일 저장 실패는 무시 (인메모리가 primary)
+
+    def _load_queue(self):
+        """시작 시 파일에서 큐 복원."""
+        try:
+            if os.path.exists(QUEUE_FILE):
+                with open(QUEUE_FILE, 'r', encoding='utf-8') as f:
+                    self._queue = json.load(f)
+        except Exception:
+            self._queue = []
 
     def enqueue(self, content_id: str, title: str, content: str,
                 plugin_id: str, user_id: str) -> dict:
@@ -45,6 +68,7 @@ class PublishQueueService:
         }
         with self._lock:
             self._queue.append(item)
+            self._save_queue()
         logger.info(f"큐 추가: {item['id']} (plugin={plugin_id}, title={title[:30]})")
         return self._sanitize(item)
 
@@ -87,10 +111,12 @@ class PublishQueueService:
                             item, result.get('message', '발행 실패')
                         )
                     item['updated_at'] = time.time()
+                    self._save_queue()
             except Exception as e:
                 with self._lock:
                     self._handle_failure(item, str(e))
                     item['updated_at'] = time.time()
+                    self._save_queue()
                 logger.error(f"발행 예외: {item_id} - {e}")
 
             results.append(self._sanitize(item))
@@ -143,6 +169,7 @@ class PublishQueueService:
                     'error': f"'{item['status']}' 상태에서는 취소할 수 없습니다.",
                 }
             self._queue.remove(item)
+            self._save_queue()
         logger.info(f"큐 항목 취소: {item_id}")
         return {'success': True}
 
@@ -162,6 +189,7 @@ class PublishQueueService:
             item['next_retry_at'] = None
             item['error_message'] = None
             item['updated_at'] = time.time()
+            self._save_queue()
         logger.info(f"수동 재시도: {item_id}")
         return {'success': True}
 

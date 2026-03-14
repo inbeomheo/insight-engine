@@ -38,8 +38,8 @@ def get_supabase() -> Client:
 
 
 def is_supabase_enabled() -> bool:
-    """Supabase 비활성 (로컬 전용 모드)."""
-    return False
+    """Supabase 활성화 여부 (환경변수 기반)."""
+    return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
 
 
 def _get_admin_client() -> Client:

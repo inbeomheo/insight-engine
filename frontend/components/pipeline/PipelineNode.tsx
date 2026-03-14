@@ -24,7 +24,7 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
   const Icon = STEP_ICONS[step.type] || Zap;
 
   return (
-    <div className="group border border-border/60 rounded-lg bg-white p-3 hover:border-primary/30 transition-colors">
+    <div className="group border border-border/60 rounded-lg bg-white dark:bg-zinc-900 p-3 hover:border-primary/30 transition-colors">
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center shrink-0">
           <Icon className="h-4 w-4 text-primary" />
@@ -54,7 +54,7 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
           <select
             value={step.config.style || 'blog_seo'}
             onChange={(e) => onConfigChange({ style: e.target.value })}
-            className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white"
+            className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white dark:bg-zinc-800"
           >
             <option value="blog_seo">블로그 SEO</option>
             <option value="summary">요약</option>
@@ -72,7 +72,7 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
           <select
             value={step.config.platform || 'twitter'}
             onChange={(e) => onConfigChange({ platform: e.target.value })}
-            className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white"
+            className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white dark:bg-zinc-800"
           >
             <option value="twitter">Twitter</option>
             <option value="linkedin">LinkedIn</option>

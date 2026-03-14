@@ -72,9 +72,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = isFormData ? undefined : { 'Content-Type': 'application/json' };
 
   try {
+    const mergedHeaders = {
+      ...headers,
+      ...(init?.headers || {}),
+    };
     const res = await fetch(`${BASE}${url}`, {
-      headers,
       ...init,
+      headers: mergedHeaders,
       signal: controller.signal,
     });
     if (!res.ok) {

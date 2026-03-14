@@ -275,23 +275,36 @@ class WorkspaceService:
         return _db_operation('Workspace delete', False, operation)
 
     def find_user_by_email(self, email: str) -> str | None:
-        """이메일로 사용자 ID 조회 (admin 클라이언트 필요)"""
-        from services.supabase_service import _get_admin_client
+        """이메일로 사용자 ID 조회 (ie_usage 테이블에서 직접 검색)"""
+        if not is_supabase_enabled():
+            return None
 
-        admin = _get_admin_client()
-        if not admin:
+        supabase = get_supabase()
+        if not supabase:
             return None
 
         try:
-            # admin API로 이메일 검색
+            # ie_usage 테이블에서 이메일로 직접 조회 (전체 로드 방지)
+            result = supabase.table('ie_usage').select('user_id').eq('email', email).limit(1).execute()
+            if result.data:
+                return result.data[0]['user_id']
+        except Exception:
+            pass
+
+        # 폴백: admin API로 조회
+        try:
+            from services.supabase_service import _get_admin_client
+            admin = _get_admin_client()
+            if not admin:
+                return None
             users = admin.auth.admin.list_users()
             for user in users:
                 if user.email == email:
                     return user.id
-            return None
         except Exception as e:
             logger.error(f"사용자 이메일 조회 실패: {e}")
-            return None
+
+        return None
 
 
 # =============================================

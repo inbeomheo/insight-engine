@@ -1,5 +1,6 @@
 """publish_queue_service 단위 테스트"""
 import unittest
+from unittest.mock import patch
 
 from services.publish_queue_service import PublishQueueService
 
@@ -7,7 +8,12 @@ from services.publish_queue_service import PublishQueueService
 class TestPublishQueueService(unittest.TestCase):
 
     def setUp(self):
-        self.svc = PublishQueueService()
+        # 테스트 시 파일 I/O 무효화 (인메모리만 사용)
+        with patch.object(PublishQueueService, '_load_queue'), \
+             patch.object(PublishQueueService, '_save_queue'):
+            self.svc = PublishQueueService()
+        self.svc._queue = []
+        self.svc._save_queue = lambda: None  # enqueue 등에서 호출 시 무시
 
     def test_enqueue(self):
         """큐에 항목 추가"""

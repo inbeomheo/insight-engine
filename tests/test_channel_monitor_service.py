@@ -7,13 +7,13 @@ from services.channel_monitor_service import get_latest_video, check_monitors
 
 class TestGetLatestVideo(unittest.TestCase):
 
-    @patch('services.channel_monitor_service.YOUTUBE_API_KEY', '')
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': ''}, clear=False)
     def test_no_api_key(self):
         """API 키 없음 → None"""
         result = get_latest_video('UC_test')
         self.assertIsNone(result)
 
-    @patch('services.channel_monitor_service.YOUTUBE_API_KEY', 'test-key')
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
     @patch('requests.get')
     def test_success(self, mock_get):
         """정상 응답 → video_id, title, published_at"""
@@ -34,7 +34,7 @@ class TestGetLatestVideo(unittest.TestCase):
         self.assertEqual(result['title'], '테스트 영상')
         self.assertEqual(result['published_at'], '2026-03-01T00:00:00Z')
 
-    @patch('services.channel_monitor_service.YOUTUBE_API_KEY', 'test-key')
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
     @patch('requests.get')
     def test_empty_items(self, mock_get):
         """빈 결과 → None"""
@@ -45,7 +45,7 @@ class TestGetLatestVideo(unittest.TestCase):
         result = get_latest_video('UC_empty')
         self.assertIsNone(result)
 
-    @patch('services.channel_monitor_service.YOUTUBE_API_KEY', 'test-key')
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
     @patch('requests.get')
     def test_request_error(self, mock_get):
         """네트워크 오류 → None"""

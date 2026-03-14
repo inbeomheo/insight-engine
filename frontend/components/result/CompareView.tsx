@@ -29,28 +29,48 @@ type DiffLine = { text: string; type: 'same' | 'added' | 'removed' };
 function computeDiff(a: string, b: string): { left: DiffLine[]; right: DiffLine[] } {
   const linesA = a.split('\n');
   const linesB = b.split('\n');
+  const m = linesA.length;
+  const n = linesB.length;
+
+  // LCS (Longest Common Subsequence) 테이블 구축
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = linesA[i - 1] === linesB[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+
+  // 역추적으로 diff 생성
   const left: DiffLine[] = [];
   const right: DiffLine[] = [];
+  let i = m, j = n;
+  const stack: Array<{ left: DiffLine; right: DiffLine }> = [];
 
-  const maxLen = Math.max(linesA.length, linesB.length);
-  for (let i = 0; i < maxLen; i++) {
-    const lineA = linesA[i];
-    const lineB = linesB[i];
-
-    if (lineA === undefined) {
-      left.push({ text: '', type: 'same' });
-      right.push({ text: lineB, type: 'added' });
-    } else if (lineB === undefined) {
-      left.push({ text: lineA, type: 'removed' });
-      right.push({ text: '', type: 'same' });
-    } else if (lineA === lineB) {
-      left.push({ text: lineA, type: 'same' });
-      right.push({ text: lineB, type: 'same' });
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && linesA[i - 1] === linesB[j - 1]) {
+      stack.push({
+        left: { text: linesA[i - 1], type: 'same' },
+        right: { text: linesB[j - 1], type: 'same' },
+      });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      stack.push({
+        left: { text: '', type: 'same' },
+        right: { text: linesB[j - 1], type: 'added' },
+      });
+      j--;
     } else {
-      left.push({ text: lineA, type: 'removed' });
-      right.push({ text: lineB, type: 'added' });
+      stack.push({
+        left: { text: linesA[i - 1], type: 'removed' },
+        right: { text: '', type: 'same' },
+      });
+      i--;
     }
   }
+
+  for (let k = stack.length - 1; k >= 0; k--) {
+    left.push(stack[k].left);
+    right.push(stack[k].right);
+  }
+
   return { left, right };
 }
 

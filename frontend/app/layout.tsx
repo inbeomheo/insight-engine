@@ -1,22 +1,23 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#4F46E5",
+};
 
 export const metadata: Metadata = {
   title: "Insight Engine — AI Content Analysis",
   description: "YouTube 영상을 AI로 분석하여 고품질 콘텐츠를 생성합니다.",
   manifest: "/manifest.json",
-  themeColor: "#4F46E5",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Insight Engine",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
 };
 

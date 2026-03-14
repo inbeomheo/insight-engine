@@ -99,6 +99,11 @@ def create_app(test_config=None):
                 if not referer_origin.startswith(host):
                     if not is_allowed_origin(referer_origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
+            else:
+                # Origin/Referer 모두 없는 경우: API 키 인증이 있으면 허용 (프로그래밍 방식 접근)
+                if request.headers.get('X-API-Key') or request.headers.get('Authorization'):
+                    return None
+                return jsonify({'error': 'CSRF 검증 실패: Origin 또는 Referer 헤더가 필요합니다.'}), 403
         return None
 
     # 글로벌 에러 핸들러 — JSON 응답 통일

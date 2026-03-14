@@ -323,6 +323,7 @@ def pay_invoice(invoice_id):
 # =============================================
 
 @blog_bp.route('/api/coupons', methods=['GET'])
+@require_auth
 def list_coupons():
     """쿠폰 목록"""
     from services.payment.coupon_service import coupon_service
@@ -330,6 +331,7 @@ def list_coupons():
 
 
 @blog_bp.route('/api/coupons', methods=['POST'])
+@require_auth
 def create_coupon():
     """쿠폰 생성"""
     from services.payment.coupon_service import coupon_service
@@ -347,6 +349,7 @@ def create_coupon():
 
 
 @blog_bp.route('/api/coupons/validate', methods=['POST'])
+@require_auth
 def validate_coupon():
     """쿠폰 유효성 검증"""
     from services.payment.coupon_service import coupon_service
@@ -378,6 +381,7 @@ def redeem_coupon():
 # =============================================
 
 @blog_bp.route('/api/team-billing/<team_id>', methods=['GET'])
+@require_auth
 def get_team_billing(team_id):
     """팀 과금 현황"""
     from services.payment.team_billing_service import team_billing_service
@@ -388,6 +392,7 @@ def get_team_billing(team_id):
 
 
 @blog_bp.route('/api/team-billing/<team_id>/members', methods=['GET'])
+@require_auth
 def get_team_member_usage(team_id):
     """팀 멤버별 사용량"""
     from services.payment.team_billing_service import team_billing_service

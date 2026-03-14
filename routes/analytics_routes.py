@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 
+from extensions import limiter
 from services.supabase_service import require_auth
 from services.analytics.dashboard_service import DashboardService
 from services.analytics.performance_service import PerformanceService
@@ -99,12 +100,14 @@ def get_performance(content_id: str):
 
 
 @analytics_bp.route('/api/performance/<content_id>/view', methods=['POST'])
+@limiter.limit("30/minute")
 def record_view(content_id: str):
     _performance.record_view(content_id)
     return jsonify({'ok': True})
 
 
 @analytics_bp.route('/api/performance/<content_id>/share', methods=['POST'])
+@limiter.limit("30/minute")
 def record_share(content_id: str):
     _performance.record_share(content_id)
     return jsonify({'ok': True})
@@ -154,6 +157,7 @@ def calculate_roi():
 
 # ─── F6-09: 히트맵 ───────────────────────────────────────────
 @analytics_bp.route('/api/heatmap/<content_id>/click', methods=['POST'])
+@limiter.limit("30/minute")
 def record_click(content_id: str):
     data = request.get_json() or {}
     _heatmap.record_click(content_id, int(data.get('x', 0)), int(data.get('y', 0)))
@@ -161,6 +165,7 @@ def record_click(content_id: str):
 
 
 @analytics_bp.route('/api/heatmap/<content_id>/scroll', methods=['POST'])
+@limiter.limit("30/minute")
 def record_scroll(content_id: str):
     data = request.get_json() or {}
     _heatmap.record_scroll(content_id, float(data.get('depth_pct', 0)))
@@ -202,6 +207,7 @@ def ab_test_results(test_id: str):
 
 
 @analytics_bp.route('/api/ab-tests/<test_id>/event', methods=['POST'])
+@limiter.limit("30/minute")
 def ab_test_event(test_id: str):
     data = request.get_json() or {}
     variant = data.get('variant', '')
@@ -216,6 +222,7 @@ def ab_test_event(test_id: str):
 
 # ─── F6-11: 사용자 행동 분석 ─────────────────────────────────
 @analytics_bp.route('/api/behavior/record', methods=['POST'])
+@limiter.limit("30/minute")
 def record_behavior():
     data = request.get_json() or {}
     _user_behavior.record(
@@ -367,6 +374,7 @@ def create_share_link():
     _share_tokens[token] = {
         'days': days,
         'created_at': datetime.now(timezone.utc).isoformat(),
+        'expires_at': time.time() + 86400,
     }
     return jsonify({'share_url': f'/api/dashboard/shared/{token}', 'token': token})
 
@@ -374,8 +382,9 @@ def create_share_link():
 @analytics_bp.route('/api/dashboard/shared/<token>', methods=['GET'])
 def view_shared_dashboard(token: str):
     meta = _share_tokens.get(token)
-    if not meta:
-        return jsonify({'error': '유효하지 않은 공유 링크'}), 404
+    if not meta or time.time() > meta.get('expires_at', 0):
+        _share_tokens.pop(token, None)
+        return jsonify({'error': '만료된 링크'}), 404
     days = meta['days']
     return jsonify({
         'shared': True,

@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import DOMPurify from 'isomorphic-dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -51,13 +52,15 @@ const AnalysisDashboard = dynamic(() => import('./AnalysisDashboard'), { ssr: fa
 const TranscriptPanel = dynamic(() => import('./TranscriptPanel'), { ssr: false });
 const ChapterTimeline = dynamic(() => import('./ChapterTimeline'), { ssr: false });
 
-/** script 태그 및 이벤트 핸들러 속성 제거 */
+/** DOMPurify 기반 HTML 새니타이징 (XSS 방지) */
 function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<script[^>]*>/gi, '')
-    .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/\s+on\w+\s*=\s*\S+/gi, '');
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['h1','h2','h3','h4','h5','h6','p','br','strong','em','b','i','u','s',
+      'ul','ol','li','a','img','table','thead','tbody','tr','th','td',
+      'blockquote','pre','code','span','div','hr','sup','sub','mark'],
+    ALLOWED_ATTR: ['href','src','alt','class','style','target','rel','colspan','rowspan'],
+    ALLOW_DATA_ATTR: false,
+  });
 }
 
 interface ResultCardProps {

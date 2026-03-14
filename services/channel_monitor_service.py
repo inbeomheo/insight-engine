@@ -6,8 +6,6 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
-
 
 def get_latest_video(channel_id: str) -> Optional[dict]:
     """YouTube 채널의 최신 영상 정보를 가져옵니다.
@@ -15,7 +13,8 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
     Returns:
         {'video_id': str, 'title': str, 'published_at': str} or None
     """
-    if not YOUTUBE_API_KEY:
+    api_key = os.getenv('YOUTUBE_API_KEY', '')
+    if not api_key:
         logger.warning("YOUTUBE_API_KEY 미설정")
         return None
 
@@ -25,7 +24,7 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
         resp = requests.get(
             'https://www.googleapis.com/youtube/v3/search',
             params={
-                'key': YOUTUBE_API_KEY,
+                'key': api_key,
                 'channelId': channel_id,
                 'order': 'date',
                 'maxResults': 1,

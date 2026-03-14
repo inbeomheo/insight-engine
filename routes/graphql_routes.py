@@ -9,7 +9,10 @@ import logging
 import re
 from typing import Any, Optional
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, g
+
+from services.supabase_service import require_auth
+from services.usage.usage_service import UsageService
 
 graphql_bp = Blueprint('graphql', __name__)
 logger = logging.getLogger(__name__)
@@ -74,6 +77,11 @@ def resolve_schedules() -> list:
 
 def resolve_generate_content(url: str, style_id: str, language: str = 'ko') -> Optional[dict]:
     """콘텐츠 생성 뮤테이션 리졸버"""
+    # 사용량 체크
+    user_id = g.user_id if hasattr(g, 'user_id') else None
+    if not UsageService.check_can_use(user_id):
+        return {'errors': [{'message': '사용량이 초과되었습니다.'}]}
+
     try:
         from services.content_service import get_transcript
         from services.ai_service import create_content
@@ -179,10 +187,13 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
 # ── 라우트 ──────────────────────────────────────
 
 @graphql_bp.route('/graphql', methods=['GET', 'POST'])
+@require_auth
 def graphql_endpoint():
     """GraphQL 엔드포인트"""
     if request.method == 'GET':
-        # GraphiQL UI (간단한 HTML)
+        # GraphiQL UI는 개발 모드에서만 허용
+        if not current_app.debug:
+            return jsonify({'error': 'GraphiQL은 개발 모드에서만 사용 가능합니다.'}), 403
         return _graphiql_html(), 200, {'Content-Type': 'text/html'}
 
     body = request.get_json(silent=True)

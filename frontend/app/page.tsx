@@ -114,10 +114,15 @@ export default function Home() {
 
   useEffect(() => {
     if (visibleCount >= deferredFiltered.length) return;
-    const id = requestIdleCallback(() => {
+    // Safari 호환 폴리필 (requestIdleCallback 미지원)
+    const rIC = typeof requestIdleCallback === 'function'
+      ? requestIdleCallback
+      : (cb: IdleRequestCallback, _opts?: IdleRequestOptions) => setTimeout(cb, 1) as unknown as number;
+    const cIC = typeof cancelIdleCallback === 'function' ? cancelIdleCallback : (id: number) => clearTimeout(id);
+    const id = rIC(() => {
       setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
     }, { timeout: 200 });
-    return () => cancelIdleCallback(id);
+    return () => cIC(id);
   }, [visibleCount, deferredFiltered.length]);
 
   // 도움말 패널 + 가이드 투어

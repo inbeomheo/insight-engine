@@ -102,7 +102,7 @@ export function useGenerate() {
         setState((s) => ({ ...s, isLoading: false, error: message }));
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, addReport, updateReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport, updateReport]
   );
 
   const generateBatchUrls = useCallback(

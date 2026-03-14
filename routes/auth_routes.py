@@ -2,6 +2,8 @@
 인증 관련 라우트
 회원가입, 로그인, 로그아웃, 사용자 정보 조회
 """
+import os
+
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response
 from services.supabase_service import (
@@ -136,11 +138,12 @@ def oauth_login(provider):
         return _error_response(f'지원하지 않는 OAuth 제공자: {provider}')
 
     try:
-        # 현재 요청의 호스트에서 redirect URL 생성
-        default_redirect = request.host_url.rstrip('/')
+        # CORS 허용 목록 기반 리디렉트 URL 검증 (Host 헤더 조작 방지)
+        allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5001').split(',')
+        allowed_origins = [o.strip().rstrip('/') for o in allowed_origins]
+        default_redirect = allowed_origins[0] if allowed_origins else 'http://localhost:3000'
         redirect_url = request.args.get('redirect_url', default_redirect)
-        # 오픈 리디렉트 방지: 동일 호스트만 허용
-        if not redirect_url.startswith(request.host_url):
+        if not any(redirect_url.startswith(origin) for origin in allowed_origins):
             redirect_url = default_redirect
 
         result = get_supabase().auth.sign_in_with_oauth({
@@ -184,8 +187,9 @@ def oauth_callback():
         return _error_response('세션 생성에 실패했습니다.', 401)
 
     except Exception as e:
-        error_msg = str(e)
-        return _error_response(f'OAuth 콜백 오류: {error_msg}', 401)
+        import logging
+        logging.getLogger(__name__).error(f'OAuth 콜백 오류: {e}')
+        return _error_response('OAuth 인증 처리 중 오류가 발생했습니다.', 401)
 
 
 @auth_bp.route('/api/auth/login', methods=['POST'])
@@ -214,10 +218,9 @@ def login():
         return _error_response('로그인에 실패했습니다.', 401)
 
     except Exception as e:
-        error_msg = str(e)
-        if 'invalid' in error_msg.lower():
-            return _error_response('이메일 또는 비밀번호가 올바르지 않습니다.', 401)
-        return _error_response(f'로그인 오류: {error_msg}', 401)
+        import logging
+        logging.getLogger(__name__).error(f'로그인 오류: {e}')
+        return _error_response('이메일 또는 비밀번호가 올바르지 않습니다.', 401)
 
 
 @auth_bp.route('/api/auth/logout', methods=['POST'])

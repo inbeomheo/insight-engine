@@ -15,7 +15,7 @@ from extensions import limiter
 from config import get_model_max_tokens, CAMPAIGN_PACKS
 from services import ai_service, content_service, fusion_service
 from services.supabase_service import require_auth
-from services.usage import require_usage, check_usage
+from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 from utils.responses import handle_error
 
@@ -273,7 +273,7 @@ def generate_campaign():
 @blog_bp.route('/api/generate-fusion', methods=['POST'])
 @limiter.limit("5/minute")
 @require_auth
-@check_usage
+@require_usage
 def generate_fusion():
     """퓨전 생성: N개 URL → 융합 1편"""
     data = request.get_json()
@@ -300,11 +300,6 @@ def generate_fusion():
             enable_web_research=enable_web_research,
             enable_deep_comments=enable_deep_comments
         )
-
-        # 사용량 차감 (1회)
-        if hasattr(g, 'usage') and g.usage:
-            from services.usage import UsageService
-            UsageService.decrement(g.usage.get('user_id'))
 
         return jsonify(result)
 

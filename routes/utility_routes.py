@@ -18,6 +18,14 @@ from utils.responses import handle_error
 _CLIENT_TRACKER: Dict[str, float] = {}
 
 
+def _cleanup_stale_clients():
+    """5분 이상 heartbeat 없는 클라이언트 정리."""
+    now = time.time()
+    stale = [cid for cid, ts in _CLIENT_TRACKER.items() if now - ts > 300]
+    for cid in stale:
+        del _CLIENT_TRACKER[cid]
+
+
 @blog_bp.route('/health')
 def health():
     """헬스체크 엔드포인트 (Railway/Docker용)"""
@@ -37,6 +45,7 @@ def api_heartbeat():
     if not client_id:
         return jsonify({'ok': False, 'error': 'clientId required'}), 400
     _CLIENT_TRACKER[client_id] = time.time()
+    _cleanup_stale_clients()
     return jsonify({'ok': True})
 
 

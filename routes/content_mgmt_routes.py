@@ -2,10 +2,13 @@
 
 F8-01 ~ F8-25 기능에 대한 REST API 엔드포인트.
 """
+import html
+import re
 import time
 import uuid
 from flask import Blueprint, request, jsonify, Response
 
+from services.supabase_service import require_auth
 from services import content_library_service
 from services import archive_service
 from services import lock_service
@@ -44,6 +47,7 @@ def _get_json():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('', methods=['POST'])
+@require_auth
 def create_content():
     """콘텐츠 라이브러리에 항목 추가."""
     data = _get_json()
@@ -65,6 +69,7 @@ def create_content():
 
 
 @content_mgmt_bp.route('', methods=['GET'])
+@require_auth
 def list_contents():
     """콘텐츠 라이브러리 검색·필터."""
     args = request.args
@@ -87,6 +92,7 @@ def list_contents():
 
 
 @content_mgmt_bp.route('/<item_id>', methods=['GET'])
+@require_auth
 def get_content(item_id):
     """단일 콘텐츠 조회."""
     item = content_library_service.get_item(item_id)
@@ -97,6 +103,7 @@ def get_content(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>', methods=['PATCH'])
+@require_auth
 def update_content(item_id):
     """콘텐츠 업데이트."""
     data = _get_json()
@@ -107,6 +114,7 @@ def update_content(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>', methods=['DELETE'])
+@require_auth
 def delete_content(item_id):
     """콘텐츠 소프트 삭제 (휴지통으로 이동)."""
     success = trash_service.move_to_trash(item_id)
@@ -120,6 +128,7 @@ def delete_content(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/bulk', methods=['POST'])
+@require_auth
 def bulk_action():
     """여러 항목에 일괄 작업을 수행합니다.
 
@@ -185,6 +194,7 @@ def bulk_action():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/clone', methods=['POST'])
+@require_auth
 def clone_content(item_id):
     """콘텐츠를 복제합니다."""
     original = content_library_service.get_item(item_id)
@@ -211,6 +221,7 @@ def clone_content(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/archive', methods=['POST'])
+@require_auth
 def archive_content(item_id):
     """콘텐츠를 아카이브합니다."""
     data = _get_json()
@@ -221,6 +232,7 @@ def archive_content(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/unarchive', methods=['POST'])
+@require_auth
 def unarchive_content(item_id):
     """아카이브를 해제합니다."""
     data = _get_json()
@@ -231,6 +243,7 @@ def unarchive_content(item_id):
 
 
 @content_mgmt_bp.route('/archive', methods=['GET'])
+@require_auth
 def list_archived():
     """아카이브 목록 조회."""
     args = request.args
@@ -248,6 +261,7 @@ def list_archived():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/lock', methods=['POST'])
+@require_auth
 def acquire_lock(item_id):
     """편집 잠금을 획득합니다."""
     data = _get_json()
@@ -261,6 +275,7 @@ def acquire_lock(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/lock', methods=['DELETE'])
+@require_auth
 def release_lock(item_id):
     """편집 잠금을 해제합니다."""
     data = _get_json()
@@ -269,6 +284,7 @@ def release_lock(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/lock/heartbeat', methods=['POST'])
+@require_auth
 def lock_heartbeat(item_id):
     """잠금 TTL을 갱신합니다."""
     data = _get_json()
@@ -277,6 +293,7 @@ def lock_heartbeat(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/lock', methods=['GET'])
+@require_auth
 def get_lock_status(item_id):
     """잠금 상태를 조회합니다."""
     lock = lock_service.get_lock(item_id)
@@ -288,6 +305,7 @@ def get_lock_status(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/expiry', methods=['POST'])
+@require_auth
 def set_expiry(item_id):
     """만료 규칙을 설정합니다."""
     data = _get_json()
@@ -304,6 +322,7 @@ def set_expiry(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/expiry', methods=['DELETE'])
+@require_auth
 def remove_expiry(item_id):
     """만료 규칙을 제거합니다."""
     success = expiry_service.remove_expiry(item_id)
@@ -311,6 +330,7 @@ def remove_expiry(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/expiry', methods=['GET'])
+@require_auth
 def get_expiry(item_id):
     """만료 규칙을 조회합니다."""
     rule = expiry_service.get_expiry(item_id)
@@ -322,6 +342,7 @@ def get_expiry(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/media', methods=['POST'])
+@require_auth
 def register_media():
     """미디어 항목을 등록합니다."""
     data = _get_json()
@@ -342,6 +363,7 @@ def register_media():
 
 
 @content_mgmt_bp.route('/media', methods=['GET'])
+@require_auth
 def list_media():
     """미디어 목록을 조회합니다."""
     args = request.args
@@ -358,6 +380,7 @@ def list_media():
 
 
 @content_mgmt_bp.route('/media/<media_id>', methods=['DELETE'])
+@require_auth
 def delete_media(media_id):
     """미디어 항목을 삭제합니다."""
     success = media_library_service.delete_media(media_id)
@@ -367,6 +390,7 @@ def delete_media(media_id):
 
 
 @content_mgmt_bp.route('/media/stats', methods=['GET'])
+@require_auth
 def media_stats():
     """미디어 스토리지 통계."""
     stats = media_library_service.get_storage_stats(request.args.get('workspace_id', ''))
@@ -378,6 +402,7 @@ def media_stats():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/fields', methods=['POST'])
+@require_auth
 def create_field():
     """커스텀 필드 스키마를 생성합니다."""
     data = _get_json()
@@ -396,6 +421,7 @@ def create_field():
 
 
 @content_mgmt_bp.route('/fields', methods=['GET'])
+@require_auth
 def list_fields():
     """워크스페이스의 커스텀 필드 목록."""
     workspace_id = request.args.get('workspace_id', '')
@@ -406,6 +432,7 @@ def list_fields():
 
 
 @content_mgmt_bp.route('/<item_id>/fields', methods=['GET'])
+@require_auth
 def get_item_fields(item_id):
     """콘텐츠 항목의 커스텀 필드 값 조회."""
     values = custom_field_service.get_field_values(item_id)
@@ -413,6 +440,7 @@ def get_item_fields(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/fields/<field_id>', methods=['PUT'])
+@require_auth
 def set_item_field(item_id, field_id):
     """콘텐츠 항목의 커스텀 필드 값 설정."""
     data = _get_json()
@@ -425,6 +453,7 @@ def set_item_field(item_id, field_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/links', methods=['POST'])
+@require_auth
 def add_link(item_id):
     """링크를 추가합니다."""
     data = _get_json()
@@ -441,6 +470,7 @@ def add_link(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/links', methods=['GET'])
+@require_auth
 def get_links(item_id):
     """콘텐츠의 링크와 역링크를 반환합니다."""
     links = link_manager_service.get_links_from(item_id)
@@ -449,6 +479,7 @@ def get_links(item_id):
 
 
 @content_mgmt_bp.route('/links/<link_id>', methods=['DELETE'])
+@require_auth
 def remove_link(link_id):
     """링크를 삭제합니다."""
     success = link_manager_service.remove_link(link_id)
@@ -460,6 +491,7 @@ def remove_link(link_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/seo-check', methods=['POST'])
+@require_auth
 def seo_check():
     """SEO 체크리스트를 실행합니다."""
     data = _get_json()
@@ -472,6 +504,7 @@ def seo_check():
 
 
 @content_mgmt_bp.route('/<item_id>/seo-check', methods=['GET'])
+@require_auth
 def seo_check_item(item_id):
     """저장된 콘텐츠에 SEO 체크리스트를 실행합니다."""
     item = content_library_service.get_item(item_id)
@@ -490,15 +523,19 @@ def seo_check_item(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/embed/<item_id>', methods=['GET'])
+@require_auth
 def embed_content(item_id):
     """임베드 가능한 HTML 스니펫을 반환합니다."""
     item = content_library_service.get_item(item_id)
     if not item:
         return _err('항목을 찾을 수 없습니다.', 404)
 
-    title = item.get('title', '')
+    title = html.escape(item.get('title', ''))
     # content를 마크다운 → HTML 변환 (간단 버전)
     content_html = item.get('content', '').replace('\n', '<br>')
+    # XSS 방지: <script> 태그 및 인라인 이벤트 핸들러 제거
+    content_html = re.sub(r'<script[\s\S]*?</script>', '', content_html, flags=re.IGNORECASE)
+    content_html = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', content_html, flags=re.IGNORECASE)
     embed_html = f"""
 <!DOCTYPE html>
 <html lang="ko">
@@ -525,6 +562,7 @@ def embed_content(item_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/share', methods=['POST'])
+@require_auth
 def create_share(item_id):
     """공유 링크를 생성합니다."""
     data = _get_json()
@@ -539,6 +577,7 @@ def create_share(item_id):
 
 
 @content_mgmt_bp.route('/share/<token>', methods=['GET'])
+@require_auth
 def access_share(token):
     """공유 링크로 콘텐츠에 접근합니다."""
     password = request.args.get('password', '')
@@ -554,6 +593,7 @@ def access_share(token):
 
 
 @content_mgmt_bp.route('/share/<token>', methods=['DELETE'])
+@require_auth
 def revoke_share(token):
     """공유 링크를 취소합니다."""
     data = _get_json()
@@ -566,6 +606,7 @@ def revoke_share(token):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/comments', methods=['POST'])
+@require_auth
 def add_comment(item_id):
     """댓글을 추가합니다."""
     data = _get_json()
@@ -583,6 +624,7 @@ def add_comment(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/comments', methods=['GET'])
+@require_auth
 def list_comments(item_id):
     """댓글 목록 조회."""
     include_resolved = request.args.get('include_resolved', 'true').lower() != 'false'
@@ -592,6 +634,7 @@ def list_comments(item_id):
 
 
 @content_mgmt_bp.route('/comments/<comment_id>', methods=['PATCH'])
+@require_auth
 def update_comment(comment_id):
     """댓글 수정."""
     data = _get_json()
@@ -602,6 +645,7 @@ def update_comment(comment_id):
 
 
 @content_mgmt_bp.route('/comments/<comment_id>', methods=['DELETE'])
+@require_auth
 def delete_comment(comment_id):
     """댓글 삭제."""
     data = _get_json()
@@ -610,6 +654,7 @@ def delete_comment(comment_id):
 
 
 @content_mgmt_bp.route('/comments/<comment_id>/resolve', methods=['POST'])
+@require_auth
 def resolve_comment(comment_id):
     """댓글 해결 처리."""
     data = _get_json()
@@ -620,6 +665,7 @@ def resolve_comment(comment_id):
 
 
 @content_mgmt_bp.route('/comments/<comment_id>/react', methods=['POST'])
+@require_auth
 def react_comment(comment_id):
     """댓글에 이모지 반응을 추가/토글합니다."""
     data = _get_json()
@@ -634,6 +680,7 @@ def react_comment(comment_id):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/workflows', methods=['POST'])
+@require_auth
 def create_workflow():
     """워크플로우를 생성합니다."""
     data = _get_json()
@@ -653,6 +700,7 @@ def create_workflow():
 
 
 @content_mgmt_bp.route('/workflows', methods=['GET'])
+@require_auth
 def list_workflows():
     """워크플로우 목록 조회."""
     workspace_id = request.args.get('workspace_id', '')
@@ -661,6 +709,7 @@ def list_workflows():
 
 
 @content_mgmt_bp.route('/workflows/<wf_id>', methods=['PATCH'])
+@require_auth
 def update_workflow(wf_id):
     """워크플로우 업데이트."""
     data = _get_json()
@@ -671,6 +720,7 @@ def update_workflow(wf_id):
 
 
 @content_mgmt_bp.route('/workflows/<wf_id>', methods=['DELETE'])
+@require_auth
 def delete_workflow(wf_id):
     """워크플로우 삭제."""
     success = workflow_service.delete_workflow(wf_id)
@@ -678,6 +728,7 @@ def delete_workflow(wf_id):
 
 
 @content_mgmt_bp.route('/workflows/fire', methods=['POST'])
+@require_auth
 def fire_trigger():
     """워크플로우 트리거를 수동 발동합니다."""
     data = _get_json()
@@ -695,6 +746,7 @@ def fire_trigger():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/roles', methods=['POST'])
+@require_auth
 def create_role():
     """사용자 정의 역할을 생성합니다."""
     data = _get_json()
@@ -709,6 +761,7 @@ def create_role():
 
 
 @content_mgmt_bp.route('/roles', methods=['GET'])
+@require_auth
 def list_roles():
     """역할 목록 조회."""
     workspace_id = request.args.get('workspace_id', '')
@@ -717,6 +770,7 @@ def list_roles():
 
 
 @content_mgmt_bp.route('/roles/assign', methods=['POST'])
+@require_auth
 def assign_role():
     """사용자에게 역할을 할당합니다."""
     data = _get_json()
@@ -729,6 +783,7 @@ def assign_role():
 
 
 @content_mgmt_bp.route('/roles/check', methods=['POST'])
+@require_auth
 def check_permission():
     """권한 보유 여부를 확인합니다."""
     data = _get_json()
@@ -745,6 +800,7 @@ def check_permission():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/backup', methods=['POST'])
+@require_auth
 def create_backup():
     """수동 백업을 생성합니다."""
     data = _get_json()
@@ -757,6 +813,7 @@ def create_backup():
 
 
 @content_mgmt_bp.route('/backup', methods=['GET'])
+@require_auth
 def list_backups():
     """백업 목록 조회."""
     backups = backup_service.list_backups()
@@ -764,6 +821,7 @@ def list_backups():
 
 
 @content_mgmt_bp.route('/backup/<filename>/restore', methods=['POST'])
+@require_auth
 def restore_backup(filename):
     """백업을 복원합니다."""
     try:
@@ -778,6 +836,7 @@ def restore_backup(filename):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/export/<fmt>', methods=['GET'])
+@require_auth
 def export_content(fmt):
     """콘텐츠를 JSON/CSV/Markdown으로 내보냅니다."""
     args = request.args
@@ -801,6 +860,7 @@ def export_content(fmt):
 
 
 @content_mgmt_bp.route('/import/<fmt>', methods=['POST'])
+@require_auth
 def import_content(fmt):
     """JSON/CSV 형식으로 콘텐츠를 가져옵니다."""
     data = _get_json()
@@ -825,6 +885,7 @@ def import_content(fmt):
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/trash', methods=['GET'])
+@require_auth
 def list_trash():
     """휴지통 목록 조회."""
     args = request.args
@@ -838,6 +899,7 @@ def list_trash():
 
 
 @content_mgmt_bp.route('/trash/<item_id>/restore', methods=['POST'])
+@require_auth
 def restore_from_trash(item_id):
     """휴지통에서 복구합니다."""
     data = _get_json()
@@ -848,6 +910,7 @@ def restore_from_trash(item_id):
 
 
 @content_mgmt_bp.route('/trash/<item_id>', methods=['DELETE'])
+@require_auth
 def permanent_delete(item_id):
     """항목을 영구 삭제합니다."""
     data = _get_json()
@@ -856,6 +919,7 @@ def permanent_delete(item_id):
 
 
 @content_mgmt_bp.route('/trash/empty', methods=['POST'])
+@require_auth
 def empty_trash():
     """휴지통을 비웁니다."""
     data = _get_json()
@@ -871,6 +935,7 @@ def empty_trash():
 # ══════════════════════════════════════════════════════════════════
 
 @content_mgmt_bp.route('/<item_id>/pin', methods=['POST'])
+@require_auth
 def pin_content(item_id):
     """콘텐츠를 고정합니다."""
     item = content_library_service.update_item(item_id, is_pinned=True)
@@ -880,6 +945,7 @@ def pin_content(item_id):
 
 
 @content_mgmt_bp.route('/<item_id>/pin', methods=['DELETE'])
+@require_auth
 def unpin_content(item_id):
     """콘텐츠 고정을 해제합니다."""
     item = content_library_service.update_item(item_id, is_pinned=False)
@@ -889,6 +955,7 @@ def unpin_content(item_id):
 
 
 @content_mgmt_bp.route('/pinned', methods=['GET'])
+@require_auth
 def list_pinned():
     """고정된 콘텐츠 목록 조회."""
     args = request.args

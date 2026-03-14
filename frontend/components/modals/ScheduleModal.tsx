@@ -36,9 +36,9 @@ export default function ScheduleModal({
     }
   }, [plugins, selectedPlugin]);
 
-  // 기본값: 내일 오전 9시
+  // 모달 열릴 때 기본값 초기화: 내일 오전 9시
   useEffect(() => {
-    if (!open || scheduledAt) return;
+    if (!open) return;
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);

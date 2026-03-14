@@ -75,7 +75,7 @@ export default function InfographicPreview({ title, content }: InfographicPrevie
             className="w-full rounded-lg border bg-white"
             style={{ height: '500px' }}
             title="인포그래픽 미리보기"
-            sandbox="allow-same-origin"
+            sandbox=""
           />
           <Button onClick={downloadHtml} variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />

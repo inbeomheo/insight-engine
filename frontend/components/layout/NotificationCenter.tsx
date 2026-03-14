@@ -24,6 +24,18 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
   system: Bell,
 };
 
+/** localStorage 기반 user_id 조회 (Supabase 인증 미연동 상태) */
+function getUserId(): string {
+  try {
+    const profile = localStorage.getItem('ie_profile');
+    if (profile) {
+      const parsed = JSON.parse(profile);
+      if (parsed.email) return parsed.email;
+    }
+  } catch { /* 파싱 실패 무시 */ }
+  return 'anonymous';
+}
+
 /** 알림 센터 드롭다운 (F5-13) */
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
@@ -33,8 +45,9 @@ export default function NotificationCenter() {
 
   // 알림 로드
   const loadNotifications = useCallback(async () => {
+    const uid = getUserId();
     try {
-      const res = await fetch(apiUrl('/api/notifications?user_id=anonymous&limit=20'));
+      const res = await fetch(apiUrl(`/api/notifications?user_id=${encodeURIComponent(uid)}&limit=20`));
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -54,8 +67,9 @@ export default function NotificationCenter() {
 
   // 알림 읽음 처리
   const markRead = useCallback(async (id: string) => {
+    const uid = getUserId();
     try {
-      await fetch(apiUrl(`/api/notifications/${id}/read?user_id=anonymous`), { method: 'POST' });
+      await fetch(apiUrl(`/api/notifications/${id}/read?user_id=${encodeURIComponent(uid)}`), { method: 'POST' });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
       );
@@ -67,11 +81,12 @@ export default function NotificationCenter() {
 
   // 전체 읽음 처리
   const markAllRead = useCallback(async () => {
+    const uid = getUserId();
     try {
       await fetch(apiUrl('/api/notifications/read-all'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: 'anonymous' }),
+        body: JSON.stringify({ user_id: uid }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
@@ -115,8 +130,9 @@ export default function NotificationCenter() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-[360px] bg-white border border-border/60
-                          rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 w-[360px] bg-white dark:bg-zinc-800 border border-border/60
+                          rounded-xl shadow-xl z-50 overflow-hidden"
+               role="menu" aria-expanded={open}>
             {/* 헤더 */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
               <span className="text-sm font-semibold">알림</span>

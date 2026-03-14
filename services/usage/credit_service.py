@@ -4,12 +4,16 @@
 """
 import json
 import os
+import threading
 from datetime import datetime, timezone
 
 from services.supabase_service import is_supabase_enabled, get_supabase
 from services.logging_config import ServiceLogger
 
 logger = ServiceLogger('CreditService')
+
+# 잔액 조회/차감 원자성 보장용 Lock
+_credit_lock = threading.Lock()
 
 # 로컬 폴백용 JSON 파일 경로
 _LOCAL_CREDITS_FILE = os.path.join(
@@ -120,9 +124,10 @@ class CreditService:
         if amount <= 0:
             return {'success': False, 'error': '충전 금액은 양수여야 합니다.'}
 
-        current = CreditService.get_balance(user_id)
-        new_balance = current['balance'] + amount
-        return _persist_credit_change(user_id, new_balance, current['plan'], amount, 'add', reason, '충전')
+        with _credit_lock:
+            current = CreditService.get_balance(user_id)
+            new_balance = current['balance'] + amount
+            return _persist_credit_change(user_id, new_balance, current['plan'], amount, 'add', reason, '충전')
 
     @staticmethod
     def deduct_credits(user_id: str, amount: int = 1, reason: str = '') -> dict:
@@ -135,12 +140,13 @@ class CreditService:
         if amount <= 0:
             return {'success': False, 'error': '차감 금액은 양수여야 합니다.'}
 
-        current = CreditService.get_balance(user_id)
-        if current['balance'] < amount:
-            return {'success': False, 'error': '크레딧이 부족합니다.', 'balance': current['balance']}
+        with _credit_lock:
+            current = CreditService.get_balance(user_id)
+            if current['balance'] < amount:
+                return {'success': False, 'error': '크레딧이 부족합니다.', 'balance': current['balance']}
 
-        new_balance = current['balance'] - amount
-        return _persist_credit_change(user_id, new_balance, current['plan'], -amount, 'deduct', reason, '차감')
+            new_balance = current['balance'] - amount
+            return _persist_credit_change(user_id, new_balance, current['plan'], -amount, 'deduct', reason, '차감')
 
     @staticmethod
     def check_sufficient(user_id: str, amount: int = 1) -> bool:

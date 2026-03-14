@@ -107,7 +107,7 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
     <div
       ref={menuRef}
       className={cn(
-        'fixed z-[70] min-w-[180px] py-1 bg-white rounded-lg shadow-lg border border-border/60',
+        'fixed z-[70] min-w-[180px] py-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-border/60',
         'animate-fade-in'
       )}
       style={{ top: menu.y, left: menu.x }}
@@ -119,7 +119,7 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
         return (
           <button
             key={item.label}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:bg-muted/50 transition-colors text-left"
             onClick={item.onClick}
             role="menuitem"
             aria-label={item.label}

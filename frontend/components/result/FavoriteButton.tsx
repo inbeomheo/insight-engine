@@ -16,7 +16,7 @@ export default function FavoriteButton({ reportId, isFavorite = false }: Favorit
   const updateReport = useResultStore((s) => s.updateReport);
 
   const toggle = useCallback(() => {
-    updateReport(reportId, { favorite: !isFavorite } as never);
+    updateReport(reportId, { favorite: !isFavorite });
   }, [reportId, isFavorite, updateReport]);
 
   return (

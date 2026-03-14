@@ -14,6 +14,7 @@ from services.supabase_service import require_auth
 
 
 @blog_bp.route('/api/notion/import', methods=['POST'])
+@require_auth
 def notion_import():
     """Notion 페이지 URL → 콘텐츠 추출"""
     from services.notion_service import extract_notion_page
@@ -52,6 +53,7 @@ def notion_status():
 
 
 @blog_bp.route('/api/gdocs/import', methods=['POST'])
+@require_auth
 def gdocs_import():
     """Google Docs URL → 콘텐츠 추출"""
     from services.gdocs_service import extract_google_doc
@@ -131,6 +133,7 @@ def rss_unsubscribe(feed_id: str):
 
 
 @blog_bp.route('/api/bookmarks/parse', methods=['POST'])
+@require_auth
 def bookmarks_parse():
     """북마크 HTML 파일 파싱"""
     from services.bookmark_import_service import parse_bookmarks
@@ -169,6 +172,7 @@ def mcp_list_plugins():
 
 
 @blog_bp.route('/api/mcp/publish', methods=['POST'])
+@require_auth
 def mcp_publish():
     """지정된 플러그인으로 콘텐츠를 발행합니다."""
     from services.mcp import plugin_registry
@@ -465,6 +469,7 @@ def knowledge_delete(doc_id):
 
 
 @blog_bp.route('/api/email/ingest', methods=['POST'])
+@require_auth
 def email_ingest():
     """이메일 뉴스레터에서 콘텐츠를 추출합니다.
 
@@ -929,32 +934,35 @@ def make_webhook():
     # 즉시 수락 응답 (Make는 비동기 처리 가능)
     import threading
 
-    def _process():
-        try:
-            from services.content_service import get_transcript
-            from services.ai_service import create_content
-            transcript = get_transcript(url)
-            if not transcript:
-                return
-            result = create_content(transcript, style_id, modifiers={'language': language})
+    app = current_app._get_current_object()
 
-            # callback_url이 있으면 결과 전달
-            if callback_url:
-                import json
-                import urllib.request
-                payload = json.dumps({
-                    'title': result.get('title', ''),
-                    'content': result.get('content', ''),
-                    'source_url': url,
-                }).encode()
-                req = urllib.request.Request(
-                    callback_url,
-                    data=payload,
-                    headers={'Content-Type': 'application/json'},
-                )
-                urllib.request.urlopen(req, timeout=30)
-        except Exception as e:
-            current_app.logger.error(f"Make 웹훅 처리 오류: {e}")
+    def _process():
+        with app.app_context():
+            try:
+                from services.content_service import get_transcript
+                from services.ai_service import create_content
+                transcript = get_transcript(url)
+                if not transcript:
+                    return
+                result = create_content(transcript, style_id, modifiers={'language': language})
+
+                # callback_url이 있으면 결과 전달
+                if callback_url:
+                    import json
+                    import urllib.request
+                    payload = json.dumps({
+                        'title': result.get('title', ''),
+                        'content': result.get('content', ''),
+                        'source_url': url,
+                    }).encode()
+                    req = urllib.request.Request(
+                        callback_url,
+                        data=payload,
+                        headers={'Content-Type': 'application/json'},
+                    )
+                    urllib.request.urlopen(req, timeout=30)
+            except Exception as e:
+                app.logger.error(f"Make 웹훅 처리 오류: {e}")
 
     threading.Thread(target=_process, daemon=True).start()
     return jsonify({'accepted': True, 'message': '처리를 시작했습니다.'})
@@ -1166,6 +1174,7 @@ def oauth_register_client():
 
 
 @blog_bp.route('/oauth/authorize', methods=['GET', 'POST'])
+@require_auth
 def oauth_authorize():
     """OAuth 2.0 인가 엔드포인트"""
     from services.auth.oauth_provider_service import oauth_provider_service
@@ -1180,8 +1189,10 @@ def oauth_authorize():
         code_challenge = request.args.get('code_challenge', '')
         code_challenge_method = request.args.get('code_challenge_method', 'S256')
 
-        # 개발 환경: 자동 승인
-        user_id = 'demo_user'  # 실제로는 세션에서 가져와야 함
+        # 인증된 사용자 ID 사용
+        user_id = getattr(g, 'user_id', None)
+        if not user_id:
+            return jsonify({'error': '인증이 필요합니다.'}), 401
         code = oauth_provider_service.create_authorization_code(
             client_id=client_id,
             user_id=user_id,

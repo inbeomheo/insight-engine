@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react';
 import { Users, Circle } from 'lucide-react';
 import PresenceCursors from './PresenceCursors';
 import { apiUrl } from '@/lib/api';
@@ -33,6 +33,7 @@ export default function CollaborativeEditor({
   const [connected, setConnected] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 세션 생성/참가
   useEffect(() => {
@@ -105,31 +106,37 @@ export default function CollaborativeEditor({
     return () => clearInterval(pollRef.current);
   }, [sessionId, version, userId]);
 
-  // 콘텐츠 변경 시 서버로 전송
+  // 콘텐츠 변경 시 서버로 전송 (500ms 디바운스)
   const handleChange = useCallback(
-    async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
       const newContent = e.target.value;
+      const cursorPos = e.target.selectionStart;
       setContent(newContent);
 
       if (!sessionId) return;
-      try {
-        const res = await fetch(apiUrl(`/api/collab/session/${sessionId}/update`), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: userId,
-            content: newContent,
-            cursor_position: e.target.selectionStart,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setVersion(data.version);
-          setParticipants(data.participants || []);
+
+      // API 호출은 디바운스
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(apiUrl(`/api/collab/session/${sessionId}/update`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId,
+              content: newContent,
+              cursor_position: cursorPos,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setVersion(data.version);
+            setParticipants(data.participants || []);
+          }
+        } catch {
+          // 전송 실패 시 로컬 변경 유지
         }
-      } catch {
-        // 전송 실패 시 로컬 변경 유지
-      }
+      }, 500);
     },
     [sessionId, userId],
   );

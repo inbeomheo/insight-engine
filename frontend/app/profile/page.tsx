@@ -24,18 +24,22 @@ export default function ProfilePage() {
     // localStorage에서 프로필 로드 (Supabase 연동 시 API 호출로 교체)
     const saved = localStorage.getItem('ie_profile');
     if (saved) {
-      setProfile(JSON.parse(saved));
-    } else {
-      // 기본 프로필
-      setProfile({
-        displayName: 'User',
-        email: '',
-        plan: 'Free',
-        usageUsed: 0,
-        usageTotal: 30,
-        memberSince: new Date().toISOString().split('T')[0],
-      });
+      try {
+        setProfile(JSON.parse(saved));
+        return;
+      } catch {
+        localStorage.removeItem('ie_profile');
+      }
     }
+    // 기본 프로필
+    setProfile({
+      displayName: 'User',
+      email: '',
+      plan: 'Free',
+      usageUsed: 0,
+      usageTotal: 30,
+      memberSince: new Date().toISOString().split('T')[0],
+    });
   }, []);
 
   if (!profile) return null;

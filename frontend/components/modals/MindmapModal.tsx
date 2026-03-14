@@ -60,7 +60,7 @@ export default function MindmapModal() {
       })
       .catch(() => toast.error('마인드맵 생성 실패'))
       .finally(() => setLoading(false));
-  }, [mindmapModalOpen, report, updateReport]);
+  }, [mindmapModalOpen, report, updateReport, selectedModel]);
 
   /** 마인드맵 영역에서 SVG를 찾아 반환 */
   const findSvg = useCallback((): SVGSVGElement | null => {

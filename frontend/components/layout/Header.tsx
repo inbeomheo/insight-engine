@@ -8,7 +8,7 @@ export default function Header() {
   const { toggleSidebar, setSettingsModalOpen } = useUIStore();
 
   return (
-    <header className="h-14 border-b border-border/60 flex items-center justify-between px-4 shrink-0 bg-white/80 backdrop-blur-sm" role="banner">
+    <header className="h-14 border-b border-border/60 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm" role="banner">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"

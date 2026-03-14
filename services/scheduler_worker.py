@@ -103,29 +103,39 @@ def start_scheduler(app):
     if scheduler.running:
         return
 
+    _app = app  # 클로저 캡처
+
+    def _with_context(func):
+        """Flask 앱 컨텍스트 내에서 job 함수를 실행하는 래퍼"""
+        def wrapper():
+            with _app.app_context():
+                func()
+        wrapper.__name__ = func.__name__
+        return wrapper
+
     scheduler.add_job(
-        check_and_publish,
+        _with_context(check_and_publish),
         'interval',
         minutes=1,
         id='publish_checker',
         replace_existing=True,
     )
     scheduler.add_job(
-        _check_channel_monitors,
+        _with_context(_check_channel_monitors),
         'interval',
         minutes=30,
         id='channel_monitor_checker',
         replace_existing=True,
     )
     scheduler.add_job(
-        _process_publish_queue,
+        _with_context(_process_publish_queue),
         'interval',
         minutes=2,
         id='publish_queue_processor',
         replace_existing=True,
     )
     scheduler.add_job(
-        _check_rss_subscriptions,
+        _with_context(_check_rss_subscriptions),
         'interval',
         minutes=30,
         id='rss_subscription_checker',
