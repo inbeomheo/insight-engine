@@ -61,7 +61,7 @@ def generate_mindmap():
             'success': True,
             'markdown': result.get('content', ''),
             'elapsed_time': elapsed_time,
-            'usage': get_usage_for_response()
+            'quota': get_usage_for_response()
         })
 
     except ValueError as e:
@@ -155,7 +155,7 @@ def generate_multi():
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
             'elapsed_time': elapsed_time,
-            'usage': get_usage_for_response()
+            'quota': get_usage_for_response()
         })
 
     except ValueError as e:
@@ -260,7 +260,7 @@ def generate_campaign():
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
             'elapsed_time': elapsed_time,
-            'usage': get_usage_for_response()
+            'quota': get_usage_for_response()
         })
 
     except ValueError as e:
@@ -334,7 +334,7 @@ def rewrite_content():
 
         return jsonify({
             **result,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
     except Exception as e:
         current_app.logger.error(f"Rewrite failed: {e}")
@@ -527,7 +527,7 @@ def generate_clips():
         return jsonify({
             'success': True,
             'clips': results,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
 
     except ValueError as e:
@@ -558,7 +558,7 @@ def generate_podcast():
         return jsonify({
             'success': True,
             **result,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
 
     except ValueError as e:
@@ -642,7 +642,7 @@ def generate_multilang():
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
             'elapsed_time': elapsed_time,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
 
     except ValueError as e:
@@ -672,7 +672,7 @@ def inline_edit_content():
         result = ai_service.inline_edit(content, selection, instruction, model)
         return jsonify({
             **result,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
     except Exception as e:
         current_app.logger.error(f"Inline edit failed: {e}")
@@ -816,7 +816,7 @@ def agent_pipeline():
             },
             'elapsed_seconds': result.get('elapsed_seconds', 0),
             'agent_count': result.get('agent_count', 0),
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
     except Exception as e:
         current_app.logger.error(f"Agent pipeline failed: {e}")

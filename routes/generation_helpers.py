@@ -190,7 +190,7 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
         'comment_summary_included': False,
         'bypassed': True,
         'bypass_reason': 'short_content',
-        'usage': get_usage_for_response()
+        'quota': get_usage_for_response()
     })
 
 
@@ -215,7 +215,8 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         'transcript_source': transcript_source,
         'cached': True,
         'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
-        'usage': get_usage_for_response()
+        'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0},
+        'quota': get_usage_for_response()
     })
 
 
@@ -459,7 +460,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "analysis": analysis,
         "transcript_segments": transcript_segments or [],
         "chapters": chapters,
-        "usage": get_usage_for_response(),
+        "quota": get_usage_for_response(),
         **(agent_meta or {}),
     })
 

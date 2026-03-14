@@ -276,7 +276,7 @@ def generate():
                 'transcript_source': 'direct_input',
                 'cached': False,
                 'comment_summary_included': False,
-                'usage': get_usage_for_response(),
+                'quota': get_usage_for_response(),
             })
 
         # ── 파일 업로드 모드: PDF/DOCX 문서 또는 오디오 파일에서 콘텐츠 생성 ──
@@ -339,7 +339,7 @@ def generate():
                     'source_title': source_title,
                     'cached': False,
                     'comment_summary_included': False,
-                    'usage': get_usage_for_response(),
+                    'quota': get_usage_for_response(),
                 })
 
             # PDF/DOCX 문서
@@ -381,7 +381,7 @@ def generate():
                 'page_count': doc.get('page_count', 0),
                 'cached': False,
                 'comment_summary_included': False,
-                'usage': get_usage_for_response(),
+                'quota': get_usage_for_response(),
             })
 
         if not url:
@@ -451,7 +451,7 @@ def generate():
                 'elapsed_time': elapsed_time,
                 'source_type': source_type,
                 'source_title': source_title,
-                'usage': get_usage_for_response(),
+                'quota': get_usage_for_response(),
             }
             if params.get('include_transcript'):
                 response_data['transcript'] = source_content[:5000]
@@ -629,7 +629,7 @@ def regenerate():
             return_prompt=True
         )
 
-        return jsonify({**result, "prompt": used_prompt, "usage": get_usage_for_response()})
+        return jsonify({**result, "prompt": used_prompt, "quota": get_usage_for_response()})
 
     except ValueError as e:
         return handle_error(str(e))
@@ -965,7 +965,7 @@ def generate_merged():
             'merged': True,
             'seo': seo,
             'geo': geo,
-            'usage': get_usage_for_response(),
+            'quota': get_usage_for_response(),
         })
 
     except ValueError as e:
