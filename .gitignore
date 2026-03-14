@@ -12,6 +12,8 @@ env/
 
 # Environment
 .env
+.env.*
+!.env.example
 
 # Cache
 cache/
@@ -43,6 +45,23 @@ tmpclaude-*
 landing.html
 mockup-*.html
 CODE_REVIEW.html
+
+# Runtime data (사용자 데이터, DB, 로그)
+data/
+*.sqlite3
+*.jsonl
+publish_queue.json
+
+# Logs & debug
+*.log
+stdout
+bash.exe.stackdump
+
+# pip 오류 잔존 파일
+=*
+
+# Skills lock
+skills-lock.json
 
 # Build
 build/
