@@ -37,7 +37,7 @@ const HistoryItem = memo(function HistoryItem({
     >
       <span className="text-sm shrink-0 mt-0.5">{getStyleEmoji(report.style)}</span>
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate text-foreground/90 leading-snug">
+        <div className="font-medium text-foreground/90 leading-snug line-clamp-2" title={report.title}>
           {report.title}
         </div>
         <div className="flex items-center gap-1 text-muted-foreground/50 mt-1">
