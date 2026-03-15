@@ -6,13 +6,16 @@ import html as html_lib
 import os
 import re
 import time
-import markdown
+markdown = None  # 지연 로딩 (cold start 최적화)
 import threading
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 from flask import current_app
-from litellm import completion
+def _get_completion():
+    """litellm.completion을 지연 로딩합니다 (cold start 최적화: ~4초 절감)."""
+    from litellm import completion
+    return completion
 
 # Zhipu AI (GLM) OpenAI 호환 API 설정
 ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
@@ -351,7 +354,7 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
             for attempt in range(GLM_RETRY_COUNT):
                 with _glm_lock:
                     try:
-                        response = completion(**completion_kwargs)
+                        response = _get_completion()(**completion_kwargs)
                         current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
                         break
                     except Exception as e:
@@ -368,7 +371,7 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
             else:
                 raise last_error
         else:
-            response = completion(**completion_kwargs)
+            response = _get_completion()(**completion_kwargs)
 
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
@@ -385,6 +388,10 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
 
         # P3 버그 #11: 마크다운 렌더링 폴백
         try:
+            global markdown
+            if markdown is None:
+                import markdown as _md
+                markdown = _md
             html = markdown.markdown(body, extensions=['tables', 'fenced_code', 'nl2br'])
         except Exception as md_err:
             current_app.logger.warning(f"마크다운 변환 실패: {md_err}")
@@ -434,7 +441,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
 
     try:
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True, detail_level=detail_level)
-        response = completion(**completion_kwargs)
+        response = _get_completion()(**completion_kwargs)
 
         for chunk in response:
             delta = chunk.choices[0].delta if chunk.choices else None

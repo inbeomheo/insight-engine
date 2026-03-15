@@ -14,7 +14,12 @@ from xml.etree import ElementTree
 
 import requests
 from flask import current_app
-from googleapiclient.discovery import build
+def _get_youtube_build():
+    """googleapiclient를 지연 로딩합니다 (cold start 최적화)."""
+    from googleapiclient.discovery import build
+    return build
+
+
 from googleapiclient.errors import HttpError
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
@@ -769,7 +774,7 @@ def get_youtube_title(video_id: str) -> Optional[str]:
         if not api_key:
             return None
 
-        youtube = build('youtube', 'v3', developerKey=api_key)
+        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
         results = youtube.videos().list(part="snippet", id=video_id).execute()
 
         items = results.get("items", [])
@@ -810,7 +815,7 @@ def get_top_comments(video_id: str) -> List[str]:
             _log_warning("YouTube API key not configured, skipping comments")
             return []
 
-        youtube = build('youtube', 'v3', developerKey=api_key)
+        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
         results = youtube.commentThreads().list(
             part="snippet",
             videoId=video_id,
@@ -924,7 +929,7 @@ def get_playlist_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
     max_results = min(max_results, 50)
 
     try:
-        youtube = build('youtube', 'v3', developerKey=api_key)
+        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
         response = youtube.playlistItems().list(
             part='snippet',
             playlistId=playlist_id,
@@ -974,7 +979,7 @@ def get_channel_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
     max_results = min(max_results, 50)
 
     try:
-        youtube = build('youtube', 'v3', developerKey=api_key)
+        youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
 
         # 채널 ID 조회
         channel_id = None

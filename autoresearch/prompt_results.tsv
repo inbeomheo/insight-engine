@@ -1,0 +1,15 @@
+style_id	structure	forbidden	clarity	total	before_total	delta	verdict	changes
+tutorial	40	30	23	93	73	+20	KEEP	금칙어 목록 추가, 댓글 규칙 추가, 분량 기준(3~7 Step, 3~5문장) 추가, 한국어 명시
+show_notes	40	30	26	96	74	+22	KEEP	금칙어 목록 추가, 댓글 규칙 추가, 한국어 명시, Few-shot 예시 추가
+brunch_essay	40	30	27	97	77	+20	KEEP	금칙어 목록 추가, 댓글 규칙 추가, 분량 기준(3~5섹션, 3~5문장) 추가, 한국어 명시
+newsletter	40	30	30	100	78	+22	KEEP	금칙어 목록 추가, 댓글 규칙 추가, 한국어 명시, Few-shot 예시 추가
+sns_post	40	30	26	96	79	+17	KEEP	금칙어 목록 추가, 댓글 규칙 추가, Few-shot 예시 추가
+naver_popular	40	23	16	79	79	0	-	(미수정)
+course	40	23	16	79	79	0	-	(미수정)
+qna	40	23	19	82	82	0	-	(미수정)
+summary	40	23	21	84	84	0	-	(미수정)
+app_ideas	40	23	25	88	88	0	-	(미수정)
+blog_seo	40	23	26	89	89	0	-	(미수정)
+yozm_it	40	23	26	89	89	0	-	(미수정)
+shorts_script	40	30	22	92	92	0	-	(미수정)
+geo_seo	40	23	30	93	93	0	-	(미수정)

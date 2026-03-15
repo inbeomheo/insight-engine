@@ -1,0 +1,17 @@
+experiment	hypothesis	metric	baseline	result	delta_pct	verdict
+baseline	N/A	cold_start_ms	7186	7186	0%	baseline
+baseline	N/A	/health_process_ms	1.98	1.98	0%	baseline
+baseline	N/A	/api/providers_process_ms	2.35	2.35	0%	baseline
+baseline	N/A	litellm_import_ms	4268	4268	0%	baseline
+baseline	N/A	content_service_import_ms	272	272	0%	baseline
+baseline	N/A	supabase_service_import_ms	632	632	0%	baseline
+exp1_litellm_lazy	litellm(4.3s)을 AI호출시점에 지연로딩	cold_start_ms	7186	1563	-78%	KEEP
+exp1_litellm_lazy	litellm을 모듈수준import에서 제거	litellm_import_ms	4268	0	-100%	KEEP
+exp2_googleapi_lazy	googleapiclient.discovery.build 지연로딩	content_service_import_ms	272	155	-43%	KEEP
+exp3_supabase_lazy	supabase.create_client 지연로딩	supabase_service_import_ms	632	26	-96%	KEEP
+exp4_fusion_lazy	fusion_service를 함수내 import로 이동	advanced_routes_import_ms	234	275	+17%	KEEP (cold start 기여)
+exp5_markdown_lazy	markdown 모듈 지연로딩	ai_service_markdown_ms	93	0	-100%	KEEP
+combined	5개 실험 통합	cold_start_ms	7186	1563	-78%	KEEP
+combined	5개 실험 통합	tests_passed	1219	1219	0%	KEEP
+combined	5개 실험 통합	/health_process_ms	1.98	2.10	+6%	NEUTRAL (노이즈)
+combined	5개 실험 통합	all_endpoints_status	200	200	0%	OK

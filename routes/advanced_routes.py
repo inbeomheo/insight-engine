@@ -13,7 +13,7 @@ from routes.generation_helpers import (
 )
 from extensions import limiter
 from config import get_model_max_tokens, CAMPAIGN_PACKS
-from services.core import ai_service, content_service, fusion_service
+from services.core import ai_service, content_service
 from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
@@ -312,6 +312,7 @@ def generate_fusion():
         return jsonify({'error': '[입력 오류] 모델을 선택해주세요'}), 400
 
     try:
+        from services.core import fusion_service
         result = fusion_service.generate_fusion(
             urls=urls,
             style_id=style_id,

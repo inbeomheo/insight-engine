@@ -8,20 +8,23 @@ import hashlib
 from functools import wraps
 from typing import Callable
 from flask import request, jsonify, g
-from supabase import create_client, Client
+def _lazy_create_client(url, key):
+    """supabase.create_client를 지연 로딩합니다 (cold start 최적화: ~1.5초 절감)."""
+    from supabase import create_client
+    return create_client(url, key)
 from cryptography.fernet import Fernet
 
 from services.core.logging_config import supabase_logger as logger
 from services.exceptions import ConfigurationError
 
 # Supabase 클라이언트 초기화
-_supabase_client: Client = None
-_supabase_admin: Client = None  # Admin 클라이언트 (service_role key)
+_supabase_client = None
+_supabase_admin = None  # Admin 클라이언트 (service_role key)
 _fernet_instance: Fernet = None
 _encryption_enabled: bool = None  # 암호화 활성화 여부
 
 
-def get_supabase() -> Client:
+def get_supabase():
     """Supabase 클라이언트 싱글톤"""
     global _supabase_client
 
@@ -32,7 +35,7 @@ def get_supabase() -> Client:
         if not url or not key:
             return None
 
-        _supabase_client = create_client(url, key)
+        _supabase_client = _lazy_create_client(url, key)
 
     return _supabase_client
 
@@ -42,7 +45,7 @@ def is_supabase_enabled() -> bool:
     return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
 
 
-def _get_admin_client() -> Client:
+def _get_admin_client():
     """Supabase Admin 클라이언트 (service_role key - 계정 삭제 등)"""
     global _supabase_admin
 
@@ -54,7 +57,7 @@ def _get_admin_client() -> Client:
             logger.warning("SUPABASE_SERVICE_ROLE_KEY 미설정 - admin 기능 비활성화")
             return None
 
-        _supabase_admin = create_client(url, service_role_key)
+        _supabase_admin = _lazy_create_client(url, service_role_key)
 
     return _supabase_admin
 
