@@ -7,10 +7,10 @@ Insight Engine (Next.js 16 + Tailwind v4)
 UX 개선 → 성능 최적화 → 접근성 + 시각 피드백 → 디자인 품질 → **접근성 심화 WCAG AA** (Outer Loop Round 3)
 
 ## 현재 상태
-- Phase: Outer Loop Round 3 완료 (접근성 심화 WCAG AA)
-- Inner Loop 실행 수: 40 (keep 31, revert 9)
-- Outer Loop 실행 수: 4
-- **최고 복합 점수: 99.3/100** (실험 36~40, 접근성 가중치 기준)
+- Phase: Outer Loop Round 4 완료 (시각적 정합성 — shadow/마이크로인터랙션 통일)
+- Inner Loop 실행 수: 45 (keep 36, revert 9)
+- Outer Loop 실행 수: 5
+- **최고 복합 점수: 99.45/100** (실험 41~45, 접근성 가중치 기준)
 - **수렴 상태**: converged=true, keep_rate=100%
 
 ## 베이스라인
@@ -24,7 +24,7 @@ UX 개선 → 성능 최적화 → 접근성 + 시각 피드백 → 디자인 �
 - error_score: 100 (콘솔 에러 0)
 - dom_score: 100 (접근성 랜드마크/역할 양호)
 - form_score: 99 (aria-pressed, radiogroup, switch, focus-visible, aria-expanded, aria-haspopup, aria-describedby 등)
-- visual_score: 97 (마이크로인터랙션, active:scale, hover:shadow, 트랜지션 일관성)
+- visual_score: 98 (shadow 통일, 활성 카드 깊이감, 드래그 오버레이 개선, 버튼 마이크로인터랙션 일관성)
 
 ## Outer Loop 전략 기록
 
@@ -35,6 +35,19 @@ UX 개선 → 성능 최적화 → 접근성 + 시각 피드백 → 디자인 �
 | 2 | 접근성 + 시각 피드백 강화 (focus-visible, role, hover) | 5 | 100.0% | 98.6 | — | — |
 | 3 | 디자인 품질 (마이크로인터랙션, 트랜지션, 간격/shadow) | 5 | 100.0% | 98.9 | 51.69 | Yes |
 | 4 | 접근성 심화 WCAG AA (aria-expanded, role=switch, aria-haspopup, aria-describedby) | 5 | 100.0% | 99.3 | 50.87 | Yes |
+| 5 | 시각적 정합성 (shadow 통일, 활성 카드 깊이, 드래그 오버레이, 버튼 인터랙션) | 5 | 100.0% | 99.45 | — | Yes |
+
+## Outer Loop Round 4 결과 (시각적 정합성)
+
+| # | 가설 | 점수 | 판정 |
+|---|------|------|------|
+| 41 | 활성 카드 shadow-md shadow-primary/5 깊이감 추가 | 99.45 | keep |
+| 42 | 에러 메시지 shadow-sm shadow-destructive/5 계층 강화 | 99.45 | keep |
+| 43 | combined/fusion 버튼 shadow-md 통일 + hover:shadow-lg | 99.45 | keep |
+| 44 | 드래그 오버레이 border/rounded-xl 강화 + 아이콘 bounce | 99.45 | keep |
+| 45 | 더 보기 버튼 hover:shadow-md active:scale 마이크로인터랙션 | 99.45 | keep |
+
+**keep 비율: 5/5 (100%)** — 모두 조건부 렌더링 블록 내 변경으로 hydration 에러 회피
 
 ## Outer Loop Round 3 결과 (접근성 심화 WCAG AA)
 
@@ -118,6 +131,13 @@ UX 개선 → 성능 최적화 → 접근성 + 시각 피드백 → 디자인 �
 - `role="switch" + aria-checked`: 토글 컨트롤의 시맨틱 표준 패턴
 - 조건부 렌더링 블록 내 ARIA 속성 추가는 항상 안전 (하이드레이션 에러 없음)
 
+### 시각적 정합성 패턴 (Round 5에서 학습)
+- `shadow-md shadow-primary/5`: 색조가 있는 그림자로 브랜드 일관성 유지
+- `shadow-sm shadow-destructive/5`: 에러/경고 요소에 같은 패턴 적용
+- 버튼 shadow 크기 통일: 같은 계층의 버튼은 같은 shadow 레벨 사용
+- `animate-bounce`: 드래그앤드롭 같은 일시적 오버레이에 적합한 주의 환기 효과
+- 조건부 렌더링 블록 내 CSS 클래스 변경은 항상 안전 (하이드레이션 에러 없음)
+
 ## keep된 변경 목록
 1. icon-192.png PWA 아이콘 생성
 2. workspaces API 빈 배열 반환
@@ -152,3 +172,8 @@ UX 개선 → 성능 최적화 → 접근성 + 시각 피드백 → 디자인 �
 38. NlpAnalysisSection 접기/펼치기 aria-expanded
 39. ResultCard 더보기 메뉴 aria-haspopup
 40. SettingsPopover dialog aria-describedby
+41. 활성 카드 shadow-md shadow-primary/5 깊이감
+42. 에러 메시지 shadow-sm shadow-destructive/5
+43. combined/fusion 버튼 shadow-md 통일
+44. 드래그 오버레이 border/rounded-xl + bounce
+45. 더 보기 버튼 hover:shadow-md active:scale

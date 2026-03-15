@@ -39,3 +39,8 @@ experiment	hypothesis	score	error_score	dom_score	form_score	visual_score	verdic
 38	[접근성] NlpAnalysisSection 접기/펼치기 aria-expanded 추가	99.3	100	100	99	97	keep	2026-03-16T00:00
 39	[접근성] ResultCard 더보기 메뉴 aria-haspopup=menu 추가	99.3	100	100	99	97	keep	2026-03-16T00:05
 40	[접근성] SettingsPopover dialog aria-describedby 설명 텍스트 연결	99.3	100	100	99	97	keep	2026-03-16T00:10
+41	[시각] 활성 카드 shadow-md shadow-primary/5 깊이감 추가	99.45	100	100	99	98	keep	2026-03-16T01:00
+42	[시각] 에러 메시지 shadow-sm shadow-destructive/5 계층 강화	99.45	100	100	99	98	keep	2026-03-16T01:05
+43	[시각] combined/fusion 버튼 shadow-md 통일 + hover:shadow-lg	99.45	100	100	99	98	keep	2026-03-16T01:10
+44	[시각] 드래그 오버레이 border/rounded-xl 강화 + 아이콘 bounce	99.45	100	100	99	98	keep	2026-03-16T01:15
+45	[시각] 더 보기 버튼 hover:shadow-md active:scale 마이크로인터랙션	99.45	100	100	99	98	keep	2026-03-16T01:20

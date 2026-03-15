@@ -240,9 +240,9 @@ export default function Home() {
       </a>
       {/* 드래그 오버레이 */}
       {isDragOver && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/40 rounded-lg pointer-events-none animate-fade-in">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/50 rounded-xl pointer-events-none animate-fade-in shadow-inner">
           <div className="flex flex-col items-center gap-3 text-primary">
-            <Youtube className="h-12 w-12 opacity-60" />
+            <Youtube className="h-12 w-12 opacity-60 animate-bounce" />
             <p className="text-lg font-medium">{t('urlInput.dragDrop')}</p>
           </div>
         </div>
@@ -313,7 +313,7 @@ export default function Home() {
                       onClick={handleGenerateMerged}
                       disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-sm hover:shadow-md transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-md shadow-primary/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
@@ -325,7 +325,7 @@ export default function Home() {
                       onClick={handleGenerateFusion}
                       disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-sm hover:shadow-md transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-md shadow-purple-500/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
@@ -374,7 +374,7 @@ export default function Home() {
                 <div
                   role="alert"
                   aria-live="polite"
-                  className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in flex items-center gap-2"
+                  className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in flex items-center gap-2 shadow-sm shadow-destructive/5"
                 >
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {error}
@@ -402,7 +402,7 @@ export default function Home() {
                     data-report-id={r.id}
                     className={cn(
                       'transition-all duration-300',
-                      activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl'
+                      activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl shadow-md shadow-primary/5'
                     )}
                   >
                     <ResultCard
@@ -421,7 +421,7 @@ export default function Home() {
                       variant="outline"
                       size="sm"
                       onClick={handleLoadMore}
-                      className="gap-2 text-xs"
+                      className="gap-2 text-xs hover:shadow-md active:scale-[0.98] transition-all duration-200"
                     >
                       <Layers className="h-3.5 w-3.5" />
                       더 보기 ({deferredFiltered.length - visibleCount}개 남음)
