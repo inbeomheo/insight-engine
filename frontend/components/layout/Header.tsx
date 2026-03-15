@@ -1,11 +1,14 @@
 'use client';
 
+import { memo, useCallback } from 'react';
 import { Menu, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUIStore } from '@/stores/uiStore';
 
-export default function Header() {
-  const { toggleSidebar, setSettingsModalOpen } = useUIStore();
+const Header = memo(function Header() {
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
+  const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), [setSettingsModalOpen]);
 
   return (
     <header className="h-14 border-b border-border/60 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm" role="banner">
@@ -34,7 +37,7 @@ export default function Header() {
           variant="ghost"
           size="icon"
           className="h-9 w-9 hover:bg-accent"
-          onClick={() => setSettingsModalOpen(true)}
+          onClick={handleOpenSettings}
           aria-label="설정 열기"
         >
           <Settings className="h-[18px] w-[18px]" />
@@ -42,4 +45,6 @@ export default function Header() {
       </div>
     </header>
   );
-}
+});
+
+export default Header;

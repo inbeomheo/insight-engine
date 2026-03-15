@@ -19,11 +19,17 @@ const MODES: { id: ViewMode; label: string; icon: typeof AlignJustify }[] = [
 /** 결과 카드 뷰 모드 선택기 (Segmented Control) */
 export const ViewModeSelector = memo(function ViewModeSelector({ mode, onChange }: ViewModeSelectorProps) {
   return (
-    <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-700 p-0.5 bg-zinc-100 dark:bg-zinc-800">
+    <div
+      className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-700 p-0.5 bg-zinc-100 dark:bg-zinc-800"
+      role="radiogroup"
+      aria-label="뷰 모드 선택"
+    >
       {MODES.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
           onClick={() => onChange(id)}
+          role="radio"
+          aria-checked={mode === id}
           aria-label={`${label} 뷰 모드`}
           className={cn(
             'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all',

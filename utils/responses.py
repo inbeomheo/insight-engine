@@ -32,6 +32,10 @@ _INTERNAL_KEYWORDS = [
     '/home/', '/usr/', 'supabase', 'postgres', 'connection',
     'api_key', 'token', 'secret', 'password', 'authorization', '.env',
     'openai', 'litellm', 'httpx', 'requests.exceptions',
+    'httpsconnectionpool', 'connectionpool', 'urllib3', 'ssl:',
+    'read timed out', 'connect timeout', 'max retries exceeded',
+    'connection aborted', 'connection refused',
+    'name or service not known', 'temporary failure in name resolution',
 ]
 
 
@@ -69,22 +73,36 @@ def handle_error(error_msg, log_detail=None):
         error_msg: 사용자에게 보여줄 에러 메시지
         log_detail: 로깅용 상세 에러 (선택사항)
     """
-    if log_detail:
+    is_exception = isinstance(error_msg, Exception)
+    error_text = error_msg if isinstance(error_msg, str) else str(error_msg or '')
+
+    if is_exception:
+        if log_detail:
+            current_app.logger.error('%s: %s', log_detail, error_text, exc_info=True)
+        else:
+            current_app.logger.error('Unhandled exception: %s', error_text, exc_info=True)
+    elif log_detail:
         current_app.logger.error(f'Error: {log_detail}')
 
-    is_formatted_error = any(error_msg.startswith(prefix) for prefix in _ERROR_PREFIXES)
+    if is_exception:
+        safe_msg = '[서버 오류] 요청 처리 중 문제가 발생했습니다.'
+        if isinstance(log_detail, str) and log_detail.strip():
+            safe_msg = f'[서버 오류] {log_detail.strip()} 처리 중 문제가 발생했습니다.'
+        return jsonify({'error': safe_msg}), 500
+
+    is_formatted_error = any(error_text.startswith(prefix) for prefix in _ERROR_PREFIXES)
 
     if is_formatted_error:
-        if error_msg.startswith('[인증 실패]'):
-            return jsonify({'error': error_msg}), 401
-        if error_msg.startswith('[사용량 초과]'):
-            return jsonify({'error': error_msg}), 429
-        return jsonify({'error': error_msg}), 503
+        if error_text.startswith('[인증 실패]'):
+            return jsonify({'error': error_text}), 401
+        if error_text.startswith('[사용량 초과]'):
+            return jsonify({'error': error_text}), 429
+        return jsonify({'error': error_text}), 503
 
-    if 'API 키' in error_msg or 'authentication' in error_msg.lower():
-        return jsonify({'error': error_msg}), 401
+    if 'API 키' in error_text or 'authentication' in error_text.lower():
+        return jsonify({'error': error_text}), 401
 
-    safe_msg = sanitize_error_for_client(error_msg)
+    safe_msg = sanitize_error_for_client(error_text)
     return jsonify({'error': safe_msg}), 500
 
 

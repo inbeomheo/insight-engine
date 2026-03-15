@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
+import { useState, useRef, useEffect, memo, type KeyboardEvent, type ClipboardEvent, type DragEvent } from 'react';
 import { ArrowUp, SlidersHorizontal, X, Link2, Youtube, Globe, BookOpen, Rss, FileText, Headphones, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +32,7 @@ interface UrlInputProps {
   onGenerate: () => void;
 }
 
-export default function UrlInput({
+const UrlInput = memo(function UrlInput({
   urls,
   onAddUrl,
   onAddUrls,
@@ -45,6 +45,7 @@ export default function UrlInput({
   const [input, setInput] = useState('');
   const [error, setError] = useState('');
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const dragIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -63,6 +64,11 @@ export default function UrlInput({
       ? SOURCE_TYPE_ICONS[inputSourceType].colorClass
       : 'text-muted-foreground/40';
 
+  // 페이지 로드 시 자동 포커스
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
   function handleSubmit() {
     const err = onAddUrl(input);
     if (err) {
@@ -72,6 +78,8 @@ export default function UrlInput({
       setInput('');
       setError('');
     }
+    // URL 추가/에러 후 포커스 유지
+    inputRef.current?.focus();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -105,6 +113,7 @@ export default function UrlInput({
       <InputWrapper focused={focused} error={error} className="flex items-center gap-1.5 px-4 py-2.5">
         <InputIcon className={`h-4 w-4 shrink-0 transition-colors duration-150 ${inputIconClass}`} />
         <input
+          ref={inputRef}
           id="url-input"
           type="url"
           value={input}
@@ -116,7 +125,6 @@ export default function UrlInput({
           placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv, Podcast)"
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
           aria-label="URL 입력"
-          disabled={isLoading}
         />
         <Button
           variant="ghost"
@@ -131,7 +139,6 @@ export default function UrlInput({
           size="icon"
           className="h-8 w-8 shrink-0 rounded-xl gradient-primary hover:opacity-90 transition-opacity"
           onClick={input.trim() ? handleSubmit : onGenerate}
-          disabled={isLoading && !input.trim()}
           aria-label={input.trim() ? 'URL 추가' : '생성 시작'}
         >
           <ArrowUp className="h-4 w-4 text-white" />
@@ -172,7 +179,7 @@ export default function UrlInput({
               <Badge
                 key={url}
                 variant="secondary"
-                className={`gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent transition-colors cursor-grab active:cursor-grabbing ${
+                className={`gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent hover:shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing ${
                   dragOverIndex === urlIndex ? 'ring-2 ring-primary/30' : ''
                 }`}
                 draggable={urls.length > 1}
@@ -199,7 +206,7 @@ export default function UrlInput({
                 </span>
                 <button
                   onClick={() => onRemoveUrl(url)}
-                  className="hover:text-destructive rounded-full p-0.5 transition-colors"
+                  className="hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-all duration-200 hover:scale-110"
                   aria-label={`${chipLabel} 제거`}
                 >
                   <X className="h-3 w-3" />
@@ -211,4 +218,6 @@ export default function UrlInput({
       )}
     </div>
   );
-}
+});
+
+export default UrlInput;

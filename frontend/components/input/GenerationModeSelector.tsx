@@ -13,13 +13,15 @@ export default function GenerationModeSelector() {
   const { generationMode, setGenerationMode } = useSettingsStore();
 
   return (
-    <div className="flex gap-1 rounded-lg bg-[var(--surface-secondary)] p-1">
+    <div className="flex gap-1 rounded-lg bg-[var(--surface-secondary)] p-1" role="radiogroup" aria-label="생성 모드 선택">
       {modes.map((m) => (
         <button
           key={m.key}
           onClick={() => setGenerationMode(m.key)}
+          role="radio"
+          aria-checked={generationMode === m.key}
           aria-label={`${m.label} 생성 모드`}
-          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
             generationMode === m.key
               ? 'bg-[var(--accent-primary)] text-white'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'

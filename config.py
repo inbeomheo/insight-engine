@@ -32,6 +32,7 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
     'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
     'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
+    'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
@@ -249,6 +250,13 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
             {'id': 'ollama_chat/gemma2', 'name': 'Gemma 2 (9B)', 'max_input_tokens': 8192, 'price_input': 0, 'price_output': 0},
         ]
     },
+    'chatmock': {
+        'name': 'ChatMock',
+        'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
+        'models': [
+            {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+        ]
+    },
     'openrouter': {
         'name': 'OpenRouter (2600+ 모델)',
         'api_base': 'https://openrouter.ai/api/v1',
@@ -287,6 +295,8 @@ def get_provider_from_model(model_id: str) -> str:
         return 'zhipuai'
     elif model_id.startswith('ollama_chat/') or model_id.startswith('ollama/'):
         return 'ollama'
+    elif model_id.startswith('chatmock/'):
+        return 'chatmock'
     elif model_id.startswith('openrouter/'):
         return 'openrouter'
     return 'gemini'  # 기본값 (Gemini)

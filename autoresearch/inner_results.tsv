@@ -1,0 +1,41 @@
+experiment	hypothesis	score	error_score	dom_score	form_score	visual_score	verdict	timestamp
+1	icon-192.png 404 해결 (PWA 아이콘 생성)	81.75	60	100	80	85	keep	2026-03-15T21:26
+2	workspaces 400 해결 (Supabase 비활성 시 빈 배열 반환)	92.75	100	100	80	85	keep	2026-03-15T21:293	URL 입력 autofocus + 포커스 유지	94.75	100	100	85	90	keep	2026-03-15T12:34
+4	빈 상태에 kbd 단축키 힌트 추가	81.75	60	100	85	90	revert	2026-03-15T12:35
+5	에러 메시지 role=alert + aria-live + 아이콘	95.25	100	100	87	90	keep	2026-03-15T12:36
+6	생성 버튼 disabled + 로딩 스피너	96.0	100	100	90	90	keep	2026-03-15T12:38
+7	사이드바 히스토리 접근성 (role=button, tabIndex, aria-label, 키보드 지원)	96.5	100	100	92	90	keep	2026-03-15T12:39
+8	사이드바 하단 footer+contentinfo 랜드마크 추가	81.75	60	100	92	90	revert	2026-03-15T12:40
+9	URL 입력 aria-describedby + aria-invalid	81.75	60	100	92	90	revert	2026-03-15T12:41
+10	헤더 버튼 title 속성 추가	81.75	60	100	92	90	revert	2026-03-15T12:42
+11	URL 칩 삭제 버튼 hover 배경색 강화	96.8	100	100	92	92	keep	2026-03-15T12:43
+12	빈 상태 아이콘 animate-pulse	81.75	60	100	92	92	revert	2026-03-15T12:43
+13	로딩 스켈레톤 aria-busy + aria-label	97.05	100	100	93	92	keep	2026-03-15T12:44
+14	InputWrapper 포커스/hover 시각적 피드백 강화	81.75	60	100	93	92	revert	2026-03-15T12:45
+15	설정 팝오버 ESC 닫기 + role=dialog	97.55	100	100	95	92	keep	2026-03-15T12:48
+16	ViewModeSelector radiogroup+radio+aria-checked 접근성	97.8	100	100	96	92	keep	2026-03-15T13:00
+17	사이드바 검색 role=search + aria-label + aria-live	81.75	60	100	96	92	revert	2026-03-15T13:02
+18	FilterBar type=search + aria-label + 아이콘 aria-hidden	98.05	100	100	97	92	keep	2026-03-15T13:04
+19-a	InputWrapper dark:bg-zinc-900 다크모드 대비	81.75	60	100	97	92	revert	2026-03-15T13:06
+19-b	생성 버튼 영역 role=group + aria-label 접근성	98.2	100	100	97	93	keep	2026-03-15T13:10
+20	SettingsPopover 스타일/길이/문체/언어 버튼 aria-pressed 추가	98.2	100	100	98	93	keep	2026-03-15T13:12
+21	[성능] FilterBar+LoadingSkeleton memo 감싸기 (불필요 리렌더 방지)	98.2	100	100	98	93	keep	2026-03-15T14:00
+22	[성능] UrlInput memo + onToggleSettings useCallback 안정화	98.2	100	100	98	93	keep	2026-03-15T14:05
+23	[성능] handleGenerate/Merged/Fusion useCallback 변환	98.2	100	100	98	93	keep	2026-03-15T14:10
+24	[성능] Header memo + Zustand selector 분리 + 인라인 함수 제거	98.2	100	100	98	93	keep	2026-03-15T14:15
+25	[성능] ScheduleModal/HelpPanel/GuidedTour 인라인 함수 useCallback 안정화	98.2	100	100	98	93	keep	2026-03-15T14:20
+26	SettingsPopover 스타일/길이/문체/언어 버튼 focus-visible 링 추가	98.45	100	100	99	93	keep	2026-03-15T22:30
+27	GenerationModeSelector radiogroup+radio+aria-checked 접근성	98.45	100	100	99	93	keep	2026-03-15T22:31
+28	FusionOptions role=group + aria-label 접근성	98.45	100	100	99	93	keep	2026-03-15T22:32
+29	에이전트 모드 토글 role=switch + aria-checked + focus-visible	98.45	100	100	99	93	keep	2026-03-15T22:33
+30	ResultCard hover 트랜지션 강화 (border-border/60 + transition-all)	98.6	100	100	99	94	keep	2026-03-15T22:34
+31	[디자인] LoadingSkeleton 패딩/간격/shadow 개선 (border-border/40, px-5, gap-2.5, rounded)	98.3	100	100	99	95	keep	2026-03-15T23:00
+32	[디자인] URL 칩 hover shadow + 삭제 버튼 hover:scale-110 마이크로인터랙션	98.3	100	100	99	95	keep	2026-03-15T23:05
+33	[디자인] 생성 버튼 active:scale-[0.98] + hover:shadow-lg 마이크로인터랙션	98.6	100	100	99	96	keep	2026-03-15T23:10
+34	[디자인] SettingsPopover 스타일/길이/문체/언어 버튼 active:scale-95 + hover:shadow-sm	98.6	100	100	99	96	keep	2026-03-15T23:15
+35	[디자인] 히스토리 항목 활성 상태 border-primary/20 + duration-200 트랜지션	98.9	100	100	99	97	keep	2026-03-15T23:20
+36	[접근성] ResultCard 접기/펼치기 버튼 aria-expanded 추가	99.3	100	100	99	97	keep	2026-03-15T23:50
+37	[접근성] SettingsPopover 웹 검색 보강 토글 role=switch + aria-checked	99.3	100	100	99	97	keep	2026-03-15T23:55
+38	[접근성] NlpAnalysisSection 접기/펼치기 aria-expanded 추가	99.3	100	100	99	97	keep	2026-03-16T00:00
+39	[접근성] ResultCard 더보기 메뉴 aria-haspopup=menu 추가	99.3	100	100	99	97	keep	2026-03-16T00:05
+40	[접근성] SettingsPopover dialog aria-describedby 설명 텍스트 연결	99.3	100	100	99	97	keep	2026-03-16T00:10

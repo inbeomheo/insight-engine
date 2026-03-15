@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Youtube, Layers, Combine, Bot } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
@@ -90,6 +90,9 @@ export default function Home() {
   // onExpandToFull — 안정 참조 (인라인 화살표 함수 방지 → memo 유지)
   const handleExpandToFull = useCallback(() => handleViewModeChange('full'), [handleViewModeChange]);
 
+  // onToggleSettings — 안정 참조 (UrlInput memo 유지)
+  const handleToggleSettings = useCallback(() => setSettingsPopoverOpen(!settingsPopoverOpen), [settingsPopoverOpen, setSettingsPopoverOpen]);
+
   // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
   const filtered = useMemo(() => {
     const lowerQuery = searchQuery?.toLowerCase();
@@ -115,6 +118,27 @@ export default function Home() {
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
   }, [deferredFiltered.length]);
+
+  // ScheduleModal 핸들러 — 안정 참조
+  const handleScheduleOpenChange = useCallback((open: boolean) => {
+    if (!open) setScheduleTarget(null);
+  }, []);
+
+  const handleScheduleSubmit = useCallback(async (data: { target_plugin: string; scheduled_at: string }) => {
+    const target = scheduleTarget;
+    if (!target) return;
+    const ok = await addSchedule({
+      title: target.title,
+      content: target.content,
+      html: target.html,
+      ...data,
+    });
+    if (ok) setScheduleTarget(null);
+  }, [scheduleTarget, addSchedule]);
+
+  // HelpPanel + GuidedTour 핸들러 — 안정 참조
+  const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
+  const handleCloseTour = useCallback(() => setTourActive(false), []);
 
   // 도움말 패널 + 가이드 투어
   const [helpOpen, setHelpOpen] = useState(false);
@@ -179,25 +203,25 @@ export default function Home() {
   }, [hydrateSettings, hydrateResults, setOnboardingOpen]);
 
   // 생성 시작 (1개면 단일, 여러 개면 배치)
-  async function handleGenerate() {
+  const handleGenerate = useCallback(async () => {
     if (urls.length === 0) return;
     const ok = await generateBatchUrls([...urls]);
     if (ok) startTransition(() => clearUrls());
-  }
+  }, [urls, generateBatchUrls, clearUrls]);
 
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
-  async function handleGenerateMerged() {
+  const handleGenerateMerged = useCallback(async () => {
     if (urls.length < 2) return;
     const ok = await generateMergedUrls([...urls]);
     if (ok) startTransition(() => clearUrls());
-  }
+  }, [urls, generateMergedUrls, clearUrls]);
 
   // 퓨전 분석 (2~5개 URL → 교차분석 + 웹리서치)
-  async function handleGenerateFusion() {
+  const handleGenerateFusion = useCallback(async () => {
     if (urls.length < 2) return;
     const ok = await generateFusionUrls([...urls]);
     if (ok) startTransition(() => clearUrls());
-  }
+  }, [urls, generateFusionUrls, clearUrls]);
 
   return (
     <div
@@ -253,7 +277,7 @@ export default function Home() {
                   onAddUrl={addUrl}
                   onAddUrls={addUrls}
                   onRemoveUrl={removeUrl}
-                  onToggleSettings={() => setSettingsPopoverOpen(!settingsPopoverOpen)}
+                  onToggleSettings={handleToggleSettings}
                   isLoading={isLoading}
                   onGenerate={handleGenerate}
                 />
@@ -270,20 +294,18 @@ export default function Home() {
 
               {/* 생성 버튼 (URL이 있을 때) */}
               {urls.length > 0 && (
-                <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in">
+                <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
                   {generationMode === 'individual' && (
                     <Button
                       onClick={handleGenerate}
                       disabled={isLoading}
-                      className="gap-2 gradient-primary hover:opacity-90 transition-opacity shadow-md px-6 h-11 rounded-xl text-sm font-medium"
+                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
-                      <Sparkles className="h-4 w-4" />
-                      {isLoading
-                        ? t('generateButton.loading')
-                        : urls.length === 1
-                          ? t('generateButton.singleUrl')
-                          : t('generateButton.multipleUrls', { count: urls.length })}
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {urls.length === 1
+                        ? t('generateButton.singleUrl')
+                        : t('generateButton.multipleUrls', { count: urls.length })}
                     </Button>
                   )}
                   {generationMode === 'combined' && urls.length >= 2 && (
@@ -291,11 +313,11 @@ export default function Home() {
                       onClick={handleGenerateMerged}
                       disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-primary/5 border-primary/30 text-primary shadow-sm px-6 h-11 rounded-xl text-sm font-medium"
+                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-sm hover:shadow-md transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
-                      <Layers className="h-4 w-4" />
-                      {isLoading ? t('generateButton.loading') : t('generateButton.combined', { count: urls.length })}
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+                      {t('generateButton.combined', { count: urls.length })}
                     </Button>
                   )}
                   {generationMode === 'fusion' && urls.length >= 2 && (
@@ -303,11 +325,11 @@ export default function Home() {
                       onClick={handleGenerateFusion}
                       disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-purple-500/10 border-purple-400/30 text-purple-500 shadow-sm px-6 h-11 rounded-xl text-sm font-medium"
+                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-sm hover:shadow-md transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
-                      <Combine className="h-4 w-4" />
-                      {isLoading ? t('generateButton.fusionLoading') : t('generateButton.fusion', { count: urls.length })}
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
+                      {t('generateButton.fusion', { count: urls.length })}
                     </Button>
                   )}
                   {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
@@ -315,11 +337,11 @@ export default function Home() {
                     <Button
                       onClick={handleGenerate}
                       disabled={isLoading}
-                      className="gap-2 gradient-primary hover:opacity-90 transition-opacity shadow-md px-6 h-11 rounded-xl text-sm font-medium"
+                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                       size="lg"
                     >
-                      <Sparkles className="h-4 w-4" />
-                      {isLoading ? t('generateButton.loading') : t('generateButton.singleUrl')}
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {t('generateButton.singleUrl')}
                     </Button>
                   )}
                 </div>
@@ -330,9 +352,12 @@ export default function Home() {
                 <div className="flex justify-center mb-2 animate-fade-in">
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={enableAgentMode}
+                    aria-label="에이전트 모드 토글"
                     onClick={() => setEnableAgentMode(!enableAgentMode)}
                     className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50',
                       enableAgentMode
                         ? 'bg-violet-500/10 border-violet-400/40 text-violet-500'
                         : 'bg-muted/40 border-border/40 text-muted-foreground hover:text-foreground'
@@ -346,7 +371,12 @@ export default function Home() {
 
               {/* 에러 */}
               {error && (
-                <div className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in">
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in flex items-center gap-2"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   {error}
                 </div>
               )}
@@ -430,29 +460,20 @@ export default function Home() {
       <TemplateGalleryModal />
 
       {/* 도움말 패널 */}
-      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpPanel open={helpOpen} onClose={handleCloseHelp} />
 
       {/* 가이드 투어 */}
-      <GuidedTour forceStart={tourActive} onClose={() => setTourActive(false)} />
+      <GuidedTour forceStart={tourActive} onClose={handleCloseTour} />
 
       {/* 예약 발행 모달 — 페이지 레벨 1개 */}
       <ScheduleModal
         open={!!scheduleTarget}
-        onOpenChange={(open) => { if (!open) setScheduleTarget(null); }}
+        onOpenChange={handleScheduleOpenChange}
         title={scheduleTarget?.title || ''}
         content={scheduleTarget?.content || ''}
         html={scheduleTarget?.html}
         isLoading={scheduleLoading}
-        onSchedule={async (data) => {
-          if (!scheduleTarget) return;
-          const ok = await addSchedule({
-            title: scheduleTarget.title,
-            content: scheduleTarget.content,
-            html: scheduleTarget.html,
-            ...data,
-          });
-          if (ok) setScheduleTarget(null);
-        }}
+        onSchedule={handleScheduleSubmit}
       />
     </div>
   );

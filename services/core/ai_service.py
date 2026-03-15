@@ -185,6 +185,16 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     if model.startswith("ollama_chat/") or model.startswith("ollama/"):
         kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
+    # ChatMock → OpenAI 호환 프록시 (ChatGPT 구독 기반)
+    if model.startswith("chatmock/"):
+        actual_model = model.replace("chatmock/", "")
+        kwargs["model"] = actual_model
+        kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
+        kwargs["api_key"] = "dummy"
+        kwargs["reasoning_effort"] = "medium"
+        kwargs.pop("temperature", None)
+        kwargs["drop_params"] = True
+
     # OpenRouter → api_base + API 키 설정
     if model.startswith("openrouter/"):
         openrouter_key = os.getenv("OPENROUTER_API_KEY")

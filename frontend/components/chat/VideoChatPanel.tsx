@@ -13,6 +13,7 @@ import {
 interface VideoChatPanelProps {
   videoUrl: string;
   videoTitle?: string;
+  model?: string;
   onClose: () => void;
 }
 
@@ -23,6 +24,7 @@ interface ChatMessage extends VideoQaMessage {
 export default function VideoChatPanel({
   videoUrl,
   videoTitle,
+  model,
   onClose,
 }: VideoChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -58,7 +60,7 @@ export default function VideoChatPanel({
     }));
 
     try {
-      const res = await askVideoQuestion(videoUrl, question, history);
+      const res = await askVideoQuestion(videoUrl, question, history, model);
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: res.answer,

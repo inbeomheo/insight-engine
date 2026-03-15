@@ -13,11 +13,11 @@ import {
 import type { Workspace } from '@/lib/types';
 import { toast } from 'sonner';
 
-export function useWorkspace() {
+export function useWorkspace(enabled = false) {
   const queryClient = useQueryClient();
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
-  // 워크스페이스 목록
+  // 워크스페이스 목록 (enabled일 때만 호출 — Supabase 비활성 시 불필요한 400 에러 방지)
   const workspacesQuery = useQuery({
     queryKey: ['workspaces'],
     queryFn: async () => {
@@ -25,6 +25,8 @@ export function useWorkspace() {
       return data.workspaces;
     },
     staleTime: 60_000,
+    retry: false,
+    enabled,
   });
 
   // 현재 워크스페이스

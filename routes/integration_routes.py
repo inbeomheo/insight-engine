@@ -8,7 +8,26 @@ from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
 from services.data.supabase_service import require_auth
-from utils.responses import handle_error
+from utils.responses import handle_error, sanitize_error_for_client
+
+
+def _sanitize_integration_error(message, fallback_message):
+    raw_message = str(message or '')
+    safe_message = sanitize_error_for_client(raw_message)
+
+    # 외부 서비스가 "사용자 메시지: 내부 상세" 형태로 원문 예외를 포함한 경우 차단합니다.
+    if safe_message == raw_message and ': ' in raw_message:
+        return fallback_message
+    if safe_message.startswith('[서버 오류]'):
+        return fallback_message
+    return safe_message
+
+
+def _sanitize_result_message(result, field_name, fallback_message):
+    sanitized = dict(result or {})
+    if sanitized.get(field_name):
+        sanitized[field_name] = _sanitize_integration_error(sanitized[field_name], fallback_message)
+    return sanitized
 
 
 # ── Notion 연동 ──────────────────────────────────────
@@ -189,7 +208,18 @@ def mcp_publish():
     if not plugin_id or not title or not content:
         return jsonify({"error": "plugin_id, title, content는 필수입니다."}), 400
 
-    result = plugin_registry.execute(plugin_id, content, title)
+    try:
+        result = plugin_registry.execute(plugin_id, content, title)
+    except Exception as e:
+        current_app.logger.error('MCP publish failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] 플러그인 발행 중 문제가 발생했습니다.'}), 500
+
+    if not result.get('success'):
+        result = _sanitize_result_message(
+            result,
+            'message',
+            '[서버 오류] 플러그인 발행에 실패했습니다.'
+        )
     status_code = 200 if result.get("success") else 404
     return jsonify(result), status_code
 
@@ -219,7 +249,11 @@ def mcp_app_render(app_name: str):
     if app is None:
         return jsonify({"error": f"앱 '{app_name}'을(를) 찾을 수 없습니다."}), 404
 
-    result = app.render(data)
+    try:
+        result = app.render(data)
+    except Exception as e:
+        current_app.logger.error('MCP app render failed for %s: %s', app_name, e, exc_info=True)
+        return jsonify({'error': '[서버 오류] 앱 렌더링 중 문제가 발생했습니다.'}), 500
     return jsonify(result)
 
 
@@ -241,7 +275,11 @@ def mcp_app_action(app_name: str):
     if app is None:
         return jsonify({"error": f"앱 '{app_name}'을(를) 찾을 수 없습니다."}), 404
 
-    result = app.handle_action(action, data)
+    try:
+        result = app.handle_action(action, data)
+    except Exception as e:
+        current_app.logger.error('MCP app action failed for %s: %s', app_name, e, exc_info=True)
+        return jsonify({'error': '[서버 오류] 앱 작업 처리 중 문제가 발생했습니다.'}), 500
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -535,14 +573,18 @@ def save_content_version(content_id):
     if not content:
         return jsonify({'error': '콘텐츠가 비어 있습니다.'}), 400
 
-    version = save_version(
-        content_id=content_id,
-        title=title,
-        content=content,
-        html=data.get('html', ''),
-        author_id=data.get('author_id', ''),
-        note=data.get('note', ''),
-    )
+    try:
+        version = save_version(
+            content_id=content_id,
+            title=title,
+            content=content,
+            html=data.get('html', ''),
+            author_id=data.get('author_id', ''),
+            note=data.get('note', ''),
+        )
+    except Exception as e:
+        current_app.logger.error('Save content version failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] 버전 저장 중 문제가 발생했습니다.'}), 500
     return jsonify(version), 201
 
 
@@ -1025,7 +1067,18 @@ def sync_to_airtable():
     if not title or not content:
         return jsonify({'error': 'title과 content가 필요합니다.'}), 400
 
-    result = airtable_service.sync_content(title, content, style, url, table_name)
+    try:
+        result = airtable_service.sync_content(title, content, style, url, table_name)
+    except Exception as e:
+        current_app.logger.error('Airtable sync failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] Airtable 동기화 중 문제가 발생했습니다.'}), 500
+
+    if not result.get('success'):
+        result = _sanitize_result_message(
+            result,
+            'message',
+            '[서버 오류] Airtable 동기화에 실패했습니다.'
+        )
     status_code = 200 if result.get('success') else 400
     return jsonify(result), status_code
 
@@ -1048,7 +1101,18 @@ def sync_to_gsheets():
     if not title or not content:
         return jsonify({'error': 'title과 content가 필요합니다.'}), 400
 
-    result = gsheets_service.sync_content(title, content, style, url, sheet_name)
+    try:
+        result = gsheets_service.sync_content(title, content, style, url, sheet_name)
+    except Exception as e:
+        current_app.logger.error('Google Sheets sync failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] Google Sheets 동기화 중 문제가 발생했습니다.'}), 500
+
+    if not result.get('success'):
+        result = _sanitize_result_message(
+            result,
+            'message',
+            '[서버 오류] Google Sheets 동기화에 실패했습니다.'
+        )
     status_code = 200 if result.get('success') else 400
     return jsonify(result), status_code
 
@@ -1072,7 +1136,22 @@ def cms_publish_all():
     if not title or not content:
         return jsonify({'error': 'title과 content가 필요합니다.'}), 400
 
-    result = cms_hub.publish_to_all(plugin_ids, title, content, plugin_configs)
+    try:
+        result = cms_hub.publish_to_all(plugin_ids, title, content, plugin_configs)
+    except Exception as e:
+        current_app.logger.error('CMS publish-all failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] CMS 발행 중 문제가 발생했습니다.'}), 500
+
+    sanitized_results = {}
+    for plugin_id, plugin_result in (result.get('results') or {}).items():
+        sanitized_results[plugin_id] = _sanitize_result_message(
+            plugin_result,
+            'message',
+            '[서버 오류] CMS 발행에 실패했습니다.'
+        )
+    if sanitized_results:
+        result = {**result, 'results': sanitized_results}
+
     return jsonify(result)
 
 
@@ -1120,7 +1199,24 @@ def webhook_relay():
     if len(urls) > 50:
         return jsonify({'error': 'URL은 최대 50개까지 허용됩니다.'}), 400
 
-    result = webhook_relay_service.send_all(urls, payload, headers, timeout)
+    try:
+        result = webhook_relay_service.send_all(urls, payload, headers, timeout)
+    except Exception as e:
+        current_app.logger.error('Webhook relay failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] 웹훅 전송 중 문제가 발생했습니다.'}), 500
+
+    sanitized_results = []
+    for item in result.get('results', []):
+        sanitized_item = dict(item)
+        if sanitized_item.get('error'):
+            sanitized_item['error'] = _sanitize_integration_error(
+                sanitized_item['error'],
+                '[서버 오류] 웹훅 전송에 실패했습니다.'
+            )
+        sanitized_results.append(sanitized_item)
+    if sanitized_results:
+        result = {**result, 'results': sanitized_results}
+
     return jsonify(result)
 
 
@@ -1170,7 +1266,11 @@ def oauth_register_client():
     if not redirect_uris:
         return jsonify({'error': 'redirect_uris가 필요합니다.'}), 400
 
-    result = oauth_provider_service.register_client(name, redirect_uris, scopes)
+    try:
+        result = oauth_provider_service.register_client(name, redirect_uris, scopes)
+    except Exception as e:
+        current_app.logger.error('OAuth client registration failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] OAuth 클라이언트 등록 중 문제가 발생했습니다.'}), 500
     return jsonify(result), 201
 
 
@@ -1194,14 +1294,18 @@ def oauth_authorize():
         user_id = getattr(g, 'user_id', None)
         if not user_id:
             return jsonify({'error': '인증이 필요합니다.'}), 401
-        code = oauth_provider_service.create_authorization_code(
-            client_id=client_id,
-            user_id=user_id,
-            scope=scope,
-            redirect_uri=redirect_uri,
-            code_challenge=code_challenge or None,
-            code_challenge_method=code_challenge_method,
-        )
+        try:
+            code = oauth_provider_service.create_authorization_code(
+                client_id=client_id,
+                user_id=user_id,
+                scope=scope,
+                redirect_uri=redirect_uri,
+                code_challenge=code_challenge or None,
+                code_challenge_method=code_challenge_method,
+            )
+        except Exception as e:
+            current_app.logger.error('OAuth authorize failed: %s', e, exc_info=True)
+            return jsonify({'error': '[인증 실패] OAuth 인가 처리 중 문제가 발생했습니다.'}), 500
 
         if not code:
             return jsonify({'error': '인가 실패 — 클라이언트 또는 redirect_uri 검증 오류'}), 400
@@ -1223,19 +1327,27 @@ def oauth_token():
     grant_type = data.get('grant_type', '')
 
     if grant_type == 'authorization_code':
-        result = oauth_provider_service.exchange_code_for_token(
-            code=data.get('code', ''),
-            client_id=data.get('client_id', ''),
-            client_secret=data.get('client_secret', ''),
-            redirect_uri=data.get('redirect_uri', ''),
-            code_verifier=data.get('code_verifier'),
-        )
+        try:
+            result = oauth_provider_service.exchange_code_for_token(
+                code=data.get('code', ''),
+                client_id=data.get('client_id', ''),
+                client_secret=data.get('client_secret', ''),
+                redirect_uri=data.get('redirect_uri', ''),
+                code_verifier=data.get('code_verifier'),
+            )
+        except Exception as e:
+            current_app.logger.error('OAuth token exchange failed: %s', e, exc_info=True)
+            return jsonify({'error': 'server_error', 'error_description': '[서버 오류] OAuth 토큰 발급 중 문제가 발생했습니다.'}), 500
     elif grant_type == 'client_credentials':
-        result = oauth_provider_service.client_credentials_token(
-            client_id=data.get('client_id', ''),
-            client_secret=data.get('client_secret', ''),
-            scope=data.get('scope', 'read'),
-        )
+        try:
+            result = oauth_provider_service.client_credentials_token(
+                client_id=data.get('client_id', ''),
+                client_secret=data.get('client_secret', ''),
+                scope=data.get('scope', 'read'),
+            )
+        except Exception as e:
+            current_app.logger.error('OAuth client credentials token failed: %s', e, exc_info=True)
+            return jsonify({'error': 'server_error', 'error_description': '[서버 오류] OAuth 토큰 발급 중 문제가 발생했습니다.'}), 500
     else:
         result = {'error': 'unsupported_grant_type', 'error_description': f'지원하지 않는 grant_type: {grant_type}'}
 
@@ -1254,7 +1366,11 @@ def oauth_revoke():
     if not token:
         return jsonify({'error': 'token이 필요합니다.'}), 400
 
-    oauth_provider_service.revoke_token(token)
+    try:
+        oauth_provider_service.revoke_token(token)
+    except Exception as e:
+        current_app.logger.error('OAuth revoke failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] OAuth 토큰 폐기 중 문제가 발생했습니다.'}), 500
     return jsonify({'success': True})
 
 
@@ -1262,4 +1378,9 @@ def oauth_revoke():
 def oauth_list_clients():
     """등록된 OAuth 클라이언트 목록"""
     from services.auth.oauth_provider_service import oauth_provider_service
-    return jsonify({'clients': oauth_provider_service.list_clients()})
+    try:
+        clients = oauth_provider_service.list_clients()
+    except Exception as e:
+        current_app.logger.error('OAuth client list failed: %s', e, exc_info=True)
+        return jsonify({'error': '[서버 오류] OAuth 클라이언트 목록 조회 중 문제가 발생했습니다.'}), 500
+    return jsonify({'clients': clients})

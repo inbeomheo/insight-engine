@@ -17,7 +17,15 @@ from services.core import ai_service, content_service, fusion_service
 from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, api_error_from_exception
+from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client
+
+
+def _sanitize_generation_error(error: Exception | str, fallback_message: str) -> str:
+    """중첩 결과/SSE 응답에 들어가는 예외 메시지를 정리합니다."""
+    safe_message = sanitize_error_for_client(str(error or ''))
+    if safe_message.startswith('[서버 오류]'):
+        return fallback_message
+    return safe_message
 
 
 @blog_bp.route('/api/mindmap', methods=['POST'])
@@ -130,7 +138,13 @@ def generate_multi():
                     result['style'] = style_id
                     return result
                 except Exception as e:
-                    return {'style': style_id, 'error': str(e)}
+                    return {
+                        'style': style_id,
+                        'error': _sanitize_generation_error(
+                            e,
+                            '[서버 오류] 스타일별 콘텐츠 생성 중 문제가 발생했습니다.'
+                        )
+                    }
 
         is_glm = model.startswith('zhipuai/')
         if is_glm:
@@ -225,7 +239,13 @@ def generate_campaign():
                     result['style'] = style_id
                     return result
                 except Exception as e:
-                    return {'style': style_id, 'error': str(e)}
+                    return {
+                        'style': style_id,
+                        'error': _sanitize_generation_error(
+                            e,
+                            '[서버 오류] 캠페인 스타일 생성 중 문제가 발생했습니다.'
+                        )
+                    }
 
         is_glm = model.startswith('zhipuai/')
         if is_glm:
@@ -330,7 +350,12 @@ def rewrite_content():
         result = rewrite_for_platform(content, platform, model)
 
         if 'error' in result:
-            return jsonify(result), 400
+            safe_result = dict(result)
+            safe_result['error'] = _sanitize_generation_error(
+                result.get('error'),
+                '[서버 오류] 콘텐츠 변환 중 문제가 발생했습니다.'
+            )
+            return jsonify(safe_result), 400
 
         return jsonify({
             **result,
@@ -481,7 +506,12 @@ def generate_thumbnail():
         result = _gen_thumb(title, keywords, size)
 
         if not result.get('success'):
-            return jsonify({'error': result.get('error', '썸네일 생성 실패')}), 400
+            return jsonify({
+                'error': _sanitize_generation_error(
+                    result.get('error', '썸네일 생성 실패'),
+                    '[서버 오류] 썸네일 생성 중 문제가 발생했습니다.'
+                )
+            }), 400
 
         return jsonify(result)
 
@@ -620,7 +650,13 @@ def generate_multilang():
                     result['language'] = lang
                     return lang, result
                 except Exception as e:
-                    return lang, {'language': lang, 'error': str(e)}
+                    return lang, {
+                        'language': lang,
+                        'error': _sanitize_generation_error(
+                            e,
+                            '[서버 오류] 다국어 콘텐츠 생성 중 문제가 발생했습니다.'
+                        )
+                    }
 
         is_glm = model.startswith('zhipuai/')
         if is_glm:
@@ -730,7 +766,13 @@ def agent_research():
                     result = agent.run(topic)
                     event_queue.put(('result', result))
                 except Exception as e:
-                    event_queue.put(('error', str(e)))
+                    event_queue.put((
+                        'error',
+                        _sanitize_generation_error(
+                            e,
+                            '[서버 오류] 리서치 에이전트 실행 중 문제가 발생했습니다.'
+                        )
+                    ))
 
             thread = threading.Thread(target=run_agent, daemon=True)
             thread.start()

@@ -864,18 +864,26 @@ def generate_merged():
 
         def _fetch_one(url):
             with app.app_context():
-                vid = content_service.get_video_id(url)
-                if not vid:
-                    return {'url': url, 'error': '유효하지 않은 YouTube URL'}
-                title = content_service.get_content_title(url) or 'YouTube 영상'
-                transcript_text, comments, error, _, source, _ = _fetch_youtube_content(vid)
-                if error:
-                    return {'url': url, 'error': error, 'title': title}
-                return {
-                    'url': url, 'video_id': vid, 'title': title,
-                    'transcript': transcript_text, 'comments': comments,
-                    'transcript_source': source,
-                }
+                try:
+                    vid = content_service.get_video_id(url)
+                    if not vid:
+                        return {'url': url, 'error': '유효하지 않은 YouTube URL'}
+                    title = content_service.get_content_title(url) or 'YouTube 영상'
+                    transcript_text, comments, error, _, source, _ = _fetch_youtube_content(vid)
+                    if error:
+                        return {'url': url, 'error': error, 'title': title}
+                    return {
+                        'url': url, 'video_id': vid, 'title': title,
+                        'transcript': transcript_text, 'comments': comments,
+                        'transcript_source': source,
+                    }
+                except Exception as e:
+                    current_app.logger.error('Merged fetch failed for %s: %s', url, e, exc_info=True)
+                    return {
+                        'url': url,
+                        'title': '알 수 없는 영상',
+                        'error': _sanitize_error_for_client(str(e))
+                    }
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(MAX_MERGED_URLS, len(urls))) as executor:
             futures = {executor.submit(_fetch_one, u): u for u in urls}
@@ -1280,34 +1288,40 @@ def video_qa():
     if not video_id:
         return jsonify({'error': '영상 ID를 추출할 수 없습니다.'}), 400
 
-    # 아직 인덱싱이 안 됐으면 자막을 가져와 인덱싱
-    if not is_video_indexed(video_id):
-        transcript_result = content_service.get_transcript(video_id)
+    try:
+        # 아직 인덱싱이 안 됐으면 자막을 가져와 인덱싱
+        if not is_video_indexed(video_id):
+            transcript_result = content_service.get_transcript(video_id)
 
-        # get_transcript 반환값은 str 또는 dict
-        if isinstance(transcript_result, dict):
-            transcript_text = transcript_result.get('text', '')
-        elif isinstance(transcript_result, str):
-            transcript_text = transcript_result
-        else:
-            transcript_text = ''
+            # get_transcript 반환값은 str 또는 dict
+            if isinstance(transcript_result, dict):
+                if transcript_result.get('error'):
+                    return jsonify({'error': sanitize_error_for_client(transcript_result['error'])}), 400
+                transcript_text = transcript_result.get('text') or transcript_result.get('transcript', '')
+            elif isinstance(transcript_result, str):
+                transcript_text = transcript_result
+            else:
+                transcript_text = ''
 
-        if not transcript_text:
-            return jsonify({'error': '영상 자막을 가져올 수 없습니다.'}), 400
+            if not transcript_text:
+                return jsonify({'error': '영상 자막을 가져올 수 없습니다.'}), 400
 
-        ok = index_video_transcript(video_id, transcript_text)
-        if not ok:
-            return jsonify({'error': '영상 자막 인덱싱에 실패했습니다.'}), 500
+            ok = index_video_transcript(video_id, transcript_text)
+            if not ok:
+                return jsonify({'error': '[서버 오류] 영상 자막 인덱싱에 실패했습니다.'}), 500
 
-    # Q&A 답변 생성
-    result = answer_question(
-        video_id=video_id,
-        question=question,
-        history=history if isinstance(history, list) else [],
-        model=model,
-    )
+        # Q&A 답변 생성
+        result = answer_question(
+            video_id=video_id,
+            question=question,
+            history=history if isinstance(history, list) else [],
+            model=model,
+        )
 
-    return jsonify(result)
+        return jsonify(result)
+    except Exception as exc:
+        current_app.logger.error('Video QA failed: %s', exc, exc_info=True)
+        return api_error_from_exception(exc, '[서버 오류] 영상 Q&A 처리 중 문제가 발생했습니다.')
 
 
 @blog_bp.route('/api/tts', methods=['POST'])
@@ -1465,7 +1479,10 @@ def get_structured_transcript(video_id):
 
     # 에러 응답 처리
     if isinstance(transcript_data, dict) and 'error' in transcript_data:
-        return jsonify({'error': transcript_data['error']}), 422
+        error_message = sanitize_error_for_client(transcript_data['error'])
+        if error_message.startswith('[서버 오류]'):
+            error_message = '[서버 오류] 자막 조회 중 문제가 발생했습니다.'
+        return jsonify({'error': error_message}), 422
 
     # 자막 텍스트 및 세그먼트 추출
     if isinstance(transcript_data, dict):
@@ -1485,8 +1502,12 @@ def get_structured_transcript(video_id):
         return jsonify({'error': '자막이 비어 있습니다.'}), 422
 
     # 문장 단위 분리
-    from services.transcript.transcript_workspace_service import parse_transcript_sentences
-    sentences = parse_transcript_sentences(text, segments if segments else None)
+    try:
+        from services.transcript.transcript_workspace_service import parse_transcript_sentences
+        sentences = parse_transcript_sentences(text, segments if segments else None)
+    except Exception as exc:
+        current_app.logger.error(f'자막 가공 오류: {exc}', exc_info=True)
+        return jsonify({'error': '[서버 오류] 자막 가공 중 문제가 발생했습니다.'}), 500
 
     result = {
         'sentences': sentences,

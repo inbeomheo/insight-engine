@@ -23,7 +23,7 @@ export default function WorkspaceSelector() {
     switchWorkspace,
     create,
     creating,
-  } = useWorkspace();
+  } = useWorkspace(true);
   const { setWorkspaceSettingsOpen } = useUIStore();
 
   const [showCreate, setShowCreate] = useState(false);

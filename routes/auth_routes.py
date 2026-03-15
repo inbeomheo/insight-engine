@@ -2,10 +2,11 @@
 인증 관련 라우트
 회원가입, 로그인, 로그아웃, 사용자 정보 조회
 """
+import logging
 import os
 
 from flask import Blueprint, request, jsonify, g
-from utils.responses import success_response, error_response
+from utils.responses import success_response, error_response, sanitize_error_for_client
 from services.data.supabase_service import (
     get_supabase, is_supabase_enabled, require_auth,
     save_api_keys, get_api_keys,
@@ -20,6 +21,7 @@ from services.data.supabase_service import (
 from services.data.workspace_service import workspace_service, content_approval_service
 
 auth_bp = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
 
 
 def _get_json_data():
@@ -36,6 +38,23 @@ def _check_supabase():
 
 _success_response = success_response
 _error_response = error_response
+
+
+def _sanitize_service_error(message, fallback_message):
+    """서비스 오류를 사용자 노출용 메시지로 정리합니다."""
+    sanitized = sanitize_error_for_client(str(message or ''))
+    if sanitized.startswith('[서버 오류]'):
+        return fallback_message
+    return sanitized
+
+
+def _safe_service_error_response(message, fallback_message, status_code=400):
+    return _error_response(_sanitize_service_error(message, fallback_message), status_code)
+
+
+def _exception_error_response(log_context, error, fallback_message, status_code=500):
+    logger.error('%s: %s', log_context, error, exc_info=True)
+    return _error_response(fallback_message, status_code)
 
 
 @auth_bp.route('/api/auth/status', methods=['GET'])
@@ -231,7 +250,12 @@ def logout():
         get_supabase().auth.sign_out()
         return _success_response()
     except Exception as e:
-        return _error_response(str(e))
+        return _exception_error_response(
+            '로그아웃 오류',
+            e,
+            '[인증 실패] 로그아웃 처리에 실패했습니다.',
+            400
+        )
 
 
 @auth_bp.route('/api/auth/refresh', methods=['POST'])
@@ -259,7 +283,12 @@ def refresh_token():
         return _error_response('토큰 갱신에 실패했습니다.', 401)
 
     except Exception as e:
-        return _error_response(str(e), 401)
+        return _exception_error_response(
+            '토큰 갱신 오류',
+            e,
+            '[인증 실패] 토큰 갱신에 실패했습니다. 다시 로그인해주세요.',
+            401
+        )
 
 
 @auth_bp.route('/api/auth/me', methods=['GET'])
@@ -276,7 +305,12 @@ def get_current_user():
             }
         })
     except Exception as e:
-        return _error_response(str(e), 401)
+        return _exception_error_response(
+            '사용자 정보 조회 오류',
+            e,
+            '[인증 실패] 사용자 정보를 확인할 수 없습니다. 다시 로그인해주세요.',
+            401
+        )
 
 # =============================================
 # API 키 관리
@@ -436,7 +470,11 @@ def toggle_history_favorite(report_id):
     result = toggle_favorite(g.user_id, report_id)
     if result.get('success'):
         return jsonify({'is_favorite': result['is_favorite']})
-    return _error_response(result.get('error', '즐겨찾기 변경에 실패했습니다.'), 500)
+    return _safe_service_error_response(
+        result.get('error'),
+        '[서버 오류] 즐겨찾기 변경에 실패했습니다.',
+        500
+    )
 
 
 @auth_bp.route('/api/user/history/<report_id>', methods=['PUT'])
@@ -472,7 +510,11 @@ def update_profile():
     result = update_user_profile(g.user_id, display_name)
     if result['success']:
         return _success_response({'user': result.get('user')})
-    return _error_response(result.get('error', '프로필 업데이트에 실패했습니다.'), 500)
+    return _safe_service_error_response(
+        result.get('error'),
+        '[서버 오류] 프로필 업데이트에 실패했습니다.',
+        500
+    )
 
 
 @auth_bp.route('/api/user/password', methods=['PUT'])
@@ -487,7 +529,11 @@ def change_password():
     result = update_user_password(g.user_id, new_password)
     if result['success']:
         return _success_response()
-    return _error_response(result.get('error', '비밀번호 변경에 실패했습니다.'), 500)
+    return _safe_service_error_response(
+        result.get('error'),
+        '[서버 오류] 비밀번호 변경에 실패했습니다.',
+        500
+    )
 
 
 @auth_bp.route('/api/user/account', methods=['DELETE'])
@@ -609,10 +655,21 @@ def create_workspace():
     if not name:
         return _error_response('워크스페이스 이름을 입력해주세요.')
 
-    result = workspace_service.create_workspace(name, g.user_id)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'], 500)
-    return jsonify(result), 201
+    try:
+        result = workspace_service.create_workspace(name, g.user_id)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 워크스페이스 생성에 실패했습니다.',
+                500
+            )
+        return jsonify(result), 201
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 생성 오류',
+            e,
+            '[서버 오류] 워크스페이스 생성 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspaces', methods=['GET'])
@@ -621,10 +678,17 @@ def list_workspaces():
     """사용자 워크스페이스 목록"""
     error = _check_supabase()
     if error:
-        return error
+        return jsonify({'workspaces': []})
 
-    workspaces = workspace_service.list_workspaces(g.user_id)
-    return jsonify({'workspaces': workspaces})
+    try:
+        workspaces = workspace_service.list_workspaces(g.user_id)
+        return jsonify({'workspaces': workspaces})
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 목록 조회 오류',
+            e,
+            '[서버 오류] 워크스페이스 목록 조회 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspaces/<workspace_id>/members', methods=['GET'])
@@ -635,12 +699,19 @@ def get_workspace_members(workspace_id):
     if error:
         return error
 
-    # IDOR 방지: 요청자가 해당 워크스페이스 멤버인지 확인
-    if not workspace_service.is_member(workspace_id, g.user_id):
-        return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
+    try:
+        # IDOR 방지: 요청자가 해당 워크스페이스 멤버인지 확인
+        if not workspace_service.is_member(workspace_id, g.user_id):
+            return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
 
-    members = workspace_service.get_members(workspace_id)
-    return jsonify({'members': members})
+        members = workspace_service.get_members(workspace_id)
+        return jsonify({'members': members})
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 멤버 조회 오류',
+            e,
+            '[서버 오류] 워크스페이스 멤버 조회 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspaces/<workspace_id>/invite', methods=['POST'])
@@ -658,20 +729,30 @@ def invite_workspace_member(workspace_id):
     if not user_email:
         return _error_response('이메일을 입력해주세요.')
 
-    # owner 권한 확인
-    ws = workspace_service.get_workspace(workspace_id)
-    if not ws or ws.get('owner_id') != g.user_id:
-        return _error_response('워크스페이스 소유자만 초대할 수 있습니다.', 403)
+    try:
+        # owner 권한 확인
+        ws = workspace_service.get_workspace(workspace_id)
+        if not ws or ws.get('owner_id') != g.user_id:
+            return _error_response('워크스페이스 소유자만 초대할 수 있습니다.', 403)
 
-    # 이메일로 사용자 ID 조회
-    target_user_id = workspace_service.find_user_by_email(user_email)
-    if not target_user_id:
-        return _error_response(f'등록되지 않은 이메일입니다: {user_email}', 404)
+        # 이메일로 사용자 ID 조회
+        target_user_id = workspace_service.find_user_by_email(user_email)
+        if not target_user_id:
+            return _error_response(f'등록되지 않은 이메일입니다: {user_email}', 404)
 
-    result = workspace_service.invite_member(workspace_id, target_user_id, role)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return _success_response({'member': result})
+        result = workspace_service.invite_member(workspace_id, target_user_id, role)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 워크스페이스 초대 처리에 실패했습니다.'
+            )
+        return _success_response({'member': result})
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 초대 오류',
+            e,
+            '[서버 오류] 워크스페이스 초대 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspaces/<workspace_id>/members/<user_id>', methods=['DELETE'])
@@ -682,14 +763,21 @@ def remove_workspace_member(workspace_id, user_id):
     if error:
         return error
 
-    # owner 권한 확인
-    ws = workspace_service.get_workspace(workspace_id)
-    if not ws or ws.get('owner_id') != g.user_id:
-        return _error_response('워크스페이스 소유자만 멤버를 제거할 수 있습니다.', 403)
+    try:
+        # owner 권한 확인
+        ws = workspace_service.get_workspace(workspace_id)
+        if not ws or ws.get('owner_id') != g.user_id:
+            return _error_response('워크스페이스 소유자만 멤버를 제거할 수 있습니다.', 403)
 
-    if workspace_service.remove_member(workspace_id, user_id):
-        return _success_response()
-    return _error_response('멤버 제거에 실패했습니다.', 500)
+        if workspace_service.remove_member(workspace_id, user_id):
+            return _success_response()
+        return _error_response('멤버 제거에 실패했습니다.', 500)
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 멤버 제거 오류',
+            e,
+            '[서버 오류] 멤버 제거 중 문제가 발생했습니다.'
+        )
 
 
 # =============================================
@@ -749,10 +837,21 @@ def create_snippet_route():
     data = _get_json_data()
     if not data.get('content'):
         return _error_response('스니펫 내용이 필요합니다.')
-    result = create_snippet(g.user_id, data)
-    if isinstance(result, dict) and result.get('error'):
-        return _error_response(result['error'], 500)
-    return jsonify(result), 201
+    try:
+        result = create_snippet(g.user_id, data)
+        if isinstance(result, dict) and result.get('error'):
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 스니펫 저장에 실패했습니다.',
+                500
+            )
+        return jsonify(result), 201
+    except Exception as e:
+        return _exception_error_response(
+            '스니펫 저장 오류',
+            e,
+            '[서버 오류] 스니펫 저장 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/user/snippets/<snippet_id>', methods=['DELETE'])
@@ -773,9 +872,16 @@ def delete_workspace(workspace_id):
     if error:
         return error
 
-    if workspace_service.delete_workspace(workspace_id, g.user_id):
-        return _success_response()
-    return _error_response('삭제에 실패했습니다. 소유자만 삭제할 수 있습니다.', 403)
+    try:
+        if workspace_service.delete_workspace(workspace_id, g.user_id):
+            return _success_response()
+        return _error_response('삭제에 실패했습니다. 소유자만 삭제할 수 있습니다.', 403)
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 삭제 오류',
+            e,
+            '[서버 오류] 워크스페이스 삭제 중 문제가 발생했습니다.'
+        )
 
 
 # =============================================
@@ -864,7 +970,11 @@ def get_channel_monitors():
             .execute()
         return jsonify({'monitors': result.data or []})
     except Exception as e:
-        return _error_response(f'모니터 조회 실패: {e}', 500)
+        return _exception_error_response(
+            '모니터 조회 오류',
+            e,
+            '[서버 오류] 모니터 조회 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/channel-monitors', methods=['POST'])
@@ -898,7 +1008,11 @@ def create_channel_monitor():
         result = client.table('ie_channel_monitors').insert(row).execute()
         return jsonify(result.data[0] if result.data else {}), 201
     except Exception as e:
-        return _error_response(f'모니터 등록 실패: {e}', 500)
+        return _exception_error_response(
+            '모니터 등록 오류',
+            e,
+            '[서버 오류] 모니터 등록 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/channel-monitors/<monitor_id>', methods=['DELETE'])
@@ -918,7 +1032,11 @@ def delete_channel_monitor(monitor_id):
             .execute()
         return _success_response()
     except Exception as e:
-        return _error_response(f'모니터 삭제 실패: {e}', 500)
+        return _exception_error_response(
+            '모니터 삭제 오류',
+            e,
+            '[서버 오류] 모니터 삭제 중 문제가 발생했습니다.'
+        )
 
 
 # =============================================
@@ -940,10 +1058,20 @@ def add_workspace_content(workspace_id):
     if not content_id or not title:
         return _error_response('content_id와 title이 필요합니다.')
 
-    result = content_approval_service.add_content(workspace_id, g.user_id, content_id, title)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result), 201
+    try:
+        result = content_approval_service.add_content(workspace_id, g.user_id, content_id, title)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 콘텐츠 추가에 실패했습니다.'
+            )
+        return jsonify(result), 201
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 콘텐츠 추가 오류',
+            e,
+            '[서버 오류] 콘텐츠 추가 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/<workspace_id>/contents', methods=['GET'])
@@ -954,13 +1082,20 @@ def get_workspace_contents(workspace_id):
     if error:
         return error
 
-    # 멤버 확인
-    if not workspace_service.is_member(workspace_id, g.user_id):
-        return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
+    try:
+        # 멤버 확인
+        if not workspace_service.is_member(workspace_id, g.user_id):
+            return _error_response('워크스페이스에 접근할 수 없습니다.', 403)
 
-    status = request.args.get('status', None, type=str)
-    contents = content_approval_service.get_workspace_contents(workspace_id, status)
-    return jsonify({'contents': contents})
+        status = request.args.get('status', None, type=str)
+        contents = content_approval_service.get_workspace_contents(workspace_id, status)
+        return jsonify({'contents': contents})
+    except Exception as e:
+        return _exception_error_response(
+            '워크스페이스 콘텐츠 조회 오류',
+            e,
+            '[서버 오류] 워크스페이스 콘텐츠 조회 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/contents/<content_id>/submit-review', methods=['POST'])
@@ -971,10 +1106,20 @@ def submit_content_review(content_id):
     if error:
         return error
 
-    result = content_approval_service.submit_for_review(content_id, g.user_id)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result)
+    try:
+        result = content_approval_service.submit_for_review(content_id, g.user_id)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 검토 요청에 실패했습니다.'
+            )
+        return jsonify(result)
+    except Exception as e:
+        return _exception_error_response(
+            '콘텐츠 검토 요청 오류',
+            e,
+            '[서버 오류] 검토 요청 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/contents/<content_id>/approve', methods=['POST'])
@@ -985,10 +1130,20 @@ def approve_content(content_id):
     if error:
         return error
 
-    result = content_approval_service.approve_content(content_id, g.user_id)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result)
+    try:
+        result = content_approval_service.approve_content(content_id, g.user_id)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 승인 처리에 실패했습니다.'
+            )
+        return jsonify(result)
+    except Exception as e:
+        return _exception_error_response(
+            '콘텐츠 승인 오류',
+            e,
+            '[서버 오류] 승인 처리 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/contents/<content_id>/reject', methods=['POST'])
@@ -1004,10 +1159,20 @@ def reject_content(content_id):
     if not reason:
         return _error_response('반려 사유를 입력해주세요.')
 
-    result = content_approval_service.reject_content(content_id, g.user_id, reason)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result)
+    try:
+        result = content_approval_service.reject_content(content_id, g.user_id, reason)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 반려 처리에 실패했습니다.'
+            )
+        return jsonify(result)
+    except Exception as e:
+        return _exception_error_response(
+            '콘텐츠 반려 오류',
+            e,
+            '[서버 오류] 반려 처리 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/contents/<content_id>/publish', methods=['POST'])
@@ -1018,10 +1183,20 @@ def publish_content(content_id):
     if error:
         return error
 
-    result = content_approval_service.publish_content(content_id, g.user_id)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result)
+    try:
+        result = content_approval_service.publish_content(content_id, g.user_id)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 게시 처리에 실패했습니다.'
+            )
+        return jsonify(result)
+    except Exception as e:
+        return _exception_error_response(
+            '콘텐츠 게시 오류',
+            e,
+            '[서버 오류] 게시 처리 중 문제가 발생했습니다.'
+        )
 
 
 @auth_bp.route('/api/workspace/contents/<content_id>/revert-draft', methods=['POST'])
@@ -1032,10 +1207,20 @@ def revert_content_to_draft(content_id):
     if error:
         return error
 
-    result = content_approval_service.revert_to_draft(content_id, g.user_id)
-    if isinstance(result, dict) and 'error' in result:
-        return _error_response(result['error'])
-    return jsonify(result)
+    try:
+        result = content_approval_service.revert_to_draft(content_id, g.user_id)
+        if isinstance(result, dict) and 'error' in result:
+            return _safe_service_error_response(
+                result['error'],
+                '[서버 오류] 초안 복구에 실패했습니다.'
+            )
+        return jsonify(result)
+    except Exception as e:
+        return _exception_error_response(
+            '콘텐츠 초안 복구 오류',
+            e,
+            '[서버 오류] 초안 복구 중 문제가 발생했습니다.'
+        )
 
 
 # =============================================

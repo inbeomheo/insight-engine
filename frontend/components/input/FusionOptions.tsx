@@ -12,7 +12,7 @@ export default function FusionOptions() {
   if (generationMode !== 'fusion') return null;
 
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-[var(--border-primary)] p-3">
+    <div className="mt-2 space-y-2 rounded-lg border border-[var(--border-primary)] p-3" role="group" aria-label="퓨전 옵션">
       <p className="text-xs font-medium text-[var(--text-secondary)]">퓨전 옵션</p>
       <label className="flex items-center gap-2 text-sm">
         <input

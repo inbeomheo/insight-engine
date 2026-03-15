@@ -29,6 +29,7 @@ import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/l
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
 import type { VideoEvent, EventSummary } from '@/lib/types';
@@ -132,6 +133,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const removeReport = useResultStore((s) => s.removeReport);
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
   const setMindmapModalOpen = useUIStore((s) => s.setMindmapModalOpen);
+  const selectedModel = useSettingsStore((s) => s.selectedModel);
   const { t } = useTranslation();
 
   const charCount = report.content.length;
@@ -352,6 +354,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       <VideoChatPanel
         videoUrl={report.url}
         videoTitle={report.youtube_title || report.title}
+        model={selectedModel || undefined}
         onClose={() => setPanel('chatOpen', false)}
       />
     )}
@@ -360,7 +363,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
-    <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow">
+    <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm hover:border-border/60 transition-all duration-200">
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
         {/* 뱃지 + 액션 */}
@@ -463,6 +466,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               size="icon"
               className="h-8 w-8"
               aria-label={collapsed ? '카드 펼치기' : '카드 접기'}
+              aria-expanded={!collapsed}
               onClick={() => {
                 if (collapsed) {
                   dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
@@ -669,7 +673,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
           {/* 더보기 메뉴 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴" aria-haspopup="menu">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -803,6 +807,7 @@ function NlpAnalysisSection({ analysis }: { analysis: NlpAnalysis }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="NLP 분석 펼치기/접기"
+        aria-expanded={open}
         className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium"
       >
         <span className="flex items-center gap-2">

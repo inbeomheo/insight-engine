@@ -29,11 +29,16 @@ const HistoryItem = memo(function HistoryItem({
 }) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${report.title} 히스토리 보기`}
+      aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-150',
-        isActive ? 'bg-primary/10 shadow-sm' : 'hover:bg-white hover:shadow-sm'
+        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-200',
+        isActive ? 'bg-primary/10 shadow-sm border border-primary/20' : 'hover:bg-white hover:shadow-sm border border-transparent'
       )}
       onClick={() => onClick(report.id)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(report.id); } }}
     >
       <span className="text-sm shrink-0 mt-0.5">{getStyleEmoji(report.style)}</span>
       <div className="flex-1 min-w-0">
@@ -55,6 +60,7 @@ const HistoryItem = memo(function HistoryItem({
           e.stopPropagation();
           onDelete(report.id);
         }}
+        aria-label={`${report.title} 삭제`}
       >
         <Trash2 className="h-3 w-3 text-destructive/60" />
       </Button>

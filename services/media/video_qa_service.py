@@ -39,8 +39,8 @@ MAX_HISTORY_MESSAGES = 10  # 대화 히스토리 최대 보관 수
 # 영상 Q&A 전용 ChromaDB 컬렉션 접두사
 VIDEO_COLLECTION_PREFIX = "video_qa_"
 
-# LiteLLM 기본 모델 (답변 생성용)
-DEFAULT_QA_MODEL = "zhipuai/GLM-4.5-Air"
+# LiteLLM 기본 모델 (답변 생성용) — ChatMock GPT-5.4
+DEFAULT_QA_MODEL = "chatmock/gpt-5.4"
 
 
 def _get_chroma_client() -> Optional[Any]:
@@ -224,16 +224,32 @@ def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[s
             "max_tokens": 1024,
             "temperature": 0.3,
         }
+
+        # 프로바이더별 설정 (ai_service.py 패턴 동일 적용)
+        if model.startswith("gemini/") and "lite" not in model.lower():
+            kwargs["reasoning_effort"] = "minimal"
+
         if model.startswith("zhipuai/"):
             kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
             api_key = os.environ.get("ZHIPUAI_API_KEY", "")
             if api_key:
                 kwargs["api_key"] = api_key
 
+        if model.startswith("ollama_chat/") or model.startswith("ollama/"):
+            kwargs["api_base"] = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+
+        if model.startswith("chatmock/"):
+            actual_model = model.replace("chatmock/", "")
+            kwargs["model"] = actual_model
+            kwargs["api_base"] = os.environ.get("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
+            kwargs["api_key"] = "dummy"
+            kwargs.pop("temperature", None)
+            kwargs["drop_params"] = True
+
         response = litellm_completion(**kwargs)
         return response.choices[0].message.content or ""
     except Exception as e:
-        logger.error(f"Q&A 답변 생성 실패 (video_id={video_id}): {e}")
+        logger.error(f"Q&A 답변 생성 실패 (video_id={video_id}, model={model}): {e}")
         return None
 
 

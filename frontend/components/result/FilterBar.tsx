@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,7 +14,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
-export default function FilterBar() {
+const FilterBar = memo(function FilterBar() {
   // reports.length만 구독 (전체 배열 구독 방지)
   const hasReports = useResultStore((s) => s.reports.length > 0);
   const searchQuery = useResultStore((s) => s.searchQuery);
@@ -41,12 +41,14 @@ export default function FilterBar() {
   return (
     <div className="flex items-center gap-3 w-full mb-5">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <Input
+          type="search"
           value={localQuery}
           onChange={(e) => setLocalQuery(e.target.value)}
           placeholder="결과 검색..."
           className="pl-9 h-10 text-sm"
+          aria-label="결과 검색"
         />
       </div>
       <Select value={styleFilter || 'all'} onValueChange={(v) => setStyleFilter(v === 'all' ? '' : v)}>
@@ -64,4 +66,6 @@ export default function FilterBar() {
       </Select>
     </div>
   );
-}
+});
+
+export default FilterBar;

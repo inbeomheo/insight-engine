@@ -56,6 +56,20 @@ export default function SettingsPopover() {
     };
   }, [settingsPopoverOpen, setSettingsPopoverOpen]);
 
+  // ESC 키로 닫기
+  useEffect(() => {
+    if (!settingsPopoverOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setSettingsPopoverOpen(false);
+      }
+    }
+    // capture 단계에서 먼저 잡기 (다른 컴포넌트가 가로채지 못하게)
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [settingsPopoverOpen, setSettingsPopoverOpen]);
+
   if (!settingsPopoverOpen) return null;
 
   const providerIds = Object.keys(providers);
@@ -70,8 +84,12 @@ export default function SettingsPopover() {
   return (
     <div
       ref={ref}
+      role="dialog"
+      aria-label="생성 설정"
+      aria-describedby="settings-popover-desc"
       className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 w-[420px] bg-popover border border-border rounded-xl shadow-lg p-5 space-y-5"
     >
+      <p id="settings-popover-desc" className="sr-only">AI 모델, 스타일, 길이, 문체, 언어 등 콘텐츠 생성 옵션을 설정합니다.</p>
       {/* AI 모델 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
@@ -120,11 +138,12 @@ export default function SettingsPopover() {
               key={s.id}
               onClick={() => setSelectedStyle(s.id)}
               aria-label={`${s.label} 스타일 선택`}
+              aria-pressed={selectedStyle === s.id}
               className={cn(
-                'px-3 py-1.5 rounded-full text-sm border transition-all',
+                'px-3 py-1.5 rounded-full text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 selectedStyle === s.id
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-foreground border-border hover:border-primary/50'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'bg-background text-foreground border-border hover:border-primary/50 hover:shadow-sm'
               )}
             >
               {s.label}
@@ -142,8 +161,9 @@ export default function SettingsPopover() {
               key={o.value}
               onClick={() => setModifiers({ length: o.value })}
               aria-label={`${o.label} 길이 선택`}
+              aria-pressed={modifiers.length === o.value}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all text-center',
+                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 modifiers.length === o.value
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-foreground border-border hover:border-primary/50'
@@ -165,8 +185,9 @@ export default function SettingsPopover() {
               key={o.value}
               onClick={() => setModifiers({ writing_style: o.value })}
               aria-label={`${o.label} 문체 선택`}
+              aria-pressed={modifiers.writing_style === o.value}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all',
+                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 modifiers.writing_style === o.value
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-foreground border-border hover:border-primary/50'
@@ -187,8 +208,9 @@ export default function SettingsPopover() {
               key={o.value}
               onClick={() => setModifiers({ language: o.value })}
               aria-label={`${o.label} 언어 선택`}
+              aria-pressed={(modifiers.language ?? 'ko') === o.value}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all',
+                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 (modifiers.language ?? 'ko') === o.value
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-foreground border-border hover:border-primary/50'
@@ -224,6 +246,8 @@ export default function SettingsPopover() {
         <label className="text-sm font-medium text-muted-foreground mb-2 block">생성 옵션</label>
         <button
           onClick={() => setEnableWebSearch(!enableWebSearch)}
+          role="switch"
+          aria-checked={enableWebSearch}
           aria-label="웹 검색 보강 토글"
           className={cn(
             'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm border transition-all',

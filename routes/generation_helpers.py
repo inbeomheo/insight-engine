@@ -18,6 +18,20 @@ from utils.responses import sanitize_error_for_client
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 
 
+def _sanitize_transcript_error(error_msg: str) -> str:
+    """자막 조회 오류를 클라이언트 노출용 메시지로 정리합니다."""
+    raw_message = str(error_msg or '')
+    safe_message = sanitize_error_for_client(raw_message)
+
+    # 서비스가 "사용자 메시지: 내부 상세" 형태로 원문 예외를 덧붙인 경우 차단합니다.
+    if safe_message == raw_message and ': ' in raw_message:
+        return '[서버 오류] 자막을 가져오는 중 문제가 발생했습니다. 다시 시도해주세요.'
+    if safe_message.startswith('[서버 오류]'):
+        return '[서버 오류] 자막을 가져오는 중 문제가 발생했습니다. 다시 시도해주세요.'
+
+    return safe_message
+
+
 def _apply_output_format(result: dict, output_format: str, max_chars: int = None) -> dict:
     """output_format에 따라 결과를 변환합니다."""
     import re
@@ -50,14 +64,25 @@ def _fetch_youtube_content(video_id):
     """
     transcript_result = content_service.get_transcript(video_id)
     if isinstance(transcript_result, dict) and transcript_result.get('error'):
-        return None, [], transcript_result['error'], None, None, []
+        return None, [], _sanitize_transcript_error(transcript_result['error']), None, None, []
 
-    # 새 형식: {'text': '...', 'source': '...', 'segments': [...]}
-    transcript_text = transcript_result.get('text', '')
-    transcript_source = transcript_result.get('source', 'unknown')
-    transcript_segments = transcript_result.get('segments', [])
+    if isinstance(transcript_result, dict):
+        # 새 형식: {'text': '...', 'source': '...', 'segments': [...]}
+        transcript_text = transcript_result.get('text', '')
+        transcript_source = transcript_result.get('source', 'unknown')
+        transcript_segments = transcript_result.get('segments', [])
+    elif isinstance(transcript_result, str):
+        transcript_text = transcript_result
+        transcript_source = 'unknown'
+        transcript_segments = []
+    else:
+        return None, [], '[서버 오류] 자막 정보를 불러오는 중 문제가 발생했습니다.', None, None, []
 
-    comments = content_service.get_top_comments(video_id) or []
+    try:
+        comments = content_service.get_top_comments(video_id) or []
+    except Exception as e:
+        current_app.logger.warning('Top comments fetch failed for %s: %s', video_id, e)
+        comments = []
 
     return transcript_text, comments, None, transcript_text, transcript_source, transcript_segments
 

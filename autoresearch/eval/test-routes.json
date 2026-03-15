@@ -1,0 +1,28 @@
+[
+  {
+    "path": "/",
+    "name": "메인 페이지",
+    "checks": {
+      "required_elements": [
+        "URL 입력 필드",
+        "생성 버튼 영역",
+        "AI 모델 선택",
+        "스타일 선택",
+        "사이드바"
+      ],
+      "forms": [
+        {
+          "description": "URL 입력",
+          "input_selector": "input[aria-label='URL 입력']",
+          "submit_action": "Enter 키",
+          "success_indicator": "URL 칩 추가됨"
+        }
+      ],
+      "interactions": [
+        "사이드바 토글",
+        "테마 전환",
+        "설정 팝오버 열기/닫기"
+      ]
+    }
+  }
+]

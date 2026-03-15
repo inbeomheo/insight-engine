@@ -6,7 +6,8 @@ import html
 import re
 import time
 import uuid
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, current_app
+from utils.responses import sanitize_error_for_client
 
 from services.data.supabase_service import require_auth
 from services.data import content_library_service
@@ -40,6 +41,13 @@ def _err(msg, status=400):
 
 def _get_json():
     return request.get_json(silent=True) or {}
+
+
+def _safe_route_error(message, fallback_message):
+    safe_message = sanitize_error_for_client(str(message or ''))
+    if safe_message.startswith('[서버 오류]'):
+        return fallback_message
+    return safe_message
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -696,7 +704,12 @@ def create_workflow():
         )
         return _json(wf, 201)
     except ValueError as e:
-        return _err(str(e))
+        return _err(
+            _safe_route_error(
+                e,
+                '[입력 오류] 워크플로우 설정을 확인해주세요.'
+            )
+        )
 
 
 @content_mgmt_bp.route('/workflows', methods=['GET'])
@@ -804,11 +817,15 @@ def check_permission():
 def create_backup():
     """수동 백업을 생성합니다."""
     data = _get_json()
-    result = backup_service.create_backup(
-        workspace_id=data.get('workspace_id', ''),
-        user_id=data.get('user_id', ''),
-        triggered_by='manual',
-    )
+    try:
+        result = backup_service.create_backup(
+            workspace_id=data.get('workspace_id', ''),
+            user_id=data.get('user_id', ''),
+            triggered_by='manual',
+        )
+    except Exception as e:
+        current_app.logger.error('Backup creation failed: %s', e, exc_info=True)
+        return _err('[서버 오류] 백업 생성 중 문제가 발생했습니다.', 500)
     return _json(result, 201)
 
 
@@ -816,7 +833,11 @@ def create_backup():
 @require_auth
 def list_backups():
     """백업 목록 조회."""
-    backups = backup_service.list_backups()
+    try:
+        backups = backup_service.list_backups()
+    except Exception as e:
+        current_app.logger.error('Backup list failed: %s', e, exc_info=True)
+        return _err('[서버 오류] 백업 목록 조회 중 문제가 발생했습니다.', 500)
     return _json({'backups': backups})
 
 
@@ -828,7 +849,11 @@ def restore_backup(filename):
         result = backup_service.restore_backup(filename)
         return _json(result)
     except FileNotFoundError as e:
-        return _err(str(e), 404)
+        current_app.logger.warning('Backup file not found: %s', e)
+        return _err('백업 파일을 찾을 수 없습니다.', 404)
+    except Exception as e:
+        current_app.logger.error('Backup restore failed: %s', e, exc_info=True)
+        return _err('[서버 오류] 백업 복원 중 문제가 발생했습니다.', 500)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -843,20 +868,24 @@ def export_content(fmt):
     workspace_id = args.get('workspace_id', '')
     user_id = args.get('user_id', '')
 
-    if fmt == 'json':
-        data = data_migration_service.export_json(workspace_id, user_id)
-        return Response(data, content_type='application/json; charset=utf-8',
-                        headers={'Content-Disposition': 'attachment; filename="export.json"'})
-    elif fmt == 'csv':
-        data = data_migration_service.export_csv(workspace_id, user_id)
-        return Response(data, content_type='text/csv; charset=utf-8',
-                        headers={'Content-Disposition': 'attachment; filename="export.csv"'})
-    elif fmt == 'markdown':
-        data = data_migration_service.export_markdown(workspace_id, user_id)
-        return Response(data, content_type='text/markdown; charset=utf-8',
-                        headers={'Content-Disposition': 'attachment; filename="export.md"'})
-    else:
-        return _err(f'지원하지 않는 형식: {fmt}. json/csv/markdown 중 선택하세요.')
+    try:
+        if fmt == 'json':
+            data = data_migration_service.export_json(workspace_id, user_id)
+            return Response(data, content_type='application/json; charset=utf-8',
+                            headers={'Content-Disposition': 'attachment; filename="export.json"'})
+        elif fmt == 'csv':
+            data = data_migration_service.export_csv(workspace_id, user_id)
+            return Response(data, content_type='text/csv; charset=utf-8',
+                            headers={'Content-Disposition': 'attachment; filename="export.csv"'})
+        elif fmt == 'markdown':
+            data = data_migration_service.export_markdown(workspace_id, user_id)
+            return Response(data, content_type='text/markdown; charset=utf-8',
+                            headers={'Content-Disposition': 'attachment; filename="export.md"'})
+        else:
+            return _err(f'지원하지 않는 형식: {fmt}. json/csv/markdown 중 선택하세요.')
+    except Exception as e:
+        current_app.logger.error('Content export failed: format=%s error=%s', fmt, e, exc_info=True)
+        return _err('[서버 오류] 콘텐츠 내보내기 중 문제가 발생했습니다.', 500)
 
 
 @content_mgmt_bp.route('/import/<fmt>', methods=['POST'])
@@ -868,14 +897,18 @@ def import_content(fmt):
     user_id = data.get('user_id', '')
     content_str = data.get('content', '')
 
-    if fmt == 'json':
-        result = data_migration_service.import_json(
-            content_str, workspace_id, user_id, overwrite=bool(data.get('overwrite', False))
-        )
-    elif fmt == 'csv':
-        result = data_migration_service.import_csv(content_str, workspace_id, user_id)
-    else:
-        return _err(f'지원하지 않는 형식: {fmt}')
+    try:
+        if fmt == 'json':
+            result = data_migration_service.import_json(
+                content_str, workspace_id, user_id, overwrite=bool(data.get('overwrite', False))
+            )
+        elif fmt == 'csv':
+            result = data_migration_service.import_csv(content_str, workspace_id, user_id)
+        else:
+            return _err(f'지원하지 않는 형식: {fmt}')
+    except Exception as e:
+        current_app.logger.error('Content import failed: format=%s error=%s', fmt, e, exc_info=True)
+        return _err('[서버 오류] 콘텐츠 가져오기 중 문제가 발생했습니다.', 500)
 
     return _json(result)
 

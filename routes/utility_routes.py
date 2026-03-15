@@ -342,7 +342,20 @@ def webhook_test():
         return jsonify({'success': False, 'error': '웹훅 URL이 필요합니다.'}), 400
 
     test_svc = WebhookService(url=url, enabled=True)
-    result = test_svc.test()
+    try:
+        result = test_svc.test()
+    except Exception as e:
+        current_app.logger.error(f"Webhook test failed: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': '[서버 오류] 웹훅 테스트 중 문제가 발생했습니다.'}), 500
+
+    if not result.get('success'):
+        result = {
+            **result,
+            'error': sanitize_error_for_client(result.get('error', '웹훅 테스트 실패'))
+        }
+        if str(result.get('error', '')).startswith('[서버 오류]'):
+            result['error'] = '[서버 오류] 웹훅 테스트에 실패했습니다.'
+
     status = 200 if result.get('success') else 400
     return jsonify(result), status
 
