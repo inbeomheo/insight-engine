@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,17 @@ import { useUIStore } from '@/stores/uiStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { generateMindmap } from '@/lib/api';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
-import { useCallback, useRef } from 'react';
+
+/** Mermaid 코드 블록에서 다이어그램 코드만 추출 */
+function extractMermaidCode(text: string): string | null {
+  // ```mermaid ... ``` 블록 추출
+  const match = text.match(/```mermaid\s*\n([\s\S]*?)```/);
+  if (match) return match[1].trim();
+  // mindmap으로 시작하면 그대로 사용
+  if (text.trim().startsWith('mindmap')) return text.trim();
+  return null;
+}
 
 /** SVG 요소를 Blob으로 변환 */
 function svgToBlob(svgEl: SVGSVGElement): Blob {
@@ -38,20 +45,19 @@ export default function MindmapModal() {
   const { selectedModel } = useSettingsStore();
   const [loading, setLoading] = useState(false);
   const [markdown, setMarkdown] = useState('');
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [renderError, setRenderError] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const report = reports.find((r) => r.id === activeMindmapReportId);
 
   useEffect(() => {
     if (!mindmapModalOpen || !report) return;
 
-    // 캐시된 마인드맵이 있으면 사용
     if (report.mindmapMarkdown) {
       setMarkdown(report.mindmapMarkdown);
       return;
     }
 
-    // 새로 생성
     setLoading(true);
     generateMindmap(report.content, report.title, selectedModel)
       .then((res) => {
@@ -62,36 +68,59 @@ export default function MindmapModal() {
       .finally(() => setLoading(false));
   }, [mindmapModalOpen, report, updateReport, selectedModel]);
 
-  /** 마인드맵 영역에서 SVG를 찾아 반환 */
-  const findSvg = useCallback((): SVGSVGElement | null => {
-    return contentRef.current?.querySelector('svg') ?? null;
-  }, []);
+  // Mermaid 렌더링
+  useEffect(() => {
+    if (!markdown || !containerRef.current || loading) return;
 
-  /** SVG 파일 다운로드 */
-  const handleDownloadSvg = useCallback(() => {
-    const svg = findSvg();
-    if (!svg) {
-      toast.error('내보낼 SVG가 없습니다');
+    const mermaidCode = extractMermaidCode(markdown);
+    if (!mermaidCode) {
+      setRenderError(true);
       return;
     }
-    const blob = svgToBlob(svg);
-    downloadBlob(blob, `mindmap-${Date.now()}.svg`);
+
+    setRenderError(false);
+    const container = containerRef.current;
+    container.innerHTML = '';
+
+    // mermaid를 dynamic import (번들 크기 최적화)
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        mindmap: { padding: 20 },
+        securityLevel: 'loose',
+      });
+
+      const id = `mindmap-${Date.now()}`;
+      mermaid.render(id, mermaidCode).then(({ svg }) => {
+        container.innerHTML = svg;
+      }).catch((err) => {
+        console.warn('Mermaid 렌더링 실패:', err);
+        setRenderError(true);
+      });
+    });
+  }, [markdown, loading]);
+
+  const findSvg = useCallback((): SVGSVGElement | null => {
+    return containerRef.current?.querySelector('svg') ?? null;
+  }, []);
+
+  const handleDownloadSvg = useCallback(() => {
+    const svg = findSvg();
+    if (!svg) { toast.error('내보낼 SVG가 없습니다'); return; }
+    downloadBlob(svgToBlob(svg), `mindmap-${Date.now()}.svg`);
     toast.success('SVG 다운로드 완료');
   }, [findSvg]);
 
-  /** PNG 파일 다운로드 (SVG → Canvas → PNG) */
   const handleDownloadPng = useCallback(() => {
     const svg = findSvg();
-    if (!svg) {
-      toast.error('내보낼 SVG가 없습니다');
-      return;
-    }
+    if (!svg) { toast.error('내보낼 SVG가 없습니다'); return; }
     const blob = svgToBlob(svg);
     const url = URL.createObjectURL(blob);
     const img = new window.Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const scale = 2; // 고해상도
+      const scale = 2;
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
       const ctx = canvas.getContext('2d');
@@ -106,10 +135,7 @@ export default function MindmapModal() {
       }, 'image/png');
       URL.revokeObjectURL(url);
     };
-    img.onerror = () => {
-      toast.error('PNG 변환 실패');
-      URL.revokeObjectURL(url);
-    };
+    img.onerror = () => { toast.error('PNG 변환 실패'); URL.revokeObjectURL(url); };
     img.src = url;
   }, [findSvg]);
 
@@ -122,7 +148,7 @@ export default function MindmapModal() {
             마인드맵
           </DialogTitle>
           <DialogDescription>콘텐츠를 구조화된 마인드맵으로 확인합니다</DialogDescription>
-          {!loading && markdown && (
+          {!loading && markdown && !renderError && (
             <div className="flex gap-2 mt-2">
               <Button variant="outline" size="sm" onClick={handleDownloadSvg}>
                 <Download className="h-4 w-4 mr-1" /> SVG
@@ -140,10 +166,13 @@ export default function MindmapModal() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-3 text-sm text-muted-foreground">마인드맵 생성 중...</span>
             </div>
-          ) : (
-            <div ref={contentRef} className="prose max-w-none p-4">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+          ) : renderError ? (
+            <div className="p-4 text-center text-muted-foreground">
+              <p className="mb-2">다이어그램 렌더링에 실패했습니다. 텍스트로 표시합니다.</p>
+              <pre className="text-left text-xs bg-muted p-4 rounded-lg overflow-auto whitespace-pre-wrap">{markdown}</pre>
             </div>
+          ) : (
+            <div ref={containerRef} className="flex justify-center p-4 [&_svg]:max-w-full [&_svg]:h-auto" />
           )}
         </ScrollArea>
       </DialogContent>
