@@ -179,6 +179,13 @@ def health_detailed():
     except Exception:
         checks['scheduled_jobs'] = 0
 
+    # AI 캐시 적중률
+    try:
+        cache_stats = current_app.ai_cache.get_stats()
+        checks['cache_hit_rate'] = cache_stats.get('hit_rate', 0.0)
+    except Exception:
+        checks['cache_hit_rate'] = 0.0
+
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])
     if configured_providers == 0:
