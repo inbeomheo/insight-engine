@@ -4,7 +4,7 @@ import unittest
 from services.content.citation_service import (
     _timestamp_to_seconds, parse_citations,
     validate_citations, enrich_content_with_links, enrich_html_with_links,
-    get_citation_stats,
+    get_citation_stats, get_citation_density_grade,
 )
 
 
@@ -95,6 +95,23 @@ class TestEnrichWithLinks(unittest.TestCase):
         text = '일반 텍스트'
         self.assertEqual(enrich_content_with_links(text, 'id'), text)
 
+    def test_html_no_double_wrap(self):
+        """HTML 이중 변환 방지: 이미 <a> 태그 내부의 마커는 건너뜀"""
+        html = '<p>[03:25] 내용</p>'
+        result1 = enrich_html_with_links(html, 'vid1')
+        self.assertIn('<a href=', result1)
+        # 2차 변환 시 동일해야 함
+        result2 = enrich_html_with_links(result1, 'vid1')
+        self.assertEqual(result1, result2)
+
+    def test_html_mixed_linked_and_plain(self):
+        """HTML에서 이미 링크된 마커와 새 마커가 혼재"""
+        html = ('<a href="url" class="citation-link">[01:00]</a> '
+                '그리고 [02:00] 도 있음')
+        result = enrich_html_with_links(html, 'abc')
+        # [01:00]은 이미 링크 → 그대로, [02:00]만 새로 변환
+        self.assertEqual(result.count('<a href='), 2)
+
 
 class TestGetCitationStats(unittest.TestCase):
     """get_citation_stats 테스트"""
@@ -141,6 +158,67 @@ class TestGetCitationStats(unittest.TestCase):
         self.assertEqual(result['count'], 1)
         self.assertEqual(result['avg_gap_seconds'], 0.0)
         self.assertEqual(result['max_gap_seconds'], 0)
+
+
+class TestEnrichContentSkipsExisting(unittest.TestCase):
+    """이미 링크화된 마커를 이중 변환하지 않는지 테스트"""
+
+    def test_already_linked_not_doubled(self):
+        """이미 마크다운 링크인 마커는 건너뜀"""
+        content = '참조 [02:30](https://youtube.com/watch?v=abc&t=150s) 입니다'
+        result = enrich_content_with_links(content, 'abc123')
+        # 이미 링크가 있으므로 이중 변환되지 않아야 함
+        self.assertNotIn('[[02:30]', result)
+
+    def test_plain_marker_still_converted(self):
+        """일반 마커는 정상 변환"""
+        content = '참조 [02:30] 입니다'
+        result = enrich_content_with_links(content, 'abc123')
+        self.assertIn('https://youtube.com/watch?v=abc123&t=150s', result)
+
+
+class TestGetCitationDensityGrade(unittest.TestCase):
+    """get_citation_density_grade 테스트"""
+
+    def test_empty_content(self):
+        """빈 콘텐츠는 none 등급"""
+        result = get_citation_density_grade('')
+        self.assertEqual(result['grade'], 'none')
+        self.assertEqual(result['citation_count'], 0)
+
+    def test_no_citations(self):
+        """인용 없으면 none 등급"""
+        result = get_citation_density_grade('일반 텍스트입니다 ' * 100)
+        self.assertEqual(result['grade'], 'none')
+        self.assertIn('인용이 없습니다', result['suggestion'])
+
+    def test_sparse_grade(self):
+        """인용 밀도 낮으면 sparse"""
+        # 1000자에 인용 1개 → density ~1.0
+        text = 'a' * 990 + ' [01:00] '
+        result = get_citation_density_grade(text)
+        self.assertEqual(result['grade'], 'sparse')
+
+    def test_moderate_grade(self):
+        """적절한 밀도는 moderate"""
+        # 200자에 인용 1개 → density ~5.0
+        text = 'a' * 190 + ' [01:00] '
+        result = get_citation_density_grade(text)
+        self.assertEqual(result['grade'], 'moderate')
+        self.assertIn('적절한', result['suggestion'])
+
+    def test_dense_grade(self):
+        """인용 과다하면 dense"""
+        # 50자에 인용 1개 → density ~20.0
+        text = 'a' * 40 + ' [01:00] '
+        result = get_citation_density_grade(text)
+        self.assertEqual(result['grade'], 'dense')
+
+    def test_returns_all_fields(self):
+        """반환값에 필수 필드가 모두 포함됨"""
+        result = get_citation_density_grade('[01:00] 텍스트')
+        for key in ('grade', 'density_per_1000', 'citation_count', 'char_count', 'suggestion'):
+            self.assertIn(key, result)
 
 
 if __name__ == '__main__':

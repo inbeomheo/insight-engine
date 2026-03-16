@@ -177,6 +177,8 @@ def get_citation_stats(content: str) -> dict:
 def enrich_content_with_links(content: str, video_id: str) -> str:
     """[MM:SS] 마커를 YouTube 타임스탬프 링크로 변환합니다.
 
+    이미 마크다운 링크로 변환된 마커(`[...](url)`)는 건너뜁니다.
+
     마크다운 형식: [MM:SS](https://youtube.com/watch?v={video_id}&t={seconds}s)
 
     Args:
@@ -186,7 +188,21 @@ def enrich_content_with_links(content: str, video_id: str) -> str:
     Returns:
         링크가 삽입된 마크다운 콘텐츠
     """
+    # 이미 링크화된 마커를 건너뛰기 위해 위치 기반 필터링
+    _ALREADY_LINKED = re.compile(
+        r'\[\[(\d{1,2}:\d{2}(?::\d{2})?)\]\]\(https?://[^\)]+\)'
+    )
+    linked_positions = set()
+    for m in _ALREADY_LINKED.finditer(content):
+        linked_positions.add(m.start() + 1)  # 내부 '[' 위치
+
     def _replace(match: re.Match) -> str:
+        if match.start() in linked_positions:
+            return match.group(0)
+        # 뒤에 바로 '(http'가 오면 이미 마크다운 링크화된 것
+        end_pos = match.end()
+        if end_pos < len(content) and content[end_pos:end_pos + 5].startswith('(http'):
+            return match.group(0)
         marker = match.group(0)
         ts_str = match.group(1)
         seconds = _timestamp_to_seconds(ts_str)
@@ -199,6 +215,8 @@ def enrich_content_with_links(content: str, video_id: str) -> str:
 def enrich_html_with_links(html_content: str, video_id: str) -> str:
     """HTML 내 [MM:SS] 마커를 클릭 가능한 링크로 변환합니다.
 
+    이미 ``<a>`` 태그 내부에 있는 마커는 건너뛰어 이중 변환을 방지합니다.
+
     Args:
         html_content: HTML 문자열
         video_id: YouTube 영상 ID
@@ -206,7 +224,16 @@ def enrich_html_with_links(html_content: str, video_id: str) -> str:
     Returns:
         링크가 삽입된 HTML 문자열
     """
+    # 이미 <a> 태그 내부에 있는 마커 위치를 수집
+    _INSIDE_A_TAG = re.compile(r'<a\b[^>]*>.*?</a>', re.DOTALL)
+    linked_ranges = [(m.start(), m.end()) for m in _INSIDE_A_TAG.finditer(html_content)]
+
+    def _is_inside_link(pos: int) -> bool:
+        return any(start <= pos < end for start, end in linked_ranges)
+
     def _replace(match: re.Match) -> str:
+        if _is_inside_link(match.start()):
+            return match.group(0)
         marker = match.group(0)
         ts_str = match.group(1)
         seconds = _timestamp_to_seconds(ts_str)
@@ -217,3 +244,52 @@ def enrich_html_with_links(html_content: str, video_id: str) -> str:
         )
 
     return _CITATION_PATTERN.sub(_replace, html_content)
+
+
+def get_citation_density_grade(content: str) -> dict:
+    """인용 밀도를 등급으로 평가합니다.
+
+    1000자당 인용 수 기반으로 sparse/moderate/dense 등급을 매기고,
+    개선 제안을 함께 반환합니다.
+
+    Args:
+        content: 마크다운 콘텐츠
+
+    Returns:
+        grade, density_per_1000, citation_count, char_count,
+        suggestion을 포함하는 dict
+    """
+    if not content or not content.strip():
+        return {
+            'grade': 'none',
+            'density_per_1000': 0.0,
+            'citation_count': 0,
+            'char_count': 0,
+            'suggestion': '콘텐츠가 비어 있습니다.',
+        }
+
+    citations = parse_citations(content)
+    count = len(citations)
+    char_count = len(content)
+    density = round(count / max(1, char_count) * 1000, 2)
+
+    if count == 0:
+        grade = 'none'
+        suggestion = '인용이 없습니다. 주요 주장에 타임스탬프 인용을 추가하세요.'
+    elif density < 2.0:
+        grade = 'sparse'
+        suggestion = '인용 밀도가 낮습니다. 핵심 논점마다 출처 인용을 추가하면 신뢰도가 높아집니다.'
+    elif density <= 8.0:
+        grade = 'moderate'
+        suggestion = '적절한 인용 밀도입니다.'
+    else:
+        grade = 'dense'
+        suggestion = '인용이 매우 많습니다. 과도한 인용은 가독성을 저해할 수 있으니 핵심만 유지하세요.'
+
+    return {
+        'grade': grade,
+        'density_per_1000': density,
+        'citation_count': count,
+        'char_count': char_count,
+        'suggestion': suggestion,
+    }
