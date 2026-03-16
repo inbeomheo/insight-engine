@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from services.data.supabase_service import is_supabase_enabled, get_supabase
 from services.core.logging_config import ServiceLogger
+import logging
 
 logger = ServiceLogger('TrialService')
 
@@ -42,58 +43,66 @@ class TrialService:
         Returns:
             {'success': bool, 'trial_end': str, 'already_used': bool}
         """
-        # 이미 체험 사용 여부 확인
-        existing = TrialService.get_trial(user_id)
-        if existing.get('started'):
-            return {'success': False, 'already_used': True, 'trial_end': existing.get('trial_end', '')}
+        try:
+            # 이미 체험 사용 여부 확인
+            existing = TrialService.get_trial(user_id)
+            if existing.get('started'):
+                return {'success': False, 'already_used': True, 'trial_end': existing.get('trial_end', '')}
 
-        now = datetime.now(timezone.utc)
-        trial_end = (now + timedelta(days=TRIAL_DURATION_DAYS)).isoformat()
+            now = datetime.now(timezone.utc)
+            trial_end = (now + timedelta(days=TRIAL_DURATION_DAYS)).isoformat()
 
-        trial_data = {
-            'user_id': user_id,
-            'started': True,
-            'trial_start': now.isoformat(),
-            'trial_end': trial_end,
-            'plan': 'pro',  # 체험 기간 동안 Pro 기능 사용
-        }
+            trial_data = {
+                'user_id': user_id,
+                'started': True,
+                'trial_start': now.isoformat(),
+                'trial_end': trial_end,
+                'plan': 'pro',  # 체험 기간 동안 Pro 기능 사용
+            }
 
-        if is_supabase_enabled():
-            try:
-                client = get_supabase()
-                client.table('ie_trials').upsert(trial_data).execute()
-                # 체험 기간 동안 Pro 플랜 크레딧 부여
-                client.table('ie_credits').upsert({
-                    'user_id': user_id,
-                    'plan': 'pro',
-                    'updated_at': now.isoformat(),
-                }).execute()
-                return {'success': True, 'trial_end': trial_end}
-            except Exception as e:
-                logger.error(f"체험 시작 실패: {e}")
-                return {'success': False, 'error': str(e)}
+            if is_supabase_enabled():
+                try:
+                    client = get_supabase()
+                    client.table('ie_trials').upsert(trial_data).execute()
+                    # 체험 기간 동안 Pro 플랜 크레딧 부여
+                    client.table('ie_credits').upsert({
+                        'user_id': user_id,
+                        'plan': 'pro',
+                        'updated_at': now.isoformat(),
+                    }).execute()
+                    return {'success': True, 'trial_end': trial_end}
+                except Exception as e:
+                    logger.error(f"체험 시작 실패: {e}")
+                    return {'success': False, 'error': str(e)}
 
-        # 로컬 폴백
-        data = _load_local_trials()
-        data[user_id] = trial_data
-        _save_local_trials(data)
-        return {'success': True, 'trial_end': trial_end}
+            # 로컬 폴백
+            data = _load_local_trials()
+            data[user_id] = trial_data
+            _save_local_trials(data)
+            return {'success': True, 'trial_end': trial_end}
+        except Exception as e:
+            logger.error("start_trial 실패: %s", e, exc_info=True)
+            return {}
 
     @staticmethod
     def get_trial(user_id: str) -> dict:
         """체험 정보 조회"""
-        if is_supabase_enabled():
-            try:
-                client = get_supabase()
-                result = client.table('ie_trials').select('*') \
-                    .eq('user_id', user_id).maybe_single().execute()
-                if result.data:
-                    return result.data
-            except Exception as e:
-                logger.error(f"체험 조회 실패: {e}")
+        try:
+            if is_supabase_enabled():
+                try:
+                    client = get_supabase()
+                    result = client.table('ie_trials').select('*') \
+                        .eq('user_id', user_id).maybe_single().execute()
+                    if result.data:
+                        return result.data
+                except Exception as e:
+                    logger.error(f"체험 조회 실패: {e}")
 
-        data = _load_local_trials()
-        return data.get(user_id, {'started': False})
+            data = _load_local_trials()
+            return data.get(user_id, {'started': False})
+        except Exception as e:
+            logger.error("get_trial 실패: %s", e, exc_info=True)
+            return {}
 
     @staticmethod
     def is_trial_active(user_id: str) -> bool:

@@ -6,6 +6,7 @@ import os
 from typing import Optional
 
 from services.core.logging_config import ServiceLogger
+import logging
 
 logger = ServiceLogger('StripeService')
 
@@ -33,7 +34,11 @@ class StripeService:
     @staticmethod
     def is_enabled() -> bool:
         """Stripe가 설정되었는지 확인"""
-        return bool(STRIPE_SECRET_KEY)
+        try:
+            return bool(STRIPE_SECRET_KEY)
+        except Exception as e:
+            logger.error("is_enabled 실패: %s", e, exc_info=True)
+            return False
 
     @staticmethod
     def create_checkout_session(

@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import os
 from services.core.logging_config import ServiceLogger
+import logging
 
 logger = ServiceLogger('PaddleService')
 
@@ -23,35 +24,47 @@ class PaddleService:
     @property
     def is_configured(self) -> bool:
         """Paddle API 키 설정 여부"""
-        return bool(PADDLE_API_KEY)
+        try:
+            return bool(PADDLE_API_KEY)
+        except Exception as e:
+            logger.error("is_configured 실패: %s", e, exc_info=True)
+            return False
 
     def verify_webhook(self, payload: bytes, signature: str) -> bool:
         """웹훅 서명 검증"""
-        if not PADDLE_WEBHOOK_SECRET:
-            logger.warning("Paddle 웹훅 시크릿 미설정")
-            return False
+        try:
+            if not PADDLE_WEBHOOK_SECRET:
+                logger.warning("Paddle 웹훅 시크릿 미설정")
+                return False
 
-        expected = hmac.new(
-            PADDLE_WEBHOOK_SECRET.encode(),
-            payload,
-            hashlib.sha256,
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
+            expected = hmac.new(
+                PADDLE_WEBHOOK_SECRET.encode(),
+                payload,
+                hashlib.sha256,
+            ).hexdigest()
+            return hmac.compare_digest(expected, signature)
+        except Exception as e:
+            logger.error("verify_webhook 실패: %s", e, exc_info=True)
+            return False
 
     def handle_webhook(self, event_type: str, data: dict) -> dict:
         """웹훅 이벤트 처리"""
-        handlers = {
-            'subscription.created': self._on_subscription_created,
-            'subscription.updated': self._on_subscription_updated,
-            'subscription.canceled': self._on_subscription_canceled,
-        }
+        try:
+            handlers = {
+                'subscription.created': self._on_subscription_created,
+                'subscription.updated': self._on_subscription_updated,
+                'subscription.canceled': self._on_subscription_canceled,
+            }
 
-        handler = handlers.get(event_type)
-        if not handler:
-            logger.debug(f"미처리 웹훅 이벤트: {event_type}")
-            return {'status': 'ignored', 'event_type': event_type}
+            handler = handlers.get(event_type)
+            if not handler:
+                logger.debug(f"미처리 웹훅 이벤트: {event_type}")
+                return {'status': 'ignored', 'event_type': event_type}
 
-        return handler(data)
+            return handler(data)
+        except Exception as e:
+            logger.error("handle_webhook 실패: %s", e, exc_info=True)
+            return {}
 
     def _on_subscription_created(self, data: dict) -> dict:
         sub_id = data.get('subscription_id', '')
@@ -79,7 +92,11 @@ class PaddleService:
 
     def get_subscription(self, subscription_id: str) -> dict | None:
         """구독 정보 단건 조회"""
-        return self._subscriptions.get(subscription_id)
+        try:
+            return self._subscriptions.get(subscription_id)
+        except Exception as e:
+            logger.error("get_subscription 실패: %s", e, exc_info=True)
+            return {}
 
 
 paddle_service = PaddleService()
