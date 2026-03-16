@@ -649,6 +649,7 @@ def export_html():
         title = data.get('title', 'AI 생성 결과')
         html_content = data.get('html', '') or data.get('content', '')
         dark_mode = data.get('dark_mode', False)
+        print_friendly = data.get('print_friendly', False)
 
         if not html_content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
@@ -695,6 +696,7 @@ th {{ background: #f9fafb; font-weight: 600; }}
 a {{ color: #2563eb; }}
 .meta {{ color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }}
 {dark_css}
+{"@media print { body { max-width: 100%; padding: 1rem; } a { color: #000; text-decoration: underline; } a[href]::after { content: ' (' attr(href) ')'; font-size: 0.8em; color: #555; } pre { white-space: pre-wrap; word-wrap: break-word; } }" if print_friendly else ""}
 </style>
 </head>
 <body>
