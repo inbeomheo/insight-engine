@@ -34,9 +34,15 @@ def rewrite_for_platform(content: str, platform: str, model: str) -> dict:
     if len(text) > preset['max_chars']:
         text = text[:preset['max_chars'] - 3] + '...'
 
+    # 원본 대비 축약 비율 계산
+    original_len = len(content)
+    rewritten_len = len(text)
+    compression_ratio = round(rewritten_len / original_len, 4) if original_len > 0 else 0.0
+
     return {
         'platform': platform,
         'text': text,
-        'char_count': len(text),
+        'char_count': rewritten_len,
         'max_chars': preset['max_chars'],
+        'compression_ratio': compression_ratio,
     }
