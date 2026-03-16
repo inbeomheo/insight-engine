@@ -430,3 +430,198 @@ def recent_logs():
     with _log_lock:
         logs = _log_buffer[-limit:]
     return jsonify({'logs': logs})
+
+
+# ─── F4-13: 코호트 분석 ──────────────────────────────────────
+@analytics_bp.route('/api/admin/cohort/event', methods=['POST'])
+@require_auth
+def cohort_record_event():
+    """코호트 이벤트 기록"""
+    from services.analytics.cohort_service import cohort_service
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '')
+    event = data.get('event', '')
+    if not user_id or not event:
+        return jsonify({'error': 'user_id와 event는 필수입니다.'}), 400
+    cohort_service.record_event(
+        user_id=user_id,
+        event=event,
+        timestamp=data.get('timestamp'),
+        revenue=float(data.get('revenue', 0)),
+    )
+    return jsonify({'ok': True})
+
+
+@analytics_bp.route('/api/admin/cohort/retention', methods=['GET'])
+@require_auth
+def cohort_retention():
+    """코호트별 잔존율 조회"""
+    from services.analytics.cohort_service import cohort_service
+    period = request.args.get('period', 'week')
+    return jsonify(cohort_service.get_retention(period))
+
+
+@analytics_bp.route('/api/admin/cohort/ltv', methods=['GET'])
+@require_auth
+def cohort_ltv():
+    """사용자 LTV 집계"""
+    from services.analytics.cohort_service import cohort_service
+    return jsonify(cohort_service.get_ltv())
+
+
+# ─── F6-03: Google Analytics 4 ────────────────────────────────
+@analytics_bp.route('/api/admin/ga/pageviews', methods=['GET'])
+@require_auth
+def ga_page_views():
+    """GA4 페이지뷰 조회"""
+    from services.analytics.ga_service import GAService
+    ga = GAService()
+    days = int(request.args.get('days', 30))
+    return jsonify(ga.get_page_views(days))
+
+
+@analytics_bp.route('/api/admin/ga/events', methods=['GET'])
+@require_auth
+def ga_events():
+    """GA4 이벤트 카운트 조회"""
+    from services.analytics.ga_service import GAService
+    ga = GAService()
+    days = int(request.args.get('days', 30))
+    return jsonify(ga.get_event_counts(days))
+
+
+# ─── F6-04: Google Search Console ─────────────────────────────
+@analytics_bp.route('/api/admin/gsc/search-analytics', methods=['GET'])
+@require_auth
+def gsc_search_analytics():
+    """GSC 검색어별 성과 조회"""
+    from services.analytics.gsc_service import GSCService
+    gsc = GSCService()
+    days = int(request.args.get('days', 30))
+    row_limit = int(request.args.get('row_limit', 25))
+    return jsonify(gsc.get_search_analytics(days, row_limit))
+
+
+@analytics_bp.route('/api/admin/gsc/top-pages', methods=['GET'])
+@require_auth
+def gsc_top_pages():
+    """GSC 페이지별 검색 성과"""
+    from services.analytics.gsc_service import GSCService
+    gsc = GSCService()
+    days = int(request.args.get('days', 30))
+    row_limit = int(request.args.get('row_limit', 25))
+    return jsonify(gsc.get_top_pages(days, row_limit))
+
+
+# ─── F4-21: 사용자 세그먼트 ───────────────────────────────────
+@analytics_bp.route('/api/admin/segments/update', methods=['POST'])
+@require_auth
+def segment_update_stats():
+    """사용자 통계 업데이트"""
+    from services.analytics.segment_service import segment_service
+    data = request.get_json() or {}
+    user_id = data.get('user_id', '')
+    stats = data.get('stats', {})
+    if not user_id:
+        return jsonify({'error': 'user_id는 필수입니다.'}), 400
+    segment_service.update_stats(user_id, stats)
+    return jsonify({'ok': True})
+
+
+@analytics_bp.route('/api/admin/segments/classify/<user_id>', methods=['GET'])
+@require_auth
+def segment_classify(user_id: str):
+    """사용자 세그먼트 분류"""
+    from services.analytics.segment_service import segment_service
+    segments = segment_service.classify_user(user_id)
+    return jsonify({'user_id': user_id, 'segments': segments})
+
+
+@analytics_bp.route('/api/admin/segments/counts', methods=['GET'])
+@require_auth
+def segment_counts():
+    """세그먼트별 사용자 수 집계"""
+    from services.analytics.segment_service import segment_service
+    return jsonify(segment_service.get_segment_counts())
+
+
+@analytics_bp.route('/api/admin/segments/<segment_id>/users', methods=['GET'])
+@require_auth
+def segment_users(segment_id: str):
+    """특정 세그먼트 사용자 목록"""
+    from services.analytics.segment_service import segment_service
+    users = segment_service.get_users_in_segment(segment_id)
+    return jsonify({'segment': segment_id, 'users': users})
+
+
+# ─── F6-07: 트렌드 키워드 모니터 ──────────────────────────────
+_trend_monitor = None
+
+
+def _get_trend_monitor():
+    global _trend_monitor
+    if _trend_monitor is None:
+        from services.analytics.trend_monitor_service import TrendMonitorService
+        _trend_monitor = TrendMonitorService()
+    return _trend_monitor
+
+
+@analytics_bp.route('/api/admin/trends/keywords', methods=['GET'])
+@require_auth
+def trend_keywords():
+    """추적 중인 키워드 목록"""
+    return jsonify({'keywords': _get_trend_monitor().get_keywords()})
+
+
+@analytics_bp.route('/api/admin/trends/keywords', methods=['POST'])
+@require_auth
+def trend_add_keyword():
+    """추적 키워드 추가"""
+    svc = _get_trend_monitor()
+    data = request.get_json() or {}
+    keyword = data.get('keyword', '').strip()
+    if not keyword:
+        return jsonify({'error': 'keyword는 필수입니다.'}), 400
+    svc.add_keyword(keyword)
+    return jsonify({'ok': True, 'keywords': svc.get_keywords()})
+
+
+@analytics_bp.route('/api/admin/trends/keywords', methods=['DELETE'])
+@require_auth
+def trend_remove_keyword():
+    """추적 키워드 제거"""
+    svc = _get_trend_monitor()
+    data = request.get_json() or {}
+    keyword = data.get('keyword', '').strip()
+    if not keyword:
+        return jsonify({'error': 'keyword는 필수입니다.'}), 400
+    svc.remove_keyword(keyword)
+    return jsonify({'ok': True, 'keywords': svc.get_keywords()})
+
+
+@analytics_bp.route('/api/admin/trends/fetch', methods=['POST'])
+@require_auth
+def trend_fetch():
+    """Google Trends 데이터 수집"""
+    svc = _get_trend_monitor()
+    data = request.get_json() or {}
+    keywords = data.get('keywords')
+    timeframe = data.get('timeframe', 'today 3-m')
+    return jsonify(svc.fetch_trends(keywords, timeframe))
+
+
+@analytics_bp.route('/api/admin/trends/cached', methods=['GET'])
+@require_auth
+def trend_cached():
+    """캐시된 트렌드 데이터 조회"""
+    return jsonify(_get_trend_monitor().get_cached())
+
+
+@analytics_bp.route('/api/admin/trends/rising', methods=['POST'])
+@require_auth
+def trend_rising():
+    """급상승 키워드 조회"""
+    svc = _get_trend_monitor()
+    data = request.get_json() or {}
+    keywords = data.get('keywords')
+    return jsonify(svc.get_rising_keywords(keywords))
