@@ -168,13 +168,20 @@ def _add_formatted_text(paragraph, text):
         run.font.name = DEFAULT_FONT
 
 
-def export_markdown(title: str, content: str, frontmatter: dict | None = None) -> io.BytesIO:
+def export_markdown(
+    title: str,
+    content: str,
+    frontmatter: dict | None = None,
+    metadata: dict | None = None,
+) -> io.BytesIO:
     """마크다운 파일을 BytesIO로 반환합니다.
 
     Args:
         title: 문서 제목
         content: 마크다운 본문
         frontmatter: YAML frontmatter 딕셔너리 (title, date, tags 등)
+        metadata: 생성 메타데이터 (model, style, generated_at 등).
+                  포함 시 문서 하단에 메타 정보 섹션이 추가됨.
     """
     parts = []
     if frontmatter:
@@ -189,6 +196,13 @@ def export_markdown(title: str, content: str, frontmatter: dict | None = None) -
         parts.append('---')
         parts.append('')
     parts.append(f"# {title}\n\n{content}")
+
+    if metadata:
+        meta_lines = ['\n---\n', '## 생성 정보\n']
+        for key, value in metadata.items():
+            meta_lines.append(f'- **{key}**: {value}')
+        parts.append('\n'.join(meta_lines))
+
     text = '\n'.join(parts)
     buffer = io.BytesIO(text.encode('utf-8'))
     return buffer

@@ -303,8 +303,16 @@ def export_markdown():
 
         frontmatter = data.get('frontmatter')
 
+        metadata = None
+        if data.get('include_metadata'):
+            metadata = {}
+            for key in ('model', 'style', 'generated_at'):
+                val = data.get(key)
+                if val:
+                    metadata[key] = val
+
         from services.export.export_service import export_markdown as _export_md
-        buffer = _export_md(title, content, frontmatter=frontmatter)
+        buffer = _export_md(title, content, frontmatter=frontmatter, metadata=metadata if metadata else None)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
         return send_file(buffer, mimetype='text/markdown', as_attachment=True, download_name=f'{safe_title}.md')
@@ -603,6 +611,27 @@ def _add_table_to_docx(doc, rows):
                             run.bold = True
 
 
+def _detect_lang(text: str) -> str:
+    """텍스트의 주요 언어를 감지하여 BCP-47 코드를 반환합니다.
+
+    한글/일본어(히라가나·가타카나)/영어 문자 비율을 비교하여 판정.
+    """
+    ko = ja = en = 0
+    for ch in text:
+        cp = ord(ch)
+        if 0xAC00 <= cp <= 0xD7AF or 0x3130 <= cp <= 0x318F:
+            ko += 1
+        elif 0x3040 <= cp <= 0x309F or 0x30A0 <= cp <= 0x30FF:
+            ja += 1
+        elif (0x41 <= cp <= 0x5A) or (0x61 <= cp <= 0x7A):
+            en += 1
+    if ko >= ja and ko >= en:
+        return 'ko'
+    if ja >= en:
+        return 'ja'
+    return 'en'
+
+
 @blog_bp.route('/api/export/html', methods=['POST'])
 @require_auth
 def export_html():
@@ -619,6 +648,8 @@ def export_html():
 
         if not html_content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+
+        lang = _detect_lang(html_content)
 
         dark_css = ""
         if dark_mode:
@@ -637,7 +668,7 @@ a { color: #60a5fa; }
 }"""
 
         standalone_html = f"""<!DOCTYPE html>
-<html lang="ko">
+<html lang="{lang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
