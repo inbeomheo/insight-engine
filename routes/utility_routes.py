@@ -3637,7 +3637,11 @@ def app_version():
 
     # 등록된 URL 라우트 수 (Flask url_map 기준)
     from flask import current_app
-    total_routes = len(set(rule.rule for rule in current_app.url_map.iter_rules()))
+    all_rules = set(rule.rule for rule in current_app.url_map.iter_rules())
+    total_routes = len(all_rules)
+
+    # API 엔드포인트 수 (/api/ 접두사 기준)
+    features_count = sum(1 for r in all_rules if r.startswith('/api/'))
 
     return jsonify({
         'name': 'Insight Engine',
@@ -3648,6 +3652,7 @@ def app_version():
         'services': service_count,
         'routes': route_count,
         'total_routes': total_routes,
+        'features_count': features_count,
         'python': os.sys.version.split()[0],
     })
 
