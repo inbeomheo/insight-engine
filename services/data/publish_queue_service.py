@@ -11,7 +11,6 @@ import uuid
 from threading import Lock
 
 from services.core.logging_config import get_logger
-import logging
 
 logger = get_logger('publish_queue')
 
@@ -71,7 +70,7 @@ class PublishQueueService:
             with self._lock:
                 self._queue.append(item)
                 self._save_queue()
-            logger.info(f"큐 추가: {item['id']} (plugin={plugin_id}, title={title[:30]})")
+            logger.info("큐 추가: %s (plugin=%s, title=%s)", item['id'], plugin_id, title[:30])
             return self._sanitize(item)
         except Exception as e:
             logger.error("enqueue 실패: %s", e, exc_info=True)
@@ -111,7 +110,7 @@ class PublishQueueService:
                             item['status'] = 'success'
                             item['published_url'] = result.get('url')
                             item['error_message'] = None
-                            logger.info(f"발행 성공: {item_id}")
+                            logger.info("발행 성공: %s", item_id)
                         else:
                             self._handle_failure(
                                 item, result.get('message', '발행 실패')
@@ -123,7 +122,7 @@ class PublishQueueService:
                         self._handle_failure(item, str(e))
                         item['updated_at'] = time.time()
                         self._save_queue()
-                    logger.error(f"발행 예외: {item_id} - {e}")
+                    logger.error("발행 예외: %s - %s", item_id, e)
 
                 results.append(self._sanitize(item))
 
@@ -144,15 +143,14 @@ class PublishQueueService:
             item['status'] = 'queued'
             item['next_retry_at'] = time.time() + delay
             logger.warning(
-                f"재시도 예약: {item['id']} "
-                f"(시도 {item['retry_count']}/{self.MAX_RETRIES}, "
-                f"대기 {delay}초)"
+                "재시도 예약: %s (시도 %d/%d, 대기 %d초)",
+                item['id'], item['retry_count'], self.MAX_RETRIES, delay
             )
         else:
             item['status'] = 'failed'
             logger.warning(
-                f"최종 실패: {item['id']} "
-                f"(최대 재시도 {self.MAX_RETRIES}회 초과)"
+                "최종 실패: %s (최대 재시도 %d회 초과)",
+                item['id'], self.MAX_RETRIES
             )
 
     def get_queue_status(self, user_id: str = None) -> list:
@@ -206,7 +204,7 @@ class PublishQueueService:
                     }
                 self._queue.remove(item)
                 self._save_queue()
-            logger.info(f"큐 항목 취소: {item_id}")
+            logger.info("큐 항목 취소: %s", item_id)
             return {'success': True}
         except Exception as e:
             logger.error("cancel_item 실패: %s", e, exc_info=True)
@@ -230,7 +228,7 @@ class PublishQueueService:
                 item['error_message'] = None
                 item['updated_at'] = time.time()
                 self._save_queue()
-            logger.info(f"수동 재시도: {item_id}")
+            logger.info("수동 재시도: %s", item_id)
             return {'success': True}
         except Exception as e:
             logger.error("retry_item 실패: %s", e, exc_info=True)
