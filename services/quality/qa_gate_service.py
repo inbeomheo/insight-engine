@@ -35,7 +35,7 @@ def _check_forbidden_words(content: str, rules: dict = None) -> list:
 
 def _check_duplicates(content: str) -> list:
     """반복 문장을 검사합니다."""
-    sentences = [s.strip() for s in re.split(r'[.!?。]\s', content) if len(s.strip()) > 20]
+    sentences = [s.strip() for s in re.split(r'[.!?。]\s*', content) if len(s.strip()) > 20]
     seen = set()
     duplicates = []
     for s in sentences:

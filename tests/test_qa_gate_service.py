@@ -78,6 +78,37 @@ class TestCheckQuality(unittest.TestCase):
         types = [i['type'] for i in result['issues']]
         self.assertIn('duplicate', types)
 
+    def test_duplicate_sentences_no_space_after_period(self):
+        """마침표 뒤에 공백 없이 연결된 중복 문장도 감지"""
+        repeated = '이것은 충분히 긴 반복 문장이며 스무자가 넘습니다'
+        content = self._make_content() + f'{repeated}.{repeated}.끝'
+        result = check_quality(content)
+        types = [i['type'] for i in result['issues']]
+        self.assertIn('duplicate', types)
+
+    def test_duplicate_sentences_exclamation_mark(self):
+        """느낌표 뒤 공백 없이 연결된 중복 문장도 감지"""
+        repeated = '이것은 충분히 긴 반복 문장이며 스무자가 넘습니다'
+        content = self._make_content() + f'{repeated}!{repeated}!끝'
+        result = check_quality(content)
+        types = [i['type'] for i in result['issues']]
+        self.assertIn('duplicate', types)
+
+    def test_duplicate_sentences_korean_period(self):
+        """한국어 마침표(。) 뒤 공백 없이 연결된 중복도 감지"""
+        repeated = '이것은 충분히 긴 반복 문장이며 스무자가 넘습니다'
+        content = self._make_content() + f'{repeated}。{repeated}。끝'
+        result = check_quality(content)
+        types = [i['type'] for i in result['issues']]
+        self.assertIn('duplicate', types)
+
+    def test_no_duplicate_unique_sentences(self):
+        """고유 문장들은 중복 이슈 없음"""
+        content = self._make_content() + '첫 번째 긴 문장이며 스무자 이상입니다. 두 번째로 다른 긴 문장이며 역시 스무자 넘습니다.'
+        result = check_quality(content)
+        types = [i['type'] for i in result['issues']]
+        self.assertNotIn('duplicate', types)
+
     # ── 빈 링크 체크 ──
 
     def test_broken_links_detected(self):
