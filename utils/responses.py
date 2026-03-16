@@ -37,6 +37,7 @@ _INTERNAL_KEYWORDS = [
     'read timed out', 'connect timeout', 'max retries exceeded',
     'connection aborted', 'connection refused',
     'name or service not known', 'temporary failure in name resolution',
+    'c:\\users\\', 'c:/users/', 'd:\\', 'e:\\',
 ]
 
 
@@ -247,3 +248,41 @@ def clamp_query_int(value, default: int = 10, min_val: int = 1, max_val: int = 1
     except (ValueError, TypeError):
         n = default
     return max(min_val, min(n, max_val))
+
+
+def truncate_string(text: str, max_length: int = 200, suffix: str = '...') -> str:
+    """긴 문자열을 안전하게 잘라냅니다 (유니코드 서로게이트 깨짐 방지).
+
+    Args:
+        text: 원본 문자열
+        max_length: 최대 길이 (suffix 포함)
+        suffix: 생략 표시 문자열
+
+    Returns:
+        max_length 이하로 절단된 문자열
+    """
+    if not isinstance(text, str) or len(text) <= max_length:
+        return text if isinstance(text, str) else ''
+    if max_length <= len(suffix):
+        return suffix[:max_length]
+    return text[:max_length - len(suffix)] + suffix
+
+
+def mask_sensitive(value: str, visible_chars: int = 4) -> str:
+    """API 키/토큰 등 민감 문자열을 마스킹합니다 (로그 안전 출력용).
+
+    Args:
+        value: 마스킹할 문자열
+        visible_chars: 앞/뒤에 노출할 문자 수
+
+    Returns:
+        마스킹된 문자열. 예: 'sk-ab****yz'
+    """
+    if not isinstance(value, str) or not value:
+        return '****'
+    if len(value) <= visible_chars * 2:
+        return '*' * len(value)
+    prefix = value[:visible_chars]
+    suffix_part = value[-visible_chars:]
+    masked_len = len(value) - visible_chars * 2
+    return f'{prefix}{"*" * min(masked_len, 8)}{suffix_part}'

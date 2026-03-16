@@ -46,7 +46,7 @@ def _apply_output_format(result: dict, output_format: str, max_chars: int = None
     elif output_format == 'markdown':
         result = {**result, 'html': ''}  # HTML 제거, markdown만
 
-    if max_chars and result.get('content'):
+    if max_chars and isinstance(max_chars, int) and max_chars > 0 and result.get('content'):
         result = {**result, 'content': result['content'][:max_chars]}
 
     return result

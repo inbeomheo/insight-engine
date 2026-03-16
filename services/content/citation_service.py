@@ -27,10 +27,13 @@ def _timestamp_to_seconds(ts: str) -> int:
         초 단위 정수
     """
     parts = ts.split(':')
-    if len(parts) == 2:
-        return int(parts[0]) * 60 + int(parts[1])
-    elif len(parts) == 3:
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    try:
+        if len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+        elif len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    except (ValueError, TypeError):
+        return 0
     return 0
 
 

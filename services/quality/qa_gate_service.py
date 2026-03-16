@@ -114,4 +114,5 @@ def check_quality(content: str, rules: dict = None) -> dict:
         }
     except Exception as e:
         logger.error(f"QA 검증 처리 실패: {e}")
-        return {'passed': False, 'issues': [], 'score': 0}
+        return {'passed': False, 'issues': [], 'score': 0,
+                'error_count': 0, 'warning_count': 0, 'suggestions': []}
