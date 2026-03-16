@@ -1074,3 +1074,62 @@ def progressive_summary():
     except Exception as e:
         current_app.logger.error(f"Progressive summary failed: {e}")
         return handle_error(str(e))
+
+
+# =============================================
+# 파인튜닝 데이터 수집 API (F10-15)
+# =============================================
+
+@blog_bp.route('/api/finetune/collect', methods=['POST'])
+@require_auth
+def finetune_collect():
+    """Supabase 히스토리에서 학습 데이터 수집"""
+    from services.finetune.data_collector import AutoDataCollector
+
+    data = request.get_json(silent=True) or {}
+    days_back = min(int(data.get('days_back', 30)), 365)
+    limit = min(int(data.get('limit', 1000)), 5000)
+
+    try:
+        collector = AutoDataCollector(
+            output_dir=data.get('output_dir', './data/finetune'),
+            min_quality_score=float(data.get('min_quality_score', 0.6)),
+            min_content_length=int(data.get('min_content_length', 500)),
+        )
+        result = collector.collect_from_supabase(days_back=days_back, limit=limit)
+
+        if 'error' in result:
+            return jsonify({'error': result['error']}), 400
+
+        return jsonify({'success': True, **result})
+    except Exception as e:
+        current_app.logger.error(f"Finetune collect failed: {e}")
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/finetune/collect-local', methods=['POST'])
+@require_auth
+def finetune_collect_local():
+    """로컬 SQLite 캐시에서 학습 데이터 수집"""
+    from services.finetune.data_collector import AutoDataCollector
+
+    data = request.get_json(silent=True) or {}
+    cache_db_path = data.get('cache_db_path', '')
+    if not cache_db_path:
+        return jsonify({'error': '캐시 DB 경로가 필요합니다.'}), 400
+
+    try:
+        collector = AutoDataCollector(
+            output_dir=data.get('output_dir', './data/finetune'),
+            min_quality_score=float(data.get('min_quality_score', 0.6)),
+            min_content_length=int(data.get('min_content_length', 500)),
+        )
+        result = collector.collect_from_local_cache(cache_db_path)
+
+        if 'error' in result:
+            return jsonify({'error': result['error']}), 400
+
+        return jsonify({'success': True, **result})
+    except Exception as e:
+        current_app.logger.error(f"Finetune collect-local failed: {e}")
+        return handle_error(str(e))
