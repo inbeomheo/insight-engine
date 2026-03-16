@@ -21,6 +21,7 @@ _ATOM_NS = "http://www.w3.org/2005/Atom"
 _ARXIV_NS = "http://arxiv.org/schemas/atom"
 
 _API_BASE = "http://export.arxiv.org/api/query"
+_SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1/paper/ARXIV:{arxiv_id}"
 _REQUEST_TIMEOUT = 15  # 초
 
 
@@ -43,6 +44,21 @@ def _build_content_text(title: str, abstract: str, authors: List[str],
     if all_categories:
         content += f"\n카테고리: {', '.join(all_categories)}"
     return content
+
+
+def _fetch_citation_count(arxiv_id: str):
+    """Semantic Scholar API로 인용 횟수를 조회합니다. 실패 시 None 반환."""
+    if not arxiv_id:
+        return None
+    try:
+        url = _SEMANTIC_SCHOLAR_API.format(arxiv_id=arxiv_id)
+        resp = requests.get(url, params={'fields': 'citationCount'}, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get('citationCount')
+    except Exception:
+        pass
+    return None
 
 
 def _parse_entry(entry: ElementTree.Element) -> Dict:
@@ -136,7 +152,9 @@ def fetch_paper(arxiv_id: str) -> Dict:
             raise ValueError(f"arXiv 논문을 찾을 수 없습니다: {arxiv_id}")
 
         # 첫 번째 엔트리 반환
-        return _parse_entry(entries[0])
+        paper = _parse_entry(entries[0])
+        paper['citation_count'] = _fetch_citation_count(paper.get('arxiv_id', ''))
+        return paper
     except (ValueError, requests.RequestException):
         raise
     except Exception as e:
