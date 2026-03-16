@@ -3,6 +3,9 @@ import json
 import re
 from services.core import ai_service
 from prompts.styles.chapter_split import CHAPTER_SPLIT_PROMPT
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def split_chapters(transcript_text: str, model: str, segments: list = None) -> list:

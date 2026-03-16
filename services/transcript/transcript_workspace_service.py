@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 문장 종결 패턴 (한국어 + 영어)
@@ -35,12 +38,16 @@ def parse_transcript_sentences(
     if not transcript_text or not transcript_text.strip():
         return []
 
-    # 세그먼트가 있으면 세그먼트 기반 문장 분리
-    if segments:
-        return _parse_with_segments(segments)
+    try:
+        # 세그먼트가 있으면 세그먼트 기반 문장 분리
+        if segments:
+            return _parse_with_segments(segments)
 
-    # 세그먼트 없으면 텍스트 기반 문장 분리
-    return _parse_text_only(transcript_text)
+        # 세그먼트 없으면 텍스트 기반 문장 분리
+        return _parse_text_only(transcript_text)
+    except Exception as e:
+        logger.error("parse_transcript_sentences 실패: %s", e, exc_info=True)
+        return []
 
 
 def _parse_with_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -128,26 +135,30 @@ def apply_edits(
     Returns:
         편집이 적용된 전체 자막 텍스트
     """
-    deleted_indices = set(edits.get('deleted', []))
-    modified_map: Dict[str, str] = edits.get('modified', {})
+    try:
+        deleted_indices = set(edits.get('deleted', []))
+        modified_map: Dict[str, str] = edits.get('modified', {})
 
-    result_parts: List[str] = []
+        result_parts: List[str] = []
 
-    for sentence in sentences:
-        idx = sentence.get('index', -1)
+        for sentence in sentences:
+            idx = sentence.get('index', -1)
 
-        # 삭제된 문장은 건너뜀
-        if idx in deleted_indices:
-            continue
+            # 삭제된 문장은 건너뜀
+            if idx in deleted_indices:
+                continue
 
-        # 수정된 문장은 수정본 사용
-        idx_str = str(idx)
-        if idx_str in modified_map:
-            text = modified_map[idx_str].strip()
-        else:
-            text = sentence.get('text', '').strip()
+            # 수정된 문장은 수정본 사용
+            idx_str = str(idx)
+            if idx_str in modified_map:
+                text = modified_map[idx_str].strip()
+            else:
+                text = sentence.get('text', '').strip()
 
-        if text:
-            result_parts.append(text)
+            if text:
+                result_parts.append(text)
 
-    return ' '.join(result_parts)
+        return ' '.join(result_parts)
+    except Exception as e:
+        logger.error("apply_edits 실패: %s", e, exc_info=True)
+        return ''

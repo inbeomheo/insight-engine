@@ -11,6 +11,9 @@ from typing import Dict, List, Optional
 
 import feedparser
 from bs4 import BeautifulSoup
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _clean_html(raw: str) -> str:
@@ -87,14 +90,18 @@ def parse_feed(url: str, max_items: int = 10) -> List[Dict]:
     Raises:
         ValueError: 유효하지 않은 피드이거나 파싱 실패
     """
-    feed = feedparser.parse(url)
+    try:
+        feed = feedparser.parse(url)
 
-    # bozo == True 이면 파싱 오류 (단, 일부 피드는 bozo여도 파싱 가능)
-    if feed.bozo and not feed.entries:
-        raise ValueError(f"RSS 피드 파싱 실패: {feed.bozo_exception}")
+        # bozo == True 이면 파싱 오류 (단, 일부 피드는 bozo여도 파싱 가능)
+        if feed.bozo and not feed.entries:
+            raise ValueError(f"RSS 피드 파싱 실패: {feed.bozo_exception}")
 
-    entries = feed.entries[:max_items]
-    return [_entry_to_dict(e) for e in entries]
+        entries = feed.entries[:max_items]
+        return [_entry_to_dict(e) for e in entries]
+    except Exception as e:
+        logger.error("parse_feed 실패: %s", e, exc_info=True)
+        return []
 
 
 def get_latest_entries(url: str, since_days: int = 7) -> List[Dict]:
@@ -107,16 +114,20 @@ def get_latest_entries(url: str, since_days: int = 7) -> List[Dict]:
     Returns:
         최근 엔트리 딕셔너리 목록
     """
-    all_entries = parse_feed(url, max_items=50)
+    try:
+        all_entries = parse_feed(url, max_items=50)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
-    recent = []
-    for entry in all_entries:
-        dt = _parse_published_dt(entry.get("published", ""))
-        if dt is None:
-            # 날짜 파싱 불가 → 포함
-            recent.append(entry)
-        elif dt >= cutoff:
-            recent.append(entry)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+        recent = []
+        for entry in all_entries:
+            dt = _parse_published_dt(entry.get("published", ""))
+            if dt is None:
+                # 날짜 파싱 불가 → 포함
+                recent.append(entry)
+            elif dt >= cutoff:
+                recent.append(entry)
 
-    return recent
+        return recent
+    except Exception as e:
+        logger.error("get_latest_entries 실패: %s", e, exc_info=True)
+        return []

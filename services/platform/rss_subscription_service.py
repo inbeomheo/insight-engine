@@ -17,6 +17,7 @@ import feedparser as _feedparser
 
 from services.core.logging_config import get_logger
 from services.platform.rss_service import parse_feed
+import logging
 
 logger = get_logger('rss_subscription')
 
@@ -107,26 +108,34 @@ def unsubscribe(user_id: str, feed_id: str) -> bool:
     Returns:
         성공 여부
     """
-    with _lock:
-        data = _load_all()
-        user_subs = data.get(user_id, [])
-        original_len = len(user_subs)
-        user_subs = [s for s in user_subs if s['id'] != feed_id]
+    try:
+        with _lock:
+            data = _load_all()
+            user_subs = data.get(user_id, [])
+            original_len = len(user_subs)
+            user_subs = [s for s in user_subs if s['id'] != feed_id]
 
-        if len(user_subs) == original_len:
-            return False
+            if len(user_subs) == original_len:
+                return False
 
-        data[user_id] = user_subs
-        _save_all(data)
+            data[user_id] = user_subs
+            _save_all(data)
 
-    logger.info(f"RSS 구독 해제: {feed_id} - user={user_id}")
-    return True
+        logger.info(f"RSS 구독 해제: {feed_id} - user={user_id}")
+        return True
+    except Exception as e:
+        logger.error("unsubscribe 실패: %s", e, exc_info=True)
+        return False
 
 
 def list_subscriptions(user_id: str) -> List[Dict]:
     """사용자의 구독 목록을 반환합니다."""
-    data = _load_all()
-    return data.get(user_id, [])
+    try:
+        data = _load_all()
+        return data.get(user_id, [])
+    except Exception as e:
+        logger.error("list_subscriptions 실패: %s", e, exc_info=True)
+        return []
 
 
 def check_new_entries(subscription: Dict) -> List[Dict]:
@@ -166,17 +175,21 @@ def check_new_entries(subscription: Dict) -> List[Dict]:
 
 def update_last_checked(user_id: str, feed_id: str, last_entry_url: Optional[str] = None) -> None:
     """구독의 마지막 확인 시간을 업데이트합니다."""
-    with _lock:
-        data = _load_all()
-        user_subs = data.get(user_id, [])
-        for sub in user_subs:
-            if sub['id'] == feed_id:
-                sub['last_checked_at'] = datetime.now(timezone.utc).isoformat()
-                if last_entry_url:
-                    sub['last_entry_url'] = last_entry_url
-                break
-        data[user_id] = user_subs
-        _save_all(data)
+    try:
+        with _lock:
+            data = _load_all()
+            user_subs = data.get(user_id, [])
+            for sub in user_subs:
+                if sub['id'] == feed_id:
+                    sub['last_checked_at'] = datetime.now(timezone.utc).isoformat()
+                    if last_entry_url:
+                        sub['last_entry_url'] = last_entry_url
+                    break
+            data[user_id] = user_subs
+            _save_all(data)
+    except Exception as e:
+        logger.error("update_last_checked 실패: %s", e, exc_info=True)
+        return None
 
 
 def check_all_subscriptions() -> List[Dict]:
@@ -186,22 +199,26 @@ def check_all_subscriptions() -> List[Dict]:
     Returns:
         [{"user_id": str, "subscription": Dict, "new_entries": [Dict, ...]}]
     """
-    data = _load_all()
-    results = []
+    try:
+        data = _load_all()
+        results = []
 
-    for user_id, subs in data.items():
-        for sub in subs:
-            new_entries = check_new_entries(sub)
-            if new_entries:
-                results.append({
-                    'user_id': user_id,
-                    'subscription': sub,
-                    'new_entries': new_entries,
-                })
-                # 마지막 확인 업데이트
-                update_last_checked(
-                    user_id, sub['id'],
-                    last_entry_url=new_entries[0].get('url'),
-                )
+        for user_id, subs in data.items():
+            for sub in subs:
+                new_entries = check_new_entries(sub)
+                if new_entries:
+                    results.append({
+                        'user_id': user_id,
+                        'subscription': sub,
+                        'new_entries': new_entries,
+                    })
+                    # 마지막 확인 업데이트
+                    update_last_checked(
+                        user_id, sub['id'],
+                        last_entry_url=new_entries[0].get('url'),
+                    )
 
-    return results
+        return results
+    except Exception as e:
+        logger.error("check_all_subscriptions 실패: %s", e, exc_info=True)
+        return []

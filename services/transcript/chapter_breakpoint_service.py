@@ -7,6 +7,9 @@ Chapter Breakpoint Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩
@@ -157,35 +160,39 @@ def detect_chapter_breakpoints(content: str) -> dict:
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
 
-    sections = _parse_sections(content)
-    if not sections:
-        return dict(_EMPTY_RESULT)
+    try:
+        sections = _parse_sections(content)
+        if not sections:
+            return dict(_EMPTY_RESULT)
 
-    breakpoints, section_analysis, long_sections = (
-        _analyze_sections_and_breakpoints(sections)
-    )
+        breakpoints, section_analysis, long_sections = (
+            _analyze_sections_and_breakpoints(sections)
+        )
 
-    total_sections = len(sections)
-    total_chars = sum(s['char_count'] for s in sections)
-    avg_length = round(total_chars / total_sections) if total_sections > 0 else 0
-    score = _compute_breakpoint_score(len(breakpoints), total_sections)
+        total_sections = len(sections)
+        total_chars = sum(s['char_count'] for s in sections)
+        avg_length = round(total_chars / total_sections) if total_sections > 0 else 0
+        score = _compute_breakpoint_score(len(breakpoints), total_sections)
 
-    suggestions = _generate_suggestions(
-        breakpoints, long_sections, avg_length, total_sections
-    )
+        suggestions = _generate_suggestions(
+            breakpoints, long_sections, avg_length, total_sections
+        )
 
-    return {
-        'breakpoints': breakpoints,
-        'section_analysis': section_analysis,
-        'summary': {
-            'total_sections': total_sections,
-            'long_sections': long_sections,
-            'suggested_breaks': len(breakpoints),
-            'avg_section_length': avg_length,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'breakpoints': breakpoints,
+            'section_analysis': section_analysis,
+            'summary': {
+                'total_sections': total_sections,
+                'long_sections': long_sections,
+                'suggested_breaks': len(breakpoints),
+                'avg_section_length': avg_length,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error("detect_chapter_breakpoints 실패: %s", e, exc_info=True)
+        return {}
 
 
 def _generate_suggestions(
