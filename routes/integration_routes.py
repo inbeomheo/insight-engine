@@ -1384,3 +1384,588 @@ def oauth_list_clients():
         current_app.logger.error('OAuth client list failed: %s', e, exc_info=True)
         return jsonify({'error': '[서버 오류] OAuth 클라이언트 목록 조회 중 문제가 발생했습니다.'}), 500
     return jsonify({'clients': clients})
+
+
+# ── Discord 알림 (F6-20) ──────────────────────────────────
+
+@blog_bp.route('/api/integrations/discord/status', methods=['GET'])
+@require_auth
+def discord_status():
+    """Discord 웹훅 설정 상태 조회"""
+    from services.integrations.discord_service import DiscordService
+    svc = DiscordService()
+    return jsonify({'enabled': svc.is_enabled()})
+
+
+@blog_bp.route('/api/integrations/discord/send', methods=['POST'])
+@require_auth
+def discord_send():
+    """Discord 메시지 전송"""
+    from services.integrations.discord_service import DiscordService
+
+    data = request.get_json(silent=True) or {}
+    content = data.get('content', '').strip()
+    if not content:
+        return jsonify({'error': '메시지 내용이 필요합니다.'}), 400
+
+    try:
+        svc = DiscordService()
+        result = svc.send(content, username=data.get('username', 'Insight Engine'))
+        if not result.get('ok'):
+            return jsonify({'error': _sanitize_integration_error(
+                result.get('reason') or result.get('error', '전송 실패'),
+                'Discord 메시지 전송에 실패했습니다.'
+            )}), 400
+        return jsonify({'ok': True})
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/integrations/discord/send-embed', methods=['POST'])
+@require_auth
+def discord_send_embed():
+    """Discord Embed 메시지 전송"""
+    from services.integrations.discord_service import DiscordService
+
+    data = request.get_json(silent=True) or {}
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    if not title or not description:
+        return jsonify({'error': 'title과 description이 필요합니다.'}), 400
+
+    try:
+        svc = DiscordService()
+        result = svc.send_embed(
+            title=title,
+            description=description,
+            color=data.get('color', 0x5865F2),
+            fields=data.get('fields'),
+        )
+        if not result.get('ok'):
+            return jsonify({'error': _sanitize_integration_error(
+                result.get('reason') or result.get('error', '전송 실패'),
+                'Discord Embed 전송에 실패했습니다.'
+            )}), 400
+        return jsonify({'ok': True})
+    except Exception as e:
+        return handle_error(str(e))
+
+
+# ── Slack 알림 (F6-19) ──────────────────────────────────
+
+@blog_bp.route('/api/integrations/slack/status', methods=['GET'])
+@require_auth
+def slack_status():
+    """Slack 웹훅 설정 상태 조회"""
+    from services.integrations.slack_service import SlackService
+    svc = SlackService()
+    return jsonify({'enabled': svc.is_enabled()})
+
+
+@blog_bp.route('/api/integrations/slack/send', methods=['POST'])
+@require_auth
+def slack_send():
+    """Slack 메시지 전송"""
+    from services.integrations.slack_service import SlackService
+
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '').strip()
+    if not text:
+        return jsonify({'error': '메시지 내용이 필요합니다.'}), 400
+
+    try:
+        svc = SlackService()
+        result = svc.send(
+            text=text,
+            channel=data.get('channel', ''),
+            username=data.get('username', 'Insight Engine'),
+        )
+        if not result.get('ok'):
+            return jsonify({'error': _sanitize_integration_error(
+                result.get('reason') or result.get('error', '전송 실패'),
+                'Slack 메시지 전송에 실패했습니다.'
+            )}), 400
+        return jsonify({'ok': True})
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/integrations/slack/send-blocks', methods=['POST'])
+@require_auth
+def slack_send_blocks():
+    """Slack Block Kit 메시지 전송"""
+    from services.integrations.slack_service import SlackService
+
+    data = request.get_json(silent=True) or {}
+    blocks = data.get('blocks', [])
+    if not blocks:
+        return jsonify({'error': 'blocks가 필요합니다.'}), 400
+
+    try:
+        svc = SlackService()
+        result = svc.send_blocks(blocks=blocks, text=data.get('text', ''))
+        if not result.get('ok'):
+            return jsonify({'error': _sanitize_integration_error(
+                result.get('reason') or result.get('error', '전송 실패'),
+                'Slack Block 전송에 실패했습니다.'
+            )}), 400
+        return jsonify({'ok': True})
+    except Exception as e:
+        return handle_error(str(e))
+
+
+# ── MCP 서버 상태/도구 (F10-09) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/status', methods=['GET'])
+def mcp_server_status():
+    """MCP 서버 상태 및 SDK 설치 여부 확인"""
+    from services.mcp.mcp_server import _MCP_AVAILABLE
+    return jsonify({
+        'mcp_available': _MCP_AVAILABLE,
+        'server_name': 'insight-engine',
+        'server_version': '1.0.0',
+    })
+
+
+@blog_bp.route('/api/mcp/tools', methods=['GET'])
+def mcp_list_tools():
+    """MCP 서버에서 제공하는 도구 스키마 목록"""
+    from services.mcp.mcp_server import get_mcp_tools_schema
+    try:
+        tools = get_mcp_tools_schema()
+        return jsonify({'tools': tools})
+    except Exception as e:
+        return handle_error(str(e))
+
+
+# ── 플러그인 SDK 정보 (F7-10) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/sdk/info', methods=['GET'])
+def mcp_sdk_info():
+    """플러그인 SDK 기본 정보 및 등록된 플러그인 목록"""
+    from services.mcp.registry import plugin_registry
+    plugins = plugin_registry.list_plugins()
+    return jsonify({
+        'sdk_version': '1.0.0',
+        'base_class': 'PluginBase',
+        'decorators': ['@plugin', '@require_env'],
+        'mixins': ['HttpPluginMixin'],
+        'registered_plugins': plugins,
+    })
+
+
+@blog_bp.route('/api/mcp/sdk/schema/<plugin_id>', methods=['GET'])
+def mcp_sdk_plugin_schema(plugin_id):
+    """특정 플러그인의 설정 스키마 반환"""
+    from services.mcp.registry import plugin_registry
+    plugin = plugin_registry.get(plugin_id)
+    if not plugin:
+        return jsonify({'error': f"플러그인 '{plugin_id}'을(를) 찾을 수 없습니다."}), 404
+    return jsonify({
+        'plugin_id': plugin_id,
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── 인라인 편집 앱 (MCP App) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/apps/inline-editor/render', methods=['POST'])
+@require_auth
+def inline_editor_render():
+    """인라인 편집 앱 — 콘텐츠를 단락 단위로 렌더링"""
+    from services.mcp.apps.inline_editor import InlineEditorApp
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    content_text = data.get('content', '').strip()
+    if not content_text:
+        return jsonify({'error': 'content가 필요합니다.'}), 400
+
+    try:
+        app = InlineEditorApp()
+        result = app.render(data)
+        return jsonify(result)
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/mcp/apps/inline-editor/action', methods=['POST'])
+@require_auth
+def inline_editor_action():
+    """인라인 편집 앱 — 편집 액션 처리 (save_edit/undo/reset/get_result)"""
+    from services.mcp.apps.inline_editor import InlineEditorApp
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    action = data.get('action', '').strip()
+    if not action:
+        return jsonify({'error': 'action이 필요합니다.'}), 400
+
+    try:
+        app = InlineEditorApp()
+        result = app.handle_action(action, data)
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        return handle_error(str(e))
+
+
+# ── Ghost CMS 발행 플러그인 (F7-13) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/plugins/ghost/publish', methods=['POST'])
+@require_auth
+def ghost_publish():
+    """Ghost CMS에 콘텐츠를 발행"""
+    from services.mcp.plugins.ghost import GhostPlugin
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    if not title or not content:
+        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+
+    try:
+        plugin = GhostPlugin()
+        result = plugin.execute(content, title, **{
+            k: v for k, v in data.items() if k not in ('title', 'content')
+        })
+        result = _sanitize_result_message(result, 'message', 'Ghost CMS 발행에 실패했습니다.')
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/mcp/plugins/ghost/schema', methods=['GET'])
+def ghost_schema():
+    """Ghost CMS 플러그인 설정 스키마"""
+    from services.mcp.plugins.ghost import GhostPlugin
+    plugin = GhostPlugin()
+    return jsonify({
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── Instagram 발행 플러그인 (F7-17) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/plugins/instagram/publish', methods=['POST'])
+@require_auth
+def instagram_publish():
+    """Instagram에 콘텐츠를 발행"""
+    from services.mcp.plugins.instagram import InstagramPlugin
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    if not title or not content:
+        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+
+    try:
+        plugin = InstagramPlugin()
+        result = plugin.execute(content, title, **{
+            k: v for k, v in data.items() if k not in ('title', 'content')
+        })
+        result = _sanitize_result_message(result, 'message', 'Instagram 발행에 실패했습니다.')
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/mcp/plugins/instagram/schema', methods=['GET'])
+def instagram_schema():
+    """Instagram 플러그인 설정 스키마"""
+    from services.mcp.plugins.instagram import InstagramPlugin
+    plugin = InstagramPlugin()
+    return jsonify({
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── Shopify 발행 플러그인 (F7-14) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/plugins/shopify/publish', methods=['POST'])
+@require_auth
+def shopify_publish():
+    """Shopify 블로그에 아티클을 발행"""
+    from services.mcp.plugins.shopify import ShopifyPlugin
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    if not title or not content:
+        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+
+    try:
+        plugin = ShopifyPlugin()
+        result = plugin.execute(content, title, **{
+            k: v for k, v in data.items() if k not in ('title', 'content')
+        })
+        result = _sanitize_result_message(result, 'message', 'Shopify 발행에 실패했습니다.')
+        status_code = 200 if result.get('success') else 400
+        return jsonify(result), status_code
+    except Exception as e:
+        return handle_error(str(e))
+
+
+@blog_bp.route('/api/mcp/plugins/shopify/schema', methods=['GET'])
+def shopify_schema():
+    """Shopify 플러그인 설정 스키마"""
+    from services.mcp.plugins.shopify import ShopifyPlugin
+    plugin = ShopifyPlugin()
+    return jsonify({
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── Substack 발행 (MCP 플러그인) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/substack/publish', methods=['POST'])
+@require_auth
+def substack_publish():
+    """Substack에 Draft/Published 포스트를 생성합니다."""
+    from services.mcp.plugins.substack import SubstackPlugin
+
+    data = request.get_json(silent=True) or {}
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    subdomain = data.get('subdomain', '').strip()
+    api_key = data.get('api_key', '').strip()
+
+    if not title or not content:
+        return jsonify({'error': 'title과 content는 필수입니다.'}), 400
+    if not subdomain or not api_key:
+        return jsonify({'error': 'subdomain과 api_key는 필수입니다.'}), 400
+
+    try:
+        plugin = SubstackPlugin()
+        result = plugin.execute(
+            content=content,
+            title=title,
+            subdomain=subdomain,
+            api_key=api_key,
+            publish_status=data.get('publish_status', 'draft'),
+        )
+        result = _sanitize_result_message(result, 'message', 'Substack 발행 처리 중 오류가 발생했습니다.')
+        status = 200 if result.get('success') else 502
+        return jsonify(result), status
+    except Exception as e:
+        return handle_error(e, 'Substack 발행')
+
+
+@blog_bp.route('/api/mcp/substack/schema', methods=['GET'])
+def substack_schema():
+    """Substack 플러그인 스키마 조회"""
+    from services.mcp.plugins.substack import SubstackPlugin
+    plugin = SubstackPlugin()
+    return jsonify({
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── Threads 발행 (MCP 플러그인) ──────────────────────────────────────
+
+
+@blog_bp.route('/api/mcp/threads/publish', methods=['POST'])
+@require_auth
+def threads_publish():
+    """Threads에 포스트를 게시합니다."""
+    from services.mcp.plugins.threads import ThreadsPlugin
+
+    data = request.get_json(silent=True) or {}
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+
+    if not content:
+        return jsonify({'error': 'content는 필수입니다.'}), 400
+
+    access_token = data.get('access_token', '').strip()
+    user_id = data.get('user_id', '').strip()
+
+    if not access_token or not user_id:
+        return jsonify({'error': 'access_token과 user_id는 필수입니다.'}), 400
+
+    try:
+        plugin = ThreadsPlugin()
+        result = plugin.execute(
+            content=content,
+            title=title or '',
+            access_token=access_token,
+            user_id=user_id,
+            media_type=data.get('media_type', 'TEXT'),
+            image_url=data.get('image_url', ''),
+        )
+        result = _sanitize_result_message(result, 'message', 'Threads 발행 처리 중 오류가 발생했습니다.')
+        status = 200 if result.get('success') else 502
+        return jsonify(result), status
+    except Exception as e:
+        return handle_error(e, 'Threads 발행')
+
+
+@blog_bp.route('/api/mcp/threads/schema', methods=['GET'])
+def threads_schema():
+    """Threads 플러그인 스키마 조회"""
+    from services.mcp.plugins.threads import ThreadsPlugin
+    plugin = ThreadsPlugin()
+    return jsonify({
+        'name': plugin.name,
+        'description': plugin.description,
+        'schema': plugin.schema(),
+    })
+
+
+# ── GraphRAG 엔진 ──────────────────────────────────────
+
+
+@blog_bp.route('/api/rag/graph/ingest', methods=['POST'])
+@require_auth
+def graph_rag_ingest():
+    """텍스트에서 엔티티/관계를 자동 추출하여 그래프에 추가합니다."""
+    from services.rag.graph_rag_engine import GraphRAGEngine
+
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '').strip()
+    if not text:
+        return jsonify({'error': 'text는 필수입니다.'}), 400
+
+    try:
+        engine = GraphRAGEngine()
+        result = engine.ingest(g.user_id, text)
+        return jsonify(result)
+    except Exception as e:
+        return handle_error(e, 'GraphRAG 인제스트')
+
+
+@blog_bp.route('/api/rag/graph/search/local', methods=['POST'])
+@require_auth
+def graph_rag_local_search():
+    """엔티티 중심 로컬 검색 (BFS 탐색)"""
+    from services.rag.graph_rag_engine import GraphRAGEngine
+
+    data = request.get_json(silent=True) or {}
+    entities = data.get('entities', [])
+    if not entities:
+        return jsonify({'error': 'entities 목록은 필수입니다.'}), 400
+
+    try:
+        engine = GraphRAGEngine()
+        results = engine.local_search(
+            g.user_id,
+            entities,
+            max_depth=int(data.get('max_depth', 2)),
+            max_results=int(data.get('max_results', 20)),
+        )
+        return jsonify({'results': results})
+    except Exception as e:
+        return handle_error(e, 'GraphRAG 로컬 검색')
+
+
+@blog_bp.route('/api/rag/graph/search/global', methods=['GET'])
+@require_auth
+def graph_rag_global_search():
+    """전체 그래프 요약 — 연결이 많은 상위 노드 반환"""
+    from services.rag.graph_rag_engine import GraphRAGEngine
+
+    top_n = int(request.args.get('top_n', 10))
+    try:
+        engine = GraphRAGEngine()
+        result = engine.global_search(g.user_id, top_n=top_n)
+        return jsonify(result)
+    except Exception as e:
+        return handle_error(e, 'GraphRAG 글로벌 검색')
+
+
+# ── 멀티모달 RAG ──────────────────────────────────────
+
+
+@blog_bp.route('/api/rag/multimodal/detect-type', methods=['POST'])
+@require_auth
+def multimodal_detect_type():
+    """파일 경로의 타입을 감지합니다."""
+    from services.rag.multimodal_rag import MultimodalRAG
+
+    data = request.get_json(silent=True) or {}
+    file_path = data.get('file_path', '').strip()
+    if not file_path:
+        return jsonify({'error': 'file_path는 필수입니다.'}), 400
+
+    rag = MultimodalRAG()
+    file_type = rag.detect_file_type(file_path)
+    return jsonify({'file_path': file_path, 'file_type': file_type})
+
+
+@blog_bp.route('/api/rag/multimodal/ingest', methods=['POST'])
+@require_auth
+def multimodal_ingest():
+    """파일을 RAG 시스템에 통합합니다."""
+    from services.rag.multimodal_rag import MultimodalRAG
+
+    data = request.get_json(silent=True) or {}
+    file_path = data.get('file_path', '').strip()
+    if not file_path:
+        return jsonify({'error': 'file_path는 필수입니다.'}), 400
+
+    try:
+        rag = MultimodalRAG()
+        result = rag.ingest_file(
+            file_path,
+            metadata=data.get('metadata'),
+            file_type=data.get('file_type'),
+        )
+        status = 200 if result.get('success') else 400
+        return jsonify(result), status
+    except Exception as e:
+        return handle_error(e, '멀티모달 RAG 인제스트')
+
+
+@blog_bp.route('/api/rag/multimodal/query', methods=['POST'])
+@require_auth
+def multimodal_query():
+    """멀티모달 쿼리 (텍스트 + 이미지)"""
+    from services.rag.multimodal_rag import MultimodalRAG
+
+    data = request.get_json(silent=True) or {}
+    query = data.get('query', '').strip()
+    if not query:
+        return jsonify({'error': 'query는 필수입니다.'}), 400
+
+    try:
+        rag = MultimodalRAG()
+        result = rag.query_multimodal(
+            query=query,
+            image_path=data.get('image_path'),
+            top_k=int(data.get('top_k', 5)),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return handle_error(e, '멀티모달 RAG 쿼리')
