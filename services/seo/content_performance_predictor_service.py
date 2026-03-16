@@ -4,9 +4,12 @@
 AI API 호출 없이 순수 규칙/통계 기반으로 동작합니다.
 """
 
+import logging
 import re
 import statistics
 
+
+logger = logging.getLogger(__name__)
 
 # 감정어 목록
 _EMOTION_WORDS = [
@@ -276,24 +279,28 @@ def predict_performance(content: str, title: str = '') -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    category_scores = {
-        "readability": _score_readability(content),
-        "engagement": _score_engagement(content),
-        "seo_signals": _score_seo_signals(content, title),
-        "structure": _score_structure(content),
-        "shareability": _score_shareability(content),
-    }
+        category_scores = {
+            "readability": _score_readability(content),
+            "engagement": _score_engagement(content),
+            "seo_signals": _score_seo_signals(content, title),
+            "structure": _score_structure(content),
+            "shareability": _score_shareability(content),
+        }
 
-    overall_score = sum(category_scores.values()) / len(category_scores)
-    strengths, weaknesses, suggestions = _classify_strengths_weaknesses(category_scores)
+        overall_score = sum(category_scores.values()) / len(category_scores)
+        strengths, weaknesses, suggestions = _classify_strengths_weaknesses(category_scores)
 
-    return {
-        "overall_score": round(overall_score, 1),
-        "grade": _map_grade(overall_score),
-        "category_scores": {k: round(v, 1) for k, v in category_scores.items()},
-        "prediction": _map_prediction(overall_score),
-        "strengths": strengths,
-        "weaknesses": weaknesses,
-        "suggestions": suggestions,
-    }
+        return {
+            "overall_score": round(overall_score, 1),
+            "grade": _map_grade(overall_score),
+            "category_scores": {k: round(v, 1) for k, v in category_scores.items()},
+            "prediction": _map_prediction(overall_score),
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "suggestions": suggestions,
+        }
+    except Exception as e:
+        logger.error(f"콘텐츠 성과 예측 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)

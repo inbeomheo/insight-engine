@@ -4,10 +4,13 @@ Entity Coverage Analyzer 서비스
 콘텐츠에서 엔터티(사람, 브랜드, 제품, 기술, 개념, 조직)를 규칙 기반으로 추출하고,
 관계(동시 등장)와 누락 엔터티를 분석합니다. AI API 호출 없이 동작합니다.
 """
+import logging
 import re
 from collections import Counter, defaultdict
 from typing import List, Dict, Any
 
+
+logger = logging.getLogger(__name__)
 
 # ── 알려진 엔터티 사전 ──────────────────────────────────────────────
 
@@ -312,38 +315,42 @@ def analyze_entities(content: str) -> dict:
     # 빈 콘텐츠 처리
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    # 엔터티 추출
-    entities = _extract_entities(content)
+        # 엔터티 추출
+        entities = _extract_entities(content)
 
-    # 단어 수 계산
-    word_count = _count_words(content)
+        # 단어 수 계산
+        word_count = _count_words(content)
 
-    # 엔터티 밀도 계산 (엔터티 수 / 전체 단어 수 × 100)
-    total_entity_mentions = sum(e["count"] for e in entities)
-    entity_density = (total_entity_mentions / word_count * 100) if word_count > 0 else 0.0
-    entity_density = round(entity_density, 2)
+        # 엔터티 밀도 계산 (엔터티 수 / 전체 단어 수 × 100)
+        total_entity_mentions = sum(e["count"] for e in entities)
+        entity_density = (total_entity_mentions / word_count * 100) if word_count > 0 else 0.0
+        entity_density = round(entity_density, 2)
 
-    # 타입 분포
-    type_distribution: Dict[str, int] = defaultdict(int)
-    for entity in entities:
-        type_distribution[entity["type"]] += 1
-    type_distribution = dict(type_distribution)
+        # 타입 분포
+        type_distribution: Dict[str, int] = defaultdict(int)
+        for entity in entities:
+            type_distribution[entity["type"]] += 1
+        type_distribution = dict(type_distribution)
 
-    # 관계 분석
-    relationships = _find_relationships(content, entities)
+        # 관계 분석
+        relationships = _find_relationships(content, entities)
 
-    # 커버리지 점수
-    coverage_score = _calculate_coverage_score(entities, type_distribution, entity_density)
+        # 커버리지 점수
+        coverage_score = _calculate_coverage_score(entities, type_distribution, entity_density)
 
-    # 제안 생성
-    suggestions = _generate_suggestions(entities, type_distribution, entity_density)
+        # 제안 생성
+        suggestions = _generate_suggestions(entities, type_distribution, entity_density)
 
-    return {
-        "entities": entities,
-        "entity_density": entity_density,
-        "type_distribution": type_distribution,
-        "relationships": relationships,
-        "coverage_score": coverage_score,
-        "suggestions": suggestions,
-    }
+        return {
+            "entities": entities,
+            "entity_density": entity_density,
+            "type_distribution": type_distribution,
+            "relationships": relationships,
+            "coverage_score": coverage_score,
+            "suggestions": suggestions,
+        }
+    except Exception as e:
+        logger.error(f"엔터티 분석 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)

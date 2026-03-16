@@ -5,9 +5,12 @@ VideoObject, FAQPage, Article 스키마를 생성하여
 AI 검색 엔진 최적화(GEO)를 지원합니다.
 """
 
+import logging
 import re
 from datetime import datetime, timezone
 
+
+logger = logging.getLogger(__name__)
 
 def _get_video_id(video_url: str) -> str | None:
     """YouTube URL에서 video_id를 추출합니다."""
@@ -113,47 +116,51 @@ def generate_article_schema(title: str, description: str = '', keywords: list[st
 
 
 def generate_all_schemas(
-    video_url: str,
-    title: str,
-    content: str,
-    faq_pairs: list[dict],
-    keywords: list[str] | None = None,
-    description: str = '',
-) -> list[dict]:
-    """모든 JSON-LD 스키마를 생성하여 리스트로 반환합니다.
+    try:
+        video_url: str,
+        title: str,
+        content: str,
+        faq_pairs: list[dict],
+        keywords: list[str] | None = None,
+        description: str = '',
+    ) -> list[dict]:
+        """모든 JSON-LD 스키마를 생성하여 리스트로 반환합니다.
 
-    Args:
-        video_url: YouTube 영상 URL
-        title: 콘텐츠 제목
-        content: 생성된 마크다운 본문 (설명 자동 추출용)
-        faq_pairs: FAQ Q&A 쌍 리스트
-        keywords: 키워드 리스트
-        description: 명시적 설명 (없으면 content 첫 문장에서 추출)
+        Args:
+            video_url: YouTube 영상 URL
+            title: 콘텐츠 제목
+            content: 생성된 마크다운 본문 (설명 자동 추출용)
+            faq_pairs: FAQ Q&A 쌍 리스트
+            keywords: 키워드 리스트
+            description: 명시적 설명 (없으면 content 첫 문장에서 추출)
 
-    Returns:
-        list[dict]: [VideoObject, FAQPage, Article] 스키마 리스트
-    """
-    # 설명이 없으면 본문 첫 비빈 줄에서 추출
-    if not description and content:
-        for line in content.split('\n'):
-            clean = line.strip().lstrip('#>-* ')
-            if clean and len(clean) > 20:
-                description = clean[:300]
-                break
+        Returns:
+            list[dict]: [VideoObject, FAQPage, Article] 스키마 리스트
+        """
+        # 설명이 없으면 본문 첫 비빈 줄에서 추출
+        if not description and content:
+            for line in content.split('\n'):
+                clean = line.strip().lstrip('#>-* ')
+                if clean and len(clean) > 20:
+                    description = clean[:300]
+                    break
 
-    schemas = []
+        schemas = []
 
-    # VideoObject (YouTube URL이 있을 때만 추가)
-    if video_url:
-        schemas.append(generate_video_object_schema(video_url, title, description))
+        # VideoObject (YouTube URL이 있을 때만 추가)
+        if video_url:
+            schemas.append(generate_video_object_schema(video_url, title, description))
 
-    # FAQPage (FAQ가 있을 때만 추가)
-    if faq_pairs:
-        faq_schema = generate_faq_page_schema(faq_pairs)
-        if faq_schema.get('mainEntity'):
-            schemas.append(faq_schema)
+        # FAQPage (FAQ가 있을 때만 추가)
+        if faq_pairs:
+            faq_schema = generate_faq_page_schema(faq_pairs)
+            if faq_schema.get('mainEntity'):
+                schemas.append(faq_schema)
 
-    # Article
-    schemas.append(generate_article_schema(title, description, keywords))
+        # Article
+        schemas.append(generate_article_schema(title, description, keywords))
 
-    return schemas
+        return schemas
+    except Exception as e:
+        logger.error(f"스키마 생성 처리 실패: {e}")
+        return []

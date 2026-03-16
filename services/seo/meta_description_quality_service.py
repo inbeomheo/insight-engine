@@ -5,9 +5,12 @@ Meta Description Quality Checker 서비스
 길이, 키워드 포함, 행동 유도 표현 등을 평가합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
 
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 
@@ -115,25 +118,27 @@ def check_meta_description_quality(content: str) -> dict:
     """
     if not content or not content.strip():
         return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
 
-    desc = _extract_description(content)
-    if not desc:
-        return {**_EMPTY_RESULT, 'suggestions': ['메타 디스크립션이나 도입 문단을 추가하세요.']}
+        desc = _extract_description(content)
+        if not desc:
+            return {**_EMPTY_RESULT, 'suggestions': ['메타 디스크립션이나 도입 문단을 추가하세요.']}
 
-    checks, score, quality = _evaluate_description(desc)
-    length = len(desc)
+        checks, score, quality = _evaluate_description(desc)
+        length = len(desc)
 
-    return {
-        'description': desc if len(desc) <= 200 else desc[:197] + '...',
-        'checks': checks,
-        'summary': {'length': length, 'quality_level': quality},
-        'score': score,
-        'suggestions': _generate_suggestions(
-            checks, length, checks['optimal_length'], length < 80, length > 200
-        ),
-    }
-
-
+        return {
+            'description': desc if len(desc) <= 200 else desc[:197] + '...',
+            'checks': checks,
+            'summary': {'length': length, 'quality_level': quality},
+            'score': score,
+            'suggestions': _generate_suggestions(
+                checks, length, checks['optimal_length'], length < 80, length > 200
+            ),
+        }
+    except Exception as e:
+        logger.error(f"메타 디스크립션 품질 점검 처리 실패: {e}")
+        return {**_EMPTY_RESULT, 'suggestions': ['분석 중 오류가 발생했습니다.']}
 def _generate_suggestions(checks: Dict, length: int, ok: bool, short: bool, long: bool) -> List[str]:
     suggestions = []
     if short:

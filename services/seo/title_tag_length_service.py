@@ -5,8 +5,11 @@ Title Tag Length Checker 서비스
 Google 검색 결과 표시 기준 (30-60자/영문, 15-30자/한글)으로 평가합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 _TITLE_TAG_RE = re.compile(r'<title>([^<]+)</title>', re.IGNORECASE)
@@ -108,29 +111,31 @@ def check_title_tag_length(content: str) -> dict:
     """
     if not content or not content.strip():
         return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
 
-    title = _extract_title(content)
-    if not title:
-        return {**_EMPTY_RESULT, 'score': 20.0,
-                'suggestions': ['제목이 없습니다. H1 또는 title 태그를 추가하세요.']}
+        title = _extract_title(content)
+        if not title:
+            return {**_EMPTY_RESULT, 'score': 20.0,
+                    'suggestions': ['제목이 없습니다. H1 또는 title 태그를 추가하세요.']}
 
-    is_korean = _is_korean_dominant(title)
-    checks, score, quality = _evaluate_title(title, is_korean)
-    length = len(title)
-    opt_min, opt_max = (15, 30) if is_korean else (30, 60)
+        is_korean = _is_korean_dominant(title)
+        checks, score, quality = _evaluate_title(title, is_korean)
+        length = len(title)
+        opt_min, opt_max = (15, 30) if is_korean else (30, 60)
 
-    return {
-        'title': title,
-        'checks': checks,
-        'summary': {'length': length, 'language': 'ko' if is_korean else 'en',
-                     'quality_level': quality},
-        'score': score,
-        'suggestions': _generate_suggestions(
-            title, length, is_korean, opt_min, opt_max, checks
-        ),
-    }
-
-
+        return {
+            'title': title,
+            'checks': checks,
+            'summary': {'length': length, 'language': 'ko' if is_korean else 'en',
+                         'quality_level': quality},
+            'score': score,
+            'suggestions': _generate_suggestions(
+                title, length, is_korean, opt_min, opt_max, checks
+            ),
+        }
+    except Exception as e:
+        logger.error(f"제목 태그 길이 점검 처리 실패: {e}")
+        return {**_EMPTY_RESULT, 'suggestions': ['분석 중 오류가 발생했습니다.']}
 def _check_keyword_front(title: str) -> bool:
     """핵심 키워드가 제목 앞부분(40%)에 있는지 추정합니다."""
     # 핵심 단어 = 가장 긴 단어 (명사 추정)

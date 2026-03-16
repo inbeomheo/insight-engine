@@ -5,9 +5,12 @@ URL Health Checker 서비스
 실제 HTTP 요청 없이 패턴 기반으로 검사합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
 from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 # URL 추출 패턴
 _URL_RE = re.compile(
@@ -126,27 +129,29 @@ def check_url_health(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    extracted = _extract_urls(content)
-    if not extracted:
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠에 URL이 없습니다.']}
+        extracted = _extract_urls(content)
+        if not extracted:
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠에 URL이 없습니다.']}
 
-    results, healthy, issues_count = _evaluate_urls(extracted)
-    total = len(results)
-    health_rate = round(healthy / total * 100, 1) if total > 0 else 100.0
-    score = round(max(0.0, min(100.0, health_rate)), 1)
+        results, healthy, issues_count = _evaluate_urls(extracted)
+        total = len(results)
+        health_rate = round(healthy / total * 100, 1) if total > 0 else 100.0
+        score = round(max(0.0, min(100.0, health_rate)), 1)
 
-    return {
-        'url_results': results[:30],
-        'summary': {
-            'total_urls': total, 'healthy': healthy,
-            'issues_found': issues_count, 'health_rate': health_rate,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(results, healthy, total, health_rate),
-    }
-
-
+        return {
+            'url_results': results[:30],
+            'summary': {
+                'total_urls': total, 'healthy': healthy,
+                'issues_found': issues_count, 'health_rate': health_rate,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(results, healthy, total, health_rate),
+        }
+    except Exception as e:
+        logger.error(f"URL 건강 상태 검사 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _evaluate_urls(extracted: List[Dict]) -> tuple:
     """추출된 URL 목록을 검사하여 (results, healthy, issues_count) 튜플을 반환합니다."""
     results = []

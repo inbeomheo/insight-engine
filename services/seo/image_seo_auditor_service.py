@@ -5,9 +5,12 @@ Image SEO Auditor 서비스
 SEO 관련 속성의 품질을 점검합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
 
+
+logger = logging.getLogger(__name__)
 
 # 마크다운 이미지: ![alt](url "title")
 _MD_IMAGE_RE = re.compile(
@@ -153,33 +156,35 @@ def audit_image_seo(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    images = _extract_images(content)
-    if not images:
-        return {**_EMPTY_RESULT, 'suggestions': ['이미지가 없습니다. 시각 자료를 추가하면 콘텐츠 품질이 향상됩니다.']}
+        images = _extract_images(content)
+        if not images:
+            return {**_EMPTY_RESULT, 'suggestions': ['이미지가 없습니다. 시각 자료를 추가하면 콘텐츠 품질이 향상됩니다.']}
 
-    missing_alt, generic_alt, short_alt, long_alt, good_alt, meaningless_fn, score = (
-        _compute_image_seo_score(images)
-    )
+        missing_alt, generic_alt, short_alt, long_alt, good_alt, meaningless_fn, score = (
+            _compute_image_seo_score(images)
+        )
 
-    suggestions = _generate_suggestions(
-        len(images), missing_alt, generic_alt, short_alt, long_alt, meaningless_fn
-    )
+        suggestions = _generate_suggestions(
+            len(images), missing_alt, generic_alt, short_alt, long_alt, meaningless_fn
+        )
 
-    return {
-        'images': images,
-        'summary': {
-            'total_images': len(images),
-            'missing_alt': missing_alt,
-            'generic_alt': generic_alt,
-            'good_alt': good_alt,
-            'meaningless_filename': meaningless_fn,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
-
-
+        return {
+            'images': images,
+            'summary': {
+                'total_images': len(images),
+                'missing_alt': missing_alt,
+                'generic_alt': generic_alt,
+                'good_alt': good_alt,
+                'meaningless_filename': meaningless_fn,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"이미지 SEO 감사 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(
     total: int, missing: int, generic: int, short: int, long: int, meaningless: int
 ) -> List[str]:

@@ -5,9 +5,12 @@ Content Freshness Indicator 서비스
 날짜 표현, 시간 참조, 최신 용어 사용 여부를 분석합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from datetime import datetime
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 # 날짜 패턴
 _DATE_PATTERNS = [
@@ -105,34 +108,38 @@ def check_content_freshness(content: str) -> dict:
     if not content or not content.strip():
         return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    current_year = datetime.now().year
-    date_refs, newest_year, time_signals, trend_count, outdated_count, outdated_matches = \
-        _collect_freshness_signals(content)
+    try:
+        current_year = datetime.now().year
+        date_refs, newest_year, time_signals, trend_count, outdated_count, outdated_matches = \
+            _collect_freshness_signals(content)
 
-    level = _determine_level(newest_year, current_year, time_signals,
-                              trend_count, outdated_count)
+        level = _determine_level(newest_year, current_year, time_signals,
+                                  trend_count, outdated_count)
 
-    return {
-        'date_references': list(set(date_refs))[:20],
-        'time_signals': time_signals,
-        'freshness_indicators': {
-            'trend_keywords': trend_count,
-            'outdated_terms': outdated_count,
-            'recent_signals': time_signals.get('recent', 0),
-            'outdated_signals': time_signals.get('outdated', 0),
-        },
-        'summary': {
-            'has_dates': len(date_refs) > 0,
-            'newest_year': newest_year,
-            'freshness_level': level,
-        },
-        'score': _calculate_score(newest_year, current_year, time_signals,
-                                   trend_count, outdated_count),
-        'suggestions': _generate_suggestions(
-            newest_year, current_year, date_refs, time_signals,
-            trend_count, outdated_count, outdated_matches, level
-        ),
-    }
+        return {
+            'date_references': list(set(date_refs))[:20],
+            'time_signals': time_signals,
+            'freshness_indicators': {
+                'trend_keywords': trend_count,
+                'outdated_terms': outdated_count,
+                'recent_signals': time_signals.get('recent', 0),
+                'outdated_signals': time_signals.get('outdated', 0),
+            },
+            'summary': {
+                'has_dates': len(date_refs) > 0,
+                'newest_year': newest_year,
+                'freshness_level': level,
+            },
+            'score': _calculate_score(newest_year, current_year, time_signals,
+                                       trend_count, outdated_count),
+            'suggestions': _generate_suggestions(
+                newest_year, current_year, date_refs, time_signals,
+                trend_count, outdated_count, outdated_matches, level
+            ),
+        }
+    except Exception as e:
+        logger.error(f"콘텐츠 시의성 평가 처리 실패: {e}")
+        return {**_EMPTY_RESULT, 'suggestions': ['분석 중 오류가 발생했습니다.']}
 
 
 def _determine_level(newest: int, current: int, signals: Dict,

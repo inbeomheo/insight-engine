@@ -5,9 +5,12 @@ Keyword Stuffing Detector 서비스
 SEO 스팸 판정 기준으로 키워드 밀도를 분석합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from collections import Counter
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 _MD_LINK_RE = re.compile(r'\[([^\]]+)\]\([^)]+\)')
@@ -84,36 +87,38 @@ def detect_keyword_stuffing(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    all_words = _extract_words(content)
-    if not all_words:
+        all_words = _extract_words(content)
+        if not all_words:
+            return dict(_EMPTY_RESULT)
+
+        total = len(all_words)
+        counter = Counter(all_words)
+        keyword_density, stuffed, warned = _analyze_density(counter, total)
+
+        max_density = keyword_density[0]['density'] if keyword_density else 0.0
+        score = 100.0
+        for s in stuffed:
+            score -= (s['density'] - _STUFFING_THRESHOLD) * 10 + 10
+        for w in warned:
+            score -= 5.0
+
+        return {
+            'keyword_density': keyword_density,
+            'stuffed_keywords': stuffed,
+            'summary': {
+                'total_words': total,
+                'unique_keywords': len(counter),
+                'max_density': max_density,
+                'stuffing_detected': len(stuffed) > 0,
+            },
+            'score': round(max(0.0, min(100.0, score)), 1),
+            'suggestions': _generate_suggestions(stuffed, warned, max_density),
+        }
+    except Exception as e:
+        logger.error(f"키워드 스터핑 감지 처리 실패: {e}")
         return dict(_EMPTY_RESULT)
-
-    total = len(all_words)
-    counter = Counter(all_words)
-    keyword_density, stuffed, warned = _analyze_density(counter, total)
-
-    max_density = keyword_density[0]['density'] if keyword_density else 0.0
-    score = 100.0
-    for s in stuffed:
-        score -= (s['density'] - _STUFFING_THRESHOLD) * 10 + 10
-    for w in warned:
-        score -= 5.0
-
-    return {
-        'keyword_density': keyword_density,
-        'stuffed_keywords': stuffed,
-        'summary': {
-            'total_words': total,
-            'unique_keywords': len(counter),
-            'max_density': max_density,
-            'stuffing_detected': len(stuffed) > 0,
-        },
-        'score': round(max(0.0, min(100.0, score)), 1),
-        'suggestions': _generate_suggestions(stuffed, warned, max_density),
-    }
-
-
 def _generate_suggestions(stuffed: List[Dict], warned: List[Dict],
                            max_density: float) -> List[str]:
     suggestions = []
