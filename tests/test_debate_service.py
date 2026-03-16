@@ -3,6 +3,7 @@ import unittest
 
 from services.content.debate_service import (
     generate_debate,
+    analyze_debate_balance,
     _extract_points,
     _generate_questions,
 )
@@ -91,6 +92,62 @@ class TestGenerateQuestions(unittest.TestCase):
         questions = _generate_questions('블록체인')
         self.assertEqual(len(questions), 3)
         self.assertTrue(all('블록체인' in q for q in questions))
+
+
+class TestAnalyzeDebateBalance(unittest.TestCase):
+    """analyze_debate_balance 테스트"""
+
+    def test_balanced_debate(self):
+        """균형 잡힌 토론 결과 분석"""
+        result = generate_debate('인공지능 도입')
+        analysis = analyze_debate_balance(result)
+        self.assertIn('balance_score', analysis)
+        self.assertIn('intensity_score', analysis)
+        self.assertIn('per_stance', analysis)
+        self.assertIn('verdict', analysis)
+
+    def test_balance_score_range(self):
+        """균형 점수는 0~100 범위"""
+        result = generate_debate('원격 근무')
+        analysis = analyze_debate_balance(result)
+        self.assertGreaterEqual(analysis['balance_score'], 0.0)
+        self.assertLessEqual(analysis['balance_score'], 100.0)
+
+    def test_intensity_score_range(self):
+        """강도 점수는 0~100 범위"""
+        result = generate_debate('AI 규제')
+        analysis = analyze_debate_balance(result)
+        self.assertGreaterEqual(analysis['intensity_score'], 0.0)
+        self.assertLessEqual(analysis['intensity_score'], 100.0)
+
+    def test_per_stance_includes_all(self):
+        """per_stance에 3개 관점 모두 포함"""
+        result = generate_debate('블록체인')
+        analysis = analyze_debate_balance(result)
+        self.assertIn('pro', analysis['per_stance'])
+        self.assertIn('con', analysis['per_stance'])
+        self.assertIn('neutral', analysis['per_stance'])
+
+    def test_empty_perspectives(self):
+        """빈 관점 목록 처리"""
+        analysis = analyze_debate_balance({'perspectives': []})
+        self.assertEqual(analysis['balance_score'], 0.0)
+        self.assertEqual(analysis['intensity_score'], 0.0)
+
+    def test_verdict_is_string(self):
+        """verdict는 비어있지 않은 문자열"""
+        result = generate_debate('기후 변화')
+        analysis = analyze_debate_balance(result)
+        self.assertIsInstance(analysis['verdict'], str)
+        self.assertGreater(len(analysis['verdict']), 0)
+
+    def test_per_stance_has_counts(self):
+        """per_stance 항목에 point_count, char_count 포함"""
+        result = generate_debate('교육 혁신')
+        analysis = analyze_debate_balance(result)
+        for stance_data in analysis['per_stance'].values():
+            self.assertIn('point_count', stance_data)
+            self.assertIn('char_count', stance_data)
 
 
 if __name__ == '__main__':

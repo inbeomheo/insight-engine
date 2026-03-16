@@ -175,6 +175,81 @@ def _generate_conclusion(topic: str) -> str:
     )
 
 
+def analyze_debate_balance(debate_result: dict) -> dict:
+    """토론 결과의 관점 균형을 분석합니다.
+
+    각 관점의 논거 수, 논거 길이, 토론 강도 점수를 계산하여
+    토론이 얼마나 균형 잡혀 있는지 평가합니다.
+
+    Args:
+        debate_result: generate_debate()의 반환값
+
+    Returns:
+        {
+            "balance_score": float (0-100),
+            "intensity_score": float (0-100),
+            "per_stance": { "pro": {...}, "con": {...}, "neutral": {...} },
+            "verdict": str,
+        }
+    """
+    perspectives = debate_result.get('perspectives', [])
+    if not perspectives:
+        return {
+            'balance_score': 0.0,
+            'intensity_score': 0.0,
+            'per_stance': {},
+            'verdict': '관점이 없어 분석할 수 없습니다.',
+        }
+
+    per_stance = {}
+    point_counts = []
+    total_chars = 0
+
+    for p in perspectives:
+        stance = p.get('stance', 'unknown')
+        key_points = p.get('key_points', [])
+        summary = p.get('summary', '')
+        considerations = p.get('considerations', '')
+
+        char_count = len(summary) + sum(len(kp) for kp in key_points) + len(considerations)
+        total_chars += char_count
+        point_counts.append(len(key_points))
+
+        per_stance[stance] = {
+            'point_count': len(key_points),
+            'char_count': char_count,
+        }
+
+    # 균형 점수: 논거 수 편차가 작을수록 높음
+    if point_counts:
+        avg_points = sum(point_counts) / len(point_counts)
+        max_deviation = max(abs(c - avg_points) for c in point_counts) if avg_points > 0 else 0
+        balance_score = round(max(0.0, 100.0 - max_deviation * 25), 1)
+    else:
+        balance_score = 0.0
+
+    # 강도 점수: 논거 총량과 토론 질문 수 기반
+    questions = debate_result.get('discussion_questions', [])
+    intensity_base = min(100.0, total_chars / 10.0)
+    question_bonus = min(20.0, len(questions) * 5.0)
+    intensity_score = round(min(100.0, intensity_base + question_bonus), 1)
+
+    # 판정
+    if balance_score >= 80:
+        verdict = '균형 잡힌 토론입니다. 모든 관점이 적절히 다루어졌습니다.'
+    elif balance_score >= 50:
+        verdict = '대체로 균형 잡혀 있으나, 일부 관점의 논거를 보강하면 좋겠습니다.'
+    else:
+        verdict = '관점 간 불균형이 있습니다. 소외된 관점의 논거를 추가하세요.'
+
+    return {
+        'balance_score': balance_score,
+        'intensity_score': intensity_score,
+        'per_stance': per_stance,
+        'verdict': verdict,
+    }
+
+
 def _extract_points(content: str) -> list:
     """콘텐츠에서 핵심 문장을 추출합니다."""
     if not content:
