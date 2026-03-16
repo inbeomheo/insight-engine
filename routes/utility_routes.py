@@ -3,6 +3,7 @@
 """
 import json
 import os
+import threading
 import time
 from typing import Dict
 
@@ -24,6 +25,29 @@ _SERVER_START_TIME: float = time.time()
 _PLAYLIST_CACHE: Dict[str, dict] = {}
 _PLAYLIST_CACHE_TTL: int = 300  # 초
 
+# 현재 처리 중인 요청 수 (active_requests 카운터)
+_active_requests_counter: int = 0
+_active_requests_lock = threading.Lock()
+
+
+def increment_active_requests():
+    """활성 요청 수 증가."""
+    global _active_requests_counter
+    with _active_requests_lock:
+        _active_requests_counter += 1
+
+
+def decrement_active_requests():
+    """활성 요청 수 감소."""
+    global _active_requests_counter
+    with _active_requests_lock:
+        _active_requests_counter = max(0, _active_requests_counter - 1)
+
+
+def get_active_requests() -> int:
+    """현재 활성 요청 수 반환."""
+    return _active_requests_counter
+
 
 def _cleanup_stale_clients():
     """5분 이상 heartbeat 없는 클라이언트 정리."""
@@ -37,7 +61,8 @@ def _cleanup_stale_clients():
 def health():
     """헬스체크 엔드포인트 (Railway/Docker용)"""
     uptime = round(time.time() - _SERVER_START_TIME, 1)
-    return jsonify({'status': 'healthy', 'uptime_seconds': uptime}), 200
+    env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env}), 200
 
 
 @blog_bp.route('/api/health/detailed')
@@ -114,6 +139,9 @@ def health_detailed():
         }
     except Exception:
         checks['disk_usage'] = {'cache_dir': '', 'size_bytes': 0, 'size_mb': 0.0}
+
+    # 현재 활성 요청 수
+    checks['active_requests'] = get_active_requests()
 
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])
@@ -3492,6 +3520,19 @@ def content_stats():
         # 헤딩 수: 마크다운 # 기준
         heading_count = len(_re.findall(r'^#{1,6}\s+\S', content, _re.MULTILINE))
 
+        # 키워드 밀도: 상위 5개 단어 + 빈도 (1글자 이하, 불용어 제외)
+        _stopwords = {'은', '는', '이', '가', '을', '를', '의', '에', '와', '과',
+                      '도', '로', '으로', '에서', '까지', '부터', '하고', '한',
+                      '된', '및', '또는', '그', '더', '수', '것', '등', '때',
+                      'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on',
+                      'at', 'to', 'for', 'of', 'and', 'or', 'but', 'with', 'as'}
+        _kw_words = [w.lower() for w in words if len(w) > 1 and w.lower() not in _stopwords]
+        _freq: dict = {}
+        for _w in _kw_words:
+            _freq[_w] = _freq.get(_w, 0) + 1
+        _top5 = sorted(_freq.items(), key=lambda x: x[1], reverse=True)[:5]
+        keyword_density = [{'keyword': k, 'count': c} for k, c in _top5]
+
         return jsonify({
             'char_count': char_count,
             'word_count': word_count,
@@ -3500,6 +3541,7 @@ def content_stats():
             'avg_sentence_length': round(char_count / sentence_count, 1),
             'paragraph_count': paragraph_count,
             'heading_count': heading_count,
+            'keyword_density': keyword_density,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
@@ -3565,11 +3607,13 @@ def prompts_info():
     style_info = []
     for style_id, label in STYLE_OPTIONS:
         prompt_text = STYLE_PROMPTS.get(style_id, '')
+        forbidden_count = sum(1 for expr in FORBIDDEN_EXPRESSIONS if expr in prompt_text)
         style_info.append({
             'id': style_id,
             'label': label,
             'prompt_length': len(prompt_text),
             'has_examples': '예시' in prompt_text or '예:' in prompt_text,
+            'forbidden_count': forbidden_count,
         })
 
     return jsonify({
