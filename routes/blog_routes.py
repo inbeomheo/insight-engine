@@ -287,6 +287,7 @@ def generate():
                 'style_label': _get_style_label(params['style']),
                 'cached': False,
                 'comment_summary_included': False,
+                'has_code_blocks': bool('```' in result.get('content', '') or '<code>' in result.get('content', '')),
                 'quota': get_usage_for_response(),
             })
 
@@ -351,6 +352,7 @@ def generate():
                     'style_label': _get_style_label(params['style']),
                     'cached': False,
                     'comment_summary_included': False,
+                    'has_code_blocks': bool('```' in result.get('content', '') or '<code>' in result.get('content', '')),
                     'quota': get_usage_for_response(),
                 })
 
@@ -394,6 +396,7 @@ def generate():
                 'style_label': _get_style_label(params['style']),
                 'cached': False,
                 'comment_summary_included': False,
+                'has_code_blocks': bool('```' in result.get('content', '') or '<code>' in result.get('content', '')),
                 'quota': get_usage_for_response(),
             })
 

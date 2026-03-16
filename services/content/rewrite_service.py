@@ -1,5 +1,6 @@
 """플랫폼별 카피 변환 서비스"""
 import logging
+import re as _re
 from services.core import ai_service
 from config import PLATFORM_PRESETS
 
@@ -55,6 +56,9 @@ def rewrite_for_platform(content: str, platform: str, model: str) -> dict:
         rewritten_len = len(text)
         compression_ratio = round(rewritten_len / original_len, 4) if original_len > 0 else 0.0
 
+        # 생성된 해시태그 수
+        hashtag_count = len(_re.findall(r'#\S+', text))
+
         return {
             'platform': platform,
             'text': text,
@@ -62,6 +66,7 @@ def rewrite_for_platform(content: str, platform: str, model: str) -> dict:
             'max_chars': preset['max_chars'],
             'compression_ratio': compression_ratio,
             'platform_limits': get_platform_limits(platform),
+            'hashtag_count': hashtag_count,
         }
     except Exception as e:
         logger.error(f"플랫폼 리라이트 처리 실패: {e}")

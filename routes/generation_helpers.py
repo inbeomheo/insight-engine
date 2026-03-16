@@ -482,6 +482,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "char_count": _char_count,
         "word_count": len(_content_text.split()) if _content_text else 0,
         "reading_time_min": _reading_time_min,
+        "has_code_blocks": bool('```' in _content_text or '<code>' in _content_text),
     }
 
     from routes.blog_routes import _get_style_label
