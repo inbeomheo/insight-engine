@@ -471,9 +471,13 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
 
     # 콘텐츠 통계 (프론트엔드 카드 메타 칩용)
     _content_text = result.get('content', '')
+    _char_count = len(_content_text)
+    # 한국어 기준 분당 500자, 최소 1분
+    _reading_time_min = max(1, round(_char_count / 500)) if _char_count > 0 else 0
     _content_stats = {
-        "char_count": len(_content_text),
+        "char_count": _char_count,
         "word_count": len(_content_text.split()) if _content_text else 0,
+        "reading_time_min": _reading_time_min,
     }
 
     return jsonify({
