@@ -337,6 +337,21 @@ def generate_fusion():
         return handle_error(str(e))
 
 
+@blog_bp.route('/api/rewrite/platforms')
+def rewrite_platforms():
+    """지원하는 리라이트 플랫폼 목록을 반환합니다."""
+    from config import PLATFORM_PRESETS
+    platforms = []
+    for name, preset in PLATFORM_PRESETS.items():
+        platforms.append({
+            'name': name,
+            'max_chars': preset['max_chars'],
+            'tone': preset['tone'],
+            'format': preset['format'],
+        })
+    return jsonify({'available_platforms': platforms})
+
+
 @blog_bp.route('/api/rewrite', methods=['POST'])
 @require_auth
 @require_usage

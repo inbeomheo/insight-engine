@@ -282,6 +282,7 @@ def generate():
                 **result,
                 'elapsed_time': elapsed_time,
                 'prompt': used_prompt,
+                'prompt_length': len(used_prompt) if used_prompt else 0,
                 'transcript_source': 'direct_input',
                 'style_label': _get_style_label(params['style']),
                 'cached': False,
@@ -460,6 +461,7 @@ def generate():
                 **result,
                 'id': report_id,
                 'prompt': used_prompt,
+                'prompt_length': len(used_prompt) if used_prompt else 0,
                 'elapsed_time': elapsed_time,
                 'source_type': source_type,
                 'source_title': source_title,
@@ -1524,6 +1526,7 @@ def get_structured_transcript(video_id):
 
     result = {
         'sentences': sentences,
+        'sentence_count': len(sentences),
         'video_id': video_id,
         'source': source,
     }
