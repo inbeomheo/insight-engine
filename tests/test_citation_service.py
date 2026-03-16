@@ -20,6 +20,38 @@ class TestTimestampToSeconds(unittest.TestCase):
     def test_zero(self):
         self.assertEqual(_timestamp_to_seconds('0:00'), 0)
 
+    def test_decimal_seconds_mm_ss(self):
+        """소수점 초 (일부 자막 형식)를 정수로 변환"""
+        self.assertEqual(_timestamp_to_seconds('1:30.5'), 90)
+
+    def test_decimal_seconds_hh_mm_ss(self):
+        """HH:MM:SS.ms 형식의 소수점 초"""
+        self.assertEqual(_timestamp_to_seconds('0:01:30.9'), 90)
+
+    def test_invalid_empty_string(self):
+        """빈 문자열은 0 반환"""
+        self.assertEqual(_timestamp_to_seconds(''), 0)
+
+    def test_single_number(self):
+        """콜론 없는 숫자는 0 반환"""
+        self.assertEqual(_timestamp_to_seconds('30'), 0)
+
+    def test_four_parts(self):
+        """4개 파트는 0 반환"""
+        self.assertEqual(_timestamp_to_seconds('1:2:3:4'), 0)
+
+    def test_seconds_out_of_range(self):
+        """초가 60 이상이면 0 반환"""
+        self.assertEqual(_timestamp_to_seconds('1:60'), 0)
+
+    def test_minutes_out_of_range_in_hhmmss(self):
+        """HH:MM:SS에서 분이 60 이상이면 0 반환"""
+        self.assertEqual(_timestamp_to_seconds('1:60:00'), 0)
+
+    def test_non_numeric(self):
+        """문자열이 포함된 경우 0 반환"""
+        self.assertEqual(_timestamp_to_seconds('ab:cd'), 0)
+
 
 class TestParseCitations(unittest.TestCase):
     """parse_citations 테스트"""
@@ -81,34 +113,34 @@ class TestEnrichWithLinks(unittest.TestCase):
 
     def test_markdown_link(self):
         """마크다운 링크 변환"""
-        result = enrich_content_with_links('참조 [02:30] 입니다', 'abc123')
-        self.assertIn('https://youtube.com/watch?v=abc123&t=150s', result)
+        result = enrich_content_with_links('참조 [02:30] 입니다', 'dQw4w9WgXcQ')
+        self.assertIn('https://youtube.com/watch?v=dQw4w9WgXcQ&t=150s', result)
 
     def test_html_link(self):
         """HTML 링크 변환"""
-        result = enrich_html_with_links('<p>[01:00] 내용</p>', 'xyz')
-        self.assertIn('<a href="https://youtube.com/watch?v=xyz&t=60s"', result)
+        result = enrich_html_with_links('<p>[01:00] 내용</p>', 'dQw4w9WgXcQ')
+        self.assertIn('<a href="https://youtube.com/watch?v=dQw4w9WgXcQ&t=60s"', result)
         self.assertIn('target="_blank"', result)
 
     def test_no_citations_unchanged(self):
         """인용 없으면 변경 없음"""
         text = '일반 텍스트'
-        self.assertEqual(enrich_content_with_links(text, 'id'), text)
+        self.assertEqual(enrich_content_with_links(text, 'dQw4w9WgXcQ'), text)
 
     def test_html_no_double_wrap(self):
         """HTML 이중 변환 방지: 이미 <a> 태그 내부의 마커는 건너뜀"""
         html = '<p>[03:25] 내용</p>'
-        result1 = enrich_html_with_links(html, 'vid1')
+        result1 = enrich_html_with_links(html, 'dQw4w9WgXcQ')
         self.assertIn('<a href=', result1)
         # 2차 변환 시 동일해야 함
-        result2 = enrich_html_with_links(result1, 'vid1')
+        result2 = enrich_html_with_links(result1, 'dQw4w9WgXcQ')
         self.assertEqual(result1, result2)
 
     def test_html_mixed_linked_and_plain(self):
         """HTML에서 이미 링크된 마커와 새 마커가 혼재"""
         html = ('<a href="url" class="citation-link">[01:00]</a> '
                 '그리고 [02:00] 도 있음')
-        result = enrich_html_with_links(html, 'abc')
+        result = enrich_html_with_links(html, 'dQw4w9WgXcQ')
         # [01:00]은 이미 링크 → 그대로, [02:00]만 새로 변환
         self.assertEqual(result.count('<a href='), 2)
 
@@ -166,14 +198,14 @@ class TestEnrichContentSkipsExisting(unittest.TestCase):
     def test_already_linked_not_doubled(self):
         """이미 마크다운 링크인 마커는 건너뜀"""
         content = '참조 [02:30](https://youtube.com/watch?v=abc&t=150s) 입니다'
-        result = enrich_content_with_links(content, 'abc123')
+        result = enrich_content_with_links(content, 'dQw4w9WgXcQ')
         # 이미 링크가 있으므로 이중 변환되지 않아야 함
         self.assertNotIn('[[02:30]', result)
 
     def test_plain_marker_still_converted(self):
         """일반 마커는 정상 변환"""
         content = '참조 [02:30] 입니다'
-        result = enrich_content_with_links(content, 'abc123')
+        result = enrich_content_with_links(content, 'dQw4w9WgXcQ')
         self.assertIn('https://youtube.com/watch?v=abc123&t=150s', result)
 
 

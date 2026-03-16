@@ -11,10 +11,38 @@ from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
+# YouTube video_id 형식: 11자 영숫자 + 하이픈 + 언더스코어
+_VIDEO_ID_RE = re.compile(r'^[A-Za-z0-9_-]{11}$')
+
 # [MM:SS] 또는 [HH:MM:SS] 패턴
 _CITATION_PATTERN = re.compile(
     r'\[(\d{1,2}:\d{2}(?::\d{2})?)\]'
 )
+
+# 이미 마크다운 링크로 변환된 인용 마커 (모듈 레벨 사전 컴파일)
+_ALREADY_LINKED_RE = re.compile(
+    r'\[\[(\d{1,2}:\d{2}(?::\d{2})?)\]\]\(https?://[^\)]+\)'
+)
+
+# 이미 <a> 태그 내부의 마커 (모듈 레벨 사전 컴파일)
+_INSIDE_A_TAG_RE = re.compile(r'<a\b[^>]*>.*?</a>', re.DOTALL)
+
+
+def _validate_video_id(video_id: str) -> str:
+    """video_id 형식을 검증하여 XSS/인젝션을 방지합니다.
+
+    Args:
+        video_id: YouTube 비디오 ID
+
+    Returns:
+        검증된 video_id
+
+    Raises:
+        ValueError: 유효하지 않은 video_id 형식
+    """
+    if not video_id or not _VIDEO_ID_RE.match(video_id):
+        raise ValueError(f"유효하지 않은 video_id 형식: {video_id!r}")
+    return video_id
 
 
 def _timestamp_to_seconds(ts: str) -> int:
@@ -29,12 +57,12 @@ def _timestamp_to_seconds(ts: str) -> int:
     parts = ts.split(':')
     try:
         if len(parts) == 2:
-            minutes, seconds = int(parts[0]), int(parts[1])
+            minutes, seconds = int(parts[0]), int(float(parts[1]))
             if seconds < 0 or seconds >= 60 or minutes < 0:
                 return 0
             return minutes * 60 + seconds
         elif len(parts) == 3:
-            hours, minutes, seconds = int(parts[0]), int(parts[1]), int(parts[2])
+            hours, minutes, seconds = int(parts[0]), int(parts[1]), int(float(parts[2]))
             if seconds < 0 or seconds >= 60 or minutes < 0 or minutes >= 60 or hours < 0:
                 return 0
             return hours * 3600 + minutes * 60 + seconds
@@ -82,6 +110,8 @@ def parse_citations(content: str) -> List[Dict]:
     except Exception as e:
         logger.error(f"인용 마커 파싱 처리 실패: {e}")
         return []
+
+
 def validate_citations(
     citations: List[Dict],
     transcript_segments: List[Dict],
@@ -187,13 +217,14 @@ def enrich_content_with_links(content: str, video_id: str) -> str:
 
     Returns:
         링크가 삽입된 마크다운 콘텐츠
+
+    Raises:
+        ValueError: 유효하지 않은 video_id 형식
     """
+    video_id = _validate_video_id(video_id)
     # 이미 링크화된 마커를 건너뛰기 위해 위치 기반 필터링
-    _ALREADY_LINKED = re.compile(
-        r'\[\[(\d{1,2}:\d{2}(?::\d{2})?)\]\]\(https?://[^\)]+\)'
-    )
     linked_positions = set()
-    for m in _ALREADY_LINKED.finditer(content):
+    for m in _ALREADY_LINKED_RE.finditer(content):
         linked_positions.add(m.start() + 1)  # 내부 '[' 위치
 
     def _replace(match: re.Match) -> str:
@@ -223,10 +254,13 @@ def enrich_html_with_links(html_content: str, video_id: str) -> str:
 
     Returns:
         링크가 삽입된 HTML 문자열
+
+    Raises:
+        ValueError: 유효하지 않은 video_id 형식
     """
+    video_id = _validate_video_id(video_id)
     # 이미 <a> 태그 내부에 있는 마커 위치를 수집
-    _INSIDE_A_TAG = re.compile(r'<a\b[^>]*>.*?</a>', re.DOTALL)
-    linked_ranges = [(m.start(), m.end()) for m in _INSIDE_A_TAG.finditer(html_content)]
+    linked_ranges = [(m.start(), m.end()) for m in _INSIDE_A_TAG_RE.finditer(html_content)]
 
     def _is_inside_link(pos: int) -> bool:
         return any(start <= pos < end for start, end in linked_ranges)
