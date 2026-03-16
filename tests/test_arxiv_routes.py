@@ -34,7 +34,7 @@ class TestArxivRoutes(unittest.TestCase):
         self.assertEqual(data['count'], 1)
         self.assertEqual(len(data['papers']), 1)
         self.assertEqual(data['total_results'], 12345)
-        mock_search.assert_called_once_with('transformer', max_results=3)
+        mock_search.assert_called_once_with('transformer', max_results=3, sort_by='relevance')
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.data.arxiv_service.search_papers')

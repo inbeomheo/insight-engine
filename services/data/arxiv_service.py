@@ -208,12 +208,13 @@ def fetch_paper_fulltext(arxiv_id: str) -> Dict:
     return paper
 
 
-def search_papers(query: str, max_results: int = 5) -> Dict:
+def search_papers(query: str, max_results: int = 5, sort_by: str = "relevance") -> Dict:
     """arXiv에서 논문을 검색합니다.
 
     Args:
         query: 검색어 (예: 'machine learning transformer')
         max_results: 최대 결과 수 (기본 5, 최대 20)
+        sort_by: 정렬 기준 ('relevance', 'lastUpdatedDate', 'submittedDate')
 
     Returns:
         {"papers": List[Dict], "total_results": int}
@@ -223,11 +224,14 @@ def search_papers(query: str, max_results: int = 5) -> Dict:
     """
     try:
         max_results = min(max_results, 20)
+        _valid_sorts = ("relevance", "lastUpdatedDate", "submittedDate")
+        if sort_by not in _valid_sorts:
+            sort_by = "relevance"
         params = {
             "search_query": f"all:{query}",
             "start": 0,
             "max_results": max_results,
-            "sortBy": "relevance",
+            "sortBy": sort_by,
             "sortOrder": "descending",
         }
 
