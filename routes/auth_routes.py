@@ -909,7 +909,7 @@ def admin_dashboard():
 
         # 히스토리 통계
         histories = supabase.table('ie_histories') \
-            .select('created_at,style,elapsed_time,success') \
+            .select('created_at,style,elapsed_time,success,content') \
             .gte('created_at', week_ago) \
             .execute()
 
@@ -917,15 +917,22 @@ def admin_dashboard():
         total = len(items)
         success_count = sum(1 for i in items if i.get('success', True))
 
-        # 스타일 분포
+        # 스타일 분포 + 콘텐츠 길이 집계
         style_dist = {}
         total_time = 0
+        total_content_length = 0
+        content_count = 0
         for item in items:
             s = item.get('style', 'unknown')
             style_dist[s] = style_dist.get(s, 0) + 1
             total_time += float(item.get('elapsed_time', 0) or 0)
+            content = item.get('content') or ''
+            if content:
+                total_content_length += len(content)
+                content_count += 1
 
         avg_time = round(total_time / total, 2) if total > 0 else 0
+        avg_content_length = round(total_content_length / content_count) if content_count > 0 else 0
 
         # 사용량 통계
         usage_data = supabase.table('ie_usage') \
@@ -949,6 +956,7 @@ def admin_dashboard():
             'success_rate': round(success_count / total * 100, 1) if total > 0 else 0,
             'avg_time': avg_time,
             'avg_generation_time': avg_time,
+            'avg_content_length': avg_content_length,
             'style_distribution': style_dist,
             'top_styles': top_styles,
             'daily_usage': daily_usage,

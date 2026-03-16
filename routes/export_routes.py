@@ -29,12 +29,19 @@ def export_docx():
 
         include_toc = data.get('include_toc', False)
 
+        # font_size 옵션: small(9pt), medium(11pt, 기본), large(14pt)
+        font_size_map = {'small': 9, 'medium': 11, 'large': 14}
+        font_size_label = data.get('font_size', 'medium')
+        if font_size_label not in font_size_map:
+            font_size_label = 'medium'
+        font_size_pt = font_size_map[font_size_label]
+
         doc = Document()
 
         # 기본 스타일 설정
         style = doc.styles['Normal']
         style.font.name = 'Malgun Gothic'
-        style.font.size = Pt(11)
+        style.font.size = Pt(font_size_pt)
         style.paragraph_format.line_spacing = 1.5
 
         # 제목

@@ -3449,7 +3449,7 @@ def github_readme():
 @blog_bp.route('/api/styles')
 def list_styles():
     """사용 가능한 전체 스타일 목록 + 메타데이터 반환."""
-    from config import STYLE_OPTIONS, STYLE_TEMPERATURE, STYLE_MODIFIERS
+    from config import STYLE_OPTIONS, STYLE_TEMPERATURE, STYLE_MODIFIERS, STYLE_DESCRIPTIONS
 
     styles = []
     for style_id, label in STYLE_OPTIONS:
@@ -3457,6 +3457,7 @@ def list_styles():
             'id': style_id,
             'label': label,
             'temperature': STYLE_TEMPERATURE.get(style_id, 0.7),
+            'description': STYLE_DESCRIPTIONS.get(style_id, ''),
         })
 
     return jsonify({
@@ -3560,6 +3561,7 @@ def app_version():
     # Git 커밋 해시
     git_hash = 'unknown'
     git_date = 'unknown'
+    last_commit_message = ''
     try:
         git_hash = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
@@ -3569,6 +3571,10 @@ def app_version():
             ['git', 'log', '-1', '--format=%ci'],
             stderr=subprocess.DEVNULL, timeout=5
         ).decode().strip()[:10]
+        last_commit_message = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%s'],
+            stderr=subprocess.DEVNULL, timeout=5
+        ).decode().strip()
     except Exception:
         pass
 
@@ -3587,6 +3593,7 @@ def app_version():
         'version': '2.0.0',
         'git_hash': git_hash,
         'git_date': git_date,
+        'last_commit_message': last_commit_message,
         'services': service_count,
         'routes': route_count,
         'python': os.sys.version.split()[0],
