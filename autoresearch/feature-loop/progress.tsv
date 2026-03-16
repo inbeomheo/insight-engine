@@ -1,0 +1,11 @@
+round	feature	status	passed_tests	files_changed	commit
+1	arXiv 논문 검색/조회 API 연결	keep	3404	2	255c2de
+2	상세 헬스체크 API	keep	3408	2	26a18f7
+3	API 응답 시간 로깅 미들웨어	keep	3411	2	37a65e9
+4	GitHub README 추출 API	keep	3414	2	56a70cc
+5	스타일 목록 API	keep	3418	2	25ffa9b
+6	캐시 통계 API	keep	3421	2	82e8bbd
+7	HTML 내보내기 API	keep	3424	2	bbd43b0
+8	콘텐츠 통계 분석 API	keep	3427	2	1467ebe
+9	앱 버전 정보 API	keep	3430	2	5e2b2da
+10	프롬프트 시스템 정보 API	keep	3433	2	e9b5698
