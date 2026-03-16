@@ -3200,3 +3200,48 @@ def detect_section_drift_route():
 
         except Exception as e:
             return handle_error(e, '인지부하 분석')
+
+
+# ──────────────────────────────────────────────
+# arXiv 논문 검색/조회
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/arxiv/search', methods=['POST'])
+@require_auth
+def arxiv_search():
+    """arXiv 논문 검색.
+
+    Body: {"query": "transformer attention", "max_results": 5}
+    """
+    try:
+        from services.data.arxiv_service import search_papers
+        data = request.get_json(silent=True) or {}
+        query = (data.get('query') or '').strip()
+        if not query:
+            return jsonify({'error': '검색어를 입력해주세요.'}), 400
+        max_results = min(int(data.get('max_results', 5)), 20)
+        papers = search_papers(query, max_results=max_results)
+        return jsonify({'papers': papers, 'count': len(papers)})
+    except Exception as e:
+        return handle_error(e, 'arXiv 검색')
+
+
+@blog_bp.route('/api/arxiv/paper', methods=['POST'])
+@require_auth
+def arxiv_paper():
+    """arXiv 논문 ID로 메타데이터 조회.
+
+    Body: {"arxiv_id": "2303.08774"}
+    """
+    try:
+        from services.data.arxiv_service import fetch_paper
+        data = request.get_json(silent=True) or {}
+        arxiv_id = (data.get('arxiv_id') or '').strip()
+        if not arxiv_id:
+            return jsonify({'error': 'arXiv ID를 입력해주세요.'}), 400
+        paper = fetch_paper(arxiv_id)
+        return jsonify(paper)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return handle_error(e, 'arXiv 논문 조회')
