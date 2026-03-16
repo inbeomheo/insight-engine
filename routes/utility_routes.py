@@ -3455,3 +3455,32 @@ def app_version():
         'routes': route_count,
         'python': os.sys.version.split()[0],
     })
+
+
+# ──────────────────────────────────────────────
+# 프롬프트 시스템 정보
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/prompts/info')
+def prompts_info():
+    """프롬프트 시스템 요약 — 스타일별 프롬프트 길이, 금칙어 목록, 버전."""
+    from prompts.base import FORBIDDEN_EXPRESSIONS
+    from prompts.styles import STYLE_PROMPTS
+    from config import STYLE_OPTIONS
+
+    style_info = []
+    for style_id, label in STYLE_OPTIONS:
+        prompt_text = STYLE_PROMPTS.get(style_id, '')
+        style_info.append({
+            'id': style_id,
+            'label': label,
+            'prompt_length': len(prompt_text),
+            'has_examples': '예시' in prompt_text or '예:' in prompt_text,
+        })
+
+    return jsonify({
+        'version': '3.4',
+        'styles': style_info,
+        'forbidden_expressions': FORBIDDEN_EXPRESSIONS if isinstance(FORBIDDEN_EXPRESSIONS, list) else [],
+        'total_styles': len(style_info),
+    })
