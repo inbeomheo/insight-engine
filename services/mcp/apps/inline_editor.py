@@ -240,7 +240,5 @@ def _split_sections(text: str) -> list:
 def _make_session_id(content: dict) -> str:
     """콘텐츠 기반 결정적 세션 ID를 생성합니다."""
     import hashlib
-
-logger = logging.getLogger(__name__)
     key = (content.get("title") or "") + (content.get("content") or "")[:200]
     return hashlib.md5(key.encode()).hexdigest()[:12]
