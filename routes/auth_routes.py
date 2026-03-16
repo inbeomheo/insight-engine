@@ -939,6 +939,10 @@ def admin_dashboard():
             for u in (usage_data.data or [])
         ]
 
+        # 가장 많이 사용된 스타일 상위 3개
+        top_styles = sorted(style_dist.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_styles = [{'style': s, 'count': c} for s, c in top_styles]
+
         return jsonify({
             'period': '7d',
             'total_generations': total,
@@ -946,6 +950,7 @@ def admin_dashboard():
             'avg_time': avg_time,
             'avg_generation_time': avg_time,
             'style_distribution': style_dist,
+            'top_styles': top_styles,
             'daily_usage': daily_usage,
         })
     except Exception as e:
