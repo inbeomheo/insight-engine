@@ -144,8 +144,13 @@ def api_providers():
     providers = get_available_providers()
     styles = current_app.config.get('STYLE_OPTIONS', [])
 
+    # 각 프로바이더에 model_count 필드 추가
+    enriched = {}
+    for pid, pdata in providers.items():
+        enriched[pid] = {**pdata, 'model_count': len(pdata.get('models', []))}
+
     return jsonify({
-        'providers': providers,
+        'providers': enriched,
         'styles': [{'id': s[0], 'name': s[1]} for s in styles],
         'supadataConfigured': bool(SUPADATA_API_KEY),
         'hasAutoFallback': True
@@ -258,6 +263,29 @@ def api_clear_cache():
         'success': True,
         'message': '전체 캐시가 삭제되었습니다.',
         'deleted': deleted
+    })
+
+
+@blog_bp.route('/api/cache/purge', methods=['POST'])
+@require_auth
+def api_purge_cache():
+    """만료된 캐시만 선택적으로 정리합니다.
+
+    Body (JSON, 선택):
+        max_age_hours (int): 이 시간보다 오래된 캐시 삭제 (기본 24)
+    """
+    from services.core.content_service import purge_expired_cache
+
+    data = request.get_json(silent=True) or {}
+    max_age = data.get('max_age_hours', 24)
+    if not isinstance(max_age, (int, float)) or max_age <= 0:
+        return jsonify({'error': 'max_age_hours는 양수여야 합니다.'}), 400
+
+    result = purge_expired_cache(int(max_age))
+    return jsonify({
+        'success': True,
+        'message': f'{max_age}시간 이상 된 캐시를 정리했습니다.',
+        **result,
     })
 
 

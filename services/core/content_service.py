@@ -163,6 +163,41 @@ def clear_cache(video_id: Optional[str] = None) -> int:
     return deleted
 
 
+def purge_expired_cache(max_age_hours: int = 24) -> dict:
+    """만료된 캐시 파일만 선택적으로 삭제합니다.
+
+    Args:
+        max_age_hours: 이 시간(시)보다 오래된 캐시 삭제 (기본 24시간)
+
+    Returns:
+        {'purged': 삭제 수, 'remaining': 남은 수}
+    """
+    if not os.path.exists(CACHE_DIR):
+        return {'purged': 0, 'remaining': 0}
+
+    import time as _time
+    now = _time.time()
+    cutoff = now - (max_age_hours * 3600)
+    purged = 0
+    remaining = 0
+
+    for filename in os.listdir(CACHE_DIR):
+        filepath = os.path.join(CACHE_DIR, filename)
+        if not os.path.isfile(filepath):
+            continue
+        try:
+            mtime = os.path.getmtime(filepath)
+            if mtime < cutoff:
+                os.remove(filepath)
+                purged += 1
+            else:
+                remaining += 1
+        except IOError:
+            remaining += 1
+
+    return {'purged': purged, 'remaining': remaining}
+
+
 # ==================== URL Utilities ====================
 
 def is_youtube_url(url: str) -> bool:
