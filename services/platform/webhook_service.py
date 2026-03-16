@@ -13,11 +13,33 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+# 클라우드 메타데이터 엔드포인트 등 위험한 호스트명 차단
+_BLOCKED_HOSTNAMES = frozenset({
+    'localhost',
+    'metadata.google.internal',      # GCP 메타데이터
+    'metadata.internal',
+    'instance-data',                  # AWS 메타데이터 별칭
+})
+
+
+def _is_dangerous_ip(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """IP 주소가 사설/루프백/예약/링크로컬인지 검사합니다."""
+    if addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local:
+        return True
+    # IPv4-mapped IPv6 (::ffff:127.0.0.1 등) 우회 차단
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
+        mapped = addr.ipv4_mapped
+        if mapped.is_private or mapped.is_loopback or mapped.is_reserved or mapped.is_link_local:
+            return True
+    return False
+
+
 def _validate_webhook_url(url: str) -> bool:
     """웹훅 URL의 안전성을 검증합니다 (SSRF 방지).
 
     - http/https 스키마만 허용
-    - 사설 IP, 루프백, localhost 차단
+    - 사설 IP, 루프백, localhost, 클라우드 메타데이터 엔드포인트 차단
+    - 도메인인 경우 DNS 해석 후 실제 IP까지 검증 (TOCTOU 방어)
     """
     try:
         parsed = urlparse(url)
@@ -31,21 +53,35 @@ def _validate_webhook_url(url: str) -> bool:
     if not hostname:
         return False
 
-    if hostname in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
+    # 알려진 위험 호스트명 차단
+    if hostname.lower() in _BLOCKED_HOSTNAMES:
         return False
 
+    # IP 리터럴 검사
     try:
         addr = ipaddress.ip_address(hostname)
-        if addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local:
+        if _is_dangerous_ip(addr):
             return False
-        # IPv4-mapped IPv6 (::ffff:127.0.0.1 등) 우회 차단
-        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
-            mapped = addr.ipv4_mapped
-            if mapped.is_private or mapped.is_loopback or mapped.is_reserved or mapped.is_link_local:
-                return False
+        return True
     except ValueError:
-        # 도메인 이름인 경우 — DNS 리바인딩까지 막지는 않지만 기본 차단은 통과
         pass
+
+    # 도메인인 경우 — DNS 해석 후 실제 IP 검증 (DNS 리바인딩 부분 방어)
+    import socket
+    try:
+        resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for family, _type, _proto, _canonname, sockaddr in resolved:
+            ip_str = sockaddr[0]
+            try:
+                addr = ipaddress.ip_address(ip_str)
+                if _is_dangerous_ip(addr):
+                    logger.warning("웹훅 DNS 해석 결과 위험한 IP 감지: %s → %s", hostname, ip_str)
+                    return False
+            except ValueError:
+                continue
+    except socket.gaierror:
+        # DNS 해석 실패 — 존재하지 않는 도메인이므로 차단
+        return False
 
     return True
 
