@@ -4,8 +4,9 @@
 URL 타입을 자동 감지하고 각 서비스에 위임하여 콘텐츠를 수집합니다.
 지원 소스: youtube, webpage, rss, arxiv, twitter, reddit, github, hackernews, podcast
 """
-import logging
 from __future__ import annotations
+
+import logging
 
 import re
 from typing import Dict, Optional
