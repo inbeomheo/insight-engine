@@ -950,6 +950,19 @@ def admin_dashboard():
         top_styles = sorted(style_dist.items(), key=lambda x: x[1], reverse=True)[:3]
         top_styles = [{'style': s, 'count': c} for s, c in top_styles]
 
+        # 최근 5개 생성 기록 (제목 + 스타일)
+        sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
+        recent_generations = []
+        for item in sorted_items[:5]:
+            title = (item.get('content') or '')[:80].split('\n')[0].strip()
+            if not title:
+                title = '(제목 없음)'
+            recent_generations.append({
+                'title': title,
+                'style': item.get('style', 'unknown'),
+                'created_at': item.get('created_at', ''),
+            })
+
         return jsonify({
             'period': '7d',
             'total_generations': total,
@@ -960,6 +973,7 @@ def admin_dashboard():
             'style_distribution': style_dist,
             'top_styles': top_styles,
             'daily_usage': daily_usage,
+            'recent_generations': recent_generations,
         })
     except Exception as e:
         import logging
