@@ -99,11 +99,15 @@ class AICacheService:
             """, (cache_key, video_id, style_id, model, length, writing_style,
                   result_json, now, now, size_bytes))
 
-        self._evict_if_needed()
+            # 동일 연결 내에서 eviction 수행 (불필요한 연결 재생성 방지)
+            self._evict_if_needed(conn)
 
-    def _evict_if_needed(self) -> None:
+    def _evict_if_needed(self, conn: Optional['sqlite3.Connection'] = None) -> None:
         """총 용량이 max_size_bytes 초과 시 오래된 항목 20% 삭제"""
-        with self._get_conn() as conn:
+        own_conn = conn is None
+        if own_conn:
+            conn = self._get_conn()
+        try:
             total = conn.execute("SELECT COALESCE(SUM(size_bytes), 0) AS total FROM ai_cache").fetchone()['total']
             if total <= self.max_size_bytes:
                 return
@@ -115,6 +119,11 @@ class AICacheService:
                     SELECT cache_key FROM ai_cache ORDER BY accessed_at ASC LIMIT ?
                 )
             """, (delete_count,))
+            if own_conn:
+                conn.commit()
+        finally:
+            if own_conn:
+                conn.close()
 
     def get_stats(self) -> Dict[str, Any]:
         """캐시 통계 반환"""

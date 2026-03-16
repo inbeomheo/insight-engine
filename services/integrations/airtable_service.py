@@ -92,13 +92,13 @@ class AirtableService:
                 'message': 'AIRTABLE_API_KEY 또는 AIRTABLE_BASE_ID가 설정되지 않았습니다.',
             }
 
-        from datetime import datetime
+        from datetime import datetime, timezone
         fields = {
             'Title': title[:255],
             'Style': style,
             'Source URL': url,
             'Content': content[:100000],  # Airtable 필드 최대 길이
-            'Created At': datetime.utcnow().isoformat() + 'Z',
+            'Created At': datetime.now(timezone.utc).isoformat(),
             'Status': 'Generated',
         }
 
