@@ -65,6 +65,21 @@ class TestGenerateFaq(unittest.TestCase):
         # 주제를 추출할 수 없을 수 있음
         self.assertIsInstance(result['faqs'], list)
 
+    def test_word_count_field(self):
+        """word_count 필드가 마크다운 단어 수를 반영"""
+        content = '파이썬은 프로그래밍 언어입니다. 파이썬은 인기가 높습니다. 파이썬을 배우세요.'
+        result = generate_faq(content)
+        self.assertIn('word_count', result)
+        self.assertIsInstance(result['word_count'], int)
+        if result['markdown']:
+            self.assertEqual(result['word_count'], len(result['markdown'].split()))
+
+    def test_word_count_empty(self):
+        """빈 콘텐츠일 때 word_count 없음 (faqs가 비어있으므로)"""
+        result = generate_faq('')
+        # 빈 결과엔 word_count 키가 없을 수 있음 (_EMPTY_RESULT)
+        self.assertEqual(result['faqs'], [])
+
 
 class TestExtractTopics(unittest.TestCase):
 

@@ -81,12 +81,14 @@ def generate_faq(content: str, max_questions: int = 5) -> dict:
         return {**_EMPTY_RESULT, 'suggestions': ['주제를 추출할 수 없습니다. 더 구체적인 콘텐츠가 필요합니다.']}
 
     faqs = _build_faqs(topics, content, max_questions)
+    markdown = _build_faq_markdown(faqs)
 
     return {
         'faqs': faqs,
         'topics': topics,
         'schema_json': _build_faq_schema(faqs),
-        'markdown': _build_faq_markdown(faqs),
+        'markdown': markdown,
+        'word_count': len(markdown.split()),
         'suggestions': _generate_suggestions(faqs, topics),
     }
 
