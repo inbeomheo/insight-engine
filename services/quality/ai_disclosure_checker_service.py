@@ -5,8 +5,11 @@ AI 작성/보조/자동화 흔적이 있는 문서에서 생성 방식 설명이
 편집 책임 표시 누락을 점검합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 # AI 관련 마커 (한국어)
 _KO_AI_MARKERS = [
@@ -118,32 +121,34 @@ def check_ai_disclosure(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    ai_markers, disclosure_markers, trace_matches, human_review = _detect_all_markers(content)
-    has_ai = len(ai_markers) > 0
-    has_disclosure = len(disclosure_markers) > 0
-    has_traces = len(trace_matches) > 0
+        ai_markers, disclosure_markers, trace_matches, human_review = _detect_all_markers(content)
+        has_ai = len(ai_markers) > 0
+        has_disclosure = len(disclosure_markers) > 0
+        has_traces = len(trace_matches) > 0
 
-    score = _compute_disclosure_score(has_ai, has_disclosure, has_traces, human_review)
+        score = _compute_disclosure_score(has_ai, has_disclosure, has_traces, human_review)
 
-    return {
-        'score': score,
-        'summary': {
-            'has_ai_markers': has_ai,
-            'disclosure_found': has_disclosure,
-            'automation_traces': len(trace_matches),
-            'human_review_noted': human_review,
-        },
-        'ai_markers': ai_markers[:10],
-        'disclosure_markers': disclosure_markers[:10],
-        'automation_traces': trace_matches[:5],
-        'suggestions': _generate_suggestions(
-            has_ai, has_disclosure, has_traces,
-            human_review, ai_markers, trace_matches, score
-        ),
-    }
-
-
+        return {
+            'score': score,
+            'summary': {
+                'has_ai_markers': has_ai,
+                'disclosure_found': has_disclosure,
+                'automation_traces': len(trace_matches),
+                'human_review_noted': human_review,
+            },
+            'ai_markers': ai_markers[:10],
+            'disclosure_markers': disclosure_markers[:10],
+            'automation_traces': trace_matches[:5],
+            'suggestions': _generate_suggestions(
+                has_ai, has_disclosure, has_traces,
+                human_review, ai_markers, trace_matches, score
+            ),
+        }
+    except Exception as e:
+        logger.error(f"AI 공시 점검 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(has_ai: bool, has_disclosure: bool,
                            has_traces: bool, human_review: bool,
                            ai_markers: List[Dict],

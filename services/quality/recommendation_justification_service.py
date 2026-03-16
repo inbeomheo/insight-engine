@@ -5,8 +5,11 @@ Recommendation Justification Analyzer 서비스
 왜 다른 대안보다 나은지 근거 부족을 감지합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 # 추천 항목 패턴 (랭킹/목록)
 _ITEM_PATTERNS = [
@@ -138,41 +141,43 @@ def analyze_recommendation_justification(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    is_rec = _count_matches(content, _RECOMMENDATION_SIGNALS) >= 2
-    has_why = _count_matches(content, _WHY_PATTERNS) >= 2
-    has_best_for = _count_matches(content, _BEST_FOR_PATTERNS) >= 1
-    has_comparison = _count_matches(content, _COMPARISON_PATTERNS) >= 1
+        is_rec = _count_matches(content, _RECOMMENDATION_SIGNALS) >= 2
+        has_why = _count_matches(content, _WHY_PATTERNS) >= 2
+        has_best_for = _count_matches(content, _BEST_FOR_PATTERNS) >= 1
+        has_comparison = _count_matches(content, _COMPARISON_PATTERNS) >= 1
 
-    total_items, missing_why_sections, missing_best_for_sections = (
-        _analyze_item_sections(content)
-    )
-    score, level = _compute_justification_score(
-        is_rec, has_why, has_best_for, has_comparison,
-        total_items, missing_why_sections
-    )
+        total_items, missing_why_sections, missing_best_for_sections = (
+            _analyze_item_sections(content)
+        )
+        score, level = _compute_justification_score(
+            is_rec, has_why, has_best_for, has_comparison,
+            total_items, missing_why_sections
+        )
 
-    suggestions = _generate_suggestions(
-        is_rec, has_why, has_best_for, has_comparison,
-        level, missing_why_sections, missing_best_for_sections
-    )
+        suggestions = _generate_suggestions(
+            is_rec, has_why, has_best_for, has_comparison,
+            level, missing_why_sections, missing_best_for_sections
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'is_recommendation_content': is_rec,
-            'total_items': total_items,
-            'has_why': has_why,
-            'has_best_for': has_best_for,
-            'has_comparison': has_comparison,
-            'justification_level': level,
-        },
-        'missing_why': missing_why_sections[:5],
-        'missing_best_for': missing_best_for_sections[:5],
-        'suggestions': suggestions,
-    }
-
-
+        return {
+            'score': score,
+            'summary': {
+                'is_recommendation_content': is_rec,
+                'total_items': total_items,
+                'has_why': has_why,
+                'has_best_for': has_best_for,
+                'has_comparison': has_comparison,
+                'justification_level': level,
+            },
+            'missing_why': missing_why_sections[:5],
+            'missing_best_for': missing_best_for_sections[:5],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"추천 근거 분석 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(is_rec: bool, has_why: bool, has_best_for: bool,
                            has_comparison: bool, level: str,
                            missing_why: List[str],

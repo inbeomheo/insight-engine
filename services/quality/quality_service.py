@@ -8,12 +8,15 @@ quality_check: true 파라미터가 있을 때만 동작합니다.
 - 품질 평가 활성화 시 요청당 AI 호출 1회 추가 (평가 전용)
 - 재생성 활성화 시 최대 1회 추가 (기준 미달 시만)
 """
+import logging
 import json
 import re
 import os
 from typing import Callable, Dict, Optional, Tuple
 
 from flask import current_app
+
+logger = logging.getLogger(__name__)
 
 # 등급 순서 (낮을수록 낮은 등급)
 _GRADE_ORDER = {'D': 0, 'C': 1, 'B': 2, 'A': 3}
@@ -275,37 +278,39 @@ def calculate_comprehensive_score(content: str) -> Dict:
     """
     if not content or not content.strip():
         return {
-            "total_score": 0,
-            "seo": 0, "readability": 0, "originality": 0, "structure": 0,
-            "details": {"error": "콘텐츠가 비어있습니다."},
+    try:
+                "total_score": 0,
+                "seo": 0, "readability": 0, "originality": 0, "structure": 0,
+                "details": {"error": "콘텐츠가 비어있습니다."},
+            }
+
+        lines = content.split('\n')
+        text_lines = [l for l in lines if l.strip()]
+        char_count = len(content)
+        headings = [l for l in text_lines if l.strip().startswith('#')]
+
+        seo = _score_seo(headings, char_count, content)
+        readability, list_items = _score_readability(text_lines, headings)
+        originality = _score_originality(content)
+        structure = _score_structure(headings, list_items, char_count)
+        total = round((seo + readability + originality + structure) / 4)
+
+        return {
+            "total_score": total,
+            "seo": seo,
+            "readability": readability,
+            "originality": originality,
+            "structure": structure,
+            "details": {
+                "char_count": char_count,
+                "word_count": len(content.split()),
+                "heading_count": len(headings),
+                "list_items": list_items,
+            },
         }
-
-    lines = content.split('\n')
-    text_lines = [l for l in lines if l.strip()]
-    char_count = len(content)
-    headings = [l for l in text_lines if l.strip().startswith('#')]
-
-    seo = _score_seo(headings, char_count, content)
-    readability, list_items = _score_readability(text_lines, headings)
-    originality = _score_originality(content)
-    structure = _score_structure(headings, list_items, char_count)
-    total = round((seo + readability + originality + structure) / 4)
-
-    return {
-        "total_score": total,
-        "seo": seo,
-        "readability": readability,
-        "originality": originality,
-        "structure": structure,
-        "details": {
-            "char_count": char_count,
-            "word_count": len(content.split()),
-            "heading_count": len(headings),
-            "list_items": list_items,
-        },
-    }
-
-
+    except Exception as e:
+        logger.error(f"종합 점수 계산 처리 실패: {e}")
+        return {"total_score": 0, "seo": 0, "readability": 0, "originality": 0, "structure": 0, "details": {}}
 def auto_regenerate(
     content_fn: Callable[..., Tuple[Dict, str]],
     source_summary: str,

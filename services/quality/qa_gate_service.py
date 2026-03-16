@@ -1,7 +1,10 @@
 """발행 전 QA 검증 서비스 -- 규칙 기반"""
+import logging
 import re
 from config import QA_FORBIDDEN_WORDS, QA_MIN_SECTIONS, QA_MIN_CHARS
 
+
+logger = logging.getLogger(__name__)
 
 def _check_length(content: str) -> list:
     """최소 길이를 검사합니다."""
@@ -64,13 +67,17 @@ def check_quality(content: str, rules: dict = None) -> dict:
     Returns:
         {'passed': bool, 'issues': [...], 'score': int}
     """
-    issues = (
-        _check_length(content)
-        + _check_sections(content)
-        + _check_forbidden_words(content, rules)
-        + _check_duplicates(content)
-        + _check_broken_links(content)
-    )
+    try:
+        issues = (
+            _check_length(content)
+            + _check_sections(content)
+            + _check_forbidden_words(content, rules)
+            + _check_duplicates(content)
+            + _check_broken_links(content)
+        )
 
-    errors = [i for i in issues if i['severity'] == 'error']
-    return {'passed': len(errors) == 0, 'issues': issues, 'score': max(0, 100 - len(issues) * 15)}
+        errors = [i for i in issues if i['severity'] == 'error']
+        return {'passed': len(errors) == 0, 'issues': issues, 'score': max(0, 100 - len(issues) * 15)}
+    except Exception as e:
+        logger.error(f"QA 검증 처리 실패: {e}")
+        return {'passed': False, 'issues': [], 'score': 0}

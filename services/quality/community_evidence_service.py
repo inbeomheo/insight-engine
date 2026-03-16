@@ -5,8 +5,11 @@ Reddit, 포럼, 리뷰, Q&A 같은 사용자 발화 기반 근거가
 포함됐는지 점검하여 커뮤니티 맥락 신호를 평가합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 # 커뮤니티 소스 타입별 패턴
 _COMMUNITY_SOURCES = {
@@ -138,32 +141,34 @@ def analyze_community_evidence(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    sources_found, sources_missing, signals = _scan_sources(content)
-    citation_count = _count_matches(content, _COMMUNITY_CITATION)
-    url_count = _count_matches(content, _COMMUNITY_URLS)
-    coverage = round(len(sources_found) / max(len(_COMMUNITY_SOURCES), 1) * 100, 1)
-    total_signals = len(sources_found) + citation_count + url_count
-    score, level = _compute_evidence_score(total_signals, citation_count)
+        sources_found, sources_missing, signals = _scan_sources(content)
+        citation_count = _count_matches(content, _COMMUNITY_CITATION)
+        url_count = _count_matches(content, _COMMUNITY_URLS)
+        coverage = round(len(sources_found) / max(len(_COMMUNITY_SOURCES), 1) * 100, 1)
+        total_signals = len(sources_found) + citation_count + url_count
+        score, level = _compute_evidence_score(total_signals, citation_count)
 
-    return {
-        'score': score,
-        'summary': {
-            'sources_found': sources_found,
-            'sources_missing': sources_missing,
-            'citation_count': citation_count,
-            'community_url_count': url_count,
-            'coverage_ratio': coverage,
-            'level': level,
-        },
-        'community_signals': signals,
-        'suggestions': _generate_suggestions(
-            sources_found, sources_missing, citation_count,
-            url_count, coverage, level
-        ),
-    }
-
-
+        return {
+            'score': score,
+            'summary': {
+                'sources_found': sources_found,
+                'sources_missing': sources_missing,
+                'citation_count': citation_count,
+                'community_url_count': url_count,
+                'coverage_ratio': coverage,
+                'level': level,
+            },
+            'community_signals': signals,
+            'suggestions': _generate_suggestions(
+                sources_found, sources_missing, citation_count,
+                url_count, coverage, level
+            ),
+        }
+    except Exception as e:
+        logger.error(f"커뮤니티 근거 분석 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(found: List[str], missing: List[str],
                            citations: int, urls: int,
                            coverage: float, level: str) -> List[str]:

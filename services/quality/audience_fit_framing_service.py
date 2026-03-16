@@ -5,8 +5,11 @@ Audience-Fit Framing Analyzer 서비스
 누구에게는 맞지 않는지 초반에 분명히 밝혔는지 평가합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 # 대상 독자 명시 패턴
 _AUDIENCE_PATTERNS = [
@@ -121,25 +124,27 @@ def analyze_audience_fit_framing(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    audience_matches, has_audience, audience_early, has_context, has_not_for = \
-        _detect_framing_signals(content)
-    score, level = _compute_framing_score(has_audience, has_context, has_not_for, audience_early)
+        audience_matches, has_audience, audience_early, has_context, has_not_for = \
+            _detect_framing_signals(content)
+        score, level = _compute_framing_score(has_audience, has_context, has_not_for, audience_early)
 
-    return {
-        'score': score,
-        'summary': {
-            'has_audience': has_audience, 'has_context': has_context,
-            'has_not_for': has_not_for, 'audience_early': audience_early,
-            'framing_signals': sum([has_audience, has_context, has_not_for]),
-            'level': level,
-        },
-        'audience_matches': [m['text'] for m in audience_matches[:5]],
-        'suggestions': _generate_suggestions(has_audience, has_context, has_not_for,
-                                              audience_early, level),
-    }
-
-
+        return {
+            'score': score,
+            'summary': {
+                'has_audience': has_audience, 'has_context': has_context,
+                'has_not_for': has_not_for, 'audience_early': audience_early,
+                'framing_signals': sum([has_audience, has_context, has_not_for]),
+                'level': level,
+            },
+            'audience_matches': [m['text'] for m in audience_matches[:5]],
+            'suggestions': _generate_suggestions(has_audience, has_context, has_not_for,
+                                                  audience_early, level),
+        }
+    except Exception as e:
+        logger.error(f"대상 프레이밍 분석 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(has_audience: bool, has_context: bool,
                            has_not_for: bool, early: bool,
                            level: str) -> List[str]:

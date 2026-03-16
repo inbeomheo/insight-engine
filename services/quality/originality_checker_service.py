@@ -1,6 +1,9 @@
 """독창성·출처 중복 검사 서비스 — 순수 규칙 기반 (n-gram, Jaccard 유사도)"""
+import logging
 import re
 
+
+logger = logging.getLogger(__name__)
 
 # 한국어 클리셰 사전
 CLICHE_PHRASES = [
@@ -271,45 +274,49 @@ def check_originality(content: str, reference_contents: list = None) -> dict:
     """
     if not content or not content.strip():
         return {
-            "originality_score": 0.0, "grade": "F",
-            "overlap_analysis": {"self_repetition": 0.0, "external_overlap": None, "unique_ratio": 0.0},
-            "flagged_sentences": [], "common_phrases": [],
-            "suggestions": ["분석할 콘텐츠가 없습니다."],
-        }
+    try:
+                "originality_score": 0.0, "grade": "F",
+                "overlap_analysis": {"self_repetition": 0.0, "external_overlap": None, "unique_ratio": 0.0},
+                "flagged_sentences": [], "common_phrases": [],
+                "suggestions": ["분석할 콘텐츠가 없습니다."],
+            }
 
-    sentences = _split_sentences(content)
-    if not sentences:
+        sentences = _split_sentences(content)
+        if not sentences:
+            return {
+                "originality_score": 50.0, "grade": "C",
+                "overlap_analysis": {"self_repetition": 0.0,
+                                     "external_overlap": None if not reference_contents else 0.0,
+                                     "unique_ratio": 100.0},
+                "flagged_sentences": [], "common_phrases": [],
+                "suggestions": ["문장이 너무 짧아 정밀 분석이 어렵습니다."],
+            }
+
+        (self_repetition, self_flagged, external_overlap, external_flagged,
+         common_phrases, cliche_flagged, unique_ratio) = (
+            _analyze_all_overlaps(sentences, content, reference_contents)
+        )
+
+        originality_score, grade = _compute_originality_score(
+            unique_ratio, self_repetition, common_phrases
+        )
+
+        suggestions = _generate_suggestions(
+            self_repetition, external_overlap, common_phrases, unique_ratio
+        )
+
         return {
-            "originality_score": 50.0, "grade": "C",
-            "overlap_analysis": {"self_repetition": 0.0,
-                                 "external_overlap": None if not reference_contents else 0.0,
-                                 "unique_ratio": 100.0},
-            "flagged_sentences": [], "common_phrases": [],
-            "suggestions": ["문장이 너무 짧아 정밀 분석이 어렵습니다."],
+            "originality_score": originality_score,
+            "grade": grade,
+            "overlap_analysis": {
+                "self_repetition": self_repetition,
+                "external_overlap": external_overlap,
+                "unique_ratio": unique_ratio,
+            },
+            "flagged_sentences": self_flagged + external_flagged + cliche_flagged,
+            "common_phrases": common_phrases,
+            "suggestions": suggestions,
         }
-
-    (self_repetition, self_flagged, external_overlap, external_flagged,
-     common_phrases, cliche_flagged, unique_ratio) = (
-        _analyze_all_overlaps(sentences, content, reference_contents)
-    )
-
-    originality_score, grade = _compute_originality_score(
-        unique_ratio, self_repetition, common_phrases
-    )
-
-    suggestions = _generate_suggestions(
-        self_repetition, external_overlap, common_phrases, unique_ratio
-    )
-
-    return {
-        "originality_score": originality_score,
-        "grade": grade,
-        "overlap_analysis": {
-            "self_repetition": self_repetition,
-            "external_overlap": external_overlap,
-            "unique_ratio": unique_ratio,
-        },
-        "flagged_sentences": self_flagged + external_flagged + cliche_flagged,
-        "common_phrases": common_phrases,
-        "suggestions": suggestions,
-    }
+    except Exception as e:
+        logger.error(f"독창성 분석 처리 실패: {e}")
+        return {"originality_score": 0.0, "grade": "F", "overlap_analysis": {}, "flagged_sentences": [], "common_phrases": [], "suggestions": ["분석 중 오류가 발생했습니다."]}

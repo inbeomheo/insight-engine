@@ -4,9 +4,12 @@ Claim & Citation Verifier 서비스
 콘텐츠에서 사실 주장, 수치, 인용문을 자동 감지하고
 출처 필요 여부를 규칙 기반으로 판단합니다 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict, Optional
 
+
+logger = logging.getLogger(__name__)
 
 # ── 주장 감지 패턴 ──
 
@@ -264,18 +267,22 @@ def verify_claims(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    claims = _scan_claims(_split_sentences(content), content)
-    total, cited, uncited, citation_rate, credibility_score = _compute_credibility(claims)
+        claims = _scan_claims(_split_sentences(content), content)
+        total, cited, uncited, citation_rate, credibility_score = _compute_credibility(claims)
 
-    return {
-        "claims": claims,
-        "summary": {
-            "total_claims": total,
-            "cited": cited,
-            "uncited": uncited,
-            "citation_rate": citation_rate,
-        },
-        "credibility_score": credibility_score,
-        "suggestions": _generate_suggestions(claims),
-    }
+        return {
+            "claims": claims,
+            "summary": {
+                "total_claims": total,
+                "cited": cited,
+                "uncited": uncited,
+                "citation_rate": citation_rate,
+            },
+            "credibility_score": credibility_score,
+            "suggestions": _generate_suggestions(claims),
+        }
+    except Exception as e:
+        logger.error(f"주장 검증 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
