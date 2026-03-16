@@ -437,10 +437,10 @@ def export_srt():
 def _seconds_to_srt_time(seconds: float) -> str:
     """초를 SRT 타임코드 형식(HH:MM:SS,mmm)으로 변환합니다."""
     seconds = max(0, float(seconds))
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds % 1) * 1000)
+    total_ms = round(seconds * 1000)
+    h, remainder = divmod(total_ms, 3_600_000)
+    m, remainder = divmod(remainder, 60_000)
+    s, ms = divmod(remainder, 1000)
     return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
 
 
