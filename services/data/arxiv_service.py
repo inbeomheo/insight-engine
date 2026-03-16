@@ -208,7 +208,7 @@ def fetch_paper_fulltext(arxiv_id: str) -> Dict:
     return paper
 
 
-def search_papers(query: str, max_results: int = 5) -> List[Dict]:
+def search_papers(query: str, max_results: int = 5) -> Dict:
     """arXiv에서 논문을 검색합니다.
 
     Args:
@@ -216,7 +216,7 @@ def search_papers(query: str, max_results: int = 5) -> List[Dict]:
         max_results: 최대 결과 수 (기본 5, 최대 20)
 
     Returns:
-        논문 딕셔너리 목록
+        {"papers": List[Dict], "total_results": int}
 
     Raises:
         requests.RequestException: 네트워크 오류
@@ -237,9 +237,15 @@ def search_papers(query: str, max_results: int = 5) -> List[Dict]:
         root = ElementTree.fromstring(resp.content)
         entries = root.findall(_ns("entry"))
 
-        return [_parse_entry(e) for e in entries]
+        # OpenSearch totalResults 추출
+        _OPENSEARCH_NS = "http://a9.com/-/spec/opensearch/1.1/"
+        total_el = root.find(f"{{{_OPENSEARCH_NS}}}totalResults")
+        total_results = int(total_el.text) if total_el is not None and total_el.text else len(entries)
+
+        papers = [_parse_entry(e) for e in entries]
+        return {"papers": papers, "total_results": total_results}
     except requests.RequestException:
         raise
     except Exception as e:
         logger.error("search_papers 실패: %s", e, exc_info=True)
-        return []
+        return {"papers": [], "total_results": 0}

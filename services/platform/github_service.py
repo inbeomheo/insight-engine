@@ -75,7 +75,8 @@ def extract_github_readme(url: str) -> Dict:
     owner, repo = _parse_github_url(url)
     content = _fetch_readme_raw(owner, repo)
 
-    repo_desc = _get_repo_description(owner, repo)
+    meta = _get_repo_metadata(owner, repo)
+    repo_desc = meta.get("description", "")
     header = f"리포지토리: {owner}/{repo}"
     if repo_desc:
         header += f"\n설명: {repo_desc}"
@@ -85,6 +86,8 @@ def extract_github_readme(url: str) -> Dict:
         "content": f"{header}\n\n{content}",
         "url": url,
         "source_type": "github",
+        "stars": meta.get("stars", 0),
+        "forks": meta.get("forks", 0),
     }
 
 
@@ -111,8 +114,12 @@ def _parse_github_url(url: str) -> tuple:
     return owner, repo
 
 
-def _get_repo_description(owner: str, repo: str) -> str:
-    """리포지토리 설명을 가져옵니다 (실패 시 빈 문자열)."""
+def _get_repo_metadata(owner: str, repo: str) -> Dict:
+    """리포지토리 메타데이터를 가져옵니다 (실패 시 빈 dict).
+
+    Returns:
+        {"description": str, "stars": int, "forks": int}
+    """
     try:
         resp = requests.get(
             f"{_GITHUB_API_BASE}/repos/{owner}/{repo}",
@@ -120,6 +127,11 @@ def _get_repo_description(owner: str, repo: str) -> str:
             timeout=_REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
-        return resp.json().get("description", "") or ""
+        data = resp.json()
+        return {
+            "description": data.get("description", "") or "",
+            "stars": data.get("stargazers_count", 0),
+            "forks": data.get("forks_count", 0),
+        }
     except Exception:
-        return ""
+        return {"description": "", "stars": 0, "forks": 0}

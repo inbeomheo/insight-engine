@@ -751,14 +751,26 @@ def inline_edit(content: str, selection: str, instruction: str, model: str, cont
 - 선택된 부분만 수정하고 나머지는 그대로 유지
 - 수정된 텍스트만 출력 (다른 설명 없이)
 """
+    import difflib
+
     result = create_content(prompt, model, style_prompt='', style_id='summary')
     edited = result.get('content', '').strip()
     full_content = content.replace(selection, edited, 1)
+
+    # unified diff 생성
+    diff_lines = list(difflib.unified_diff(
+        selection.splitlines(keepends=True),
+        edited.splitlines(keepends=True),
+        fromfile='original',
+        tofile='edited',
+        lineterm='',
+    ))
 
     return {
         'original': selection,
         'edited': edited,
         'full_content': full_content,
+        'diff': '\n'.join(diff_lines),
     }
 
 

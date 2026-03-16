@@ -11,7 +11,7 @@ import requests
 class TestExtractGithubReadme(unittest.TestCase):
     """extract_github_readme 단위 테스트"""
 
-    @patch("services.platform.github_service._get_repo_description", return_value="테스트 설명")
+    @patch("services.platform.github_service._get_repo_metadata", return_value={"description": "테스트 설명", "stars": 1500, "forks": 200})
     @patch("services.platform.github_service.requests.get")
     def test_extracts_readme_successfully(self, mock_get, mock_desc):
         """README를 정상적으로 추출"""
@@ -34,6 +34,8 @@ class TestExtractGithubReadme(unittest.TestCase):
         self.assertIn("# My Project", result["content"])
         self.assertIn("테스트 설명", result["content"])
         self.assertEqual(result["source_type"], "github")
+        self.assertEqual(result["stars"], 1500)
+        self.assertEqual(result["forks"], 200)
 
     def test_raises_on_invalid_url(self):
         """유효하지 않은 GitHub URL에서 ValueError 발생"""
@@ -57,7 +59,7 @@ class TestExtractGithubReadme(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_github_readme("https://github.com/owner/norepo")
 
-    @patch("services.platform.github_service._get_repo_description", return_value="")
+    @patch("services.platform.github_service._get_repo_metadata", return_value={"description": "", "stars": 0, "forks": 0})
     @patch("services.platform.github_service.requests.get")
     def test_strips_git_suffix(self, mock_get, mock_desc):
         """.git 접미사가 자동으로 제거됨"""
@@ -72,7 +74,7 @@ class TestExtractGithubReadme(unittest.TestCase):
 
         self.assertEqual(result["title"], "owner/repo")
 
-    @patch("services.platform.github_service._get_repo_description", return_value="")
+    @patch("services.platform.github_service._get_repo_metadata", return_value={"description": "", "stars": 0, "forks": 0})
     @patch("services.platform.github_service.requests.get")
     def test_raises_on_empty_readme(self, mock_get, mock_desc):
         """빈 README에서 ValueError 발생"""
