@@ -70,3 +70,11 @@ class TestSystemInfo:
         # 모든 값은 문자열이어야 함
         for pkg, ver in deps.items():
             assert isinstance(ver, str)
+
+    def test_system_info_returns_disk_free_gb(self, _mock, client):
+        """disk_free_gb 필드가 포함되어야 한다."""
+        resp = client.get('/api/admin/system-info', headers=ORIGIN)
+        data = json.loads(resp.data)
+        assert 'disk_free_gb' in data
+        assert isinstance(data['disk_free_gb'], (int, float))
+        assert data['disk_free_gb'] > 0

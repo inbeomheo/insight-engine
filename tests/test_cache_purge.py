@@ -77,7 +77,41 @@ class TestPurgeExpiredCache:
         content_service.CACHE_DIR = '/nonexistent/path/cache'
         try:
             result = content_service.purge_expired_cache()
-            assert result == {'purged': 0, 'remaining': 0}
+            assert result == {'purged': 0, 'remaining': 0, 'freed_bytes': 0}
+        finally:
+            content_service.CACHE_DIR = original_cache_dir
+
+    def test_purge_returns_freed_bytes(self):
+        """삭제된 파일의 바이트 수를 freed_bytes로 반환."""
+        from services.core import content_service
+
+        tmpdir = tempfile.mkdtemp()
+        original_cache_dir = content_service.CACHE_DIR
+        content_service.CACHE_DIR = tmpdir
+        try:
+            # 오래된 파일 (2일 전, 100바이트)
+            old_file = os.path.join(tmpdir, 'old.json')
+            with open(old_file, 'w') as f:
+                f.write('x' * 100)
+            os.utime(old_file, (time.time() - 200000, time.time() - 200000))
+
+            result = content_service.purge_expired_cache(max_age_hours=24)
+            assert result['purged'] == 1
+            assert result['freed_bytes'] >= 100
+            assert 'freed_bytes' in result
+        finally:
+            content_service.CACHE_DIR = original_cache_dir
+
+    def test_purge_empty_dir_freed_bytes_zero(self):
+        """빈 디렉토리에서는 freed_bytes가 0."""
+        from services.core import content_service
+
+        tmpdir = tempfile.mkdtemp()
+        original_cache_dir = content_service.CACHE_DIR
+        content_service.CACHE_DIR = tmpdir
+        try:
+            result = content_service.purge_expired_cache()
+            assert result['freed_bytes'] == 0
         finally:
             content_service.CACHE_DIR = original_cache_dir
 
@@ -86,7 +120,7 @@ class TestPurgeExpiredCache:
 class TestCachePurgeAPI:
     """캐시 퍼지 API 엔드포인트 테스트."""
 
-    @patch('services.core.content_service.purge_expired_cache', return_value={'purged': 3, 'remaining': 5})
+    @patch('services.core.content_service.purge_expired_cache', return_value={'purged': 3, 'remaining': 5, 'freed_bytes': 1024})
     def test_purge_default(self, mock_purge, _mock_supa, client):
         """기본 호출 시 24시간 기준 정리."""
         resp = client.post('/api/cache/purge',
@@ -96,9 +130,10 @@ class TestCachePurgeAPI:
         data = json.loads(resp.data)
         assert data['success'] is True
         assert data['purged'] == 3
+        assert data['freed_bytes'] == 1024
         mock_purge.assert_called_once_with(24)
 
-    @patch('services.core.content_service.purge_expired_cache', return_value={'purged': 0, 'remaining': 2})
+    @patch('services.core.content_service.purge_expired_cache', return_value={'purged': 0, 'remaining': 2, 'freed_bytes': 0})
     def test_purge_custom_hours(self, mock_purge, _mock_supa, client):
         """사용자 지정 시간 기준."""
         resp = client.post('/api/cache/purge',

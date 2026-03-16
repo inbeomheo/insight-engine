@@ -170,16 +170,17 @@ def purge_expired_cache(max_age_hours: int = 24) -> dict:
         max_age_hours: 이 시간(시)보다 오래된 캐시 삭제 (기본 24시간)
 
     Returns:
-        {'purged': 삭제 수, 'remaining': 남은 수}
+        {'purged': 삭제 수, 'remaining': 남은 수, 'freed_bytes': 삭제로 확보된 바이트}
     """
     if not os.path.exists(CACHE_DIR):
-        return {'purged': 0, 'remaining': 0}
+        return {'purged': 0, 'remaining': 0, 'freed_bytes': 0}
 
     import time as _time
     now = _time.time()
     cutoff = now - (max_age_hours * 3600)
     purged = 0
     remaining = 0
+    freed_bytes = 0
 
     for filename in os.listdir(CACHE_DIR):
         filepath = os.path.join(CACHE_DIR, filename)
@@ -188,6 +189,10 @@ def purge_expired_cache(max_age_hours: int = 24) -> dict:
         try:
             mtime = os.path.getmtime(filepath)
             if mtime < cutoff:
+                try:
+                    freed_bytes += os.path.getsize(filepath)
+                except OSError:
+                    pass
                 os.remove(filepath)
                 purged += 1
             else:
@@ -195,7 +200,7 @@ def purge_expired_cache(max_age_hours: int = 24) -> dict:
         except IOError:
             remaining += 1
 
-    return {'purged': purged, 'remaining': remaining}
+    return {'purged': purged, 'remaining': remaining, 'freed_bytes': freed_bytes}
 
 
 # ==================== URL Utilities ====================

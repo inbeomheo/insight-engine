@@ -159,5 +159,30 @@ class TestCheckQuality(unittest.TestCase):
         self.assertLessEqual(len(result['suggestions']), 3)
 
 
+class TestQaCheckAPITiming(unittest.TestCase):
+    """POST /api/qa-check 응답에 check_duration_ms 포함 테스트."""
+
+    def setUp(self):
+        from app import create_app
+        app = create_app()
+        app.config['TESTING'] = True
+        self.client = app.test_client()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_qa_check_includes_duration_ms(self, _mock_supa):
+        """QA 검증 응답에 check_duration_ms 필드가 포함되어야 한다."""
+        import json
+        resp = self.client.post(
+            '/api/qa-check',
+            headers={'Origin': 'http://localhost:3000', 'Content-Type': 'application/json'},
+            data=json.dumps({'content': '## 섹션 1\n' + '가나다라마바사. ' * 80})
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertIn('check_duration_ms', data)
+        self.assertIsInstance(data['check_duration_ms'], float)
+        self.assertGreaterEqual(data['check_duration_ms'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()
