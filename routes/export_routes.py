@@ -315,8 +315,10 @@ def export_markdown():
                 if val:
                     metadata[key] = val
 
+        include_separator = bool(data.get('include_separator', False))
+
         from services.export.export_service import export_markdown as _export_md
-        buffer = _export_md(title, content, frontmatter=frontmatter, metadata=metadata if metadata else None)
+        buffer = _export_md(title, content, frontmatter=frontmatter, metadata=metadata if metadata else None, include_separator=include_separator)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
         return send_file(buffer, mimetype='text/markdown', as_attachment=True, download_name=f'{safe_title}.md')
@@ -636,6 +638,29 @@ def _detect_lang(text: str) -> str:
     return 'en'
 
 
+def _build_html_toc(html_content):
+    """HTML 콘텐츠에서 h2/h3 태그를 파싱하여 목차 HTML을 생성합니다."""
+    headings = re_module.findall(r'<(h[23])[^>]*>(.*?)</\1>', html_content, re_module.IGNORECASE | re_module.DOTALL)
+    if not headings:
+        return ''
+
+    items = []
+    for tag, text in headings:
+        # HTML 태그 제거 (볼드/링크 등 내부 태그)
+        clean_text = re_module.sub(r'<[^>]+>', '', text).strip()
+        if not clean_text:
+            continue
+        anchor = re_module.sub(r'[^\w가-힣-]', '-', clean_text).strip('-').lower()
+        css_class = 'toc-h3' if tag.lower() == 'h3' else ''
+        class_attr = f' class="{css_class}"' if css_class else ''
+        items.append(f'<li{class_attr}><a href="#{anchor}">{clean_text}</a></li>')
+
+    if not items:
+        return ''
+
+    return '<nav class="toc"><h2>목차</h2><ul>' + '\n'.join(items) + '</ul></nav>'
+
+
 @blog_bp.route('/api/export/html', methods=['POST'])
 @require_auth
 def export_html():
@@ -654,6 +679,7 @@ def export_html():
         if not html_content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
+        include_toc = data.get('include_toc', False)
         lang = _detect_lang(html_content)
 
         dark_css = ""
@@ -695,6 +721,13 @@ th, td {{ border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; text-align: left; 
 th {{ background: #f9fafb; font-weight: 600; }}
 a {{ color: #2563eb; }}
 .meta {{ color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }}
+.toc {{ background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 2rem; }}
+.toc h2 {{ font-size: 1.1rem; margin: 0 0 0.5rem 0; color: #1e293b; }}
+.toc ul {{ list-style: none; padding-left: 0; margin: 0; }}
+.toc li {{ margin: 0.25rem 0; }}
+.toc a {{ color: #2563eb; text-decoration: none; }}
+.toc a:hover {{ text-decoration: underline; }}
+.toc .toc-h3 {{ padding-left: 1.2rem; font-size: 0.9em; }}
 {dark_css}
 {"@media print { body { max-width: 100%; padding: 1rem; } a { color: #000; text-decoration: underline; } a[href]::after { content: ' (' attr(href) ')'; font-size: 0.8em; color: #555; } pre { white-space: pre-wrap; word-wrap: break-word; } }" if print_friendly else ""}
 </style>
@@ -702,6 +735,7 @@ a {{ color: #2563eb; }}
 <body>
 <h1>{title}</h1>
 <p class="meta">Insight Engine으로 생성됨</p>
+{_build_html_toc(html_content) if include_toc else ''}
 {html_content}
 </body>
 </html>"""

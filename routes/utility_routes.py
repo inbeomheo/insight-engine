@@ -31,6 +31,22 @@ _PLAYLIST_CACHE_TTL: int = 300  # 초
 _active_requests_counter: int = 0
 _active_requests_lock = threading.Lock()
 
+# 서버 시작 후 총 요청 수
+_total_request_count: int = 0
+_total_request_count_lock = threading.Lock()
+
+
+def increment_request_count():
+    """총 요청 수 1 증가."""
+    global _total_request_count
+    with _total_request_count_lock:
+        _total_request_count += 1
+
+
+def get_request_count() -> int:
+    """서버 시작 후 총 요청 수 반환."""
+    return _total_request_count
+
 
 def increment_active_requests():
     """활성 요청 수 증가."""
@@ -62,9 +78,10 @@ def _cleanup_stale_clients():
 @blog_bp.route('/health')
 def health():
     """헬스체크 엔드포인트 (Railway/Docker용)"""
+    increment_request_count()
     uptime = round(time.time() - _SERVER_START_TIME, 1)
     env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
-    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0'}), 200
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count()}), 200
 
 
 @blog_bp.route('/api/health/detailed')
@@ -3501,6 +3518,15 @@ def list_styles():
         'course': '정보형',
     }
 
+    # 스타일별 기본 길이(medium) 기준 예상 평균 글자 수
+    # medium = 1000~1500자 기준, 스타일 특성에 따라 보정
+    _AVG_LENGTH_CHARS = {
+        'blog_seo': 1400, 'summary': 800, 'tutorial': 1500, 'qna': 1200,
+        'app_ideas': 1300, 'yozm_it': 1400, 'brunch_essay': 1300,
+        'naver_popular': 1200, 'sns_post': 600, 'newsletter': 1300,
+        'show_notes': 1000, 'shorts_script': 900, 'geo_seo': 1500, 'course': 1600,
+    }
+
     styles = []
     for style_id, label in STYLE_OPTIONS:
         styles.append({
@@ -3509,6 +3535,7 @@ def list_styles():
             'temperature': STYLE_TEMPERATURE.get(style_id, 0.7),
             'description': STYLE_DESCRIPTIONS.get(style_id, ''),
             'category': _STYLE_CATEGORIES.get(style_id, '정보형'),
+            'avg_length_chars': _AVG_LENGTH_CHARS.get(style_id, 1200),
         })
 
     # 추천 스타일: 범용성 높은 상위 3개
@@ -3600,6 +3627,9 @@ def content_stats():
         # 물음표로 끝나는 문장 수
         question_count = len(_re.findall(r'[?？]', plain))
 
+        # 불렛/번호 리스트 항목 수 (마크다운 - / * / + / 1. 패턴)
+        list_count = len(_re.findall(r'^[\s]*(?:[-*+]|\d+\.)\s+\S', content, _re.MULTILINE))
+
         # Flesch Reading Ease (한국어 적용)
         # 한국어: 음절 수 ≈ 글자 수, 공식 적용
         # 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
@@ -3608,6 +3638,9 @@ def content_stats():
         avg_syllables_per_word = syllable_count / word_count if word_count else 0
         flesch_score = 206.835 - 1.015 * avg_words_per_sentence - 84.6 * avg_syllables_per_word
         flesch_reading_ease = round(max(0, min(100, flesch_score)), 1)
+
+        # URL 패턴 수 (http/https 링크 + 마크다운 링크)
+        link_count = len(_re.findall(r'https?://[^\s)\]]+', content))
 
         return jsonify({
             'char_count': char_count,
@@ -3622,6 +3655,8 @@ def content_stats():
             'flesch_reading_ease': flesch_reading_ease,
             'unique_words': unique_words,
             'question_count': question_count,
+            'list_count': list_count,
+            'link_count': link_count,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
@@ -3675,6 +3710,14 @@ def app_version():
     # API 엔드포인트 수 (/api/ 접두사 기준)
     features_count = sum(1 for r in all_rules if r.startswith('/api/'))
 
+    # 테스트 파일 수 (tests/ 디렉토리 내 test_*.py)
+    total_tests = 0
+    if os.path.isdir('tests'):
+        total_tests = sum(
+            1 for f in os.listdir('tests')
+            if f.startswith('test_') and f.endswith('.py')
+        )
+
     return jsonify({
         'name': 'Insight Engine',
         'version': '2.0.0',
@@ -3685,6 +3728,7 @@ def app_version():
         'routes': route_count,
         'total_routes': total_routes,
         'features_count': features_count,
+        'total_tests': total_tests,
         'python': os.sys.version.split()[0],
         'started_at': _SERVER_STARTED_AT,
     })

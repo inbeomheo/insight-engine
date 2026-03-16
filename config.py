@@ -183,10 +183,10 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
 # === 플랫폼별 카피 리라이트 프리셋 ===
 
 PLATFORM_PRESETS: Dict[str, Dict[str, Any]] = {
-    'twitter': {'max_chars': 280, 'tone': 'casual', 'format': 'one-liner + hashtags'},
-    'linkedin': {'max_chars': 3000, 'tone': 'professional', 'format': 'thought leadership'},
-    'instagram': {'max_chars': 2200, 'tone': 'friendly', 'format': 'story + hashtags'},
-    'threads': {'max_chars': 500, 'tone': 'conversational', 'format': 'short opinion'},
+    'twitter': {'max_chars': 280, 'tone': 'casual', 'format': 'one-liner + hashtags', 'icon_emoji': '🐦'},
+    'linkedin': {'max_chars': 3000, 'tone': 'professional', 'format': 'thought leadership', 'icon_emoji': '💼'},
+    'instagram': {'max_chars': 2200, 'tone': 'friendly', 'format': 'story + hashtags', 'icon_emoji': '📸'},
+    'threads': {'max_chars': 500, 'tone': 'conversational', 'format': 'short opinion', 'icon_emoji': '🧵'},
 }
 
 # === QA 게이트 (발행 전 품질 검증) ===

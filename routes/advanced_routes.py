@@ -366,6 +366,7 @@ def rewrite_platforms():
             'max_chars': preset['max_chars'],
             'tone': preset['tone'],
             'format': preset['format'],
+            'icon_emoji': preset.get('icon_emoji', ''),
         })
     return jsonify({'available_platforms': platforms})
 

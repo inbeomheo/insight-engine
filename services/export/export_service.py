@@ -173,6 +173,7 @@ def export_markdown(
     content: str,
     frontmatter: dict | None = None,
     metadata: dict | None = None,
+    include_separator: bool = False,
 ) -> io.BytesIO:
     """마크다운 파일을 BytesIO로 반환합니다.
 
@@ -182,6 +183,7 @@ def export_markdown(
         frontmatter: YAML frontmatter 딕셔너리 (title, date, tags 등)
         metadata: 생성 메타데이터 (model, style, generated_at 등).
                   포함 시 문서 하단에 메타 정보 섹션이 추가됨.
+        include_separator: True이면 ## 헤딩 사이에 수평 구분선(---) 삽입.
     """
     parts = []
     if frontmatter:
@@ -195,7 +197,13 @@ def export_markdown(
                 parts.append(f'{key}: {value}')
         parts.append('---')
         parts.append('')
-    parts.append(f"# {title}\n\n{content}")
+
+    body = content
+    if include_separator:
+        import re as _re
+        body = _re.sub(r'\n(## )', r'\n---\n\n\1', body)
+
+    parts.append(f"# {title}\n\n{body}")
 
     if metadata:
         meta_lines = ['\n---\n', '## 생성 정보\n']
