@@ -636,14 +636,18 @@ def get_transcript(video_id: str) -> TranscriptResult:
     2. watch 페이지 직접 파싱 (무료)
     3. Supadata API (유료 - 마지막 폴백)
     """
+    overall_start = time.time()
+
     # 0순위: 캐시 확인
     cached = _load_cache(video_id, 'transcript')
     if cached:
         _log_info(f"Transcript loaded from cache for video_id={video_id}")
+        elapsed_ms = round((time.time() - overall_start) * 1000, 1)
         # 캐시된 데이터가 새 형식(dict)인지 구버전(str)인지 확인
         if isinstance(cached, dict) and 'text' in cached:
+            cached['extraction_time_ms'] = elapsed_ms
             return cached
-        return {'text': cached, 'source': 'cache'}
+        return {'text': cached, 'source': 'cache', 'extraction_time_ms': elapsed_ms}
 
     supadata_api_key = os.getenv('SUPADATA_API_KEY', '')
     last_error = None
@@ -671,7 +675,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
                     'is_auto': is_auto,
                     'language': _detect_language_from_text(text),
                 }
-                result = {'text': text, 'source': 'api', 'segments': segments, 'source_meta': source_meta}
+                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+                result = {'text': text, 'source': 'api', 'segments': segments, 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
                 _save_cache(video_id, 'transcript', result)
                 return result
 
@@ -708,7 +713,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
             'is_auto': False,
             'language': _detect_language_from_text(watch_result),
         }
-        result = {'text': watch_result, 'source': 'watch', 'source_meta': source_meta}
+        elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+        result = {'text': watch_result, 'source': 'watch', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
         _save_cache(video_id, 'transcript', result)
         return result
 
@@ -724,7 +730,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
                 'is_auto': False,
                 'language': _detect_language_from_text(supadata_result),
             }
-            result = {'text': supadata_result, 'source': 'supadata', 'source_meta': source_meta}
+            elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+            result = {'text': supadata_result, 'source': 'supadata', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
             _save_cache(video_id, 'transcript', result)
             return result
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
@@ -747,7 +754,8 @@ def get_transcript(video_id: str) -> TranscriptResult:
                     'is_auto': True,
                     'language': _detect_language_from_text(whisper_text),
                 }
-                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta}
+                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
                 _save_cache(video_id, 'transcript', result)
                 return result
         except Exception as e:
