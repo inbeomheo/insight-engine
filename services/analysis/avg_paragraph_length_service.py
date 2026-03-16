@@ -6,7 +6,10 @@ Average Paragraph Length 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 _PARAGRAPH_SPLIT = re.compile(r'\n\s*\n')
@@ -110,31 +113,35 @@ def analyze_avg_paragraph_length(content: str) -> dict:
     Returns:
         paragraph_data, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    paragraphs = _split_paragraphs(content)
-    if not paragraphs:
-        return dict(_EMPTY_RESULT)
+        paragraphs = _split_paragraphs(content)
+        if not paragraphs:
+            return dict(_EMPTY_RESULT)
 
-    paragraph_data, long_paras, short_paras, total_words, total_sentences = _classify_paragraphs(paragraphs)
-    total = len(paragraphs)
-    avg_words = round(total_words / total, 1)
-    avg_sentences = round(total_sentences / total, 1)
+        paragraph_data, long_paras, short_paras, total_words, total_sentences = _classify_paragraphs(paragraphs)
+        total = len(paragraphs)
+        avg_words = round(total_words / total, 1)
+        avg_sentences = round(total_sentences / total, 1)
 
-    score, level = _compute_paragraph_score(avg_words, paragraph_data, long_paras, short_paras, total)
-    suggestions = _generate_suggestions(avg_words, avg_sentences, level, long_paras, short_paras, total)
+        score, level = _compute_paragraph_score(avg_words, paragraph_data, long_paras, short_paras, total)
+        suggestions = _generate_suggestions(avg_words, avg_sentences, level, long_paras, short_paras, total)
 
-    return {
-        'paragraph_data': paragraph_data[:20],
-        'summary': {
-            'total_paragraphs': total, 'avg_words': avg_words,
-            'avg_sentences': avg_sentences, 'long_paragraphs': long_paras,
-            'short_paragraphs': short_paras, 'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'paragraph_data': paragraph_data[:20],
+            'summary': {
+                'total_paragraphs': total, 'avg_words': avg_words,
+                'avg_sentences': avg_sentences, 'long_paragraphs': long_paras,
+                'short_paragraphs': short_paras, 'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"단락 평균 길이 분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(avg_words: float, avg_sent: float, level: str,

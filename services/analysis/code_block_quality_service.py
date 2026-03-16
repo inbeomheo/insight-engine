@@ -7,6 +7,9 @@ Code Block Quality Checker 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 코드 블록 패턴 (fenced)
@@ -103,28 +106,32 @@ def check_code_block_quality(content: str) -> dict:
     Returns:
         code_blocks, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    blocks, missing_lang, long_blocks, empty_blocks = _scan_code_blocks(content)
-    total = len(blocks)
-    if total == 0:
-        return dict(_EMPTY_RESULT)
+        blocks, missing_lang, long_blocks, empty_blocks = _scan_code_blocks(content)
+        total = len(blocks)
+        if total == 0:
+            return dict(_EMPTY_RESULT)
 
-    issue_count = missing_lang + long_blocks + empty_blocks
-    score = round(max(0.0, min(100.0, (1.0 - issue_count / (total * 1.5)) * 100.0)), 1)
+        issue_count = missing_lang + long_blocks + empty_blocks
+        score = round(max(0.0, min(100.0, (1.0 - issue_count / (total * 1.5)) * 100.0)), 1)
 
-    return {
-        'code_blocks': blocks,
-        'summary': {
-            'total_blocks': total,
-            'missing_language': missing_lang,
-            'long_blocks': long_blocks,
-            'empty_blocks': empty_blocks,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(total, missing_lang, long_blocks, empty_blocks),
-    }
+        return {
+            'code_blocks': blocks,
+            'summary': {
+                'total_blocks': total,
+                'missing_language': missing_lang,
+                'long_blocks': long_blocks,
+                'empty_blocks': empty_blocks,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(total, missing_lang, long_blocks, empty_blocks),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, missing: int, long: int, empty: int) -> List[str]:

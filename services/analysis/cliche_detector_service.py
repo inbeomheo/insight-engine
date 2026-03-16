@@ -7,6 +7,9 @@ Cliché Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 
@@ -115,18 +118,22 @@ def detect_cliches(content: str) -> dict:
     Returns:
         cliches, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    found_cliches, category_count, total = _scan_cliches(_HEADING_RE.sub('', content))
-    score, level = _compute_cliche_score(total)
+        found_cliches, category_count, total = _scan_cliches(_HEADING_RE.sub('', content))
+        score, level = _compute_cliche_score(total)
 
-    return {
-        'cliches': found_cliches[:20],
-        'summary': {'total_cliches': total, 'categories': category_count, 'level': level},
-        'score': score,
-        'suggestions': _generate_suggestions(found_cliches, total, level),
-    }
+        return {
+            'cliches': found_cliches[:20],
+            'summary': {'total_cliches': total, 'categories': category_count, 'level': level},
+            'score': score,
+            'suggestions': _generate_suggestions(found_cliches, total, level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(cliches: List[Dict], total: int, level: str) -> List[str]:

@@ -146,22 +146,27 @@ def check_inclusive_language(content: str) -> dict:
     Returns:
         issues, summary, inclusivity_score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
 
-    issues = _detect_issues(_split_sentences(content))
-    cat_counter = Counter(i['category'] for i in issues)
+        issues = _detect_issues(_split_sentences(content))
+        cat_counter = Counter(i['category'] for i in issues)
 
-    return {
-        'issues': issues,
-        'summary': {
-            'total': len(issues),
-            'by_category': dict(cat_counter),
-            'by_severity': dict(Counter(i['severity'] for i in issues)),
-        },
-        'inclusivity_score': _calculate_score(issues, content),
-        'suggestions': _generate_suggestions(issues, cat_counter),
-    }
+        return {
+            'issues': issues,
+            'summary': {
+                'total': len(issues),
+                'by_category': dict(cat_counter),
+                'by_severity': dict(Counter(i['severity'] for i in issues)),
+            },
+            'inclusivity_score': _calculate_score(issues, content),
+            'suggestions': _generate_suggestions(issues, cat_counter),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _split_sentences(content: str) -> list:

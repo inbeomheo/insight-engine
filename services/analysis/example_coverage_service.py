@@ -112,29 +112,34 @@ def analyze_example_coverage(content: str) -> dict:
     Returns:
         claims, summary, coverage_score, weak_sections, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
+        sentences = _split_sentences(content)
+        if not sentences:
+            return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
 
-    claim_indices = _detect_claims(sentences)
-    if not claim_indices:
-        return {**_EMPTY_RESULT, 'coverage_score': 100.0,
-                'suggestions': ['주장/조언 문장이 없습니다. 근거 분석이 불필요합니다.']}
+        claim_indices = _detect_claims(sentences)
+        if not claim_indices:
+            return {**_EMPTY_RESULT, 'coverage_score': 100.0,
+                    'suggestions': ['주장/조언 문장이 없습니다. 근거 분석이 불필요합니다.']}
 
-    claims, supported, unsupported = _verify_claims(sentences, claim_indices)
-    total = len(claims)
-    coverage_score = round((supported / total) * 100, 1) if total > 0 else 0.0
+        claims, supported, unsupported = _verify_claims(sentences, claim_indices)
+        total = len(claims)
+        coverage_score = round((supported / total) * 100, 1) if total > 0 else 0.0
 
-    return {
-        'claims': claims,
-        'summary': {'total_claims': total, 'supported': supported, 'unsupported': unsupported},
-        'coverage_score': coverage_score,
-        'weak_sections': [c['claim_sentence'] for c in claims if not c['has_evidence']],
-        'suggestions': _generate_suggestions(claims, coverage_score),
-    }
+        return {
+            'claims': claims,
+            'summary': {'total_claims': total, 'supported': supported, 'unsupported': unsupported},
+            'coverage_score': coverage_score,
+            'weak_sections': [c['claim_sentence'] for c in claims if not c['has_evidence']],
+            'suggestions': _generate_suggestions(claims, coverage_score),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _split_sentences(content: str) -> list:

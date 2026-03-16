@@ -7,6 +7,9 @@ Definition Gap Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 약어 패턴 (2~6자 대문자)
 _ACRONYM = re.compile(r'\b[A-Z]{2,6}(?![A-Za-z])')
@@ -174,29 +177,34 @@ def detect_definition_gaps(content: str) -> dict:
     Returns:
         score, summary, undefined_terms, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    terms = _find_terms(content)
-    if not terms:
-        return dict(_EMPTY_RESULT)
+        terms = _find_terms(content)
+        if not terms:
+            return dict(_EMPTY_RESULT)
 
-    defined_count, undefined_items = _check_definitions(content, terms)
-    total = len(terms)
-    undefined_count = total - defined_count
-    score, level = _compute_gap_score(total, defined_count, undefined_count)
+        defined_count, undefined_items = _check_definitions(content, terms)
+        total = len(terms)
+        undefined_count = total - defined_count
+        score, level = _compute_gap_score(total, defined_count, undefined_count)
 
-    return {
-        'score': score,
-        'summary': {
-            'total_terms': total, 'defined_terms': defined_count,
-            'undefined_terms': undefined_count, 'level': level,
-        },
-        'undefined_terms': undefined_items[:10],
-        'suggestions': _generate_suggestions(
-            total, defined_count, undefined_count, level, undefined_items
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_terms': total, 'defined_terms': defined_count,
+                'undefined_terms': undefined_count, 'level': level,
+            },
+            'undefined_terms': undefined_items[:10],
+            'suggestions': _generate_suggestions(
+                total, defined_count, undefined_count, level, undefined_items
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(total: int, defined: int, undefined: int,

@@ -7,6 +7,9 @@ Conclusion Strength Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
@@ -99,24 +102,28 @@ def analyze_conclusion_strength(content: str) -> dict:
     Returns:
         elements, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    conclusion = _get_conclusion_section(content)
-    elements = _detect_elements(content, conclusion)
-    element_count = sum(1 for v in elements.values() if v)
-    level = _strength_level(element_count)
+        conclusion = _get_conclusion_section(content)
+        elements = _detect_elements(content, conclusion)
+        element_count = sum(1 for v in elements.values() if v)
+        level = _strength_level(element_count)
 
-    return {
-        'elements': elements,
-        'summary': {
-            'has_conclusion_heading': elements['conclusion_heading'],
-            'element_count': element_count,
-            'strength_level': level,
-        },
-        'score': round(min(100.0, element_count * 20.0), 1),
-        'suggestions': _generate_suggestions(elements, level, element_count),
-    }
+        return {
+            'elements': elements,
+            'summary': {
+                'has_conclusion_heading': elements['conclusion_heading'],
+                'element_count': element_count,
+                'strength_level': level,
+            },
+            'score': round(min(100.0, element_count * 20.0), 1),
+            'suggestions': _generate_suggestions(elements, level, element_count),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(elements: Dict, level: str, count: int) -> List[str]:

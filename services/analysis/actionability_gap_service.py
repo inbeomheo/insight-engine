@@ -6,7 +6,10 @@ Actionability Gap Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 # ── 마크다운 헤딩 ──
@@ -159,29 +162,33 @@ def detect_actionability_gaps(content: str) -> dict:
     Returns:
         section_analysis, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sections = _parse_sections(content)
-    if not sections:
-        sections = [{'section': '(전체)', 'lines': content.split('\n')}]
+        sections = _parse_sections(content)
+        if not sections:
+            sections = [{'section': '(전체)', 'lines': content.split('\n')}]
 
-    section_analysis, total_advice, total_actions, gap_sections = _analyze_sections(sections)
+        section_analysis, total_advice, total_actions, gap_sections = _analyze_sections(sections)
 
-    rate = round((total_actions / total_advice * 100) if total_advice > 0 else 100.0, 1)
-    score = round(min(100.0, rate), 1)
+        rate = round((total_actions / total_advice * 100) if total_advice > 0 else 100.0, 1)
+        score = round(min(100.0, rate), 1)
 
-    return {
-        'section_analysis': section_analysis,
-        'summary': {
-            'total_advice': total_advice,
-            'total_actions': total_actions,
-            'actionability_rate': rate,
-            'gap_sections': gap_sections,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(section_analysis, gap_sections, rate),
-    }
+        return {
+            'section_analysis': section_analysis,
+            'summary': {
+                'total_advice': total_advice,
+                'total_actions': total_actions,
+                'actionability_rate': rate,
+                'gap_sections': gap_sections,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(section_analysis, gap_sections, rate),
+        }
+    except Exception as e:
+        logger.error(f"실행 가능성 갭 분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(analysis: List[Dict], gaps: int, rate: float) -> List[str]:

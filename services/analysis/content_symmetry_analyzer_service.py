@@ -8,6 +8,9 @@ Content Symmetry Analyzer 서비스
 import re
 import math
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+.+$', re.MULTILINE)
 _SECTION_SPLIT_RE = re.compile(r'^#{1,3}\s+', re.MULTILINE)
@@ -140,45 +143,50 @@ def analyze_content_symmetry(content: str) -> dict:
     Returns:
         sections, balance, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sections = _split_sections(content)
+        sections = _split_sections(content)
 
-    if len(sections) < 2:
+        if len(sections) < 2:
+            return {
+                'sections': [{'title': s['title'],
+                              'word_count': s['word_count'],
+                              'char_count': s['char_count']} for s in sections],
+                'balance': {},
+                'summary': {
+                    'total_sections': len(sections), 'symmetry_score': 0.0,
+                    'cv': 0.0, 'level': 'single',
+                },
+                'score': 50.0,
+                'suggestions': ['섹션이 1개뿐입니다. 구조적 분석을 위해 헤딩으로 섹션을 나누세요.'],
+            }
+
+        section_data, balance, cv = _compute_balance(sections)
+        score, level = _compute_symmetry_score(cv)
+
+        suggestions = _generate_suggestions(
+            cv, level, section_data, balance['min_words'], balance['max_words'],
+            balance['mean_words']
+        )
+
         return {
-            'sections': [{'title': s['title'],
-                          'word_count': s['word_count'],
-                          'char_count': s['char_count']} for s in sections],
-            'balance': {},
+            'sections': section_data[:20],
+            'balance': balance,
             'summary': {
-                'total_sections': len(sections), 'symmetry_score': 0.0,
-                'cv': 0.0, 'level': 'single',
+                'total_sections': len(sections),
+                'symmetry_score': round(100.0 - cv * 100.0, 1) if cv <= 1.0 else 0.0,
+                'cv': cv,
+                'level': level,
             },
-            'score': 50.0,
-            'suggestions': ['섹션이 1개뿐입니다. 구조적 분석을 위해 헤딩으로 섹션을 나누세요.'],
+            'score': score,
+            'suggestions': suggestions,
         }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
-    section_data, balance, cv = _compute_balance(sections)
-    score, level = _compute_symmetry_score(cv)
-
-    suggestions = _generate_suggestions(
-        cv, level, section_data, balance['min_words'], balance['max_words'],
-        balance['mean_words']
-    )
-
-    return {
-        'sections': section_data[:20],
-        'balance': balance,
-        'summary': {
-            'total_sections': len(sections),
-            'symmetry_score': round(100.0 - cv * 100.0, 1) if cv <= 1.0 else 0.0,
-            'cv': cv,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
 
 
 def _generate_suggestions(cv: float, level: str,

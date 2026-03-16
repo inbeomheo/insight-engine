@@ -8,6 +8,9 @@ Heading Keyword Density 서비스
 import re
 from typing import List, Dict
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 
@@ -136,37 +139,42 @@ def analyze_heading_keyword_density(content: str) -> dict:
     Returns:
         headings, keyword_coverage, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    headings = _extract_headings(content)
-    if not headings:
-        return {**_EMPTY_RESULT, 'score': 50.0,
-                'suggestions': ['헤딩이 없습니다. H1~H6 헤딩을 추가하세요.']}
+        headings = _extract_headings(content)
+        if not headings:
+            return {**_EMPTY_RESULT, 'score': 50.0,
+                    'suggestions': ['헤딩이 없습니다. H1~H6 헤딩을 추가하세요.']}
 
-    body_keywords = _get_body_keywords(content)
-    heading_data, keyword_coverage, covered, duplicated, coverage_ratio = (
-        _analyze_keyword_coverage(headings, body_keywords)
-    )
-    score, level = _compute_density_score(coverage_ratio, duplicated)
+        body_keywords = _get_body_keywords(content)
+        heading_data, keyword_coverage, covered, duplicated, coverage_ratio = (
+            _analyze_keyword_coverage(headings, body_keywords)
+        )
+        score, level = _compute_density_score(coverage_ratio, duplicated)
 
-    suggestions = _generate_suggestions(
-        coverage_ratio, level, body_keywords, covered, duplicated, len(headings)
-    )
+        suggestions = _generate_suggestions(
+            coverage_ratio, level, body_keywords, covered, duplicated, len(headings)
+        )
 
-    return {
-        'headings': heading_data[:20],
-        'keyword_coverage': keyword_coverage[:10],
-        'summary': {
-            'total_headings': len(headings),
-            'body_keywords_in_headings': len(covered),
-            'coverage_ratio': coverage_ratio,
-            'duplicated_keywords': list(duplicated.keys())[:5],
-            'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'headings': heading_data[:20],
+            'keyword_coverage': keyword_coverage[:10],
+            'summary': {
+                'total_headings': len(headings),
+                'body_keywords_in_headings': len(covered),
+                'coverage_ratio': coverage_ratio,
+                'duplicated_keywords': list(duplicated.keys())[:5],
+                'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(ratio: float, level: str,

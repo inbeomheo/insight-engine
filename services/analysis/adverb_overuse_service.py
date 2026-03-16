@@ -5,7 +5,10 @@ Adverb Overuse Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 # ── 한국어 부사 사전 ──
@@ -157,28 +160,32 @@ def detect_adverb_overuse(content: str) -> dict:
     Returns:
         adverbs, weak_combinations, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    adverbs = _build_adverb_list(content)
-    weak_combinations = _find_weak_combinations(content)
+        adverbs = _build_adverb_list(content)
+        weak_combinations = _find_weak_combinations(content)
 
-    total_adverb_count = sum(a['count'] for a in adverbs)
-    word_count = _count_words(content)
-    density = round((total_adverb_count / word_count * 100) if word_count > 0 else 0.0, 2)
-    score = _compute_adverb_score(density)
+        total_adverb_count = sum(a['count'] for a in adverbs)
+        word_count = _count_words(content)
+        density = round((total_adverb_count / word_count * 100) if word_count > 0 else 0.0, 2)
+        score = _compute_adverb_score(density)
 
-    return {
-        'adverbs': adverbs,
-        'weak_combinations': weak_combinations,
-        'summary': {
-            'total_adverbs': total_adverb_count,
-            'adverb_density': density,
-            'weak_combos': len(weak_combinations),
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(adverbs, density, weak_combinations),
-    }
+        return {
+            'adverbs': adverbs,
+            'weak_combinations': weak_combinations,
+            'summary': {
+                'total_adverbs': total_adverb_count,
+                'adverb_density': density,
+                'weak_combos': len(weak_combinations),
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(adverbs, density, weak_combinations),
+        }
+    except Exception as e:
+        logger.error(f"부사 남용 감지 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

@@ -7,6 +7,9 @@ Content Depth Scorer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
@@ -110,22 +113,26 @@ def score_content_depth(content: str) -> dict:
     Returns:
         depth_indicators, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    indicators = _measure_depth_indicators(content)
-    word_count = len(re.findall(r'[A-Za-z]+', content)) + len(re.findall(r'[가-힣]+', content))
-    score, depth_level, density = _compute_depth_score(indicators, word_count)
+        indicators = _measure_depth_indicators(content)
+        word_count = len(re.findall(r'[A-Za-z]+', content)) + len(re.findall(r'[가-힣]+', content))
+        score, depth_level, density = _compute_depth_score(indicators, word_count)
 
-    return {
-        'depth_indicators': indicators,
-        'summary': {'total_indicators': sum(indicators.values()), 'depth_level': depth_level,
-                     'word_count': word_count, 'indicator_density': density},
-        'score': score,
-        'suggestions': _generate_suggestions(
-            indicators, depth_level, sum(1 for v in indicators.values() if v > 0), density
-        ),
-    }
+        return {
+            'depth_indicators': indicators,
+            'summary': {'total_indicators': sum(indicators.values()), 'depth_level': depth_level,
+                         'word_count': word_count, 'indicator_density': density},
+            'score': score,
+            'suggestions': _generate_suggestions(
+                indicators, depth_level, sum(1 for v in indicators.values() if v > 0), density
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(indicators: Dict, level: str, active: int, density: float) -> List[str]:

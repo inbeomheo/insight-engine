@@ -7,6 +7,9 @@ Gender-Neutral Language Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 
@@ -102,20 +105,25 @@ def check_gender_neutral(content: str) -> dict:
     Returns:
         findings, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    findings, ko_count, en_count = _scan_gendered_terms(_HEADING_RE.sub('', content))
-    total = ko_count + en_count
-    score, level = _compute_gender_score(total)
+        findings, ko_count, en_count = _scan_gendered_terms(_HEADING_RE.sub('', content))
+        total = ko_count + en_count
+        score, level = _compute_gender_score(total)
 
-    return {
-        'findings': findings[:20],
-        'summary': {'total_issues': total, 'ko_issues': ko_count,
-                     'en_issues': en_count, 'level': level},
-        'score': score,
-        'suggestions': _generate_suggestions(findings, total, level),
-    }
+        return {
+            'findings': findings[:20],
+            'summary': {'total_issues': total, 'ko_issues': ko_count,
+                         'en_issues': en_count, 'level': level},
+            'score': score,
+            'suggestions': _generate_suggestions(findings, total, level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(findings: List[Dict], total: int,

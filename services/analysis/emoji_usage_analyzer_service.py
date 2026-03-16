@@ -8,6 +8,9 @@ Emoji Usage Analyzer 서비스
 import re
 from typing import List
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 이모지 감지 패턴 (유니코드 범위 기반)
 _EMOJI_RE = re.compile(
@@ -110,31 +113,36 @@ def analyze_emoji_usage(content: str) -> dict:
     Returns:
         emoji_list, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    all_emojis = _extract_emojis(content)
-    if not all_emojis:
-        word_count = len(content.split())
-        suggestions = ['이모지가 없습니다. 필요에 따라 적절히 사용하면 가독성을 높일 수 있습니다.'] if word_count > 50 else []
-        return {**_EMPTY_RESULT, 'suggestions': suggestions}
+        all_emojis = _extract_emojis(content)
+        if not all_emojis:
+            word_count = len(content.split())
+            suggestions = ['이모지가 없습니다. 필요에 따라 적절히 사용하면 가독성을 높일 수 있습니다.'] if word_count > 50 else []
+            return {**_EMPTY_RESULT, 'suggestions': suggestions}
 
-    emoji_list, density, unique_emojis, heading_emojis, body_emojis = (
-        _analyze_distribution(content, all_emojis)
-    )
-    score, level = _compute_emoji_score(density, len(all_emojis), unique_emojis)
-    suggestions = _generate_suggestions(density, level, len(all_emojis), unique_emojis, heading_emojis)
+        emoji_list, density, unique_emojis, heading_emojis, body_emojis = (
+            _analyze_distribution(content, all_emojis)
+        )
+        score, level = _compute_emoji_score(density, len(all_emojis), unique_emojis)
+        suggestions = _generate_suggestions(density, level, len(all_emojis), unique_emojis, heading_emojis)
 
-    return {
-        'emoji_list': emoji_list,
-        'summary': {
-            'total_emojis': len(all_emojis), 'unique_emojis': unique_emojis,
-            'emoji_density': density, 'level': level,
-            'in_headings': heading_emojis, 'in_body': body_emojis,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'emoji_list': emoji_list,
+            'summary': {
+                'total_emojis': len(all_emojis), 'unique_emojis': unique_emojis,
+                'emoji_density': density, 'level': level,
+                'in_headings': heading_emojis, 'in_body': body_emojis,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(density: float, level: str, total: int,

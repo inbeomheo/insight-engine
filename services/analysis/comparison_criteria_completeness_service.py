@@ -7,6 +7,9 @@ Comparison Criteria Completeness Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 비교 콘텐츠 탐지 패턴
 _COMPARISON_SIGNAL = [
@@ -111,31 +114,35 @@ def check_comparison_criteria_completeness(content: str) -> dict:
     Returns:
         score, summary, criteria_found, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    if not _has_pattern(content, _COMPARISON_SIGNAL):
-        return dict(_EMPTY_RESULT)
+        if not _has_pattern(content, _COMPARISON_SIGNAL):
+            return dict(_EMPTY_RESULT)
 
-    criteria_details, found_categories = _scan_criteria(content)
-    found_count = len(found_categories)
-    total_categories = len(_CRITERIA_PATTERNS)
-    completeness = round(found_count / total_categories * 100, 1)
-    level = _compute_completeness_level(found_count)
-    score = round(max(0.0, min(100.0, 15.0 + (found_count / total_categories * 85.0))), 1)
+        criteria_details, found_categories = _scan_criteria(content)
+        found_count = len(found_categories)
+        total_categories = len(_CRITERIA_PATTERNS)
+        completeness = round(found_count / total_categories * 100, 1)
+        level = _compute_completeness_level(found_count)
+        score = round(max(0.0, min(100.0, 15.0 + (found_count / total_categories * 85.0))), 1)
 
-    return {
-        'score': score,
-        'summary': {
-            'is_comparison_content': True, 'criteria_categories': found_count,
-            'criteria_found': found_categories,
-            'completeness_ratio': completeness, 'level': level,
-        },
-        'criteria_details': criteria_details,
-        'suggestions': _generate_suggestions(
-            found_categories, criteria_details, completeness, level
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_comparison_content': True, 'criteria_categories': found_count,
+                'criteria_found': found_categories,
+                'completeness_ratio': completeness, 'level': level,
+            },
+            'criteria_details': criteria_details,
+            'suggestions': _generate_suggestions(
+                found_categories, criteria_details, completeness, level
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(found: List[str], details: List[Dict],

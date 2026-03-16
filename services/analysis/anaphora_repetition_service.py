@@ -6,7 +6,10 @@ Anaphora Repetition Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
@@ -96,29 +99,33 @@ def detect_anaphora_repetition(content: str) -> dict:
     Returns:
         anaphora_groups, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if len(sentences) < _MIN_REPEAT:
-        return {**_EMPTY_RESULT, 'summary': {**_EMPTY_RESULT['summary'],
-                'total_sentences': len(sentences)}}
+        sentences = _split_sentences(content)
+        if len(sentences) < _MIN_REPEAT:
+            return {**_EMPTY_RESULT, 'summary': {**_EMPTY_RESULT['summary'],
+                    'total_sentences': len(sentences)}}
 
-    groups = _scan_anaphora_groups(sentences)
-    total_repeated = sum(g['count'] for g in groups)
-    score, intentional, unintentional = _compute_anaphora_score(groups)
+        groups = _scan_anaphora_groups(sentences)
+        total_repeated = sum(g['count'] for g in groups)
+        score, intentional, unintentional = _compute_anaphora_score(groups)
 
-    return {
-        'anaphora_groups': groups,
-        'summary': {
-            'total_sentences': len(sentences),
-            'groups_found': len(groups),
-            'repeated_sentences': total_repeated,
-            'intentional_count': intentional,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(groups, intentional, unintentional),
-    }
+        return {
+            'anaphora_groups': groups,
+            'summary': {
+                'total_sentences': len(sentences),
+                'groups_found': len(groups),
+                'repeated_sentences': total_repeated,
+                'intentional_count': intentional,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(groups, intentional, unintentional),
+        }
+    except Exception as e:
+        logger.error(f"수사 반복 감지 실패: {e}")
+        return {"error": str(e)}
 
 
 def _is_intentional_anaphora(sentences: List[str]) -> bool:

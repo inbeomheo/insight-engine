@@ -7,6 +7,9 @@ H1→H2→H3 계층 건너뜀, 중복 H1, 빈 섹션 등
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 마크다운 제목 패턴
 _HEADING = re.compile(r'^(#{1,6})\s+(.+)', re.MULTILINE)
@@ -141,24 +144,29 @@ def check_heading_hierarchy(content: str) -> dict:
     Returns:
         score, summary, hierarchy_issues, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    headings = _extract_headings(content)
-    if not headings:
-        return dict(_EMPTY_RESULT)
+        headings = _extract_headings(content)
+        if not headings:
+            return dict(_EMPTY_RESULT)
 
-    issues = _collect_issues(content, headings)
-    max_depth = max(h['level'] for h in headings)
-    score, level = _compute_hierarchy_score(len(issues), len(headings))
+        issues = _collect_issues(content, headings)
+        max_depth = max(h['level'] for h in headings)
+        score, level = _compute_hierarchy_score(len(issues), len(headings))
 
-    return {
-        'score': score,
-        'summary': {'total_headings': len(headings), 'max_depth': max_depth,
-                     'issue_count': len(issues), 'level': level},
-        'hierarchy_issues': issues[:10],
-        'suggestions': _generate_suggestions(headings, max_depth, issues, level),
-    }
+        return {
+            'score': score,
+            'summary': {'total_headings': len(headings), 'max_depth': max_depth,
+                         'issue_count': len(issues), 'level': level},
+            'hierarchy_issues': issues[:10],
+            'suggestions': _generate_suggestions(headings, max_depth, issues, level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(headings: List[Dict], max_depth: int,

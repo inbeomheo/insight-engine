@@ -123,21 +123,25 @@ def extract_acronyms(content: str) -> dict:
     Returns:
         acronyms, summary, glossary_markdown, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    acronyms, known_count, unknown_count = _scan_acronyms(content)
+        acronyms, known_count, unknown_count = _scan_acronyms(content)
 
-    return {
-        'acronyms': acronyms,
-        'summary': {
-            'total': len(acronyms),
-            'known': known_count,
-            'unknown': unknown_count,
-        },
-        'glossary_markdown': _build_glossary_markdown(acronyms),
-        'suggestions': _generate_suggestions(acronyms, known_count, unknown_count),
-    }
+        return {
+            'acronyms': acronyms,
+            'summary': {
+                'total': len(acronyms),
+                'known': known_count,
+                'unknown': unknown_count,
+            },
+            'glossary_markdown': _build_glossary_markdown(acronyms),
+            'suggestions': _generate_suggestions(acronyms, known_count, unknown_count),
+        }
+    except Exception as e:
+        logger.error(f"약어 추출 실패: {e}")
+        return {"error": str(e)}
 
 
 def _build_glossary_markdown(acronyms: list) -> str:

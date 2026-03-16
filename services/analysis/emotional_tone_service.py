@@ -124,33 +124,38 @@ def map_emotional_tone(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    paragraphs = [p.strip() for p in re.split(r'\n\s*\n|\n', content) if len(p.strip()) >= 5]
-    if not paragraphs:
-        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
+        paragraphs = [p.strip() for p in re.split(r'\n\s*\n|\n', content) if len(p.strip()) >= 5]
+        if not paragraphs:
+            return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
 
-    arc, total_emotions = _analyze_paragraphs(paragraphs)
+        arc, total_emotions = _analyze_paragraphs(paragraphs)
 
-    overall_dominant = max(total_emotions, key=total_emotions.get) if total_emotions else 'neutral'
-    total_score = sum(total_emotions.values()) or 1
-    distribution = {k: round(v / total_score * 100, 1)
-                    for k, v in sorted(total_emotions.items(), key=lambda x: x[1], reverse=True)}
-    flow_pattern = _detect_flow_pattern(arc)
+        overall_dominant = max(total_emotions, key=total_emotions.get) if total_emotions else 'neutral'
+        total_score = sum(total_emotions.values()) or 1
+        distribution = {k: round(v / total_score * 100, 1)
+                        for k, v in sorted(total_emotions.items(), key=lambda x: x[1], reverse=True)}
+        flow_pattern = _detect_flow_pattern(arc)
 
-    return {
-        'arc': arc,
-        'overall': {
-            'dominant_emotion': overall_dominant,
-            'emotion_label': _EMOTION_LEXICON.get(overall_dominant, {}).get('label', '중립'),
-            'valence': round(_calculate_valence(total_emotions), 2),
-            'distribution': distribution,
-        },
-        'flow_pattern': flow_pattern,
-        'score': _calculate_tone_score(arc, distribution, flow_pattern),
-        'suggestions': _generate_suggestions(arc, distribution, flow_pattern),
-    }
+        return {
+            'arc': arc,
+            'overall': {
+                'dominant_emotion': overall_dominant,
+                'emotion_label': _EMOTION_LEXICON.get(overall_dominant, {}).get('label', '중립'),
+                'valence': round(_calculate_valence(total_emotions), 2),
+                'distribution': distribution,
+            },
+            'flow_pattern': flow_pattern,
+            'score': _calculate_tone_score(arc, distribution, flow_pattern),
+            'suggestions': _generate_suggestions(arc, distribution, flow_pattern),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _score_paragraph(text: str) -> dict:

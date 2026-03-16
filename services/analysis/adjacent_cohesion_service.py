@@ -6,7 +6,10 @@ Adjacent Paragraph Cohesion Analyzer 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _WORD_SPLIT = re.compile(r'[가-힣]{2,}|[a-zA-Z]{3,}', re.IGNORECASE)
 
@@ -154,29 +157,33 @@ def analyze_adjacent_cohesion(content: str) -> dict:
     Returns:
         score, summary, pair_details, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    paragraphs = _split_paragraphs(content)
-    if len(paragraphs) < 2:
-        return dict(_EMPTY_RESULT)
+        paragraphs = _split_paragraphs(content)
+        if len(paragraphs) < 2:
+            return dict(_EMPTY_RESULT)
 
-    pair_details, weak_count = _analyze_pairs(paragraphs)
-    score, level, avg_cohesion = _compute_cohesion_score(pair_details, weak_count)
+        pair_details, weak_count = _analyze_pairs(paragraphs)
+        score, level, avg_cohesion = _compute_cohesion_score(pair_details, weak_count)
 
-    return {
-        'score': score,
-        'summary': {
-            'total_pairs': len(pair_details),
-            'weak_pairs': weak_count,
-            'avg_cohesion': avg_cohesion,
-            'level': level,
-        },
-        'pair_details': pair_details[:10],
-        'suggestions': _generate_suggestions(
-            len(pair_details), weak_count, avg_cohesion, level, pair_details
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_pairs': len(pair_details),
+                'weak_pairs': weak_count,
+                'avg_cohesion': avg_cohesion,
+                'level': level,
+            },
+            'pair_details': pair_details[:10],
+            'suggestions': _generate_suggestions(
+                len(pair_details), weak_count, avg_cohesion, level, pair_details
+            ),
+        }
+    except Exception as e:
+        logger.error(f"인접 문단 응집도 분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, weak: int, avg: float,

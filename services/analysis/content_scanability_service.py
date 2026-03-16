@@ -7,6 +7,9 @@ Content Scanability Score 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+.+$', re.MULTILINE)
 _BOLD_RE = re.compile(r'\*\*[^*]+\*\*|__[^_]+__')
@@ -85,33 +88,37 @@ def score_content_scanability(content: str) -> dict:
     Returns:
         elements, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
+    try:
+        if not content or not content.strip():
+            return {
+                'elements': {}, 'score': 0.0,
+                'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
+                'suggestions': ['콘텐츠가 비어 있습니다.'],
+            }
+
+        word_count = len(content.split())
+        if word_count < 10:
+            return {
+                'elements': dict(_ZERO_ELEMENTS), 'score': 50.0,
+                'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
+                'suggestions': [],
+            }
+
+        elements = _detect_elements(content)
+        total_elements = sum(elements[k] for k in ('headings', 'bold_texts', 'list_items',
+                                                     'code_blocks', 'images', 'tables', 'blockquotes'))
+        score, level = _compute_scanability_score(elements, word_count)
+        suggestions = _generate_suggestions(elements, score, level, word_count)
+
         return {
-            'elements': {}, 'score': 0.0,
-            'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
+            'elements': elements,
+            'summary': {'total_elements': total_elements, 'scanability_score': score, 'level': level},
+            'score': score,
+            'suggestions': suggestions,
         }
-
-    word_count = len(content.split())
-    if word_count < 10:
-        return {
-            'elements': dict(_ZERO_ELEMENTS), 'score': 50.0,
-            'summary': {'total_elements': 0, 'scanability_score': 0.0, 'level': 'none'},
-            'suggestions': [],
-        }
-
-    elements = _detect_elements(content)
-    total_elements = sum(elements[k] for k in ('headings', 'bold_texts', 'list_items',
-                                                 'code_blocks', 'images', 'tables', 'blockquotes'))
-    score, level = _compute_scanability_score(elements, word_count)
-    suggestions = _generate_suggestions(elements, score, level, word_count)
-
-    return {
-        'elements': elements,
-        'summary': {'total_elements': total_elements, 'scanability_score': score, 'level': level},
-        'score': score,
-        'suggestions': suggestions,
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(elements: Dict, score: float,

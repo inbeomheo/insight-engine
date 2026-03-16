@@ -278,12 +278,12 @@ def calculate_comprehensive_score(content: str) -> Dict:
     """
     if not content or not content.strip():
         return {
-    try:
-                "total_score": 0,
-                "seo": 0, "readability": 0, "originality": 0, "structure": 0,
-                "details": {"error": "콘텐츠가 비어있습니다."},
-            }
+            "total_score": 0,
+            "seo": 0, "readability": 0, "originality": 0, "structure": 0,
+            "details": {"error": "콘텐츠가 비어있습니다."},
+        }
 
+    try:
         lines = content.split('\n')
         text_lines = [l for l in lines if l.strip()]
         char_count = len(content)

@@ -9,6 +9,9 @@ import re
 from collections import Counter
 from typing import List, Dict
 from urllib.parse import urlparse
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # URL 추출 패턴
@@ -121,41 +124,46 @@ def audit_external_source_diversity(content: str) -> dict:
     Returns:
         sources, domain_distribution, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sources, domain_counter = _extract_sources(content)
-    citation_count = _count_citations(content)
+        sources, domain_counter = _extract_sources(content)
+        citation_count = _count_citations(content)
 
-    if not sources:
+        if not sources:
+            return {
+                **_EMPTY_RESULT,
+                'summary': {**_EMPTY_RESULT['summary'], 'citation_count': citation_count},
+                'score': 50.0 if citation_count == 0 else 60.0,
+                'suggestions': ['외부 링크가 없습니다. 신뢰할 수 있는 출처를 인용하면 E-E-A-T 점수가 향상됩니다.'],
+            }
+
+        total_sources = len(sources)
+        unique_domains = len(domain_counter)
+        diversity_ratio = unique_domains / total_sources if total_sources > 0 else 0.0
+
+        domain_distribution = [
+            {'domain': d, 'count': c, 'percentage': round(c / total_sources * 100, 1)}
+            for d, c in domain_counter.most_common()
+        ]
+        score = _compute_diversity_score(domain_counter, total_sources, domain_distribution)
+
         return {
-            **_EMPTY_RESULT,
-            'summary': {**_EMPTY_RESULT['summary'], 'citation_count': citation_count},
-            'score': 50.0 if citation_count == 0 else 60.0,
-            'suggestions': ['외부 링크가 없습니다. 신뢰할 수 있는 출처를 인용하면 E-E-A-T 점수가 향상됩니다.'],
+            'sources': sources,
+            'domain_distribution': domain_distribution,
+            'summary': {
+                'total_sources': total_sources, 'unique_domains': unique_domains,
+                'diversity_score': round(diversity_ratio * 100, 1),
+                'citation_count': citation_count,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(unique_domains, total_sources, domain_distribution, citation_count),
         }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
-    total_sources = len(sources)
-    unique_domains = len(domain_counter)
-    diversity_ratio = unique_domains / total_sources if total_sources > 0 else 0.0
-
-    domain_distribution = [
-        {'domain': d, 'count': c, 'percentage': round(c / total_sources * 100, 1)}
-        for d, c in domain_counter.most_common()
-    ]
-    score = _compute_diversity_score(domain_counter, total_sources, domain_distribution)
-
-    return {
-        'sources': sources,
-        'domain_distribution': domain_distribution,
-        'summary': {
-            'total_sources': total_sources, 'unique_domains': unique_domains,
-            'diversity_score': round(diversity_ratio * 100, 1),
-            'citation_count': citation_count,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(unique_domains, total_sources, domain_distribution, citation_count),
-    }
 
 
 def _generate_suggestions(

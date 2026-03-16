@@ -122,42 +122,46 @@ class ComplexityService:
         Returns:
             ComplexityReport
         """
-        if not content or not content.strip():
+        try:
+            if not content or not content.strip():
+                return _EMPTY_REPORT
+
+            plain = self._strip_markdown(content)
+            paragraphs = [p for p in content.split('\n\n') if p.strip()]
+            sentences = self._split_sentences(plain)
+            words = plain.split()
+
+            avg_sentence_len = sum(len(s) for s in sentences) / max(1, len(sentences))
+            avg_word_len = sum(len(w) for w in words) / max(1, len(words))
+
+            headings = re.findall(r'^(#{1,6})\s', content, re.MULTILINE)
+            heading_depth = max((len(h) for h in headings), default=0)
+            list_items = len(re.findall(r'^[-*+]\s', content, re.MULTILINE))
+            code_blocks = len(re.findall(r'```', content)) // 2
+            tech_count, domain = self._count_tech_terms(content)
+
+            readability, complexity, expertise = _compute_scores(
+                avg_sentence_len, avg_word_len, tech_count,
+                heading_depth, code_blocks, len(paragraphs),
+            )
+
+            return ComplexityReport(
+                avg_sentence_length=avg_sentence_len,
+                avg_word_length=avg_word_len,
+                paragraph_count=len(paragraphs),
+                sentence_count=len(sentences),
+                heading_depth=heading_depth,
+                list_count=list_items,
+                code_block_count=code_blocks,
+                technical_term_count=tech_count,
+                domain_detected=domain,
+                readability_score=readability,
+                complexity_score=complexity,
+                expertise_level=expertise,
+            )
+        except Exception as e:
+            logger.error(f"복잡도 분석 실패: {e}")
             return _EMPTY_REPORT
-
-        plain = self._strip_markdown(content)
-        paragraphs = [p for p in content.split('\n\n') if p.strip()]
-        sentences = self._split_sentences(plain)
-        words = plain.split()
-
-        avg_sentence_len = sum(len(s) for s in sentences) / max(1, len(sentences))
-        avg_word_len = sum(len(w) for w in words) / max(1, len(words))
-
-        headings = re.findall(r'^(#{1,6})\s', content, re.MULTILINE)
-        heading_depth = max((len(h) for h in headings), default=0)
-        list_items = len(re.findall(r'^[-*+]\s', content, re.MULTILINE))
-        code_blocks = len(re.findall(r'```', content)) // 2
-        tech_count, domain = self._count_tech_terms(content)
-
-        readability, complexity, expertise = _compute_scores(
-            avg_sentence_len, avg_word_len, tech_count,
-            heading_depth, code_blocks, len(paragraphs),
-        )
-
-        return ComplexityReport(
-            avg_sentence_length=avg_sentence_len,
-            avg_word_length=avg_word_len,
-            paragraph_count=len(paragraphs),
-            sentence_count=len(sentences),
-            heading_depth=heading_depth,
-            list_count=list_items,
-            code_block_count=code_blocks,
-            technical_term_count=tech_count,
-            domain_detected=domain,
-            readability_score=readability,
-            complexity_score=complexity,
-            expertise_level=expertise,
-        )
 
     def _strip_markdown(self, text: str) -> str:
         """마크다운 기호 제거 (분석용 평문 변환)"""

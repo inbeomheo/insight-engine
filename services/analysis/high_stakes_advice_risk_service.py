@@ -7,6 +7,9 @@ High-Stakes Advice Risk Detector 서비스
 """
 import re
 from typing import List, Tuple
+import logging
+
+logger = logging.getLogger(__name__)
 
 # YMYL 도메인별 키워드
 _YMYL_DOMAINS = {
@@ -134,34 +137,39 @@ def detect_high_stakes_advice_risk(content: str) -> dict:
     Returns:
         score, summary, suggestions, risk_spans, missing_safety_signals를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    ymyl_domains = _detect_ymyl_domains(content)
-    is_ymyl = len(ymyl_domains) > 0
-    has_disclaimer = len(_find_matches(content, _DISCLAIMER_PATTERNS)) > 0
-    has_authority = len(_find_matches(content, _AUTHORITY_PATTERNS)) > 0
-    risk_level, missing, score = _assess_risk(is_ymyl, has_disclaimer, has_authority, ymyl_domains)
+        ymyl_domains = _detect_ymyl_domains(content)
+        is_ymyl = len(ymyl_domains) > 0
+        has_disclaimer = len(_find_matches(content, _DISCLAIMER_PATTERNS)) > 0
+        has_authority = len(_find_matches(content, _AUTHORITY_PATTERNS)) > 0
+        risk_level, missing, score = _assess_risk(is_ymyl, has_disclaimer, has_authority, ymyl_domains)
 
-    return {
-        'score': score,
-        'summary': {
-            'is_ymyl': is_ymyl,
-            'ymyl_domains': [
-                {'domain': d, 'label': _DOMAIN_LABELS.get(d, d), 'count': c}
-                for d, c in ymyl_domains
-            ],
-            'has_disclaimer': has_disclaimer,
-            'has_authority': has_authority,
-            'risk_level': risk_level,
-        },
-        'risk_spans': [{'domain': d, 'count': c} for d, c in ymyl_domains[:5]],
-        'missing_safety_signals': missing,
-        'suggestions': _generate_suggestions(
-            is_ymyl, ymyl_domains, has_disclaimer, has_authority,
-            risk_level, missing, _DOMAIN_LABELS
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_ymyl': is_ymyl,
+                'ymyl_domains': [
+                    {'domain': d, 'label': _DOMAIN_LABELS.get(d, d), 'count': c}
+                    for d, c in ymyl_domains
+                ],
+                'has_disclaimer': has_disclaimer,
+                'has_authority': has_authority,
+                'risk_level': risk_level,
+            },
+            'risk_spans': [{'domain': d, 'count': c} for d, c in ymyl_domains[:5]],
+            'missing_safety_signals': missing,
+            'suggestions': _generate_suggestions(
+                is_ymyl, ymyl_domains, has_disclaimer, has_authority,
+                risk_level, missing, _DOMAIN_LABELS
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(is_ymyl: bool, domains: list,

@@ -55,34 +55,39 @@ def check_heading_parallelism(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return _empty_result()
+    try:
+        if not content or not content.strip():
+            return _empty_result()
 
-    # 1) 헤딩 추출
-    headings = _extract_headings(content)
+        # 1) 헤딩 추출
+        headings = _extract_headings(content)
 
-    if not headings:
-        return _empty_result(headings=[])
+        if not headings:
+            return _empty_result(headings=[])
 
-    # 2) 레벨별 그룹화
-    groups = _group_by_level(headings)
+        # 2) 레벨별 그룹화
+        groups = _group_by_level(headings)
 
-    # 3) 비일관성 검출
-    issues = _find_issues(headings, groups)
+        # 3) 비일관성 검출
+        issues = _find_issues(headings, groups)
 
-    # 4) 점수 계산
-    score = _calculate_score(headings, groups)
+        # 4) 점수 계산
+        score = _calculate_score(headings, groups)
 
-    # 5) 개선 제안 생성
-    suggestions = _generate_suggestions(groups, issues)
+        # 5) 개선 제안 생성
+        suggestions = _generate_suggestions(groups, issues)
 
-    return {
-        'headings': headings,
-        'groups': groups,
-        'parallelism_score': score,
-        'issues': issues,
-        'suggestions': suggestions,
-    }
+        return {
+            'headings': headings,
+            'groups': groups,
+            'parallelism_score': score,
+            'issues': issues,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _empty_result(headings=None):

@@ -6,7 +6,10 @@ Acronym Expansion Compliance Checker 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 # 약어 패턴 (2-6자 대문자, 한글 뒤 \b 미동작 우회)
@@ -100,27 +103,31 @@ def check_acronym_expansion(content: str) -> dict:
     Returns:
         acronyms, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    all_acronyms = {m.group(1) for m in _ACRONYM_PATTERN.finditer(content)} - _ACRONYM_EXCEPTIONS
-    if not all_acronyms:
-        return dict(_EMPTY_RESULT)
+        all_acronyms = {m.group(1) for m in _ACRONYM_PATTERN.finditer(content)} - _ACRONYM_EXCEPTIONS
+        if not all_acronyms:
+            return dict(_EMPTY_RESULT)
 
-    acronyms, well_known_count = _classify_acronyms(all_acronyms, _find_expanded_acronyms(content))
-    total = len(acronyms)
-    expanded = sum(1 for a in acronyms if a['is_expanded'])
-    unexpanded = sum(1 for a in acronyms if a['status'] == 'unexpanded')
-    compliant = expanded + well_known_count
-    score = max(0.0, min(100.0, round((compliant / total * 100) if total > 0 else 100.0, 1)))
+        acronyms, well_known_count = _classify_acronyms(all_acronyms, _find_expanded_acronyms(content))
+        total = len(acronyms)
+        expanded = sum(1 for a in acronyms if a['is_expanded'])
+        unexpanded = sum(1 for a in acronyms if a['status'] == 'unexpanded')
+        compliant = expanded + well_known_count
+        score = max(0.0, min(100.0, round((compliant / total * 100) if total > 0 else 100.0, 1)))
 
-    return {
-        'acronyms': acronyms,
-        'summary': {'total_acronyms': total, 'expanded': expanded,
-                    'unexpanded': unexpanded, 'well_known': well_known_count},
-        'score': score,
-        'suggestions': _generate_suggestions(acronyms, unexpanded, total),
-    }
+        return {
+            'acronyms': acronyms,
+            'summary': {'total_acronyms': total, 'expanded': expanded,
+                        'unexpanded': unexpanded, 'well_known': well_known_count},
+            'score': score,
+            'suggestions': _generate_suggestions(acronyms, unexpanded, total),
+        }
+    except Exception as e:
+        logger.error(f"약어 풀어쓰기 점검 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(acronyms: List[Dict], unexpanded: int, total: int) -> List[str]:

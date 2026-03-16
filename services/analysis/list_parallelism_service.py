@@ -7,6 +7,9 @@ List Parallelism Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 목록 항목 추출 (마크다운 + 일반 목록)
 _LIST_ITEM = re.compile(
@@ -162,33 +165,38 @@ def check_list_parallelism(content: str) -> dict:
     Returns:
         score, summary, parallelism_issues, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    lists = _extract_lists(content)
-    if not lists:
-        return dict(_EMPTY_RESULT)
+        lists = _extract_lists(content)
+        if not lists:
+            return dict(_EMPTY_RESULT)
 
-    issues, parallel_count = _analyze_list_parallelism(lists)
-    total = len(lists)
-    non_parallel = total - parallel_count
-    score, level = _compute_parallelism_score(total, non_parallel, parallel_count)
+        issues, parallel_count = _analyze_list_parallelism(lists)
+        total = len(lists)
+        non_parallel = total - parallel_count
+        score, level = _compute_parallelism_score(total, non_parallel, parallel_count)
 
-    suggestions = _generate_suggestions(
-        total, parallel_count, non_parallel, level, issues
-    )
+        suggestions = _generate_suggestions(
+            total, parallel_count, non_parallel, level, issues
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_lists': total,
-            'parallel_lists': parallel_count,
-            'non_parallel_lists': non_parallel,
-            'level': level,
-        },
-        'parallelism_issues': issues[:5],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_lists': total,
+                'parallel_lists': parallel_count,
+                'non_parallel_lists': non_parallel,
+                'level': level,
+            },
+            'parallelism_issues': issues[:5],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(total: int, parallel: int,

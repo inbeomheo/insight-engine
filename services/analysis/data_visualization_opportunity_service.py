@@ -7,6 +7,9 @@ Data Visualization Opportunity 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
@@ -167,38 +170,43 @@ def find_visualization_opportunities(content: str) -> dict:
     Returns:
         opportunities, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    cleaned = _HEADING_RE.sub('', content)
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(cleaned)
-                 if s.strip() and len(s.strip()) >= 5]
+        cleaned = _HEADING_RE.sub('', content)
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(cleaned)
+                     if s.strip() and len(s.strip()) >= 5]
 
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    all_numbers = _NUMBER_RE.findall(cleaned)
-    word_count = len(cleaned.split())
-    number_density = round(len(all_numbers) / max(word_count, 1) * 100, 1)
+        all_numbers = _NUMBER_RE.findall(cleaned)
+        word_count = len(cleaned.split())
+        number_density = round(len(all_numbers) / max(word_count, 1) * 100, 1)
 
-    all_opportunities, chart_type_counter = _collect_opportunities(sentences, cleaned)
-    score, level = _compute_viz_score(len(all_opportunities))
+        all_opportunities, chart_type_counter = _collect_opportunities(sentences, cleaned)
+        score, level = _compute_viz_score(len(all_opportunities))
 
-    suggestions = _generate_suggestions(
-        all_opportunities, chart_type_counter, number_density, level
-    )
+        suggestions = _generate_suggestions(
+            all_opportunities, chart_type_counter, number_density, level
+        )
 
-    return {
-        'opportunities': all_opportunities[:20],
-        'summary': {
-            'total_opportunities': len(all_opportunities),
-            'chart_types': chart_type_counter,
-            'number_density': number_density,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'opportunities': all_opportunities[:20],
+            'summary': {
+                'total_opportunities': len(all_opportunities),
+                'chart_types': chart_type_counter,
+                'number_density': number_density,
+                'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(opportunities: List[Dict],

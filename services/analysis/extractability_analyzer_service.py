@@ -7,6 +7,9 @@ AI 답변/요약에 인용되기 쉬운 "독립형 설명" 비율을 평가합�
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 
@@ -111,34 +114,39 @@ def analyze_extractability(content: str) -> dict:
     Returns:
         score, summary, flagged_spans, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 10]
-    if not sentences:
-        return {**_EMPTY_RESULT, 'score': 50.0}
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 10]
+        if not sentences:
+            return {**_EMPTY_RESULT, 'score': 50.0}
 
-    extractable, dependent = _classify_sentences(sentences)
-    total = len(sentences)
-    ext_ratio = round(len(extractable) / max(total, 1) * 100, 1)
-    dep_ratio = round(len(dependent) / max(total, 1) * 100, 1)
-    score, level = _compute_extractability_score(ext_ratio, dep_ratio)
+        extractable, dependent = _classify_sentences(sentences)
+        total = len(sentences)
+        ext_ratio = round(len(extractable) / max(total, 1) * 100, 1)
+        dep_ratio = round(len(dependent) / max(total, 1) * 100, 1)
+        score, level = _compute_extractability_score(ext_ratio, dep_ratio)
 
-    return {
-        'score': score,
-        'summary': {
-            'total_sentences': total,
-            'extractable_count': len(extractable),
-            'dependent_count': len(dependent),
-            'extractable_ratio': ext_ratio,
-            'level': level,
-        },
-        'flagged_spans': dependent[:10],
-        'suggestions': _generate_suggestions(
-            total, len(extractable), len(dependent),
-            ext_ratio, dep_ratio, level, dependent[:3]
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_sentences': total,
+                'extractable_count': len(extractable),
+                'dependent_count': len(dependent),
+                'extractable_ratio': ext_ratio,
+                'level': level,
+            },
+            'flagged_spans': dependent[:10],
+            'suggestions': _generate_suggestions(
+                total, len(extractable), len(dependent),
+                ext_ratio, dep_ratio, level, dependent[:3]
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(total: int, ext: int, dep: int,

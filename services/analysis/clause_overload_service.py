@@ -6,6 +6,9 @@ Clause Overload Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 한국어 절 표지 패턴 ──
@@ -120,31 +123,35 @@ def detect_clause_overload(content: str) -> dict:
     Returns:
         overloaded_sentences, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    overloaded, total_clauses = _scan_overloaded(sentences)
+        overloaded, total_clauses = _scan_overloaded(sentences)
 
-    total_sentences = len(sentences)
-    avg_clauses = round(total_clauses / total_sentences, 2) if total_sentences > 0 else 0.0
-    overloaded_count = len(overloaded)
-    overload_ratio = (overloaded_count / total_sentences) if total_sentences > 0 else 0.0
-    score = round(max(0.0, min(100.0, (1.0 - overload_ratio) * 100.0)), 1)
+        total_sentences = len(sentences)
+        avg_clauses = round(total_clauses / total_sentences, 2) if total_sentences > 0 else 0.0
+        overloaded_count = len(overloaded)
+        overload_ratio = (overloaded_count / total_sentences) if total_sentences > 0 else 0.0
+        score = round(max(0.0, min(100.0, (1.0 - overload_ratio) * 100.0)), 1)
 
-    return {
-        'overloaded_sentences': overloaded,
-        'summary': {
-            'total_sentences': total_sentences,
-            'overloaded': overloaded_count,
-            'avg_clauses': avg_clauses,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(overloaded_count, total_sentences, avg_clauses, overloaded),
-    }
+        return {
+            'overloaded_sentences': overloaded,
+            'summary': {
+                'total_sentences': total_sentences,
+                'overloaded': overloaded_count,
+                'avg_clauses': avg_clauses,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(overloaded_count, total_sentences, avg_clauses, overloaded),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

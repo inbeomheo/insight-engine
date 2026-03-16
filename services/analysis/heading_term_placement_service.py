@@ -8,6 +8,9 @@ Heading Term Placement Auditor 서비스
 import re
 from collections import Counter
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩 패턴
@@ -103,38 +106,43 @@ def audit_heading_term_placement(content: str) -> dict:
     Returns:
         key_terms, heading_analysis, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    headings = [{'level': len(m.group(1)), 'text': m.group(2).strip()}
-                for m in _HEADING_RE.finditer(content)]
+        headings = [{'level': len(m.group(1)), 'text': m.group(2).strip()}
+                    for m in _HEADING_RE.finditer(content)]
 
-    if not headings:
-        return {**_EMPTY_RESULT, 'score': 50.0,
-                'suggestions': ['헤딩이 없습니다. 마크다운 헤딩을 추가하여 구조를 개선하세요.']}
+        if not headings:
+            return {**_EMPTY_RESULT, 'score': 50.0,
+                    'suggestions': ['헤딩이 없습니다. 마크다운 헤딩을 추가하여 구조를 개선하세요.']}
 
-    key_terms = _extract_key_terms(content)
-    if not key_terms:
-        no_term_analysis = [{'heading': h['text'], 'level': h['level'],
-                             'matched_terms': [], 'has_key_term': False} for h in headings]
-        return {**_EMPTY_RESULT, 'heading_analysis': no_term_analysis,
-                'summary': {**_EMPTY_RESULT['summary'], 'total_headings': len(headings)},
-                'score': 50.0, 'suggestions': ['반복되는 핵심 용어가 없습니다. 주제를 명확히 하세요.']}
+        key_terms = _extract_key_terms(content)
+        if not key_terms:
+            no_term_analysis = [{'heading': h['text'], 'level': h['level'],
+                                 'matched_terms': [], 'has_key_term': False} for h in headings]
+            return {**_EMPTY_RESULT, 'heading_analysis': no_term_analysis,
+                    'summary': {**_EMPTY_RESULT['summary'], 'total_headings': len(headings)},
+                    'score': 50.0, 'suggestions': ['반복되는 핵심 용어가 없습니다. 주제를 명확히 하세요.']}
 
-    analysis, terms_found = _analyze_heading_terms(headings, key_terms)
-    terms_in_headings = len(terms_found)
-    total_key_terms = len(key_terms)
-    placement_rate = round((terms_in_headings / total_key_terms * 100)
-                           if total_key_terms > 0 else 0.0, 1)
+        analysis, terms_found = _analyze_heading_terms(headings, key_terms)
+        terms_in_headings = len(terms_found)
+        total_key_terms = len(key_terms)
+        placement_rate = round((terms_in_headings / total_key_terms * 100)
+                               if total_key_terms > 0 else 0.0, 1)
 
-    return {
-        'key_terms': key_terms,
-        'heading_analysis': analysis,
-        'summary': {'total_headings': len(headings), 'terms_in_headings': terms_in_headings,
-                    'total_key_terms': total_key_terms, 'placement_rate': placement_rate},
-        'score': round(min(100.0, placement_rate), 1),
-        'suggestions': _generate_suggestions(key_terms, terms_found, analysis, placement_rate),
-    }
+        return {
+            'key_terms': key_terms,
+            'heading_analysis': analysis,
+            'summary': {'total_headings': len(headings), 'terms_in_headings': terms_in_headings,
+                        'total_key_terms': total_key_terms, 'placement_rate': placement_rate},
+            'score': round(min(100.0, placement_rate), 1),
+            'suggestions': _generate_suggestions(key_terms, terms_found, analysis, placement_rate),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(

@@ -7,6 +7,9 @@ Emotional Arc Mapper 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
@@ -128,27 +131,32 @@ def map_emotional_arc(content: str) -> dict:
     Returns:
         arc, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sections = _split_sections(content)
-    arc, sentiments = _build_arc(sections)
+        sections = _split_sections(content)
+        arc, sentiments = _build_arc(sections)
 
-    avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else 0.0
-    arc_pattern = _detect_pattern(sentiments)
-    tone = _overall_tone(avg_sentiment)
+        avg_sentiment = round(sum(sentiments) / len(sentiments), 2) if sentiments else 0.0
+        arc_pattern = _detect_pattern(sentiments)
+        tone = _overall_tone(avg_sentiment)
 
-    return {
-        'arc': arc,
-        'summary': {
-            'total_sections': len(sections),
-            'overall_tone': tone,
-            'overall_sentiment': avg_sentiment,
-            'arc_pattern': arc_pattern,
-        },
-        'score': _calculate_score(sentiments, arc_pattern),
-        'suggestions': _generate_suggestions(arc, tone, arc_pattern, sentiments),
-    }
+        return {
+            'arc': arc,
+            'summary': {
+                'total_sections': len(sections),
+                'overall_tone': tone,
+                'overall_sentiment': avg_sentiment,
+                'arc_pattern': arc_pattern,
+            },
+            'score': _calculate_score(sentiments, arc_pattern),
+            'suggestions': _generate_suggestions(arc, tone, arc_pattern, sentiments),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _detect_pattern(sentiments: List[float]) -> str:

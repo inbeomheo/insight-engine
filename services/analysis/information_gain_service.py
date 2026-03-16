@@ -121,42 +121,47 @@ def analyze_information_gain(content: str, reference_contents: list = None) -> d
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
+    try:
+        if not content or not content.strip():
+            return {
+                'signals': {name: {'count': 0, 'items': []} for name in _SIGNAL_PATTERNS},
+                'information_gain_score': 0.0,
+                'differentiation_score': None,
+                'grade': 'F',
+                'weak_areas': list(_SIGNAL_PATTERNS.keys()),
+                'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력해 주세요.'],
+            }
+
+        # 1. 5가지 신호 분석
+        signals = _detect_signals(content)
+
+        # 2. 정보 이득 점수 계산
+        score = _calculate_score(signals)
+
+        # 3. 등급 부여
+        grade = _assign_grade(score)
+
+        # 4. 레퍼런스 대비 차별화 점수
+        diff_score = None
+        if reference_contents:
+            diff_score = _calculate_differentiation(content, reference_contents)
+
+        # 5. 부족 영역 및 제안
+        weak_areas = _find_weak_areas(signals)
+        suggestions = _generate_suggestions(weak_areas, signals, score)
+
         return {
-            'signals': {name: {'count': 0, 'items': []} for name in _SIGNAL_PATTERNS},
-            'information_gain_score': 0.0,
-            'differentiation_score': None,
-            'grade': 'F',
-            'weak_areas': list(_SIGNAL_PATTERNS.keys()),
-            'suggestions': ['콘텐츠가 비어 있습니다. 분석할 텍스트를 입력해 주세요.'],
+            'signals': signals,
+            'information_gain_score': round(score, 1),
+            'differentiation_score': round(diff_score, 1) if diff_score is not None else None,
+            'grade': grade,
+            'weak_areas': weak_areas,
+            'suggestions': suggestions,
         }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
-    # 1. 5가지 신호 분석
-    signals = _detect_signals(content)
-
-    # 2. 정보 이득 점수 계산
-    score = _calculate_score(signals)
-
-    # 3. 등급 부여
-    grade = _assign_grade(score)
-
-    # 4. 레퍼런스 대비 차별화 점수
-    diff_score = None
-    if reference_contents:
-        diff_score = _calculate_differentiation(content, reference_contents)
-
-    # 5. 부족 영역 및 제안
-    weak_areas = _find_weak_areas(signals)
-    suggestions = _generate_suggestions(weak_areas, signals, score)
-
-    return {
-        'signals': signals,
-        'information_gain_score': round(score, 1),
-        'differentiation_score': round(diff_score, 1) if diff_score is not None else None,
-        'grade': grade,
-        'weak_areas': weak_areas,
-        'suggestions': suggestions,
-    }
 
 
 def _detect_signals(content: str) -> dict:

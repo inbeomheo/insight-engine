@@ -131,26 +131,26 @@ def _make_short_answer(sentence: str, keywords: list, difficulty: str) -> QuizQu
 
 
 def generate_quiz(
+    content: str,
+    num_questions: int = 5,
+    difficulty: str = "medium",
+) -> Quiz:
+    """콘텐츠 기반 퀴즈 생성
+
+    Args:
+        content: 콘텐츠 텍스트
+        num_questions: 생성할 문항 수
+        difficulty: 난이도 (easy/medium/hard)
+
+    Returns:
+        Quiz: 생성된 퀴즈
+    """
+    if difficulty not in VALID_DIFFICULTIES:
+        raise ValueError(f"유효하지 않은 난이도: {difficulty}")
+    if num_questions < 1:
+        raise ValueError("문항 수는 1 이상이어야 합니다.")
+
     try:
-        content: str,
-        num_questions: int = 5,
-        difficulty: str = "medium",
-    ) -> Quiz:
-        """콘텐츠 기반 퀴즈 생성
-
-        Args:
-            content: 콘텐츠 텍스트
-            num_questions: 생성할 문항 수
-            difficulty: 난이도 (easy/medium/hard)
-
-        Returns:
-            Quiz: 생성된 퀴즈
-        """
-        if difficulty not in VALID_DIFFICULTIES:
-            raise ValueError(f"유효하지 않은 난이도: {difficulty}")
-        if num_questions < 1:
-            raise ValueError("문항 수는 1 이상이어야 합니다.")
-
         sentences = _extract_sentences(content)
         if not sentences:
             return Quiz(

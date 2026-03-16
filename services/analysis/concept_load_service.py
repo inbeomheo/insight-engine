@@ -7,6 +7,9 @@ Concept Load Analyzer 서비스
 """
 import re
 from typing import List, Dict, Set
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 
@@ -138,37 +141,41 @@ def analyze_concept_load(content: str) -> dict:
     Returns:
         score, summary, overloaded_segments, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                     if s.strip() and len(s.strip()) >= 5]
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    sentence_concepts = [_extract_concepts(s) for s in sentences]
-    sentence_explanations = [_has_explanation(s) for s in sentences]
+        sentence_concepts = [_extract_concepts(s) for s in sentences]
+        sentence_explanations = [_has_explanation(s) for s in sentences]
 
-    overloaded, max_concepts = _detect_overloaded_windows(
-        sentences, sentence_concepts, sentence_explanations
-    )
-    score, level = _compute_load_score(len(overloaded), max_concepts, len(sentences))
+        overloaded, max_concepts = _detect_overloaded_windows(
+            sentences, sentence_concepts, sentence_explanations
+        )
+        score, level = _compute_load_score(len(overloaded), max_concepts, len(sentences))
 
-    suggestions = _generate_suggestions(
-        len(sentences), max_concepts, len(overloaded), level, overloaded
-    )
+        suggestions = _generate_suggestions(
+            len(sentences), max_concepts, len(overloaded), level, overloaded
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_sentences': len(sentences),
-            'max_concepts_in_window': max_concepts,
-            'overloaded_windows': len(overloaded),
-            'level': level,
-        },
-        'overloaded_segments': overloaded[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_sentences': len(sentences),
+                'max_concepts_in_window': max_concepts,
+                'overloaded_windows': len(overloaded),
+                'level': level,
+            },
+            'overloaded_segments': overloaded[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, max_concepts: int,

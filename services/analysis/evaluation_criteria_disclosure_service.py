@@ -7,6 +7,9 @@ Evaluation Criteria Disclosure Checker 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 리뷰/비교 콘텐츠 신호
 _REVIEW_SIGNALS = [
@@ -124,33 +127,38 @@ def check_evaluation_criteria_disclosure(content: str) -> dict:
     Returns:
         score, summary, suggestions, missing_criteria를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    is_review = _count_matches(content, _REVIEW_SIGNALS) >= 2
-    criteria_details, criteria_found, criteria_missing = _scan_criteria(content)
-    completeness = round(len(criteria_found) / max(len(_CRITERIA_PATTERNS), 1) * 100, 1)
-    level, score = _compute_level_and_score(is_review, completeness)
+        is_review = _count_matches(content, _REVIEW_SIGNALS) >= 2
+        criteria_details, criteria_found, criteria_missing = _scan_criteria(content)
+        completeness = round(len(criteria_found) / max(len(_CRITERIA_PATTERNS), 1) * 100, 1)
+        level, score = _compute_level_and_score(is_review, completeness)
 
-    return {
-        'score': score,
-        'summary': {
-            'is_review_content': is_review,
-            'criteria_found': criteria_found,
-            'criteria_missing': criteria_missing,
-            'completeness_ratio': completeness,
-            'level': level,
-        },
-        'criteria_details': criteria_details,
-        'missing_criteria': [
-            {'name': m, 'label': _CRITERIA_LABELS.get(m, m)}
-            for m in criteria_missing
-        ],
-        'suggestions': _generate_suggestions(
-            is_review, criteria_found, criteria_missing,
-            completeness, level, _CRITERIA_LABELS
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_review_content': is_review,
+                'criteria_found': criteria_found,
+                'criteria_missing': criteria_missing,
+                'completeness_ratio': completeness,
+                'level': level,
+            },
+            'criteria_details': criteria_details,
+            'missing_criteria': [
+                {'name': m, 'label': _CRITERIA_LABELS.get(m, m)}
+                for m in criteria_missing
+            ],
+            'suggestions': _generate_suggestions(
+                is_review, criteria_found, criteria_missing,
+                completeness, level, _CRITERIA_LABELS
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(is_review: bool, found: List[str],

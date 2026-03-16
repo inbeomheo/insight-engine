@@ -6,8 +6,11 @@ Acronym Consistency Checker 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 
 # 약어 패턴: 2글자 이상 대문자 (숫자 포함 가능)
 _ACRONYM_RE = re.compile(r'(?<![A-Za-z0-9])([A-Z][A-Z0-9]{1,9})(?![A-Za-z0-9])')
@@ -147,46 +150,50 @@ def check_acronym_consistency(content: str) -> dict:
     Returns:
         acronym_map, issues, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    cleaned = _HEADING_RE.sub('', content)
-    acronyms = _find_acronyms(cleaned)
-    definitions = _find_definitions(cleaned)
+        cleaned = _HEADING_RE.sub('', content)
+        acronyms = _find_acronyms(cleaned)
+        definitions = _find_definitions(cleaned)
 
-    if not acronyms:
-        return dict(_EMPTY_RESULT)
+        if not acronyms:
+            return dict(_EMPTY_RESULT)
 
-    usage_count, first_occurrence = _count_usage(acronyms)
+        usage_count, first_occurrence = _count_usage(acronyms)
 
-    unique_acronyms = set(usage_count.keys())
-    defined = set(definitions.keys())
-    undefined = unique_acronyms - defined
+        unique_acronyms = set(usage_count.keys())
+        defined = set(definitions.keys())
+        undefined = unique_acronyms - defined
 
-    issues = _detect_issues(unique_acronyms, undefined, usage_count)
-    acronym_map = _build_acronym_map(unique_acronyms, definitions, usage_count, defined)
+        issues = _detect_issues(unique_acronyms, undefined, usage_count)
+        acronym_map = _build_acronym_map(unique_acronyms, definitions, usage_count, defined)
 
-    total_unique = len(unique_acronyms)
-    defined_count = len(defined & unique_acronyms)
-    undefined_count = len(undefined)
+        total_unique = len(unique_acronyms)
+        defined_count = len(defined & unique_acronyms)
+        undefined_count = len(undefined)
 
-    level = _determine_level(total_unique, undefined_count)
-    score = _calculate_score(total_unique, defined_count, len(issues))
-    suggestions = _generate_suggestions(undefined, defined, usage_count, level)
+        level = _determine_level(total_unique, undefined_count)
+        score = _calculate_score(total_unique, defined_count, len(issues))
+        suggestions = _generate_suggestions(undefined, defined, usage_count, level)
 
-    return {
-        'acronym_map': acronym_map[:20],
-        'issues': issues[:15],
-        'summary': {
-            'total_acronyms': sum(usage_count.values()),
-            'unique_acronyms': total_unique,
-            'defined_count': defined_count,
-            'undefined_count': undefined_count,
-            'consistency_level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'acronym_map': acronym_map[:20],
+            'issues': issues[:15],
+            'summary': {
+                'total_acronyms': sum(usage_count.values()),
+                'unique_acronyms': total_unique,
+                'defined_count': defined_count,
+                'undefined_count': undefined_count,
+                'consistency_level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"약어 일관성 검사 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(undefined: set, defined: set,

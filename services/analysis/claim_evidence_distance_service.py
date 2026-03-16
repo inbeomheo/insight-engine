@@ -7,6 +7,9 @@ Claim-Evidence Distance Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 
@@ -134,36 +137,40 @@ def analyze_claim_evidence_distance(content: str) -> dict:
     Returns:
         score, summary, distant_claims, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return _empty_result()
+    try:
+        if not content or not content.strip():
+            return _empty_result()
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
-    if not sentences:
-        return _empty_result()
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                     if s.strip() and len(s.strip()) >= 5]
+        if not sentences:
+            return _empty_result()
 
-    roles = ['evidence' if _is_evidence(s) else 'claim' if _is_claim(s) else 'neutral'
-             for s in sentences]
+        roles = ['evidence' if _is_evidence(s) else 'claim' if _is_claim(s) else 'neutral'
+                 for s in sentences]
 
-    claim_indices = [i for i, r in enumerate(roles) if r == 'claim']
-    evidence_indices = [i for i, r in enumerate(roles) if r == 'evidence']
+        claim_indices = [i for i, r in enumerate(roles) if r == 'claim']
+        evidence_indices = [i for i, r in enumerate(roles) if r == 'evidence']
 
-    supported, distant, unsupported, distant_items = _evaluate_claims(
-        sentences, claim_indices, evidence_indices,
-    )
-    total_claims = len(claim_indices)
-    score, level = _compute_score_and_level(total_claims, supported, distant, unsupported)
-    suggestions = _generate_suggestions(total_claims, supported, distant, unsupported, level, distant_items)
+        supported, distant, unsupported, distant_items = _evaluate_claims(
+            sentences, claim_indices, evidence_indices,
+        )
+        total_claims = len(claim_indices)
+        score, level = _compute_score_and_level(total_claims, supported, distant, unsupported)
+        suggestions = _generate_suggestions(total_claims, supported, distant, unsupported, level, distant_items)
 
-    return {
-        'score': score,
-        'summary': {
-            'total_claims': total_claims, 'supported_claims': supported,
-            'distant_claims': distant, 'unsupported_claims': unsupported, 'level': level,
-        },
-        'distant_claims': distant_items[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_claims': total_claims, 'supported_claims': supported,
+                'distant_claims': distant, 'unsupported_claims': unsupported, 'level': level,
+            },
+            'distant_claims': distant_items[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, supported: int, distant: int,

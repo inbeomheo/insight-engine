@@ -274,13 +274,13 @@ def check_originality(content: str, reference_contents: list = None) -> dict:
     """
     if not content or not content.strip():
         return {
-    try:
-                "originality_score": 0.0, "grade": "F",
-                "overlap_analysis": {"self_repetition": 0.0, "external_overlap": None, "unique_ratio": 0.0},
-                "flagged_sentences": [], "common_phrases": [],
-                "suggestions": ["분석할 콘텐츠가 없습니다."],
-            }
+            "originality_score": 0.0, "grade": "F",
+            "overlap_analysis": {"self_repetition": 0.0, "external_overlap": None, "unique_ratio": 0.0},
+            "flagged_sentences": [], "common_phrases": [],
+            "suggestions": ["분석할 콘텐츠가 없습니다."],
+        }
 
+    try:
         sentences = _split_sentences(content)
         if not sentences:
             return {

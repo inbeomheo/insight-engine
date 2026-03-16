@@ -232,35 +232,40 @@ def detect_fillers(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return {**_EMPTY_RESULT, 'suggestions': ['유효한 문장이 없습니다.']}
+        sentences = _split_sentences(content)
+        if not sentences:
+            return {**_EMPTY_RESULT, 'suggestions': ['유효한 문장이 없습니다.']}
 
-    all_detections = []
-    for sent in sentences:
-        all_detections.extend(_detect_in_sentence(sent))
+        all_detections = []
+        for sent in sentences:
+            all_detections.extend(_detect_in_sentence(sent))
 
-    total_fillers, total_hedges, filler_ratio, hedge_ratio, clarity_score, worst_sentences = (
-        _aggregate_detections(all_detections, len(sentences))
-    )
+        total_fillers, total_hedges, filler_ratio, hedge_ratio, clarity_score, worst_sentences = (
+            _aggregate_detections(all_detections, len(sentences))
+        )
 
-    suggestions = _generate_suggestions(total_fillers, total_hedges, clarity_score, all_detections)
+        suggestions = _generate_suggestions(total_fillers, total_hedges, clarity_score, all_detections)
 
-    return {
-        'detections': all_detections,
-        'summary': {
-            'total_fillers': total_fillers,
-            'total_hedges': total_hedges,
-            'filler_ratio': filler_ratio,
-            'hedge_ratio': hedge_ratio,
-            'clarity_score': clarity_score,
-        },
-        'worst_sentences': worst_sentences,
-        'suggestions': suggestions,
-    }
+        return {
+            'detections': all_detections,
+            'summary': {
+                'total_fillers': total_fillers,
+                'total_hedges': total_hedges,
+                'filler_ratio': filler_ratio,
+                'hedge_ratio': hedge_ratio,
+                'clarity_score': clarity_score,
+            },
+            'worst_sentences': worst_sentences,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(total_fillers: int, total_hedges: int,

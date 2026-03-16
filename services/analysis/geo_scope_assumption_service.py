@@ -7,6 +7,9 @@ Geo Scope Assumption Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 지역 의존 키워드 (라벨 없이 쓰이면 문제)
 _GEO_SENSITIVE_CATEGORIES = {
@@ -143,24 +146,29 @@ def detect_geo_scope_assumptions(content: str) -> dict:
     Returns:
         score, summary, unlabeled_scope_issues, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sensitive_found, sensitive_terms, has_geo_label, unlabeled = _scan_sensitive_categories(content)
-    score, level = _compute_geo_score(sensitive_found, has_geo_label, unlabeled)
+        sensitive_found, sensitive_terms, has_geo_label, unlabeled = _scan_sensitive_categories(content)
+        score, level = _compute_geo_score(sensitive_found, has_geo_label, unlabeled)
 
-    return {
-        'score': score,
-        'summary': {
-            'geo_sensitive_found': sensitive_found,
-            'has_geo_label': has_geo_label,
-            'unlabeled_count': len(unlabeled),
-            'level': level,
-        },
-        'geo_sensitive_terms': sensitive_terms[:10],
-        'unlabeled_scope_issues': unlabeled[:5],
-        'suggestions': _generate_suggestions(sensitive_found, has_geo_label, unlabeled, level),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'geo_sensitive_found': sensitive_found,
+                'has_geo_label': has_geo_label,
+                'unlabeled_count': len(unlabeled),
+                'level': level,
+            },
+            'geo_sensitive_terms': sensitive_terms[:10],
+            'unlabeled_scope_issues': unlabeled[:5],
+            'suggestions': _generate_suggestions(sensitive_found, has_geo_label, unlabeled, level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+
 
 
 def _generate_suggestions(found: List[str], has_label: bool,

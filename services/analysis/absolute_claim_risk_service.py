@@ -6,7 +6,10 @@ Absolute Claim Risk Detector 서비스
 규칙 기반 (AI API 호출 없음).
 """
 import re
+import logging
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 
@@ -124,36 +127,40 @@ def detect_absolute_claim_risk(content: str) -> dict:
     Returns:
         score, summary, risky_claims, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 5]
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content) if s.strip() and len(s.strip()) >= 5]
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    risky_claims, absolute_count, qualified_count = _scan_absolute_claims(sentences)
-    unqualified = absolute_count - qualified_count
-    risk_ratio = round(unqualified / max(len(sentences), 1) * 100, 1)
-    score, level = _compute_claim_risk_score(risk_ratio, unqualified)
+        risky_claims, absolute_count, qualified_count = _scan_absolute_claims(sentences)
+        unqualified = absolute_count - qualified_count
+        risk_ratio = round(unqualified / max(len(sentences), 1) * 100, 1)
+        score, level = _compute_claim_risk_score(risk_ratio, unqualified)
 
-    suggestions = _generate_suggestions(
-        absolute_count, qualified_count, unqualified,
-        risk_ratio, level, risky_claims
-    )
+        suggestions = _generate_suggestions(
+            absolute_count, qualified_count, unqualified,
+            risk_ratio, level, risky_claims
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_sentences': len(sentences),
-            'absolute_count': absolute_count,
-            'qualified_count': qualified_count,
-            'unqualified_count': unqualified,
-            'risk_ratio': risk_ratio,
-            'level': level,
-        },
-        'risky_claims': risky_claims[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_sentences': len(sentences),
+                'absolute_count': absolute_count,
+                'qualified_count': qualified_count,
+                'unqualified_count': unqualified,
+                'risk_ratio': risk_ratio,
+                'level': level,
+            },
+            'risky_claims': risky_claims[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"절대 표현 위험도 분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(absolute: int, qualified: int,

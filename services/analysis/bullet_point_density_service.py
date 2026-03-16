@@ -7,6 +7,9 @@ Bullet Point Density Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩
@@ -132,30 +135,34 @@ def analyze_bullet_density(content: str) -> dict:
     Returns:
         section_analysis, list_groups, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    total_list_items = len(_BULLET_RE.findall(content)) + len(_NUMBERED_RE.findall(content)) + len(_HTML_LI_RE.findall(content))
-    content_lines = _count_content_lines(content)
-    density = round((total_list_items / content_lines * 100) if content_lines > 0 else 0.0, 1)
+        total_list_items = len(_BULLET_RE.findall(content)) + len(_NUMBERED_RE.findall(content)) + len(_HTML_LI_RE.findall(content))
+        content_lines = _count_content_lines(content)
+        density = round((total_list_items / content_lines * 100) if content_lines > 0 else 0.0, 1)
 
-    list_groups = _detect_list_groups(content)
-    section_analysis = _analyze_section_density(_parse_sections(content))
-    score = _compute_bullet_score(density, list_groups)
-    long_groups = [g for g in list_groups if g['is_long']]
+        list_groups = _detect_list_groups(content)
+        section_analysis = _analyze_section_density(_parse_sections(content))
+        score = _compute_bullet_score(density, list_groups)
+        long_groups = [g for g in list_groups if g['is_long']]
 
-    return {
-        'section_analysis': section_analysis,
-        'list_groups': list_groups,
-        'summary': {
-            'total_list_items': total_list_items,
-            'total_content_lines': content_lines,
-            'bullet_density': density,
-            'list_group_count': len(list_groups),
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(total_list_items, density, list_groups, long_groups, content_lines),
-    }
+        return {
+            'section_analysis': section_analysis,
+            'list_groups': list_groups,
+            'summary': {
+                'total_list_items': total_list_items,
+                'total_content_lines': content_lines,
+                'bullet_density': density,
+                'list_group_count': len(list_groups),
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(total_list_items, density, list_groups, long_groups, content_lines),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(
