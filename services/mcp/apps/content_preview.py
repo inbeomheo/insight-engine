@@ -4,8 +4,11 @@
 플랫폼별(네이버 블로그, WordPress, 티스토리, Medium) 레이아웃으로
 발행 전 콘텐츠 미리보기를 제공합니다.
 """
+import logging
 import html as html_lib
 from ..mcp_apps import BaseMCPApp
+
+logger = logging.getLogger(__name__)
 
 # 플랫폼별 스타일 정의
 _PLATFORM_STYLES: dict[str, dict] = {
@@ -74,6 +77,14 @@ class ContentPreviewApp(BaseMCPApp):
             content: {"title": str, "content": str, "html": str,
                       "platform": str (선택, 기본 naver_blog)}
         """
+        try:
+            return self._render_internal(content)
+        except Exception as e:
+            logger.error('콘텐츠 미리보기 렌더링 실패: %s', e)
+            return {"html": f"<p>미리보기 생성 실패: {e}</p>", "actions": []}
+
+    def _render_internal(self, content: dict) -> dict:
+        """실제 렌더링 로직"""
         platform = content.get("platform", _DEFAULT_PLATFORM)
         style = _PLATFORM_STYLES.get(platform, _PLATFORM_STYLES[_DEFAULT_PLATFORM])
 

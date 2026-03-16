@@ -3,7 +3,10 @@ MCP 플러그인 추상 인터페이스
 
 모든 외부 발행 플러그인은 이 클래스를 상속하여 구현합니다.
 """
+import logging
 from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
 
 
 class MCPPlugin(ABC):

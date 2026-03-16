@@ -2,7 +2,10 @@
 크레딧 플랜 정의
 Free / Pro / Team 플랜별 크레딧 한도와 기능
 """
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # 플랜 정의
 CREDIT_PLANS: dict[str, dict[str, Any]] = {

@@ -4,6 +4,7 @@
 콘텐츠를 단락 단위로 분리하여 발행 전 인라인 편집 기능을 제공합니다.
 편집 이력을 메모리에 보관하여 실행 취소(undo)를 지원합니다.
 """
+import logging
 import html as html_lib
 import re
 from ..mcp_apps import BaseMCPApp
@@ -109,6 +110,18 @@ class InlineEditorApp(BaseMCPApp):
         - reset:      {"session_id": str, "original_content": str}
         - get_result: {"session_id": str}
         """
+        try:
+            return self._handle_action_internal(action, data)
+        except Exception as e:
+            logger.error('인라인 편집 액션 처리 실패 (action=%s): %s', action, e)
+            return {
+                "success": False,
+                "message": f"액션 처리 중 오류: {e}",
+                "updated_content": None,
+            }
+
+    def _handle_action_internal(self, action: str, data: dict) -> dict:
+        """실제 액션 처리 로직"""
         session_id = data.get("session_id")
         if not session_id or session_id not in self._sessions:
             return {

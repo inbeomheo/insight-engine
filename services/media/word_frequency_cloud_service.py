@@ -5,9 +5,12 @@ Word Frequency Cloud Generator 서비스
 불용어(stopwords) 제외, 명사/키워드 중심 빈도 산출.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from collections import Counter
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 # 한국어 불용어
 _KO_STOPWORDS = {
@@ -93,39 +96,43 @@ def generate_word_frequency(content: str, top_n: int = 30) -> dict:
     if not content or not content.strip():
         return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    ko_filtered, en_filtered = _extract_filtered_words(content)
-    all_words = ko_filtered + en_filtered
+    try:
+        ko_filtered, en_filtered = _extract_filtered_words(content)
+        all_words = ko_filtered + en_filtered
 
-    if not all_words:
-        return {**_EMPTY_RESULT, 'score': 50.0,
-                'suggestions': ['분석 가능한 키워드가 부족합니다.']}
+        if not all_words:
+            return {**_EMPTY_RESULT, 'score': 50.0,
+                    'suggestions': ['분석 가능한 키워드가 부족합니다.']}
 
-    counter = Counter(all_words)
-    total = len(all_words)
-    unique = len(counter)
+        counter = Counter(all_words)
+        total = len(all_words)
+        unique = len(counter)
 
-    top_words = counter.most_common(top_n)
-    max_count = top_words[0][1] if top_words else 1
+        top_words = counter.most_common(top_n)
+        max_count = top_words[0][1] if top_words else 1
 
-    word_cloud = [
-        {'word': word, 'count': count,
-         'frequency': round(count / total * 100, 2),
-         'weight': round(count / max_count, 2)}
-        for word, count in top_words
-    ]
+        word_cloud = [
+            {'word': word, 'count': count,
+             'frequency': round(count / total * 100, 2),
+             'weight': round(count / max_count, 2)}
+            for word, count in top_words
+        ]
 
-    diversity = round(unique / total * 100, 1) if total > 0 else 0.0
+        diversity = round(unique / total * 100, 1) if total > 0 else 0.0
 
-    return {
-        'word_cloud': word_cloud,
-        'summary': {
-            'total_words': total, 'unique_words': unique,
-            'diversity_ratio': diversity,
-            'dominant_language': 'ko' if len(ko_filtered) >= len(en_filtered) else 'en',
-        },
-        'score': _compute_diversity_score(diversity),
-        'suggestions': _generate_suggestions(word_cloud, diversity, total),
-    }
+        return {
+            'word_cloud': word_cloud,
+            'summary': {
+                'total_words': total, 'unique_words': unique,
+                'diversity_ratio': diversity,
+                'dominant_language': 'ko' if len(ko_filtered) >= len(en_filtered) else 'en',
+            },
+            'score': _compute_diversity_score(diversity),
+            'suggestions': _generate_suggestions(word_cloud, diversity, total),
+        }
+    except Exception as e:
+        logger.error('단어 빈도 분석 중 오류: %s', e)
+        return {**_EMPTY_RESULT, 'suggestions': [f'분석 중 오류 발생: {e}']}
 
 
 def _generate_suggestions(cloud: List[Dict], diversity: float, total: int) -> List[str]:

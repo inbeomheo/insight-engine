@@ -4,8 +4,11 @@
 마크다운 콘텐츠를 Reveal.js HTML 슬라이드로 변환합니다.
 ## 헤딩을 슬라이드 구분자로 사용합니다.
 """
+import logging
 import re
 from html import escape
+
+logger = logging.getLogger(__name__)
 
 
 def convert_to_slides(markdown_content: str, theme: str = 'black') -> str:
@@ -21,8 +24,14 @@ def convert_to_slides(markdown_content: str, theme: str = 'black') -> str:
     if not markdown_content or not markdown_content.strip():
         raise ValueError('변환할 콘텐츠가 없습니다.')
 
-    slides = _split_into_slides(markdown_content)
-    slides_html = '\n'.join(_render_slide(s) for s in slides)
+    try:
+        slides = _split_into_slides(markdown_content)
+        slides_html = '\n'.join(_render_slide(s) for s in slides)
+    except ValueError:
+        raise
+    except Exception as e:
+        logger.error('슬라이드 변환 중 오류: %s', e)
+        raise RuntimeError(f'슬라이드 변환 실패: {e}') from e
 
     return f'''<!DOCTYPE html>
 <html lang="ko">

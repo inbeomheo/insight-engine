@@ -4,8 +4,11 @@ MCP Apps SDK — 인터랙티브 UI 앱 추상 인터페이스
 콘텐츠 미리보기·인라인 편집처럼 발행 전 사용자가 상호작용하는
 '앱' 단위를 정의합니다. 플러그인(발행)과는 별개 레이어입니다.
 """
+import logging
 from abc import ABC, abstractmethod
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 
 class BaseMCPApp(ABC):
@@ -56,7 +59,9 @@ class MCPAppRegistry:
 
     def register(self, app: BaseMCPApp) -> None:
         """앱을 이름 기준으로 등록합니다."""
-        self._apps[app.get_name()] = app
+        name = app.get_name()
+        self._apps[name] = app
+        logger.info('MCP 앱 등록: %s', name)
 
     def get(self, name: str) -> BaseMCPApp | None:
         """이름으로 앱을 조회합니다."""

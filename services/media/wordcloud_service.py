@@ -4,10 +4,13 @@
 텍스트에서 단어 빈도를 계산하여 SVG 태그 클라우드를 생성합니다.
 외부 패키지 없이 순수 Python으로 구현합니다.
 """
+import logging
 import math
 import re
 from collections import Counter
 from html import escape
+
+logger = logging.getLogger(__name__)
 
 # 한국어/영어 불용어
 _STOPWORDS = {
@@ -49,11 +52,17 @@ def generate_wordcloud(text: str, max_words: int = 60, width: int = 800, height:
     if not text or not text.strip():
         raise ValueError('분석할 텍스트가 없습니다.')
 
-    word_counts = _count_words(text, max_words)
-    if not word_counts:
-        raise ValueError('추출된 단어가 없습니다.')
+    try:
+        word_counts = _count_words(text, max_words)
+        if not word_counts:
+            raise ValueError('추출된 단어가 없습니다.')
 
-    return _render_svg(word_counts, width, height)
+        return _render_svg(word_counts, width, height)
+    except ValueError:
+        raise
+    except Exception as e:
+        logger.error('워드클라우드 생성 중 오류: %s', e)
+        raise RuntimeError(f'워드클라우드 생성 실패: {e}') from e
 
 
 def _count_words(text: str, max_words: int) -> list[tuple[str, int]]:
