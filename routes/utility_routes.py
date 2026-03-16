@@ -17,6 +17,10 @@ from utils.responses import handle_error, sanitize_error_for_client
 
 _CLIENT_TRACKER: Dict[str, float] = {}
 
+# 재생목록/채널 조회 결과 캐시 (5분 TTL)
+_PLAYLIST_CACHE: Dict[str, dict] = {}
+_PLAYLIST_CACHE_TTL: int = 300  # 초
+
 
 def _cleanup_stale_clients():
     """5분 이상 heartbeat 없는 클라이언트 정리."""
@@ -76,6 +80,16 @@ def health_detailed():
         dirs[:] = [d for d in dirs if d != '__pycache__']
         service_count += sum(1 for f in files if f.endswith('.py') and f != '__init__.py')
     checks['services'] = {'count': service_count}
+
+    # 웹훅 실패 횟수
+    try:
+        from routes.generation_helpers import _webhook
+        checks['webhook'] = {
+            'enabled': _webhook.enabled,
+            'failure_count': _webhook.failure_count,
+        }
+    except Exception:
+        checks['webhook'] = {'enabled': False, 'failure_count': 0}
 
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])
@@ -429,6 +443,17 @@ def playlist_videos():
         if not url:
             return jsonify({'error': 'URL이 필요합니다.'}), 400
 
+        # 캐시 키: URL + max_results
+        cache_key = f"{url}|{max_results}"
+        now = time.time()
+
+        # 캐시 히트 확인 (TTL 5분)
+        cached = _PLAYLIST_CACHE.get(cache_key)
+        if cached and (now - cached['ts']) < _PLAYLIST_CACHE_TTL:
+            result = cached['data']
+            result['cached'] = True
+            return jsonify(result)
+
         if content_service.is_playlist_url(url):
             result = content_service.get_playlist_videos(url, max_results)
         elif content_service.is_channel_url(url):
@@ -438,6 +463,9 @@ def playlist_videos():
 
         if 'error' in result:
             return jsonify(result), 400
+
+        # 성공 결과를 캐시에 저장
+        _PLAYLIST_CACHE[cache_key] = {'data': dict(result), 'ts': now}
 
         return jsonify(result)
 
