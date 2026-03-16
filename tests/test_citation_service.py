@@ -3,7 +3,8 @@ import unittest
 
 from services.content.citation_service import (
     _timestamp_to_seconds, parse_citations,
-    validate_citations, enrich_content_with_links, enrich_html_with_links
+    validate_citations, enrich_content_with_links, enrich_html_with_links,
+    get_citation_stats,
 )
 
 
@@ -93,6 +94,53 @@ class TestEnrichWithLinks(unittest.TestCase):
         """인용 없으면 변경 없음"""
         text = '일반 텍스트'
         self.assertEqual(enrich_content_with_links(text, 'id'), text)
+
+
+class TestGetCitationStats(unittest.TestCase):
+    """get_citation_stats 테스트"""
+
+    def test_empty_content(self):
+        """빈 콘텐츠는 기본값 반환"""
+        result = get_citation_stats('')
+        self.assertEqual(result['count'], 0)
+        self.assertEqual(result['density_per_1000'], 0.0)
+
+    def test_no_citations(self):
+        """인용 없는 텍스트"""
+        result = get_citation_stats('일반 텍스트입니다')
+        self.assertEqual(result['count'], 0)
+
+    def test_count_and_density(self):
+        """인용 개수와 밀도 계산"""
+        # 100자 텍스트에 인용 2개 → 밀도 약 20/1000자
+        text = 'a' * 50 + ' [01:00] ' + 'b' * 40 + ' [02:00] 끝'
+        result = get_citation_stats(text)
+        self.assertEqual(result['count'], 2)
+        self.assertGreater(result['density_per_1000'], 0)
+
+    def test_distribution(self):
+        """시간 분포 (전반/중반/후반)"""
+        text = '[00:30] 전반 [01:30] 중반 [02:30] 후반'
+        result = get_citation_stats(text)
+        dist = result['distribution']
+        self.assertEqual(dist['early'], 1)
+        self.assertEqual(dist['mid'], 1)
+        self.assertEqual(dist['late'], 1)
+
+    def test_gap_calculation(self):
+        """간격 계산"""
+        text = '[01:00] 첫 [03:00] 둘 [04:00] 셋'
+        result = get_citation_stats(text)
+        # 간격: 120초, 60초 → 평균 90초, 최대 120초
+        self.assertEqual(result['avg_gap_seconds'], 90.0)
+        self.assertEqual(result['max_gap_seconds'], 120)
+
+    def test_single_citation(self):
+        """인용 1개: 간격 없음"""
+        result = get_citation_stats('[05:00] 하나만')
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['avg_gap_seconds'], 0.0)
+        self.assertEqual(result['max_gap_seconds'], 0)
 
 
 if __name__ == '__main__':

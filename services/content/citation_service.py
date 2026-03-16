@@ -29,9 +29,15 @@ def _timestamp_to_seconds(ts: str) -> int:
     parts = ts.split(':')
     try:
         if len(parts) == 2:
-            return int(parts[0]) * 60 + int(parts[1])
+            minutes, seconds = int(parts[0]), int(parts[1])
+            if seconds < 0 or seconds >= 60 or minutes < 0:
+                return 0
+            return minutes * 60 + seconds
         elif len(parts) == 3:
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+            hours, minutes, seconds = int(parts[0]), int(parts[1]), int(parts[2])
+            if seconds < 0 or seconds >= 60 or minutes < 0 or minutes >= 60 or hours < 0:
+                return 0
+            return hours * 3600 + minutes * 60 + seconds
     except (ValueError, TypeError):
         return 0
     return 0
@@ -109,6 +115,63 @@ def validate_citations(
         c['valid'] = min_time <= c['seconds'] <= max_time
 
     return citations
+
+
+def get_citation_stats(content: str) -> dict:
+    """콘텐츠의 인용 통계를 분석합니다.
+
+    인용 개수, 밀도(인용/1000자), 시간 분포(전반/중반/후반),
+    평균 간격 등을 반환합니다.
+
+    Args:
+        content: 마크다운 콘텐츠
+
+    Returns:
+        count, density_per_1000, distribution, avg_gap_seconds, max_gap_seconds를 포함하는 dict
+    """
+    empty = {
+        'count': 0,
+        'density_per_1000': 0.0,
+        'distribution': {'early': 0, 'mid': 0, 'late': 0},
+        'avg_gap_seconds': 0.0,
+        'max_gap_seconds': 0,
+    }
+
+    if not content or not content.strip():
+        return empty
+
+    citations = parse_citations(content)
+    count = len(citations)
+    if count == 0:
+        return empty
+
+    # 밀도: 인용 수 / 1000자
+    char_count = len(content)
+    density = round(count / max(1, char_count) * 1000, 2)
+
+    # 시간 분포: 초 단위 정렬 후 3등분
+    seconds_list = sorted(c['seconds'] for c in citations)
+    if seconds_list[-1] > 0:
+        max_sec = seconds_list[-1]
+        third = max_sec / 3
+        early = sum(1 for s in seconds_list if s <= third)
+        mid = sum(1 for s in seconds_list if third < s <= third * 2)
+        late = sum(1 for s in seconds_list if s > third * 2)
+    else:
+        early, mid, late = count, 0, 0
+
+    # 간격 분석
+    gaps = [seconds_list[i + 1] - seconds_list[i] for i in range(len(seconds_list) - 1)]
+    avg_gap = round(sum(gaps) / len(gaps), 1) if gaps else 0.0
+    max_gap = max(gaps) if gaps else 0
+
+    return {
+        'count': count,
+        'density_per_1000': density,
+        'distribution': {'early': early, 'mid': mid, 'late': late},
+        'avg_gap_seconds': avg_gap,
+        'max_gap_seconds': max_gap,
+    }
 
 
 def enrich_content_with_links(content: str, video_id: str) -> str:
