@@ -339,6 +339,23 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
 ]
 
 
+STYLE_DESCRIPTIONS: Dict[str, str] = {
+    'blog_seo': 'SEO 최적화된 블로그 포스트를 생성합니다',
+    'summary': '영상 핵심 내용을 간결하게 요약합니다',
+    'tutorial': '단계별 학습 가이드를 작성합니다',
+    'qna': 'Q&A 형식으로 핵심 질문과 답변을 정리합니다',
+    'app_ideas': '영상에서 앱/서비스 아이디어를 도출합니다',
+    'yozm_it': '요즘IT 스타일의 기술 아티클을 작성합니다',
+    'brunch_essay': '브런치 감성의 에세이를 작성합니다',
+    'naver_popular': '네이버 인기글 스타일로 작성합니다',
+    'sns_post': 'SNS에 바로 올릴 수 있는 짧은 포스트를 생성합니다',
+    'newsletter': '뉴스레터 형식의 큐레이션 콘텐츠를 작성합니다',
+    'show_notes': '팟캐스트/유튜브 쇼노트를 작성합니다',
+    'shorts_script': '60초 Shorts 클립 스크립트를 추출합니다',
+    'geo_seo': 'AI 검색엔진에 최적화된 콘텐츠를 생성합니다',
+    'course': 'AI 학습 코스 형식의 교육 콘텐츠를 작성합니다',
+}
+
 STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
     'length': {
         'short': '총 분량은 약 500~800자로 핵심만 간결하게 작성하세요.',

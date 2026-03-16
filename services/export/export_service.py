@@ -247,6 +247,25 @@ def export_zip(title: str, content: str) -> io.BytesIO:
         }
         zf.writestr('meta.json', json.dumps(meta, ensure_ascii=False, indent=2))
 
+        # manifest.json — ZIP 내 파일 목록 + 크기
+        manifest_files = []
+        for entry in zf.infolist():
+            if entry.filename != 'manifest.json':
+                manifest_files.append({
+                    'filename': entry.filename,
+                    'size_bytes': entry.file_size,
+                    'compress_size_bytes': entry.compress_size,
+                })
+        manifest = {
+            'version': '1.0',
+            'total_files': len(manifest_files) + 2,  # +manifest.json +readme.txt
+            'files': manifest_files + [
+                {'filename': 'manifest.json', 'size_bytes': 0, 'compress_size_bytes': 0},
+                {'filename': 'readme.txt', 'size_bytes': 0, 'compress_size_bytes': 0},
+            ],
+        }
+        zf.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2))
+
         # readme.txt — 생성 설정 요약
         word_count = len(content.split())
         line_count = len(content.split('\n'))
