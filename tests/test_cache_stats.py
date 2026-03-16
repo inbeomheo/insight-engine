@@ -39,6 +39,23 @@ class TestCacheStats(unittest.TestCase):
         data = resp.get_json()
         self.assertIsInstance(data['total_mb'], (int, float))
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_has_oldest_and_newest_entry(self, _mock_sb):
+        """oldest_entry와 newest_entry 필드가 응답에 포함."""
+        resp = self.client.get('/api/cache/stats', headers=_HEADERS)
+        data = resp.get_json()
+        self.assertIn('oldest_entry', data)
+        self.assertIn('newest_entry', data)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_empty_cache_has_null_entries(self, _mock_sb):
+        """빈 캐시에서 oldest/newest는 None."""
+        resp = self.client.get('/api/cache/stats', headers=_HEADERS)
+        data = resp.get_json()
+        if data['count'] == 0:
+            self.assertIsNone(data['oldest_entry'])
+            self.assertIsNone(data['newest_entry'])
+
 
 if __name__ == '__main__':
     unittest.main()

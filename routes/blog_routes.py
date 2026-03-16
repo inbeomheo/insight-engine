@@ -223,6 +223,15 @@ def _get_style_prompt(style, custom_prompt=None):
     return style_prompts.get(style, '')
 
 
+def _get_style_label(style_id: str) -> str:
+    """스타일 ID에 대한 한글 표시명을 반환합니다."""
+    from config import STYLE_OPTIONS
+    for sid, label in STYLE_OPTIONS:
+        if sid == style_id:
+            return label
+    return style_id
+
+
 # ── 생성 헬퍼 (분리된 모듈에서 import) ──────────────────────────
 from routes.generation_helpers import (
     _fetch_youtube_content, _build_combined_content,
@@ -274,6 +283,7 @@ def generate():
                 'elapsed_time': elapsed_time,
                 'prompt': used_prompt,
                 'transcript_source': 'direct_input',
+                'style_label': _get_style_label(params['style']),
                 'cached': False,
                 'comment_summary_included': False,
                 'quota': get_usage_for_response(),
@@ -337,6 +347,7 @@ def generate():
                     'prompt': used_prompt,
                     'source_type': 'voice',
                     'source_title': source_title,
+                    'style_label': _get_style_label(params['style']),
                     'cached': False,
                     'comment_summary_included': False,
                     'quota': get_usage_for_response(),
@@ -379,6 +390,7 @@ def generate():
                 'source_type': 'document',
                 'source_title': source_title,
                 'page_count': doc.get('page_count', 0),
+                'style_label': _get_style_label(params['style']),
                 'cached': False,
                 'comment_summary_included': False,
                 'quota': get_usage_for_response(),
@@ -451,6 +463,7 @@ def generate():
                 'elapsed_time': elapsed_time,
                 'source_type': source_type,
                 'source_title': source_title,
+                'style_label': _get_style_label(params['style']),
                 'quota': get_usage_for_response(),
             }
             if params.get('include_transcript'):

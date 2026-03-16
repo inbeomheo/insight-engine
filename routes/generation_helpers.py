@@ -230,8 +230,11 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         return None
 
     g.skip_usage_decrement = True
-    elapsed_time = round(time.time() - start_time, 2)
+    now = time.time()
+    elapsed_time = round(now - start_time, 2)
     _cached_content = cached.get('content', '')
+    _cached_at = cached.pop('_cached_at', None)
+    cache_age_seconds = round(now - _cached_at, 1) if _cached_at else None
     return jsonify({
         **cached,
         'id': str(uuid.uuid4()),
@@ -240,6 +243,7 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         'transcript': raw_transcript,
         'transcript_source': transcript_source,
         'cached': True,
+        'cache_age_seconds': cache_age_seconds,
         'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
         'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0},
         'char_count': len(_cached_content),
@@ -480,6 +484,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "reading_time_min": _reading_time_min,
     }
 
+    from routes.blog_routes import _get_style_label
     return jsonify({
         **result,
         "id": report_id,
@@ -490,6 +495,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "youtube_title": youtube_title,
         "transcript": raw_transcript,
         "transcript_source": transcript_source,
+        "style_label": _get_style_label(params['style']),
         "comment_summary_included": bool(comments and comment_result),
         "seo": seo,
         "geo": geo,

@@ -39,6 +39,15 @@ class TestPromptsInfo(unittest.TestCase):
         self.assertIsInstance(data['forbidden_expressions'], list)
         self.assertGreater(len(data['forbidden_expressions']), 0)
 
+    def test_styles_have_forbidden_count(self):
+        """각 스타일에 forbidden_count 필드가 0 이상의 정수로 포함."""
+        resp = self.client.get('/api/prompts/info')
+        data = resp.get_json()
+        for style in data['styles']:
+            self.assertIn('forbidden_count', style)
+            self.assertIsInstance(style['forbidden_count'], int)
+            self.assertGreaterEqual(style['forbidden_count'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

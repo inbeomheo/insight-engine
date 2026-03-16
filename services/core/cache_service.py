@@ -80,7 +80,9 @@ class AICacheService:
                 (now, cache_key)
             )
             self._hits += 1
-            return json.loads(row['result_json'])
+            result = json.loads(row['result_json'])
+            result['_cached_at'] = row['created_at']
+            return result
 
     def put(self, cache_key: str, video_id: str, style_id: str, model: str, length: str, writing_style: str, result: Dict[str, Any]) -> None:
         """캐시에 결과 저장. 용량 초과 시 LRU eviction."""
@@ -116,14 +118,25 @@ class AICacheService:
 
     def get_stats(self) -> Dict[str, Any]:
         """캐시 통계 반환"""
+        from datetime import datetime, timezone
         with self._get_conn() as conn:
             row = conn.execute("""
                 SELECT COUNT(*) AS count,
-                       COALESCE(SUM(size_bytes), 0) AS total_bytes
+                       COALESCE(SUM(size_bytes), 0) AS total_bytes,
+                       MIN(created_at) AS oldest_ts,
+                       MAX(created_at) AS newest_ts
                 FROM ai_cache
             """).fetchone()
             total_requests = self._hits + self._misses
             hit_rate = round(self._hits / total_requests, 4) if total_requests > 0 else 0.0
+
+            oldest_entry = None
+            newest_entry = None
+            if row['oldest_ts'] is not None:
+                oldest_entry = datetime.fromtimestamp(row['oldest_ts'], tz=timezone.utc).isoformat()
+            if row['newest_ts'] is not None:
+                newest_entry = datetime.fromtimestamp(row['newest_ts'], tz=timezone.utc).isoformat()
+
             return {
                 'count': row['count'],
                 'total_bytes': row['total_bytes'],
@@ -133,6 +146,8 @@ class AICacheService:
                 'hits': self._hits,
                 'misses': self._misses,
                 'hit_rate': hit_rate,
+                'oldest_entry': oldest_entry,
+                'newest_entry': newest_entry,
             }
 
     def clear(self, video_id: Optional[str] = None) -> int:
