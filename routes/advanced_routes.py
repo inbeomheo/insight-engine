@@ -68,6 +68,7 @@ def generate_mindmap():
         return jsonify({
             'success': True,
             'markdown': result.get('content', ''),
+            'usage': result.get('usage'),
             'elapsed_time': elapsed_time,
             'quota': get_usage_for_response()
         })
@@ -377,6 +378,7 @@ def rewrite_platforms():
 def rewrite_content():
     """콘텐츠를 특정 플랫폼 형식으로 변환합니다."""
     try:
+        start_time = time.time()
         data = request.get_json(silent=True) or {}
         content = data.get('content', '')
         platform = data.get('platform', '')
@@ -398,8 +400,11 @@ def rewrite_content():
             )
             return jsonify(safe_result), 400
 
+        elapsed_time = round(time.time() - start_time, 2)
+
         return jsonify({
             **result,
+            'elapsed_time': elapsed_time,
             'quota': get_usage_for_response(),
         })
     except Exception as e:
@@ -716,11 +721,17 @@ def generate_multilang():
 
         elapsed_time = round(time.time() - start_time, 2)
 
+        succeeded = sum(1 for r in results.values() if 'error' not in r)
+        failed = len(results) - succeeded
+
         return jsonify({
             'success': True,
             'results': results,
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
+            'language_count': len(results),
+            'succeeded': succeeded,
+            'failed': failed,
             'elapsed_time': elapsed_time,
             'quota': get_usage_for_response(),
         })

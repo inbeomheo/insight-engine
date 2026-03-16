@@ -27,6 +27,7 @@ from services.analytics.roi_calculator_service import ROICalculatorService
 from services.analytics.heatmap_service import HeatmapService
 from services.content.digest_service import DigestService
 from services.core.logging_config import ServiceLogger
+from utils.responses import clamp_query_int
 
 logger = ServiceLogger('AnalyticsRoutes')
 
@@ -68,7 +69,7 @@ def _append_log(message: str) -> None:
 @require_auth
 def dashboard_extended():
     """운영 대시보드 확장 통계"""
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     return jsonify({
         'summary': _dashboard.get_summary(days),
         'by_style': _dashboard.get_style_stats(days),
@@ -116,7 +117,6 @@ def record_share(content_id: str):
 @analytics_bp.route('/api/performance/top', methods=['GET'])
 @require_auth
 def top_contents():
-    from utils.responses import clamp_query_int
     by = request.args.get('by', 'views')
     limit = clamp_query_int(request.args.get('limit'), default=10, max_val=100)
     return jsonify(_performance.get_top_contents(by=by, limit=limit))
@@ -238,7 +238,7 @@ def record_behavior():
 @analytics_bp.route('/api/admin/behavior/features', methods=['GET'])
 @require_auth
 def feature_frequency():
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     return jsonify(_user_behavior.get_feature_frequency(days))
 
 
@@ -252,7 +252,7 @@ def session_stats():
 @analytics_bp.route('/api/admin/quality/trend', methods=['GET'])
 @require_auth
 def quality_trend():
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     granularity = request.args.get('granularity', 'day')
     return jsonify({
         'trend': _quality_trend.get_trend(days, granularity),
@@ -297,7 +297,6 @@ def realtime_status():
 @analytics_bp.route('/api/admin/anomalies', methods=['GET'])
 @require_auth
 def get_anomalies():
-    from utils.responses import clamp_query_int
     limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
     return jsonify(_anomaly.get_anomalies(limit))
 
@@ -319,7 +318,7 @@ def record_metric():
 def export_data():
     """대시보드 데이터를 CSV 또는 JSON으로 내보내기"""
     fmt = request.args.get('format', 'json')
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
 
     data = {
         'summary': _dashboard.get_summary(days),
@@ -426,7 +425,7 @@ def log_stream():
 @require_auth
 def recent_logs():
     """최근 로그 반환"""
-    limit = int(request.args.get('limit', 50))
+    limit = clamp_query_int(request.args.get('limit'), default=50, min_val=1, max_val=500)
     with _log_lock:
         logs = _log_buffer[-limit:]
     return jsonify({'logs': logs})
@@ -476,7 +475,7 @@ def ga_page_views():
     """GA4 페이지뷰 조회"""
     from services.analytics.ga_service import GAService
     ga = GAService()
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     return jsonify(ga.get_page_views(days))
 
 
@@ -486,7 +485,7 @@ def ga_events():
     """GA4 이벤트 카운트 조회"""
     from services.analytics.ga_service import GAService
     ga = GAService()
-    days = int(request.args.get('days', 30))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     return jsonify(ga.get_event_counts(days))
 
 
@@ -497,8 +496,8 @@ def gsc_search_analytics():
     """GSC 검색어별 성과 조회"""
     from services.analytics.gsc_service import GSCService
     gsc = GSCService()
-    days = int(request.args.get('days', 30))
-    row_limit = int(request.args.get('row_limit', 25))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
+    row_limit = clamp_query_int(request.args.get('row_limit'), default=25, min_val=1, max_val=100)
     return jsonify(gsc.get_search_analytics(days, row_limit))
 
 
@@ -508,8 +507,8 @@ def gsc_top_pages():
     """GSC 페이지별 검색 성과"""
     from services.analytics.gsc_service import GSCService
     gsc = GSCService()
-    days = int(request.args.get('days', 30))
-    row_limit = int(request.args.get('row_limit', 25))
+    days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
+    row_limit = clamp_query_int(request.args.get('row_limit'), default=25, min_val=1, max_val=100)
     return jsonify(gsc.get_top_pages(days, row_limit))
 
 
