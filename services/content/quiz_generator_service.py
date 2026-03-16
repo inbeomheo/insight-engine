@@ -217,6 +217,96 @@ def grade_answer(question: QuizQuestion, user_answer: str) -> dict:
     }
 
 
+def shuffle_quiz(quiz: Quiz, seed: int = 0) -> Quiz:
+    """퀴즈 문항 순서와 객관식 선택지 순서를 셔플합니다.
+
+    결정적 셔플을 위해 seed를 지정할 수 있습니다.
+
+    Args:
+        quiz: 원본 퀴즈
+        seed: 랜덤 시드 (기본 0 = 현재 시간 기반)
+
+    Returns:
+        셔플된 새 Quiz 객체
+    """
+    import random
+    rng = random.Random(seed if seed != 0 else None)
+
+    shuffled_questions = list(quiz.questions)
+    rng.shuffle(shuffled_questions)
+
+    # 객관식 선택지도 셔플
+    new_questions = []
+    for q in shuffled_questions:
+        if q.question_type == 'multiple_choice' and q.options:
+            shuffled_options = list(q.options)
+            rng.shuffle(shuffled_options)
+            new_questions.append(QuizQuestion(
+                question_id=q.question_id,
+                question_text=q.question_text,
+                question_type=q.question_type,
+                options=shuffled_options,
+                correct_answer=q.correct_answer,
+                explanation=q.explanation,
+                difficulty=q.difficulty,
+            ))
+        else:
+            new_questions.append(q)
+
+    return Quiz(
+        quiz_id=quiz.quiz_id,
+        title=quiz.title,
+        questions=new_questions,
+        passing_score=quiz.passing_score,
+    )
+
+
+def generate_mixed_difficulty_quiz(
+    content: str,
+    num_questions: int = 6,
+    easy_ratio: float = 0.3,
+    medium_ratio: float = 0.5,
+    hard_ratio: float = 0.2,
+) -> Quiz:
+    """난이도 비율을 조절하여 혼합 퀴즈를 생성합니다.
+
+    Args:
+        content: 콘텐츠 텍스트
+        num_questions: 총 문항 수
+        easy_ratio: easy 비율 (기본 0.3)
+        medium_ratio: medium 비율 (기본 0.5)
+        hard_ratio: hard 비율 (기본 0.2)
+
+    Returns:
+        혼합 난이도 Quiz
+    """
+    if num_questions < 1:
+        raise ValueError("문항 수는 1 이상이어야 합니다.")
+
+    # 비율 정규화
+    total_ratio = easy_ratio + medium_ratio + hard_ratio
+    if total_ratio <= 0:
+        easy_ratio, medium_ratio, hard_ratio = 0.3, 0.5, 0.2
+        total_ratio = 1.0
+
+    easy_count = max(0, round(num_questions * easy_ratio / total_ratio))
+    hard_count = max(0, round(num_questions * hard_ratio / total_ratio))
+    medium_count = max(0, num_questions - easy_count - hard_count)
+
+    all_questions = []
+    for difficulty, count in [('easy', easy_count), ('medium', medium_count), ('hard', hard_count)]:
+        if count > 0:
+            sub_quiz = generate_quiz(content, num_questions=count, difficulty=difficulty)
+            all_questions.extend(sub_quiz.questions)
+
+    return Quiz(
+        quiz_id=_new_id("quiz"),
+        title=f"혼합 난이도 퀴즈 ({num_questions}문항)",
+        questions=all_questions[:num_questions],
+        passing_score=0.7,
+    )
+
+
 def calculate_results(quiz: Quiz, answers: list) -> dict:
     """결과 집계
 
