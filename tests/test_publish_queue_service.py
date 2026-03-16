@@ -123,6 +123,23 @@ class TestPublishQueueService(unittest.TestCase):
         for state in PublishQueueService.STATES:
             self.assertEqual(summary[state], 0)
 
+    def test_sanitize_includes_next_retry_at(self):
+        """_sanitize 응답에 next_retry_at 필드 포함"""
+        item = self.svc.enqueue('c1', '제목', '내용', 'p1', 'u1')
+        # 초기 상태: next_retry_at = None
+        self.assertIn('next_retry_at', item)
+        self.assertIsNone(item['next_retry_at'])
+
+    def test_sanitize_next_retry_at_after_failure(self):
+        """재시도 예약 후 next_retry_at이 ISO 문자열로 변환"""
+        self.svc.enqueue('c1', '제목', '내용', 'p1', 'u1')
+        raw = self.svc._queue[0]
+        self.svc._handle_failure(raw, '오류')
+        sanitized = self.svc._sanitize(raw)
+        self.assertIsNotNone(sanitized['next_retry_at'])
+        # ISO 형식인지 확인
+        self.assertIn('T', sanitized['next_retry_at'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -33,6 +33,28 @@ GLM_RETRY_DELAY = 10  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
 
+# 사전 컴파일된 정규식 패턴 (호출마다 재컴파일 방지)
+_KEYWORDS_RE = re.compile(r'<!--\s*KEYWORDS:\s*(.+?)\s*-->')
+_SEO_META_RE = re.compile(r'\*\*메타 설명\*\*\s*\|?\s*(.+?)(?:\s*\||\n)')
+_SEO_KW_RE = re.compile(r'\*\*타겟 키워드\*\*\s*\|?\s*(.+?)(?:\s*\||\n)')
+_SEO_KW_MAIN_RE = re.compile(r'메인\s*[:：]\s*')
+_SEO_KW_RELATED_RE = re.compile(r'연관\s*[:：]\s*')
+_SEO_SLUG_RE = re.compile(r'\*\*추천 URL\*\*\s*\|?\s*(/?.+?)(?:\s*\||\n)')
+_SEO_TAG_RE = re.compile(r'(?:\*\*태그\*\*|#태그|태그\s*[:：])\s*(.+?)(?:\n|$)')
+_SEO_HASHTAG_RE = re.compile(r'#([\w가-힣]+)')
+_GEO_FACTS_RE = re.compile(r'[-•✓]\s*✓?\s*(.+?)(?:\n|$)')
+_GEO_STRUCT_RE = re.compile(r'###\s*구조화\s*데이터\s*\n((?:\|.+\|\n?)+)')
+_GEO_ENTITY_RE = re.compile(r'###\s*엔티티\s*태그\s*\n(.+?)(?:\n\n|\n---|\n###|$)', re.DOTALL)
+_GEO_BACKTICK_RE = re.compile(r'`([^`]+)`')
+_GEO_DEF_RE = re.compile(r'###\s*한 줄 정의\s*\n>\s*(.+?)(?:\n|$)')
+_GEO_QA_RE = re.compile(r'A\.\s*(.+?)(?:\n|$)')
+_CTA_PRIMARY_RE = re.compile(r'\*\*CTA_PRIMARY\*\*\s*[:：]\s*(.+?)(?:\n|$)')
+_CTA_SECONDARY_RE = re.compile(r'\*\*CTA_SECONDARY\*\*\s*[:：]\s*(.+?)(?:\n|$)')
+_FAQ_QA_RE = re.compile(
+    r'\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*(.+?)(?=\n\s*\*\*Q\.|\n---|\n##|\Z)',
+    re.DOTALL
+)
+
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -145,14 +167,13 @@ def _extract_keywords(content):
     Returns:
         tuple: (cleaned_content, keywords_list)
     """
-    pattern = r'<!--\s*KEYWORDS:\s*(.+?)\s*-->'
-    match = re.search(pattern, content)
+    match = _KEYWORDS_RE.search(content)
     if not match:
         return content, []
 
     raw = match.group(1)
     keywords = [kw.strip()[:20] for kw in raw.split(',') if kw.strip()][:10]
-    cleaned = re.sub(pattern, '', content).strip()
+    cleaned = _KEYWORDS_RE.sub('', content).strip()
     return cleaned, keywords
 
 
@@ -532,38 +553,36 @@ def extract_seo_metadata(content: str) -> Optional[Dict[str, Any]]:
     Returns:
         dict 또는 None: {meta_description, keywords, slug, tags}
     """
-    import re
-
     if not content:
         return None
 
     seo = {}
 
     # 메타 설명
-    meta_match = re.search(r'\*\*메타 설명\*\*\s*\|?\s*(.+?)(?:\s*\||\n)', content)
+    meta_match = _SEO_META_RE.search(content)
     if meta_match:
         seo['meta_description'] = meta_match.group(1).strip()
 
     # 타겟 키워드
-    kw_match = re.search(r'\*\*타겟 키워드\*\*\s*\|?\s*(.+?)(?:\s*\||\n)', content)
+    kw_match = _SEO_KW_RE.search(content)
     if kw_match:
         raw = kw_match.group(1).strip()
         # "메인: X, 연관: Y, Z" 또는 "X, Y, Z" 형식 파싱
-        raw = re.sub(r'메인\s*[:：]\s*', '', raw)
-        raw = re.sub(r'연관\s*[:：]\s*', '', raw)
+        raw = _SEO_KW_MAIN_RE.sub('', raw)
+        raw = _SEO_KW_RELATED_RE.sub('', raw)
         keywords = [k.strip().strip('[]') for k in raw.split(',') if k.strip()]
         seo['keywords'] = keywords
 
     # 추천 URL 슬러그
-    slug_match = re.search(r'\*\*추천 URL\*\*\s*\|?\s*(/?.+?)(?:\s*\||\n)', content)
+    slug_match = _SEO_SLUG_RE.search(content)
     if slug_match:
         seo['slug'] = slug_match.group(1).strip().strip('/')
 
     # 태그 (#태그 형식)
-    tag_match = re.search(r'(?:\*\*태그\*\*|#태그|태그\s*[:：])\s*(.+?)(?:\n|$)', content)
+    tag_match = _SEO_TAG_RE.search(content)
     if tag_match:
         raw_tags = tag_match.group(1).strip()
-        tags = re.findall(r'#([\w가-힣]+)', raw_tags)
+        tags = _SEO_HASHTAG_RE.findall(raw_tags)
         if tags:
             seo['tags'] = tags
 
@@ -580,23 +599,18 @@ def extract_geo_metadata(content: str) -> Optional[Dict[str, Any]]:
     Returns:
         dict 또는 None: {citations, structured_data, entity_tags, key_facts}
     """
-    import re
-
     if not content:
         return None
 
     geo = {}
 
     # 주요 팩트 (✓ 로 시작하는 줄)
-    facts = re.findall(r'[-•✓]\s*✓?\s*(.+?)(?:\n|$)', content)
+    facts = _GEO_FACTS_RE.findall(content)
     if facts:
         geo['key_facts'] = [f.strip() for f in facts if f.strip()]
 
     # 구조화 데이터 (마크다운 테이블에서 추출 — "구조화 데이터" 섹션)
-    table_section = re.search(
-        r'###\s*구조화\s*데이터\s*\n((?:\|.+\|\n?)+)',
-        content
-    )
+    table_section = _GEO_STRUCT_RE.search(content)
     if table_section:
         rows = table_section.group(1).strip().split('\n')
         structured = {}
@@ -611,10 +625,10 @@ def extract_geo_metadata(content: str) -> Optional[Dict[str, Any]]:
             geo['structured_data'] = structured
 
     # 엔티티 태그 (백틱으로 감싼 태그들 — "엔티티 태그" 섹션)
-    tag_section = re.search(r'###\s*엔티티\s*태그\s*\n(.+?)(?:\n\n|\n---|\n###|$)', content, re.DOTALL)
+    tag_section = _GEO_ENTITY_RE.search(content)
     if tag_section:
         raw_tags = tag_section.group(1).strip()
-        tags = re.findall(r'`([^`]+)`', raw_tags)
+        tags = _GEO_BACKTICK_RE.findall(raw_tags)
         if tags:
             geo['entity_tags'] = [t.strip() for t in tags]
 
@@ -622,12 +636,12 @@ def extract_geo_metadata(content: str) -> Optional[Dict[str, Any]]:
     citations = []
 
     # 한 줄 정의
-    definition = re.search(r'###\s*한 줄 정의\s*\n>\s*(.+?)(?:\n|$)', content)
+    definition = _GEO_DEF_RE.search(content)
     if definition:
         citations.append(definition.group(1).strip())
 
     # Q&A 답변의 첫 문장
-    qa_answers = re.findall(r'A\.\s*(.+?)(?:\n|$)', content)
+    qa_answers = _GEO_QA_RE.findall(content)
     for ans in qa_answers:
         text = ans.strip()
         if text and len(text) > 10:
@@ -663,11 +677,7 @@ def extract_faq_schema(content: str) -> Optional[Dict[str, Any]]:
         return None
 
     # Q&A 패턴 추출: **Q. 질문?** 다음 줄에 A. 답변
-    qa_pattern = re.compile(
-        r'\*\*Q\.\s*(.+?)\*\*\s*\n\s*A\.\s*(.+?)(?=\n\s*\*\*Q\.|\n---|\n##|\Z)',
-        re.DOTALL
-    )
-    matches = qa_pattern.findall(content)
+    matches = _FAQ_QA_RE.findall(content)
 
     if not matches:
         return None
@@ -712,11 +722,11 @@ def extract_cta(content: str) -> Optional[Dict[str, str]]:
 
     cta = {}
 
-    primary_match = re.search(r'\*\*CTA_PRIMARY\*\*\s*[:：]\s*(.+?)(?:\n|$)', content)
+    primary_match = _CTA_PRIMARY_RE.search(content)
     if primary_match:
         cta['primary'] = primary_match.group(1).strip()
 
-    secondary_match = re.search(r'\*\*CTA_SECONDARY\*\*\s*[:：]\s*(.+?)(?:\n|$)', content)
+    secondary_match = _CTA_SECONDARY_RE.search(content)
     if secondary_match:
         cta['secondary'] = secondary_match.group(1).strip()
 

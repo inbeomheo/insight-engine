@@ -88,6 +88,23 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.assertEqual(updated['error_message'], '연결 실패')
 
 
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
+    def test_create_invalid_scheduled_at(self, _):
+        """잘못된 ISO 형식 scheduled_at → 빈 dict 반환 (크래시 방지)"""
+        result = self.svc.create(
+            self.user_id, '제목', '내용', None, 'wp', 'not-a-date'
+        )
+        self.assertEqual(result, {})
+
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
+    def test_create_empty_scheduled_at(self, _):
+        """빈 문자열 scheduled_at → 빈 dict 반환"""
+        result = self.svc.create(
+            self.user_id, '제목', '내용', None, 'wp', ''
+        )
+        self.assertEqual(result, {})
+
+
 class TestCheckAndPublish(unittest.TestCase):
     """워커 check_and_publish 모크 테스트"""
 

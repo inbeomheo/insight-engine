@@ -243,6 +243,7 @@ class PublishQueueService:
 
     def _sanitize(self, item: dict) -> dict:
         """API 응답용으로 content 필드 제외한 요약 반환"""
+        next_retry = item.get('next_retry_at')
         return {
             'id': item['id'],
             'content_id': item['content_id'],
@@ -251,6 +252,7 @@ class PublishQueueService:
             'user_id': item['user_id'],
             'status': item['status'],
             'retry_count': item['retry_count'],
+            'next_retry_at': _ts_to_iso(next_retry) if next_retry else None,
             'published_url': item['published_url'],
             'error_message': item['error_message'],
             'created_at': _ts_to_iso(item['created_at']),

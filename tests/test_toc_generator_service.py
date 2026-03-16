@@ -162,5 +162,30 @@ class TestNumberedToc(unittest.TestCase):
         self.assertEqual(result['numbered_toc'], [])
 
 
+class TestDuplicateAnchor(unittest.TestCase):
+    """동일 텍스트 헤딩의 앵커 ID 중복 방지 테스트"""
+
+    def test_duplicate_headings_get_unique_anchors(self):
+        """동일 텍스트 헤딩이 여러 개면 앵커에 번호 접미사 추가"""
+        content = """# 제목
+## 결론
+## 중간
+## 결론"""
+        result = generate_toc(content)
+        anchors = [h['anchor'] for h in result['toc']]
+        # 모든 앵커가 고유해야 함
+        self.assertEqual(len(anchors), len(set(anchors)))
+        # 첫 '결론'은 접미사 없음, 두 번째는 -1 접미사
+        conclusion_anchors = [h['anchor'] for h in result['toc'] if h['text'] == '결론']
+        self.assertEqual(len(conclusion_anchors), 2)
+        self.assertNotEqual(conclusion_anchors[0], conclusion_anchors[1])
+
+    def test_single_heading_no_suffix(self):
+        """단일 헤딩은 접미사 없음"""
+        content = '## 유일한 헤딩'
+        result = generate_toc(content)
+        self.assertNotIn('-', result['toc'][0]['anchor'].split('유일한-헤딩')[-1])
+
+
 if __name__ == '__main__':
     unittest.main()

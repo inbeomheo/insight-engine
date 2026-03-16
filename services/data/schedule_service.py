@@ -33,6 +33,13 @@ class ScheduleService:
             return self._db_create(user_id, title, content, html, target_plugin, scheduled_at)
 
         try:
+            # scheduled_at ISO 8601 유효성 검증 (잘못된 값이면 get_due_posts에서 크래시)
+            try:
+                datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                logger.error("잘못된 scheduled_at 형식: %s", scheduled_at)
+                return {}
+
             # 메모리 fallback
             post_id = str(uuid.uuid4())
             post = {

@@ -321,19 +321,19 @@ def _build_ytt_api() -> YouTubeTranscriptApi:
 def _order_transcript_tracks(tracks: List[Any]) -> List[Any]:
     """자막 트랙을 우선순위에 따라 정렬합니다."""
     ordered: List[Any] = []
+    seen: set = set()
     for is_generated in [False, True]:
         for lang in PREFERRED_LANGUAGES:
-            ordered.extend([
-                t for t in tracks
-                if getattr(t, 'is_generated', False) == is_generated
-                and getattr(t, 'language_code', '') == lang
-                and t not in ordered
-            ])
-        ordered.extend([
-            t for t in tracks
-            if getattr(t, 'is_generated', False) == is_generated
-            and t not in ordered
-        ])
+            for t in tracks:
+                tid = id(t)
+                if tid not in seen and getattr(t, 'is_generated', False) == is_generated and getattr(t, 'language_code', '') == lang:
+                    ordered.append(t)
+                    seen.add(tid)
+        for t in tracks:
+            tid = id(t)
+            if tid not in seen and getattr(t, 'is_generated', False) == is_generated:
+                ordered.append(t)
+                seen.add(tid)
     return ordered
 
 
@@ -653,22 +653,26 @@ def _detect_auto_caption(ytt_api: YouTubeTranscriptApi, video_id: str) -> bool:
 
 
 def _detect_language_from_text(text: str) -> str:
-    """텍스트 첫 200자를 분석하여 간단한 언어 감지를 수행합니다."""
+    """텍스트 첫 200자를 분석하여 간단한 언어 감지를 수행합니다 (단일 순회)."""
     if not text:
         return 'unknown'
     sample = text[:200]
-    # 한국어 유니코드 범위 체크
-    ko_count = sum(1 for c in sample if '\uac00' <= c <= '\ud7a3')
-    # 일본어: 히라가나 + 카타카나 (CJK 한자 제외 — 중국어와 구분)
-    ja_kana_count = sum(1 for c in sample if '\u3040' <= c <= '\u30ff')
-    # CJK 한자 (중국어/일본어 공유)
-    cjk_count = sum(1 for c in sample if '\u4e00' <= c <= '\u9fff')
-    if ko_count > len(sample) * 0.1:
+    ko_count = 0
+    ja_kana_count = 0
+    cjk_count = 0
+    for c in sample:
+        if '\uac00' <= c <= '\ud7a3':
+            ko_count += 1
+        elif '\u3040' <= c <= '\u30ff':
+            ja_kana_count += 1
+        elif '\u4e00' <= c <= '\u9fff':
+            cjk_count += 1
+    sample_len = len(sample)
+    if ko_count > sample_len * 0.1:
         return 'ko'
-    # 히라가나/카타카나가 있으면 일본어, 한자만 있으면 중국어
-    if ja_kana_count > len(sample) * 0.05:
+    if ja_kana_count > sample_len * 0.05:
         return 'ja'
-    if cjk_count > len(sample) * 0.1:
+    if cjk_count > sample_len * 0.1:
         return 'zh'
     return 'en'
 

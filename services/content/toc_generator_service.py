@@ -32,16 +32,24 @@ _EMPTY_RESULT = {
 
 
 def _extract_headings(content: str, max_depth: int) -> List[Dict]:
-    """마크다운 콘텐츠에서 헤딩을 추출합니다."""
+    """마크다운 콘텐츠에서 헤딩을 추출합니다.
+
+    동일 텍스트 헤딩이 여러 개일 때 앵커 ID에 번호 접미사를 붙여 중복을 방지합니다.
+    """
     headings = []
+    anchor_counts: Dict[str, int] = {}
     for match in _HEADING_RE.finditer(content):
         level = len(match.group(1))
         text = match.group(2).strip()
         if level <= max_depth:
+            base_anchor = _slugify(text)
+            count = anchor_counts.get(base_anchor, 0)
+            anchor_counts[base_anchor] = count + 1
+            anchor = base_anchor if count == 0 else f'{base_anchor}-{count}'
             headings.append({
                 'level': level,
                 'text': text,
-                'anchor': _slugify(text),
+                'anchor': anchor,
             })
     return headings
 
