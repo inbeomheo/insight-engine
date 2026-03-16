@@ -65,7 +65,7 @@ class TestFinetuneRoutes(unittest.TestCase):
             'save_stats': {},
         }
         resp = self.client.post('/api/finetune/collect-local',
-                                json={'cache_db_path': '/tmp/test.db'},
+                                json={'cache_db_path': 'cache/test.db'},
                                 headers=_HEADERS)
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()

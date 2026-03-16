@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client
+from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client, sanitize_path, clamp_query_int
 
 
 def _sanitize_generation_error(error: Exception | str, fallback_message: str) -> str:
@@ -790,7 +790,7 @@ def agent_research():
         data = request.get_json(silent=True) or {}
         topic = data.get('topic', '').strip()
         model = data.get('model', DEFAULT_MODEL)
-        max_sources = min(int(data.get('max_sources', 5)), 10)
+        max_sources = clamp_query_int(data.get('max_sources'), default=5, min_val=1, max_val=10)
 
         if not topic:
             return jsonify({'error': '리서치 주제가 필요합니다.'}), 400
@@ -1141,14 +1141,22 @@ def finetune_collect():
     from services.finetune.data_collector import AutoDataCollector
 
     data = request.get_json(silent=True) or {}
-    days_back = min(int(data.get('days_back', 30)), 365)
-    limit = min(int(data.get('limit', 1000)), 5000)
+    days_back = clamp_query_int(data.get('days_back'), default=30, min_val=1, max_val=365)
+    limit = clamp_query_int(data.get('limit'), default=1000, min_val=1, max_val=5000)
+
+    # 경로 순회 방어: output_dir을 허용 범위 내로 제한
+    try:
+        safe_output_dir = sanitize_path(
+            data.get('output_dir', 'finetune'), './data'
+        )
+    except ValueError:
+        return jsonify({'error': '출력 경로가 허용 범위를 벗어났습니다.'}), 400
 
     try:
         collector = AutoDataCollector(
-            output_dir=data.get('output_dir', './data/finetune'),
+            output_dir=safe_output_dir,
             min_quality_score=float(data.get('min_quality_score', 0.6)),
-            min_content_length=int(data.get('min_content_length', 500)),
+            min_content_length=clamp_query_int(data.get('min_content_length'), default=500, min_val=50, max_val=100000),
         )
         result = collector.collect_from_supabase(days_back=days_back, limit=limit)
 
@@ -1172,13 +1180,26 @@ def finetune_collect_local():
     if not cache_db_path:
         return jsonify({'error': '캐시 DB 경로가 필요합니다.'}), 400
 
+    # 경로 순회 방어: cache_db_path와 output_dir을 허용 범위 내로 제한
+    try:
+        safe_cache_path = sanitize_path(cache_db_path, './data')
+    except ValueError:
+        return jsonify({'error': '캐시 DB 경로가 허용 범위를 벗어났습니다.'}), 400
+
+    try:
+        safe_output_dir = sanitize_path(
+            data.get('output_dir', 'finetune'), './data'
+        )
+    except ValueError:
+        return jsonify({'error': '출력 경로가 허용 범위를 벗어났습니다.'}), 400
+
     try:
         collector = AutoDataCollector(
-            output_dir=data.get('output_dir', './data/finetune'),
+            output_dir=safe_output_dir,
             min_quality_score=float(data.get('min_quality_score', 0.6)),
-            min_content_length=int(data.get('min_content_length', 500)),
+            min_content_length=clamp_query_int(data.get('min_content_length'), default=500, min_val=50, max_val=100000),
         )
-        result = collector.collect_from_local_cache(cache_db_path)
+        result = collector.collect_from_local_cache(safe_cache_path)
 
         if 'error' in result:
             return jsonify({'error': result['error']}), 400

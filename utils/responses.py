@@ -22,7 +22,8 @@ _ERROR_PREFIXES = [
 # 클라이언트에 노출해도 안전한 에러 접두사
 _SAFE_ERROR_PREFIXES = [
     '[인증 실패]', '[사용량 초과]', '[입력 오류]', '[자막 없음]',
-    '[생성 실패]', '[타임아웃]',
+    '[생성 실패]', '[타임아웃]', '[모델 오류]', '[잔액 부족]',
+    '[컨텐츠 차단]', '[AI 오류]',
     '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL',
 ]
 
@@ -93,11 +94,13 @@ def handle_error(error_msg, log_detail=None):
     is_formatted_error = any(error_text.startswith(prefix) for prefix in _ERROR_PREFIXES)
 
     if is_formatted_error:
+        # 내부 정보가 접두사 뒤에 포함되어 있을 수 있으므로 필터링 적용
+        safe_error = sanitize_error_for_client(error_text)
         if error_text.startswith('[인증 실패]'):
-            return jsonify({'error': error_text}), 401
+            return jsonify({'error': safe_error}), 401
         if error_text.startswith('[사용량 초과]'):
-            return jsonify({'error': error_text}), 429
-        return jsonify({'error': error_text}), 503
+            return jsonify({'error': safe_error}), 429
+        return jsonify({'error': safe_error}), 503
 
     if 'API 키' in error_text or 'authentication' in error_text.lower():
         return jsonify({'error': error_text}), 401
@@ -137,6 +140,35 @@ def api_error_from_exception(e: Exception, fallback_message: str = '서버 오�
     """
     logger.error(f"API 오류: {e}", exc_info=True)
     return jsonify({'error': fallback_message}), 500
+
+
+def sanitize_path(user_path: str, allowed_base: str) -> str:
+    """사용자 입력 경로를 허용된 기본 디렉토리 하위로 제한합니다 (Path Traversal 방어).
+
+    '../', 절대 경로, 심볼릭 링크 등을 통한 경로 탈출을 차단합니다.
+
+    Args:
+        user_path: 사용자가 입력한 경로 (상대/절대)
+        allowed_base: 허용된 기본 디렉토리 (예: './data/finetune')
+
+    Returns:
+        allowed_base 하위에 정규화된 안전한 절대 경로
+
+    Raises:
+        ValueError: 경로가 허용 범위를 벗어나는 경우
+    """
+    import os
+
+    # 기본 디렉토리의 절대 경로
+    base = os.path.realpath(os.path.abspath(allowed_base))
+    # 사용자 경로를 기본 디렉토리 기준으로 결합 후 정규화
+    joined = os.path.realpath(os.path.abspath(os.path.join(base, user_path)))
+
+    # 기본 디렉토리 하위인지 검증 (os.sep 추가로 '/data/finetune2' 같은 형제 디렉토리 차단)
+    if not (joined == base or joined.startswith(base + os.sep)):
+        raise ValueError(f'경로가 허용 범위를 벗어났습니다: {user_path}')
+
+    return joined
 
 
 def clamp_query_int(value, default: int = 10, min_val: int = 1, max_val: int = 100) -> int:
