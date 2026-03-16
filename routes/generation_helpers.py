@@ -466,6 +466,13 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         params.get('max_chars'),
     )
 
+    # 콘텐츠 통계 (프론트엔드 카드 메타 칩용)
+    _content_text = result.get('content', '')
+    _content_stats = {
+        "char_count": len(_content_text),
+        "word_count": len(_content_text.split()) if _content_text else 0,
+    }
+
     return jsonify({
         **result,
         "id": report_id,
@@ -486,6 +493,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "transcript_segments": transcript_segments or [],
         "chapters": chapters,
         "quota": get_usage_for_response(),
+        **_content_stats,
         **(agent_meta or {}),
     })
 
