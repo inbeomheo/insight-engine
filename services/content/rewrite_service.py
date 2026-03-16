@@ -4,6 +4,18 @@ from services.core import ai_service
 from config import PLATFORM_PRESETS
 
 
+def get_platform_limits(platform: str) -> dict:
+    """플랫폼의 글자 제한 정보를 반환합니다."""
+    preset = PLATFORM_PRESETS.get(platform)
+    if not preset:
+        return {}
+    return {
+        'max_chars': preset['max_chars'],
+        'tone': preset['tone'],
+        'format': preset['format'],
+    }
+
+
 logger = logging.getLogger(__name__)
 
 def rewrite_for_platform(content: str, platform: str, model: str) -> dict:
@@ -49,6 +61,7 @@ def rewrite_for_platform(content: str, platform: str, model: str) -> dict:
             'char_count': rewritten_len,
             'max_chars': preset['max_chars'],
             'compression_ratio': compression_ratio,
+            'platform_limits': get_platform_limits(platform),
         }
     except Exception as e:
         logger.error(f"플랫폼 리라이트 처리 실패: {e}")

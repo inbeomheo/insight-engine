@@ -103,5 +103,36 @@ class TestCheckQuality(unittest.TestCase):
         self.assertGreaterEqual(result['score'], 0)
 
 
+    # ── error_count / warning_count ──
+
+    def test_error_warning_counts_in_result(self):
+        """결과에 error_count, warning_count 포함"""
+        content = self._make_content(chars=600, sections=4)
+        result = check_quality(content)
+        self.assertIn('error_count', result)
+        self.assertIn('warning_count', result)
+        self.assertEqual(result['error_count'], 0)
+        self.assertEqual(result['warning_count'], 0)
+
+    def test_error_count_on_short_content(self):
+        """짧은 글은 error_count >= 1"""
+        result = check_quality('짧은 글')
+        self.assertGreaterEqual(result['error_count'], 1)
+
+    def test_warning_count_on_no_sections(self):
+        """섹션 없는 긴 글은 warning_count >= 1"""
+        content = '가' * 500
+        result = check_quality(content)
+        self.assertGreaterEqual(result['warning_count'], 1)
+
+    def test_score_penalty_weighted(self):
+        """error는 25점, warning은 10점 감점"""
+        # 빈 링크(error) + 섹션 부족(warning) = -35점 = 65점
+        content = '가' * 500 + '\n[빈링크]()'
+        result = check_quality(content)
+        # error 1개(-25) + warning 1개(-10) = 65
+        self.assertEqual(result['score'], 65)
+
+
 if __name__ == '__main__':
     unittest.main()

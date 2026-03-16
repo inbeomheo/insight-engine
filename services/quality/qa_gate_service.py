@@ -77,7 +77,16 @@ def check_quality(content: str, rules: dict = None) -> dict:
         )
 
         errors = [i for i in issues if i['severity'] == 'error']
-        return {'passed': len(errors) == 0, 'issues': issues, 'score': max(0, 100 - len(issues) * 15)}
+        warnings = [i for i in issues if i['severity'] == 'warning']
+        penalty = len(errors) * 25 + len(warnings) * 10
+        score = max(0, 100 - penalty)
+        return {
+            'passed': len(errors) == 0,
+            'issues': issues,
+            'score': score,
+            'error_count': len(errors),
+            'warning_count': len(warnings),
+        }
     except Exception as e:
         logger.error(f"QA 검증 처리 실패: {e}")
         return {'passed': False, 'issues': [], 'score': 0}

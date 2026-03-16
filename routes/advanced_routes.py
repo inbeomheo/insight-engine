@@ -234,12 +234,14 @@ def generate_campaign():
         def _gen_for_style(style_id):
             with app.app_context():
                 try:
+                    style_start = time.time()
                     sp = style_prompts_dict.get(style_id, '')
                     result = ai_service.create_content(
                         truncated_content, model, sp,
                         style_id=style_id, modifiers=modifiers
                     )
                     result['style'] = style_id
+                    result['elapsed_time'] = round(time.time() - style_start, 2)
                     return result
                 except Exception as e:
                     return {
@@ -272,7 +274,7 @@ def generate_campaign():
             total_usage['input_tokens'] += u.get('input_tokens', u.get('prompt_tokens', 0))
             total_usage['output_tokens'] += u.get('output_tokens', u.get('completion_tokens', 0))
 
-        elapsed_time = round(time.time() - start_time, 2)
+        total_elapsed_time = round(time.time() - start_time, 2)
 
         return jsonify({
             'success': True,
@@ -282,7 +284,8 @@ def generate_campaign():
             'total_usage': total_usage,
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
-            'elapsed_time': elapsed_time,
+            'elapsed_time': total_elapsed_time,
+            'total_elapsed_time': total_elapsed_time,
             'quota': get_usage_for_response()
         })
 

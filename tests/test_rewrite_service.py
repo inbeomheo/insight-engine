@@ -77,5 +77,42 @@ class TestRewriteForPlatform(unittest.TestCase):
         self.assertNotIn('X' * 5000, prompt)
 
 
+    @patch.object(rewrite_service, 'PLATFORM_PRESETS', MOCK_PRESETS)
+    @patch.object(rewrite_service, 'ai_service')
+    def test_platform_limits_in_result(self, mock_ai):
+        """결과에 platform_limits 메타 포함"""
+        mock_ai.create_content.return_value = {'content': '변환됨'}
+        result = rewrite_service.rewrite_for_platform('원본', 'twitter', 'model1')
+        self.assertIn('platform_limits', result)
+        limits = result['platform_limits']
+        self.assertEqual(limits['max_chars'], 280)
+        self.assertEqual(limits['tone'], '간결하고 임팩트 있게')
+        self.assertEqual(limits['format'], '짧은 문장')
+
+    @patch.object(rewrite_service, 'PLATFORM_PRESETS', MOCK_PRESETS)
+    @patch.object(rewrite_service, 'ai_service')
+    def test_platform_limits_linkedin(self, mock_ai):
+        """LinkedIn platform_limits 확인"""
+        mock_ai.create_content.return_value = {'content': '결과'}
+        result = rewrite_service.rewrite_for_platform('원본', 'linkedin', 'model1')
+        limits = result['platform_limits']
+        self.assertEqual(limits['max_chars'], 3000)
+        self.assertEqual(limits['tone'], '전문적')
+
+
+class TestGetPlatformLimits(unittest.TestCase):
+    """get_platform_limits 단위 테스트"""
+
+    @patch.object(rewrite_service, 'PLATFORM_PRESETS', MOCK_PRESETS)
+    def test_known_platform(self):
+        limits = rewrite_service.get_platform_limits('twitter')
+        self.assertEqual(limits['max_chars'], 280)
+
+    @patch.object(rewrite_service, 'PLATFORM_PRESETS', MOCK_PRESETS)
+    def test_unknown_platform(self):
+        limits = rewrite_service.get_platform_limits('tiktok')
+        self.assertEqual(limits, {})
+
+
 if __name__ == '__main__':
     unittest.main()
