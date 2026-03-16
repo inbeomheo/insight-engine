@@ -32,6 +32,63 @@ def health():
     return jsonify({'status': 'healthy'}), 200
 
 
+@blog_bp.route('/api/health/detailed')
+def health_detailed():
+    """상세 헬스체크 — 프로바이더 상태, DB, 서비스 요약."""
+    import os
+    from config import SUPPORTED_PROVIDERS
+
+    checks = {}
+
+    # AI 프로바이더 API 키 설정 여부
+    provider_status = {}
+    for pid, info in SUPPORTED_PROVIDERS.items():
+        env_key = info.get('env_key', '')
+        if env_key:
+            provider_status[pid] = {
+                'configured': bool(os.environ.get(env_key)),
+                'name': info.get('name', pid),
+            }
+        elif pid == 'ollama':
+            provider_status[pid] = {
+                'configured': bool(os.environ.get('OLLAMA_BASE_URL')),
+                'name': 'Ollama (로컬)',
+            }
+    checks['providers'] = provider_status
+
+    # Supabase 연결 상태
+    from services.data.supabase_service import is_supabase_enabled
+    checks['supabase'] = {'connected': is_supabase_enabled()}
+
+    # RAG ChromaDB 상태
+    try:
+        from services.rag.vector_store import get_collection_count
+        checks['rag'] = {'available': True, 'documents': get_collection_count()}
+    except Exception:
+        checks['rag'] = {'available': False, 'documents': 0}
+
+    # Whisper 활성화 여부
+    checks['whisper'] = {'enabled': os.environ.get('WHISPER_ENABLED', '').lower() == 'true'}
+
+    # 서비스 파일 수
+    service_count = 0
+    for root, dirs, files in os.walk('services'):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        service_count += sum(1 for f in files if f.endswith('.py') and f != '__init__.py')
+    checks['services'] = {'count': service_count}
+
+    overall = 'healthy'
+    configured_providers = sum(1 for p in provider_status.values() if p['configured'])
+    if configured_providers == 0:
+        overall = 'degraded'
+
+    return jsonify({
+        'status': overall,
+        'checks': checks,
+        'configured_providers': configured_providers,
+    })
+
+
 @blog_bp.route('/')
 def home():
     """API 서버 상태를 반환합니다. 프론트엔드는 Next.js에서 제공."""
