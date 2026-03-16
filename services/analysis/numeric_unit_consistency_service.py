@@ -7,6 +7,9 @@ Numeric & Unit Consistency Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 통화 표기 패턴
 _CURRENCY_PATTERNS = {
@@ -148,23 +151,27 @@ def check_numeric_unit_consistency(content: str) -> dict:
     Returns:
         score, summary, consistency_issues, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    issues, categories_checked = _check_all_categories(content)
-    score, level = _compute_consistency_score(issues, categories_checked)
-    suggestions = _generate_suggestions(issues, level, categories_checked)
+        issues, categories_checked = _check_all_categories(content)
+        score, level = _compute_consistency_score(issues, categories_checked)
+        suggestions = _generate_suggestions(issues, level, categories_checked)
 
-    return {
-        'score': score,
-        'summary': {
-            'categories_checked': categories_checked,
-            'inconsistent_count': len(issues),
-            'level': level,
-        },
-        'consistency_issues': issues[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'categories_checked': categories_checked,
+                'inconsistent_count': len(issues),
+                'level': level,
+            },
+            'consistency_issues': issues[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(issues: List[Dict], level: str,

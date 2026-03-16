@@ -7,6 +7,9 @@ FAQ형 문제 해결이 없는지 탐지합니다.
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 가이드/튜토리얼 신호
 _GUIDE_SIGNALS = [
@@ -136,37 +139,41 @@ def analyze_troubleshooting_coverage(content: str) -> dict:
     Returns:
         score, summary, suggestions, missing_categories를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    is_guide = _count_matches(content, _GUIDE_SIGNALS) >= 2
-    headings = _HEADING_RE.findall(content)
-    has_ts_section = any(
-        _has_pattern(h, _TROUBLESHOOTING_HEADING_PATTERNS) for h in headings
-    )
-    categories_found, categories_missing = _scan_categories(content)
-    coverage = round(len(categories_found) / max(len(_TROUBLESHOOTING_CATEGORIES), 1) * 100, 1)
-    level, score = _compute_level_and_score(is_guide, coverage, has_ts_section)
+        is_guide = _count_matches(content, _GUIDE_SIGNALS) >= 2
+        headings = _HEADING_RE.findall(content)
+        has_ts_section = any(
+            _has_pattern(h, _TROUBLESHOOTING_HEADING_PATTERNS) for h in headings
+        )
+        categories_found, categories_missing = _scan_categories(content)
+        coverage = round(len(categories_found) / max(len(_TROUBLESHOOTING_CATEGORIES), 1) * 100, 1)
+        level, score = _compute_level_and_score(is_guide, coverage, has_ts_section)
 
-    return {
-        'score': score,
-        'summary': {
-            'is_guide_content': is_guide,
-            'has_troubleshooting_section': has_ts_section,
-            'categories_found': categories_found,
-            'categories_missing': categories_missing,
-            'coverage_ratio': coverage,
-            'level': level,
-        },
-        'missing_categories': [
-            {'category': m, 'label': _TROUBLESHOOTING_CATEGORIES[m]['label']}
-            for m in categories_missing
-        ],
-        'suggestions': _generate_suggestions(
-            is_guide, has_ts_section, categories_found,
-            categories_missing, coverage, level
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_guide_content': is_guide,
+                'has_troubleshooting_section': has_ts_section,
+                'categories_found': categories_found,
+                'categories_missing': categories_missing,
+                'coverage_ratio': coverage,
+                'level': level,
+            },
+            'missing_categories': [
+                {'category': m, 'label': _TROUBLESHOOTING_CATEGORIES[m]['label']}
+                for m in categories_missing
+            ],
+            'suggestions': _generate_suggestions(
+                is_guide, has_ts_section, categories_found,
+                categories_missing, coverage, level
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(is_guide: bool, has_section: bool,

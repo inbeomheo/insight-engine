@@ -8,6 +8,9 @@ Rhetorical Device Detector 서비스
 import re
 from typing import List
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
@@ -140,31 +143,35 @@ def detect_rhetorical_devices(content: str) -> dict:
     Returns:
         devices, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    devices, type_counter = _scan_devices(sentences)
-    score, level, device_types, total_devices, density = (
-        _compute_rhetoric_score(type_counter, len(sentences))
-    )
-    suggestions = _generate_suggestions(type_counter, device_types, density, level)
+        devices, type_counter = _scan_devices(sentences)
+        score, level, device_types, total_devices, density = (
+            _compute_rhetoric_score(type_counter, len(sentences))
+        )
+        suggestions = _generate_suggestions(type_counter, device_types, density, level)
 
-    return {
-        'devices': devices[:30],
-        'summary': {
-            'total_devices': total_devices,
-            'device_types': device_types,
-            'device_breakdown': dict(type_counter),
-            'density': density,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'devices': devices[:30],
+            'summary': {
+                'total_devices': total_devices,
+                'device_types': device_types,
+                'device_breakdown': dict(type_counter),
+                'density': density,
+                'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(type_counter: Counter, types: int,

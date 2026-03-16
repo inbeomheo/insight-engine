@@ -7,6 +7,9 @@ Quantifier Specificity Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 
@@ -126,40 +129,44 @@ def analyze_quantifier_specificity(content: str) -> dict:
     Returns:
         score, summary, vague_quantifiers, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
-                 if s.strip() and len(s.strip()) >= 5]
+        sentences = [s.strip() for s in _SENTENCE_SPLIT.split(content)
+                     if s.strip() and len(s.strip()) >= 5]
 
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    vague_items, vague_count, specific_count = _scan_quantifiers(sentences)
+        vague_items, vague_count, specific_count = _scan_quantifiers(sentences)
 
-    total_quantified = vague_count + specific_count
-    specificity_ratio = (round(specific_count / total_quantified * 100, 1)
-                         if total_quantified > 0 else 100.0)
+        total_quantified = vague_count + specific_count
+        specificity_ratio = (round(specific_count / total_quantified * 100, 1)
+                             if total_quantified > 0 else 100.0)
 
-    score, level = _compute_specificity_score(len(vague_items), specificity_ratio)
+        score, level = _compute_specificity_score(len(vague_items), specificity_ratio)
 
-    suggestions = _generate_suggestions(
-        vague_count, specific_count, len(vague_items),
-        specificity_ratio, level, vague_items
-    )
+        suggestions = _generate_suggestions(
+            vague_count, specific_count, len(vague_items),
+            specificity_ratio, level, vague_items
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_sentences': len(sentences),
-            'vague_count': vague_count,
-            'specific_count': specific_count,
-            'specificity_ratio': specificity_ratio,
-            'level': level,
-        },
-        'vague_quantifiers': vague_items[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_sentences': len(sentences),
+                'vague_count': vague_count,
+                'specific_count': specific_count,
+                'specificity_ratio': specificity_ratio,
+                'level': level,
+            },
+            'vague_quantifiers': vague_items[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(vague: int, specific: int,

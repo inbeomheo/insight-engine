@@ -107,29 +107,33 @@ def analyze_sentiment(content: str) -> dict:
             "tone_summary": str,
         }
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    plain = _strip_markdown(content)
-    paragraphs = [p.strip() for p in plain.split('\n\n') if len(p.strip()) >= 10]
-    if not paragraphs:
-        paragraphs = [plain]
+        plain = _strip_markdown(content)
+        paragraphs = [p.strip() for p in plain.split('\n\n') if len(p.strip()) >= 10]
+        if not paragraphs:
+            paragraphs = [plain]
 
-    para_results, all_pos, all_neg, scores = _analyze_paragraphs_sentiment(paragraphs)
+        para_results, all_pos, all_neg, scores = _analyze_paragraphs_sentiment(paragraphs)
 
-    overall_score = max(-1.0, min(1.0, round(sum(scores) / len(scores), 3))) if scores else 0.0
-    overall_sentiment = 'positive' if overall_score > 0.1 else ('negative' if overall_score < -0.1 else 'neutral')
-    distribution = _compute_distribution(scores)
+        overall_score = max(-1.0, min(1.0, round(sum(scores) / len(scores), 3))) if scores else 0.0
+        overall_sentiment = 'positive' if overall_score > 0.1 else ('negative' if overall_score < -0.1 else 'neutral')
+        distribution = _compute_distribution(scores)
 
-    return {
-        'overall_sentiment': overall_sentiment,
-        'overall_score': overall_score,
-        'distribution': distribution,
-        'paragraph_sentiments': para_results[:10],
-        'top_positive_words': _unique_top(all_pos, 5),
-        'top_negative_words': _unique_top(all_neg, 5),
-        'tone_summary': _generate_tone_summary(overall_sentiment, distribution),
-    }
+        return {
+            'overall_sentiment': overall_sentiment,
+            'overall_score': overall_score,
+            'distribution': distribution,
+            'paragraph_sentiments': para_results[:10],
+            'top_positive_words': _unique_top(all_pos, 5),
+            'top_negative_words': _unique_top(all_neg, 5),
+            'tone_summary': _generate_tone_summary(overall_sentiment, distribution),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _score_paragraph(text: str) -> tuple:

@@ -7,6 +7,9 @@ Passive Construction Ratio 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
@@ -81,33 +84,37 @@ def analyze_passive_ratio(content: str) -> dict:
     Returns:
         passive_sentences, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    passive_list = [
-        {'text': sent if len(sent) <= 60 else sent[:57] + '...'}
-        for sent in sentences if _is_passive(sent)
-    ]
+        passive_list = [
+            {'text': sent if len(sent) <= 60 else sent[:57] + '...'}
+            for sent in sentences if _is_passive(sent)
+        ]
 
-    total = len(sentences)
-    ratio = round(len(passive_list) / total * 100, 1) if total > 0 else 0.0
-    level = _classify_passive_level(ratio)
+        total = len(sentences)
+        ratio = round(len(passive_list) / total * 100, 1) if total > 0 else 0.0
+        level = _classify_passive_level(ratio)
 
-    return {
-        'passive_sentences': passive_list[:20],
-        'summary': {
-            'total_sentences': total,
-            'passive_count': len(passive_list),
-            'passive_ratio': ratio,
-            'level': level,
-        },
-        'score': _compute_passive_score(ratio),
-        'suggestions': _generate_suggestions(ratio, len(passive_list), level),
-    }
+        return {
+            'passive_sentences': passive_list[:20],
+            'summary': {
+                'total_sentences': total,
+                'passive_count': len(passive_list),
+                'passive_ratio': ratio,
+                'level': level,
+            },
+            'score': _compute_passive_score(ratio),
+            'suggestions': _generate_suggestions(ratio, len(passive_list), level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(ratio: float, count: int, level: str) -> List[str]:

@@ -7,6 +7,9 @@ Instruction Sequence Validator 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩
@@ -152,36 +155,40 @@ def validate_instruction_sequence(content: str) -> dict:
     Returns:
         sequences, ordinals, issues, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    numbered = _find_numbered_sequences(content)
-    step_items = _find_step_sequences(content)
-    ordinals = _find_ordinal_sequences(content)
+        numbered = _find_numbered_sequences(content)
+        step_items = _find_step_sequences(content)
+        ordinals = _find_ordinal_sequences(content)
 
-    all_issues = _collect_all_issues(numbered, step_items, ordinals)
-    total_steps = sum(len(s) for s in numbered) + len(step_items) + len(ordinals)
-    has_instructions = total_steps > 0
-    total_issues = len(all_issues)
+        all_issues = _collect_all_issues(numbered, step_items, ordinals)
+        total_steps = sum(len(s) for s in numbered) + len(step_items) + len(ordinals)
+        has_instructions = total_steps > 0
+        total_issues = len(all_issues)
 
-    if not has_instructions or total_issues == 0:
-        score = 100.0
-    else:
-        score = round(max(0.0, 100.0 - total_issues * 20.0), 1)
+        if not has_instructions or total_issues == 0:
+            score = 100.0
+        else:
+            score = round(max(0.0, 100.0 - total_issues * 20.0), 1)
 
-    return {
-        'sequences': _summarize_sequences(numbered),
-        'ordinals': ordinals,
-        'issues': all_issues,
-        'summary': {
-            'total_sequences': len(numbered),
-            'total_steps': total_steps,
-            'total_issues': total_issues,
-            'has_instructions': has_instructions,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(all_issues, has_instructions, total_steps),
-    }
+        return {
+            'sequences': _summarize_sequences(numbered),
+            'ordinals': ordinals,
+            'issues': all_issues,
+            'summary': {
+                'total_sequences': len(numbered),
+                'total_steps': total_steps,
+                'total_issues': total_issues,
+                'has_instructions': has_instructions,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(all_issues, has_instructions, total_steps),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(issues: List[Dict], has_inst: bool, steps: int) -> List[str]:

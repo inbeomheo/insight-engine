@@ -120,28 +120,32 @@ def analyze_transitions(content: str) -> dict:
     Returns:
         transitions, summary, paragraph_analysis, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
-    if not paragraphs:
-        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
+        paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
+        if not paragraphs:
+            return {**_EMPTY_RESULT, 'suggestions': ['분석할 문단이 없습니다.']}
 
-    found_transitions, category_counts, paragraph_analysis = _scan_paragraphs(paragraphs)
-    total = len(found_transitions)
-    density = round(total / max(len(paragraphs), 1) * 100, 1)
+        found_transitions, category_counts, paragraph_analysis = _scan_paragraphs(paragraphs)
+        total = len(found_transitions)
+        density = round(total / max(len(paragraphs), 1) * 100, 1)
 
-    return {
-        'transitions': found_transitions,
-        'summary': {
-            'total': total,
-            'categories': {k: {'count': v, 'label': _TRANSITION_WORDS[k]['label']} for k, v in category_counts.items()},
-            'density': density,
-        },
-        'paragraph_analysis': paragraph_analysis,
-        'score': _calculate_score(paragraphs, paragraph_analysis, category_counts),
-        'suggestions': _generate_suggestions(paragraphs, paragraph_analysis, category_counts, density),
-    }
+        return {
+            'transitions': found_transitions,
+            'summary': {
+                'total': total,
+                'categories': {k: {'count': v, 'label': _TRANSITION_WORDS[k]['label']} for k, v in category_counts.items()},
+                'density': density,
+            },
+            'paragraph_analysis': paragraph_analysis,
+            'score': _calculate_score(paragraphs, paragraph_analysis, category_counts),
+            'suggestions': _generate_suggestions(paragraphs, paragraph_analysis, category_counts, density),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def suggest_transitions(content: str) -> dict:
@@ -156,50 +160,58 @@ def suggest_transitions(content: str) -> dict:
             "general_tips": list[str],
         }
     """
-    if not content or not content.strip():
+    try:
+        if not content or not content.strip():
+            return {
+                'recommendations': [],
+                'general_tips': ['콘텐츠가 비어 있습니다.'],
+            }
+
+        analysis = analyze_transitions(content)
+        paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
+        recommendations = []
+
+        for pa in analysis['paragraph_analysis']:
+            if pa['index'] == 0:
+                continue  # 첫 문단은 연결어 불필요
+
+            if not pa['has_transition']:
+                para_text = paragraphs[pa['index']] if pa['index'] < len(paragraphs) else ''
+                preview = para_text[:50] + '...' if len(para_text) > 50 else para_text
+
+                # 이전 문단과의 관계를 추정하여 적절한 연결어 제안
+                suggested = _suggest_for_context(paragraphs, pa['index'])
+                recommendations.append({
+                    'paragraph': pa['index'],
+                    'context': preview,
+                    'suggested_words': suggested,
+                })
+
+        general_tips = [
+            '매 문단 시작에 연결어를 넣을 필요는 없지만, 논리적 흐름이 끊기는 곳에는 추가하세요.',
+            '같은 연결어를 반복하지 말고 다양한 표현을 사용하세요.',
+            '인과(따라서), 대조(그러나), 예시(예를 들어) 연결어를 골고루 사용하면 글이 풍성해집니다.',
+        ]
+
         return {
-            'recommendations': [],
-            'general_tips': ['콘텐츠가 비어 있습니다.'],
+            'recommendations': recommendations,
+            'general_tips': general_tips,
         }
-
-    analysis = analyze_transitions(content)
-    paragraphs = [p.strip() for p in content.split('\n') if len(p.strip()) >= 5]
-    recommendations = []
-
-    for pa in analysis['paragraph_analysis']:
-        if pa['index'] == 0:
-            continue  # 첫 문단은 연결어 불필요
-
-        if not pa['has_transition']:
-            para_text = paragraphs[pa['index']] if pa['index'] < len(paragraphs) else ''
-            preview = para_text[:50] + '...' if len(para_text) > 50 else para_text
-
-            # 이전 문단과의 관계를 추정하여 적절한 연결어 제안
-            suggested = _suggest_for_context(paragraphs, pa['index'])
-            recommendations.append({
-                'paragraph': pa['index'],
-                'context': preview,
-                'suggested_words': suggested,
-            })
-
-    general_tips = [
-        '매 문단 시작에 연결어를 넣을 필요는 없지만, 논리적 흐름이 끊기는 곳에는 추가하세요.',
-        '같은 연결어를 반복하지 말고 다양한 표현을 사용하세요.',
-        '인과(따라서), 대조(그러나), 예시(예를 들어) 연결어를 골고루 사용하면 글이 풍성해집니다.',
-    ]
-
-    return {
-        'recommendations': recommendations,
-        'general_tips': general_tips,
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def get_transition_categories() -> list:
     """사용 가능한 연결어 카테고리 목록을 반환합니다."""
-    return [
-        {'id': k, 'label': v['label'], 'count': len(v['words']), 'examples': v['words'][:3]}
-        for k, v in _TRANSITION_WORDS.items()
-    ]
+    try:
+        return [
+            {'id': k, 'label': v['label'], 'count': len(v['words']), 'examples': v['words'][:3]}
+            for k, v in _TRANSITION_WORDS.items()
+        ]
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _calculate_score(paragraphs: list, para_analysis: list, categories: dict) -> int:

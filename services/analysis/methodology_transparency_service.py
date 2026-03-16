@@ -7,6 +7,9 @@ Methodology Transparency Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 방법론 투명성 카테고리
 _METHODOLOGY_CATEGORIES = {
@@ -136,27 +139,31 @@ def check_methodology_transparency(content: str) -> dict:
     Returns:
         score, summary, transparency_details, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    found_list, missing_list, details = _scan_categories(content)
-    total = len(_METHODOLOGY_CATEGORIES)
-    level, score, ratio = _compute_transparency_level(len(found_list), total)
+        found_list, missing_list, details = _scan_categories(content)
+        total = len(_METHODOLOGY_CATEGORIES)
+        level, score, ratio = _compute_transparency_level(len(found_list), total)
 
-    return {
-        'score': score,
-        'summary': {
-            'categories_found': len(found_list),
-            'found_list': found_list,
-            'missing_list': missing_list,
-            'transparency_ratio': ratio,
-            'level': level,
-        },
-        'transparency_details': details,
-        'suggestions': _generate_suggestions(
-            found_list, missing_list, ratio, level, details
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'categories_found': len(found_list),
+                'found_list': found_list,
+                'missing_list': missing_list,
+                'transparency_ratio': ratio,
+                'level': level,
+            },
+            'transparency_details': details,
+            'suggestions': _generate_suggestions(
+                found_list, missing_list, ratio, level, details
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(found: List[str], missing: List[str],

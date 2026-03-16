@@ -162,41 +162,45 @@ def _variety_generate_suggestions(dist: dict, count: int, unique_ratio: float,
 
 def analyze_variety(content: str) -> dict:
     """문장 다양성을 분석합니다."""
-    if not content or not content.strip():
-        return {**_VARIETY_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_VARIETY_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    clean = re.sub(r'#{1,6}\s+', '', content)
-    clean = re.sub(r'```[\s\S]*?```', '', clean)
-    clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
+        clean = re.sub(r'#{1,6}\s+', '', content)
+        clean = re.sub(r'```[\s\S]*?```', '', clean)
+        clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
 
-    raw_sentences = re.split(r'(?<=[.!?。])\s+|\n+', clean)
-    sentences = [s.strip() for s in raw_sentences if len(s.strip()) >= 5]
+        raw_sentences = re.split(r'(?<=[.!?。])\s+|\n+', clean)
+        sentences = [s.strip() for s in raw_sentences if len(s.strip()) >= 5]
 
-    if not sentences:
-        return {**_VARIETY_EMPTY, 'suggestions': ['분석할 문장이 없습니다.']}
+        if not sentences:
+            return {**_VARIETY_EMPTY, 'suggestions': ['분석할 문장이 없습니다.']}
 
-    analyzed, lengths, start_words, length_dist = _variety_analyze_sentences(sentences)
-    count = len(lengths)
-    avg_length = sum(lengths) / count
-    variance = sum((l - avg_length) ** 2 for l in lengths) / count
-    std_dev = round(math.sqrt(variance), 1)
+        analyzed, lengths, start_words, length_dist = _variety_analyze_sentences(sentences)
+        count = len(lengths)
+        avg_length = sum(lengths) / count
+        variance = sum((l - avg_length) ** 2 for l in lengths) / count
+        std_dev = round(math.sqrt(variance), 1)
 
-    unique_ratio, repeated = _variety_analyze_start_patterns(start_words, count)
-    variety_score = _variety_calculate_score(length_dist, count, unique_ratio, std_dev, avg_length)
-    suggestions = _variety_generate_suggestions(length_dist, count, unique_ratio, repeated, avg_length)
+        unique_ratio, repeated = _variety_analyze_start_patterns(start_words, count)
+        variety_score = _variety_calculate_score(length_dist, count, unique_ratio, std_dev, avg_length)
+        suggestions = _variety_generate_suggestions(length_dist, count, unique_ratio, repeated, avg_length)
 
-    return {
-        'sentences': analyzed,
-        'length_distribution': length_dist,
-        'start_pattern': {'unique_ratio': unique_ratio, 'repeated': repeated},
-        'variety_score': variety_score,
-        'stats': {
-            'count': count, 'avg_length': round(avg_length, 1),
-            'std_dev': std_dev, 'min_length': min(lengths),
-            'max_length': max(lengths),
-        },
-        'suggestions': suggestions,
-    }
+        return {
+            'sentences': analyzed,
+            'length_distribution': length_dist,
+            'start_pattern': {'unique_ratio': unique_ratio, 'repeated': repeated},
+            'variety_score': variety_score,
+            'stats': {
+                'count': count, 'avg_length': round(avg_length, 1),
+                'std_dev': std_dev, 'min_length': min(lengths),
+                'max_length': max(lengths),
+            },
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -327,32 +331,36 @@ def _connector_generate_suggestions(total: int, sent_count: int, variety: float,
 
 def analyze_connector_variety(content: str) -> dict:
     """연결어 다양성을 분석합니다."""
-    if not content or not content.strip():
-        return dict(_CONNECTOR_EMPTY)
+    try:
+        if not content or not content.strip():
+            return dict(_CONNECTOR_EMPTY)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_CONNECTOR_EMPTY)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_CONNECTOR_EMPTY)
 
-    found_connectors, connector_counts, category_counts = _connector_scan(sentences)
-    total_connectors = len(found_connectors)
-    unique_connectors = len(connector_counts)
-    variety_rate = round(
-        (unique_connectors / total_connectors * 100) if total_connectors > 0 else 0.0, 1
-    )
-    cat_dist = dict(category_counts)
-    repeated = {w: c for w, c in connector_counts.items() if c >= 3}
+        found_connectors, connector_counts, category_counts = _connector_scan(sentences)
+        total_connectors = len(found_connectors)
+        unique_connectors = len(connector_counts)
+        variety_rate = round(
+            (unique_connectors / total_connectors * 100) if total_connectors > 0 else 0.0, 1
+        )
+        cat_dist = dict(category_counts)
+        repeated = {w: c for w, c in connector_counts.items() if c >= 3}
 
-    return {
-        'connectors': found_connectors,
-        'category_distribution': cat_dist,
-        'summary': {'total_sentences': len(sentences), 'connector_count': total_connectors,
-                     'unique_connectors': unique_connectors, 'variety_rate': variety_rate},
-        'score': _connector_calculate_score(total_connectors, unique_connectors, variety_rate,
-                                            len(sentences), connector_counts),
-        'suggestions': _connector_generate_suggestions(total_connectors, len(sentences),
-                                                       variety_rate, repeated, cat_dist),
-    }
+        return {
+            'connectors': found_connectors,
+            'category_distribution': cat_dist,
+            'summary': {'total_sentences': len(sentences), 'connector_count': total_connectors,
+                         'unique_connectors': unique_connectors, 'variety_rate': variety_rate},
+            'score': _connector_calculate_score(total_connectors, unique_connectors, variety_rate,
+                                                len(sentences), connector_counts),
+            'suggestions': _connector_generate_suggestions(total_connectors, len(sentences),
+                                                           variety_rate, repeated, cat_dist),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -464,36 +472,40 @@ def _rhythm_generate_suggestions(avg: float, std_dev: float, consecutive: int,
 
 def analyze_sentence_rhythm(content: str) -> dict:
     """문장 길이 리듬을 분석합니다."""
-    if not content or not content.strip():
-        return {**_RHYTHM_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_RHYTHM_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content, min_len=3)
-    if not sentences:
-        return dict(_RHYTHM_EMPTY)
+        sentences = _split_sentences(content, min_len=3)
+        if not sentences:
+            return dict(_RHYTHM_EMPTY)
 
-    length_data, lengths, avg, std_dev = _rhythm_build_length_data(sentences)
-    consecutive_same = _rhythm_count_consecutive_same(length_data)
-    category_dist = {}
-    for d in length_data:
-        category_dist[d['category']] = category_dist.get(d['category'], 0) + 1
+        length_data, lengths, avg, std_dev = _rhythm_build_length_data(sentences)
+        consecutive_same = _rhythm_count_consecutive_same(length_data)
+        category_dist = {}
+        for d in length_data:
+            category_dist[d['category']] = category_dist.get(d['category'], 0) + 1
 
-    rhythm_quality = _rhythm_assess(std_dev, consecutive_same, len(sentences))
+        rhythm_quality = _rhythm_assess(std_dev, consecutive_same, len(sentences))
 
-    return {
-        'length_data': length_data[:50],
-        'rhythm_analysis': {
-            'category_distribution': category_dist,
-            'max_consecutive_same': consecutive_same,
-            'length_range': max(lengths) - min(lengths) if lengths else 0,
-        },
-        'summary': {
-            'total_sentences': len(sentences), 'avg_length': round(avg, 1),
-            'std_deviation': std_dev, 'rhythm_quality': rhythm_quality,
-        },
-        'score': _rhythm_calculate_score(std_dev, consecutive_same, len(sentences), category_dist),
-        'suggestions': _rhythm_generate_suggestions(avg, std_dev, consecutive_same,
-                                                    rhythm_quality, category_dist),
-    }
+        return {
+            'length_data': length_data[:50],
+            'rhythm_analysis': {
+                'category_distribution': category_dist,
+                'max_consecutive_same': consecutive_same,
+                'length_range': max(lengths) - min(lengths) if lengths else 0,
+            },
+            'summary': {
+                'total_sentences': len(sentences), 'avg_length': round(avg, 1),
+                'std_deviation': std_dev, 'rhythm_quality': rhythm_quality,
+            },
+            'score': _rhythm_calculate_score(std_dev, consecutive_same, len(sentences), category_dist),
+            'suggestions': _rhythm_generate_suggestions(avg, std_dev, consecutive_same,
+                                                        rhythm_quality, category_dist),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -599,32 +611,36 @@ def _ending_generate_suggestions(dominant: str, ratio: float, variety: float,
 
 def analyze_sentence_ending_variety(content: str) -> dict:
     """문장 종결어미 다양성을 분석합니다."""
-    if not content or not content.strip():
-        return dict(_ENDING_EMPTY)
+    try:
+        if not content or not content.strip():
+            return dict(_ENDING_EMPTY)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_ENDING_EMPTY)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_ENDING_EMPTY)
 
-    ending_data, ending_counts, dominant, dominant_ratio, variety_rate = (
-        _ending_classify_all(sentences)
-    )
-    total = len(sentences)
+        ending_data, ending_counts, dominant, dominant_ratio, variety_rate = (
+            _ending_classify_all(sentences)
+        )
+        total = len(sentences)
 
-    return {
-        'ending_data': ending_data[:30],
-        'ending_distribution': dict(ending_counts),
-        'summary': {
-            'total_sentences': total,
-            'unique_endings': len(ending_counts),
-            'variety_rate': variety_rate,
-            'dominant_ending': dominant,
-        },
-        'score': _ending_calculate_score(variety_rate, dominant_ratio, ending_counts, total),
-        'suggestions': _ending_generate_suggestions(
-            dominant, dominant_ratio, variety_rate, ending_counts
-        ),
-    }
+        return {
+            'ending_data': ending_data[:30],
+            'ending_distribution': dict(ending_counts),
+            'summary': {
+                'total_sentences': total,
+                'unique_endings': len(ending_counts),
+                'variety_rate': variety_rate,
+                'dominant_ending': dominant,
+            },
+            'score': _ending_calculate_score(variety_rate, dominant_ratio, ending_counts, total),
+            'suggestions': _ending_generate_suggestions(
+                dominant, dominant_ratio, variety_rate, ending_counts
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -717,28 +733,32 @@ def _avg_words_generate_suggestions(avg: float, level: str, long: int,
 
 def analyze_avg_words_per_sentence(content: str) -> dict:
     """문장당 평균 단어 수를 분석합니다."""
-    if not content or not content.strip():
-        return {**_AVG_WORDS_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_AVG_WORDS_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_AVG_WORDS_EMPTY)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_AVG_WORDS_EMPTY)
 
-    sentence_data, total_words, long_sentences, short_sentences = _avg_words_collect(sentences)
-    total = len(sentences)
-    avg = round(total_words / total, 1) if total > 0 else 0.0
-    score, level = _avg_words_readability(avg, long_sentences, total)
+        sentence_data, total_words, long_sentences, short_sentences = _avg_words_collect(sentences)
+        total = len(sentences)
+        avg = round(total_words / total, 1) if total > 0 else 0.0
+        score, level = _avg_words_readability(avg, long_sentences, total)
 
-    return {
-        'sentence_data': sentence_data[:30],
-        'summary': {
-            'total_sentences': total, 'total_words': total_words,
-            'avg_words': avg, 'readability_level': level,
-            'long_sentences': long_sentences, 'short_sentences': short_sentences,
-        },
-        'score': score,
-        'suggestions': _avg_words_generate_suggestions(avg, level, long_sentences, short_sentences, total),
-    }
+        return {
+            'sentence_data': sentence_data[:30],
+            'summary': {
+                'total_sentences': total, 'total_words': total_words,
+                'avg_words': avg, 'readability_level': level,
+                'long_sentences': long_sentences, 'short_sentences': short_sentences,
+            },
+            'score': score,
+            'suggestions': _avg_words_generate_suggestions(avg, level, long_sentences, short_sentences, total),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -868,28 +888,32 @@ def _complexity_generate_suggestions(avg: float, level: str,
 
 def score_sentence_complexity(content: str) -> dict:
     """문장 복잡도를 평가합니다."""
-    if not content or not content.strip():
-        return {**_COMPLEXITY_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_COMPLEXITY_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_COMPLEXITY_EMPTY)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_COMPLEXITY_EMPTY)
 
-    scored = [_complexity_score_sentence(s) for s in sentences]
-    distribution, avg_complexity, level = _complexity_compute_stats(scored)
-    score = _complexity_compute_score(avg_complexity, distribution)
+        scored = [_complexity_score_sentence(s) for s in sentences]
+        distribution, avg_complexity, level = _complexity_compute_stats(scored)
+        score = _complexity_compute_score(avg_complexity, distribution)
 
-    return {
-        'sentences': scored[:30],
-        'summary': {
-            'total_sentences': len(scored),
-            'avg_complexity': avg_complexity,
-            'distribution': distribution,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': _complexity_generate_suggestions(avg_complexity, level, distribution, len(scored)),
-    }
+        return {
+            'sentences': scored[:30],
+            'summary': {
+                'total_sentences': len(scored),
+                'avg_complexity': avg_complexity,
+                'distribution': distribution,
+                'level': level,
+            },
+            'score': score,
+            'suggestions': _complexity_generate_suggestions(avg_complexity, level, distribution, len(scored)),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -968,32 +992,36 @@ def _starter_generate_suggestions(counter: Counter, ratio: float, level: str,
 
 def analyze_sentence_starter_diversity(content: str) -> dict:
     """문장 시작어 다양성을 분석합니다."""
-    if not content or not content.strip():
-        return {**_STARTER_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_STARTER_EMPTY, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_STARTER_EMPTY)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_STARTER_EMPTY)
 
-    starters = [_get_starter(s) for s in sentences]
-    total = len(starters)
-    starter_counter, diversity_ratio, consec, starter_data = _starter_analyze(starters, total)
-    score, level = _starter_compute_score(diversity_ratio, consec)
+        starters = [_get_starter(s) for s in sentences]
+        total = len(starters)
+        starter_counter, diversity_ratio, consec, starter_data = _starter_analyze(starters, total)
+        score, level = _starter_compute_score(diversity_ratio, consec)
 
-    return {
-        'starter_data': starter_data,
-        'summary': {
-            'total_sentences': total,
-            'unique_starters': len(starter_counter),
-            'diversity_ratio': diversity_ratio,
-            'consecutive_repeats': consec,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': _starter_generate_suggestions(
-            starter_counter, diversity_ratio, level, consec, total
-        ),
-    }
+        return {
+            'starter_data': starter_data,
+            'summary': {
+                'total_sentences': total,
+                'unique_starters': len(starter_counter),
+                'diversity_ratio': diversity_ratio,
+                'consecutive_repeats': consec,
+                'level': level,
+            },
+            'score': score,
+            'suggestions': _starter_generate_suggestions(
+                starter_counter, diversity_ratio, level, consec, total
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1160,29 +1188,34 @@ def _topic_generate_suggestions(total: int, aligned: int, misaligned: int,
 
 def analyze_topic_sentence_alignment(content: str) -> dict:
     """문단별 주제문 정렬을 분석합니다."""
-    if not content or not content.strip():
-        return dict(_TOPIC_EMPTY)
+    try:
+        if not content or not content.strip():
+            return dict(_TOPIC_EMPTY)
 
-    paragraphs = _topic_split_paragraphs(content)
-    if not paragraphs:
-        return dict(_TOPIC_EMPTY)
+        paragraphs = _topic_split_paragraphs(content)
+        if not paragraphs:
+            return dict(_TOPIC_EMPTY)
 
-    details = [_topic_analyze_paragraph(p) for p in paragraphs]
-    aligned, misaligned, weak, analyzable = _topic_aggregate(details)
-    score, level = _topic_compute_score(aligned, misaligned, weak, analyzable)
+        details = [_topic_analyze_paragraph(p) for p in paragraphs]
+        aligned, misaligned, weak, analyzable = _topic_aggregate(details)
+        score, level = _topic_compute_score(aligned, misaligned, weak, analyzable)
 
-    return {
-        'score': score,
-        'summary': {
-            'total_paragraphs': len(details),
-            'aligned_count': aligned,
-            'misaligned_count': misaligned,
-            'weak_opener_count': weak,
-            'level': level,
-        },
-        'paragraph_details': [d for d in details[:10]
-                               if d['alignment'] != 'too_short'],
-        'suggestions': _topic_generate_suggestions(
-            len(details), aligned, misaligned, weak, level, details
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_paragraphs': len(details),
+                'aligned_count': aligned,
+                'misaligned_count': misaligned,
+                'weak_opener_count': weak,
+                'level': level,
+            },
+            'paragraph_details': [d for d in details[:10]
+                                   if d['alignment'] != 'too_short'],
+            'suggestions': _topic_generate_suggestions(
+                len(details), aligned, misaligned, weak, level, details
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
+

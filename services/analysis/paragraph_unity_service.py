@@ -8,6 +8,9 @@ Paragraph Unity Checker 서비스
 import re
 from typing import List, Dict
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
 _WORD_SPLIT = re.compile(r'[가-힣]{2,}|[a-zA-Z]{3,}', re.IGNORECASE)
@@ -165,33 +168,37 @@ def check_paragraph_unity(content: str) -> dict:
     Returns:
         score, summary, paragraph_details, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    paragraphs = _split_paragraphs(content)
-    if not paragraphs:
-        return dict(_EMPTY_RESULT)
+        paragraphs = _split_paragraphs(content)
+        if not paragraphs:
+            return dict(_EMPTY_RESULT)
 
-    details = [_analyze_unity(p) for p in paragraphs]
-    analyzable, unified, fragmented, avg_coherence = _aggregate_unity_stats(details)
-    score, level = _compute_unity_score(analyzable, unified, fragmented, avg_coherence)
+        details = [_analyze_unity(p) for p in paragraphs]
+        analyzable, unified, fragmented, avg_coherence = _aggregate_unity_stats(details)
+        score, level = _compute_unity_score(analyzable, unified, fragmented, avg_coherence)
 
-    total = len(paragraphs)
-    suggestions = _generate_suggestions(
-        total, unified, fragmented, avg_coherence, level, details
-    )
+        total = len(paragraphs)
+        suggestions = _generate_suggestions(
+            total, unified, fragmented, avg_coherence, level, details
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_paragraphs': total, 'unified_count': unified,
-            'fragmented_count': fragmented,
-            'avg_coherence': round(avg_coherence, 3), 'level': level,
-        },
-        'paragraph_details': [d for d in details[:10]
-                               if d['unity'] != 'too_short'],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_paragraphs': total, 'unified_count': unified,
+                'fragmented_count': fragmented,
+                'avg_coherence': round(avg_coherence, 3), 'level': level,
+            },
+            'paragraph_details': [d for d in details[:10]
+                                   if d['unity'] != 'too_short'],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, unified: int, fragmented: int,

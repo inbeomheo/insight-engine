@@ -7,6 +7,9 @@ Whitespace Formatting Auditor 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def audit_whitespace_formatting(content: str) -> dict:
@@ -15,51 +18,55 @@ def audit_whitespace_formatting(content: str) -> dict:
     Returns:
         issues, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
+    try:
+        if not content or not content.strip():
+            return {
+                'issues': [],
+                'summary': {'total_issues': 0, 'consecutive_blanks': 0,
+                            'trailing_spaces': 0, 'inconsistent_indent': 0,
+                            'total_lines': 0},
+                'score': 100.0,
+                'suggestions': [],
+            }
+
+        lines = content.split('\n')
+        total_lines = len(lines)
+        issues: list = []
+
+        blanks_issues, consecutive_blank_count = _check_consecutive_blanks(lines, total_lines)
+        trailing_issues, trailing_count = _check_trailing_spaces(lines)
+        indent_issues, inconsistent_indent = _check_mixed_indent(lines)
+        long_issues, long_lines = _check_long_lines(lines)
+        heading_issues, missing_heading_space = _check_heading_spacing(lines)
+
+        issues.extend(blanks_issues)
+        issues.extend(trailing_issues)
+        issues.extend(indent_issues)
+        issues.extend(long_issues)
+        issues.extend(heading_issues)
+
+        penalty = (consecutive_blank_count * 10 + trailing_count * 2 +
+                   inconsistent_indent * 15 + long_lines * 5 + missing_heading_space * 3)
+        score = round(max(0.0, min(100.0, 100.0 - penalty)), 1)
+
+        suggestions = _generate_suggestions(issues, consecutive_blank_count,
+                                             trailing_count, inconsistent_indent, long_lines)
+
         return {
-            'issues': [],
-            'summary': {'total_issues': 0, 'consecutive_blanks': 0,
-                        'trailing_spaces': 0, 'inconsistent_indent': 0,
-                        'total_lines': 0},
-            'score': 100.0,
-            'suggestions': [],
+            'issues': issues,
+            'summary': {
+                'total_issues': len(issues),
+                'consecutive_blanks': consecutive_blank_count,
+                'trailing_spaces': trailing_count,
+                'inconsistent_indent': inconsistent_indent,
+                'total_lines': total_lines,
+            },
+            'score': score,
+            'suggestions': suggestions,
         }
-
-    lines = content.split('\n')
-    total_lines = len(lines)
-    issues: list = []
-
-    blanks_issues, consecutive_blank_count = _check_consecutive_blanks(lines, total_lines)
-    trailing_issues, trailing_count = _check_trailing_spaces(lines)
-    indent_issues, inconsistent_indent = _check_mixed_indent(lines)
-    long_issues, long_lines = _check_long_lines(lines)
-    heading_issues, missing_heading_space = _check_heading_spacing(lines)
-
-    issues.extend(blanks_issues)
-    issues.extend(trailing_issues)
-    issues.extend(indent_issues)
-    issues.extend(long_issues)
-    issues.extend(heading_issues)
-
-    penalty = (consecutive_blank_count * 10 + trailing_count * 2 +
-               inconsistent_indent * 15 + long_lines * 5 + missing_heading_space * 3)
-    score = round(max(0.0, min(100.0, 100.0 - penalty)), 1)
-
-    suggestions = _generate_suggestions(issues, consecutive_blank_count,
-                                         trailing_count, inconsistent_indent, long_lines)
-
-    return {
-        'issues': issues,
-        'summary': {
-            'total_issues': len(issues),
-            'consecutive_blanks': consecutive_blank_count,
-            'trailing_spaces': trailing_count,
-            'inconsistent_indent': inconsistent_indent,
-            'total_lines': total_lines,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _check_consecutive_blanks(lines: list, total_lines: int) -> tuple:

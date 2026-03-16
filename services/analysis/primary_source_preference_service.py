@@ -7,6 +7,9 @@ Primary Source Preference Checker 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 # URL 추출
 _URL_RE = re.compile(r'https?://[^\s\)\]>\"\']+', re.IGNORECASE)
@@ -159,42 +162,46 @@ def check_primary_source_preference(content: str) -> dict:
     Returns:
         score, summary, suggestions, source_tiers를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    source_tiers, primary_count, secondary_count, unknown_count = (
-        _extract_and_classify_urls(content)
-    )
-    total_urls = primary_count + secondary_count + unknown_count
-    citation_mentions, academic_citations = _count_citations(content)
+        source_tiers, primary_count, secondary_count, unknown_count = (
+            _extract_and_classify_urls(content)
+        )
+        total_urls = primary_count + secondary_count + unknown_count
+        citation_mentions, academic_citations = _count_citations(content)
 
-    classified = primary_count + secondary_count
-    primary_ratio = round(primary_count / max(classified, 1) * 100, 1)
+        classified = primary_count + secondary_count
+        primary_ratio = round(primary_count / max(classified, 1) * 100, 1)
 
-    score, level = _compute_source_score(
-        total_urls, primary_ratio, citation_mentions, academic_citations, content
-    )
+        score, level = _compute_source_score(
+            total_urls, primary_ratio, citation_mentions, academic_citations, content
+        )
 
-    suggestions = _generate_suggestions(
-        total_urls, primary_count, secondary_count,
-        primary_ratio, citation_mentions, academic_citations, level
-    )
+        suggestions = _generate_suggestions(
+            total_urls, primary_count, secondary_count,
+            primary_ratio, citation_mentions, academic_citations, level
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_urls': total_urls,
-            'primary_count': primary_count,
-            'secondary_count': secondary_count,
-            'unknown_count': unknown_count,
-            'primary_ratio': primary_ratio,
-            'citation_mentions': citation_mentions,
-            'academic_citations': academic_citations,
-            'level': level,
-        },
-        'source_tiers': source_tiers[:20],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_urls': total_urls,
+                'primary_count': primary_count,
+                'secondary_count': secondary_count,
+                'unknown_count': unknown_count,
+                'primary_ratio': primary_ratio,
+                'citation_mentions': citation_mentions,
+                'academic_citations': academic_citations,
+                'level': level,
+            },
+            'source_tiers': source_tiers[:20],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, primary: int, secondary: int,

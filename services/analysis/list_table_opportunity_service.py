@@ -7,6 +7,9 @@ List/Table Opportunity Detector 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 나열형 패턴 (목록 변환 후보) ──
@@ -135,26 +138,30 @@ def detect_list_table_opportunities(content: str) -> dict:
     Returns:
         opportunities, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    paragraphs = _parse_paragraphs(content)
-    if not paragraphs:
-        return dict(_EMPTY_RESULT)
+        paragraphs = _parse_paragraphs(content)
+        if not paragraphs:
+            return dict(_EMPTY_RESULT)
 
-    opportunities, list_cands, table_cands, long_paras = _scan_paragraph_opportunities(paragraphs)
+        opportunities, list_cands, table_cands, long_paras = _scan_paragraph_opportunities(paragraphs)
 
-    total = len(opportunities)
-    opp_ratio = (total / len(paragraphs)) if paragraphs else 0.0
-    score = round(max(0.0, min(100.0, (1.0 - opp_ratio) * 100.0)), 1)
+        total = len(opportunities)
+        opp_ratio = (total / len(paragraphs)) if paragraphs else 0.0
+        score = round(max(0.0, min(100.0, (1.0 - opp_ratio) * 100.0)), 1)
 
-    return {
-        'opportunities': opportunities,
-        'summary': {'total_opportunities': total, 'list_candidates': list_cands,
-                    'table_candidates': table_cands, 'long_paragraphs': long_paras},
-        'score': score,
-        'suggestions': _generate_suggestions(opportunities, list_cands, table_cands, long_paras),
-    }
+        return {
+            'opportunities': opportunities,
+            'summary': {'total_opportunities': total, 'list_candidates': list_cands,
+                        'table_candidates': table_cands, 'long_paragraphs': long_paras},
+            'score': score,
+            'suggestions': _generate_suggestions(opportunities, list_cands, table_cands, long_paras),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(opps: List[Dict], lists: int, tables: int, longs: int) -> List[str]:

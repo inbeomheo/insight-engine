@@ -7,6 +7,9 @@ Step Verification Coverage Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 단계 제목 패턴
 _STEP_PATTERNS = [
@@ -135,36 +138,40 @@ def analyze_step_verification_coverage(content: str) -> dict:
     Returns:
         score, summary, step_details, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    steps = _extract_steps(content)
-    if not steps:
-        return dict(_EMPTY_RESULT)
+        steps = _extract_steps(content)
+        if not steps:
+            return dict(_EMPTY_RESULT)
 
-    step_details, verified_count = _analyze_steps(steps, content)
+        step_details, verified_count = _analyze_steps(steps, content)
 
-    total = len(steps)
-    unverified = total - verified_count
-    coverage = round(verified_count / max(total, 1) * 100, 1)
-    score, level = _compute_verification_score(coverage)
+        total = len(steps)
+        unverified = total - verified_count
+        coverage = round(verified_count / max(total, 1) * 100, 1)
+        score, level = _compute_verification_score(coverage)
 
-    suggestions = _generate_suggestions(
-        total, verified_count, unverified, coverage, level, step_details
-    )
+        suggestions = _generate_suggestions(
+            total, verified_count, unverified, coverage, level, step_details
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'total_steps': total,
-            'verified_steps': verified_count,
-            'unverified_steps': unverified,
-            'coverage_ratio': coverage,
-            'level': level,
-        },
-        'step_details': step_details[:10],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'total_steps': total,
+                'verified_steps': verified_count,
+                'unverified_steps': unverified,
+                'coverage_ratio': coverage,
+                'level': level,
+            },
+            'step_details': step_details[:10],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, verified: int,

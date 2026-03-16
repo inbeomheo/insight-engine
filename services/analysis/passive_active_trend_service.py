@@ -7,6 +7,9 @@ Passive-to-Active Ratio Trend 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,3})\s+(.+)$', re.MULTILINE)
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
@@ -151,35 +154,39 @@ def analyze_passive_active_trend(content: str) -> dict:
     Returns:
         section_data, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sections = _split_sections(content)
-    if not sections:
-        return dict(_EMPTY_RESULT)
+        sections = _split_sections(content)
+        if not sections:
+            return dict(_EMPTY_RESULT)
 
-    section_data, total_sentences, total_passive, hotspot, max_passive_ratio = (
-        _analyze_sections(sections)
-    )
-    overall_ratio = round(total_passive / max(total_sentences, 1) * 100, 1)
-    trend = _determine_trend(section_data)
-    score = _compute_passive_score(overall_ratio, trend)
+        section_data, total_sentences, total_passive, hotspot, max_passive_ratio = (
+            _analyze_sections(sections)
+        )
+        overall_ratio = round(total_passive / max(total_sentences, 1) * 100, 1)
+        trend = _determine_trend(section_data)
+        score = _compute_passive_score(overall_ratio, trend)
 
-    suggestions = _generate_suggestions(
-        section_data, overall_ratio, trend, hotspot, max_passive_ratio
-    )
+        suggestions = _generate_suggestions(
+            section_data, overall_ratio, trend, hotspot, max_passive_ratio
+        )
 
-    return {
-        'section_data': section_data[:20],
-        'summary': {
-            'total_sections': len(section_data),
-            'overall_passive_ratio': overall_ratio,
-            'trend': trend,
-            'hotspot_section': hotspot,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'section_data': section_data[:20],
+            'summary': {
+                'total_sections': len(section_data),
+                'overall_passive_ratio': overall_ratio,
+                'trend': trend,
+                'hotspot_section': hotspot,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(sections: List[Dict], overall: float,

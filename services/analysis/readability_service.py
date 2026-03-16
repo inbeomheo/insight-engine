@@ -82,30 +82,34 @@ def analyze_readability(text: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not text or not text.strip():
+    try:
+        if not text or not text.strip():
+            return {
+                'score': 0, 'grade': 'D',
+                'details': _empty_details(),
+                'suggestions': ['텍스트가 비어 있습니다.'],
+            }
+
+        plain = _strip_markdown(text)
+        details = _compute_text_metrics(plain)
+        score, suggestions = _calculate_score(
+            avg_sentence_length=details['avg_sentence_length'],
+            ttr=details['vocabulary_diversity'],
+            foreign_ratio=details['foreign_ratio'],
+            paragraph_count=details['paragraph_count'],
+            sentence_count=details['sentence_count'],
+            char_count=details['char_count'],
+        )
+
         return {
-            'score': 0, 'grade': 'D',
-            'details': _empty_details(),
-            'suggestions': ['텍스트가 비어 있습니다.'],
+            'score': score,
+            'grade': _score_to_grade(score),
+            'details': details,
+            'suggestions': suggestions,
         }
-
-    plain = _strip_markdown(text)
-    details = _compute_text_metrics(plain)
-    score, suggestions = _calculate_score(
-        avg_sentence_length=details['avg_sentence_length'],
-        ttr=details['vocabulary_diversity'],
-        foreign_ratio=details['foreign_ratio'],
-        paragraph_count=details['paragraph_count'],
-        sentence_count=details['sentence_count'],
-        char_count=details['char_count'],
-    )
-
-    return {
-        'score': score,
-        'grade': _score_to_grade(score),
-        'details': details,
-        'suggestions': suggestions,
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _empty_details() -> dict:

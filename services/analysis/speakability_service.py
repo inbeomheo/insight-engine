@@ -81,22 +81,26 @@ def analyze_speakability(content: str) -> dict:
     Returns:
         factors, speakability_score, problem_sentences, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = [s.strip() for s in _SENTENCE_SPLIT_RE.split(content) if len(s.strip()) >= 5]
-    if not sentences:
-        sentences = [content.strip()]
+        sentences = [s.strip() for s in _SENTENCE_SPLIT_RE.split(content) if len(s.strip()) >= 5]
+        if not sentences:
+            sentences = [content.strip()]
 
-    factors = _collect_factors(content, sentences)
-    problem_sentences = _identify_problem_sentences(sentences, content)
+        factors = _collect_factors(content, sentences)
+        problem_sentences = _identify_problem_sentences(sentences, content)
 
-    return {
-        'factors': factors,
-        'speakability_score': _compute_speakability_score(factors),
-        'problem_sentences': problem_sentences,
-        'suggestions': _generate_suggestions(factors, problem_sentences),
-    }
+        return {
+            'factors': factors,
+            'speakability_score': _compute_speakability_score(factors),
+            'problem_sentences': problem_sentences,
+            'suggestions': _generate_suggestions(factors, problem_sentences),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _analyze_sentence_length(sentences: list) -> dict:

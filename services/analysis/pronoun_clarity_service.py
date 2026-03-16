@@ -86,29 +86,33 @@ def check_pronoun_clarity(content: str) -> dict:
     Returns:
         issues, summary, clarity_score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['검사할 콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    issues = []
-    for i, sentence in enumerate(sentences):
-        prev_sentence = sentences[i - 1] if i > 0 else ''
-        issues.extend(_check_sentence(sentence, prev_sentence))
+        issues = []
+        for i, sentence in enumerate(sentences):
+            prev_sentence = sentences[i - 1] if i > 0 else ''
+            issues.extend(_check_sentence(sentence, prev_sentence))
 
-    by_severity = {}
-    for issue in issues:
-        sev = issue['severity']
-        by_severity[sev] = by_severity.get(sev, 0) + 1
+        by_severity = {}
+        for issue in issues:
+            sev = issue['severity']
+            by_severity[sev] = by_severity.get(sev, 0) + 1
 
-    return {
-        'issues': issues,
-        'summary': {'total': len(issues), 'by_severity': by_severity},
-        'clarity_score': _calculate_score(issues, len(sentences)),
-        'suggestions': _generate_suggestions(issues, len(sentences)),
-    }
+        return {
+            'issues': issues,
+            'summary': {'total': len(issues), 'by_severity': by_severity},
+            'clarity_score': _calculate_score(issues, len(sentences)),
+            'suggestions': _generate_suggestions(issues, len(sentences)),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _split_sentences(content: str) -> list:

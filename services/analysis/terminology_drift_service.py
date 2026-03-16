@@ -8,6 +8,9 @@ Terminology Drift Analyzer 서비스
 import re
 from typing import List, Dict
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING = re.compile(r'^#{1,6}\s+(.+)', re.MULTILINE)
 _WORD_SPLIT = re.compile(r'[가-힣]+|[a-zA-Z]+(?:-[a-zA-Z]+)*', re.IGNORECASE)
@@ -172,29 +175,33 @@ def analyze_terminology_drift(content: str) -> dict:
     Returns:
         score, summary, drift_items, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sections = _split_sections(content)
-    if len(sections) < 2:
-        return {**_EMPTY_RESULT, 'summary': {
-            'total_sections': len(sections), 'drift_count': 0, 'level': 'none',
-        }}
+        sections = _split_sections(content)
+        if len(sections) < 2:
+            return {**_EMPTY_RESULT, 'summary': {
+                'total_sections': len(sections), 'drift_count': 0, 'level': 'none',
+            }}
 
-    drifts = _find_drifts(sections)
-    drift_count = len(drifts)
-    level = _classify_drift_level(drift_count)
+        drifts = _find_drifts(sections)
+        drift_count = len(drifts)
+        level = _classify_drift_level(drift_count)
 
-    return {
-        'score': _compute_drift_score(drift_count, len(sections)),
-        'summary': {
-            'total_sections': len(sections),
-            'drift_count': drift_count,
-            'level': level,
-        },
-        'drift_items': drifts[:10],
-        'suggestions': _generate_suggestions(drifts, level, len(sections)),
-    }
+        return {
+            'score': _compute_drift_score(drift_count, len(sections)),
+            'summary': {
+                'total_sections': len(sections),
+                'drift_count': drift_count,
+                'level': level,
+            },
+            'drift_items': drifts[:10],
+            'suggestions': _generate_suggestions(drifts, level, len(sections)),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(drifts: List[Dict], level: str,

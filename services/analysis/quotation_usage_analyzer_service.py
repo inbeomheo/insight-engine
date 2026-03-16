@@ -7,6 +7,9 @@ Quotation Usage Analyzer 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
 
@@ -121,26 +124,30 @@ def analyze_quotation_usage(content: str) -> dict:
     Returns:
         quotations, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    cleaned = _HEADING_RE.sub('', content)
-    quotations, direct, emphasis, block = _collect_quotations(cleaned, content)
-    attribution = len(_ATTRIBUTION.findall(cleaned))
-    total = direct + emphasis + block
-    score, level = _calculate_score(direct, emphasis, block, attribution)
-    suggestions = _generate_suggestions(direct, emphasis, block, attribution, total, level)
+        cleaned = _HEADING_RE.sub('', content)
+        quotations, direct, emphasis, block = _collect_quotations(cleaned, content)
+        attribution = len(_ATTRIBUTION.findall(cleaned))
+        total = direct + emphasis + block
+        score, level = _calculate_score(direct, emphasis, block, attribution)
+        suggestions = _generate_suggestions(direct, emphasis, block, attribution, total, level)
 
-    return {
-        'quotations': quotations[:20],
-        'summary': {
-            'total_quotes': total, 'direct_quotes': direct,
-            'emphasis_quotes': emphasis, 'block_quotes': block,
-            'with_attribution': attribution, 'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'quotations': quotations[:20],
+            'summary': {
+                'total_quotes': total, 'direct_quotes': direct,
+                'emphasis_quotes': emphasis, 'block_quotes': block,
+                'with_attribution': attribution, 'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(direct: int, emphasis: int, block: int,

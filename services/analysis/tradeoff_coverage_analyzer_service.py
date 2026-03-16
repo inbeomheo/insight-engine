@@ -6,6 +6,9 @@ Trade-off Coverage Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 긍정 표현 (한국어 + 영어)
 _POSITIVE_PATTERNS = [
@@ -131,38 +134,42 @@ def analyze_tradeoff_coverage(content: str) -> dict:
     Returns:
         score, summary, suggestions, one_sided_sections를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    bal = _analyze_content_balance(content)
-    total = bal['pos_count'] + bal['neg_count']
-    score, level = _compute_tradeoff_score(
-        bal['is_rec'], total, bal['balance_ratio'],
-        bal['has_contrast'], bal['has_target_limits'],
-    )
+        bal = _analyze_content_balance(content)
+        total = bal['pos_count'] + bal['neg_count']
+        score, level = _compute_tradeoff_score(
+            bal['is_rec'], total, bal['balance_ratio'],
+            bal['has_contrast'], bal['has_target_limits'],
+        )
 
-    suggestions = _generate_suggestions(
-        bal['is_rec'], bal['pos_count'], bal['neg_count'],
-        bal['balance_ratio'], bal['has_contrast'], bal['has_target_limits'],
-        level, bal['one_sided'],
-    )
+        suggestions = _generate_suggestions(
+            bal['is_rec'], bal['pos_count'], bal['neg_count'],
+            bal['balance_ratio'], bal['has_contrast'], bal['has_target_limits'],
+            level, bal['one_sided'],
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'is_recommendation_content': bal['is_rec'],
-            'positive_count': bal['pos_count'],
-            'negative_count': bal['neg_count'],
-            'balance_ratio': bal['balance_ratio'],
-            'has_contrast': bal['has_contrast'],
-            'has_target_limits': bal['has_target_limits'],
-            'level': level,
-        },
-        'positive_expressions': bal['pos_exprs'][:10],
-        'negative_expressions': bal['neg_exprs'][:10],
-        'one_sided_sections': bal['one_sided'][:5],
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_recommendation_content': bal['is_rec'],
+                'positive_count': bal['pos_count'],
+                'negative_count': bal['neg_count'],
+                'balance_ratio': bal['balance_ratio'],
+                'has_contrast': bal['has_contrast'],
+                'has_target_limits': bal['has_target_limits'],
+                'level': level,
+            },
+            'positive_expressions': bal['pos_exprs'][:10],
+            'negative_expressions': bal['neg_exprs'][:10],
+            'one_sided_sections': bal['one_sided'][:5],
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _find_one_sided_sections(content: str) -> List[Dict]:

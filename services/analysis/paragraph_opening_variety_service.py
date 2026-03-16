@@ -8,6 +8,9 @@ Paragraph Opening Variety Checker 서비스
 import re
 from collections import Counter
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩
@@ -111,40 +114,44 @@ def check_paragraph_opening_variety(content: str) -> dict:
     Returns:
         openings, pattern_frequency, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {'openings': [], 'pattern_frequency': [],
-                'summary': dict(_EMPTY_SUMMARY), 'score': 100.0, 'suggestions': []}
+    try:
+        if not content or not content.strip():
+            return {'openings': [], 'pattern_frequency': [],
+                    'summary': dict(_EMPTY_SUMMARY), 'score': 100.0, 'suggestions': []}
 
-    paragraph_openings = _extract_paragraphs(content)
-    if len(paragraph_openings) < 2:
+        paragraph_openings = _extract_paragraphs(content)
+        if len(paragraph_openings) < 2:
+            return {
+                'openings': [{'text': o, 'pattern': _get_opening_pattern(o)}
+                             for o in paragraph_openings],
+                'pattern_frequency': [],
+                'summary': {**_EMPTY_SUMMARY, 'total_paragraphs': len(paragraph_openings),
+                            'unique_patterns': len(paragraph_openings), 'variety_rate': 100.0},
+                'score': 100.0, 'suggestions': [],
+            }
+
+        openings, pattern_frequency, pattern_counter = _build_opening_data(paragraph_openings)
+        total = len(paragraph_openings)
+        variety_rate = round((len(pattern_counter) / total * 100) if total > 0 else 0.0, 1)
+        most_repeated = pattern_counter.most_common(1)[0][0] if pattern_counter else ''
+        max_repeat = pattern_counter.most_common(1)[0][1] if pattern_counter else 0
+        score = _compute_variety_score(variety_rate, max_repeat)
+
         return {
-            'openings': [{'text': o, 'pattern': _get_opening_pattern(o)}
-                         for o in paragraph_openings],
-            'pattern_frequency': [],
-            'summary': {**_EMPTY_SUMMARY, 'total_paragraphs': len(paragraph_openings),
-                        'unique_patterns': len(paragraph_openings), 'variety_rate': 100.0},
-            'score': 100.0, 'suggestions': [],
+            'openings': openings,
+            'pattern_frequency': pattern_frequency,
+            'summary': {
+                'total_paragraphs': total, 'unique_patterns': len(pattern_counter),
+                'variety_rate': variety_rate, 'most_repeated': most_repeated,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(
+                variety_rate, pattern_frequency, most_repeated, max_repeat, total
+            ),
         }
-
-    openings, pattern_frequency, pattern_counter = _build_opening_data(paragraph_openings)
-    total = len(paragraph_openings)
-    variety_rate = round((len(pattern_counter) / total * 100) if total > 0 else 0.0, 1)
-    most_repeated = pattern_counter.most_common(1)[0][0] if pattern_counter else ''
-    max_repeat = pattern_counter.most_common(1)[0][1] if pattern_counter else 0
-    score = _compute_variety_score(variety_rate, max_repeat)
-
-    return {
-        'openings': openings,
-        'pattern_frequency': pattern_frequency,
-        'summary': {
-            'total_paragraphs': total, 'unique_patterns': len(pattern_counter),
-            'variety_rate': variety_rate, 'most_repeated': most_repeated,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(
-            variety_rate, pattern_frequency, most_repeated, max_repeat, total
-        ),
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

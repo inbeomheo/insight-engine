@@ -7,6 +7,9 @@ AI API 호출 없음.
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 한국어 고난도 어휘 → 쉬운 대체어 사전 ──
@@ -160,29 +163,33 @@ def find_simple_alternatives(content: str) -> dict:
     Returns:
         findings, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    findings = _scan_complex_words(content)
-    total = len(findings)
-    ko_count = sum(1 for f in findings if f['language'] == 'korean')
-    en_count = sum(1 for f in findings if f['language'] == 'english')
+        findings = _scan_complex_words(content)
+        total = len(findings)
+        ko_count = sum(1 for f in findings if f['language'] == 'korean')
+        en_count = sum(1 for f in findings if f['language'] == 'english')
 
-    word_count = len(re.findall(r'[A-Za-z]+|[가-힣]+', content))
-    score, complex_ratio = _compute_complexity_score(total, word_count)
+        word_count = len(re.findall(r'[A-Za-z]+|[가-힣]+', content))
+        score, complex_ratio = _compute_complexity_score(total, word_count)
 
-    suggestions = _generate_suggestions(findings, total, complex_ratio)
+        suggestions = _generate_suggestions(findings, total, complex_ratio)
 
-    return {
-        'findings': findings,
-        'summary': {
-            'total_complex': total,
-            'korean_complex': ko_count,
-            'english_complex': en_count,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'findings': findings,
+            'summary': {
+                'total_complex': total,
+                'korean_complex': ko_count,
+                'english_complex': en_count,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(findings: List[Dict], total: int, ratio: float) -> List[str]:

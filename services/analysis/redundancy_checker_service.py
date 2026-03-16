@@ -55,22 +55,26 @@ def check_redundancy(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    repeated_phrases = _find_repeated_phrases(content)
-    redundant_patterns = _find_redundant_patterns(content)
-    overused_words = _find_overused_words(content)
-    similar_sentences = _find_similar_sentences(content)
+        repeated_phrases = _find_repeated_phrases(content)
+        redundant_patterns = _find_redundant_patterns(content)
+        overused_words = _find_overused_words(content)
+        similar_sentences = _find_similar_sentences(content)
 
-    return {
-        'repeated_phrases': repeated_phrases,
-        'redundant_patterns': redundant_patterns,
-        'overused_words': overused_words,
-        'similar_sentences': similar_sentences,
-        'score': _calculate_score(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
-        'suggestions': _generate_suggestions(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
-    }
+        return {
+            'repeated_phrases': repeated_phrases,
+            'redundant_patterns': redundant_patterns,
+            'overused_words': overused_words,
+            'similar_sentences': similar_sentences,
+            'score': _calculate_score(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
+            'suggestions': _generate_suggestions(repeated_phrases, redundant_patterns, overused_words, similar_sentences),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _find_repeated_phrases(content: str) -> list:

@@ -7,6 +7,9 @@ Thesis Frontload Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 핵심 주장/결론 신호 패턴 ──
@@ -103,35 +106,39 @@ def check_thesis_frontload(content: str) -> dict:
     Returns:
         thesis_sentences, position_analysis, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    thesis_sentences, frontloaded, mid_section, back_loaded = \
-        _scan_thesis_positions(sentences)
+        thesis_sentences, frontloaded, mid_section, back_loaded = \
+            _scan_thesis_positions(sentences)
 
-    total_thesis = len(thesis_sentences)
-    frontload_rate = round((frontloaded / total_thesis * 100) if total_thesis > 0 else 0.0, 1)
-    score = 50.0 if total_thesis == 0 else round(min(100.0, frontload_rate), 1)
+        total_thesis = len(thesis_sentences)
+        frontload_rate = round((frontloaded / total_thesis * 100) if total_thesis > 0 else 0.0, 1)
+        score = 50.0 if total_thesis == 0 else round(min(100.0, frontload_rate), 1)
 
-    return {
-        'thesis_sentences': thesis_sentences,
-        'position_analysis': {
-            'frontloaded': frontloaded,
-            'mid_section': mid_section,
-            'back_loaded': back_loaded,
-        },
-        'summary': {
-            'total_thesis': total_thesis,
-            'frontload_rate': frontload_rate,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(thesis_sentences, total_thesis,
-                                              frontloaded, back_loaded, frontload_rate),
-    }
+        return {
+            'thesis_sentences': thesis_sentences,
+            'position_analysis': {
+                'frontloaded': frontloaded,
+                'mid_section': mid_section,
+                'back_loaded': back_loaded,
+            },
+            'summary': {
+                'total_thesis': total_thesis,
+                'frontload_rate': frontload_rate,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(thesis_sentences, total_thesis,
+                                                  frontloaded, back_loaded, frontload_rate),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

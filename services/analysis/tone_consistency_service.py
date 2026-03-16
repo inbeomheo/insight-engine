@@ -7,6 +7,9 @@ Tone Consistency Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 한국어 존댓말 패턴 ──
@@ -142,34 +145,38 @@ def check_tone_consistency(content: str) -> dict:
     Returns:
         tone_analysis, inconsistencies, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    tone_analysis, tone_counts, dominant = _classify_sentences(sentences)
-    inconsistencies, consistency_rate = _find_inconsistencies(
-        tone_analysis, dominant, tone_counts
-    )
+        tone_analysis, tone_counts, dominant = _classify_sentences(sentences)
+        inconsistencies, consistency_rate = _find_inconsistencies(
+            tone_analysis, dominant, tone_counts
+        )
 
-    total_toned = sum(v for k, v in tone_counts.items() if k != 'neutral')
-    score = 100.0 if total_toned == 0 else round(min(100.0, consistency_rate), 1)
-    distribution = {k: v for k, v in tone_counts.items() if v > 0}
+        total_toned = sum(v for k, v in tone_counts.items() if k != 'neutral')
+        score = 100.0 if total_toned == 0 else round(min(100.0, consistency_rate), 1)
+        distribution = {k: v for k, v in tone_counts.items() if v > 0}
 
-    return {
-        'tone_analysis': tone_analysis,
-        'inconsistencies': inconsistencies,
-        'summary': {
-            'total_sentences': len(sentences), 'dominant_tone': dominant,
-            'consistency_rate': consistency_rate, 'tone_distribution': distribution,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(
-            dominant, inconsistencies, consistency_rate, distribution
-        ),
-    }
+        return {
+            'tone_analysis': tone_analysis,
+            'inconsistencies': inconsistencies,
+            'summary': {
+                'total_sentences': len(sentences), 'dominant_tone': dominant,
+                'consistency_rate': consistency_rate, 'tone_distribution': distribution,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(
+                dominant, inconsistencies, consistency_rate, distribution
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

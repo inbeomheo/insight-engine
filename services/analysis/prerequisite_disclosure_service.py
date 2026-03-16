@@ -7,6 +7,9 @@ Prerequisite Disclosure Checker 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 튜토리얼/가이드 콘텐츠 신호
 _TUTORIAL_SIGNALS = [
@@ -164,48 +167,52 @@ def check_prerequisite_disclosure(content: str) -> dict:
     Returns:
         score, summary, suggestions, missing_prereqs를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    is_tutorial = _count_matches(content, _TUTORIAL_SIGNALS) >= 2
+        is_tutorial = _count_matches(content, _TUTORIAL_SIGNALS) >= 2
 
-    headings = _HEADING_RE.findall(content)
-    has_prereq_section = any(
-        _has_pattern(h, _PREREQ_HEADING_PATTERNS) for h in headings
-    )
+        headings = _HEADING_RE.findall(content)
+        has_prereq_section = any(
+            _has_pattern(h, _PREREQ_HEADING_PATTERNS) for h in headings
+        )
 
-    prereqs_found, prereqs_implied = _scan_prereq_categories(content)
-    completeness = round(len(prereqs_found) / max(len(_PREREQ_CATEGORIES), 1) * 100, 1)
-    score, level = _compute_prereq_score(is_tutorial, has_prereq_section, prereqs_found, completeness)
+        prereqs_found, prereqs_implied = _scan_prereq_categories(content)
+        completeness = round(len(prereqs_found) / max(len(_PREREQ_CATEGORIES), 1) * 100, 1)
+        score, level = _compute_prereq_score(is_tutorial, has_prereq_section, prereqs_found, completeness)
 
-    missing = []
-    if is_tutorial:
-        for cat_name, cat_info in _PREREQ_CATEGORIES.items():
-            if cat_name not in prereqs_found and cat_name in prereqs_implied:
-                missing.append({
-                    'category': cat_name,
-                    'label': cat_info['label'],
-                    'reason': '본문에 암시되어 있으나 명시적 공시 없음',
-                })
+        missing = []
+        if is_tutorial:
+            for cat_name, cat_info in _PREREQ_CATEGORIES.items():
+                if cat_name not in prereqs_found and cat_name in prereqs_implied:
+                    missing.append({
+                        'category': cat_name,
+                        'label': cat_info['label'],
+                        'reason': '본문에 암시되어 있으나 명시적 공시 없음',
+                    })
 
-    suggestions = _generate_suggestions(
-        is_tutorial, has_prereq_section, prereqs_found,
-        prereqs_implied, missing, level
-    )
+        suggestions = _generate_suggestions(
+            is_tutorial, has_prereq_section, prereqs_found,
+            prereqs_implied, missing, level
+        )
 
-    return {
-        'score': score,
-        'summary': {
-            'is_tutorial_content': is_tutorial,
-            'has_prereq_section': has_prereq_section,
-            'prereqs_found': prereqs_found,
-            'prereqs_implied': prereqs_implied,
-            'completeness_ratio': completeness,
-            'level': level,
-        },
-        'missing_prereqs': missing,
-        'suggestions': suggestions,
-    }
+        return {
+            'score': score,
+            'summary': {
+                'is_tutorial_content': is_tutorial,
+                'has_prereq_section': has_prereq_section,
+                'prereqs_found': prereqs_found,
+                'prereqs_implied': prereqs_implied,
+                'completeness_ratio': completeness,
+                'level': level,
+            },
+            'missing_prereqs': missing,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(is_tutorial: bool, has_section: bool,

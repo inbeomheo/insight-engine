@@ -8,6 +8,9 @@ Temporal Reference Checker 서비스
 import re
 from typing import List, Dict
 from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
 
 _SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+|\n+')
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
@@ -130,34 +133,38 @@ def check_temporal_references(content: str) -> dict:
     Returns:
         tense_data, vague_references, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    tense_data, tense_counter = _classify_all_tenses(sentences)
-    vague_references = _find_vague_references(content)
-    score, level, consistency = _compute_temporal_score(tense_counter, len(vague_references))
+        tense_data, tense_counter = _classify_all_tenses(sentences)
+        vague_references = _find_vague_references(content)
+        score, level, consistency = _compute_temporal_score(tense_counter, len(vague_references))
 
-    suggestions = _generate_suggestions(
-        tense_counter, consistency, level, len(vague_references), vague_references
-    )
+        suggestions = _generate_suggestions(
+            tense_counter, consistency, level, len(vague_references), vague_references
+        )
 
-    return {
-        'tense_data': tense_data[:30],
-        'vague_references': vague_references[:15],
-        'summary': {
-            'total_sentences': len(sentences),
-            'tense_distribution': dict(tense_counter),
-            'vague_count': len(vague_references),
-            'consistency': consistency,
-            'level': level,
-        },
-        'score': score,
-        'suggestions': suggestions,
-    }
+        return {
+            'tense_data': tense_data[:30],
+            'vague_references': vague_references[:15],
+            'summary': {
+                'total_sentences': len(sentences),
+                'tense_distribution': dict(tense_counter),
+                'vague_count': len(vague_references),
+                'consistency': consistency,
+                'level': level,
+            },
+            'score': score,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(tense_counter: Counter, consistency: float,

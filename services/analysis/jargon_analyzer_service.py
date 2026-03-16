@@ -118,24 +118,28 @@ def analyze_jargon_coverage(content: str) -> dict:
     Returns:
         terms, summary, coverage_score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    found_terms = _collect_terms(content)
-    if not found_terms:
-        return {**_EMPTY_RESULT, 'suggestions': ['전문 용어가 감지되지 않았습니다.']}
+        found_terms = _collect_terms(content)
+        if not found_terms:
+            return {**_EMPTY_RESULT, 'suggestions': ['전문 용어가 감지되지 않았습니다.']}
 
-    results = _check_all_definitions(found_terms, content)
-    defined_count = sum(1 for r in results if r['has_definition'])
-    total = len(results)
-    coverage = (defined_count / total * 100) if total > 0 else 100.0
+        results = _check_all_definitions(found_terms, content)
+        defined_count = sum(1 for r in results if r['has_definition'])
+        total = len(results)
+        coverage = (defined_count / total * 100) if total > 0 else 100.0
 
-    return {
-        'terms': results,
-        'summary': {'total': total, 'defined': defined_count, 'undefined': total - defined_count},
-        'coverage_score': round(coverage, 1),
-        'suggestions': _generate_suggestions(results, coverage),
-    }
+        return {
+            'terms': results,
+            'summary': {'total': total, 'defined': defined_count, 'undefined': total - defined_count},
+            'coverage_score': round(coverage, 1),
+            'suggestions': _generate_suggestions(results, coverage),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 # 용어별 정의 패턴 캐시 (루프 내 re.search 문자열 치환 반복 방지)

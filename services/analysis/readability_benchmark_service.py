@@ -73,27 +73,31 @@ def benchmark_readability(content: str, category: str = 'blog') -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
+    try:
+        if not content or not content.strip():
+            return {
+                'category': category, 'metrics': {}, 'benchmarks': {},
+                'overall_status': 'below', 'percentile': 0,
+                'suggestions': ['콘텐츠가 비어 있습니다.'],
+            }
+
+        if category not in _BENCHMARKS:
+            category = 'blog'
+
+        bench = _BENCHMARKS[category]
+        metrics = _calculate_metrics(content)
+        comparisons, overall = _compare_with_benchmark(metrics, bench)
+
         return {
-            'category': category, 'metrics': {}, 'benchmarks': {},
-            'overall_status': 'below', 'percentile': 0,
-            'suggestions': ['콘텐츠가 비어 있습니다.'],
+            'category': category, 'category_label': bench['label'],
+            'metrics': metrics, 'benchmarks': comparisons,
+            'overall_status': overall,
+            'percentile': _estimate_percentile(metrics, bench),
+            'suggestions': _generate_suggestions(comparisons, bench, category),
         }
-
-    if category not in _BENCHMARKS:
-        category = 'blog'
-
-    bench = _BENCHMARKS[category]
-    metrics = _calculate_metrics(content)
-    comparisons, overall = _compare_with_benchmark(metrics, bench)
-
-    return {
-        'category': category, 'category_label': bench['label'],
-        'metrics': metrics, 'benchmarks': comparisons,
-        'overall_status': overall,
-        'percentile': _estimate_percentile(metrics, bench),
-        'suggestions': _generate_suggestions(comparisons, bench, category),
-    }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _compare_with_benchmark(metrics: dict, bench: dict) -> tuple:

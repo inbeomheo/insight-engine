@@ -7,6 +7,9 @@ Noun-to-Verb Ratio 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 _HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
@@ -123,28 +126,32 @@ def analyze_noun_verb_ratio(content: str) -> dict:
     Returns:
         counts, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    counts = _classify_tokens(content)
-    nouns = counts['nouns']
-    verbs = counts['verbs']
+        counts = _classify_tokens(content)
+        nouns = counts['nouns']
+        verbs = counts['verbs']
 
-    if nouns + verbs == 0:
-        return {'counts': counts, 'summary': dict(_EMPTY_SUMMARY),
-                'score': 50.0, 'suggestions': []}
+        if nouns + verbs == 0:
+            return {'counts': counts, 'summary': dict(_EMPTY_SUMMARY),
+                    'score': 50.0, 'suggestions': []}
 
-    noun_ratio, verb_ratio, nv_ratio, level, score = _compute_nv_metrics(nouns, verbs)
+        noun_ratio, verb_ratio, nv_ratio, level, score = _compute_nv_metrics(nouns, verbs)
 
-    return {
-        'counts': counts,
-        'summary': {
-            'noun_ratio': noun_ratio, 'verb_ratio': verb_ratio,
-            'nv_ratio': nv_ratio, 'level': level,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(noun_ratio, verb_ratio, nv_ratio, level),
-    }
+        return {
+            'counts': counts,
+            'summary': {
+                'noun_ratio': noun_ratio, 'verb_ratio': verb_ratio,
+                'nv_ratio': nv_ratio, 'level': level,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(noun_ratio, verb_ratio, nv_ratio, level),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(n_ratio: float, v_ratio: float,

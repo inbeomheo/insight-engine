@@ -77,24 +77,28 @@ def check_numerical_promises(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    promises = _detect_promises(content)
-    if not promises:
-        return {**_EMPTY_RESULT, 'suggestions': ['수치 약속이 감지되지 않았습니다.']}
+        promises = _detect_promises(content)
+        if not promises:
+            return {**_EMPTY_RESULT, 'suggestions': ['수치 약속이 감지되지 않았습니다.']}
 
-    # 각 약속에 대해 이행 여부 검증
-    for promise in promises:
-        actual = _count_fulfillment(content, promise)
-        promise['actual_count'] = actual
-        promise['status'] = _determine_status(promise['promised_number'], actual)
+        # 각 약속에 대해 이행 여부 검증
+        for promise in promises:
+            actual = _count_fulfillment(content, promise)
+            promise['actual_count'] = actual
+            promise['status'] = _determine_status(promise['promised_number'], actual)
 
-    return {
-        'promises': promises,
-        'integrity_score': _calculate_integrity_score(promises),
-        'suggestions': _generate_suggestions(promises),
-    }
+        return {
+            'promises': promises,
+            'integrity_score': _calculate_integrity_score(promises),
+            'suggestions': _generate_suggestions(promises),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _detect_promises(content: str) -> list:

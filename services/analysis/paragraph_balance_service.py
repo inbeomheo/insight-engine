@@ -70,38 +70,42 @@ def analyze_balance(content: str) -> dict:
     Returns:
         paragraphs, stats, balance_score, issues, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    clean = re.sub(r'#{1,6}\s+', '', content)
-    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', clean) if len(p.strip()) >= 3]
+        clean = re.sub(r'#{1,6}\s+', '', content)
+        paragraphs = [p.strip() for p in re.split(r'\n\s*\n', clean) if len(p.strip()) >= 3]
 
-    if not paragraphs:
-        paragraphs = [p.strip() for p in clean.split('\n') if len(p.strip()) >= 3]
+        if not paragraphs:
+            paragraphs = [p.strip() for p in clean.split('\n') if len(p.strip()) >= 3]
 
-    if not paragraphs:
-        return {**_EMPTY_RESULT, 'suggestions': ['문단을 감지할 수 없습니다.']}
+        if not paragraphs:
+            return {**_EMPTY_RESULT, 'suggestions': ['문단을 감지할 수 없습니다.']}
 
-    lengths = [len(p) for p in paragraphs]
-    avg_len = sum(lengths) / len(lengths)
-    variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
-    std_dev = round(math.sqrt(variance), 1)
+        lengths = [len(p) for p in paragraphs]
+        avg_len = sum(lengths) / len(lengths)
+        variance = sum((l - avg_len) ** 2 for l in lengths) / len(lengths)
+        std_dev = round(math.sqrt(variance), 1)
 
-    para_results, issues = _classify_paragraphs(paragraphs, lengths)
-    balance_score = _calculate_balance_score(lengths, avg_len, std_dev, issues)
-    suggestions = _generate_suggestions(lengths, avg_len, std_dev, issues, len(paragraphs))
+        para_results, issues = _classify_paragraphs(paragraphs, lengths)
+        balance_score = _calculate_balance_score(lengths, avg_len, std_dev, issues)
+        suggestions = _generate_suggestions(lengths, avg_len, std_dev, issues, len(paragraphs))
 
-    return {
-        'paragraphs': para_results,
-        'stats': {
-            'count': len(paragraphs), 'avg_length': round(avg_len, 1),
-            'min_length': min(lengths), 'max_length': max(lengths),
-            'std_dev': std_dev,
-        },
-        'balance_score': balance_score,
-        'issues': issues,
-        'suggestions': suggestions,
-    }
+        return {
+            'paragraphs': para_results,
+            'stats': {
+                'count': len(paragraphs), 'avg_length': round(avg_len, 1),
+                'min_length': min(lengths), 'max_length': max(lengths),
+                'std_dev': std_dev,
+            },
+            'balance_score': balance_score,
+            'issues': issues,
+            'suggestions': suggestions,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _calculate_balance_score(lengths: list, avg: float, std_dev: float, issues: list) -> int:

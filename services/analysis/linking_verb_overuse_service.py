@@ -7,6 +7,9 @@ be동사(이다/입니다) 과다 사용을 감지하여
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 한국어 이다/입니다 패턴 (연결 동사)
@@ -103,32 +106,36 @@ def detect_linking_verb_overuse(content: str) -> dict:
     Returns:
         sentences, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    result_sentences, total_linking, sentences_with_linking = _scan_linking_verbs(sentences)
+        result_sentences, total_linking, sentences_with_linking = _scan_linking_verbs(sentences)
 
-    total_sents = len(sentences)
-    ratio = round((sentences_with_linking / total_sents * 100) if total_sents > 0 else 0.0, 1)
-    word_count = _count_words(content)
-    density = round((total_linking / word_count * 100) if word_count > 0 else 0.0, 2)
-    score = _compute_linking_score(ratio)
+        total_sents = len(sentences)
+        ratio = round((sentences_with_linking / total_sents * 100) if total_sents > 0 else 0.0, 1)
+        word_count = _count_words(content)
+        density = round((total_linking / word_count * 100) if word_count > 0 else 0.0, 2)
+        score = _compute_linking_score(ratio)
 
-    return {
-        'sentences': result_sentences,
-        'summary': {
-            'total_linking_verbs': total_linking,
-            'total_sentences': total_sents,
-            'linking_verb_ratio': ratio,
-            'density': density,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(ratio, density, total_linking, sentences_with_linking),
-    }
+        return {
+            'sentences': result_sentences,
+            'summary': {
+                'total_linking_verbs': total_linking,
+                'total_sentences': total_sents,
+                'linking_verb_ratio': ratio,
+                'density': density,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(ratio, density, total_linking, sentences_with_linking),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(ratio: float, density: float, total: int, with_lv: int) -> List[str]:

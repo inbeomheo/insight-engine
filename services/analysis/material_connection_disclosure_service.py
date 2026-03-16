@@ -7,6 +7,9 @@ FTC 가이드라인 기반 규칙 적용.
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 한국어 이해관계 키워드
 _KO_MATERIAL = [
@@ -115,31 +118,35 @@ def check_material_connection_disclosure(content: str) -> dict:
     Returns:
         score, summary, suggestions, material_markers, disclosure_markers를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    material_markers, disclosure_markers, is_review = _detect_signals(content)
-    has_material = len(material_markers) > 0
-    has_disclosure = len(disclosure_markers) > 0
-    placement_ok, placement_issues = _evaluate_placement(disclosure_markers)
-    score = _compute_disclosure_score(has_material, has_disclosure, is_review, placement_ok)
+        material_markers, disclosure_markers, is_review = _detect_signals(content)
+        has_material = len(material_markers) > 0
+        has_disclosure = len(disclosure_markers) > 0
+        placement_ok, placement_issues = _evaluate_placement(disclosure_markers)
+        score = _compute_disclosure_score(has_material, has_disclosure, is_review, placement_ok)
 
-    return {
-        'score': score,
-        'summary': {
-            'has_material_connection': has_material,
-            'disclosure_found': has_disclosure,
-            'review_content': is_review,
-            'placement_ok': placement_ok,
-            'material_markers': len(material_markers),
-        },
-        'material_markers': material_markers[:10],
-        'disclosure_markers': disclosure_markers[:10],
-        'suggestions': _generate_suggestions(
-            has_material, has_disclosure, is_review,
-            placement_ok, placement_issues, material_markers, score
-        ),
-    }
+        return {
+            'score': score,
+            'summary': {
+                'has_material_connection': has_material,
+                'disclosure_found': has_disclosure,
+                'review_content': is_review,
+                'placement_ok': placement_ok,
+                'material_markers': len(material_markers),
+            },
+            'material_markers': material_markers[:10],
+            'disclosure_markers': disclosure_markers[:10],
+            'suggestions': _generate_suggestions(
+                has_material, has_disclosure, is_review,
+                placement_ok, placement_issues, material_markers, score
+            ),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(has_material: bool, has_disclosure: bool,

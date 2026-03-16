@@ -7,6 +7,9 @@ Question Density Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 마크다운 헤딩
@@ -128,35 +131,39 @@ def analyze_question_density(content: str) -> dict:
     Returns:
         questions, section_analysis, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = _split_sentences(content)
-    if not sentences:
-        return dict(_EMPTY_RESULT)
+        sentences = _split_sentences(content)
+        if not sentences:
+            return dict(_EMPTY_RESULT)
 
-    questions, rhetorical_count = _detect_questions(sentences)
-    total_q = len(questions)
-    total_s = len(sentences)
-    density = round((total_q / total_s * 100) if total_s > 0 else 0.0, 1)
+        questions, rhetorical_count = _detect_questions(sentences)
+        total_q = len(questions)
+        total_s = len(sentences)
+        density = round((total_q / total_s * 100) if total_s > 0 else 0.0, 1)
 
-    sections = _parse_sections(content)
-    section_analysis = []
-    for sec in sections:
-        sec_sents = _split_sentences('\n'.join(sec['lines']))
-        section_analysis.append({
-            'section': sec['section'],
-            'questions': sum(1 for s in sec_sents if _is_question(s)),
-            'sentences': len(sec_sents),
-        })
+        sections = _parse_sections(content)
+        section_analysis = []
+        for sec in sections:
+            sec_sents = _split_sentences('\n'.join(sec['lines']))
+            section_analysis.append({
+                'section': sec['section'],
+                'questions': sum(1 for s in sec_sents if _is_question(s)),
+                'sentences': len(sec_sents),
+            })
 
-    return {
-        'questions': questions, 'section_analysis': section_analysis,
-        'summary': {'total_questions': total_q, 'total_sentences': total_s,
-                    'question_density': density, 'rhetorical_count': rhetorical_count},
-        'score': _compute_density_score(density),
-        'suggestions': _generate_suggestions(total_q, density, rhetorical_count, sections),
-    }
+        return {
+            'questions': questions, 'section_analysis': section_analysis,
+            'summary': {'total_questions': total_q, 'total_sentences': total_s,
+                        'question_density': density, 'rhetorical_count': rhetorical_count},
+            'score': _compute_density_score(density),
+            'suggestions': _generate_suggestions(total_q, density, rhetorical_count, sections),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, density: float, rhetorical: int, sections: list) -> List[str]:

@@ -93,21 +93,25 @@ def check_promotional_tone(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    detections = _detect_promotions(_split_sentences(content))
-    summary = _build_summary(detections, content)
-    hotspots = _find_hotspots(_split_paragraphs(content))
-    trust_score = _calculate_trust_score(detections, summary, hotspots)
+        detections = _detect_promotions(_split_sentences(content))
+        summary = _build_summary(detections, content)
+        hotspots = _find_hotspots(_split_paragraphs(content))
+        trust_score = _calculate_trust_score(detections, summary, hotspots)
 
-    return {
-        'detections': detections,
-        'summary': summary,
-        'hotspots': hotspots,
-        'trust_score': trust_score,
-        'suggestions': _generate_suggestions(detections, summary, hotspots, trust_score),
-    }
+        return {
+            'detections': detections,
+            'summary': summary,
+            'hotspots': hotspots,
+            'trust_score': trust_score,
+            'suggestions': _generate_suggestions(detections, summary, hotspots, trust_score),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _split_sentences(content: str) -> list:

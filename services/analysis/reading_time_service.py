@@ -88,24 +88,28 @@ def estimate_reading_time(content: str, content_type: str = 'general') -> dict:
     Returns:
         reading_time, word_stats, difficulty, recommendations를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'recommendations': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'recommendations': ['콘텐츠가 비어 있습니다.']}
 
-    if content_type not in _TYPE_MODIFIERS:
-        content_type = 'general'
+        if content_type not in _TYPE_MODIFIERS:
+            content_type = 'general'
 
-    plain = _strip_markdown(content)
-    stats = _compute_word_stats(plain)
-    reading_time = _compute_reading_time(stats['char_count'], content_type)
-    difficulty = _analyze_difficulty(plain, stats['_sentences'], stats['char_count'])
-    recommendations = _generate_recommendations(stats['char_count'], reading_time['minutes'], difficulty)
+        plain = _strip_markdown(content)
+        stats = _compute_word_stats(plain)
+        reading_time = _compute_reading_time(stats['char_count'], content_type)
+        difficulty = _analyze_difficulty(plain, stats['_sentences'], stats['char_count'])
+        recommendations = _generate_recommendations(stats['char_count'], reading_time['minutes'], difficulty)
 
-    return {
-        'reading_time': reading_time,
-        'word_stats': {k: v for k, v in stats.items() if not k.startswith('_')},
-        'difficulty': difficulty,
-        'recommendations': recommendations,
-    }
+        return {
+            'reading_time': reading_time,
+            'word_stats': {k: v for k, v in stats.items() if not k.startswith('_')},
+            'difficulty': difficulty,
+            'recommendations': recommendations,
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _analyze_difficulty(text: str, sentences: list, char_count: int) -> dict:

@@ -108,27 +108,31 @@ def analyze_power_words(content: str) -> dict:
     Returns:
         found, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    words = re.findall(r'[가-힣]{2,}', content)
-    total_words = len(words)
-    found, found_map, category_counts = _scan_power_words(words)
+        words = re.findall(r'[가-힣]{2,}', content)
+        total_words = len(words)
+        found, found_map, category_counts = _scan_power_words(words)
 
-    total_found = sum(found_map.values())
-    unique_count = len(found_map)
-    density = round((total_found / max(total_words, 1)) * 100, 2)
+        total_found = sum(found_map.values())
+        unique_count = len(found_map)
+        density = round((total_found / max(total_words, 1)) * 100, 2)
 
-    cat_summary = {cat: {'label': _POWER_WORDS[cat]['label'], 'count': count}
-                   for cat, count in category_counts.items()}
+        cat_summary = {cat: {'label': _POWER_WORDS[cat]['label'], 'count': count}
+                       for cat, count in category_counts.items()}
 
-    return {
-        'found': found,
-        'summary': {'total_found': total_found, 'unique_count': unique_count,
-                     'density': density, 'categories': cat_summary},
-        'score': _calculate_score(density, unique_count, category_counts),
-        'suggestions': _generate_suggestions(density, unique_count, category_counts, total_words),
-    }
+        return {
+            'found': found,
+            'summary': {'total_found': total_found, 'unique_count': unique_count,
+                         'density': density, 'categories': cat_summary},
+            'score': _calculate_score(density, unique_count, category_counts),
+            'suggestions': _generate_suggestions(density, unique_count, category_counts, total_words),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def suggest_power_words(content: str, goal: str = 'engagement') -> dict:
@@ -141,32 +145,36 @@ def suggest_power_words(content: str, goal: str = 'engagement') -> dict:
     Returns:
         {"goal": str, "recommended_categories": list, "words": list[str]}
     """
-    goal_map = {
-        'engagement': ['emotion', 'curiosity', 'action'],
-        'conversion': ['urgency', 'value', 'action'],
-        'trust': ['trust', 'authority'],
-        'viral': ['emotion', 'curiosity', 'urgency'],
-    }
+    try:
+        goal_map = {
+            'engagement': ['emotion', 'curiosity', 'action'],
+            'conversion': ['urgency', 'value', 'action'],
+            'trust': ['trust', 'authority'],
+            'viral': ['emotion', 'curiosity', 'urgency'],
+        }
 
-    if goal not in goal_map:
-        goal = 'engagement'
+        if goal not in goal_map:
+            goal = 'engagement'
 
-    categories = goal_map[goal]
-    recommended = []
-    for cat in categories:
-        recommended.extend(_POWER_WORDS[cat]['words'][:5])
+        categories = goal_map[goal]
+        recommended = []
+        for cat in categories:
+            recommended.extend(_POWER_WORDS[cat]['words'][:5])
 
-    # 이미 사용 중인 단어 제외
-    if content:
-        recommended = [w for w in recommended if w not in content]
+        # 이미 사용 중인 단어 제외
+        if content:
+            recommended = [w for w in recommended if w not in content]
 
-    return {
-        'goal': goal,
-        'recommended_categories': [
-            {'id': c, 'label': _POWER_WORDS[c]['label']} for c in categories
-        ],
-        'words': recommended[:15],
-    }
+        return {
+            'goal': goal,
+            'recommended_categories': [
+                {'id': c, 'label': _POWER_WORDS[c]['label']} for c in categories
+            ],
+            'words': recommended[:15],
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def get_power_word_categories() -> list:

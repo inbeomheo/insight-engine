@@ -107,28 +107,32 @@ def detect_passive(content: str) -> dict:
     Returns:
         passive_expressions, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content)
-                 if len(s.strip()) >= 5]
-    if not sentences:
-        return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
+        sentences = [s.strip() for s in re.split(r'[.!?。]\s*|\n+', content)
+                     if len(s.strip()) >= 5]
+        if not sentences:
+            return {**_EMPTY_RESULT, 'suggestions': ['분석할 문장이 없습니다.']}
 
-    passives, passive_sentence_count = _scan_passive_expressions(sentences)
-    total_sentences = len(sentences)
-    passive_ratio = round(passive_sentence_count / total_sentences * 100, 1)
+        passives, passive_sentence_count = _scan_passive_expressions(sentences)
+        total_sentences = len(sentences)
+        passive_ratio = round(passive_sentence_count / total_sentences * 100, 1)
 
-    return {
-        'passive_expressions': passives,
-        'summary': {
-            'total': len(passives),
-            'sentence_count': total_sentences,
-            'passive_ratio': passive_ratio,
-        },
-        'score': max(0, min(100, 100 - int(passive_ratio * 1.5))),
-        'suggestions': _generate_suggestions(passive_ratio, len(passives), total_sentences),
-    }
+        return {
+            'passive_expressions': passives,
+            'summary': {
+                'total': len(passives),
+                'sentence_count': total_sentences,
+                'passive_ratio': passive_ratio,
+            },
+            'score': max(0, min(100, 100 - int(passive_ratio * 1.5))),
+            'suggestions': _generate_suggestions(passive_ratio, len(passives), total_sentences),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _suggest_active(keyword: str, sentence: str) -> str:

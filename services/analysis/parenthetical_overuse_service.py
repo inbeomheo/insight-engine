@@ -7,6 +7,9 @@ Parenthetical Overuse Checker 서비스
 """
 import re
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # 괄호 패턴
@@ -80,29 +83,33 @@ def check_parenthetical_overuse(content: str) -> dict:
     Returns:
         parentheticals, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return dict(_EMPTY_RESULT)
+    try:
+        if not content or not content.strip():
+            return dict(_EMPTY_RESULT)
 
-    clean_content = _MD_LINK_RE.sub('LINK', content)
-    total_sentences = len(_split_sentences(content))
+        clean_content = _MD_LINK_RE.sub('LINK', content)
+        total_sentences = len(_split_sentences(content))
 
-    parentheticals, long_parens, nested = _scan_parentheticals(clean_content)
-    total_parens = len(parentheticals)
-    paren_ratio = round((total_parens / total_sentences * 100) if total_sentences > 0 else 0.0, 1)
-    score = _compute_paren_score(paren_ratio, long_parens, nested)
+        parentheticals, long_parens, nested = _scan_parentheticals(clean_content)
+        total_parens = len(parentheticals)
+        paren_ratio = round((total_parens / total_sentences * 100) if total_sentences > 0 else 0.0, 1)
+        score = _compute_paren_score(paren_ratio, long_parens, nested)
 
-    return {
-        'parentheticals': parentheticals,
-        'summary': {
-            'total_parentheticals': total_parens,
-            'total_sentences': total_sentences,
-            'paren_ratio': paren_ratio,
-            'long_parens': long_parens,
-            'nested_parens': nested,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(total_parens, paren_ratio, long_parens, nested),
-    }
+        return {
+            'parentheticals': parentheticals,
+            'summary': {
+                'total_parentheticals': total_parens,
+                'total_sentences': total_sentences,
+                'paren_ratio': paren_ratio,
+                'long_parens': long_parens,
+                'nested_parens': nested,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(total_parens, paren_ratio, long_parens, nested),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(total: int, ratio: float, long: int, nested: int) -> List[str]:

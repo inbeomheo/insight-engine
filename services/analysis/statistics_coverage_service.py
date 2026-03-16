@@ -6,6 +6,9 @@ Statistics Coverage Analyzer 서비스
 """
 import re
 from typing import List, Dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ── 수치 패턴 정의 ──
@@ -114,29 +117,33 @@ def analyze_statistics_coverage(content: str) -> dict:
     Returns:
         statistics, section_coverage, summary, score, suggestions를 포함하는 dict
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sections = _parse_sections(content)
-    if not sections:
-        sections = [{'section': '(전체)', 'content_lines': content.split('\n')}]
+        sections = _parse_sections(content)
+        if not sections:
+            sections = [{'section': '(전체)', 'content_lines': content.split('\n')}]
 
-    all_statistics, section_coverage = _scan_section_stats(sections)
-    total_sections = len(section_coverage)
-    sections_with = sum(1 for sc in section_coverage if sc['has_stats'])
-    coverage_rate = round((sections_with / total_sections * 100) if total_sections > 0 else 0.0, 1)
-    stat_types = set(s['type'] for s in all_statistics)
+        all_statistics, section_coverage = _scan_section_stats(sections)
+        total_sections = len(section_coverage)
+        sections_with = sum(1 for sc in section_coverage if sc['has_stats'])
+        coverage_rate = round((sections_with / total_sections * 100) if total_sections > 0 else 0.0, 1)
+        stat_types = set(s['type'] for s in all_statistics)
 
-    return {
-        'statistics': all_statistics,
-        'section_coverage': section_coverage,
-        'summary': {
-            'total_stats': len(all_statistics), 'sections_with_stats': sections_with,
-            'total_sections': total_sections, 'coverage_rate': coverage_rate,
-        },
-        'score': _compute_coverage_score(coverage_rate, stat_types),
-        'suggestions': _generate_suggestions(all_statistics, section_coverage, coverage_rate, stat_types),
-    }
+        return {
+            'statistics': all_statistics,
+            'section_coverage': section_coverage,
+            'summary': {
+                'total_stats': len(all_statistics), 'sections_with_stats': sections_with,
+                'total_sections': total_sections, 'coverage_rate': coverage_rate,
+            },
+            'score': _compute_coverage_score(coverage_rate, stat_types),
+            'suggestions': _generate_suggestions(all_statistics, section_coverage, coverage_rate, stat_types),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _generate_suggestions(

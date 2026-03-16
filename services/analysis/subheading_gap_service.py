@@ -44,23 +44,27 @@ def detect_subheading_gaps(content: str) -> dict:
             "suggestions": list[str],
         }
     """
-    if not content or not content.strip():
-        return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
+        if not content or not content.strip():
+            return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
 
-    sections = _split_sections(content)
-    if not sections:
-        return {**_EMPTY_RESULT, 'suggestions': ['헤딩이 없습니다. 마크다운 헤딩(#, ##, ###)을 추가해 주세요.']}
+        sections = _split_sections(content)
+        if not sections:
+            return {**_EMPTY_RESULT, 'suggestions': ['헤딩이 없습니다. 마크다운 헤딩(#, ##, ###)을 추가해 주세요.']}
 
-    analyzed = [_analyze_section(s) for s in sections]
-    gaps = _detect_gaps(analyzed)
-    balance_score = _calculate_balance_score(analyzed)
+        analyzed = [_analyze_section(s) for s in sections]
+        gaps = _detect_gaps(analyzed)
+        balance_score = _calculate_balance_score(analyzed)
 
-    return {
-        'sections': analyzed,
-        'gaps': gaps,
-        'balance_score': balance_score,
-        'suggestions': _generate_suggestions(analyzed, gaps, balance_score),
-    }
+        return {
+            'sections': analyzed,
+            'gaps': gaps,
+            'balance_score': balance_score,
+            'suggestions': _generate_suggestions(analyzed, gaps, balance_score),
+        }
+    except Exception as e:
+        logger.error(f"분석 실패: {e}")
+        return {"error": str(e)}
 
 
 def _split_sections(content: str) -> list:
