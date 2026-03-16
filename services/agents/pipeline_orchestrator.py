@@ -88,7 +88,7 @@ class AgentOrchestrator:
         }
 
     def _run_agent_with_context(
-        self, agent: BaseAgent, task: str, context: Dict[str, Any]
+        self, agent: FrameworkBaseAgent, task: str, context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """에이전트를 context와 함께 실행합니다."""
         final_result: Dict[str, Any] = {}
