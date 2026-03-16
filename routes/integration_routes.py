@@ -453,7 +453,7 @@ def knowledge_upload():
     try:
         from services.rag.chunker import extract_text_from_file, chunk_text
         from services.rag import vector_store
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         text = extract_text_from_file(file_bytes, file.filename)
         if not text.strip():
@@ -463,7 +463,7 @@ def knowledge_upload():
         doc_id = str(uuid.uuid4())
         metadata = {
             'filename': file.filename,
-            'uploaded_at': datetime.utcnow().isoformat(),
+            'uploaded_at': datetime.now(timezone.utc).isoformat(),
         }
         vector_store.add_document(g.user_id, doc_id, chunks, metadata)
 

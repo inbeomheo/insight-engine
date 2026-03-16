@@ -105,7 +105,40 @@ def health():
     increment_request_count()
     uptime = round(time.time() - _SERVER_START_TIME, 1)
     env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
-    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count(), 'error_count': get_error_count(), 'error_rate': get_error_rate()}), 200
+    # 프로세스 메모리 사용량 (MB) — 표준 라이브러리만 사용
+    mem_mb = None
+    try:
+        import resource
+        # Linux/macOS: ru_maxrss는 KB 단위 (macOS는 bytes이지만 보통 KB)
+        mem_mb = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
+    except ImportError:
+        # Windows: /proc 없으므로 ctypes 사용
+        try:
+            import ctypes
+            import ctypes.wintypes
+            class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                _fields_ = [
+                    ('cb', ctypes.wintypes.DWORD),
+                    ('PageFaultCount', ctypes.wintypes.DWORD),
+                    ('PeakWorkingSetSize', ctypes.c_size_t),
+                    ('WorkingSetSize', ctypes.c_size_t),
+                    ('QuotaPeakPagedPoolUsage', ctypes.c_size_t),
+                    ('QuotaPagedPoolUsage', ctypes.c_size_t),
+                    ('QuotaPeakNonPagedPoolUsage', ctypes.c_size_t),
+                    ('QuotaNonPagedPoolUsage', ctypes.c_size_t),
+                    ('PagefileUsage', ctypes.c_size_t),
+                    ('PeakPagefileUsage', ctypes.c_size_t),
+                ]
+            pmc = PROCESS_MEMORY_COUNTERS()
+            pmc.cb = ctypes.sizeof(pmc)
+            handle = ctypes.windll.kernel32.GetCurrentProcess()
+            if ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(pmc), pmc.cb):
+                mem_mb = round(pmc.WorkingSetSize / (1024 * 1024), 1)
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count(), 'error_count': get_error_count(), 'error_rate': get_error_rate(), 'memory_usage_mb': mem_mb}), 200
 
 
 @blog_bp.route('/api/health/detailed')
