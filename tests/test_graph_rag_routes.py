@@ -1,0 +1,62 @@
+"""GraphRAG 엔진 라우트 테스트."""
+import unittest
+from unittest.mock import patch, MagicMock
+
+from app import create_app
+
+_HEADERS = {'Origin': 'http://localhost:3000'}
+
+
+class TestGraphRAGRoutes(unittest.TestCase):
+    """GraphRAG API 테스트."""
+
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_ingest_missing_text_returns_400(self, _mock_sb):
+        """text 누락 시 400."""
+        resp = self.client.post('/api/rag/graph/ingest',
+                                json={},
+                                headers=_HEADERS)
+        self.assertEqual(resp.status_code, 400)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.rag.graph_rag_engine.GraphRAGEngine.ingest')
+    def test_ingest_success(self, mock_ingest, _mock_sb):
+        """인제스트 성공."""
+        mock_ingest.return_value = {'entities_added': 3, 'relations_added': 2}
+        resp = self.client.post('/api/rag/graph/ingest',
+                                json={'text': 'Python은 프로그래밍 언어입니다.'},
+                                headers=_HEADERS)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data['entities_added'], 3)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_local_search_missing_entities_returns_400(self, _mock_sb):
+        """entities 누락 시 400."""
+        resp = self.client.post('/api/rag/graph/search/local',
+                                json={},
+                                headers=_HEADERS)
+        self.assertEqual(resp.status_code, 400)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.rag.graph_rag_engine.GraphRAGEngine.global_search')
+    def test_global_search_success(self, mock_global, _mock_sb):
+        """글로벌 검색 성공."""
+        mock_global.return_value = {
+            'nodes': [{'name': 'Python', 'type': 'language', 'degree': 5}],
+            'stats': {'nodes': 10, 'edges': 8},
+        }
+        resp = self.client.get('/api/rag/graph/search/global?top_n=5',
+                               headers=_HEADERS)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn('nodes', data)
+
+
+if __name__ == '__main__':
+    unittest.main()
