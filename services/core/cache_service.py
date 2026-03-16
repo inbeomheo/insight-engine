@@ -5,6 +5,7 @@ SQLite 기반, TTL + LRU eviction 지원
 import hashlib
 import json
 import os
+import random
 import sqlite3
 import time
 from typing import Any, Dict, Optional
@@ -56,7 +57,15 @@ class AICacheService:
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:
-        """캐시에서 결과 조회. TTL 만료 시 None 반환."""
+        """캐시에서 결과 조회. TTL 만료 시 None 반환.
+
+        약 2% 확률로 만료 항목 일괄 정리를 수행하여
+        별도 스케줄러 없이도 디스크 공간을 회수합니다.
+        """
+        # 확률적 만료 정리 (약 50회 조회당 1회)
+        if random.random() < 0.02:
+            self.purge_expired()
+
         now = time.time()
         with self._get_conn() as conn:
             row = conn.execute(
