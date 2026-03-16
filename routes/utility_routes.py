@@ -3409,3 +3409,49 @@ def content_stats():
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
+
+
+# ──────────────────────────────────────────────
+# 앱 버전 정보
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/version')
+def app_version():
+    """앱 버전, 빌드 정보, 기능 요약."""
+    import subprocess
+    import os
+
+    # Git 커밋 해시
+    git_hash = 'unknown'
+    git_date = 'unknown'
+    try:
+        git_hash = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL, timeout=5
+        ).decode().strip()
+        git_date = subprocess.check_output(
+            ['git', 'log', '-1', '--format=%ci'],
+            stderr=subprocess.DEVNULL, timeout=5
+        ).decode().strip()[:10]
+    except Exception:
+        pass
+
+    # 서비스/라우트 파일 수
+    service_count = 0
+    for root, dirs, files in os.walk('services'):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        service_count += sum(1 for f in files if f.endswith('.py') and f != '__init__.py')
+
+    route_count = 0
+    if os.path.isdir('routes'):
+        route_count = sum(1 for f in os.listdir('routes') if f.endswith('.py') and f != '__init__.py')
+
+    return jsonify({
+        'name': 'Insight Engine',
+        'version': '2.0.0',
+        'git_hash': git_hash,
+        'git_date': git_date,
+        'services': service_count,
+        'routes': route_count,
+        'python': os.sys.version.split()[0],
+    })
