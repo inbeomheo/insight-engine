@@ -17,6 +17,9 @@ from utils.responses import handle_error, sanitize_error_for_client
 
 _CLIENT_TRACKER: Dict[str, float] = {}
 
+# 서버 시작 시각 (uptime 계산용)
+_SERVER_START_TIME: float = time.time()
+
 # 재생목록/채널 조회 결과 캐시 (5분 TTL)
 _PLAYLIST_CACHE: Dict[str, dict] = {}
 _PLAYLIST_CACHE_TTL: int = 300  # 초
@@ -33,7 +36,8 @@ def _cleanup_stale_clients():
 @blog_bp.route('/health')
 def health():
     """헬스체크 엔드포인트 (Railway/Docker용)"""
-    return jsonify({'status': 'healthy'}), 200
+    uptime = round(time.time() - _SERVER_START_TIME, 1)
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime}), 200
 
 
 @blog_bp.route('/api/health/detailed')
@@ -3536,4 +3540,47 @@ def scheduler_status():
         'running': scheduler.running,
         'jobs': jobs,
         'total_jobs': len(jobs),
+    })
+
+
+# ──────────────────────────────────────────────
+# 시스템 정보 (관리자용)
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/admin/system-info')
+@require_auth
+def system_info():
+    """Python/Flask/주요 의존성 버전 및 런타임 환경 상세 정보."""
+    import platform
+    import sys
+
+    # 주요 패키지 버전 수집
+    packages = [
+        'flask', 'litellm', 'chromadb', 'faster_whisper',
+        'python-docx', 'trafilatura', 'apscheduler',
+    ]
+    dependency_versions = {}
+    for pkg in packages:
+        try:
+            mod = __import__(pkg.replace('-', '_'))
+            ver = getattr(mod, '__version__', getattr(mod, 'VERSION', 'unknown'))
+            dependency_versions[pkg] = str(ver)
+        except ImportError:
+            dependency_versions[pkg] = 'not_installed'
+
+    uptime = round(time.time() - _SERVER_START_TIME, 1)
+
+    return jsonify({
+        'python': {
+            'version': sys.version.split()[0],
+            'implementation': platform.python_implementation(),
+            'build': platform.python_build()[0],
+        },
+        'platform': {
+            'system': platform.system(),
+            'release': platform.release(),
+            'machine': platform.machine(),
+        },
+        'dependencies': dependency_versions,
+        'uptime_seconds': uptime,
     })
