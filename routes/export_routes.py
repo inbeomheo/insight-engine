@@ -45,17 +45,22 @@ def export_docx():
         # BytesIO에 저장
         buffer = io.BytesIO()
         doc.save(buffer)
+
+        # Content-Length 계산 (다운로드 진행률 표시용)
+        content_length = buffer.seek(0, 2)
         buffer.seek(0)
 
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
         filename = f'{safe_title}.docx'
 
-        return send_file(
+        response = send_file(
             buffer,
             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             as_attachment=True,
             download_name=filename
         )
+        response.headers['Content-Length'] = content_length
+        return response
 
     except ImportError:
         return jsonify({'error': 'python-docx 패키지가 설치되지 않았습니다.'}), 500
