@@ -195,7 +195,12 @@ def api_providers():
     # 각 프로바이더에 model_count 필드 추가
     enriched = {}
     for pid, pdata in providers.items():
-        enriched[pid] = {**pdata, 'model_count': len(pdata.get('models', []))}
+        models = pdata.get('models', [])
+        enriched[pid] = {
+            **pdata,
+            'model_count': len(models),
+            'default_model': models[0]['id'] if models else None,
+        }
 
     return jsonify({
         'providers': enriched,
@@ -3534,12 +3539,17 @@ def content_stats():
         _top5 = sorted(_freq.items(), key=lambda x: x[1], reverse=True)[:5]
         keyword_density = [{'keyword': k, 'count': c} for k, c in _top5]
 
+        # 평균 단어 길이
+        total_word_chars = sum(len(w) for w in words)
+        avg_word_length = round(total_word_chars / word_count, 1) if word_count else 0.0
+
         return jsonify({
             'char_count': char_count,
             'word_count': word_count,
             'sentence_count': sentence_count,
             'reading_time_min': reading_time_min,
             'avg_sentence_length': round(char_count / sentence_count, 1),
+            'avg_word_length': avg_word_length,
             'paragraph_count': paragraph_count,
             'heading_count': heading_count,
             'keyword_density': keyword_density,
@@ -3588,6 +3598,10 @@ def app_version():
     if os.path.isdir('routes'):
         route_count = sum(1 for f in os.listdir('routes') if f.endswith('.py') and f != '__init__.py')
 
+    # 등록된 URL 라우트 수 (Flask url_map 기준)
+    from flask import current_app
+    total_routes = len(set(rule.rule for rule in current_app.url_map.iter_rules()))
+
     return jsonify({
         'name': 'Insight Engine',
         'version': '2.0.0',
@@ -3596,6 +3610,7 @@ def app_version():
         'last_commit_message': last_commit_message,
         'services': service_count,
         'routes': route_count,
+        'total_routes': total_routes,
         'python': os.sys.version.split()[0],
     })
 
