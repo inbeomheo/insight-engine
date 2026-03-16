@@ -396,9 +396,15 @@ def schedule_list():
 
     posts = schedule_service.list_by_user(g.user_id)
     # next_run_at: pending 상태 중 가장 빠른 scheduled_at
-    pending = [p['scheduled_at'] for p in posts if p.get('status') == 'pending' and p.get('scheduled_at')]
-    next_run_at = min(pending) if pending else None
-    return jsonify({'schedules': posts, 'next_run_at': next_run_at})
+    pending = [p for p in posts if p.get('status') == 'pending' and p.get('scheduled_at')]
+    pending_ats = [p['scheduled_at'] for p in pending]
+    next_run_at = min(pending_ats) if pending_ats else None
+    return jsonify({
+        'schedules': posts,
+        'next_run_at': next_run_at,
+        'total_count': len(posts),
+        'pending_count': len(pending),
+    })
 
 
 @blog_bp.route('/api/schedule/<post_id>', methods=['DELETE'])

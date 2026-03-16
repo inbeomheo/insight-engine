@@ -68,6 +68,32 @@ class TestScheduleNextRunAt(unittest.TestCase):
         self.assertIn('schedules', data)
         self.assertEqual(len(data['schedules']), 1)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.schedule_service')
+    def test_total_count_and_pending_count(self, mock_svc, _):
+        """total_count와 pending_count 필드 반환"""
+        mock_svc.list_by_user.return_value = [
+            {'title': 'A', 'status': 'pending', 'scheduled_at': '2026-03-20T10:00:00+00:00'},
+            {'title': 'B', 'status': 'pending', 'scheduled_at': '2026-03-18T10:00:00+00:00'},
+            {'title': 'C', 'status': 'published', 'scheduled_at': '2026-03-15T10:00:00+00:00'},
+        ]
+
+        resp = self.client.get('/api/schedule', headers=_HEADERS)
+        data = resp.get_json()
+        self.assertEqual(data['total_count'], 3)
+        self.assertEqual(data['pending_count'], 2)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.schedule_service')
+    def test_counts_zero_when_empty(self, mock_svc, _):
+        """빈 목록일 때 카운트 0"""
+        mock_svc.list_by_user.return_value = []
+
+        resp = self.client.get('/api/schedule', headers=_HEADERS)
+        data = resp.get_json()
+        self.assertEqual(data['total_count'], 0)
+        self.assertEqual(data['pending_count'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()
