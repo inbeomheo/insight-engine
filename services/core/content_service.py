@@ -639,7 +639,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
     0. 캐시 (있으면 바로 반환)
     1. youtube-transcript-api 라이브러리 (무료)
     2. watch 페이지 직접 파싱 (무료)
-    3. Supadata API (유료 - 마지막 폴백)
+    2.5. yt-dlp 자막 직접 추출 (무료, 음성인식 없이)
+    3. Supadata API (유료)
+    4. Whisper 음성 인식 (로컬, 느림)
     """
     overall_start = time.time()
 
@@ -722,6 +724,27 @@ def get_transcript(video_id: str) -> TranscriptResult:
         result = {'text': watch_result, 'source': 'watch', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
         _save_cache(video_id, 'transcript', result)
         return result
+
+    # 2.5순위: yt-dlp 자막 직접 추출 (음성인식 없이 자막 파일 다운로드)
+    try:
+        from services.transcript.whisper_service import extract_subtitles_ytdlp
+        _log_info(f"Trying yt-dlp subtitle extraction for video_id={video_id}")
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        ytdlp_text = extract_subtitles_ytdlp(video_url)
+        if ytdlp_text and ytdlp_text.strip():
+            _log_info(f"Transcript extracted via yt-dlp subtitles for video_id={video_id}")
+            source_meta = {
+                'source_type': 'ytdlp_subtitle',
+                'quality_score': 0.9,
+                'is_auto': True,
+                'language': _detect_language_from_text(ytdlp_text),
+            }
+            elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+            result = {'text': ytdlp_text, 'source': 'ytdlp', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
+            _save_cache(video_id, 'transcript', result)
+            return result
+    except Exception as e:
+        _log_warning(f"yt-dlp subtitle extraction failed for video_id={video_id}: {str(e)}")
 
     # 3순위: Supadata API (유료 - 마지막 폴백)
     if supadata_api_key:
