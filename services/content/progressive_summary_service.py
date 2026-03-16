@@ -3,6 +3,7 @@
 
 1줄 / 3줄 / 전체 요약을 단계별로 생성합니다.
 """
+import functools
 import logging
 import json
 import re
@@ -97,6 +98,7 @@ def generate_progressive_summary(content: str, model: Optional[str] = None) -> D
     except Exception as e:
         logger.error(f"단계별 요약 처리 실패: {e}")
         raise
+@functools.lru_cache(maxsize=1)
 def _get_model() -> str:
     """사용 가능한 모델을 반환합니다."""
     from config import PROVIDER_API_KEYS

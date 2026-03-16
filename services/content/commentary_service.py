@@ -4,6 +4,7 @@ AI 코멘터리 서비스
 원본 콘텐츠에 [해설] 주석을 추가합니다.
 전문 용어 설명, 배경 정보, 관련 사례를 주석으로 삽입합니다.
 """
+import functools
 import logging
 import re
 from typing import Dict, Optional
@@ -74,6 +75,7 @@ def add_commentary(content: str, model: Optional[str] = None) -> Dict:
     except Exception as e:
         logger.error(f"AI 해설 추가 처리 실패: {e}")
         raise
+@functools.lru_cache(maxsize=1)
 def _get_model() -> str:
     """사용 가능한 모델을 반환합니다."""
     from config import PROVIDER_API_KEYS

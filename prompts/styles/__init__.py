@@ -4,6 +4,7 @@
              sns_post, newsletter, show_notes, course, cited_summary
 + 댓글 요약 전용 프롬프트 (UI 비노출)
 """
+import functools
 
 from .blog_seo import BLOG_SEO_PROMPT
 from .summary import SUMMARY_PROMPT
@@ -45,6 +46,7 @@ STYLE_PROMPTS = {
 }
 
 
+@functools.lru_cache(maxsize=32)
 def get_style_prompt(style: str) -> str:
     """
     스타일 이름으로 프롬프트를 반환합니다.

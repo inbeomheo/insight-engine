@@ -2,6 +2,7 @@
 AI 콘텐츠 생성 서비스
 LiteLLM을 사용한 다중 AI 프로바이더 지원
 """
+import functools
 import html as html_lib
 import os
 import re
@@ -12,6 +13,9 @@ from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 from flask import current_app
+
+
+@functools.lru_cache(maxsize=1)
 def _get_completion():
     """litellm.completion을 지연 로딩합니다 (cold start 최적화: ~4초 절감)."""
     from litellm import completion

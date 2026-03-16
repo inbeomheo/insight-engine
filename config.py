@@ -9,7 +9,9 @@ v3.0 업데이트:
 - 레거시 호환성 완전 제거
 """
 from typing import Dict, List, Any, Tuple
+import functools
 import os
+import time
 
 # prompts 패키지에서 가져오기
 from prompts import (
@@ -270,17 +272,32 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
 }
 
 
+_providers_cache: Dict[str, Any] = {}
+_providers_cache_time: float = 0.0
+_PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
+
+
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
     """API 키가 설정된 프로바이더만 반환합니다.
     Ollama는 API 키 불필요 — OLLAMA_BASE_URL이 설정되어 있으면 활성화.
+    결과를 60초간 캐싱합니다.
     """
+    global _providers_cache, _providers_cache_time
+    now = time.time()
+    if _providers_cache and (now - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
+        return _providers_cache
+
     available = {}
     for provider_id, api_key in PROVIDER_API_KEYS.items():
         if api_key and provider_id in SUPPORTED_PROVIDERS:
             available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+
+    _providers_cache = available
+    _providers_cache_time = now
     return available
 
 
+@functools.lru_cache(maxsize=128)
 def get_provider_from_model(model_id: str) -> str:
     """모델 ID에서 프로바이더를 추출합니다."""
     if model_id.startswith('gpt-'):
@@ -342,6 +359,7 @@ STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
 }
 
 
+@functools.lru_cache(maxsize=128)
 def get_model_max_tokens(model_id: str) -> int:
     """모델 ID로 최대 입력 토큰 수를 반환합니다."""
     for provider in SUPPORTED_PROVIDERS.values():
@@ -351,6 +369,7 @@ def get_model_max_tokens(model_id: str) -> int:
     return MAX_CONTENT_TOKENS  # fallback
 
 
+@functools.lru_cache(maxsize=1)
 def get_style_options() -> List[Tuple[str, str]]:
     """
     스타일 옵션 목록을 반환합니다.
@@ -361,6 +380,7 @@ def get_style_options() -> List[Tuple[str, str]]:
     return STYLE_OPTIONS
 
 
+@functools.lru_cache(maxsize=1)
 def get_modifier_options() -> Dict[str, Dict[str, Any]]:
     """
     모디파이어 옵션 정보를 반환합니다 (UI 구성용).

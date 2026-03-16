@@ -12,8 +12,13 @@ import time
 from typing import Any, Dict, List, Optional, Union
 from xml.etree import ElementTree
 
+import functools
+
 import requests
 from flask import current_app
+
+
+@functools.lru_cache(maxsize=1)
 def _get_youtube_build():
     """googleapiclient를 지연 로딩합니다 (cold start 최적화)."""
     from googleapiclient.discovery import build

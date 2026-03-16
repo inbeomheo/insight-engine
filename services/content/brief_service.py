@@ -3,6 +3,7 @@
 
 AI를 활용하여 주제에 대한 콘텐츠 브리프를 생성합니다.
 """
+import functools
 import logging
 import json
 import re
@@ -133,6 +134,7 @@ def _ensure_brief_defaults(
     return parsed
 
 
+@functools.lru_cache(maxsize=1)
 def _get_model() -> str:
     """사용 가능한 모델을 반환합니다."""
     from config import PROVIDER_API_KEYS
