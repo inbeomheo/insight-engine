@@ -9,3 +9,13 @@ round	feature	status	passed_tests	files_changed	commit
 8	콘텐츠 통계 분석 API	keep	3427	2	1467ebe
 9	앱 버전 정보 API	keep	3430	2	5e2b2da
 10	프롬프트 시스템 정보 API	keep	3433	2	e9b5698
+11	쿼리 파라미터 상한 검증	keep	3440	4	035d605
+12	생성 응답 char_count/word_count	keep	3442	2	a277784
+13	캐시 히트 응답 통계 일관성	keep	3443	2	2ad1864
+14	ZIP meta.json generated_at	keep	3450	2	9186507
+15	rewrite compression_ratio	keep	3455	2	f255abe
+16	playlist-videos 메모리 캐시	keep	3460	2	ae3d730
+17	자막 추출 시간 로깅	revert	-	-	-
+18	대시보드 avg_generation_time	keep	3463	2	1f11f73
+19	웹훅 실패 카운터 + health 노출	keep	3467	3	9e101a8
+20	DOCX Content-Length 헤더	keep	3472	2	ee40ed0
