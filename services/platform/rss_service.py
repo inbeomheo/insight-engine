@@ -99,6 +99,8 @@ def parse_feed(url: str, max_items: int = 10) -> List[Dict]:
 
         entries = feed.entries[:max_items]
         return [_entry_to_dict(e) for e in entries]
+    except ValueError:
+        raise
     except Exception as e:
         logger.error("parse_feed 실패: %s", e, exc_info=True)
         return []
