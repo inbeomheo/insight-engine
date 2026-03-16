@@ -478,11 +478,17 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     _char_count = len(_content_text)
     # 한국어 기준 분당 500자, 최소 1분
     _reading_time_min = max(1, round(_char_count / 500)) if _char_count > 0 else 0
+    # 토큰 효율성 (글자수 / 총 토큰수) — 토큰 대비 실제 출력 밀도
+    _usage = result.get('usage') or {}
+    _total_tokens = _usage.get('total_tokens', 0)
+    _token_efficiency = round(_char_count / _total_tokens, 2) if _total_tokens > 0 else 0.0
+
     _content_stats = {
         "char_count": _char_count,
         "word_count": len(_content_text.split()) if _content_text else 0,
         "reading_time_min": _reading_time_min,
         "has_code_blocks": bool('```' in _content_text or '<code>' in _content_text),
+        "token_efficiency": _token_efficiency,
     }
 
     from routes.blog_routes import _get_style_label
