@@ -3302,3 +3302,28 @@ def arxiv_paper():
         return jsonify({'error': str(e)}), 404
     except Exception as e:
         return handle_error(e, 'arXiv 논문 조회')
+
+
+# ──────────────────────────────────────────────
+# GitHub README 추출
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/github/readme', methods=['POST'])
+@require_auth
+def github_readme():
+    """GitHub 리포지토리 URL에서 README 추출.
+
+    Body: {"url": "https://github.com/owner/repo"}
+    """
+    try:
+        from services.platform.github_service import extract_github_readme
+        data = request.get_json(silent=True) or {}
+        url = (data.get('url') or '').strip()
+        if not url:
+            return jsonify({'error': 'GitHub URL을 입력해주세요.'}), 400
+        result = extract_github_readme(url)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return handle_error(e, 'GitHub README 추출')
