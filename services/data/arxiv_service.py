@@ -137,6 +137,8 @@ def fetch_paper(arxiv_id: str) -> Dict:
 
         # 첫 번째 엔트리 반환
         return _parse_entry(entries[0])
+    except (ValueError, requests.RequestException):
+        raise
     except Exception as e:
         logger.error("fetch_paper 실패: %s", e, exc_info=True)
         return {}
@@ -236,6 +238,8 @@ def search_papers(query: str, max_results: int = 5) -> List[Dict]:
         entries = root.findall(_ns("entry"))
 
         return [_parse_entry(e) for e in entries]
+    except requests.RequestException:
+        raise
     except Exception as e:
         logger.error("search_papers 실패: %s", e, exc_info=True)
         return []

@@ -43,6 +43,8 @@ def parse_bookmarks(html_content: str) -> List[Dict]:
             raise ValueError("유효한 북마크 URL을 찾을 수 없습니다.")
 
         return bookmarks
+    except ValueError:
+        raise
     except Exception as e:
         logger.error("parse_bookmarks 실패: %s", e, exc_info=True)
         return []
