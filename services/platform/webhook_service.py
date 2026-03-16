@@ -119,18 +119,18 @@ class WebhookService:
                 # 4xx 클라이언트 에러는 재시도 무의미 → 즉시 중단
                 if 400 <= resp.status_code < 500:
                     self.failure_count += 1
-                    logger.error(f"웹훅 클라이언트 에러 (재시도 안 함): {resp.status_code} {event}")
+                    logger.error("웹훅 클라이언트 에러 (재시도 안 함): %s %s", resp.status_code, event)
                     return
                 resp.raise_for_status()
-                logger.info(f"웹훅 전송 성공: {event}")
+                logger.info("웹훅 전송 성공: %s", event)
                 return
             except Exception as e:
                 if attempt == 0:
-                    logger.warning(f"웹훅 전송 실패 (2초 후 재시도): {e}")
+                    logger.warning("웹훅 전송 실패 (2초 후 재시도): %s", e)
                     _time.sleep(2)
                 else:
                     self.failure_count += 1
-                    logger.error(f"웹훅 전송 최종 실패: {e}")
+                    logger.error("웹훅 전송 최종 실패: %s", e)
 
     def test(self) -> dict:
         """웹훅 테스트 전송 (동기, 결과 반환)"""
