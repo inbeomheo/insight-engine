@@ -3351,3 +3351,18 @@ def list_styles():
         'modifiers': STYLE_MODIFIERS,
         'count': len(styles),
     })
+
+
+# ──────────────────────────────────────────────
+# 캐시 통계
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/cache/stats')
+@require_auth
+def cache_stats():
+    """AI 캐시 통계 (항목 수, 크기, TTL)."""
+    try:
+        stats = current_app.ai_cache.get_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return handle_error(e, '캐시 통계 조회')
