@@ -263,9 +263,11 @@ def api_validate_provider():
         import requests as http_requests
         base_url = api_key or provider.get('api_base', 'http://localhost:11434')
         try:
+            t0 = time.time()
             resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
+            latency_ms = round((time.time() - t0) * 1000)
             resp.raise_for_status()
-            return jsonify({'valid': True, 'model_tested': test_model})
+            return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
         except Exception as e:
             return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
@@ -286,8 +288,10 @@ def api_validate_provider():
         if provider.get('api_base'):
             kwargs['api_base'] = provider['api_base']
 
+        t0 = time.time()
         litellm.completion(**kwargs)
-        return jsonify({'valid': True, 'model_tested': test_model})
+        latency_ms = round((time.time() - t0) * 1000)
+        return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
     except Exception as e:
         return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
@@ -3562,6 +3566,9 @@ def content_stats():
         total_word_chars = sum(len(w) for w in words)
         avg_word_length = round(total_word_chars / word_count, 1) if word_count else 0.0
 
+        # 중복 제거 단어 수
+        unique_words = len(set(w.lower() for w in words))
+
         # Flesch Reading Ease (한국어 적용)
         # 한국어: 음절 수 ≈ 글자 수, 공식 적용
         # 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
@@ -3582,6 +3589,7 @@ def content_stats():
             'heading_count': heading_count,
             'keyword_density': keyword_density,
             'flesch_reading_ease': flesch_reading_ease,
+            'unique_words': unique_words,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
