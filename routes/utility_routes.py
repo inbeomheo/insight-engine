@@ -62,7 +62,7 @@ def health():
     """헬스체크 엔드포인트 (Railway/Docker용)"""
     uptime = round(time.time() - _SERVER_START_TIME, 1)
     env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
-    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env}), 200
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0'}), 200
 
 
 @blog_bp.route('/api/health/detailed')
@@ -142,6 +142,16 @@ def health_detailed():
 
     # 현재 활성 요청 수
     checks['active_requests'] = get_active_requests()
+
+    # 등록된 스케줄 잡 수
+    try:
+        from services.data.scheduler_worker import scheduler
+        if scheduler.running:
+            checks['scheduled_jobs'] = len(scheduler.get_jobs())
+        else:
+            checks['scheduled_jobs'] = 0
+    except Exception:
+        checks['scheduled_jobs'] = 0
 
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])
@@ -3390,7 +3400,11 @@ def arxiv_search():
         if not query:
             return jsonify({'error': '검색어를 입력해주세요.'}), 400
         max_results = min(int(data.get('max_results', 5)), 20)
-        result = search_papers(query, max_results=max_results)
+        sort_by = data.get('sort_by', 'relevance')
+        _valid_sorts = ('relevance', 'lastUpdatedDate', 'submittedDate')
+        if sort_by not in _valid_sorts:
+            sort_by = 'relevance'
+        result = search_papers(query, max_results=max_results, sort_by=sort_by)
         papers = result.get('papers', [])
         return jsonify({
             'papers': papers,
@@ -3465,10 +3479,15 @@ def list_styles():
             'description': STYLE_DESCRIPTIONS.get(style_id, ''),
         })
 
+    # 추천 스타일: 범용성 높은 상위 3개
+    _RECOMMENDED_IDS = ['blog_seo', 'summary', 'tutorial']
+    recommended = [s for s in styles if s['id'] in _RECOMMENDED_IDS]
+
     return jsonify({
         'styles': styles,
         'modifiers': STYLE_MODIFIERS,
         'count': len(styles),
+        'recommended': recommended,
     })
 
 
@@ -3543,6 +3562,15 @@ def content_stats():
         total_word_chars = sum(len(w) for w in words)
         avg_word_length = round(total_word_chars / word_count, 1) if word_count else 0.0
 
+        # Flesch Reading Ease (한국어 적용)
+        # 한국어: 음절 수 ≈ 글자 수, 공식 적용
+        # 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
+        syllable_count = sum(len(w) for w in words)  # 한국어: 1글자 ≈ 1음절
+        avg_words_per_sentence = word_count / sentence_count if sentence_count else 0
+        avg_syllables_per_word = syllable_count / word_count if word_count else 0
+        flesch_score = 206.835 - 1.015 * avg_words_per_sentence - 84.6 * avg_syllables_per_word
+        flesch_reading_ease = round(max(0, min(100, flesch_score)), 1)
+
         return jsonify({
             'char_count': char_count,
             'word_count': word_count,
@@ -3553,6 +3581,7 @@ def content_stats():
             'paragraph_count': paragraph_count,
             'heading_count': heading_count,
             'keyword_density': keyword_density,
+            'flesch_reading_ease': flesch_reading_ease,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
