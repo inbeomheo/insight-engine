@@ -369,6 +369,19 @@ def get_model_max_tokens(model_id: str) -> int:
     return MAX_CONTENT_TOKENS  # fallback
 
 
+def get_model_display_name(model_id: str) -> str:
+    """모델 ID로 사용자 표시용 이름을 반환합니다.
+
+    예: 'zhipuai/GLM-4.5-Air' → 'GLM-4.5 Air (경량)'
+    매칭 실패 시 모델 ID를 그대로 반환합니다.
+    """
+    for provider in SUPPORTED_PROVIDERS.values():
+        for model in provider.get('models', []):
+            if model['id'] == model_id:
+                return model.get('name', model_id)
+    return model_id
+
+
 @functools.lru_cache(maxsize=1)
 def get_style_options() -> List[Tuple[str, str]]:
     """

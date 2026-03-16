@@ -12,7 +12,7 @@ from services.core.content_service import clear_cache
 from services.data.supabase_service import save_history
 from services.usage.usage_decorator import get_usage_for_response
 from services.platform.webhook_service import WebhookService
-from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED
+from config import get_model_max_tokens, get_model_display_name, WEBHOOK_URL, WEBHOOK_ENABLED
 from utils.responses import sanitize_error_for_client
 
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
@@ -484,6 +484,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         **result,
         "id": report_id,
         "source_url": url,
+        "model_name": get_model_display_name(model),
         "prompt": used_prompt,
         "elapsed_time": elapsed_time,
         "youtube_title": youtube_title,
