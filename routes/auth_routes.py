@@ -950,6 +950,18 @@ def admin_dashboard():
         top_styles = sorted(style_dist.items(), key=lambda x: x[1], reverse=True)[:3]
         top_styles = [{'style': s, 'count': c} for s, c in top_styles]
 
+        # 가장 생성이 많은 시간대 (0~23시)
+        hour_dist = {}
+        for item in items:
+            created = item.get('created_at', '')
+            if created and len(created) >= 13:
+                try:
+                    hour = int(created[11:13])
+                    hour_dist[hour] = hour_dist.get(hour, 0) + 1
+                except (ValueError, IndexError):
+                    pass
+        busiest_hour = max(hour_dist, key=hour_dist.get) if hour_dist else None
+
         # 최근 5개 생성 기록 (제목 + 스타일)
         sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
         recent_generations = []
@@ -974,6 +986,7 @@ def admin_dashboard():
             'top_styles': top_styles,
             'daily_usage': daily_usage,
             'recent_generations': recent_generations,
+            'busiest_hour': busiest_hour,
         })
     except Exception as e:
         import logging

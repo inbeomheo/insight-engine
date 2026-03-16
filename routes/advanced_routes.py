@@ -166,9 +166,15 @@ def generate_multi():
 
         elapsed_time = round(time.time() - start_time, 2)
 
+        # 성공/실패 요약
+        fail_count = sum(1 for r in results if 'error' in r)
+        success_count = len(results) - fail_count
+
         return jsonify({
             'success': True,
             'results': results,
+            'success_count': success_count,
+            'fail_count': fail_count,
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
             'elapsed_time': elapsed_time,
