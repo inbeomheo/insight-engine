@@ -5,6 +5,7 @@ import json
 import os
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Dict
 
 from flask import request, jsonify, current_app
@@ -17,6 +18,7 @@ from services.platform.webhook_service import WebhookService
 from utils.responses import handle_error, sanitize_error_for_client
 
 _CLIENT_TRACKER: Dict[str, float] = {}
+_SERVER_STARTED_AT: str = datetime.now(timezone.utc).isoformat()
 
 # 서버 시작 시각 (uptime 계산용)
 _SERVER_START_TIME: float = time.time()
@@ -139,6 +141,13 @@ def health_detailed():
         }
     except Exception:
         checks['disk_usage'] = {'cache_dir': '', 'size_bytes': 0, 'size_mb': 0.0}
+
+    # 설치된 Python 패키지 수
+    try:
+        import importlib.metadata
+        checks['python_packages_count'] = len(list(importlib.metadata.distributions()))
+    except Exception:
+        checks['python_packages_count'] = 0
 
     # 현재 활성 요청 수
     checks['active_requests'] = get_active_requests()
@@ -3474,6 +3483,24 @@ def list_styles():
     """사용 가능한 전체 스타일 목록 + 메타데이터 반환."""
     from config import STYLE_OPTIONS, STYLE_TEMPERATURE, STYLE_MODIFIERS, STYLE_DESCRIPTIONS
 
+    # 스타일 카테고리 분류 (정보형 / 창작형 / 마케팅형)
+    _STYLE_CATEGORIES = {
+        'blog_seo': '마케팅형',
+        'summary': '정보형',
+        'tutorial': '정보형',
+        'qna': '정보형',
+        'app_ideas': '창작형',
+        'yozm_it': '정보형',
+        'brunch_essay': '창작형',
+        'naver_popular': '마케팅형',
+        'sns_post': '마케팅형',
+        'newsletter': '마케팅형',
+        'show_notes': '정보형',
+        'shorts_script': '창작형',
+        'geo_seo': '마케팅형',
+        'course': '정보형',
+    }
+
     styles = []
     for style_id, label in STYLE_OPTIONS:
         styles.append({
@@ -3481,6 +3508,7 @@ def list_styles():
             'label': label,
             'temperature': STYLE_TEMPERATURE.get(style_id, 0.7),
             'description': STYLE_DESCRIPTIONS.get(style_id, ''),
+            'category': _STYLE_CATEGORIES.get(style_id, '정보형'),
         })
 
     # 추천 스타일: 범용성 높은 상위 3개
@@ -3569,6 +3597,9 @@ def content_stats():
         # 중복 제거 단어 수
         unique_words = len(set(w.lower() for w in words))
 
+        # 물음표로 끝나는 문장 수
+        question_count = len(_re.findall(r'[?？]', plain))
+
         # Flesch Reading Ease (한국어 적용)
         # 한국어: 음절 수 ≈ 글자 수, 공식 적용
         # 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
@@ -3590,6 +3621,7 @@ def content_stats():
             'keyword_density': keyword_density,
             'flesch_reading_ease': flesch_reading_ease,
             'unique_words': unique_words,
+            'question_count': question_count,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
@@ -3654,6 +3686,7 @@ def app_version():
         'total_routes': total_routes,
         'features_count': features_count,
         'python': os.sys.version.split()[0],
+        'started_at': _SERVER_STARTED_AT,
     })
 
 
@@ -3680,11 +3713,14 @@ def prompts_info():
             'forbidden_count': forbidden_count,
         })
 
+    total_prompt_chars = sum(item['prompt_length'] for item in style_info)
+
     return jsonify({
         'version': '3.4',
         'styles': style_info,
         'forbidden_expressions': FORBIDDEN_EXPRESSIONS if isinstance(FORBIDDEN_EXPRESSIONS, list) else [],
         'total_styles': len(style_info),
+        'total_prompt_chars': total_prompt_chars,
     })
 
 
@@ -3740,6 +3776,13 @@ def system_info():
 
     uptime = round(time.time() - _SERVER_START_TIME, 1)
 
+    import shutil
+    try:
+        disk_usage = shutil.disk_usage(os.getcwd())
+        disk_free_gb = round(disk_usage.free / (1024 ** 3), 2)
+    except OSError:
+        disk_free_gb = None
+
     return jsonify({
         'python': {
             'version': sys.version.split()[0],
@@ -3753,6 +3796,7 @@ def system_info():
         },
         'dependencies': dependency_versions,
         'uptime_seconds': uptime,
+        'disk_free_gb': disk_free_gb,
     })
 
 
