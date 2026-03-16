@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from services.core.logging_config import get_logger
 from services.data.supabase_service import get_supabase, is_supabase_enabled
+import logging
 
 logger = get_logger('schedule_service')
 
@@ -31,74 +32,94 @@ class ScheduleService:
         if is_supabase_enabled():
             return self._db_create(user_id, title, content, html, target_plugin, scheduled_at)
 
-        # 메모리 fallback
-        post_id = str(uuid.uuid4())
-        post = {
-            'id': post_id,
-            'user_id': user_id,
-            'title': title,
-            'content': content,
-            'html': html,
-            'target_plugin': target_plugin,
-            'scheduled_at': scheduled_at,
-            'status': 'pending',
-            'error_message': None,
-            'published_url': None,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-        }
-        _memory_store[post_id] = post
-        return post
+        try:
+            # 메모리 fallback
+            post_id = str(uuid.uuid4())
+            post = {
+                'id': post_id,
+                'user_id': user_id,
+                'title': title,
+                'content': content,
+                'html': html,
+                'target_plugin': target_plugin,
+                'scheduled_at': scheduled_at,
+                'status': 'pending',
+                'error_message': None,
+                'published_url': None,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+            }
+            _memory_store[post_id] = post
+            return post
+        except Exception as e:
+            logger.error("create 실패: %s", e, exc_info=True)
+            return {}
 
     def list_by_user(self, user_id: str) -> list[dict]:
         """사용자의 예약 목록 조회 (최신순)"""
         if is_supabase_enabled():
             return self._db_list_by_user(user_id)
 
-        return sorted(
-            [p for p in _memory_store.values() if p['user_id'] == user_id],
-            key=lambda p: p['created_at'],
-            reverse=True,
-        )
+        try:
+            return sorted(
+                [p for p in _memory_store.values() if p['user_id'] == user_id],
+                key=lambda p: p['created_at'],
+                reverse=True,
+            )
+        except Exception as e:
+            logger.error("list_by_user 실패: %s", e, exc_info=True)
+            return []
 
     def delete(self, post_id: str, user_id: str) -> bool:
         """예약 삭제 (본인 것만)"""
         if is_supabase_enabled():
             return self._db_delete(post_id, user_id)
 
-        post = _memory_store.get(post_id)
-        if post and post['user_id'] == user_id:
-            del _memory_store[post_id]
-            return True
-        return False
+        try:
+            post = _memory_store.get(post_id)
+            if post and post['user_id'] == user_id:
+                del _memory_store[post_id]
+                return True
+            return False
+        except Exception as e:
+            logger.error("delete 실패: %s", e, exc_info=True)
+            return False
 
     def get_due_posts(self) -> list[dict]:
         """발행 시각이 지난 pending 포스트 조회"""
-        now = datetime.now(timezone.utc)
+        try:
+            now = datetime.now(timezone.utc)
 
-        if is_supabase_enabled():
-            return self._db_get_due_posts(now)
+            if is_supabase_enabled():
+                return self._db_get_due_posts(now)
 
-        return [
-            p for p in _memory_store.values()
-            if p['status'] == 'pending'
-            and datetime.fromisoformat(p['scheduled_at'].replace('Z', '+00:00')) <= now
-        ]
+            return [
+                p for p in _memory_store.values()
+                if p['status'] == 'pending'
+                and datetime.fromisoformat(p['scheduled_at'].replace('Z', '+00:00')) <= now
+            ]
+        except Exception as e:
+            logger.error("get_due_posts 실패: %s", e, exc_info=True)
+            return []
 
     def update_status(self, post_id: str, status: str,
                       error_message: str | None = None,
                       published_url: str | None = None) -> None:
         """예약 상태 업데이트"""
-        if is_supabase_enabled():
-            self._db_update_status(post_id, status, error_message, published_url)
-            return
+        try:
+            if is_supabase_enabled():
+                self._db_update_status(post_id, status, error_message, published_url)
+                return
 
-        post = _memory_store.get(post_id)
-        if post:
-            post['status'] = status
-            if error_message is not None:
-                post['error_message'] = error_message
-            if published_url is not None:
-                post['published_url'] = published_url
+            post = _memory_store.get(post_id)
+            if post:
+                post['status'] = status
+                if error_message is not None:
+                    post['error_message'] = error_message
+                if published_url is not None:
+                    post['published_url'] = published_url
+        except Exception as e:
+            logger.error("update_status 실패: %s", e, exc_info=True)
+            return None
 
     # --- Supabase DB 구현 ---
 

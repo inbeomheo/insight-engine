@@ -7,6 +7,7 @@ APScheduler로 매분 예약된 포스트를 확인하고 MCP 플러그인으로
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from services.core.logging_config import get_logger
+import logging
 
 logger = get_logger('scheduler_worker')
 
@@ -15,38 +16,42 @@ scheduler = BackgroundScheduler()
 
 def check_and_publish():
     """매분 실행: 예약된 포스트 확인 → MCP 발행"""
-    from services.data.schedule_service import schedule_service
-    from services.mcp import plugin_registry
+    try:
+        from services.data.schedule_service import schedule_service
+        from services.mcp import plugin_registry
 
-    due_posts = schedule_service.get_due_posts()
-    if not due_posts:
-        return
+        due_posts = schedule_service.get_due_posts()
+        if not due_posts:
+            return
 
-    logger.info(f"발행 대기 포스트 {len(due_posts)}건 처리 시작")
+        logger.info(f"발행 대기 포스트 {len(due_posts)}건 처리 시작")
 
-    for post in due_posts:
-        post_id = post['id']
-        try:
-            result = plugin_registry.execute(
-                post['target_plugin'],
-                post['content'],
-                post['title'],
-            )
-            if result.get('success'):
-                schedule_service.update_status(
-                    post_id, 'published',
-                    published_url=result.get('url'),
+        for post in due_posts:
+            post_id = post['id']
+            try:
+                result = plugin_registry.execute(
+                    post['target_plugin'],
+                    post['content'],
+                    post['title'],
                 )
-                logger.info(f"발행 완료: {post_id}")
-            else:
-                schedule_service.update_status(
-                    post_id, 'failed',
-                    error_message=result.get('message', '발행 실패'),
-                )
-                logger.warning(f"발행 실패: {post_id} - {result.get('message')}")
-        except Exception as e:
-            schedule_service.update_status(post_id, 'failed', error_message=str(e))
-            logger.error(f"발행 예외: {post_id} - {e}")
+                if result.get('success'):
+                    schedule_service.update_status(
+                        post_id, 'published',
+                        published_url=result.get('url'),
+                    )
+                    logger.info(f"발행 완료: {post_id}")
+                else:
+                    schedule_service.update_status(
+                        post_id, 'failed',
+                        error_message=result.get('message', '발행 실패'),
+                    )
+                    logger.warning(f"발행 실패: {post_id} - {result.get('message')}")
+            except Exception as e:
+                schedule_service.update_status(post_id, 'failed', error_message=str(e))
+                logger.error(f"발행 예외: {post_id} - {e}")
+    except Exception as e:
+        logger.error("check_and_publish 실패: %s", e, exc_info=True)
+        return None
 
 
 def _check_channel_monitors():
@@ -100,53 +105,61 @@ def _check_rss_subscriptions():
 
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
-    if scheduler.running:
-        return
+    try:
+        if scheduler.running:
+            return
 
-    _app = app  # 클로저 캡처
+        _app = app  # 클로저 캡처
 
-    def _with_context(func):
-        """Flask 앱 컨텍스트 내에서 job 함수를 실행하는 래퍼"""
-        def wrapper():
-            with _app.app_context():
-                func()
-        wrapper.__name__ = func.__name__
-        return wrapper
+        def _with_context(func):
+            """Flask 앱 컨텍스트 내에서 job 함수를 실행하는 래퍼"""
+            def wrapper():
+                with _app.app_context():
+                    func()
+            wrapper.__name__ = func.__name__
+            return wrapper
 
-    scheduler.add_job(
-        _with_context(check_and_publish),
-        'interval',
-        minutes=1,
-        id='publish_checker',
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        _with_context(_check_channel_monitors),
-        'interval',
-        minutes=30,
-        id='channel_monitor_checker',
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        _with_context(_process_publish_queue),
-        'interval',
-        minutes=2,
-        id='publish_queue_processor',
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        _with_context(_check_rss_subscriptions),
-        'interval',
-        minutes=30,
-        id='rss_subscription_checker',
-        replace_existing=True,
-    )
-    scheduler.start()
-    logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)")
+        scheduler.add_job(
+            _with_context(check_and_publish),
+            'interval',
+            minutes=1,
+            id='publish_checker',
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            _with_context(_check_channel_monitors),
+            'interval',
+            minutes=30,
+            id='channel_monitor_checker',
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            _with_context(_process_publish_queue),
+            'interval',
+            minutes=2,
+            id='publish_queue_processor',
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            _with_context(_check_rss_subscriptions),
+            'interval',
+            minutes=30,
+            id='rss_subscription_checker',
+            replace_existing=True,
+        )
+        scheduler.start()
+        logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)")
+    except Exception as e:
+        logger.error("start_scheduler 실패: %s", e, exc_info=True)
+        return None
 
 
 def stop_scheduler():
     """스케줄러 종료"""
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
-        logger.info("예약 발행 스케줄러 종료됨")
+    try:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            logger.info("예약 발행 스케줄러 종료됨")
+    except Exception as e:
+        logger.error("stop_scheduler 실패: %s", e, exc_info=True)
+        return None

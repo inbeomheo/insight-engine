@@ -12,6 +12,9 @@ from typing import Dict, List
 from xml.etree import ElementTree
 
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 # arXiv Atom 피드 네임스페이스
 _ATOM_NS = "http://www.w3.org/2005/Atom"
@@ -117,22 +120,26 @@ def fetch_paper(arxiv_id: str) -> Dict:
         ValueError: 논문을 찾을 수 없는 경우
         requests.RequestException: 네트워크 오류
     """
-    # URL에서 ID 추출 (arxiv.org/abs/xxxx 형식 지원)
-    arxiv_id = re.sub(r".*arxiv\.org/abs/", "", arxiv_id).strip()
-    arxiv_id = arxiv_id.rstrip("/")
+    try:
+        # URL에서 ID 추출 (arxiv.org/abs/xxxx 형식 지원)
+        arxiv_id = re.sub(r".*arxiv\.org/abs/", "", arxiv_id).strip()
+        arxiv_id = arxiv_id.rstrip("/")
 
-    params = {"id_list": arxiv_id, "max_results": 1}
-    resp = requests.get(_API_BASE, params=params, timeout=_REQUEST_TIMEOUT)
-    resp.raise_for_status()
+        params = {"id_list": arxiv_id, "max_results": 1}
+        resp = requests.get(_API_BASE, params=params, timeout=_REQUEST_TIMEOUT)
+        resp.raise_for_status()
 
-    root = ElementTree.fromstring(resp.content)
-    entries = root.findall(_ns("entry"))
+        root = ElementTree.fromstring(resp.content)
+        entries = root.findall(_ns("entry"))
 
-    if not entries:
-        raise ValueError(f"arXiv 논문을 찾을 수 없습니다: {arxiv_id}")
+        if not entries:
+            raise ValueError(f"arXiv 논문을 찾을 수 없습니다: {arxiv_id}")
 
-    # 첫 번째 엔트리 반환
-    return _parse_entry(entries[0])
+        # 첫 번째 엔트리 반환
+        return _parse_entry(entries[0])
+    except Exception as e:
+        logger.error("fetch_paper 실패: %s", e, exc_info=True)
+        return {}
 
 
 def fetch_paper_fulltext(arxiv_id: str) -> Dict:
@@ -212,19 +219,23 @@ def search_papers(query: str, max_results: int = 5) -> List[Dict]:
     Raises:
         requests.RequestException: 네트워크 오류
     """
-    max_results = min(max_results, 20)
-    params = {
-        "search_query": f"all:{query}",
-        "start": 0,
-        "max_results": max_results,
-        "sortBy": "relevance",
-        "sortOrder": "descending",
-    }
+    try:
+        max_results = min(max_results, 20)
+        params = {
+            "search_query": f"all:{query}",
+            "start": 0,
+            "max_results": max_results,
+            "sortBy": "relevance",
+            "sortOrder": "descending",
+        }
 
-    resp = requests.get(_API_BASE, params=params, timeout=_REQUEST_TIMEOUT)
-    resp.raise_for_status()
+        resp = requests.get(_API_BASE, params=params, timeout=_REQUEST_TIMEOUT)
+        resp.raise_for_status()
 
-    root = ElementTree.fromstring(resp.content)
-    entries = root.findall(_ns("entry"))
+        root = ElementTree.fromstring(resp.content)
+        entries = root.findall(_ns("entry"))
 
-    return [_parse_entry(e) for e in entries]
+        return [_parse_entry(e) for e in entries]
+    except Exception as e:
+        logger.error("search_papers 실패: %s", e, exc_info=True)
+        return []

@@ -4,6 +4,9 @@
 """
 from services.data.supabase_service import get_supabase, is_supabase_enabled
 from services.core.logging_config import supabase_logger as logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 페이지당 최대 항목 수
 MAX_TEMPLATES_PER_USER = 50
@@ -57,34 +60,38 @@ def get_templates(user_id: str | None, page: int = 1, search: str = '') -> dict:
     if not is_supabase_enabled():
         return _empty_page(page)
 
-    supabase = get_supabase()
-    if not supabase:
-        return _empty_page(page)
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return _empty_page(page)
 
-    def operation():
-        filter_expr = _user_filter_expr(user_id)
-        query = supabase.table('ie_prompt_templates').select('*', count='exact')
-        if search:
-            query = query.or_(f"name.ilike.%{search}%,description.ilike.%{search}%")
-        if user_id:
-            query = query.or_(filter_expr)
-        else:
-            query = query.eq('is_public', True)
+        def operation():
+            filter_expr = _user_filter_expr(user_id)
+            query = supabase.table('ie_prompt_templates').select('*', count='exact')
+            if search:
+                query = query.or_(f"name.ilike.%{search}%,description.ilike.%{search}%")
+            if user_id:
+                query = query.or_(filter_expr)
+            else:
+                query = query.eq('is_public', True)
 
-        total = (query.execute()).count or 0
-        offset = (page - 1) * PAGE_SIZE
+            total = (query.execute()).count or 0
+            offset = (page - 1) * PAGE_SIZE
 
-        result = (
-            supabase.table('ie_prompt_templates').select('*')
-            .or_(filter_expr)
-            .order('usage_count', desc=True)
-            .order('created_at', desc=True)
-            .range(offset, offset + PAGE_SIZE - 1)
-            .execute()
-        )
-        return _build_page_result(result.data, total, page, user_id)
+            result = (
+                supabase.table('ie_prompt_templates').select('*')
+                .or_(filter_expr)
+                .order('usage_count', desc=True)
+                .order('created_at', desc=True)
+                .range(offset, offset + PAGE_SIZE - 1)
+                .execute()
+            )
+            return _build_page_result(result.data, total, page, user_id)
 
-    return _db_op('get_templates', _empty_page(page), operation)
+        return _db_op('get_templates', _empty_page(page), operation)
+    except Exception as e:
+        logger.error("get_templates 실패: %s", e, exc_info=True)
+        return {}
 
 
 def get_template_by_id(template_id: str, user_id: str | None) -> dict | None:
@@ -92,24 +99,28 @@ def get_template_by_id(template_id: str, user_id: str | None) -> dict | None:
     if not is_supabase_enabled():
         return None
 
-    supabase = get_supabase()
-    if not supabase:
-        return None
-
-    def operation():
-        query = supabase.table('ie_prompt_templates').select('*').eq('id', template_id)
-
-        if user_id:
-            query = query.or_(f"is_public.eq.true,user_id.eq.{user_id}")
-        else:
-            query = query.eq('is_public', True)
-
-        result = query.limit(1).execute()
-        if not result.data:
+    try:
+        supabase = get_supabase()
+        if not supabase:
             return None
-        return _format_template(result.data[0], user_id)
 
-    return _db_op('get_template_by_id', None, operation)
+        def operation():
+            query = supabase.table('ie_prompt_templates').select('*').eq('id', template_id)
+
+            if user_id:
+                query = query.or_(f"is_public.eq.true,user_id.eq.{user_id}")
+            else:
+                query = query.eq('is_public', True)
+
+            result = query.limit(1).execute()
+            if not result.data:
+                return None
+            return _format_template(result.data[0], user_id)
+
+        return _db_op('get_template_by_id', None, operation)
+    except Exception as e:
+        logger.error("get_template_by_id 실패: %s", e, exc_info=True)
+        return {}
 
 
 # =============================================
@@ -129,37 +140,41 @@ def create_template(user_id: str, data: dict) -> dict | None:
     if not is_supabase_enabled():
         return _local_template(data)
 
-    supabase = get_supabase()
-    if not supabase:
-        return _local_template(data)
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return _local_template(data)
 
-    def operation():
-        # 사용자당 최대 개수 제한
-        count_result = (
-            supabase.table('ie_prompt_templates')
-            .select('id', count='exact')
-            .eq('user_id', user_id)
-            .execute()
-        )
-        if (count_result.count or 0) >= MAX_TEMPLATES_PER_USER:
-            raise ValueError(f"템플릿은 최대 {MAX_TEMPLATES_PER_USER}개까지 저장할 수 있습니다.")
+        def operation():
+            # 사용자당 최대 개수 제한
+            count_result = (
+                supabase.table('ie_prompt_templates')
+                .select('id', count='exact')
+                .eq('user_id', user_id)
+                .execute()
+            )
+            if (count_result.count or 0) >= MAX_TEMPLATES_PER_USER:
+                raise ValueError(f"템플릿은 최대 {MAX_TEMPLATES_PER_USER}개까지 저장할 수 있습니다.")
 
-        result = (
-            supabase.table('ie_prompt_templates')
-            .insert({
-                'user_id': user_id,
-                'name': data['name'],
-                'description': data.get('description', ''),
-                'prompt_text': data['prompt_text'],
-                'style_base': data.get('style_base', 'blog_seo'),
-                'is_public': bool(data.get('is_public', False)),
-                'usage_count': 0,
-            })
-            .execute()
-        )
-        return _format_template(result.data[0], user_id) if result.data else None
+            result = (
+                supabase.table('ie_prompt_templates')
+                .insert({
+                    'user_id': user_id,
+                    'name': data['name'],
+                    'description': data.get('description', ''),
+                    'prompt_text': data['prompt_text'],
+                    'style_base': data.get('style_base', 'blog_seo'),
+                    'is_public': bool(data.get('is_public', False)),
+                    'usage_count': 0,
+                })
+                .execute()
+            )
+            return _format_template(result.data[0], user_id) if result.data else None
 
-    return _db_op('create_template', None, operation)
+        return _db_op('create_template', None, operation)
+    except Exception as e:
+        logger.error("create_template 실패: %s", e, exc_info=True)
+        return {}
 
 
 def update_template(template_id: str, user_id: str, data: dict) -> dict | None:
@@ -176,40 +191,44 @@ def update_template(template_id: str, user_id: str, data: dict) -> dict | None:
     if not is_supabase_enabled():
         return None
 
-    supabase = get_supabase()
-    if not supabase:
-        return None
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return None
 
-    def operation():
-        # 소유자 확인
-        check = (
-            supabase.table('ie_prompt_templates')
-            .select('id')
-            .eq('id', template_id)
-            .eq('user_id', user_id)
-            .limit(1)
-            .execute()
-        )
-        if not check.data:
-            return None  # 없거나 권한 없음
+        def operation():
+            # 소유자 확인
+            check = (
+                supabase.table('ie_prompt_templates')
+                .select('id')
+                .eq('id', template_id)
+                .eq('user_id', user_id)
+                .limit(1)
+                .execute()
+            )
+            if not check.data:
+                return None  # 없거나 권한 없음
 
-        update_data = {}
-        for field in ('name', 'description', 'prompt_text', 'style_base'):
-            if field in data:
-                update_data[field] = data[field]
-        if 'is_public' in data:
-            update_data['is_public'] = bool(data['is_public'])
+            update_data = {}
+            for field in ('name', 'description', 'prompt_text', 'style_base'):
+                if field in data:
+                    update_data[field] = data[field]
+            if 'is_public' in data:
+                update_data['is_public'] = bool(data['is_public'])
 
-        result = (
-            supabase.table('ie_prompt_templates')
-            .update(update_data)
-            .eq('id', template_id)
-            .eq('user_id', user_id)
-            .execute()
-        )
-        return _format_template(result.data[0], user_id) if result.data else None
+            result = (
+                supabase.table('ie_prompt_templates')
+                .update(update_data)
+                .eq('id', template_id)
+                .eq('user_id', user_id)
+                .execute()
+            )
+            return _format_template(result.data[0], user_id) if result.data else None
 
-    return _db_op('update_template', None, operation)
+        return _db_op('update_template', None, operation)
+    except Exception as e:
+        logger.error("update_template 실패: %s", e, exc_info=True)
+        return {}
 
 
 def delete_template(template_id: str, user_id: str) -> bool:
@@ -217,21 +236,25 @@ def delete_template(template_id: str, user_id: str) -> bool:
     if not is_supabase_enabled():
         return False
 
-    supabase = get_supabase()
-    if not supabase:
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            result = (
+                supabase.table('ie_prompt_templates')
+                .delete()
+                .eq('id', template_id)
+                .eq('user_id', user_id)
+                .execute()
+            )
+            return bool(result.data)
+
+        return _db_op('delete_template', False, operation)
+    except Exception as e:
+        logger.error("delete_template 실패: %s", e, exc_info=True)
         return False
-
-    def operation():
-        result = (
-            supabase.table('ie_prompt_templates')
-            .delete()
-            .eq('id', template_id)
-            .eq('user_id', user_id)
-            .execute()
-        )
-        return bool(result.data)
-
-    return _db_op('delete_template', False, operation)
 
 
 def increment_usage(template_id: str) -> bool:
@@ -239,15 +262,19 @@ def increment_usage(template_id: str) -> bool:
     if not is_supabase_enabled():
         return False
 
-    supabase = get_supabase()
-    if not supabase:
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            supabase.rpc('increment_template_usage', {'p_template_id': template_id}).execute()
+            return True
+
+        return _db_op('increment_usage', False, operation)
+    except Exception as e:
+        logger.error("increment_usage 실패: %s", e, exc_info=True)
         return False
-
-    def operation():
-        supabase.rpc('increment_template_usage', {'p_template_id': template_id}).execute()
-        return True
-
-    return _db_op('increment_usage', False, operation)
 
 
 # =============================================

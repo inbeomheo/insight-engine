@@ -5,6 +5,9 @@ AI 프롬프트에 자동 주입하는 기능을 담당합니다.
 """
 from services.data.supabase_service import get_supabase, is_supabase_enabled
 from services.core.logging_config import supabase_logger as logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 스타일 ID → 한국어 레이블 매핑
 STYLE_LABELS = {
@@ -74,34 +77,38 @@ def get_profile(user_id: str) -> dict:
     if not is_supabase_enabled():
         return dict(DEFAULT_PROFILE)
 
-    supabase = get_supabase()
-    if not supabase:
-        return dict(DEFAULT_PROFILE)
-
-    def operation():
-        result = (
-            supabase.table('ie_style_profiles')
-            .select('*')
-            .eq('user_id', user_id)
-            .limit(1)
-            .execute()
-        )
-        if not result.data:
+    try:
+        supabase = get_supabase()
+        if not supabase:
             return dict(DEFAULT_PROFILE)
 
-        row = result.data[0]
-        return {
-            'preferred_styles': row.get('preferred_styles') or [],
-            'preferred_length': row.get('preferred_length') or 'medium',
-            'preferred_writing_style': row.get('preferred_writing_style') or 'conversational',
-            'tone_keywords': row.get('tone_keywords') or [],
-            'avoid_keywords': row.get('avoid_keywords') or [],
-            'custom_instructions': row.get('custom_instructions') or '',
-            'style_memory_enabled': row.get('style_memory_enabled', True),
-            'generation_count': row.get('generation_count') or 0,
-        }
+        def operation():
+            result = (
+                supabase.table('ie_style_profiles')
+                .select('*')
+                .eq('user_id', user_id)
+                .limit(1)
+                .execute()
+            )
+            if not result.data:
+                return dict(DEFAULT_PROFILE)
 
-    return _db_op('get_profile', dict(DEFAULT_PROFILE), operation)
+            row = result.data[0]
+            return {
+                'preferred_styles': row.get('preferred_styles') or [],
+                'preferred_length': row.get('preferred_length') or 'medium',
+                'preferred_writing_style': row.get('preferred_writing_style') or 'conversational',
+                'tone_keywords': row.get('tone_keywords') or [],
+                'avoid_keywords': row.get('avoid_keywords') or [],
+                'custom_instructions': row.get('custom_instructions') or '',
+                'style_memory_enabled': row.get('style_memory_enabled', True),
+                'generation_count': row.get('generation_count') or 0,
+            }
+
+        return _db_op('get_profile', dict(DEFAULT_PROFILE), operation)
+    except Exception as e:
+        logger.error("get_profile 실패: %s", e, exc_info=True)
+        return {}
 
 
 def _build_update_data(row: dict, style_id: str, length: str, writing_style: str) -> dict:
@@ -139,32 +146,36 @@ def update_profile(user_id: str, generation_params: dict) -> None:
         user_id: 업데이트할 사용자 ID
         generation_params: 생성에 사용된 파라미터
     """
-    if not is_supabase_enabled():
-        return
+    try:
+        if not is_supabase_enabled():
+            return
 
-    supabase = get_supabase()
-    if not supabase:
-        return
+        supabase = get_supabase()
+        if not supabase:
+            return
 
-    style_id = generation_params.get('style', '')
-    modifiers = generation_params.get('modifiers') or {}
-    length = modifiers.get('length', 'medium')
-    writing_style = modifiers.get('writing_style', 'conversational')
+        style_id = generation_params.get('style', '')
+        modifiers = generation_params.get('modifiers') or {}
+        length = modifiers.get('length', 'medium')
+        writing_style = modifiers.get('writing_style', 'conversational')
 
-    def operation():
-        result = (
-            supabase.table('ie_style_profiles').select('*')
-            .eq('user_id', user_id).limit(1).execute()
-        )
-        if result.data:
-            data = _build_update_data(result.data[0], style_id, length, writing_style)
-            supabase.table('ie_style_profiles').update(data).eq('user_id', user_id).execute()
-        else:
-            supabase.table('ie_style_profiles').insert(
-                _build_new_profile_data(user_id, style_id, length, writing_style)
-            ).execute()
+        def operation():
+            result = (
+                supabase.table('ie_style_profiles').select('*')
+                .eq('user_id', user_id).limit(1).execute()
+            )
+            if result.data:
+                data = _build_update_data(result.data[0], style_id, length, writing_style)
+                supabase.table('ie_style_profiles').update(data).eq('user_id', user_id).execute()
+            else:
+                supabase.table('ie_style_profiles').insert(
+                    _build_new_profile_data(user_id, style_id, length, writing_style)
+                ).execute()
 
-    _db_op('update_profile', None, operation)
+        _db_op('update_profile', None, operation)
+    except Exception as e:
+        logger.error("update_profile 실패: %s", e, exc_info=True)
+        return None
 
 
 def _sanitize_preferences(preferences: dict) -> dict:
@@ -196,28 +207,32 @@ def save_user_preferences(user_id: str, preferences: dict) -> bool:
     if not is_supabase_enabled():
         return False
 
-    supabase = get_supabase()
-    if not supabase:
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        update_data = _sanitize_preferences(preferences)
+        if not update_data:
+            return False
+
+        def operation():
+            check = (
+                supabase.table('ie_style_profiles').select('user_id')
+                .eq('user_id', user_id).limit(1).execute()
+            )
+            if check.data:
+                supabase.table('ie_style_profiles').update(update_data).eq('user_id', user_id).execute()
+            else:
+                supabase.table('ie_style_profiles').insert({
+                    **DEFAULT_PROFILE, 'user_id': user_id, **update_data,
+                }).execute()
+            return True
+
+        return _db_op('save_user_preferences', False, operation) or False
+    except Exception as e:
+        logger.error("save_user_preferences 실패: %s", e, exc_info=True)
         return False
-
-    update_data = _sanitize_preferences(preferences)
-    if not update_data:
-        return False
-
-    def operation():
-        check = (
-            supabase.table('ie_style_profiles').select('user_id')
-            .eq('user_id', user_id).limit(1).execute()
-        )
-        if check.data:
-            supabase.table('ie_style_profiles').update(update_data).eq('user_id', user_id).execute()
-        else:
-            supabase.table('ie_style_profiles').insert({
-                **DEFAULT_PROFILE, 'user_id': user_id, **update_data,
-            }).execute()
-        return True
-
-    return _db_op('save_user_preferences', False, operation) or False
 
 
 def reset_profile(user_id: str) -> bool:
@@ -232,25 +247,29 @@ def reset_profile(user_id: str) -> bool:
     if not is_supabase_enabled():
         return False
 
-    supabase = get_supabase()
-    if not supabase:
+    try:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            supabase.table('ie_style_profiles').upsert({
+                'user_id': user_id,
+                'preferred_styles': [],
+                'preferred_length': 'medium',
+                'preferred_writing_style': 'conversational',
+                'tone_keywords': [],
+                'avoid_keywords': [],
+                'custom_instructions': '',
+                'style_memory_enabled': True,
+                'generation_count': 0,
+            }).execute()
+            return True
+
+        return _db_op('reset_profile', False, operation) or False
+    except Exception as e:
+        logger.error("reset_profile 실패: %s", e, exc_info=True)
         return False
-
-    def operation():
-        supabase.table('ie_style_profiles').upsert({
-            'user_id': user_id,
-            'preferred_styles': [],
-            'preferred_length': 'medium',
-            'preferred_writing_style': 'conversational',
-            'tone_keywords': [],
-            'avoid_keywords': [],
-            'custom_instructions': '',
-            'style_memory_enabled': True,
-            'generation_count': 0,
-        }).execute()
-        return True
-
-    return _db_op('reset_profile', False, operation) or False
 
 
 def build_style_context(profile: dict) -> str:
@@ -267,48 +286,52 @@ def build_style_context(profile: dict) -> str:
     if not profile:
         return ''
 
-    if not profile.get('style_memory_enabled', True):
+    try:
+        if not profile.get('style_memory_enabled', True):
+            return ''
+
+        lines = []
+
+        # 자주 사용하는 스타일 (상위 3개)
+        preferred_styles = profile.get('preferred_styles') or []
+        if preferred_styles:
+            top_styles = sorted(preferred_styles, key=lambda x: x.get('count', 0), reverse=True)[:3]
+            style_names = [STYLE_LABELS.get(s['style_id'], s['style_id']) for s in top_styles if 'style_id' in s]
+            if style_names:
+                lines.append(f"- 자주 사용 스타일: {', '.join(style_names)}")
+
+        # 선호 길이
+        preferred_length = profile.get('preferred_length', 'medium')
+        length_label = LENGTH_LABELS.get(preferred_length, preferred_length)
+        lines.append(f"- 선호 글 길이: {length_label}")
+
+        # 선호 문체
+        preferred_ws = profile.get('preferred_writing_style', 'conversational')
+        ws_label = WRITING_STYLE_LABELS.get(preferred_ws, preferred_ws)
+        lines.append(f"- 선호 문체: {ws_label}")
+
+        # 선호 톤 키워드
+        tone_keywords = profile.get('tone_keywords') or []
+        if tone_keywords:
+            lines.append(f"- 선호 톤: {', '.join(tone_keywords[:5])}")
+
+        # 피하고 싶은 표현
+        avoid_keywords = profile.get('avoid_keywords') or []
+        if avoid_keywords:
+            lines.append(f"- 피하는 표현: {', '.join(avoid_keywords[:10])}")
+
+        # 커스텀 지시사항
+        custom_instructions = (profile.get('custom_instructions') or '').strip()
+        if custom_instructions:
+            lines.append(f"- 추가 지시: {custom_instructions}")
+
+        if not lines:
+            return ''
+
+        return '[사용자 선호 스타일]\n' + '\n'.join(lines)
+    except Exception as e:
+        logger.error("build_style_context 실패: %s", e, exc_info=True)
         return ''
-
-    lines = []
-
-    # 자주 사용하는 스타일 (상위 3개)
-    preferred_styles = profile.get('preferred_styles') or []
-    if preferred_styles:
-        top_styles = sorted(preferred_styles, key=lambda x: x.get('count', 0), reverse=True)[:3]
-        style_names = [STYLE_LABELS.get(s['style_id'], s['style_id']) for s in top_styles if 'style_id' in s]
-        if style_names:
-            lines.append(f"- 자주 사용 스타일: {', '.join(style_names)}")
-
-    # 선호 길이
-    preferred_length = profile.get('preferred_length', 'medium')
-    length_label = LENGTH_LABELS.get(preferred_length, preferred_length)
-    lines.append(f"- 선호 글 길이: {length_label}")
-
-    # 선호 문체
-    preferred_ws = profile.get('preferred_writing_style', 'conversational')
-    ws_label = WRITING_STYLE_LABELS.get(preferred_ws, preferred_ws)
-    lines.append(f"- 선호 문체: {ws_label}")
-
-    # 선호 톤 키워드
-    tone_keywords = profile.get('tone_keywords') or []
-    if tone_keywords:
-        lines.append(f"- 선호 톤: {', '.join(tone_keywords[:5])}")
-
-    # 피하고 싶은 표현
-    avoid_keywords = profile.get('avoid_keywords') or []
-    if avoid_keywords:
-        lines.append(f"- 피하는 표현: {', '.join(avoid_keywords[:10])}")
-
-    # 커스텀 지시사항
-    custom_instructions = (profile.get('custom_instructions') or '').strip()
-    if custom_instructions:
-        lines.append(f"- 추가 지시: {custom_instructions}")
-
-    if not lines:
-        return ''
-
-    return '[사용자 선호 스타일]\n' + '\n'.join(lines)
 
 
 # =============================================

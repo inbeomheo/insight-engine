@@ -9,6 +9,9 @@ from __future__ import annotations
 from typing import Dict, List
 
 from bs4 import BeautifulSoup
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def parse_bookmarks(html_content: str) -> List[Dict]:
@@ -29,16 +32,20 @@ def parse_bookmarks(html_content: str) -> List[Dict]:
     if not html_content or not html_content.strip():
         raise ValueError("빈 파일입니다.")
 
-    soup = BeautifulSoup(html_content, 'html.parser')
-    links = soup.find_all('a')
-    if not links:
-        raise ValueError("북마크를 찾을 수 없습니다. Chrome 또는 Firefox에서 내보낸 HTML 파일인지 확인해주세요.")
+    try:
+        soup = BeautifulSoup(html_content, 'html.parser')
+        links = soup.find_all('a')
+        if not links:
+            raise ValueError("북마크를 찾을 수 없습니다. Chrome 또는 Firefox에서 내보낸 HTML 파일인지 확인해주세요.")
 
-    bookmarks = _extract_bookmark_links(links)
-    if not bookmarks:
-        raise ValueError("유효한 북마크 URL을 찾을 수 없습니다.")
+        bookmarks = _extract_bookmark_links(links)
+        if not bookmarks:
+            raise ValueError("유효한 북마크 URL을 찾을 수 없습니다.")
 
-    return bookmarks
+        return bookmarks
+    except Exception as e:
+        logger.error("parse_bookmarks 실패: %s", e, exc_info=True)
+        return []
 
 
 def _extract_bookmark_links(links) -> List[Dict]:

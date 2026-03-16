@@ -5,6 +5,9 @@
 import time
 from dataclasses import dataclass, field, asdict
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -42,29 +45,33 @@ class ActivityFeedService:
         metadata: dict | None = None,
     ) -> ActivityItem:
         """활동 기록 추가"""
-        self._counter += 1
-        item = ActivityItem(
-            id=f"act_{self._counter}_{int(time.time())}",
-            workspace_id=workspace_id,
-            user_id=user_id,
-            user_email=user_email,
-            action=action,
-            target_title=target_title,
-            target_id=target_id,
-            metadata=metadata or {},
-        )
+        try:
+            self._counter += 1
+            item = ActivityItem(
+                id=f"act_{self._counter}_{int(time.time())}",
+                workspace_id=workspace_id,
+                user_id=user_id,
+                user_email=user_email,
+                action=action,
+                target_title=target_title,
+                target_id=target_id,
+                metadata=metadata or {},
+            )
 
-        if workspace_id not in self._feeds:
-            self._feeds[workspace_id] = []
+            if workspace_id not in self._feeds:
+                self._feeds[workspace_id] = []
 
-        feed = self._feeds[workspace_id]
-        feed.insert(0, item)
+            feed = self._feeds[workspace_id]
+            feed.insert(0, item)
 
-        # 최대 개수 제한
-        if len(feed) > self.MAX_ITEMS_PER_WORKSPACE:
-            self._feeds[workspace_id] = feed[:self.MAX_ITEMS_PER_WORKSPACE]
+            # 최대 개수 제한
+            if len(feed) > self.MAX_ITEMS_PER_WORKSPACE:
+                self._feeds[workspace_id] = feed[:self.MAX_ITEMS_PER_WORKSPACE]
 
-        return item
+            return item
+        except Exception as e:
+            logger.error("record 실패: %s", e, exc_info=True)
+            return None
 
     def get_feed(
         self,
@@ -73,9 +80,13 @@ class ActivityFeedService:
         offset: int = 0,
     ) -> list[dict]:
         """워크스페이스 활동 피드 조회"""
-        feed = self._feeds.get(workspace_id, [])
-        items = feed[offset:offset + limit]
-        return [asdict(item) for item in items]
+        try:
+            feed = self._feeds.get(workspace_id, [])
+            items = feed[offset:offset + limit]
+            return [asdict(item) for item in items]
+        except Exception as e:
+            logger.error("get_feed 실패: %s", e, exc_info=True)
+            return []
 
     def get_user_feed(
         self,
@@ -83,18 +94,26 @@ class ActivityFeedService:
         limit: int = 30,
     ) -> list[dict]:
         """특정 사용자의 활동만 조회"""
-        results = []
-        for feed in self._feeds.values():
-            for item in feed:
-                if item.user_id == user_id:
-                    results.append(asdict(item))
-                    if len(results) >= limit:
-                        return results
-        return results
+        try:
+            results = []
+            for feed in self._feeds.values():
+                for item in feed:
+                    if item.user_id == user_id:
+                        results.append(asdict(item))
+                        if len(results) >= limit:
+                            return results
+            return results
+        except Exception as e:
+            logger.error("get_user_feed 실패: %s", e, exc_info=True)
+            return []
 
     def clear_workspace(self, workspace_id: str) -> None:
         """워크스페이스 피드 초기화"""
-        self._feeds.pop(workspace_id, None)
+        try:
+            self._feeds.pop(workspace_id, None)
+        except Exception as e:
+            logger.error("clear_workspace 실패: %s", e, exc_info=True)
+            return None
 
 
 # 싱글턴 인스턴스

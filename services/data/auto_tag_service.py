@@ -8,6 +8,9 @@ import math
 import re
 from collections import Counter
 from typing import Dict, List
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 한국어 불용어 (조사, 접미사, 일반적인 단어)
 _STOPWORDS_KO = frozenset([
@@ -150,11 +153,15 @@ def generate_tags(content: str, max_tags: int = 10) -> Dict:
     if not content or not content.strip():
         return {"tags": [], "category": "일반"}
 
-    max_tags = max(5, min(max_tags, 10))
+    try:
+        max_tags = max(5, min(max_tags, 10))
 
-    tokens = _tokenize(content)
-    tags = _compute_tfidf(tokens, top_n=max_tags)
-    text_lower = content.lower()
-    category = _classify_category(tags, text_lower)
+        tokens = _tokenize(content)
+        tags = _compute_tfidf(tokens, top_n=max_tags)
+        text_lower = content.lower()
+        category = _classify_category(tags, text_lower)
 
-    return {"tags": tags, "category": category}
+        return {"tags": tags, "category": category}
+    except Exception as e:
+        logger.error("generate_tags 실패: %s", e, exc_info=True)
+        return {}
