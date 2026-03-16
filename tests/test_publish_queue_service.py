@@ -96,6 +96,33 @@ class TestPublishQueueService(unittest.TestCase):
         self.assertNotIn('content', item)
         self.assertIn('title', item)
 
+    def test_get_status_summary(self):
+        """상태별 요약 통계"""
+        self.svc.enqueue('c1', '제목1', '내용1', 'p1', 'u1')
+        self.svc.enqueue('c2', '제목2', '내용2', 'p1', 'u1')
+        self.svc._queue[1]['status'] = 'failed'
+        summary = self.svc.get_status_summary()
+        self.assertEqual(summary['queued'], 1)
+        self.assertEqual(summary['failed'], 1)
+        self.assertEqual(summary['total'], 2)
+        self.assertEqual(summary['success'], 0)
+        self.assertEqual(summary['publishing'], 0)
+
+    def test_get_status_summary_filtered_by_user(self):
+        """사용자별 상태 요약"""
+        self.svc.enqueue('c1', '제목1', '내용1', 'p1', 'u1')
+        self.svc.enqueue('c2', '제목2', '내용2', 'p1', 'u2')
+        summary = self.svc.get_status_summary(user_id='u1')
+        self.assertEqual(summary['total'], 1)
+        self.assertEqual(summary['queued'], 1)
+
+    def test_get_status_summary_empty(self):
+        """빈 큐 상태 요약"""
+        summary = self.svc.get_status_summary()
+        self.assertEqual(summary['total'], 0)
+        for state in PublishQueueService.STATES:
+            self.assertEqual(summary[state], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

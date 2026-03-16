@@ -170,6 +170,28 @@ class PublishQueueService:
             logger.error("get_queue_status 실패: %s", e, exc_info=True)
             return []
 
+    def get_status_summary(self, user_id: str = None) -> dict:
+        """큐 항목을 상태별로 집계한 요약을 반환합니다.
+
+        Returns:
+            {'queued': int, 'publishing': int, 'success': int, 'failed': int, 'total': int}
+        """
+        try:
+            with self._lock:
+                items = self._queue
+                if user_id:
+                    items = [i for i in items if i['user_id'] == user_id]
+                summary = {s: 0 for s in self.STATES}
+                for item in items:
+                    status = item.get('status', 'queued')
+                    if status in summary:
+                        summary[status] += 1
+                summary['total'] = len(items)
+                return summary
+        except Exception as e:
+            logger.error("get_status_summary 실패: %s", e, exc_info=True)
+            return {s: 0 for s in self.STATES + ['total']}
+
     def cancel_item(self, item_id: str) -> dict:
         """큐 항목 취소 — queued 상태만 취소 가능"""
         try:

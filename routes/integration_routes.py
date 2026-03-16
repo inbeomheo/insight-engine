@@ -295,7 +295,8 @@ def publish_queue_list():
 
     user_id = getattr(g, 'user_id', None)
     items = publish_queue_service.get_queue_status(user_id=user_id)
-    return jsonify({'items': items})
+    summary = publish_queue_service.get_status_summary(user_id=user_id)
+    return jsonify({'items': items, 'status_summary': summary})
 
 
 @blog_bp.route('/api/publish-queue', methods=['POST'])
