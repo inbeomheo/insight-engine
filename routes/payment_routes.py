@@ -616,3 +616,214 @@ def get_team_member_usage(team_id):
             e,
             '[서버 오류] 팀 멤버 사용량을 조회할 수 없습니다.'
         )
+
+
+# =============================================
+# Paddle 결제 API (F4-16)
+# =============================================
+
+@blog_bp.route('/api/paddle/status', methods=['GET'])
+@require_auth
+def paddle_status():
+    """Paddle 설정 상태 조회"""
+    from services.payment.paddle_service import paddle_service
+    return jsonify({'configured': paddle_service.is_configured})
+
+
+@blog_bp.route('/api/paddle/webhook', methods=['POST'])
+def paddle_webhook():
+    """Paddle 웹훅 수신 (서명 검증 포함)"""
+    from services.payment.paddle_service import paddle_service
+
+    payload = request.get_data()
+    signature = request.headers.get('Paddle-Signature', '')
+
+    if not paddle_service.verify_webhook(payload, signature):
+        return error_response('[인증 실패] Paddle 웹훅 서명 검증에 실패했습니다.', 400)
+
+    data = request.get_json(silent=True) or {}
+    event_type = data.get('event_type', '')
+    event_data = data.get('data', {})
+
+    try:
+        result = paddle_service.handle_webhook(event_type, event_data)
+        return jsonify(result)
+    except Exception as e:
+        return _payment_exception_response(
+            'Paddle 웹훅 처리 오류',
+            e,
+            '[결제 오류] Paddle 웹훅 처리에 실패했습니다.'
+        )
+
+
+@blog_bp.route('/api/paddle/subscription/<subscription_id>', methods=['GET'])
+@require_auth
+def paddle_get_subscription(subscription_id):
+    """Paddle 구독 정보 조회"""
+    from services.payment.paddle_service import paddle_service
+
+    sub = paddle_service.get_subscription(subscription_id)
+    if not sub:
+        return error_response('구독 정보를 찾을 수 없습니다.', 404)
+    return jsonify(sub)
+
+
+# =============================================
+# 하이브리드 과금 API (F4-11)
+# =============================================
+
+@blog_bp.route('/api/billing/setup', methods=['POST'])
+@require_auth
+def billing_setup():
+    """하이브리드 과금 계정 설정"""
+    from services.payment.hybrid_billing_service import hybrid_billing_service
+
+    data = request.get_json(silent=True) or {}
+    base_credits = data.get('base_credits')
+    overage_rate = data.get('overage_rate')
+
+    if base_credits is None or overage_rate is None:
+        return error_response('base_credits와 overage_rate가 필요합니다.')
+
+    try:
+        result = hybrid_billing_service.setup_account(
+            g.user_id,
+            int(base_credits),
+            float(overage_rate),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return _payment_exception_response(
+            '과금 계정 설정 오류',
+            e,
+            '[서버 오류] 과금 계정 설정에 실패했습니다.'
+        )
+
+
+@blog_bp.route('/api/billing/consume', methods=['POST'])
+@require_auth
+def billing_consume():
+    """크레딧 사용 (기본 크레딧 우선 차감)"""
+    from services.payment.hybrid_billing_service import hybrid_billing_service
+
+    data = request.get_json(silent=True) or {}
+    amount = int(data.get('amount', 1))
+
+    result = hybrid_billing_service.consume(g.user_id, amount)
+    if 'error' in result:
+        return _safe_payment_error_response(
+            result['error'],
+            '[서버 오류] 크레딧 사용에 실패했습니다.',
+            400
+        )
+    return jsonify(result)
+
+
+@blog_bp.route('/api/billing/summary', methods=['GET'])
+@require_auth
+def billing_summary():
+    """과금 요약 조회"""
+    from services.payment.hybrid_billing_service import hybrid_billing_service
+
+    result = hybrid_billing_service.get_billing_summary(g.user_id)
+    if 'error' in result:
+        return _safe_payment_error_response(
+            result['error'],
+            '[서버 오류] 과금 정보를 조회할 수 없습니다.',
+            404
+        )
+    return jsonify(result)
+
+
+@blog_bp.route('/api/billing/reset-monthly', methods=['POST'])
+@require_auth
+def billing_reset_monthly():
+    """월간 과금 초기화"""
+    from services.payment.hybrid_billing_service import hybrid_billing_service
+
+    result = hybrid_billing_service.reset_monthly(g.user_id)
+    if 'error' in result:
+        return _safe_payment_error_response(
+            result['error'],
+            '[서버 오류] 월간 초기화에 실패했습니다.',
+            404
+        )
+    return jsonify(result)
+
+
+# =============================================
+# 암호화폐 결제 API (F4-17)
+# =============================================
+
+@blog_bp.route('/api/crypto/charge', methods=['POST'])
+@require_auth
+def crypto_create_charge():
+    """암호화폐 결제 요청 생성"""
+    from services.payment.crypto_service import crypto_service
+
+    if not crypto_service.is_configured:
+        return error_response('Coinbase Commerce가 설정되지 않았습니다.', 503)
+
+    data = request.get_json(silent=True) or {}
+    amount = data.get('amount')
+    if not amount or float(amount) <= 0:
+        return error_response('유효한 amount가 필요합니다.')
+
+    try:
+        result = crypto_service.create_charge(
+            user_id=g.user_id,
+            amount=float(amount),
+            currency=data.get('currency', 'USD'),
+            description=data.get('description', ''),
+        )
+        if 'error' in result:
+            return _safe_payment_error_response(
+                result['error'],
+                '[결제 오류] 암호화폐 결제 요청 생성에 실패했습니다.',
+                500
+            )
+        return jsonify(result), 201
+    except Exception as e:
+        return _payment_exception_response(
+            '암호화폐 결제 요청 생성 오류',
+            e,
+            '[결제 오류] 암호화폐 결제 요청 생성에 실패했습니다.'
+        )
+
+
+@blog_bp.route('/api/crypto/charge/<charge_id>', methods=['GET'])
+@require_auth
+def crypto_get_charge(charge_id):
+    """암호화폐 결제 요청 단건 조회"""
+    from services.payment.crypto_service import crypto_service
+
+    charge = crypto_service.get_charge(charge_id)
+    if not charge:
+        return error_response('결제 요청을 찾을 수 없습니다.', 404)
+    return jsonify(charge)
+
+
+@blog_bp.route('/api/crypto/webhook', methods=['POST'])
+def crypto_webhook():
+    """Coinbase Commerce 웹훅 수신"""
+    from services.payment.crypto_service import crypto_service
+
+    payload = request.get_data()
+    signature = request.headers.get('X-CC-Webhook-Signature', '')
+
+    if not crypto_service.verify_webhook(payload, signature):
+        return error_response('웹훅 서명 검증 실패', 401)
+
+    data = request.get_json(silent=True) or {}
+    event_type = data.get('type', '')
+    event_data = data.get('data', {})
+
+    try:
+        result = crypto_service.handle_webhook(event_type, event_data)
+        return jsonify(result)
+    except Exception as e:
+        return _payment_exception_response(
+            '암호화폐 웹훅 처리 오류',
+            e,
+            '[결제 오류] 웹훅 처리 중 문제가 발생했습니다.'
+        )
