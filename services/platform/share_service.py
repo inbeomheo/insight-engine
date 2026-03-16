@@ -105,10 +105,20 @@ def list_shares(item_id: str = '', user_id: str = '') -> list[dict]:
 
 
 def _hash_password(password: str) -> str:
-    """간단한 비밀번호 해시 (실 운영 시 bcrypt 등으로 교체 필요)."""
+    """비밀번호 해시 (salt + SHA256). 형식: salt$hash"""
     import hashlib
-    return hashlib.sha256(password.encode()).hexdigest()
+    salt = secrets.token_hex(16)
+    h = hashlib.sha256((salt + password).encode()).hexdigest()
+    return f"{salt}${h}"
 
 
-def _verify_password(password: str, hashed: str) -> bool:
-    return _hash_password(password) == hashed
+def _verify_password(password: str, stored: str) -> bool:
+    """타이밍 공격 방지를 위한 상수 시간 비교."""
+    import hashlib
+    import hmac
+    parts = stored.split('$', 1)
+    if len(parts) != 2:
+        return False
+    salt, expected_hash = parts
+    actual_hash = hashlib.sha256((salt + password).encode()).hexdigest()
+    return hmac.compare_digest(actual_hash, expected_hash)
