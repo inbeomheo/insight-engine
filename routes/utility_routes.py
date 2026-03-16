@@ -3512,3 +3512,28 @@ def prompts_info():
         'forbidden_expressions': FORBIDDEN_EXPRESSIONS if isinstance(FORBIDDEN_EXPRESSIONS, list) else [],
         'total_styles': len(style_info),
     })
+
+
+# ── 스케줄러 상태 조회 ──────────────────────────────────────
+
+
+@blog_bp.route('/api/scheduler/status', methods=['GET'])
+@require_auth
+def scheduler_status():
+    """스케줄러 실행 상태 및 등록된 잡 목록을 조회합니다."""
+    from services.data.scheduler_worker import scheduler
+
+    jobs = []
+    for job in scheduler.get_jobs():
+        jobs.append({
+            'id': job.id,
+            'name': job.name,
+            'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
+            'trigger': str(job.trigger),
+        })
+
+    return jsonify({
+        'running': scheduler.running,
+        'jobs': jobs,
+        'total_jobs': len(jobs),
+    })
