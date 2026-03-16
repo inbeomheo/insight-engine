@@ -6,10 +6,9 @@ from unittest.mock import patch, MagicMock
 class TestFusionService(unittest.TestCase):
 
     @patch('services.core.fusion_service.ai_service')
-    @patch('services.core.fusion_service.comment_analyzer_service')
     @patch('services.core.fusion_service.web_research_service')
     @patch('services.core.fusion_service.content_service')
-    def test_generate_fusion_full(self, mock_cs, mock_wr, mock_ca, mock_ai):
+    def test_generate_fusion_full(self, mock_cs, mock_wr, mock_ai):
         mock_cs.get_video_id.return_value = 'vid1'
         mock_cs.get_transcript.return_value = {'text': '자막1', 'source': 'api'}
         mock_cs.get_top_comments.return_value = ['댓글1', '댓글2']
@@ -19,11 +18,6 @@ class TestFusionService(unittest.TestCase):
             'content': '# 퓨전 본문\n내용',
             'html': '<h1>퓨전 본문</h1>',
             'usage': {'prompt_tokens': 100, 'completion_tokens': 200, 'total_tokens': 300}
-        }
-        mock_ca.analyze_comments.return_value = {
-            'insights': ['인사이트1'], 'questions': ['질문1'],
-            'fact_checks': [], 'sentiments': ['감상1'],
-            'usage': {'total_tokens': 50}
         }
         mock_wr.research_topic.return_value = [
             {'title': 'Art1', 'url': 'http://ex.com', 'summary': '요약1'}

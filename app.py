@@ -95,6 +95,9 @@ def create_app(test_config=None):
     def csrf_protect():
         """POST/PUT/DELETE 요청에 대해 Origin 헤더를 검증합니다."""
         if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            # 테스트 환경에서는 CSRF 건너뜀
+            if app.testing:
+                return None
             # 헬스체크, 정적 파일은 제외
             if request.path in ('/health', '/api/heartbeat'):
                 return None

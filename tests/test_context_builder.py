@@ -105,9 +105,16 @@ class TestRAGContextBuilder(unittest.TestCase):
     def test_apply_crag(self):
         """CRAG 적용 실패 시 원본 청크 반환"""
         chunks = [{"text": "c1", "metadata": {}}]
-        result = self.builder._apply_crag("q", chunks, "u", 5)
-        # corrective_rag 모듈 import 실패 시 원본 반환
-        self.assertEqual(len(result), 1)
+        # corrective_rag의 corrective_search가 예외를 던지도록 패치
+        import services.rag.corrective_rag as crag_mod
+        original = crag_mod.corrective_search
+        crag_mod.corrective_search = MagicMock(side_effect=Exception("mocked"))
+        try:
+            result = self.builder._apply_crag("q", chunks, "u", 5)
+            # 예외 발생 시 원본 반환
+            self.assertEqual(len(result), 1)
+        finally:
+            crag_mod.corrective_search = original
 
     def test_build_context_with_graph_rag(self):
         """GraphRAG 활성화 시 그래프 검색 결과 포함"""
