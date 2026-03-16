@@ -170,11 +170,23 @@ def generate_multi():
         fail_count = sum(1 for r in results if 'error' in r)
         success_count = len(results) - fail_count
 
+        # 가장 빠른/느린 스타일 식별
+        timed = [r for r in results if 'style_elapsed_time' in r and 'error' not in r]
+        fastest_style = None
+        slowest_style = None
+        if timed:
+            fastest = min(timed, key=lambda r: r['style_elapsed_time'])
+            slowest = max(timed, key=lambda r: r['style_elapsed_time'])
+            fastest_style = {'style': fastest['style'], 'elapsed_time': fastest['style_elapsed_time']}
+            slowest_style = {'style': slowest['style'], 'elapsed_time': slowest['style_elapsed_time']}
+
         return jsonify({
             'success': True,
             'results': results,
             'success_count': success_count,
             'fail_count': fail_count,
+            'fastest_style': fastest_style,
+            'slowest_style': slowest_style,
             'youtube_title': youtube_title,
             'transcript_source': transcript_source,
             'elapsed_time': elapsed_time,
@@ -398,6 +410,7 @@ def rewrite_content():
 def qa_check():
     """콘텐츠 QA 검증을 실행합니다."""
     try:
+        import time as _time
         data = request.get_json(silent=True) or {}
         content = data.get('content', '')
         rules = data.get('rules')
@@ -406,7 +419,9 @@ def qa_check():
             return jsonify({'error': '검증할 콘텐츠가 필요합니다.'}), 400
 
         from services.quality.qa_gate_service import check_quality
+        t0 = _time.monotonic()
         result = check_quality(content, rules)
+        result['check_duration_ms'] = round((_time.monotonic() - t0) * 1000, 1)
         return jsonify(result)
     except Exception as e:
         current_app.logger.error(f"QA check failed: {e}")
