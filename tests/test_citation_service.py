@@ -206,7 +206,17 @@ class TestEnrichContentSkipsExisting(unittest.TestCase):
         """일반 마커는 정상 변환"""
         content = '참조 [02:30] 입니다'
         result = enrich_content_with_links(content, 'dQw4w9WgXcQ')
-        self.assertIn('https://youtube.com/watch?v=abc123&t=150s', result)
+        self.assertIn('https://youtube.com/watch?v=dQw4w9WgXcQ&t=150s', result)
+
+    def test_invalid_video_id_raises(self):
+        """유효하지 않은 video_id는 ValueError 발생"""
+        with self.assertRaises(ValueError):
+            enrich_content_with_links('[01:00] 텍스트', 'short')
+
+    def test_invalid_video_id_html_raises(self):
+        """HTML 변환 시 유효하지 않은 video_id는 ValueError 발생"""
+        with self.assertRaises(ValueError):
+            enrich_html_with_links('<p>[01:00]</p>', '')
 
 
 class TestGetCitationDensityGrade(unittest.TestCase):

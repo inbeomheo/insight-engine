@@ -179,8 +179,7 @@ def purge_expired_cache(max_age_hours: int = 24) -> dict:
     if not os.path.exists(CACHE_DIR):
         return {'purged': 0, 'remaining': 0, 'freed_bytes': 0}
 
-    import time as _time
-    now = _time.time()
+    now = time.time()
     cutoff = now - (max_age_hours * 3600)
     purged = 0
     remaining = 0
@@ -653,7 +652,11 @@ def _detect_auto_caption(ytt_api: YouTubeTranscriptApi, video_id: str) -> bool:
 
 
 def _detect_language_from_text(text: str) -> str:
-    """텍스트 첫 200자를 분석하여 간단한 언어 감지를 수행합니다 (단일 순회)."""
+    """텍스트 첫 200자를 분석하여 간단한 언어 감지를 수행합니다 (단일 순회).
+
+    한글 자모(\u3130-\u318F), 히라가나(\u3040-\u309F), 가타카나(\u30A0-\u30FF),
+    가타카나 반각(\uFF65-\uFF9F) 범위를 포함하여 정확도를 높입니다.
+    """
     if not text:
         return 'unknown'
     sample = text[:200]
@@ -661,9 +664,9 @@ def _detect_language_from_text(text: str) -> str:
     ja_kana_count = 0
     cjk_count = 0
     for c in sample:
-        if '\uac00' <= c <= '\ud7a3':
+        if '\uac00' <= c <= '\ud7a3' or '\u3130' <= c <= '\u318f':
             ko_count += 1
-        elif '\u3040' <= c <= '\u30ff':
+        elif '\u3040' <= c <= '\u309f' or '\u30a0' <= c <= '\u30ff' or '\uff65' <= c <= '\uff9f':
             ja_kana_count += 1
         elif '\u4e00' <= c <= '\u9fff':
             cjk_count += 1
