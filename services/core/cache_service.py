@@ -137,10 +137,14 @@ class AICacheService:
             if row['newest_ts'] is not None:
                 newest_entry = datetime.fromtimestamp(row['newest_ts'], tz=timezone.utc).isoformat()
 
+            count = row['count']
+            avg_entry_size_kb = round(row['total_bytes'] / count / 1024, 2) if count > 0 else 0.0
+
             return {
-                'count': row['count'],
+                'count': count,
                 'total_bytes': row['total_bytes'],
                 'total_mb': round(row['total_bytes'] / (1024 * 1024), 2),
+                'avg_entry_size_kb': avg_entry_size_kb,
                 'max_mb': self.max_size_bytes // (1024 * 1024),
                 'ttl_days': self.ttl_seconds // 86400,
                 'hits': self._hits,

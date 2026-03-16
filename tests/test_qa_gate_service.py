@@ -133,6 +133,31 @@ class TestCheckQuality(unittest.TestCase):
         # error 1개(-25) + warning 1개(-10) = 65
         self.assertEqual(result['score'], 65)
 
+    # ── suggestions ──
+
+    def test_suggestions_in_result(self):
+        """결과에 suggestions 키 존재"""
+        result = check_quality(self._make_content(chars=600, sections=4))
+        self.assertIn('suggestions', result)
+        self.assertIsInstance(result['suggestions'], list)
+
+    def test_suggestions_empty_for_perfect(self):
+        """이슈 없으면 suggestions 비어있음"""
+        result = check_quality(self._make_content(chars=600, sections=4))
+        self.assertEqual(result['suggestions'], [])
+
+    def test_suggestions_generated_for_issues(self):
+        """이슈 있으면 개선 제안 문구 생성"""
+        content = '짧은 글'  # length error + structure warning
+        result = check_quality(content)
+        self.assertGreater(len(result['suggestions']), 0)
+
+    def test_suggestions_max_three(self):
+        """suggestions는 최대 3개"""
+        content = '짧은 글 [빈1]() [빈2]() 이것은 충분히 긴 반복 문장이며 스무자가 넘습니다. 이것은 충분히 긴 반복 문장이며 스무자가 넘습니다. '
+        result = check_quality(content)
+        self.assertLessEqual(len(result['suggestions']), 3)
+
 
 if __name__ == '__main__':
     unittest.main()

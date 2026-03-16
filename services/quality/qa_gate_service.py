@@ -57,6 +57,29 @@ def _check_broken_links(content: str) -> list:
     return []
 
 
+_SUGGESTION_MAP = {
+    'length': '콘텐츠를 보강하여 최소 글자 수 기준을 충족해 주세요.',
+    'structure': '## 또는 ### 헤딩을 추가하여 글의 구조를 개선해 주세요.',
+    'forbidden_words': '금칙어를 동의어 또는 구체적 표현으로 교체해 주세요.',
+    'duplicate': '반복되는 문장을 제거하거나 다른 표현으로 다듬어 주세요.',
+    'broken_links': '빈 링크의 URL을 채우거나 해당 링크를 제거해 주세요.',
+}
+
+
+def _build_suggestions(issues: list) -> list:
+    """이슈 목록에서 최대 3개의 개선 제안 문구를 생성합니다."""
+    seen = set()
+    suggestions = []
+    for issue in issues:
+        t = issue.get('type', '')
+        if t not in seen and t in _SUGGESTION_MAP:
+            seen.add(t)
+            suggestions.append(_SUGGESTION_MAP[t])
+        if len(suggestions) >= 3:
+            break
+    return suggestions
+
+
 def check_quality(content: str, rules: dict = None) -> dict:
     """콘텐츠 품질을 검증합니다.
 
@@ -80,12 +103,14 @@ def check_quality(content: str, rules: dict = None) -> dict:
         warnings = [i for i in issues if i['severity'] == 'warning']
         penalty = len(errors) * 25 + len(warnings) * 10
         score = max(0, 100 - penalty)
+        suggestions = _build_suggestions(issues)
         return {
             'passed': len(errors) == 0,
             'issues': issues,
             'score': score,
             'error_count': len(errors),
             'warning_count': len(warnings),
+            'suggestions': suggestions,
         }
     except Exception as e:
         logger.error(f"QA 검증 처리 실패: {e}")

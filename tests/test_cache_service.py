@@ -110,6 +110,19 @@ class TestAICacheService(unittest.TestCase):
         # 일부가 삭제되어 5개보다 적어야 함
         self.assertLess(stats['count'], 5)
 
+    def test_stats_avg_entry_size_kb(self):
+        """통계에 avg_entry_size_kb 포함"""
+        key = AICacheService.make_key('v1', 's', 'm')
+        self.cache.put(key, 'v1', 's', 'm', 'medium', 'conv', {'data': 'x' * 100})
+        stats = self.cache.get_stats()
+        self.assertIn('avg_entry_size_kb', stats)
+        self.assertGreater(stats['avg_entry_size_kb'], 0)
+
+    def test_stats_avg_entry_size_kb_empty(self):
+        """빈 캐시에서 avg_entry_size_kb는 0"""
+        stats = self.cache.get_stats()
+        self.assertEqual(stats['avg_entry_size_kb'], 0.0)
+
     def test_purge_expired(self):
         """만료 항목 정리"""
         cache = AICacheService(self.db_path, ttl_days=0, max_size_mb=1)

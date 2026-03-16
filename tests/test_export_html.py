@@ -46,5 +46,33 @@ class TestExportHtml(unittest.TestCase):
         self.assertIn('font-family', html)
 
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_lang_auto_detect_korean(self, _mock_sb):
+        """한국어 콘텐츠에 lang='ko' 설정."""
+        resp = self.client.post('/api/export/html',
+                                json={'title': '테스트', 'html': '<p>한국어 콘텐츠입니다</p>'},
+                                headers=_HEADERS)
+        html = resp.data.decode('utf-8')
+        self.assertIn('lang="ko"', html)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_lang_auto_detect_english(self, _mock_sb):
+        """영어 콘텐츠에 lang='en' 설정."""
+        resp = self.client.post('/api/export/html',
+                                json={'title': 'Test', 'html': '<p>This is English content for testing</p>'},
+                                headers=_HEADERS)
+        html = resp.data.decode('utf-8')
+        self.assertIn('lang="en"', html)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_lang_auto_detect_japanese(self, _mock_sb):
+        """일본어 콘텐츠에 lang='ja' 설정."""
+        resp = self.client.post('/api/export/html',
+                                json={'title': 'テスト', 'html': '<p>これはテストです</p>'},
+                                headers=_HEADERS)
+        html = resp.data.decode('utf-8')
+        self.assertIn('lang="ja"', html)
+
+
 if __name__ == '__main__':
     unittest.main()
