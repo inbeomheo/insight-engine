@@ -3621,3 +3621,38 @@ def system_info():
         'dependencies': dependency_versions,
         'uptime_seconds': uptime,
     })
+
+
+@blog_bp.route('/api/rate-limit/status', methods=['GET'])
+def rate_limit_status():
+    """현재 클라이언트의 rate limit 상태를 반환합니다.
+
+    응답: {enabled, client_ip, limits: [{endpoint, limit, remaining, reset_at}]}
+    """
+    from extensions import limiter
+    from flask_limiter.util import get_remote_address
+
+    enabled = limiter.enabled
+    client_ip = get_remote_address()
+
+    # 주요 엔드포인트별 제한 정보 (정적 선언)
+    _RATE_LIMITS = [
+        {'endpoint': '/generate', 'limit': '15/minute'},
+        {'endpoint': '/generate-batch', 'limit': '5/minute'},
+        {'endpoint': '/api/generate-merged', 'limit': '5/minute'},
+        {'endpoint': '/generate-stream', 'limit': '15/minute'},
+        {'endpoint': '/api/generate-multi', 'limit': '20/minute'},
+    ]
+
+    limits_info = []
+    for item in _RATE_LIMITS:
+        limits_info.append({
+            'endpoint': item['endpoint'],
+            'limit': item['limit'],
+        })
+
+    return jsonify({
+        'enabled': enabled,
+        'client_ip': client_ip,
+        'limits': limits_info,
+    })
