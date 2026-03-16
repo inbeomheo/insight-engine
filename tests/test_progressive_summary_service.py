@@ -50,5 +50,56 @@ class TestProgressiveSummary(unittest.TestCase):
         self.assertIsInstance(result, dict)
 
 
+class TestParseSummaryJson(unittest.TestCase):
+    """_parse_summary_json 단위 테스트"""
+
+    def test_valid_json(self):
+        """유효한 JSON 파싱"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        result = _parse_summary_json('{"one_line": "test"}')
+        self.assertEqual(result['one_line'], 'test')
+
+    def test_code_block_wrapped(self):
+        """코드 블록으로 감싸진 JSON"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        result = _parse_summary_json('```json\n{"one_line": "test"}\n```')
+        self.assertEqual(result['one_line'], 'test')
+
+    def test_trailing_comma(self):
+        """LLM 출력의 trailing comma 처리"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        result = _parse_summary_json('{"one_line": "test", "three_lines": "abc",}')
+        self.assertIsNotNone(result)
+        self.assertEqual(result['one_line'], 'test')
+
+    def test_nested_trailing_comma(self):
+        """중첩 구조의 trailing comma"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        result = _parse_summary_json('{"one_line": "a", "three_lines": "b", "full_summary": "c",}')
+        self.assertIsNotNone(result)
+        self.assertEqual(result['full_summary'], 'c')
+
+    def test_prefix_text(self):
+        """JSON 앞에 텍스트가 있는 경우"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        result = _parse_summary_json('여기 결과입니다: {"one_line": "test"}')
+        self.assertEqual(result['one_line'], 'test')
+
+    def test_empty_string(self):
+        """빈 문자열은 None"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        self.assertIsNone(_parse_summary_json(''))
+
+    def test_plain_text_returns_none(self):
+        """일반 텍스트는 None"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        self.assertIsNone(_parse_summary_json('그냥 텍스트입니다'))
+
+    def test_invalid_json_returns_none(self):
+        """유효하지 않은 JSON은 None"""
+        from services.content.progressive_summary_service import _parse_summary_json
+        self.assertIsNone(_parse_summary_json('{invalid json content}'))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -35,10 +35,16 @@ def _parse_summary_json(raw_text: str) -> Optional[Dict]:
 
     match = re.search(r'\{[\s\S]*\}', text)
     if match:
+        candidate = match.group()
         try:
-            return json.loads(match.group())
+            return json.loads(candidate)
         except json.JSONDecodeError:
-            pass
+            # LLM이 trailing comma를 출력하는 경우 제거 후 재시도
+            cleaned = re.sub(r',\s*([}\]])', r'\1', candidate)
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError:
+                pass
 
     try:
         return json.loads(text)

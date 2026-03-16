@@ -1,6 +1,6 @@
 """Table of Contents Generator 서비스 테스트."""
 import unittest
-from services.content.toc_generator_service import generate_toc, generate_numbered_toc
+from services.content.toc_generator_service import generate_toc, generate_numbered_toc, _slugify
 
 
 class TestTocGenerator(unittest.TestCase):
@@ -185,6 +185,93 @@ class TestDuplicateAnchor(unittest.TestCase):
         content = '## 유일한 헤딩'
         result = generate_toc(content)
         self.assertNotIn('-', result['toc'][0]['anchor'].split('유일한-헤딩')[-1])
+
+
+class TestSlugifyEdgeCases(unittest.TestCase):
+    """_slugify 엣지 케이스 테스트"""
+
+    def test_special_chars_only_returns_fallback(self):
+        """특수문자만 있으면 'heading' 폴백 반환"""
+        self.assertEqual(_slugify('!@#$%^&*()'), 'heading')
+
+    def test_empty_string_returns_fallback(self):
+        """빈 문자열은 'heading' 폴백 반환"""
+        self.assertEqual(_slugify(''), 'heading')
+
+    def test_spaces_only_returns_fallback(self):
+        """공백만 있으면 'heading' 폴백 반환"""
+        self.assertEqual(_slugify('   '), 'heading')
+
+    def test_korean_text(self):
+        """한글 텍스트는 정상 처리"""
+        self.assertEqual(_slugify('한글 제목'), '한글-제목')
+
+    def test_mixed_text(self):
+        """영문+숫자+특수문자 혼합"""
+        result = _slugify('Hello World 123!')
+        self.assertEqual(result, 'hello-world-123')
+
+
+class TestGenerateTocEdgeCases(unittest.TestCase):
+    """generate_toc 엣지 케이스 테스트"""
+
+    def test_max_depth_limits_headings(self):
+        """max_depth보다 깊은 헤딩은 제외"""
+        content = '# H1\n## H2\n### H3\n#### H4'
+        result = generate_toc(content, max_depth=2)
+        levels = [h['level'] for h in result['toc']]
+        self.assertNotIn(3, levels)
+        self.assertNotIn(4, levels)
+
+    def test_max_depth_1(self):
+        """max_depth=1이면 H1만 추출"""
+        content = '# 제목\n## 소제목\n### 하위'
+        result = generate_toc(content, max_depth=1)
+        self.assertEqual(len(result['toc']), 1)
+        self.assertEqual(result['toc'][0]['level'], 1)
+
+    def test_structure_validation_skip_levels(self):
+        """레벨 건너뛰기 감지 (H1→H3)"""
+        content = '# 제목\n### 하위 (H2 건너뜀)'
+        result = generate_toc(content)
+        self.assertFalse(result['summary']['structure_valid'])
+
+    def test_multiple_h1_detected(self):
+        """H1 여러 개 감지"""
+        content = '# 제목1\n## 내용\n# 제목2'
+        result = generate_toc(content)
+        self.assertFalse(result['summary']['structure_valid'])
+
+
+class TestGenerateNumberedTocEdgeCases(unittest.TestCase):
+    """generate_numbered_toc 엣지 케이스 테스트"""
+
+    def test_h1_has_no_number(self):
+        """H1은 번호 없음"""
+        content = '# 제목\n## 소제목'
+        result = generate_numbered_toc(content)
+        h1 = [item for item in result['numbered_toc'] if item['level'] == 1]
+        self.assertEqual(h1[0]['number'], '')
+
+    def test_h2_numbering(self):
+        """H2는 1., 2. 순서"""
+        content = '## 첫째\n## 둘째\n## 셋째'
+        result = generate_numbered_toc(content)
+        numbers = [item['number'] for item in result['numbered_toc']]
+        self.assertEqual(numbers, ['1.', '2.', '3.'])
+
+    def test_h3_nested_numbering(self):
+        """H3는 1.1., 1.2. 형식"""
+        content = '## 첫째\n### 하위1\n### 하위2\n## 둘째'
+        result = generate_numbered_toc(content)
+        numbers = [item['number'] for item in result['numbered_toc']]
+        self.assertEqual(numbers, ['1.', '1.1.', '1.2.', '2.'])
+
+    def test_empty_content(self):
+        """빈 콘텐츠"""
+        result = generate_numbered_toc('')
+        self.assertEqual(result['numbered_toc'], [])
+        self.assertEqual(result['markdown'], '')
 
 
 if __name__ == '__main__':

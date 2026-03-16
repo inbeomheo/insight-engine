@@ -18,7 +18,8 @@ def _slugify(text: str) -> str:
     """텍스트를 URL-safe 앵커 ID로 변환합니다."""
     slug = re.sub(r'[^\w가-힣\s-]', '', text)
     slug = re.sub(r'\s+', '-', slug.strip())
-    return slug.lower()
+    slug = slug.lower()
+    return slug if slug else 'heading'
 
 
 _EMPTY_RESULT = {

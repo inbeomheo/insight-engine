@@ -77,5 +77,79 @@ class TestGetTemplates(unittest.TestCase):
         self.assertIn('listicle', ids)
 
 
+class TestGenerateOutlineEdgeCases(unittest.TestCase):
+    """generate_outline 엣지 케이스 테스트"""
+
+    def test_whitespace_only_topic(self):
+        """공백만 있는 주제"""
+        result = generate_outline('   ')
+        self.assertEqual(result['outline'], [])
+
+    def test_topic_stripped(self):
+        """주제 앞뒤 공백 제거"""
+        result = generate_outline('  AI  ')
+        self.assertEqual(result['topic'], 'AI')
+
+    def test_no_keywords_no_error(self):
+        """keywords=None이어도 에러 없음"""
+        result = generate_outline('주제', keywords=None)
+        self.assertIsInstance(result['seo_tips'], list)
+
+    def test_empty_keywords_list(self):
+        """빈 키워드 리스트"""
+        result = generate_outline('주제', keywords=[])
+        self.assertIsInstance(result['seo_tips'], list)
+        # 키워드 관련 팁은 포함되지 않음
+        tips_text = ' '.join(result['seo_tips'])
+        self.assertNotIn('타겟 키워드', tips_text)
+
+    def test_comparison_has_option_sections(self):
+        """비교 분석 템플릿에 옵션 A/B 섹션 존재"""
+        result = generate_outline('프레임워크', 'comparison')
+        texts = [s['text'] for s in result['outline']]
+        has_option_a = any('옵션 A' in t for t in texts)
+        has_option_b = any('옵션 B' in t for t in texts)
+        self.assertTrue(has_option_a)
+        self.assertTrue(has_option_b)
+
+    def test_tutorial_has_steps(self):
+        """튜토리얼 템플릿에 단계 섹션 존재"""
+        result = generate_outline('React', 'tutorial')
+        texts = [s['text'] for s in result['outline']]
+        has_step = any('단계' in t for t in texts)
+        self.assertTrue(has_step)
+
+    def test_opinion_has_claim_section(self):
+        """의견 템플릿에 주장 섹션 존재"""
+        result = generate_outline('원격근무', 'opinion')
+        texts = [s['text'] for s in result['outline']]
+        has_claim = any('주장' in t for t in texts)
+        self.assertTrue(has_claim)
+
+    def test_many_keywords_capped(self):
+        """키워드 5개 이상이면 5개만 팁에 포함"""
+        keywords = ['키워드1', '키워드2', '키워드3', '키워드4', '키워드5', '키워드6']
+        result = generate_outline('주제', keywords=keywords)
+        tips_text = ' '.join(result['seo_tips'])
+        self.assertNotIn('키워드6', tips_text)
+
+
+class TestGetTemplatesDetails(unittest.TestCase):
+    """get_templates 상세 테스트"""
+
+    def test_all_five_templates(self):
+        """5개 템플릿 모두 포함"""
+        templates = get_templates()
+        ids = {t['id'] for t in templates}
+        expected = {'guide', 'listicle', 'comparison', 'tutorial', 'opinion'}
+        self.assertEqual(ids, expected)
+
+    def test_sections_count_positive(self):
+        """모든 템플릿의 sections 수가 양수"""
+        templates = get_templates()
+        for t in templates:
+            self.assertGreater(t['sections'], 0, f'{t["id"]} has no sections')
+
+
 if __name__ == '__main__':
     unittest.main()
