@@ -212,6 +212,7 @@ def export_zip(title: str, content: str) -> io.BytesIO:
             'title': title,
             'char_count': len(content),
             'exported_at': datetime.now(timezone.utc).isoformat(),
+            'generated_at': datetime.now(timezone.utc).isoformat(),
             'formats': ['md', 'txt', 'docx'],
         }
         zf.writestr('meta.json', json.dumps(meta, ensure_ascii=False, indent=2))
