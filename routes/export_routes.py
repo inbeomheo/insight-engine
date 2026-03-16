@@ -294,8 +294,10 @@ def export_markdown():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
+        frontmatter = data.get('frontmatter')
+
         from services.export.export_service import export_markdown as _export_md
-        buffer = _export_md(title, content)
+        buffer = _export_md(title, content, frontmatter=frontmatter)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
         return send_file(buffer, mimetype='text/markdown', as_attachment=True, download_name=f'{safe_title}.md')
@@ -315,8 +317,12 @@ def export_txt():
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
+        line_ending = data.get('line_ending', 'unix')
+        if line_ending not in ('unix', 'windows'):
+            line_ending = 'unix'
+
         from services.export.export_service import export_txt as _export_txt
-        buffer = _export_txt(title, content)
+        buffer = _export_txt(title, content, line_ending=line_ending)
         safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:30].strip() or 'content'
 
         return send_file(buffer, mimetype='text/plain', as_attachment=True, download_name=f'{safe_title}.txt')

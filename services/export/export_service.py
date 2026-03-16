@@ -2,6 +2,8 @@
 DOCX 내보내기 서비스
 마크다운 콘텐츠를 Word 문서로 변환
 """
+from __future__ import annotations
+
 import io
 import re
 
@@ -166,21 +168,48 @@ def _add_formatted_text(paragraph, text):
         run.font.name = DEFAULT_FONT
 
 
-def export_markdown(title: str, content: str) -> io.BytesIO:
-    """마크다운 파일을 BytesIO로 반환합니다."""
-    text = f"# {title}\n\n{content}"
+def export_markdown(title: str, content: str, frontmatter: dict | None = None) -> io.BytesIO:
+    """마크다운 파일을 BytesIO로 반환합니다.
+
+    Args:
+        title: 문서 제목
+        content: 마크다운 본문
+        frontmatter: YAML frontmatter 딕셔너리 (title, date, tags 등)
+    """
+    parts = []
+    if frontmatter:
+        parts.append('---')
+        for key, value in frontmatter.items():
+            if isinstance(value, list):
+                parts.append(f'{key}:')
+                for item in value:
+                    parts.append(f'  - {item}')
+            else:
+                parts.append(f'{key}: {value}')
+        parts.append('---')
+        parts.append('')
+    parts.append(f"# {title}\n\n{content}")
+    text = '\n'.join(parts)
     buffer = io.BytesIO(text.encode('utf-8'))
     return buffer
 
 
-def export_txt(title: str, content: str) -> io.BytesIO:
-    """순수 텍스트 파일을 BytesIO로 반환합니다. 마크다운 서식을 제거합니다."""
+def export_txt(title: str, content: str, line_ending: str = 'unix') -> io.BytesIO:
+    """순수 텍스트 파일을 BytesIO로 반환합니다. 마크다운 서식을 제거합니다.
+
+    Args:
+        title: 문서 제목
+        content: 마크다운 본문
+        line_ending: 줄바꿈 스타일 ('unix' → LF, 'windows' → CRLF). 기본값 'unix'.
+    """
     text = re.sub(r'#{1,6}\s+', '', content)
     text = re.sub(r'\*{1,3}(.+?)\*{1,3}', r'\1', text)
     text = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', text)
     text = re.sub(r'`(.+?)`', r'\1', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     full = f"{title}\n{'=' * len(title)}\n\n{text}"
+    if line_ending == 'windows':
+        full = full.replace('\r\n', '\n').replace('\n', '\r\n')
     buffer = io.BytesIO(full.encode('utf-8'))
     return buffer
 
