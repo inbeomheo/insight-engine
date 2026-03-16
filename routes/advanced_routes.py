@@ -129,6 +129,7 @@ def generate_multi():
 
         def _gen_for_style(style_id):
             with app.app_context():
+                style_start = time.time()
                 try:
                     sp = style_prompts_dict.get(style_id, '')
                     result = ai_service.create_content(
@@ -136,10 +137,12 @@ def generate_multi():
                         style_id=style_id
                     )
                     result['style'] = style_id
+                    result['style_elapsed_time'] = round(time.time() - style_start, 2)
                     return result
                 except Exception as e:
                     return {
                         'style': style_id,
+                        'style_elapsed_time': round(time.time() - style_start, 2),
                         'error': _sanitize_generation_error(
                             e,
                             '[서버 오류] 스타일별 콘텐츠 생성 중 문제가 발생했습니다.'
