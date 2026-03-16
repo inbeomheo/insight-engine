@@ -49,6 +49,7 @@ class WebhookService:
     def __init__(self, url: str, enabled: bool = False, timeout: int = 10):
         self.url = url
         self.timeout = timeout
+        self.failure_count = 0
         if enabled and url and not _validate_webhook_url(url):
             logger.warning("웹훅 URL이 안전하지 않아 비활성화됨: %s", url)
             self.enabled = False
@@ -76,6 +77,7 @@ class WebhookService:
                 resp = requests.post(self.url, json=payload, timeout=self.timeout)
                 # 4xx 클라이언트 에러는 재시도 무의미 → 즉시 중단
                 if 400 <= resp.status_code < 500:
+                    self.failure_count += 1
                     logger.error(f"웹훅 클라이언트 에러 (재시도 안 함): {resp.status_code} {event}")
                     return
                 resp.raise_for_status()
@@ -86,6 +88,7 @@ class WebhookService:
                     logger.warning(f"웹훅 전송 실패 (2초 후 재시도): {e}")
                     _time.sleep(2)
                 else:
+                    self.failure_count += 1
                     logger.error(f"웹훅 전송 최종 실패: {e}")
 
     def test(self) -> dict:
