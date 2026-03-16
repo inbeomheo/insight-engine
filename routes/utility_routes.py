@@ -3711,6 +3711,9 @@ def content_stats():
         # URL 패턴 수 (http/https 링크 + 마크다운 링크)
         link_count = len(_re.findall(r'https?://[^\s)\]]+', content))
 
+        # 코드 블록 포함 여부 (마크다운 ``` 또는 HTML <code>)
+        has_code_blocks = bool('```' in content or '<code>' in content)
+
         return jsonify({
             'char_count': char_count,
             'word_count': word_count,
@@ -3726,6 +3729,7 @@ def content_stats():
             'question_count': question_count,
             'list_count': list_count,
             'link_count': link_count,
+            'has_code_blocks': has_code_blocks,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
