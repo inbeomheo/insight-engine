@@ -38,6 +38,11 @@ def _validate_webhook_url(url: str) -> bool:
         addr = ipaddress.ip_address(hostname)
         if addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local:
             return False
+        # IPv4-mapped IPv6 (::ffff:127.0.0.1 등) 우회 차단
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
+            mapped = addr.ipv4_mapped
+            if mapped.is_private or mapped.is_loopback or mapped.is_reserved or mapped.is_link_local:
+                return False
     except ValueError:
         # 도메인 이름인 경우 — DNS 리바인딩까지 막지는 않지만 기본 차단은 통과
         pass
