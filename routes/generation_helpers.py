@@ -231,6 +231,7 @@ def _handle_cache_hit(cache_key, force, youtube_title,
 
     g.skip_usage_decrement = True
     elapsed_time = round(time.time() - start_time, 2)
+    _cached_content = cached.get('content', '')
     return jsonify({
         **cached,
         'id': str(uuid.uuid4()),
@@ -241,6 +242,8 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         'cached': True,
         'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
         'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0},
+        'char_count': len(_cached_content),
+        'word_count': len(_cached_content.split()) if _cached_content else 0,
         'quota': get_usage_for_response()
     })
 
