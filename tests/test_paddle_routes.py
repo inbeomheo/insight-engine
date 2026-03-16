@@ -53,7 +53,7 @@ class TestPaddleRoutes(unittest.TestCase):
         """구독 미발견 시 404."""
         mock_svc.get_subscription.return_value = None
         resp = self.client.get('/api/paddle/subscription/sub_999', headers=_HEADERS)
-        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.status_code, 404)
 
 
 if __name__ == '__main__':
