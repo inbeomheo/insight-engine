@@ -3,11 +3,14 @@
 
 AI를 활용하여 주제에 대한 콘텐츠 브리프를 생성합니다.
 """
+import logging
 import json
 import re
 from typing import Dict, List, Optional
 
 
+
+logger = logging.getLogger(__name__)
 
 _BRIEF_PROMPT = """당신은 콘텐츠 전략가입니다. 주어진 주제에 대해 콘텐츠 브리프를 JSON으로 작성하세요.
 
@@ -66,34 +69,36 @@ def generate_brief(topic: str, keywords: Optional[List[str]] = None) -> Dict:
         ValueError: 주제가 비어있을 때
         Exception: AI 호출 실패 시
     """
-    if not topic or not topic.strip():
-        raise ValueError("주제를 입력해주세요.")
+    try:
+        if not topic or not topic.strip():
+            raise ValueError("주제를 입력해주세요.")
 
-    keywords_section = ""
-    if keywords:
-        keywords_section = f"[참고 키워드]\n{', '.join(keywords)}"
+        keywords_section = ""
+        if keywords:
+            keywords_section = f"[참고 키워드]\n{', '.join(keywords)}"
 
-    prompt = _BRIEF_PROMPT.format(
-        topic=topic.strip(),
-        keywords_section=keywords_section,
-    )
+        prompt = _BRIEF_PROMPT.format(
+            topic=topic.strip(),
+            keywords_section=keywords_section,
+        )
 
-    from services.core import ai_service
-    result = ai_service.create_content(
-        prompt,
-        _get_model(),
-        "",  # 스타일 프롬프트 없음
-    )
+        from services.core import ai_service
+        result = ai_service.create_content(
+            prompt,
+            _get_model(),
+            "",  # 스타일 프롬프트 없음
+        )
 
-    content_text = result.get('content', '')
-    parsed = _parse_brief_json(content_text)
+        content_text = result.get('content', '')
+        parsed = _parse_brief_json(content_text)
 
-    if parsed is None:
-        return _fallback_brief(topic, content_text, keywords)
+        if parsed is None:
+            return _fallback_brief(topic, content_text, keywords)
 
-    return _ensure_brief_defaults(parsed, topic, keywords)
-
-
+        return _ensure_brief_defaults(parsed, topic, keywords)
+    except Exception as e:
+        logger.error(f"브리프 생성 처리 실패: {e}")
+        raise
 def _fallback_brief(
     topic: str, content_text: str, keywords: Optional[List[str]],
 ) -> Dict:

@@ -4,10 +4,13 @@
 AI API 호출 없이 순수 텍스트 분석만 사용합니다.
 """
 
+import logging
 import re
 import statistics
 from typing import Optional
 
+
+logger = logging.getLogger(__name__)
 
 # --- 패턴 상수 ---
 
@@ -426,28 +429,32 @@ def profile_brand_voice(content: Optional[str]) -> dict:
     """
     if not content or not content.strip():
         return {**_EMPTY_PROFILE, "suggestions": ["분석할 콘텐츠가 충분하지 않습니다."]}
+    try:
 
-    content = content.strip()
-    sentences = _split_sentences(content)
-    words = _split_words(content)
+        content = content.strip()
+        sentences = _split_sentences(content)
+        words = _split_words(content)
 
-    raw = _compute_all_metrics(sentences, words, content)
-    formality = _determine_formality(raw["formality_score"])
-    tone = _determine_tone(
-        raw["formality_score"], raw["vocabulary_complexity"],
-        raw["sentence_complexity"], raw["emotional_intensity"]
-    )
-    energy = _determine_energy(raw["emotional_intensity"], sentences)
+        raw = _compute_all_metrics(sentences, words, content)
+        formality = _determine_formality(raw["formality_score"])
+        tone = _determine_tone(
+            raw["formality_score"], raw["vocabulary_complexity"],
+            raw["sentence_complexity"], raw["emotional_intensity"]
+        )
+        energy = _determine_energy(raw["emotional_intensity"], sentences)
 
-    metrics = {k: round(v, 1) for k, v in raw.items()}
-    characteristics = _detect_characteristics(
-        raw["formality_score"], raw["emotional_intensity"], sentences, words, content
-    )
+        metrics = {k: round(v, 1) for k, v in raw.items()}
+        characteristics = _detect_characteristics(
+            raw["formality_score"], raw["emotional_intensity"], sentences, words, content
+        )
 
-    return {
-        "voice_profile": {"formality": formality, "tone": tone, "energy": energy},
-        "metrics": metrics,
-        "characteristics": characteristics,
-        "dominant_patterns": _detect_dominant_patterns(sentences, words, content, characteristics),
-        "suggestions": _generate_suggestions(formality, tone, energy, metrics, characteristics),
-    }
+        return {
+            "voice_profile": {"formality": formality, "tone": tone, "energy": energy},
+            "metrics": metrics,
+            "characteristics": characteristics,
+            "dominant_patterns": _detect_dominant_patterns(sentences, words, content, characteristics),
+            "suggestions": _generate_suggestions(formality, tone, energy, metrics, characteristics),
+        }
+    except Exception as e:
+        logger.error(f"브랜드 보이스 분석 처리 실패: {e}")
+        return {**_EMPTY_PROFILE, "suggestions": ["분석 중 오류가 발생했습니다."]}

@@ -4,9 +4,12 @@
 [MM:SS] 또는 [HH:MM:SS] 형식의 타임스탬프 인용을 파싱하고,
 실제 자막 범위와 대조 검증하며, YouTube 타임스탬프 링크로 변환합니다.
 """
+import logging
 import re
 from typing import List, Dict
 
+
+logger = logging.getLogger(__name__)
 
 # [MM:SS] 또는 [HH:MM:SS] 패턴
 _CITATION_PATTERN = re.compile(
@@ -40,34 +43,36 @@ def parse_citations(content: str) -> List[Dict]:
     Returns:
         [{ "marker": "[03:25]", "seconds": 205, "context": "주변 텍스트" }, ...]
     """
-    results = []
-    seen = set()
+    try:
+        results = []
+        seen = set()
 
-    for match in _CITATION_PATTERN.finditer(content):
-        marker = match.group(0)       # "[03:25]"
-        ts_str = match.group(1)       # "03:25"
-        seconds = _timestamp_to_seconds(ts_str)
+        for match in _CITATION_PATTERN.finditer(content):
+            marker = match.group(0)       # "[03:25]"
+            ts_str = match.group(1)       # "03:25"
+            seconds = _timestamp_to_seconds(ts_str)
 
-        # 주변 컨텍스트 추출 (마커 앞뒤 50자)
-        start = max(0, match.start() - 50)
-        end = min(len(content), match.end() + 50)
-        context = content[start:end].strip()
+            # 주변 컨텍스트 추출 (마커 앞뒤 50자)
+            start = max(0, match.start() - 50)
+            end = min(len(content), match.end() + 50)
+            context = content[start:end].strip()
 
-        # 동일 마커+초 중복 방지
-        key = (marker, seconds)
-        if key in seen:
-            continue
-        seen.add(key)
+            # 동일 마커+초 중복 방지
+            key = (marker, seconds)
+            if key in seen:
+                continue
+            seen.add(key)
 
-        results.append({
-            'marker': marker,
-            'seconds': seconds,
-            'context': context,
-        })
+            results.append({
+                'marker': marker,
+                'seconds': seconds,
+                'context': context,
+            })
 
-    return results
-
-
+        return results
+    except Exception as e:
+        logger.error(f"인용 마커 파싱 처리 실패: {e}")
+        return []
 def validate_citations(
     citations: List[Dict],
     transcript_segments: List[Dict],

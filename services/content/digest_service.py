@@ -2,10 +2,13 @@
 주간 다이제스트 자동 생성 서비스 (F6-23)
 주간 콘텐츠 요약 다이제스트 생성 및 발송
 """
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
 from services.core.logging_config import ServiceLogger
+
+logger = logging.getLogger(__name__)
 
 logger = ServiceLogger('DigestService')
 

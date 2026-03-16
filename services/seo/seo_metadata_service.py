@@ -116,27 +116,27 @@ def generate_article_schema(title: str, description: str = '', keywords: list[st
 
 
 def generate_all_schemas(
+    video_url: str,
+    title: str,
+    content: str,
+    faq_pairs: list[dict],
+    keywords: list[str] | None = None,
+    description: str = '',
+) -> list[dict]:
+    """모든 JSON-LD 스키마를 생성하여 리스트로 반환합니다.
+
+    Args:
+        video_url: YouTube 영상 URL
+        title: 콘텐츠 제목
+        content: 생성된 마크다운 본문 (설명 자동 추출용)
+        faq_pairs: FAQ Q&A 쌍 리스트
+        keywords: 키워드 리스트
+        description: 명시적 설명 (없으면 content 첫 문장에서 추출)
+
+    Returns:
+        list[dict]: [VideoObject, FAQPage, Article] 스키마 리스트
+    """
     try:
-        video_url: str,
-        title: str,
-        content: str,
-        faq_pairs: list[dict],
-        keywords: list[str] | None = None,
-        description: str = '',
-    ) -> list[dict]:
-        """모든 JSON-LD 스키마를 생성하여 리스트로 반환합니다.
-
-        Args:
-            video_url: YouTube 영상 URL
-            title: 콘텐츠 제목
-            content: 생성된 마크다운 본문 (설명 자동 추출용)
-            faq_pairs: FAQ Q&A 쌍 리스트
-            keywords: 키워드 리스트
-            description: 명시적 설명 (없으면 content 첫 문장에서 추출)
-
-        Returns:
-            list[dict]: [VideoObject, FAQPage, Article] 스키마 리스트
-        """
         # 설명이 없으면 본문 첫 비빈 줄에서 추출
         if not description and content:
             for line in content.split('\n'):

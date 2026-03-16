@@ -5,8 +5,11 @@ Table of Contents Generator 서비스
 깊이 제한, 앵커 링크 생성, 구조 검증을 수행합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 
@@ -73,30 +76,32 @@ def generate_toc(content: str, max_depth: int = 3) -> dict:
     """
     if not content or not content.strip():
         return {**_EMPTY_RESULT, 'suggestions': ['콘텐츠가 비어 있습니다.']}
+    try:
 
-    headings = _extract_headings(content, max_depth)
-    if not headings:
-        return {**_EMPTY_RESULT, 'score': 30.0,
-                'suggestions': ['헤딩이 없습니다. 구조화를 위해 헤딩을 추가하세요.']}
+        headings = _extract_headings(content, max_depth)
+        if not headings:
+            return {**_EMPTY_RESULT, 'score': 30.0,
+                    'suggestions': ['헤딩이 없습니다. 구조화를 위해 헤딩을 추가하세요.']}
 
-    issues = _validate_structure(headings)
-    markdown_toc, depth_dist, max_depth_used = _build_markdown_toc(headings)
-    score = _calculate_score(headings, issues)
+        issues = _validate_structure(headings)
+        markdown_toc, depth_dist, max_depth_used = _build_markdown_toc(headings)
+        score = _calculate_score(headings, issues)
 
-    return {
-        'toc': headings,
-        'markdown_toc': markdown_toc,
-        'summary': {
-            'total_headings': len(headings),
-            'max_depth_used': max_depth_used,
-            'structure_valid': len(issues) == 0,
-            'depth_distribution': depth_dist,
-        },
-        'score': score,
-        'suggestions': _generate_suggestions(headings, issues, depth_dist),
-    }
-
-
+        return {
+            'toc': headings,
+            'markdown_toc': markdown_toc,
+            'summary': {
+                'total_headings': len(headings),
+                'max_depth_used': max_depth_used,
+                'structure_valid': len(issues) == 0,
+                'depth_distribution': depth_dist,
+            },
+            'score': score,
+            'suggestions': _generate_suggestions(headings, issues, depth_dist),
+        }
+    except Exception as e:
+        logger.error(f"목차 생성 처리 실패: {e}")
+        return {**_EMPTY_RESULT, 'suggestions': ['분석 중 오류가 발생했습니다.']}
 def _validate_structure(headings: List[Dict]) -> List[str]:
     """헤딩 구조를 검증합니다."""
     issues = []

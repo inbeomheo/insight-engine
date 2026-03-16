@@ -4,8 +4,11 @@
 전문성, 관심사, 독서 스타일, 연령대, 직업군 등을 추론한다.
 """
 
+import logging
 import re
 from collections import Counter
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 상수 / 사전
@@ -443,19 +446,23 @@ def build_persona(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    expertise, interests, reading_style, age_group, field, indicators = _detect_all_traits(content)
+        expertise, interests, reading_style, age_group, field, indicators = _detect_all_traits(content)
 
-    return {
-        "persona": {
-            "expertise_level": expertise,
-            "interests": interests,
-            "reading_style": reading_style,
-            "age_group": age_group,
-            "professional_field": field,
-        },
-        "confidence": _calculate_confidence(content, expertise, field, reading_style),
-        "content_alignment": _calculate_content_alignment(content, expertise, reading_style),
-        "indicators": indicators,
-        "suggestions": _generate_suggestions(expertise, reading_style, age_group, field),
-    }
+        return {
+            "persona": {
+                "expertise_level": expertise,
+                "interests": interests,
+                "reading_style": reading_style,
+                "age_group": age_group,
+                "professional_field": field,
+            },
+            "confidence": _calculate_confidence(content, expertise, field, reading_style),
+            "content_alignment": _calculate_content_alignment(content, expertise, reading_style),
+            "indicators": indicators,
+            "suggestions": _generate_suggestions(expertise, reading_style, age_group, field),
+        }
+    except Exception as e:
+        logger.error(f"페르소나 추론 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)

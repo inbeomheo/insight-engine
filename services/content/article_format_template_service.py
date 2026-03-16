@@ -5,8 +5,11 @@ Article Format Template Checker 서비스
 얼마나 부합하는지 분석합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 _HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
 
@@ -123,26 +126,28 @@ def check_article_format(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    detected = _detect_formats(content)
-    structure = _analyze_structure(content)
-    primary = detected[0]['format'] if detected else 'unstructured'
+        detected = _detect_formats(content)
+        structure = _analyze_structure(content)
+        primary = detected[0]['format'] if detected else 'unstructured'
 
-    return {
-        'detected_formats': detected,
-        'structure_elements': structure,
-        'summary': {
-            'primary_format': primary,
-            'format_count': len(detected),
-            'has_intro': structure['has_intro'],
-            'has_body': structure['has_body'],
-            'has_conclusion': structure['has_conclusion'],
-        },
-        'score': _calculate_score(detected, structure),
-        'suggestions': _generate_suggestions(detected, structure, primary),
-    }
-
-
+        return {
+            'detected_formats': detected,
+            'structure_elements': structure,
+            'summary': {
+                'primary_format': primary,
+                'format_count': len(detected),
+                'has_intro': structure['has_intro'],
+                'has_body': structure['has_body'],
+                'has_conclusion': structure['has_conclusion'],
+            },
+            'score': _calculate_score(detected, structure),
+            'suggestions': _generate_suggestions(detected, structure, primary),
+        }
+    except Exception as e:
+        logger.error(f"글 형식 분석 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _calculate_score(detected: List[Dict], structure: Dict) -> float:
     score = 40.0  # 기본
 

@@ -1,8 +1,11 @@
 """핸즈프리 음성 캡처 서비스 — 말을 정돈된 텍스트로 변환"""
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+
+logger = logging.getLogger(__name__)
 
 # 한국어 필러 패턴 (말버릇)
 _FILLER_PATTERNS = [
@@ -100,47 +103,49 @@ def capture_speech(raw_text: str) -> CapturedText:
     """
     if not raw_text or not raw_text.strip():
         return CapturedText(original_length=len(raw_text) if raw_text else 0)
+    try:
 
-    original_length = len(raw_text)
+        original_length = len(raw_text)
 
-    # 1. 필러 제거
-    cleaned = _remove_fillers(raw_text)
+        # 1. 필러 제거
+        cleaned = _remove_fillers(raw_text)
 
-    # 2. 반복 단어 제거
-    cleaned = _remove_repeated_words(cleaned)
+        # 2. 반복 단어 제거
+        cleaned = _remove_repeated_words(cleaned)
 
-    # 3. 공백 정리
-    cleaned = _normalize_whitespace(cleaned)
-
-    # 4. 문장 분리 후 각 문장 정리
-    sentences = _split_sentences(cleaned)
-    refined_sentences = []
-    for s in sentences:
-        s = _clean_standalone_fillers(s)
-        s = _normalize_whitespace(s)
-        if s:
-            s = _ensure_sentence_ending(s)
-            refined_sentences.append(s)
-
-    # 문장이 없으면 전체를 하나의 문장으로 처리
-    if not refined_sentences and cleaned:
-        cleaned = _clean_standalone_fillers(cleaned)
+        # 3. 공백 정리
         cleaned = _normalize_whitespace(cleaned)
-        if cleaned:
-            cleaned = _ensure_sentence_ending(cleaned)
-            refined_sentences = [cleaned]
 
-    final_text = ' '.join(refined_sentences)
-    words = final_text.split() if final_text else []
+        # 4. 문장 분리 후 각 문장 정리
+        sentences = _split_sentences(cleaned)
+        refined_sentences = []
+        for s in sentences:
+            s = _clean_standalone_fillers(s)
+            s = _normalize_whitespace(s)
+            if s:
+                s = _ensure_sentence_ending(s)
+                refined_sentences.append(s)
 
-    return CapturedText(
-        text=final_text,
-        word_count=len(words),
-        sentence_count=len(refined_sentences),
-        original_length=original_length,
-    )
+        # 문장이 없으면 전체를 하나의 문장으로 처리
+        if not refined_sentences and cleaned:
+            cleaned = _clean_standalone_fillers(cleaned)
+            cleaned = _normalize_whitespace(cleaned)
+            if cleaned:
+                cleaned = _ensure_sentence_ending(cleaned)
+                refined_sentences = [cleaned]
 
+        final_text = ' '.join(refined_sentences)
+        words = final_text.split() if final_text else []
 
+        return CapturedText(
+            text=final_text,
+            word_count=len(words),
+            sentence_count=len(refined_sentences),
+            original_length=original_length,
+        )
+    except Exception as e:
+        logger.error(f"음성 캡처 처리 실패: {e}")
+        return CapturedText()
 def merge_captures(captures: list) -> CapturedText:
     """여러 캡처 결과를 하나로 병합
 

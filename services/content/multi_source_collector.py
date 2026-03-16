@@ -4,10 +4,13 @@
 URL 타입을 자동 감지하고 각 서비스에 위임하여 콘텐츠를 수집합니다.
 지원 소스: youtube, webpage, rss, arxiv, twitter, reddit, github, hackernews, podcast
 """
+import logging
 from __future__ import annotations
 
 import re
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 # 지원하는 소스 타입
 SOURCE_YOUTUBE = "youtube"
@@ -174,31 +177,33 @@ def collect_content(url: str, source_type: Optional[str] = None) -> Dict:
         ValueError: 지원하지 않는 소스 타입이거나 수집 실패
         requests.RequestException: 네트워크 오류
     """
-    if not url or not url.strip():
-        raise ValueError("URL이 필요합니다.")
+    try:
+        if not url or not url.strip():
+            raise ValueError("URL이 필요합니다.")
 
-    url = url.strip()
-    stype = source_type or detect_source_type(url)
+        url = url.strip()
+        stype = source_type or detect_source_type(url)
 
-    _collectors = {
-        SOURCE_YOUTUBE: _collect_youtube,
-        SOURCE_ARXIV: _collect_arxiv,
-        SOURCE_RSS: _collect_rss,
-        SOURCE_WEBPAGE: _collect_webpage,
-        SOURCE_TWITTER: _collect_twitter,
-        SOURCE_REDDIT: _collect_reddit,
-        SOURCE_GITHUB: _collect_github,
-        SOURCE_HACKERNEWS: _collect_hackernews,
-        SOURCE_STACKOVERFLOW: _collect_stackoverflow,
-        SOURCE_PODCAST: _collect_podcast,
-    }
+        _collectors = {
+            SOURCE_YOUTUBE: _collect_youtube,
+            SOURCE_ARXIV: _collect_arxiv,
+            SOURCE_RSS: _collect_rss,
+            SOURCE_WEBPAGE: _collect_webpage,
+            SOURCE_TWITTER: _collect_twitter,
+            SOURCE_REDDIT: _collect_reddit,
+            SOURCE_GITHUB: _collect_github,
+            SOURCE_HACKERNEWS: _collect_hackernews,
+            SOURCE_STACKOVERFLOW: _collect_stackoverflow,
+            SOURCE_PODCAST: _collect_podcast,
+        }
 
-    collector = _collectors.get(stype)
-    if not collector:
-        raise ValueError(f"지원하지 않는 소스 타입: {stype}")
-    return collector(url)
-
-
+        collector = _collectors.get(stype)
+        if not collector:
+            raise ValueError(f"지원하지 않는 소스 타입: {stype}")
+        return collector(url)
+    except Exception as e:
+        logger.error(f"콘텐츠 수집 처리 실패: {e}")
+        raise
 def _collect_youtube(url: str) -> Dict:
     """YouTube 콘텐츠 수집 — 기존 content_service에 위임."""
     from services.core import content_service

@@ -4,11 +4,14 @@
 규칙 기반으로 객관식, T/F, 단답형 문제를 생성합니다.
 """
 
+import logging
 import re
 import uuid
 import hashlib
 from dataclasses import dataclass, field
 
+
+logger = logging.getLogger(__name__)
 
 VALID_TYPES = {"multiple_choice", "true_false", "short_answer"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
@@ -128,61 +131,63 @@ def _make_short_answer(sentence: str, keywords: list, difficulty: str) -> QuizQu
 
 
 def generate_quiz(
-    content: str,
-    num_questions: int = 5,
-    difficulty: str = "medium",
-) -> Quiz:
-    """콘텐츠 기반 퀴즈 생성
+    try:
+        content: str,
+        num_questions: int = 5,
+        difficulty: str = "medium",
+    ) -> Quiz:
+        """콘텐츠 기반 퀴즈 생성
 
-    Args:
-        content: 콘텐츠 텍스트
-        num_questions: 생성할 문항 수
-        difficulty: 난이도 (easy/medium/hard)
+        Args:
+            content: 콘텐츠 텍스트
+            num_questions: 생성할 문항 수
+            difficulty: 난이도 (easy/medium/hard)
 
-    Returns:
-        Quiz: 생성된 퀴즈
-    """
-    if difficulty not in VALID_DIFFICULTIES:
-        raise ValueError(f"유효하지 않은 난이도: {difficulty}")
-    if num_questions < 1:
-        raise ValueError("문항 수는 1 이상이어야 합니다.")
+        Returns:
+            Quiz: 생성된 퀴즈
+        """
+        if difficulty not in VALID_DIFFICULTIES:
+            raise ValueError(f"유효하지 않은 난이도: {difficulty}")
+        if num_questions < 1:
+            raise ValueError("문항 수는 1 이상이어야 합니다.")
 
-    sentences = _extract_sentences(content)
-    if not sentences:
+        sentences = _extract_sentences(content)
+        if not sentences:
+            return Quiz(
+                quiz_id=_new_id("quiz"),
+                title="퀴즈",
+                questions=[],
+                passing_score=0.7,
+            )
+
+        questions = []
+        type_cycle = ["multiple_choice", "true_false", "short_answer"]
+
+        for i in range(min(num_questions, len(sentences))):
+            sentence = sentences[i % len(sentences)]
+            keywords = _extract_keywords(sentence)
+            q_type = type_cycle[i % len(type_cycle)]
+
+            if q_type == "multiple_choice":
+                q = _make_multiple_choice(sentence, keywords, difficulty)
+            elif q_type == "true_false":
+                q = _make_true_false(sentence, difficulty)
+            else:
+                q = _make_short_answer(sentence, keywords, difficulty)
+
+            questions.append(q)
+
+        passing = {"easy": 0.6, "medium": 0.7, "hard": 0.8}.get(difficulty, 0.7)
+
         return Quiz(
             quiz_id=_new_id("quiz"),
-            title="퀴즈",
-            questions=[],
-            passing_score=0.7,
+            title=f"자동 생성 퀴즈 ({difficulty})",
+            questions=questions,
+            passing_score=passing,
         )
-
-    questions = []
-    type_cycle = ["multiple_choice", "true_false", "short_answer"]
-
-    for i in range(min(num_questions, len(sentences))):
-        sentence = sentences[i % len(sentences)]
-        keywords = _extract_keywords(sentence)
-        q_type = type_cycle[i % len(type_cycle)]
-
-        if q_type == "multiple_choice":
-            q = _make_multiple_choice(sentence, keywords, difficulty)
-        elif q_type == "true_false":
-            q = _make_true_false(sentence, difficulty)
-        else:
-            q = _make_short_answer(sentence, keywords, difficulty)
-
-        questions.append(q)
-
-    passing = {"easy": 0.6, "medium": 0.7, "hard": 0.8}.get(difficulty, 0.7)
-
-    return Quiz(
-        quiz_id=_new_id("quiz"),
-        title=f"자동 생성 퀴즈 ({difficulty})",
-        questions=questions,
-        passing_score=passing,
-    )
-
-
+    except Exception as e:
+        logger.error(f"퀴즈 생성 처리 실패: {e}")
+        raise
 def grade_answer(question: QuizQuestion, user_answer: str) -> dict:
     """답안 채점
 

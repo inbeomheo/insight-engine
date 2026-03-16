@@ -5,8 +5,11 @@ Update Delta Summary Checker 서비스
 업데이트 요약 블록이 있는지 검사합니다.
 규칙 기반 (AI API 호출 없음).
 """
+import logging
 import re
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 # 업데이트/수정 날짜 신호
 _UPDATE_DATE_PATTERNS = [
@@ -118,27 +121,29 @@ def check_update_delta_summary(content: str) -> dict:
     """
     if not content or not content.strip():
         return dict(_EMPTY_RESULT)
+    try:
 
-    has_date, has_delta, has_heading, has_version, signals = _collect_signals(content)
-    score, level = _compute_delta_score(len(signals), content)
+        has_date, has_delta, has_heading, has_version, signals = _collect_signals(content)
+        score, level = _compute_delta_score(len(signals), content)
 
-    return {
-        'score': score,
-        'summary': {
-            'has_update_date': has_date,
-            'has_delta_summary': has_delta,
-            'has_delta_heading': has_heading,
-            'has_version': has_version,
-            'update_signals': len(signals),
-            'level': level,
-        },
-        'update_signals': signals,
-        'suggestions': _generate_suggestions(
-            has_date, has_delta, has_heading, has_version, level, signals
-        ),
-    }
-
-
+        return {
+            'score': score,
+            'summary': {
+                'has_update_date': has_date,
+                'has_delta_summary': has_delta,
+                'has_delta_heading': has_heading,
+                'has_version': has_version,
+                'update_signals': len(signals),
+                'level': level,
+            },
+            'update_signals': signals,
+            'suggestions': _generate_suggestions(
+                has_date, has_delta, has_heading, has_version, level, signals
+            ),
+        }
+    except Exception as e:
+        logger.error(f"업데이트 요약 점검 처리 실패: {e}")
+        return dict(_EMPTY_RESULT)
 def _generate_suggestions(has_date: bool, has_delta: bool,
                            has_heading: bool, has_version: bool,
                            level: str, signals: List[str]) -> List[str]:
