@@ -456,10 +456,12 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
 
     # 챕터 분할 (타임스탬프 세그먼트가 있을 때만)
     chapters = []
+    total_duration_seconds = 0
     if transcript_segments:
         try:
-            from services.transcript.chapter_service import split_chapters
+            from services.transcript.chapter_service import split_chapters, get_total_duration
             chapters = split_chapters(raw_transcript, model, transcript_segments)
+            total_duration_seconds = get_total_duration(transcript_segments)
         except Exception as ch_err:
             current_app.logger.warning(f"챕터 분할 실패 (무시): {ch_err}")
 
@@ -515,6 +517,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "analysis": analysis,
         "transcript_segments": transcript_segments or [],
         "chapters": chapters,
+        "total_duration_seconds": total_duration_seconds,
         "quota": get_usage_for_response(),
         **_content_stats,
         **(agent_meta or {}),

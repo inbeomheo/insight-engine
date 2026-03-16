@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import patch
 
-from services.transcript.chapter_service import split_chapters, _format_time
+from services.transcript.chapter_service import split_chapters, _format_time, get_total_duration
 
 
 class TestFormatTime(unittest.TestCase):
@@ -90,6 +90,31 @@ class TestSplitChapters(unittest.TestCase):
         }
         result = split_chapters('A' * 600, 'model1')
         self.assertEqual(len(result), 1)
+
+
+class TestGetTotalDuration(unittest.TestCase):
+    """get_total_duration 함수 테스트"""
+
+    def test_empty_segments(self):
+        self.assertEqual(get_total_duration([]), 0)
+
+    def test_single_segment(self):
+        result = get_total_duration([{'start': 5, 'text': 'hello'}])
+        self.assertEqual(result, 15)  # 5 + 10 여유
+
+    def test_multiple_segments(self):
+        segments = [
+            {'start': 0, 'text': 'a'},
+            {'start': 30, 'text': 'b'},
+            {'start': 60, 'text': 'c'},
+        ]
+        result = get_total_duration(segments)
+        # avg_gap = 60 / 2 = 30, total = 60 + 30 = 90
+        self.assertEqual(result, 90)
+
+    def test_no_valid_starts(self):
+        result = get_total_duration([{'text': 'no start field'}])
+        self.assertEqual(result, 0)
 
 
 if __name__ == '__main__':
