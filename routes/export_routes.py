@@ -73,6 +73,10 @@ def export_docx():
             download_name=filename
         )
         response.headers['Content-Length'] = content_length
+        # 페이지 수 추정 (한국어 기준 약 1500자/페이지)
+        plain_text = re_module.sub(r'[#*_`~\[\]()]', '', content)
+        page_count = max(1, round(len(plain_text.strip()) / 1500))
+        response.headers['X-Page-Count'] = str(page_count)
         return response
 
     except ImportError:
