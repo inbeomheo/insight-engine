@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client, sanitize_path, clamp_query_int
+from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client, sanitize_path, clamp_query_int, validate_content_length
 
 
 def _sanitize_generation_error(error: Exception | str, fallback_message: str) -> str:
@@ -44,6 +44,10 @@ def generate_mindmap():
 
         if not content:
             return jsonify({'error': '마인드맵으로 변환할 콘텐츠가 필요합니다.'}), 400
+
+        length_error = validate_content_length(content)
+        if length_error:
+            return jsonify({'error': length_error}), 400
 
         # MINDMAP_PROMPT 가져오기
         style_prompts = current_app.config.get('STYLE_PROMPTS', {})
@@ -386,6 +390,9 @@ def rewrite_content():
 
         if not content:
             return jsonify({'error': '변환할 콘텐츠가 필요합니다.'}), 400
+        length_error = validate_content_length(content)
+        if length_error:
+            return jsonify({'error': length_error}), 400
         if not platform:
             return jsonify({'error': '대상 플랫폼을 선택해주세요.'}), 400
 
@@ -757,6 +764,9 @@ def inline_edit_content():
 
         if not content or not selection:
             return jsonify({'error': '콘텐츠와 선택 영역이 필요합니다.'}), 400
+        length_error = validate_content_length(content)
+        if length_error:
+            return jsonify({'error': length_error}), 400
         if not instruction:
             return jsonify({'error': '편집 지시가 필요합니다.'}), 400
 

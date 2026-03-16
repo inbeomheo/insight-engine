@@ -36,6 +36,8 @@ def create_app(test_config=None):
 
     app.config.from_object('config')
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    # 요청 본문 최대 크기 제한 (2MB) — 대용량 입력 DoS 방어
+    app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
     # Rate Limiter 초기화
     from extensions import limiter

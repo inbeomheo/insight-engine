@@ -171,6 +171,27 @@ def sanitize_path(user_path: str, allowed_base: str) -> str:
     return joined
 
 
+# 콘텐츠 입력 최대 길이 (문자 수, ~500KB 상당)
+MAX_CONTENT_CHARS = 500_000
+
+
+def validate_content_length(content: str, max_chars: int = MAX_CONTENT_CHARS) -> str | None:
+    """콘텐츠 문자열 길이를 검증합니다.
+
+    Args:
+        content: 검증할 콘텐츠 문자열
+        max_chars: 최대 허용 문자 수
+
+    Returns:
+        None이면 유효, 문자열이면 에러 메시지
+    """
+    if not isinstance(content, str):
+        return '콘텐츠는 문자열이어야 합니다.'
+    if len(content) > max_chars:
+        return f'콘텐츠가 너무 깁니다. 최대 {max_chars:,}자까지 허용됩니다. (현재: {len(content):,}자)'
+    return None
+
+
 def safe_int(value, default: int = 0) -> int:
     """JSON 요청 파라미터를 안전하게 int로 변환합니다.
 
