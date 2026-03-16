@@ -3366,3 +3366,46 @@ def cache_stats():
         return jsonify(stats)
     except Exception as e:
         return handle_error(e, '캐시 통계 조회')
+
+
+# ──────────────────────────────────────────────
+# 콘텐츠 통계 분석
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/content/stats', methods=['POST'])
+@require_auth
+def content_stats():
+    """콘텐츠 텍스트의 통계 분석 (글자수, 단어수, 문장수, 예상 읽기 시간).
+
+    Body: {"content": "분석할 텍스트"}
+    """
+    try:
+        import re as _re
+        data = request.get_json(silent=True) or {}
+        content = (data.get('content') or '').strip()
+        if not content:
+            return jsonify({'error': '분석할 콘텐츠를 입력해주세요.'}), 400
+
+        # 마크다운 제거 후 순수 텍스트
+        plain = _re.sub(r'[#*_`~\[\]()]', '', content)
+        plain = _re.sub(r'\n{2,}', '\n', plain).strip()
+
+        char_count = len(plain)
+        # 한국어+영어 혼합 단어 수: 공백 기준
+        words = [w for w in plain.split() if w]
+        word_count = len(words)
+        # 문장 수: 마침표/물음표/느낌표 기준
+        sentences = [s for s in _re.split(r'[.?!。？！]\s*', plain) if s.strip()]
+        sentence_count = max(len(sentences), 1)
+        # 예상 읽기 시간 (한국어 평균 500자/분)
+        reading_time_min = max(1, round(char_count / 500))
+
+        return jsonify({
+            'char_count': char_count,
+            'word_count': word_count,
+            'sentence_count': sentence_count,
+            'reading_time_min': reading_time_min,
+            'avg_sentence_length': round(char_count / sentence_count, 1),
+        })
+    except Exception as e:
+        return handle_error(e, '콘텐츠 통계 분석')
