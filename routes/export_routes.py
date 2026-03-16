@@ -27,6 +27,8 @@ def export_docx():
         from docx.shared import Pt, Inches
         from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+        include_toc = data.get('include_toc', False)
+
         doc = Document()
 
         # 기본 스타일 설정
@@ -38,6 +40,10 @@ def export_docx():
         # 제목
         heading = doc.add_heading(title, level=1)
         heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # 목차 삽입 (include_toc=true 시)
+        if include_toc:
+            _insert_toc(doc, content)
 
         # 마크다운 → docx 변환
         _markdown_to_docx(doc, content)
@@ -67,6 +73,55 @@ def export_docx():
     except Exception as e:
         current_app.logger.error(f"DOCX export failed: {e}")
         return jsonify({'error': 'DOCX 변환 중 오류가 발생했습니다.'}), 500
+
+
+def _extract_headings(markdown_text):
+    """마크다운에서 헤딩을 추출합니다. [(level, text), ...]"""
+    headings = []
+    for line in markdown_text.split('\n'):
+        stripped = line.strip()
+        if stripped.startswith('#'):
+            # 헤딩 레벨 계산
+            level = 0
+            for ch in stripped:
+                if ch == '#':
+                    level += 1
+                else:
+                    break
+            if 1 <= level <= 4 and len(stripped) > level:
+                text = stripped[level:].strip()
+                text = re_module.sub(r'\*\*(.+?)\*\*', r'\1', text)
+                text = re_module.sub(r'\*(.+?)\*', r'\1', text)
+                text = re_module.sub(r'`(.+?)`', r'\1', text)
+                if text:
+                    headings.append((level, text))
+    return headings
+
+
+def _insert_toc(doc, markdown_text):
+    """마크다운 헤딩 기반 목차를 DOCX에 삽입합니다."""
+    from docx.shared import Pt
+
+    headings = _extract_headings(markdown_text)
+    if not headings:
+        return
+
+    # 목차 제목
+    toc_heading = doc.add_heading('목차', level=2)
+
+    # 최소 레벨 기준으로 들여쓰기
+    min_level = min(h[0] for h in headings)
+
+    for level, text in headings:
+        indent = '  ' * (level - min_level)
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(2)
+        p.paragraph_format.space_after = Pt(2)
+        run = p.add_run(f'{indent}{"─ " if level > min_level else "■ "}{text}')
+        run.font.size = Pt(10)
+
+    # 구분선
+    doc.add_paragraph()
 
 
 def _markdown_to_docx(doc, markdown_text):
@@ -547,9 +602,26 @@ def export_html():
         data = request.get_json(silent=True) or {}
         title = data.get('title', 'AI 생성 결과')
         html_content = data.get('html', '') or data.get('content', '')
+        dark_mode = data.get('dark_mode', False)
 
         if not html_content:
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+
+        dark_css = ""
+        if dark_mode:
+            dark_css = """
+@media (prefers-color-scheme: dark) {
+body { background: #1a1a2e; color: #e0e0e0; }
+h1 { border-bottom-color: #444; }
+h2 { color: #d1d5db; }
+h3 { color: #9ca3af; }
+blockquote { background: #1e293b; color: #93c5fd; border-left-color: #60a5fa; }
+code { background: #374151; color: #f9fafb; }
+th, td { border-color: #4b5563; }
+th { background: #1f2937; }
+a { color: #60a5fa; }
+.meta { color: #9ca3af; }
+}"""
 
         standalone_html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -574,6 +646,7 @@ th, td {{ border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; text-align: left; 
 th {{ background: #f9fafb; font-weight: 600; }}
 a {{ color: #2563eb; }}
 .meta {{ color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }}
+{dark_css}
 </style>
 </head>
 <body>
