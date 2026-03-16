@@ -208,14 +208,30 @@ def export_zip(title: str, content: str) -> io.BytesIO:
         zf.writestr(f'{safe_name}.docx', docx_buf.getvalue())
 
         # meta.json
+        exported_at = datetime.now(timezone.utc).isoformat()
         meta = {
             'title': title,
             'char_count': len(content),
-            'exported_at': datetime.now(timezone.utc).isoformat(),
-            'generated_at': datetime.now(timezone.utc).isoformat(),
+            'exported_at': exported_at,
+            'generated_at': exported_at,
             'formats': ['md', 'txt', 'docx'],
         }
         zf.writestr('meta.json', json.dumps(meta, ensure_ascii=False, indent=2))
+
+        # readme.txt — 생성 설정 요약
+        word_count = len(content.split())
+        line_count = len(content.split('\n'))
+        readme_lines = [
+            f'제목: {title}',
+            f'내보내기 일시: {exported_at}',
+            f'글자 수: {len(content)}',
+            f'단어 수: {word_count}',
+            f'줄 수: {line_count}',
+            f'포함 파일: {safe_name}.md, {safe_name}.txt, {safe_name}.docx, meta.json',
+            '',
+            'Insight Engine (https://github.com/insight-engine)으로 생성됨',
+        ]
+        zf.writestr('readme.txt', '\n'.join(readme_lines))
 
     zip_buffer.seek(0)
     return zip_buffer
