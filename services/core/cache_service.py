@@ -17,6 +17,8 @@ class AICacheService:
         self.db_path = db_path
         self.ttl_seconds = ttl_days * 86400
         self.max_size_bytes = max_size_mb * 1024 * 1024
+        self._hits = 0
+        self._misses = 0
 
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self._init_db()
@@ -63,11 +65,13 @@ class AICacheService:
             ).fetchone()
 
             if not row:
+                self._misses += 1
                 return None
 
             # TTL 체크
             if now - row['created_at'] > self.ttl_seconds:
                 conn.execute("DELETE FROM ai_cache WHERE cache_key = ?", (cache_key,))
+                self._misses += 1
                 return None
 
             # accessed_at 갱신
@@ -75,6 +79,7 @@ class AICacheService:
                 "UPDATE ai_cache SET accessed_at = ? WHERE cache_key = ?",
                 (now, cache_key)
             )
+            self._hits += 1
             return json.loads(row['result_json'])
 
     def put(self, cache_key: str, video_id: str, style_id: str, model: str, length: str, writing_style: str, result: Dict[str, Any]) -> None:
@@ -117,12 +122,17 @@ class AICacheService:
                        COALESCE(SUM(size_bytes), 0) AS total_bytes
                 FROM ai_cache
             """).fetchone()
+            total_requests = self._hits + self._misses
+            hit_rate = round(self._hits / total_requests, 4) if total_requests > 0 else 0.0
             return {
                 'count': row['count'],
                 'total_bytes': row['total_bytes'],
                 'total_mb': round(row['total_bytes'] / (1024 * 1024), 2),
                 'max_mb': self.max_size_bytes // (1024 * 1024),
                 'ttl_days': self.ttl_seconds // 86400,
+                'hits': self._hits,
+                'misses': self._misses,
+                'hit_rate': hit_rate,
             }
 
     def clear(self, video_id: Optional[str] = None) -> int:

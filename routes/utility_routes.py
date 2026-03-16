@@ -95,6 +95,26 @@ def health_detailed():
     except Exception:
         checks['webhook'] = {'enabled': False, 'failure_count': 0}
 
+    # 캐시 디렉토리 디스크 사용량
+    try:
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+        total_bytes = 0
+        if os.path.isdir(cache_dir):
+            for dirpath, _dirnames, filenames in os.walk(cache_dir):
+                for f in filenames:
+                    fp = os.path.join(dirpath, f)
+                    try:
+                        total_bytes += os.path.getsize(fp)
+                    except OSError:
+                        pass
+        checks['disk_usage'] = {
+            'cache_dir': cache_dir,
+            'size_bytes': total_bytes,
+            'size_mb': round(total_bytes / (1024 * 1024), 2),
+        }
+    except Exception:
+        checks['disk_usage'] = {'cache_dir': '', 'size_bytes': 0, 'size_mb': 0.0}
+
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])
     if configured_providers == 0:
@@ -3337,8 +3357,13 @@ def arxiv_search():
         if not query:
             return jsonify({'error': '검색어를 입력해주세요.'}), 400
         max_results = min(int(data.get('max_results', 5)), 20)
-        papers = search_papers(query, max_results=max_results)
-        return jsonify({'papers': papers, 'count': len(papers)})
+        result = search_papers(query, max_results=max_results)
+        papers = result.get('papers', [])
+        return jsonify({
+            'papers': papers,
+            'count': len(papers),
+            'total_results': result.get('total_results', len(papers)),
+        })
     except Exception as e:
         return handle_error(e, 'arXiv 검색')
 
