@@ -27,7 +27,7 @@ from services.analytics.roi_calculator_service import ROICalculatorService
 from services.analytics.heatmap_service import HeatmapService
 from services.content.digest_service import DigestService
 from services.core.logging_config import ServiceLogger
-from utils.responses import clamp_query_int
+from utils.responses import clamp_query_int, safe_int, safe_float
 
 logger = ServiceLogger('AnalyticsRoutes')
 
@@ -86,8 +86,8 @@ def dashboard_record():
     _dashboard.record_generation(
         style=data.get('style', ''),
         model=data.get('model', ''),
-        tokens=int(data.get('tokens', 0)),
-        duration_ms=float(data.get('duration_ms', 0)),
+        tokens=safe_int(data.get('tokens'), 0),
+        duration_ms=safe_float(data.get('duration_ms'), 0),
         success=bool(data.get('success', True)),
     )
     return jsonify({'ok': True})
@@ -133,7 +133,7 @@ def performance_aggregate():
 @require_auth
 def get_costs():
     days = request.args.get('days')
-    days_int = int(days) if days else None
+    days_int = safe_int(days, 0) or None
     return jsonify({
         'total': _cost_tracker.get_total_cost(days_int),
         'by_model': _cost_tracker.get_cost_by_model(days_int),
@@ -147,11 +147,11 @@ def get_costs():
 def calculate_roi():
     data = request.get_json() or {}
     result = _roi.calculate_roi(
-        generation_cost_usd=float(data.get('generation_cost_usd', 0)),
-        views=int(data.get('views', 0)),
-        clicks=int(data.get('clicks', 0)),
-        conversions=int(data.get('conversions', 0)),
-        revenue_per_conversion_usd=float(data.get('revenue_per_conversion_usd', 0)),
+        generation_cost_usd=safe_float(data.get('generation_cost_usd'), 0),
+        views=safe_int(data.get('views'), 0),
+        clicks=safe_int(data.get('clicks'), 0),
+        conversions=safe_int(data.get('conversions'), 0),
+        revenue_per_conversion_usd=safe_float(data.get('revenue_per_conversion_usd'), 0),
     )
     return jsonify(result)
 
@@ -161,7 +161,7 @@ def calculate_roi():
 @limiter.limit("30/minute")
 def record_click(content_id: str):
     data = request.get_json() or {}
-    _heatmap.record_click(content_id, int(data.get('x', 0)), int(data.get('y', 0)))
+    _heatmap.record_click(content_id, safe_int(data.get('x'), 0), safe_int(data.get('y'), 0))
     return jsonify({'ok': True})
 
 
@@ -169,7 +169,7 @@ def record_click(content_id: str):
 @limiter.limit("30/minute")
 def record_scroll(content_id: str):
     data = request.get_json() or {}
-    _heatmap.record_scroll(content_id, float(data.get('depth_pct', 0)))
+    _heatmap.record_scroll(content_id, safe_float(data.get('depth_pct'), 0))
     return jsonify({'ok': True})
 
 
@@ -307,7 +307,7 @@ def record_metric():
     data = request.get_json() or {}
     result = _anomaly.record_metric(
         metric=data.get('metric', ''),
-        value=float(data.get('value', 0)),
+        value=safe_float(data.get('value'), 0),
     )
     return jsonify({'anomaly': result})
 
@@ -355,7 +355,7 @@ def export_data():
 def generate_digest():
     data = request.get_json() or {}
     generations = data.get('generations', [])
-    period_days = int(data.get('period_days', 7))
+    period_days = safe_int(data.get('period_days'), 7)
     digest = _digest.build_digest(generations, period_days)
     fmt = data.get('format', 'json')
     if fmt == 'text':
@@ -371,7 +371,7 @@ def generate_digest():
 def create_share_link():
     import uuid
     token = str(uuid.uuid4())
-    days = int(request.get_json().get('days', 30) if request.get_json() else 30)
+    days = safe_int((request.get_json() or {}).get('days'), 30)
     _share_tokens[token] = {
         'days': days,
         'created_at': datetime.now(timezone.utc).isoformat(),
@@ -446,7 +446,7 @@ def cohort_record_event():
         user_id=user_id,
         event=event,
         timestamp=data.get('timestamp'),
-        revenue=float(data.get('revenue', 0)),
+        revenue=safe_float(data.get('revenue'), 0),
     )
     return jsonify({'ok': True})
 
