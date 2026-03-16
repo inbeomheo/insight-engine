@@ -659,11 +659,17 @@ def _detect_language_from_text(text: str) -> str:
     sample = text[:200]
     # 한국어 유니코드 범위 체크
     ko_count = sum(1 for c in sample if '\uac00' <= c <= '\ud7a3')
-    ja_count = sum(1 for c in sample if '\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9fff')
+    # 일본어: 히라가나 + 카타카나 (CJK 한자 제외 — 중국어와 구분)
+    ja_kana_count = sum(1 for c in sample if '\u3040' <= c <= '\u30ff')
+    # CJK 한자 (중국어/일본어 공유)
+    cjk_count = sum(1 for c in sample if '\u4e00' <= c <= '\u9fff')
     if ko_count > len(sample) * 0.1:
         return 'ko'
-    if ja_count > len(sample) * 0.1:
+    # 히라가나/카타카나가 있으면 일본어, 한자만 있으면 중국어
+    if ja_kana_count > len(sample) * 0.05:
         return 'ja'
+    if cjk_count > len(sample) * 0.1:
+        return 'zh'
     return 'en'
 
 

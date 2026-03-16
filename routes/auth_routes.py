@@ -975,6 +975,20 @@ def admin_dashboard():
                 'created_at': item.get('created_at', ''),
             })
 
+        # 프로바이더별 활성 상태 집계 (서버 설정 기반)
+        from config import PROVIDER_API_KEYS
+        provider_distribution = {}
+        _provider_labels = {
+            'gemini': 'Gemini', 'deepseek': 'DeepSeek', 'zhipuai': 'Zhipu AI',
+            'ollama': 'Ollama', 'openai': 'OpenAI', 'anthropic': 'Anthropic',
+            'openrouter': 'OpenRouter', 'chatmock': 'ChatMock',
+        }
+        for prov, key in PROVIDER_API_KEYS.items():
+            if key and key not in ('', 'dummy', 'http://localhost:11434'):
+                provider_distribution[_provider_labels.get(prov, prov)] = 'active'
+            elif prov == 'ollama' and key:
+                provider_distribution[_provider_labels.get(prov, prov)] = 'local'
+
         return jsonify({
             'period': '7d',
             'total_generations': total,
@@ -987,6 +1001,7 @@ def admin_dashboard():
             'daily_usage': daily_usage,
             'recent_generations': recent_generations,
             'busiest_hour': busiest_hour,
+            'provider_distribution': provider_distribution,
         })
     except Exception as e:
         import logging
@@ -1282,7 +1297,7 @@ def get_audit_logs():
     user_id = request.args.get('user_id')
     action = request.args.get('action')
     limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
-    offset = max(0, int(request.args.get('offset', 0)))
+    offset = clamp_query_int(request.args.get('offset'), default=0, min_val=0, max_val=100000)
 
     logs = audit_log_service.query(
         user_id=user_id,
@@ -1305,7 +1320,7 @@ def get_workspace_activity(workspace_id):
 
     from utils.responses import clamp_query_int
     limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
-    offset = max(0, int(request.args.get('offset', 0)))
+    offset = clamp_query_int(request.args.get('offset'), default=0, min_val=0, max_val=100000)
 
     items = activity_feed_service.get_feed(workspace_id, limit=limit, offset=offset)
     return jsonify({'items': items})

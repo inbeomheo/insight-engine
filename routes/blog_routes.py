@@ -1145,7 +1145,8 @@ def list_templates():
     from services.data.prompt_template_service import get_templates
 
     user_id = getattr(g, 'user_id', None)
-    page = max(1, int(request.args.get('page', 1)))
+    from utils.responses import clamp_query_int
+    page = clamp_query_int(request.args.get('page'), default=1, min_val=1, max_val=10000)
     search = request.args.get('search', '').strip()
 
     result = get_templates(user_id=user_id, page=page, search=search)

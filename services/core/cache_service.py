@@ -21,7 +21,9 @@ class AICacheService:
         self._hits = 0
         self._misses = 0
 
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -157,6 +159,7 @@ class AICacheService:
 
             count = row['count']
             avg_entry_size_kb = round(row['total_bytes'] / count / 1024, 2) if count > 0 else 0.0
+            usage_percent = round(row['total_bytes'] / self.max_size_bytes * 100, 1) if self.max_size_bytes > 0 else 0.0
 
             return {
                 'count': count,
@@ -164,6 +167,7 @@ class AICacheService:
                 'total_mb': round(row['total_bytes'] / (1024 * 1024), 2),
                 'avg_entry_size_kb': avg_entry_size_kb,
                 'max_mb': self.max_size_bytes // (1024 * 1024),
+                'usage_percent': usage_percent,
                 'ttl_days': self.ttl_seconds // 86400,
                 'hits': self._hits,
                 'misses': self._misses,
