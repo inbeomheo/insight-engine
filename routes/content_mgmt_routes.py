@@ -7,7 +7,7 @@ import re
 import time
 import uuid
 from flask import Blueprint, request, jsonify, Response, current_app
-from utils.responses import sanitize_error_for_client
+from utils.responses import sanitize_error_for_client, clamp_query_int
 
 from services.data.supabase_service import require_auth
 from services.data import content_library_service
@@ -91,8 +91,8 @@ def list_contents():
         folder_id=args.get('folder_id', ''),
         is_pinned=_bool_arg(args.get('is_pinned')),
         is_archived=_bool_arg(args.get('is_archived')),
-        page=int(args.get('page', 1)),
-        per_page=int(args.get('per_page', 20)),
+        page=clamp_query_int(args.get('page'), default=1, min_val=1, max_val=10000),
+        per_page=clamp_query_int(args.get('per_page'), default=20, min_val=1, max_val=100),
         sort_by=args.get('sort_by', 'created_at'),
         sort_desc=args.get('sort_desc', 'true').lower() != 'false',
     )
@@ -258,8 +258,8 @@ def list_archived():
     result = archive_service.list_archived(
         workspace_id=args.get('workspace_id', ''),
         user_id=args.get('user_id', ''),
-        page=int(args.get('page', 1)),
-        per_page=int(args.get('per_page', 20)),
+        page=clamp_query_int(args.get('page'), default=1, min_val=1, max_val=10000),
+        per_page=clamp_query_int(args.get('per_page'), default=20, min_val=1, max_val=100),
     )
     return _json(result)
 
@@ -277,7 +277,7 @@ def acquire_lock(item_id):
         item_id,
         user_id=data.get('user_id', ''),
         user_name=data.get('user_name', ''),
-        ttl=int(data.get('ttl', lock_service.DEFAULT_TTL)),
+        ttl=clamp_query_int(data.get('ttl'), default=lock_service.DEFAULT_TTL, min_val=10, max_val=86400),
     )
     return _json(result, 200 if result['success'] else 423)
 
@@ -324,7 +324,7 @@ def set_expiry(item_id):
         item_id,
         expires_at=float(expires_at),
         action=data.get('action', 'archive'),
-        notify_before_days=int(data.get('notify_before_days', 3)),
+        notify_before_days=clamp_query_int(data.get('notify_before_days'), default=3, min_val=0, max_val=365),
     )
     return _json(rule)
 
@@ -360,7 +360,7 @@ def register_media():
         name=data['name'],
         url=data['url'],
         media_type=data.get('media_type', 'image'),
-        size_bytes=int(data.get('size_bytes', 0)),
+        size_bytes=clamp_query_int(data.get('size_bytes'), default=0, min_val=0, max_val=2_147_483_647),
         mime_type=data.get('mime_type', ''),
         user_id=data.get('user_id', ''),
         workspace_id=data.get('workspace_id', ''),
@@ -381,8 +381,8 @@ def list_media():
         media_type=args.get('media_type', ''),
         tags=args.getlist('tag'),
         query=args.get('q', ''),
-        page=int(args.get('page', 1)),
-        per_page=int(args.get('per_page', 30)),
+        page=clamp_query_int(args.get('page'), default=1, min_val=1, max_val=10000),
+        per_page=clamp_query_int(args.get('per_page'), default=30, min_val=1, max_val=100),
     )
     return _json(result)
 
@@ -577,7 +577,7 @@ def create_share(item_id):
     link = share_service.create_share_link(
         item_id=item_id,
         user_id=data.get('user_id', ''),
-        expires_in_hours=int(data.get('expires_in_hours', 72)),
+        expires_in_hours=clamp_query_int(data.get('expires_in_hours'), default=72, min_val=1, max_val=8760),
         password=data.get('password', ''),
         allow_download=bool(data.get('allow_download', False)),
     )
@@ -925,8 +925,8 @@ def list_trash():
     result = trash_service.list_trash(
         workspace_id=args.get('workspace_id', ''),
         user_id=args.get('user_id', ''),
-        page=int(args.get('page', 1)),
-        per_page=int(args.get('per_page', 20)),
+        page=clamp_query_int(args.get('page'), default=1, min_val=1, max_val=10000),
+        per_page=clamp_query_int(args.get('per_page'), default=20, min_val=1, max_val=100),
     )
     return _json(result)
 

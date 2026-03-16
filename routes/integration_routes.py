@@ -8,7 +8,7 @@ from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
 from services.data.supabase_service import require_auth
-from utils.responses import handle_error, sanitize_error_for_client
+from utils.responses import handle_error, sanitize_error_for_client, clamp_query_int
 
 
 def _sanitize_integration_error(message, fallback_message):
@@ -642,8 +642,8 @@ def search_content():
     from services.seo.search_service import search
     query = request.args.get('q', '')
     style = request.args.get('style', None)
-    limit = min(int(request.args.get('limit', '20')), 50)
-    offset = int(request.args.get('offset', '0'))
+    limit = clamp_query_int(request.args.get('limit'), default=20, min_val=1, max_val=50)
+    offset = clamp_query_int(request.args.get('offset'), default=0, min_val=0, max_val=100000)
 
     result = search(query, style_filter=style, limit=limit, offset=offset)
     return jsonify(result)
@@ -720,8 +720,8 @@ def get_notifications():
     from services.data.notification_service import list_notifications
     user_id = request.args.get('user_id', 'anonymous')
     unread_only = request.args.get('unread_only', 'false').lower() == 'true'
-    limit = min(int(request.args.get('limit', '20')), 50)
-    offset = int(request.args.get('offset', '0'))
+    limit = clamp_query_int(request.args.get('limit'), default=20, min_val=1, max_val=50)
+    offset = clamp_query_int(request.args.get('offset'), default=0, min_val=0, max_val=100000)
 
     result = list_notifications(user_id, unread_only=unread_only,
                                 limit=limit, offset=offset)
@@ -1200,7 +1200,7 @@ def webhook_relay():
     urls = data.get('urls', [])
     payload = data.get('payload', {})
     headers = data.get('headers', {})
-    timeout = min(int(data.get('timeout', 15)), 60)
+    timeout = clamp_query_int(data.get('timeout'), default=15, min_val=1, max_val=60)
 
     if not urls:
         return jsonify({'error': 'urls 목록이 필요합니다.'}), 400
@@ -1892,8 +1892,8 @@ def graph_rag_local_search():
         results = engine.local_search(
             g.user_id,
             entities,
-            max_depth=int(data.get('max_depth', 2)),
-            max_results=int(data.get('max_results', 20)),
+            max_depth=clamp_query_int(data.get('max_depth'), default=2, min_val=1, max_val=10),
+            max_results=clamp_query_int(data.get('max_results'), default=20, min_val=1, max_val=100),
         )
         return jsonify({'results': results})
     except Exception as e:
@@ -1906,7 +1906,7 @@ def graph_rag_global_search():
     """전체 그래프 요약 — 연결이 많은 상위 노드 반환"""
     from services.rag.graph_rag_engine import GraphRAGEngine
 
-    top_n = int(request.args.get('top_n', 10))
+    top_n = clamp_query_int(request.args.get('top_n'), default=10, min_val=1, max_val=100)
     try:
         engine = GraphRAGEngine()
         result = engine.global_search(g.user_id, top_n=top_n)
@@ -1974,7 +1974,7 @@ def multimodal_query():
         result = rag.query_multimodal(
             query=query,
             image_path=data.get('image_path'),
-            top_k=int(data.get('top_k', 5)),
+            top_k=clamp_query_int(data.get('top_k'), default=5, min_val=1, max_val=50),
         )
         return jsonify(result)
     except Exception as e:

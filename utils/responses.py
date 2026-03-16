@@ -171,6 +171,44 @@ def sanitize_path(user_path: str, allowed_base: str) -> str:
     return joined
 
 
+def safe_int(value, default: int = 0) -> int:
+    """JSON 요청 파라미터를 안전하게 int로 변환합니다.
+
+    int(), float(), str, None 등 어떤 값이든 ValueError/TypeError 없이 처리.
+
+    Args:
+        value: 변환할 값 (data.get()의 반환값)
+        default: 변환 실패 시 기본값
+
+    Returns:
+        정수 값
+    """
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def safe_float(value, default: float = 0.0) -> float:
+    """JSON 요청 파라미터를 안전하게 float로 변환합니다.
+
+    Args:
+        value: 변환할 값
+        default: 변환 실패 시 기본값
+
+    Returns:
+        실수 값
+    """
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def clamp_query_int(value, default: int = 10, min_val: int = 1, max_val: int = 100) -> int:
     """쿼리 파라미터 정수를 안전 범위로 클램핑.
 
