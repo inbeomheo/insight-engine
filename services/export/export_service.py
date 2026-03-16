@@ -270,9 +270,14 @@ def export_zip(title: str, content: str) -> io.BytesIO:
                     'size_bytes': entry.file_size,
                     'compress_size_bytes': entry.compress_size,
                 })
+        total_size_bytes = sum(f['size_bytes'] for f in manifest_files)
+        total_compress_bytes = sum(f['compress_size_bytes'] for f in manifest_files)
         manifest = {
             'version': '1.0',
             'total_files': len(manifest_files) + 2,  # +manifest.json +readme.txt
+            'total_size_bytes': total_size_bytes,
+            'total_compress_size_bytes': total_compress_bytes,
+            'total_size_kb': round(total_size_bytes / 1024, 2),
             'files': manifest_files + [
                 {'filename': 'manifest.json', 'size_bytes': 0, 'compress_size_bytes': 0},
                 {'filename': 'readme.txt', 'size_bytes': 0, 'compress_size_bytes': 0},
