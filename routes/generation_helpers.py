@@ -483,6 +483,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     return jsonify({
         **result,
         "id": report_id,
+        "source_url": url,
         "prompt": used_prompt,
         "elapsed_time": elapsed_time,
         "youtube_title": youtube_title,
