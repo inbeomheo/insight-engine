@@ -152,6 +152,10 @@ def clear_cache(video_id: Optional[str] = None) -> int:
     if not os.path.exists(CACHE_DIR):
         return 0
 
+    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지)
+    if video_id is not None:
+        _sanitize_video_id(video_id)
+
     deleted = 0
     for filename in os.listdir(CACHE_DIR):
         if video_id is None or filename.startswith(f"{video_id}_"):

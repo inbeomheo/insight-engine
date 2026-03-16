@@ -35,6 +35,10 @@ _active_requests_lock = threading.Lock()
 _total_request_count: int = 0
 _total_request_count_lock = threading.Lock()
 
+# 서버 시작 후 에러 응답 수 (5xx)
+_total_error_count: int = 0
+_total_error_count_lock = threading.Lock()
+
 
 def increment_request_count():
     """총 요청 수 1 증가."""
@@ -43,9 +47,29 @@ def increment_request_count():
         _total_request_count += 1
 
 
+def increment_error_count():
+    """에러 응답 수 1 증가."""
+    global _total_error_count
+    with _total_error_count_lock:
+        _total_error_count += 1
+
+
 def get_request_count() -> int:
     """서버 시작 후 총 요청 수 반환."""
     return _total_request_count
+
+
+def get_error_count() -> int:
+    """서버 시작 후 에러 응답 수 반환."""
+    return _total_error_count
+
+
+def get_error_rate() -> float:
+    """에러율 반환 (0.0~1.0). 요청이 없으면 0.0."""
+    total = _total_request_count
+    if total == 0:
+        return 0.0
+    return round(_total_error_count / total, 4)
 
 
 def increment_active_requests():
@@ -81,7 +105,7 @@ def health():
     increment_request_count()
     uptime = round(time.time() - _SERVER_START_TIME, 1)
     env = 'production' if os.environ.get('FLASK_ENV') != 'development' and not current_app.debug else 'development'
-    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count()}), 200
+    return jsonify({'status': 'healthy', 'uptime_seconds': uptime, 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count(), 'error_count': get_error_count(), 'error_rate': get_error_rate()}), 200
 
 
 @blog_bp.route('/api/health/detailed')
@@ -185,6 +209,11 @@ def health_detailed():
         checks['cache_hit_rate'] = cache_stats.get('hit_rate', 0.0)
     except Exception:
         checks['cache_hit_rate'] = 0.0
+
+    # 에러율 (5xx 응답 비율)
+    checks['error_rate'] = get_error_rate()
+    checks['error_count'] = get_error_count()
+    checks['total_requests'] = get_request_count()
 
     overall = 'healthy'
     configured_providers = sum(1 for p in provider_status.values() if p['configured'])

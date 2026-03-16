@@ -178,11 +178,12 @@ def _validate_modifiers(modifiers):
     if not isinstance(modifiers, dict):
         return None, 'modifiers는 객체 형식이어야 합니다.'
 
-    # 허용된 키와 값 정의 (v3.0: 2개 모디파이어만 지원)
-    allowed_keys = {'length', 'writing_style'}
+    # 허용된 키와 값 정의 (v3.1: 3개 모디파이어 지원)
+    allowed_keys = {'length', 'writing_style', 'language'}
     allowed_values = {
         'length': {'short', 'medium', 'long'},
-        'writing_style': {'conversational', 'explanatory', 'casual', 'expert'}
+        'writing_style': {'conversational', 'explanatory', 'casual', 'expert'},
+        'language': {'ko', 'en', 'ja'},
     }
 
     validated = {}
