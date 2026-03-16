@@ -3432,12 +3432,21 @@ def content_stats():
         # 예상 읽기 시간 (한국어 평균 500자/분)
         reading_time_min = max(1, round(char_count / 500))
 
+        # 문단 수: 빈 줄로 구분된 블록
+        paragraphs = [p for p in _re.split(r'\n\s*\n', content) if p.strip()]
+        paragraph_count = len(paragraphs) or 1
+
+        # 헤딩 수: 마크다운 # 기준
+        heading_count = len(_re.findall(r'^#{1,6}\s+\S', content, _re.MULTILINE))
+
         return jsonify({
             'char_count': char_count,
             'word_count': word_count,
             'sentence_count': sentence_count,
             'reading_time_min': reading_time_min,
             'avg_sentence_length': round(char_count / sentence_count, 1),
+            'paragraph_count': paragraph_count,
+            'heading_count': heading_count,
         })
     except Exception as e:
         return handle_error(e, '콘텐츠 통계 분석')
@@ -3555,17 +3564,17 @@ def system_info():
     import sys
 
     # 주요 패키지 버전 수집
+    from importlib.metadata import version as pkg_version, PackageNotFoundError
+
     packages = [
-        'flask', 'litellm', 'chromadb', 'faster_whisper',
+        'flask', 'litellm', 'chromadb', 'faster-whisper',
         'python-docx', 'trafilatura', 'apscheduler',
     ]
     dependency_versions = {}
     for pkg in packages:
         try:
-            mod = __import__(pkg.replace('-', '_'))
-            ver = getattr(mod, '__version__', getattr(mod, 'VERSION', 'unknown'))
-            dependency_versions[pkg] = str(ver)
-        except ImportError:
+            dependency_versions[pkg] = pkg_version(pkg)
+        except PackageNotFoundError:
             dependency_versions[pkg] = 'not_installed'
 
     uptime = round(time.time() - _SERVER_START_TIME, 1)
