@@ -137,3 +137,22 @@ def api_error_from_exception(e: Exception, fallback_message: str = '서버 오�
     """
     logger.error(f"API 오류: {e}", exc_info=True)
     return jsonify({'error': fallback_message}), 500
+
+
+def clamp_query_int(value, default: int = 10, min_val: int = 1, max_val: int = 100) -> int:
+    """쿼리 파라미터 정수를 안전 범위로 클램핑.
+
+    Args:
+        value: request.args.get()의 결과 (str 또는 None)
+        default: 기본값
+        min_val: 최소값
+        max_val: 최대값 (DB 부하 방지)
+
+    Returns:
+        min_val <= result <= max_val 범위의 정수
+    """
+    try:
+        n = int(value) if value is not None else default
+    except (ValueError, TypeError):
+        n = default
+    return max(min_val, min(n, max_val))

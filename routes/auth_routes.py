@@ -1237,10 +1237,11 @@ def get_audit_logs():
     if not is_admin(g.user_id):
         return _error_response('관리자 권한이 필요합니다.', 403)
 
+    from utils.responses import clamp_query_int
     user_id = request.args.get('user_id')
     action = request.args.get('action')
-    limit = int(request.args.get('limit', 50))
-    offset = int(request.args.get('offset', 0))
+    limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
+    offset = max(0, int(request.args.get('offset', 0)))
 
     logs = audit_log_service.query(
         user_id=user_id,
@@ -1261,8 +1262,9 @@ def get_workspace_activity(workspace_id):
     """워크스페이스 활동 피드 조회"""
     from services.data.activity_feed_service import activity_feed_service
 
-    limit = int(request.args.get('limit', 50))
-    offset = int(request.args.get('offset', 0))
+    from utils.responses import clamp_query_int
+    limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
+    offset = max(0, int(request.args.get('offset', 0)))
 
     items = activity_feed_service.get_feed(workspace_id, limit=limit, offset=offset)
     return jsonify({'items': items})

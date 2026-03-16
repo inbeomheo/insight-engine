@@ -116,8 +116,9 @@ def record_share(content_id: str):
 @analytics_bp.route('/api/performance/top', methods=['GET'])
 @require_auth
 def top_contents():
+    from utils.responses import clamp_query_int
     by = request.args.get('by', 'views')
-    limit = int(request.args.get('limit', 10))
+    limit = clamp_query_int(request.args.get('limit'), default=10, max_val=100)
     return jsonify(_performance.get_top_contents(by=by, limit=limit))
 
 
@@ -296,7 +297,8 @@ def realtime_status():
 @analytics_bp.route('/api/admin/anomalies', methods=['GET'])
 @require_auth
 def get_anomalies():
-    limit = int(request.args.get('limit', 50))
+    from utils.responses import clamp_query_int
+    limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
     return jsonify(_anomaly.get_anomalies(limit))
 
 
