@@ -132,5 +132,81 @@ class TestGenerateAbHooks(unittest.TestCase):
         self.assertEqual(result['total_pairs'], 0)
 
 
+class TestGenerateHooksEdgeCases(unittest.TestCase):
+    """generate_hooks 엣지 케이스 테스트"""
+
+    def test_whitespace_only_topic(self):
+        """공백만 있는 주제는 빈 결과"""
+        result = generate_hooks('   ')
+        self.assertEqual(result['total'], 0)
+
+    def test_count_zero_returns_at_least_one(self):
+        """count=0은 max(1, 0)=1로 최소 1개 반환"""
+        result = generate_hooks('AI', count=0)
+        self.assertGreaterEqual(result['total'], 1)
+
+    def test_count_negative_returns_at_least_one(self):
+        """음수 count는 max(1, ...)로 최소 1개 반환"""
+        result = generate_hooks('AI', count=-5)
+        self.assertGreaterEqual(result['total'], 1)
+
+    def test_topic_stripped(self):
+        """주제 앞뒤 공백 제거"""
+        result = generate_hooks('  인공지능  ')
+        self.assertEqual(result['topic'], '인공지능')
+
+    def test_content_without_stats(self):
+        """통계 없는 콘텐츠에서도 정상 동작"""
+        result = generate_hooks('테스트', content='일반 텍스트 설명입니다')
+        self.assertGreater(result['total'], 0)
+
+    def test_empty_recommendation_when_no_hooks(self):
+        """빈 결과일 때 recommendation은 빈 문자열"""
+        result = generate_hooks('')
+        self.assertEqual(result['recommendation'], '')
+
+
+class TestExtractStatsEdgeCases(unittest.TestCase):
+    """_extract_stats 엣지 케이스 테스트"""
+
+    def test_korean_unit_pattern(self):
+        """한국어 단위 패턴 (만/억 + 명/원/건/개)"""
+        stats = _extract_stats('참여자가 100만명을 돌파했습니다')
+        self.assertGreater(len(stats), 0)
+
+    def test_short_match_filtered(self):
+        """5자 미만 매칭은 제외"""
+        stats = _extract_stats('5%')
+        self.assertEqual(len(stats), 0)
+
+    def test_long_match_filtered(self):
+        """50자 초과 매칭은 제외"""
+        long_text = 'a' * 45 + ' 50%' + 'b' * 10
+        stats = _extract_stats(long_text)
+        # 50자 초과인 매칭은 필터링됨
+        for s in stats:
+            self.assertLessEqual(len(s), 50)
+
+
+class TestGenerateAbHooksEdgeCases(unittest.TestCase):
+    """generate_ab_hooks 엣지 케이스 테스트"""
+
+    def test_whitespace_only_topic(self):
+        """공백만 있는 주제"""
+        result = generate_ab_hooks('   ')
+        self.assertEqual(result['total_pairs'], 0)
+
+    def test_count_zero_returns_at_least_one(self):
+        """count=0은 max(1, 0)=1로 최소 1쌍"""
+        result = generate_ab_hooks('AI', count=0)
+        self.assertGreaterEqual(result['total_pairs'], 1)
+
+    def test_pairs_have_different_texts(self):
+        """A/B 쌍의 텍스트가 서로 다름"""
+        result = generate_ab_hooks('데이터 분석', count=3)
+        for pair in result['pairs']:
+            self.assertNotEqual(pair['a']['text'], pair['b']['text'])
+
+
 if __name__ == '__main__':
     unittest.main()
