@@ -528,3 +528,64 @@ def _add_table_to_docx(doc, rows):
                     for paragraph in cell.paragraphs:
                         for run in paragraph.runs:
                             run.bold = True
+
+
+@blog_bp.route('/api/export/html', methods=['POST'])
+@require_auth
+def export_html():
+    """마크다운 콘텐츠를 독립 HTML 파일로 변환합니다.
+
+    인라인 CSS 포함, 외부 의존성 없는 self-contained HTML.
+    Body: {"title": "...", "content": "...", "html": "..."}
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        title = data.get('title', 'AI 생성 결과')
+        html_content = data.get('html', '') or data.get('content', '')
+
+        if not html_content:
+            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+
+        standalone_html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.8; color: #1a1a1a; }}
+h1 {{ font-size: 1.75rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }}
+h2 {{ font-size: 1.4rem; margin-top: 2rem; color: #374151; }}
+h3 {{ font-size: 1.15rem; color: #4b5563; }}
+p {{ margin: 0.75rem 0; }}
+ul, ol {{ padding-left: 1.5rem; }}
+li {{ margin: 0.25rem 0; }}
+blockquote {{ border-left: 4px solid #3b82f6; margin: 1rem 0; padding: 0.5rem 1rem; background: #eff6ff; color: #1e40af; }}
+code {{ background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }}
+pre {{ background: #1f2937; color: #e5e7eb; padding: 1rem; border-radius: 8px; overflow-x: auto; }}
+pre code {{ background: transparent; padding: 0; }}
+table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
+th, td {{ border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; text-align: left; }}
+th {{ background: #f9fafb; font-weight: 600; }}
+a {{ color: #2563eb; }}
+.meta {{ color: #6b7280; font-size: 0.85rem; margin-bottom: 1.5rem; }}
+</style>
+</head>
+<body>
+<h1>{title}</h1>
+<p class="meta">Insight Engine으로 생성됨</p>
+{html_content}
+</body>
+</html>"""
+
+        buf = io.BytesIO(standalone_html.encode('utf-8'))
+        safe_title = re_module.sub(r'[^\w\s가-힣-]', '', title)[:50].strip() or 'export'
+        return send_file(
+            buf,
+            mimetype='text/html',
+            as_attachment=True,
+            download_name=f'{safe_title}.html',
+        )
+
+    except Exception as e:
+        return handle_error(e, 'HTML 내보내기')
