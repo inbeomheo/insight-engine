@@ -54,8 +54,8 @@ class AutoDataCollector:
             if not client:
                 return {'error': 'Supabase 미연결'}
 
-            from datetime import datetime, timedelta
-            cutoff = (datetime.utcnow() - timedelta(days=days_back)).isoformat()
+            from datetime import datetime, timedelta, timezone
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
             resp = client.table('ie_histories') \
                 .select('url, title, style_id, content') \

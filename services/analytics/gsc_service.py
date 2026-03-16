@@ -3,7 +3,7 @@ Google Search Console 연동 서비스 (F6-04)
 GSC API를 통해 검색 순위 / CTR 데이터 조회
 """
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from services.core.logging_config import ServiceLogger
@@ -53,8 +53,8 @@ class GSCService:
         if service is None:
             return {'enabled': False, 'reason': 'google-api-python-client 필요'}
 
-        end_date = (datetime.utcnow() - timedelta(days=3)).strftime('%Y-%m-%d')
-        start_date = (datetime.utcnow() - timedelta(days=days + 3)).strftime('%Y-%m-%d')
+        end_date = (datetime.now(timezone.utc) - timedelta(days=3)).strftime('%Y-%m-%d')
+        start_date = (datetime.now(timezone.utc) - timedelta(days=days + 3)).strftime('%Y-%m-%d')
 
         try:
             body = {
@@ -92,8 +92,8 @@ class GSCService:
         if service is None:
             return {'enabled': False}
 
-        end_date = (datetime.utcnow() - timedelta(days=3)).strftime('%Y-%m-%d')
-        start_date = (datetime.utcnow() - timedelta(days=days + 3)).strftime('%Y-%m-%d')
+        end_date = (datetime.now(timezone.utc) - timedelta(days=3)).strftime('%Y-%m-%d')
+        start_date = (datetime.now(timezone.utc) - timedelta(days=days + 3)).strftime('%Y-%m-%d')
 
         try:
             body = {

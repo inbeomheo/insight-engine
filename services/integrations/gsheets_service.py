@@ -101,9 +101,9 @@ class GoogleSheetsService:
                 'message': 'GOOGLE_SHEETS_API_KEY 또는 GOOGLE_SPREADSHEET_ID가 설정되지 않았습니다.',
             }
 
-        from datetime import datetime
+        from datetime import datetime, timezone
         row = [
-            datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
             title[:500],
             style,
             url,
