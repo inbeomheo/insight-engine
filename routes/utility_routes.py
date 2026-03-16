@@ -3327,3 +3327,27 @@ def github_readme():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         return handle_error(e, 'GitHub README 추출')
+
+
+# ──────────────────────────────────────────────
+# 스타일 목록 API
+# ──────────────────────────────────────────────
+
+@blog_bp.route('/api/styles')
+def list_styles():
+    """사용 가능한 전체 스타일 목록 + 메타데이터 반환."""
+    from config import STYLE_OPTIONS, STYLE_TEMPERATURE, STYLE_MODIFIERS
+
+    styles = []
+    for style_id, label in STYLE_OPTIONS:
+        styles.append({
+            'id': style_id,
+            'label': label,
+            'temperature': STYLE_TEMPERATURE.get(style_id, 0.7),
+        })
+
+    return jsonify({
+        'styles': styles,
+        'modifiers': STYLE_MODIFIERS,
+        'count': len(styles),
+    })
