@@ -60,7 +60,7 @@ export default function Home() {
   const generationMode = useSettingsStore((s) => s.generationMode);
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
-  const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
+  const { urls, addUrl, addUrls, removeUrl } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
 
@@ -205,23 +205,26 @@ export default function Home() {
   // 생성 시작 (1개면 단일, 여러 개면 배치)
   const handleGenerate = useCallback(async () => {
     if (urls.length === 0) return;
-    const ok = await generateBatchUrls([...urls]);
-    if (ok) startTransition(() => clearUrls());
-  }, [urls, generateBatchUrls, clearUrls]);
+    const submitted = [...urls];
+    const ok = await generateBatchUrls(submitted);
+    if (ok) startTransition(() => submitted.forEach(removeUrl));
+  }, [urls, generateBatchUrls, removeUrl]);
 
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
   const handleGenerateMerged = useCallback(async () => {
     if (urls.length < 2) return;
-    const ok = await generateMergedUrls([...urls]);
-    if (ok) startTransition(() => clearUrls());
-  }, [urls, generateMergedUrls, clearUrls]);
+    const submitted = [...urls];
+    const ok = await generateMergedUrls(submitted);
+    if (ok) startTransition(() => submitted.forEach(removeUrl));
+  }, [urls, generateMergedUrls, removeUrl]);
 
   // 퓨전 분석 (2~5개 URL → 교차분석 + 웹리서치)
   const handleGenerateFusion = useCallback(async () => {
     if (urls.length < 2) return;
-    const ok = await generateFusionUrls([...urls]);
-    if (ok) startTransition(() => clearUrls());
-  }, [urls, generateFusionUrls, clearUrls]);
+    const submitted = [...urls];
+    const ok = await generateFusionUrls(submitted);
+    if (ok) startTransition(() => submitted.forEach(removeUrl));
+  }, [urls, generateFusionUrls, removeUrl]);
 
   return (
     <div
@@ -298,50 +301,50 @@ export default function Home() {
                   {generationMode === 'individual' && (
                     <Button
                       onClick={handleGenerate}
-                      disabled={isLoading}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                       {urls.length === 1
                         ? t('generateButton.singleUrl')
                         : t('generateButton.multipleUrls', { count: urls.length })}
+                      {isLoading && <span className="text-xs opacity-70">+</span>}
                     </Button>
                   )}
                   {generationMode === 'combined' && urls.length >= 2 && (
                     <Button
                       onClick={handleGenerateMerged}
-                      disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-md shadow-primary/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-md shadow-primary/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
                       {t('generateButton.combined', { count: urls.length })}
+                      {isLoading && <span className="text-xs opacity-70">+</span>}
                     </Button>
                   )}
                   {generationMode === 'fusion' && urls.length >= 2 && (
                     <Button
                       onClick={handleGenerateFusion}
-                      disabled={isLoading}
                       variant="outline"
-                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-md shadow-purple-500/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-md shadow-purple-500/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
                       {t('generateButton.fusion', { count: urls.length })}
+                      {isLoading && <span className="text-xs opacity-70">+</span>}
                     </Button>
                   )}
                   {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
                   {urls.length === 1 && generationMode !== 'individual' && (
                     <Button
                       onClick={handleGenerate}
-                      disabled={isLoading}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                       {t('generateButton.singleUrl')}
+                      {isLoading && <span className="text-xs opacity-70">+</span>}
                     </Button>
                   )}
                 </div>

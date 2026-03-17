@@ -411,3 +411,12 @@ SELECT decrement_usage_safe('user-uuid');
 - `main.js`에서 `_historyLoaded` 플래그 + `_currentUserId` 비교로 중복 로드 방지
 - `ReportManager._displayHistoryCard()`에서 `data-report-id`로 중복 카드 방지
 - 초기화 순서: `onAuthChange` 콜백 설정 → `authManager.init()` → 히스토리 로드
+
+### autoresearch 정리 (2026-03-18)
+
+176라운드 autoresearch 결과 중 불필요 코드 정리 완료:
+- 제거됨: 미사용 응답 필드 14개, Dead Code 함수 9개, API 엔드포인트 12개, 테스트 49개
+- 현재 테스트: 4,278 passed
+- 제거된 엔드포인트: `/api/arxiv/*`, `/api/health/detailed`, `/api/github/readme`, `/api/styles`, `/api/cache/stats`, `/api/cache/purge`, `/api/content/stats`, `/api/version`, `/api/prompts/info`, `/api/rate-limit/status`, `/api/admin/system-info`
+- 제거된 함수: `get_citation_stats`, `generate_numbered_toc`, `generate_ab_hooks`, `suggest_fixes`, `get_citation_density_grade`, `generate_themed_card`, `shuffle_quiz`, `generate_mixed_difficulty_quiz`, `analyze_debate_balance`
+- 이 엔드포인트/함수를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것

@@ -26,6 +26,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // http/https 외의 scheme (chrome-extension 등)은 무시
+  if (!event.request.url.startsWith('http')) return;
+
   // API 요청은 캐싱하지 않음
   if (event.request.url.includes('/api/') || event.request.url.includes('/generate')) {
     return;
