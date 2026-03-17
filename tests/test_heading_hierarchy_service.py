@@ -1,6 +1,6 @@
 """Heading Hierarchy Integrity Checker 서비스 테스트."""
 import unittest
-from services.analysis.heading_hierarchy_service import check_heading_hierarchy, suggest_fixes
+from services.analysis.heading_hierarchy_service import check_heading_hierarchy
 
 
 class TestHeadingHierarchy(unittest.TestCase):
@@ -110,61 +110,6 @@ class TestHeadingHierarchy(unittest.TestCase):
                    '## 섹션 C\n\n본문.\n')
         result = check_heading_hierarchy(content)
         self.assertEqual(result['summary']['total_headings'], 3)
-
-
-class TestSuggestFixes(unittest.TestCase):
-    """suggest_fixes 테스트"""
-
-    def test_empty_content(self):
-        result = suggest_fixes('')
-        self.assertEqual(result['fix_count'], 0)
-
-    def test_clean_no_fixes(self):
-        """이슈 없는 콘텐츠는 수정 제안 없음"""
-        content = '# 제목\n\n본문.\n\n## 섹션\n\n내용.\n'
-        result = suggest_fixes(content)
-        self.assertEqual(result['fix_count'], 0)
-
-    def test_skip_fix(self):
-        """건너뛰기 이슈에 레벨 변경 제안"""
-        content = '# 제목\n\n본문.\n\n### 건너뛴 헤딩\n\n내용.\n'
-        result = suggest_fixes(content)
-        self.assertGreater(result['fix_count'], 0)
-        fix = result['fixes'][0]
-        self.assertEqual(fix['type'], 'level_change')
-        self.assertIn('##', fix['suggested'])  # H2로 변경
-        self.assertTrue(fix['auto_fixable'])
-
-    def test_duplicate_h1_fix(self):
-        """중복 H1에 H2 변경 제안"""
-        content = '# 제목 1\n\n본문.\n\n# 제목 2\n\n내용.\n'
-        result = suggest_fixes(content)
-        h1_fixes = [f for f in result['fixes'] if f['reason'].startswith('H1 중복')]
-        self.assertGreater(len(h1_fixes), 0)
-        self.assertIn('##', h1_fixes[0]['suggested'])
-
-    def test_empty_section_not_auto_fixable(self):
-        """빈 섹션은 자동 수정 불가"""
-        content = '# 제목\n\n본문.\n\n## 빈 섹션\n## 다음\n\n내용.\n'
-        result = suggest_fixes(content)
-        empty_fixes = [f for f in result['fixes'] if f['type'] == 'content_needed']
-        self.assertGreater(len(empty_fixes), 0)
-        self.assertFalse(empty_fixes[0]['auto_fixable'])
-
-    def test_deep_nesting_fix(self):
-        """깊은 헤딩에 H4 축소 제안"""
-        content = '# 제목\n\n본문.\n\n## H2\n\n본문.\n\n### H3\n\n본문.\n\n#### H4\n\n본문.\n\n##### 깊은 헤딩\n\n내용.\n'
-        result = suggest_fixes(content)
-        deep_fixes = [f for f in result['fixes'] if 'H4' in f['reason']]
-        self.assertGreater(len(deep_fixes), 0)
-        self.assertTrue(deep_fixes[0]['auto_fixable'])
-
-    def test_auto_fixable_count(self):
-        """auto_fixable_count 정확성"""
-        content = '# 제목\n\n본문.\n\n### 건너뛰기\n\n내용.\n\n## 빈 섹션\n## 다음\n\n내용.\n'
-        result = suggest_fixes(content)
-        auto = sum(1 for f in result['fixes'] if f['auto_fixable'])
-        self.assertEqual(result['auto_fixable_count'], auto)
 
 
 if __name__ == '__main__':

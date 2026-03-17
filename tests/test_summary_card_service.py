@@ -1,7 +1,7 @@
 """summary_card_service 단위 테스트"""
 import unittest
 
-from services.content.summary_card_service import generate_summary_card, _wrap_lines, generate_themed_card
+from services.content.summary_card_service import generate_summary_card, _wrap_lines
 
 
 class TestWrapLines(unittest.TestCase):
@@ -76,49 +76,6 @@ class TestGenerateSummaryCard(unittest.TestCase):
         result = generate_summary_card('제목', [long_point])
         # 원본 50자는 없고 28자+… 형태
         self.assertNotIn('가' * 50, result)
-
-
-class TestGenerateThemedCard(unittest.TestCase):
-    """generate_themed_card 테마별 SVG 카드 테스트"""
-
-    def test_light_theme_returns_svg(self):
-        """라이트 테마 SVG 생성"""
-        result = generate_themed_card('제목', ['포인트 1'], 'light')
-        self.assertIn('<svg', result)
-        self.assertIn('#FFFFFF', result)  # 라이트 배경
-
-    def test_dark_theme_returns_svg(self):
-        """다크 테마 SVG 생성"""
-        result = generate_themed_card('제목', ['포인트 1'], 'dark')
-        self.assertIn('<svg', result)
-        self.assertIn('#1E1E2E', result)  # 다크 배경
-
-    def test_dark_theme_text_colors(self):
-        """다크 테마 텍스트 색상"""
-        result = generate_themed_card('제목', ['포인트'], 'dark')
-        self.assertIn('#E4E4E7', result)  # 다크 제목 색상
-        self.assertIn('#A1A1AA', result)  # 다크 텍스트 색상
-
-    def test_unknown_theme_fallback_to_light(self):
-        """알 수 없는 테마는 라이트로 폴백"""
-        result = generate_themed_card('제목', ['포인트'], 'unknown_theme')
-        self.assertIn('#FFFFFF', result)
-
-    def test_html_escaping_in_themed(self):
-        """테마 카드에서도 XSS 방지"""
-        result = generate_themed_card('<script>', ['A & B'], 'dark')
-        self.assertNotIn('<script>', result)
-        self.assertIn('&lt;script&gt;', result)
-
-    def test_empty_points_themed(self):
-        """빈 포인트도 에러 없음"""
-        result = generate_themed_card('제목', [], 'dark')
-        self.assertIn('<svg', result)
-
-    def test_title_in_themed_card(self):
-        """제목이 테마 카드에 포함됨"""
-        result = generate_themed_card('나의 제목', ['포인트'], 'light')
-        self.assertIn('나의 제목', result)
 
 
 if __name__ == '__main__':

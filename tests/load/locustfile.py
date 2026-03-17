@@ -42,11 +42,6 @@ class InsightEngineUser(HttpUser):
         """지원 프로바이더 목록 조회"""
         self.client.get("/api/providers", headers=self.headers, name="GET /api/providers")
 
-    @task(2)
-    def get_styles(self):
-        """스타일 목록 조회"""
-        self.client.get("/api/styles", headers=self.headers, name="GET /api/styles")
-
     @task(1)
     def generate_content(self):
         """콘텐츠 생성 (가장 무거운 작업)"""
@@ -74,11 +69,6 @@ class InsightEngineUser(HttpUser):
                 resp.success()  # Rate limit/과부하는 정상 처리
             else:
                 resp.failure(f"생성 실패: {resp.status_code}")
-
-    @task(2)
-    def check_cache_stats(self):
-        """캐시 통계 조회"""
-        self.client.get("/api/cache/stats", headers=self.headers, name="GET /api/cache/stats")
 
 
 class AdminUser(HttpUser):

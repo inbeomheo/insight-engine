@@ -994,7 +994,6 @@ def admin_dashboard():
             'total_generations': total,
             'success_rate': round(success_count / total * 100, 1) if total > 0 else 0,
             'avg_time': avg_time,
-            'avg_generation_time': avg_time,
             'avg_content_length': avg_content_length,
             'style_distribution': style_dist,
             'top_styles': top_styles,

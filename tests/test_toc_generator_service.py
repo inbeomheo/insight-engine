@@ -1,6 +1,6 @@
 """Table of Contents Generator 서비스 테스트."""
 import unittest
-from services.content.toc_generator_service import generate_toc, generate_numbered_toc, _slugify
+from services.content.toc_generator_service import generate_toc, _slugify
 
 
 class TestTocGenerator(unittest.TestCase):
@@ -113,55 +113,6 @@ class TestTocGenerator(unittest.TestCase):
         self.assertIn('depth_distribution', result['summary'])
 
 
-class TestNumberedToc(unittest.TestCase):
-    """generate_numbered_toc 테스트"""
-
-    def test_empty_content(self):
-        result = generate_numbered_toc('')
-        self.assertEqual(result['numbered_toc'], [])
-        self.assertEqual(result['markdown'], '')
-
-    def test_h2_numbering(self):
-        """H2 기본 번호 매기기"""
-        content = """# 제목
-## 소개
-## 본론
-## 결론"""
-        result = generate_numbered_toc(content)
-        numbers = [item['number'] for item in result['numbered_toc'] if item['level'] == 2]
-        self.assertEqual(numbers, ['1.', '2.', '3.'])
-
-    def test_h3_nested_numbering(self):
-        """H3 계층적 번호 매기기"""
-        content = """# 제목
-## 섹션 1
-### 항목 A
-### 항목 B
-## 섹션 2
-### 항목 C"""
-        result = generate_numbered_toc(content)
-        numbers = [item['number'] for item in result['numbered_toc'] if item['number']]
-        self.assertEqual(numbers, ['1.', '1.1.', '1.2.', '2.', '2.1.'])
-
-    def test_h1_no_number(self):
-        """H1은 번호 없음"""
-        content = '# 제목\n## 섹션'
-        result = generate_numbered_toc(content)
-        h1 = [item for item in result['numbered_toc'] if item['level'] == 1]
-        self.assertEqual(h1[0]['number'], '')
-
-    def test_markdown_output(self):
-        """마크다운 형식 출력"""
-        content = '## 섹션 1\n## 섹션 2'
-        result = generate_numbered_toc(content)
-        self.assertIn('1.', result['markdown'])
-        self.assertIn('2.', result['markdown'])
-
-    def test_no_headings(self):
-        result = generate_numbered_toc('본문만 있는 텍스트')
-        self.assertEqual(result['numbered_toc'], [])
-
-
 class TestDuplicateAnchor(unittest.TestCase):
     """동일 텍스트 헤딩의 앵커 ID 중복 방지 테스트"""
 
@@ -241,37 +192,6 @@ class TestGenerateTocEdgeCases(unittest.TestCase):
         content = '# 제목1\n## 내용\n# 제목2'
         result = generate_toc(content)
         self.assertFalse(result['summary']['structure_valid'])
-
-
-class TestGenerateNumberedTocEdgeCases(unittest.TestCase):
-    """generate_numbered_toc 엣지 케이스 테스트"""
-
-    def test_h1_has_no_number(self):
-        """H1은 번호 없음"""
-        content = '# 제목\n## 소제목'
-        result = generate_numbered_toc(content)
-        h1 = [item for item in result['numbered_toc'] if item['level'] == 1]
-        self.assertEqual(h1[0]['number'], '')
-
-    def test_h2_numbering(self):
-        """H2는 1., 2. 순서"""
-        content = '## 첫째\n## 둘째\n## 셋째'
-        result = generate_numbered_toc(content)
-        numbers = [item['number'] for item in result['numbered_toc']]
-        self.assertEqual(numbers, ['1.', '2.', '3.'])
-
-    def test_h3_nested_numbering(self):
-        """H3는 1.1., 1.2. 형식"""
-        content = '## 첫째\n### 하위1\n### 하위2\n## 둘째'
-        result = generate_numbered_toc(content)
-        numbers = [item['number'] for item in result['numbered_toc']]
-        self.assertEqual(numbers, ['1.', '1.1.', '1.2.', '2.'])
-
-    def test_empty_content(self):
-        """빈 콘텐츠"""
-        result = generate_numbered_toc('')
-        self.assertEqual(result['numbered_toc'], [])
-        self.assertEqual(result['markdown'], '')
 
 
 if __name__ == '__main__':

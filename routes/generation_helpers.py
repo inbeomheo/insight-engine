@@ -12,7 +12,7 @@ from services.core.content_service import clear_cache
 from services.data.supabase_service import save_history
 from services.usage.usage_decorator import get_usage_for_response
 from services.platform.webhook_service import WebhookService
-from config import get_model_max_tokens, get_model_display_name, WEBHOOK_URL, WEBHOOK_ENABLED
+from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED
 from utils.responses import sanitize_error_for_client
 
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
@@ -232,9 +232,7 @@ def _handle_cache_hit(cache_key, force, youtube_title,
     g.skip_usage_decrement = True
     now = time.time()
     elapsed_time = round(now - start_time, 2)
-    _cached_content = cached.get('content', '')
     _cached_at = cached.pop('_cached_at', None)
-    cache_age_seconds = round(now - _cached_at, 1) if _cached_at else None
     return jsonify({
         **cached,
         'id': str(uuid.uuid4()),
@@ -243,11 +241,8 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         'transcript': raw_transcript,
         'transcript_source': transcript_source,
         'cached': True,
-        'cache_age_seconds': cache_age_seconds,
         'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
         'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0},
-        'char_count': len(_cached_content),
-        'word_count': len(_cached_content.split()) if _cached_content else 0,
         'quota': get_usage_for_response()
     })
 
@@ -475,30 +470,10 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         params.get('max_chars'),
     )
 
-    # 콘텐츠 통계 (프론트엔드 카드 메타 칩용)
-    _content_text = result.get('content', '')
-    _char_count = len(_content_text)
-    # 한국어 기준 분당 500자, 최소 1분
-    _reading_time_min = max(1, round(_char_count / 500)) if _char_count > 0 else 0
-    # 토큰 효율성 (글자수 / 총 토큰수) — 토큰 대비 실제 출력 밀도
-    _usage = result.get('usage') or {}
-    _total_tokens = _usage.get('total_tokens', 0)
-    _token_efficiency = round(_char_count / _total_tokens, 2) if _total_tokens > 0 else 0.0
-
-    _content_stats = {
-        "char_count": _char_count,
-        "word_count": len(_content_text.split()) if _content_text else 0,
-        "reading_time_min": _reading_time_min,
-        "has_code_blocks": bool('```' in _content_text or '<code>' in _content_text),
-        "token_efficiency": _token_efficiency,
-    }
-
     from routes.blog_routes import _get_style_label
     return jsonify({
         **result,
         "id": report_id,
-        "source_url": url,
-        "model_name": get_model_display_name(model),
         "prompt": used_prompt,
         "prompt_length": len(used_prompt) if used_prompt else 0,
         "elapsed_time": elapsed_time,
@@ -519,7 +494,6 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "chapters": chapters,
         "total_duration_seconds": total_duration_seconds,
         "quota": get_usage_for_response(),
-        **_content_stats,
         **(agent_meta or {}),
     })
 

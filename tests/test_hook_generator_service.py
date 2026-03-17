@@ -3,7 +3,6 @@ import unittest
 
 from services.content.hook_generator_service import (
     generate_hooks,
-    generate_ab_hooks,
     _extract_stats,
     _rate_effectiveness,
 )
@@ -89,49 +88,6 @@ class TestRateEffectiveness(unittest.TestCase):
         self.assertEqual(_rate_effectiveness('contrarian'), 'medium')
 
 
-class TestGenerateAbHooks(unittest.TestCase):
-    """generate_ab_hooks 테스트"""
-
-    def test_empty_topic(self):
-        result = generate_ab_hooks('')
-        self.assertEqual(result['total_pairs'], 0)
-        self.assertEqual(result['pairs'], [])
-
-    def test_basic_pairs(self):
-        """기본 A/B 쌍 생성"""
-        result = generate_ab_hooks('인공지능')
-        self.assertGreater(result['total_pairs'], 0)
-        self.assertEqual(result['topic'], '인공지능')
-        for pair in result['pairs']:
-            self.assertIn('type', pair)
-            self.assertIn('a', pair)
-            self.assertIn('b', pair)
-            self.assertIn('인공지능', pair['a']['text'])
-            self.assertIn('인공지능', pair['b']['text'])
-            self.assertNotEqual(pair['a']['text'], pair['b']['text'])
-
-    def test_count_limit(self):
-        """쌍 수 제한"""
-        result = generate_ab_hooks('테스트', count=2)
-        self.assertLessEqual(result['total_pairs'], 2)
-
-    def test_ab_labels(self):
-        """A/B 라벨 확인"""
-        result = generate_ab_hooks('마케팅', count=1)
-        if result['pairs']:
-            self.assertEqual(result['pairs'][0]['a']['label'], '원본')
-            self.assertEqual(result['pairs'][0]['b']['label'], '변형')
-
-    def test_max_count_cap(self):
-        """최대 쌍 수 제한 (패턴 수 이내)"""
-        result = generate_ab_hooks('주제', count=100)
-        self.assertLessEqual(result['total_pairs'], 4)
-
-    def test_none_topic(self):
-        result = generate_ab_hooks(None)
-        self.assertEqual(result['total_pairs'], 0)
-
-
 class TestGenerateHooksEdgeCases(unittest.TestCase):
     """generate_hooks 엣지 케이스 테스트"""
 
@@ -186,26 +142,6 @@ class TestExtractStatsEdgeCases(unittest.TestCase):
         # 50자 초과인 매칭은 필터링됨
         for s in stats:
             self.assertLessEqual(len(s), 50)
-
-
-class TestGenerateAbHooksEdgeCases(unittest.TestCase):
-    """generate_ab_hooks 엣지 케이스 테스트"""
-
-    def test_whitespace_only_topic(self):
-        """공백만 있는 주제"""
-        result = generate_ab_hooks('   ')
-        self.assertEqual(result['total_pairs'], 0)
-
-    def test_count_zero_returns_at_least_one(self):
-        """count=0은 max(1, 0)=1로 최소 1쌍"""
-        result = generate_ab_hooks('AI', count=0)
-        self.assertGreaterEqual(result['total_pairs'], 1)
-
-    def test_pairs_have_different_texts(self):
-        """A/B 쌍의 텍스트가 서로 다름"""
-        result = generate_ab_hooks('데이터 분석', count=3)
-        for pair in result['pairs']:
-            self.assertNotEqual(pair['a']['text'], pair['b']['text'])
 
 
 if __name__ == '__main__':
