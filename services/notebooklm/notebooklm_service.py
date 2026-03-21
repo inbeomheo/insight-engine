@@ -41,11 +41,13 @@ class NotebookLmService:
     # ── CLI 실행 ──
 
     def _run_nlm(self, args: list[str], timeout: int = CMD_TIMEOUT) -> subprocess.CompletedProcess:
-        env = {**os.environ, 'PYTHONUTF8': '1'}
+        env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8'}
         return subprocess.run(
             ['nlm'] + args,
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             timeout=timeout,
             env=env,
         )
