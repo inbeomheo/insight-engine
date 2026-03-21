@@ -18,6 +18,218 @@ from utils.responses import sanitize_error_for_client
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 
 
+# ==================== 소스별 핸들러 ====================
+
+def _get_style_prompt(style, custom_prompt=None):
+    """스타일에 맞는 프롬프트를 반환합니다."""
+    if custom_prompt and str(custom_prompt).strip():
+        return str(custom_prompt).strip()[:2000]
+    from flask import current_app
+    style_prompts = current_app.config.get('STYLE_PROMPTS', {})
+    return style_prompts.get(style, '')
+
+
+def _get_style_label(style_id: str) -> str:
+    """스타일 ID에 대한 한글 표시명을 반환합니다."""
+    from config import STYLE_OPTIONS
+    for sid, label in STYLE_OPTIONS:
+        if sid == style_id:
+            return label
+    return style_id
+
+
+def _handle_direct_text(params: dict, start_time: float):
+    """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
+    direct_content = params.get('content', '')
+    max_tokens = get_model_max_tokens(params['model'])
+    main_content = f"[사용자 입력 텍스트]\n{direct_content}"
+    truncated_content = content_service.truncate_text(main_content, max_tokens)
+
+    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
+    result, used_prompt = ai_service.create_content(
+        truncated_content, params['model'], style_prompt,
+        return_prompt=True, modifiers=params['modifiers'],
+        style_id=params['style'],
+        detail_level=params.get('detail_level'),
+    )
+
+    elapsed_time = round(time.time() - start_time, 2)
+    return jsonify({
+        'id': str(uuid.uuid4()),
+        **result,
+        'elapsed_time': elapsed_time,
+        'prompt': used_prompt,
+        'prompt_length': len(used_prompt) if used_prompt else 0,
+        'transcript_source': 'direct_input',
+        'style_label': _get_style_label(params['style']),
+        'cached': False,
+        'comment_summary_included': False,
+        'has_code_blocks': _has_code_blocks(result),
+        'quota': get_usage_for_response(),
+    })
+
+
+def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
+    """오디오 파일 → Whisper 전사 → 콘텐츠 생성."""
+    import os
+    import tempfile
+    from flask import request
+    from services.transcript.whisper_service import transcribe_audio, _cleanup_file
+
+    whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
+    if not whisper_enabled:
+        return jsonify({'error': '음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.'}), 400
+
+    filename = (uploaded_file.filename or '').lower()
+    audio_path = None
+    try:
+        suffix = os.path.splitext(filename)[1] or '.wav'
+        fd, audio_path = tempfile.mkstemp(suffix=suffix)
+        os.close(fd)
+        uploaded_file.save(audio_path)
+
+        whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
+        transcript_text = transcribe_audio(audio_path, whisper_model)
+        if not transcript_text or not transcript_text.strip():
+            return jsonify({'error': '음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.'}), 400
+    finally:
+        if audio_path:
+            _cleanup_file(audio_path)
+
+    source_title = uploaded_file.filename or '음성 메모'
+    max_tokens = get_model_max_tokens(params['model'])
+    truncated_content = content_service.truncate_text(f"[음성 전사]\n{transcript_text}", max_tokens)
+
+    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
+    result, used_prompt = ai_service.create_content(
+        truncated_content, params['model'], style_prompt,
+        return_prompt=True, modifiers=params['modifiers'],
+        style_id=params['style'],
+        detail_level=params.get('detail_level'),
+    )
+
+    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+    elapsed_time = round(time.time() - start_time, 2)
+
+    return jsonify({
+        'id': str(uuid.uuid4()),
+        **result,
+        'elapsed_time': elapsed_time,
+        'prompt': used_prompt,
+        'source_type': 'voice',
+        'source_title': source_title,
+        'style_label': _get_style_label(params['style']),
+        'cached': False,
+        'comment_summary_included': False,
+        'has_code_blocks': _has_code_blocks(result),
+        'quota': get_usage_for_response(),
+    })
+
+
+def _handle_document_upload(params: dict, uploaded_file, start_time: float):
+    """PDF/DOCX 문서 → 콘텐츠 생성."""
+    from services.content.document_ingest_service import extract_from_upload
+
+    doc = extract_from_upload(uploaded_file)
+    source_title = doc.get('title') or uploaded_file.filename or '업로드 문서'
+    source_content = doc['content']
+
+    max_tokens = get_model_max_tokens(params['model'])
+    truncated_content = content_service.truncate_text(f"[문서 본문]\n{source_content}", max_tokens)
+
+    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
+    result, used_prompt = ai_service.create_content(
+        truncated_content, params['model'], style_prompt,
+        return_prompt=True, modifiers=params['modifiers'],
+        style_id=params['style'],
+        detail_level=params.get('detail_level'),
+    )
+
+    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+    elapsed_time = round(time.time() - start_time, 2)
+
+    return jsonify({
+        'id': str(uuid.uuid4()),
+        **result,
+        'elapsed_time': elapsed_time,
+        'prompt': used_prompt,
+        'source_type': 'document',
+        'source_title': source_title,
+        'page_count': doc.get('page_count', 0),
+        'style_label': _get_style_label(params['style']),
+        'cached': False,
+        'comment_summary_included': False,
+        'has_code_blocks': _has_code_blocks(result),
+        'quota': get_usage_for_response(),
+    })
+
+
+def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
+    """비YouTube URL (웹페이지/RSS/arXiv) → 콘텐츠 생성."""
+    from services.content.multi_source_collector import collect_content
+
+    collected = collect_content(url, source_type=source_type)
+    source_title = collected.get('title') or url
+    source_content = collected.get('content', '')
+    if not source_content.strip():
+        return jsonify({'error': '콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.'}), 400
+
+    max_tokens = get_model_max_tokens(params['model'])
+    content_label = {
+        'webpage': '웹페이지 본문', 'rss': 'RSS 피드 내용',
+        'arxiv': 'arXiv 논문 초록', 'twitter': 'Twitter 게시물',
+        'reddit': 'Reddit 포스트', 'github': 'GitHub README',
+        'hackernews': 'Hacker News 게시물', 'podcast': '팟캐스트 전사',
+    }.get(source_type, '본문')
+    truncated_content = content_service.truncate_text(f"[{content_label}]\n{source_content}", max_tokens)
+
+    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
+    result, used_prompt = ai_service.create_content(
+        truncated_content, params['model'], style_prompt,
+        return_prompt=True, modifiers=params['modifiers'],
+        style_id=params['style'],
+        detail_level=params.get('detail_level'),
+    )
+
+    elapsed_time = round(time.time() - start_time, 2)
+
+    if g.user_id:
+        save_history(g.user_id, {
+            'id': str(uuid.uuid4()), 'url': url,
+            'title': result.get('title') or source_title,
+            'style': params['style'],
+            'content': result.get('content', ''),
+            'html': result.get('html', ''),
+            'transcript': source_content[:5000],
+            'usage': result.get('usage'),
+            'elapsed_time': elapsed_time,
+        })
+
+    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+
+    response_data = {
+        **result,
+        'id': str(uuid.uuid4()),
+        'prompt': used_prompt,
+        'prompt_length': len(used_prompt) if used_prompt else 0,
+        'elapsed_time': elapsed_time,
+        'source_type': source_type,
+        'source_title': source_title,
+        'style_label': _get_style_label(params['style']),
+        'quota': get_usage_for_response(),
+    }
+    if params.get('include_transcript'):
+        response_data['transcript'] = source_content[:5000]
+
+    return jsonify(response_data)
+
+
+def _has_code_blocks(result: dict) -> bool:
+    """결과에 코드 블록이 포함되어 있는지 확인."""
+    content = result.get('content', '')
+    return bool('```' in content or '<code>' in content)
+
+
 def _sanitize_transcript_error(error_msg: str) -> str:
     """자막 조회 오류를 클라이언트 노출용 메시지로 정리합니다."""
     raw_message = str(error_msg or '')
