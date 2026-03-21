@@ -1,0 +1,84 @@
+"""NotebookLM 라우트 테스트."""
+import unittest
+from unittest.mock import patch, MagicMock
+import json
+
+
+class TestNotebookLmRoutes(unittest.TestCase):
+    """NotebookLM API 엔드포인트 테스트."""
+
+    def setUp(self):
+        # NotebookLmService를 mock으로 교체
+        self.svc_patcher = patch('routes.notebooklm_routes._service')
+        self.mock_svc = self.svc_patcher.start()
+
+        from app import create_app
+        app = create_app()
+        app.config['TESTING'] = True
+        self.client = app.test_client()
+
+    def tearDown(self):
+        self.svc_patcher.stop()
+
+    def test_auth_check_valid(self):
+        self.mock_svc.check_auth.return_value = {'valid': True, 'email': 'test@gmail.com'}
+        resp = self.client.get('/api/notebooklm/auth-check')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data['valid'])
+
+    def test_auth_check_invalid(self):
+        self.mock_svc.check_auth.return_value = {'valid': False, 'message': 'nlm login 필요'}
+        resp = self.client.get('/api/notebooklm/auth-check')
+        self.assertEqual(resp.status_code, 401)
+
+    def test_generate_missing_fields(self):
+        self.mock_svc.check_auth.return_value = {'valid': True}
+        resp = self.client.post('/api/notebooklm/generate',
+                                data=json.dumps({'type': 'audio'}),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_generate_success(self):
+        self.mock_svc.check_auth.return_value = {'valid': True}
+        self.mock_svc.generate.return_value = {
+            'artifact_id': 'test-artifact-id',
+            'status': 'in_progress',
+            'content_type': 'audio',
+        }
+        resp = self.client.post('/api/notebooklm/generate',
+                                data=json.dumps({
+                                    'type': 'audio',
+                                    'url': 'https://youtube.com/watch?v=test',
+                                    'source_text': '자막 텍스트'
+                                }),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 202)
+        data = resp.get_json()
+        self.assertEqual(data['artifact_id'], 'test-artifact-id')
+
+    def test_generate_unauthenticated(self):
+        self.mock_svc.check_auth.return_value = {'valid': False, 'message': 'nlm login 필요'}
+        resp = self.client.post('/api/notebooklm/generate',
+                                data=json.dumps({
+                                    'type': 'audio',
+                                    'url': 'https://youtube.com/watch?v=test',
+                                    'source_text': '자막'
+                                }),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 401)
+
+    def test_status_endpoint(self):
+        self.mock_svc.check_status.return_value = {'status': 'completed', 'type': 'audio'}
+        resp = self.client.get('/api/notebooklm/status/test-id')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data['status'], 'completed')
+
+    def test_download_not_implemented(self):
+        resp = self.client.get('/api/notebooklm/download/test-id')
+        self.assertEqual(resp.status_code, 501)
+
+
+if __name__ == '__main__':
+    unittest.main()

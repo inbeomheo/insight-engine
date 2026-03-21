@@ -174,6 +174,10 @@ def create_app(test_config=None):
     from routes.analytics_routes import analytics_bp
     app.register_blueprint(analytics_bp)
 
+    # NotebookLM 연동 라우트
+    from routes.notebooklm_routes import notebooklm_bp
+    app.register_blueprint(notebooklm_bp)
+
     # 예약 발행 스케줄러 시작
     from services.data.scheduler_worker import start_scheduler
     start_scheduler(app)
