@@ -680,6 +680,30 @@ def _detect_language_from_text(text: str) -> str:
     return 'en'
 
 
+def _build_transcript_result(
+    text: str, source: str, quality: float, is_auto: bool,
+    start_time: float, video_id: str, segments: list = None,
+) -> dict:
+    """자막 결과 딕셔너리를 생성하고 캐시에 저장한다."""
+    source_meta = {
+        'source_type': source,
+        'quality_score': quality,
+        'is_auto': is_auto,
+        'language': _detect_language_from_text(text),
+    }
+    elapsed_ms = round((time.time() - start_time) * 1000, 1)
+    result = {
+        'text': text,
+        'source': source,
+        'source_meta': source_meta,
+        'extraction_time_ms': elapsed_ms,
+    }
+    if segments:
+        result['segments'] = segments
+    _save_cache(video_id, 'transcript', result)
+    return result
+
+
 def get_transcript(video_id: str) -> TranscriptResult:
     """
     YouTube 자막을 가져옵니다.
@@ -731,18 +755,11 @@ def get_transcript(video_id: str) -> TranscriptResult:
             text = _extract_text_from_transcript(fetched)
             if text:
                 segments = _extract_segments_from_transcript(fetched)
-                # F15: source_meta 추가 — 자막 품질 메타데이터
                 is_auto = _detect_auto_caption(ytt_api, video_id)
-                source_meta = {
-                    'source_type': 'youtube_api',
-                    'quality_score': 0.95 if not is_auto else 0.85,
-                    'is_auto': is_auto,
-                    'language': _detect_language_from_text(text),
-                }
-                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-                result = {'text': text, 'source': 'api', 'segments': segments, 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-                _save_cache(video_id, 'transcript', result)
-                return result
+                return _build_transcript_result(
+                    text, 'api', 0.95 if not is_auto else 0.85, is_auto,
+                    overall_start, video_id, segments=segments,
+                )
 
     except (TranscriptsDisabled, NoTranscriptFound) as e:
         # 자막 자체가 없는 경우 - Supadata도 불가능하므로 바로 에러 반환
@@ -870,23 +887,16 @@ def get_transcript(video_id: str) -> TranscriptResult:
                 if res is not None:
                     source_name, text, quality, is_auto = res
                     _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
-                    # 첫 성공 결과를 즉시 사용 (나머지 취소)
                     for f in futures:
                         f.cancel()
-                    source_meta = {
-                        'source_type': source_name,
-                        'quality_score': quality,
-                        'is_auto': is_auto,
-                        'language': _detect_language_from_text(text),
-                    }
-                    elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-                    first_result = {'text': text, 'source': source_name, 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
+                    first_result = _build_transcript_result(
+                        text, source_name, quality, is_auto, overall_start, video_id,
+                    )
                     break
             except Exception as e:
                 _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
 
     if first_result:
-        _save_cache(video_id, 'transcript', first_result)
         return first_result
 
     # ── 순차 폴백: 느리거나 유료인 방법들 ──
@@ -902,16 +912,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
             whisper_text = extract_transcript_whisper(video_url, whisper_model)
             if whisper_text and whisper_text.strip():
                 _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
-                source_meta = {
-                    'source_type': 'whisper',
-                    'quality_score': 0.75,
-                    'is_auto': True,
-                    'language': _detect_language_from_text(whisper_text),
-                }
-                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-                _save_cache(video_id, 'transcript', result)
-                return result
+                return _build_transcript_result(
+                    whisper_text, 'whisper', 0.75, True, overall_start, video_id,
+                )
         except Exception as e:
             _log_warning(f"Whisper fallback failed for video_id={video_id}: {str(e)}")
 
@@ -921,16 +924,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
         supadata_result = get_transcript_via_supadata(video_id, supadata_api_key)
         if isinstance(supadata_result, str) and supadata_result.strip():
             _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
-            source_meta = {
-                'source_type': 'supadata',
-                'quality_score': 0.8,
-                'is_auto': False,
-                'language': _detect_language_from_text(supadata_result),
-            }
-            elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-            result = {'text': supadata_result, 'source': 'supadata', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-            _save_cache(video_id, 'transcript', result)
-            return result
+            return _build_transcript_result(
+                supadata_result, 'supadata', 0.8, False, overall_start, video_id,
+            )
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
             return supadata_result
 
