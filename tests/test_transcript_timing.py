@@ -79,12 +79,12 @@ class TestTranscriptTiming(unittest.TestCase):
     @patch('services.core.content_service._load_cache', return_value=None)
     @patch('services.core.content_service._save_cache')
     @patch('services.core.content_service.get_transcript_via_supadata', return_value='supadata 자막')
-    @patch('services.core.content_service._get_transcript_from_watch_page', return_value={'error': '실패'})
+    @patch('services.core.content_service._run_parallel_fallbacks', return_value=None)
     @patch('services.core.content_service._fetch_transcript_with_api', return_value=None)
     @patch('services.core.content_service._build_ytt_api')
     @patch.dict('os.environ', {'SUPADATA_API_KEY': 'test-key'})
     def test_supadata_result_has_extraction_time_ms(self, mock_build, mock_fetch,
-                                                     mock_watch, mock_supadata,
+                                                     mock_parallel, mock_supadata,
                                                      mock_save, mock_no_cache):
         """Supadata 폴백 시 extraction_time_ms 포함"""
         mock_build.return_value = MagicMock()

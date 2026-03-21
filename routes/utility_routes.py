@@ -1888,1441 +1888,1441 @@ def detect_section_drift_route():
     except Exception as e:
         return handle_error(e, '섹션 이탈 감지')
 
-    # ── Pronoun Clarity Checker ──────────────────────────────────────────
-    @blog_bp.route('/api/check-pronoun-clarity', methods=['POST'])
-    def check_pronoun_clarity_route():
-        """대명사 명확성을 검사합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.pronoun_clarity_service import check_pronoun_clarity
-            result = check_pronoun_clarity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '대명사 명확성 검사')
-
-    # ── Example Coverage Analyzer ────────────────────────────────────────
-    @blog_bp.route('/api/analyze-example-coverage', methods=['POST'])
-    def analyze_example_coverage_route():
-        """주장/조언의 예시·근거 커버리지를 분석합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.example_coverage_service import analyze_example_coverage
-            result = analyze_example_coverage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '예시 커버리지 분석')
-
-    # ── Question-Answer Closure Checker ──────────────────────────────────
-    @blog_bp.route('/api/check-qa-closure', methods=['POST'])
-    def check_qa_closure_route():
-        """질문-답변 완결성을 검사합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.quality.qa_closure_service import check_qa_closure
-            result = check_qa_closure(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '질문-답변 완결성 검사')
-
-    # ── Adverb Overuse Detector ──────────────────────────────────────────
-    @blog_bp.route('/api/detect-adverb-overuse', methods=['POST'])
-    def detect_adverb_overuse_route():
-        """부사 남용을 감지합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.adverb_overuse_service import detect_adverb_overuse
-            result = detect_adverb_overuse(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '부사 남용 감지')
-
-    # ── Clause Overload Detector ─────────────────────────────────────────
-    @blog_bp.route('/api/detect-clause-overload', methods=['POST'])
-    def detect_clause_overload_route():
-        """문장 내 절 과부하를 감지합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.clause_overload_service import detect_clause_overload
-            result = detect_clause_overload(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '절 과부하 감지')
-
-    # ── Statistics Coverage Analyzer ─────────────────────────────────────
-    @blog_bp.route('/api/analyze-statistics-coverage', methods=['POST'])
-    def analyze_statistics_coverage_route():
-        """섹션별 수치 근거 커버리지를 분석합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.statistics_coverage_service import analyze_statistics_coverage
-            result = analyze_statistics_coverage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '수치 커버리지 분석')
-
-    # ── Simple Alternative Finder ────────────────────────────────────────
-    @blog_bp.route('/api/find-simple-alternatives', methods=['POST'])
-    def find_simple_alternatives_route():
-        """고난도 어휘의 쉬운 대체어를 제안합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.simple_alternative_service import find_simple_alternatives
-            result = find_simple_alternatives(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '쉬운 대체어 검색')
-
-    # ── Heading Term Placement Auditor ───────────────────────────────────
-    @blog_bp.route('/api/audit-heading-terms', methods=['POST'])
-    def audit_heading_terms_route():
-        """핵심 용어의 헤딩 배치를 점검합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.heading_term_placement_service import audit_heading_term_placement
-            result = audit_heading_term_placement(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '헤딩 용어 배치 점검')
-
-    # ── Acronym Expansion Compliance Checker ─────────────────────────────
-    @blog_bp.route('/api/check-acronym-expansion', methods=['POST'])
-    def check_acronym_expansion_route():
-        """약어의 첫 등장 시 풀어쓰기 여부를 점검합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.acronym_expansion_service import check_acronym_expansion
-            result = check_acronym_expansion(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '약어 풀어쓰기 점검')
-
-    @blog_bp.route('/api/detect-actionability-gaps', methods=['POST'])
-    def detect_actionability_gaps_route():
-        """실행 가능성 갭 감지 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.actionability_gap_service import detect_actionability_gaps
-            result = detect_actionability_gaps(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '실행 가능성 갭 감지')
-
-    @blog_bp.route('/api/check-thesis-frontload', methods=['POST'])
-    def check_thesis_frontload_route():
-        """핵심 주장 프론트로드 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.thesis_frontload_service import check_thesis_frontload
-            result = check_thesis_frontload(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '핵심 주장 프론트로드 점검')
-
-    @blog_bp.route('/api/detect-list-table-opportunities', methods=['POST'])
-    def detect_list_table_opportunities_route():
-        """목록/표 변환 기회 감지 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.list_table_opportunity_service import detect_list_table_opportunities
-            result = detect_list_table_opportunities(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '목록/표 변환 기회 감지')
-
-    @blog_bp.route('/api/audit-image-seo', methods=['POST'])
-    def audit_image_seo_route():
-        """이미지 SEO 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.image_seo_auditor_service import audit_image_seo
-            result = audit_image_seo(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '이미지 SEO 점검')
-
-    @blog_bp.route('/api/audit-source-diversity', methods=['POST'])
-    def audit_source_diversity_route():
-        """외부 소스 다양성 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.external_source_diversity_service import audit_external_source_diversity
-            result = audit_external_source_diversity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '외부 소스 다양성 점검')
-
-    @blog_bp.route('/api/detect-chapter-breakpoints', methods=['POST'])
-    def detect_chapter_breakpoints_route():
-        """챕터 분할점 감지 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.transcript.chapter_breakpoint_service import detect_chapter_breakpoints
-            result = detect_chapter_breakpoints(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '챕터 분할점 감지')
-
-    @blog_bp.route('/api/analyze-question-density', methods=['POST'])
-    def analyze_question_density_route():
-        """질문 밀도 분석 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.question_density_service import analyze_question_density
-            result = analyze_question_density(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '질문 밀도 분석')
-
-    @blog_bp.route('/api/audit-whitespace-formatting', methods=['POST'])
-    def audit_whitespace_formatting_route():
-        """공백/포맷 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.whitespace_formatting_service import audit_whitespace_formatting
-            result = audit_whitespace_formatting(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '공백/포맷 점검')
-
-    @blog_bp.route('/api/analyze-bullet-density', methods=['POST'])
-    def analyze_bullet_density_route():
-        """불릿 리스트 밀도 분석 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.bullet_point_density_service import analyze_bullet_density
-            result = analyze_bullet_density(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '불릿 리스트 밀도 분석')
-
-    @blog_bp.route('/api/check-code-block-quality', methods=['POST'])
-    def check_code_block_quality_route():
-        """코드 블록 품질 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.code_block_quality_service import check_code_block_quality
-            result = check_code_block_quality(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '코드 블록 품질 점검')
-
-    @blog_bp.route('/api/check-paragraph-opening-variety', methods=['POST'])
-    def check_paragraph_opening_variety_route():
-        """문단 시작 다양성 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.paragraph_opening_variety_service import check_paragraph_opening_variety
-            result = check_paragraph_opening_variety(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문단 시작 다양성 점검')
-
-    @blog_bp.route('/api/check-tone-consistency', methods=['POST'])
-    def check_tone_consistency_route():
-        """문체 일관성 점검 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.tone_consistency_service import check_tone_consistency
-            result = check_tone_consistency(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문체 일관성 점검')
-
-    @blog_bp.route('/api/detect-linking-verb-overuse', methods=['POST'])
-    def detect_linking_verb_overuse_route():
-        """연결 동사 과다 사용 감지 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.linking_verb_overuse_service import detect_linking_verb_overuse
-            result = detect_linking_verb_overuse(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '연결 동사 과다 사용 감지')
-
-    @blog_bp.route('/api/validate-instruction-sequence', methods=['POST'])
-    def validate_instruction_sequence_route():
-        """절차 시퀀스 검증 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.instruction_sequence_service import validate_instruction_sequence
-            result = validate_instruction_sequence(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '절차 시퀀스 검증')
-
-    @blog_bp.route('/api/score-content-depth', methods=['POST'])
-    def score_content_depth_route():
-        """콘텐츠 심도 측정 API."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.content_depth_scorer_service import score_content_depth
-            result = score_content_depth(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '콘텐츠 심도 측정')
-
-    # ── Conclusion Strength Analyzer ──
-    @blog_bp.route('/api/analyze-conclusion-strength', methods=['POST'])
-    def analyze_conclusion_strength_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.conclusion_strength_service import analyze_conclusion_strength
-            result = analyze_conclusion_strength(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '결론 강도 분석')
-
-    # ── Meta Description Quality Checker ──
-    @blog_bp.route('/api/check-meta-description-quality', methods=['POST'])
-    def check_meta_description_quality_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.meta_description_quality_service import check_meta_description_quality
-            result = check_meta_description_quality(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '메타 디스크립션 품질 검사')
-
-    # ── Parenthetical Overuse Checker ──
-    @blog_bp.route('/api/check-parenthetical-overuse', methods=['POST'])
-    def check_parenthetical_overuse_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.parenthetical_overuse_service import check_parenthetical_overuse
-            result = check_parenthetical_overuse(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '괄호 과다 사용 검사')
-
-    # ── Word Frequency Cloud Generator ──
-    @blog_bp.route('/api/generate-word-frequency', methods=['POST'])
-    def generate_word_frequency_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.media.word_frequency_cloud_service import generate_word_frequency
-            top_n = data.get('top_n', 30)
-            result = generate_word_frequency(content, top_n=top_n)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '단어 빈도 분석')
-
-    # ── Anaphora Repetition Detector ──
-    @blog_bp.route('/api/detect-anaphora-repetition', methods=['POST'])
-    def detect_anaphora_repetition_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.anaphora_repetition_service import detect_anaphora_repetition
-            result = detect_anaphora_repetition(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '수사 반복 감지')
-
-    # ── Table of Contents Generator ──
-    @blog_bp.route('/api/generate-toc', methods=['POST'])
-    def generate_toc_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.content.toc_generator_service import generate_toc
-            max_depth = data.get('max_depth', 3)
-            result = generate_toc(content, max_depth=max_depth)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '목차 생성')
-
-    # ── Sentence Connector Variety Analyzer ──
-    @blog_bp.route('/api/analyze-connector-variety', methods=['POST'])
-    def analyze_connector_variety_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_connector_variety
-            result = analyze_connector_variety(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '연결어 다양성 분석')
-
-    # ── Content Freshness Indicator ──
-    @blog_bp.route('/api/check-content-freshness', methods=['POST'])
-    def check_content_freshness_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.content_freshness_indicator_service import check_content_freshness
-            result = check_content_freshness(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '콘텐츠 시의성 평가')
-
-    # ── Article Format Template Checker ──
-    @blog_bp.route('/api/check-article-format', methods=['POST'])
-    def check_article_format_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.content.article_format_template_service import check_article_format
-            result = check_article_format(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '글 형식 템플릿 검사')
-
-    # ── Emotional Arc Mapper ──
-    @blog_bp.route('/api/map-emotional-arc', methods=['POST'])
-    def map_emotional_arc_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.emotional_arc_mapper_service import map_emotional_arc
-            result = map_emotional_arc(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '감정 아크 매핑')
-
-    # ── Sentence Length Rhythm Analyzer ──
-    @blog_bp.route('/api/analyze-sentence-rhythm', methods=['POST'])
-    def analyze_sentence_rhythm_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_sentence_rhythm
-            result = analyze_sentence_rhythm(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문장 리듬 분석')
-
-    # ── Title Tag Length Checker ──
-    @blog_bp.route('/api/check-title-tag-length', methods=['POST'])
-    def check_title_tag_length_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.title_tag_length_service import check_title_tag_length
-            result = check_title_tag_length(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '제목 태그 길이 검사')
-
-    # ── Keyword Stuffing Detector ──
-    @blog_bp.route('/api/detect-keyword-stuffing', methods=['POST'])
-    def detect_keyword_stuffing_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.keyword_stuffing_detector_service import detect_keyword_stuffing
-            result = detect_keyword_stuffing(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '키워드 스터핑 감지')
-
-    # ── Sentence Ending Variety ──
-    @blog_bp.route('/api/analyze-sentence-ending-variety', methods=['POST'])
-    def analyze_sentence_ending_variety_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_sentence_ending_variety
-            result = analyze_sentence_ending_variety(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '종결어미 다양성 분석')
-
-    # ── URL Health Checker ──
-    @blog_bp.route('/api/check-url-health', methods=['POST'])
-    def check_url_health_route():
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.seo.url_health_checker_service import check_url_health
-            result = check_url_health(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, 'URL 건강 검사')
-
-    # ── Passive Construction Ratio ──
-    @blog_bp.route('/api/analyze-passive-ratio', methods=['POST'])
-    def analyze_passive_ratio_route():
-        """피동/수동 구문 비율을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.passive_construction_ratio_service import analyze_passive_ratio
-            result = analyze_passive_ratio(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '피동 구문 비율 분석')
-
-    # ── Average Words Per Sentence ──
-    @blog_bp.route('/api/analyze-avg-words-per-sentence', methods=['POST'])
-    def analyze_avg_words_per_sentence_route():
-        """문장당 평균 단어 수를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_avg_words_per_sentence
-            result = analyze_avg_words_per_sentence(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문장당 평균 단어 수 분석')
-
-    # ── Emoji Usage Analyzer ──
-    @blog_bp.route('/api/analyze-emoji-usage', methods=['POST'])
-    def analyze_emoji_usage_route():
-        """이모지 사용 패턴을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.emoji_usage_analyzer_service import analyze_emoji_usage
-            result = analyze_emoji_usage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '이모지 사용 분석')
-
-    # ── Acronym Consistency Checker ──
-    @blog_bp.route('/api/check-acronym-consistency', methods=['POST'])
-    def check_acronym_consistency_route():
-        """약어 일관성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.acronym_consistency_checker_service import check_acronym_consistency
-            result = check_acronym_consistency(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '약어 일관성 검사')
-
-    # ── Heading Keyword Density ──
-    @blog_bp.route('/api/analyze-heading-keyword-density', methods=['POST'])
-    def analyze_heading_keyword_density_route():
-        """헤딩 키워드 밀도를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.heading_keyword_density_service import analyze_heading_keyword_density
-            result = analyze_heading_keyword_density(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '헤딩 키워드 밀도 분석')
-
-    # ── Content Symmetry Analyzer ──
-    @blog_bp.route('/api/analyze-content-symmetry', methods=['POST'])
-    def analyze_content_symmetry_route():
-        """콘텐츠 구조적 대칭성을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.content_symmetry_analyzer_service import analyze_content_symmetry
-            result = analyze_content_symmetry(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '콘텐츠 대칭성 분석')
-
-    # ── Rhetorical Device Detector ──
-    @blog_bp.route('/api/detect-rhetorical-devices', methods=['POST'])
-    def detect_rhetorical_devices_route():
-        """수사법을 감지합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.rhetorical_device_detector_service import detect_rhetorical_devices
-            result = detect_rhetorical_devices(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '수사법 감지')
-
-    # ── Cliché Detector ──
-    @blog_bp.route('/api/detect-cliches', methods=['POST'])
-    def detect_cliches_route():
-        """진부한 표현을 감지합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.cliche_detector_service import detect_cliches
-            result = detect_cliches(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '클리셰 감지')
-
-    # ── Sentence Complexity Scorer ──
-    @blog_bp.route('/api/score-sentence-complexity', methods=['POST'])
-    def score_sentence_complexity_route():
-        """문장 복잡도를 평가합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import score_sentence_complexity
-            result = score_sentence_complexity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문장 복잡도 평가')
-
-    # ── Gender-Neutral Language Checker ──
-    @blog_bp.route('/api/check-gender-neutral', methods=['POST'])
-    def check_gender_neutral_route():
-        """성별 포용적 언어 사용을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.gender_neutral_language_service import check_gender_neutral
-            result = check_gender_neutral(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '성별 포용 언어 검사')
-
-    # ── Temporal Reference Checker ──
-    @blog_bp.route('/api/check-temporal-references', methods=['POST'])
-    def check_temporal_references_route():
-        """시제/시간 참조 일관성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.temporal_reference_checker_service import check_temporal_references
-            result = check_temporal_references(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '시제 참조 검사')
-
-    # ── Data Visualization Opportunity ──
-    @blog_bp.route('/api/find-visualization-opportunities', methods=['POST'])
-    def find_visualization_opportunities_route():
-        """데이터 시각화 기회를 찾습니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.data_visualization_opportunity_service import find_visualization_opportunities
-            result = find_visualization_opportunities(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '데이터 시각화 기회 분석')
-
-    # ── Sentence Starter Diversity ──
-    @blog_bp.route('/api/analyze-sentence-starter-diversity', methods=['POST'])
-    def analyze_sentence_starter_diversity_route():
-        """문장 시작어 다양성을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_sentence_starter_diversity
-            result = analyze_sentence_starter_diversity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문장 시작어 다양성 분석')
-
-    # ── Average Paragraph Length ──
-    @blog_bp.route('/api/analyze-avg-paragraph-length', methods=['POST'])
-    def analyze_avg_paragraph_length_route():
-        """단락 평균 길이를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.avg_paragraph_length_service import analyze_avg_paragraph_length
-            result = analyze_avg_paragraph_length(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '단락 평균 길이 분석')
-
-    # ── Quotation Usage Analyzer ──
-    @blog_bp.route('/api/analyze-quotation-usage', methods=['POST'])
-    def analyze_quotation_usage_route():
-        """인용문 사용 패턴을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.quotation_usage_analyzer_service import analyze_quotation_usage
-            result = analyze_quotation_usage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '인용문 사용 분석')
-
-    @blog_bp.route('/api/analyze-noun-verb-ratio', methods=['POST'])
-    def analyze_noun_verb_ratio_route():
-        """명사/동사 비율을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.noun_verb_ratio_service import analyze_noun_verb_ratio
-            result = analyze_noun_verb_ratio(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '명사/동사 비율 분석')
-
-    @blog_bp.route('/api/score-content-scanability', methods=['POST'])
-    def score_content_scanability_route():
-        """콘텐츠 스캔 가독성을 평가합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.content_scanability_service import score_content_scanability
-            result = score_content_scanability(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '스캔 가독성 평가')
-
-    @blog_bp.route('/api/analyze-passive-active-trend', methods=['POST'])
-    def analyze_passive_active_trend_route():
-        """섹션별 능동/피동 비율 추이를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.passive_active_trend_service import analyze_passive_active_trend
-            result = analyze_passive_active_trend(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '능동/피동 추이 분석')
-
-    @blog_bp.route('/api/check-material-connection-disclosure', methods=['POST'])
-    def check_material_connection_disclosure_route():
-        """제휴/협찬 공시 누락을 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.material_connection_disclosure_service import check_material_connection_disclosure
-            result = check_material_connection_disclosure(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '이해관계 공시 점검')
-
-    @blog_bp.route('/api/check-ai-disclosure', methods=['POST'])
-    def check_ai_disclosure_route():
-        """AI 작성/보조 표시 누락을 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.quality.ai_disclosure_checker_service import check_ai_disclosure
-            result = check_ai_disclosure(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, 'AI 공시 점검')
-
-    @blog_bp.route('/api/analyze-tradeoff-coverage', methods=['POST'])
-    def analyze_tradeoff_coverage_route():
-        """장단점 균형을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
-            result = analyze_tradeoff_coverage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '장단점 균형 분석')
-
-    @blog_bp.route('/api/check-primary-source-preference', methods=['POST'])
-    def check_primary_source_preference_route():
-        """인용 출처의 1차/2차 비율을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.primary_source_preference_service import check_primary_source_preference
-            result = check_primary_source_preference(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '출처 품질 분석')
-
-    @blog_bp.route('/api/detect-high-stakes-advice-risk', methods=['POST'])
-    def detect_high_stakes_advice_risk_route():
-        """고위험 조언 콘텐츠의 안전성을 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
-            result = detect_high_stakes_advice_risk(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, 'YMYL 위험 감지')
-
-    @blog_bp.route('/api/check-evaluation-criteria-disclosure', methods=['POST'])
-    def check_evaluation_criteria_disclosure_route():
-        """리뷰/비교 글의 평가 기준 공시를 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
-            result = check_evaluation_criteria_disclosure(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '평가 기준 공시 점검')
-
-    @blog_bp.route('/api/analyze-recommendation-justification', methods=['POST'])
-    def analyze_recommendation_justification_route():
-        """추천 항목의 근거 충분성을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.quality.recommendation_justification_service import analyze_recommendation_justification
-            result = analyze_recommendation_justification(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '추천 근거 분석')
-
-    @blog_bp.route('/api/check-prerequisite-disclosure', methods=['POST'])
-    def check_prerequisite_disclosure_route():
-        """튜토리얼/가이드의 사전조건 공시를 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.prerequisite_disclosure_service import check_prerequisite_disclosure
-            result = check_prerequisite_disclosure(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '사전조건 공시 점검')
-
-    @blog_bp.route('/api/analyze-troubleshooting-coverage', methods=['POST'])
-    def analyze_troubleshooting_coverage_route():
-        """가이드의 문제 해결 커버리지를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.troubleshooting_coverage_service import analyze_troubleshooting_coverage
-            result = analyze_troubleshooting_coverage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문제 해결 커버리지 분석')
-
-    @blog_bp.route('/api/analyze-extractability', methods=['POST'])
-    def analyze_extractability_route():
-        """콘텐츠의 문맥 독립 추출 가능성을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.extractability_analyzer_service import analyze_extractability
-            result = analyze_extractability(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '추출 가능성 분석')
-
-    @blog_bp.route('/api/analyze-community-evidence', methods=['POST'])
-    def analyze_community_evidence_route():
-        """커뮤니티 근거 포함 여부를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.quality.community_evidence_service import analyze_community_evidence
-            result = analyze_community_evidence(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '커뮤니티 근거 분석')
-
-    @blog_bp.route('/api/check-update-delta-summary', methods=['POST'])
-    def check_update_delta_summary_route():
-        """업데이트 변경 요약 블록 존재 여부를 점검합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.content.update_delta_summary_service import check_update_delta_summary
-            result = check_update_delta_summary(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '업데이트 요약 점검')
-
-    # ── Audience-Fit Framing Analyzer ──
-    @blog_bp.route('/api/analyze-audience-fit-framing', methods=['POST'])
-    def analyze_audience_fit_framing_route():
-        """대상 독자/상황/비적합 프레이밍을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.quality.audience_fit_framing_service import analyze_audience_fit_framing
-            result = analyze_audience_fit_framing(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '대상 프레이밍 분석')
-
-    # ── Geo Scope Assumption Detector ──
-    @blog_bp.route('/api/detect-geo-scope-assumptions', methods=['POST'])
-    def detect_geo_scope_assumptions_route():
-        """지역 의존 정보의 범위 라벨 누락을 탐지합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.geo_scope_assumption_service import detect_geo_scope_assumptions
-            result = detect_geo_scope_assumptions(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '지역 범위 가정 탐지')
-
-    # ── Absolute Claim Risk Detector ──
-    @blog_bp.route('/api/detect-absolute-claim-risk', methods=['POST'])
-    def detect_absolute_claim_risk_route():
-        """절대 표현의 위험도를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.absolute_claim_risk_service import detect_absolute_claim_risk
-            result = detect_absolute_claim_risk(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '절대 표현 위험 분석')
-
-    # ── Quantifier Specificity Analyzer ──
-    @blog_bp.route('/api/analyze-quantifier-specificity', methods=['POST'])
-    def analyze_quantifier_specificity_route():
-        """수량 표현의 구체성을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.quantifier_specificity_service import analyze_quantifier_specificity
-            result = analyze_quantifier_specificity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '수량 구체성 분석')
-
-    # ── List Parallelism Checker ──
-    @blog_bp.route('/api/check-list-parallelism', methods=['POST'])
-    def check_list_parallelism_route():
-        """목록 항목의 병렬 구조 일관성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.list_parallelism_service import check_list_parallelism
-            result = check_list_parallelism(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '목록 병렬 구조 검사')
-
-    # ── Heading Hierarchy Integrity Checker ──
-    @blog_bp.route('/api/check-heading-hierarchy', methods=['POST'])
-    def check_heading_hierarchy_route():
-        """마크다운 제목 계층 구조를 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.heading_hierarchy_service import check_heading_hierarchy
-            result = check_heading_hierarchy(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '제목 계층 구조 검사')
-
-    # ── Numeric & Unit Consistency Checker ──
-    @blog_bp.route('/api/check-numeric-unit-consistency', methods=['POST'])
-    def check_numeric_unit_consistency_route():
-        """숫자/단위 표기 일관성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.numeric_unit_consistency_service import check_numeric_unit_consistency
-            result = check_numeric_unit_consistency(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '숫자/단위 일관성 검사')
-
-    # ── Step Verification Coverage Analyzer ──
-    @blog_bp.route('/api/analyze-step-verification-coverage', methods=['POST'])
-    def analyze_step_verification_coverage_route():
-        """가이드 문서의 단계별 검증 기준 커버리지를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.step_verification_coverage_service import analyze_step_verification_coverage
-            result = analyze_step_verification_coverage(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '단계 검증 커버리지 분석')
-
-    # ── Comparison Criteria Completeness Checker ──
-    @blog_bp.route('/api/check-comparison-criteria-completeness', methods=['POST'])
-    def check_comparison_criteria_completeness_route():
-        """비교 콘텐츠의 기준 명시 완전성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.comparison_criteria_completeness_service import check_comparison_criteria_completeness
-            result = check_comparison_criteria_completeness(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '비교 기준 완전성 검사')
-
-    # ── Terminology Drift Analyzer ──
-    @blog_bp.route('/api/analyze-terminology-drift', methods=['POST'])
-    def analyze_terminology_drift_route():
-        """섹션 간 용어 혼용을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.terminology_drift_service import analyze_terminology_drift
-            result = analyze_terminology_drift(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '용어 혼용 분석')
-
-    # ── Topic Sentence Alignment Analyzer ──
-    @blog_bp.route('/api/analyze-topic-sentence-alignment', methods=['POST'])
-    def analyze_topic_sentence_alignment_route():
-        """문단별 주제문 정렬을 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.sentence_analysis_service import analyze_topic_sentence_alignment
-            result = analyze_topic_sentence_alignment(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '주제문 정렬 분석')
-
-    # ── Paragraph Unity Checker ──
-    @blog_bp.route('/api/check-paragraph-unity', methods=['POST'])
-    def check_paragraph_unity_route():
-        """문단별 주제 통일성을 검사합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.paragraph_unity_service import check_paragraph_unity
-            result = check_paragraph_unity(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문단 통일성 검사')
-
-    # ── Original Evidence Signal Analyzer ──
-    @blog_bp.route('/api/analyze-original-evidence', methods=['POST'])
-    def analyze_original_evidence_route():
-        """원본 증거 신호를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.original_evidence_signal_service import analyze_original_evidence
-            result = analyze_original_evidence(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '원본 증거 신호 분석')
-
-    # ── Adjacent Paragraph Cohesion Analyzer ──
-    @blog_bp.route('/api/analyze-adjacent-cohesion', methods=['POST'])
-    def analyze_adjacent_cohesion_route():
-        """인접 문단 간 응집도를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.adjacent_cohesion_service import analyze_adjacent_cohesion
-            result = analyze_adjacent_cohesion(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '문단 응집도 분석')
-
-    # ── Claim-Evidence Distance Analyzer ──
-    @blog_bp.route('/api/analyze-claim-evidence-distance', methods=['POST'])
-    def analyze_claim_evidence_distance_route():
-        """주장-근거 거리를 분석합니다."""
-        try:
-            data = request.get_json(force=True)
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.claim_evidence_distance_service import analyze_claim_evidence_distance
-            result = analyze_claim_evidence_distance(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '주장-근거 거리 분석')
-
-    # ── Definition Gap Detector ──
-    @blog_bp.route('/api/detect-definition-gaps', methods=['POST'])
-    def detect_definition_gaps_route():
-        """정의 없는 전문 용어/약어를 탐지합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.definition_gap_service import detect_definition_gaps
-            result = detect_definition_gaps(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '정의 갭 탐지')
-
-    # ── Methodology Transparency Checker ──
-    @blog_bp.route('/api/check-methodology-transparency', methods=['POST'])
-    def check_methodology_transparency_route():
-        """방법론 투명성을 검사합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.methodology_transparency_service import check_methodology_transparency
-            result = check_methodology_transparency(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '방법론 투명성 검사')
-
-    # ── Concept Load Analyzer ──
-    @blog_bp.route('/api/analyze-concept-load', methods=['POST'])
-    def analyze_concept_load_route():
-        """구간별 인지부하를 분석합니다."""
-        try:
-            data = request.get_json(silent=True) or {}
-            content = data.get('content', '')
-            if not content or not content.strip():
-                return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
-
-            from services.analysis.concept_load_service import analyze_concept_load
-            result = analyze_concept_load(content)
-            return jsonify(result)
-
-        except Exception as e:
-            return handle_error(e, '인지부하 분석')
+# ── Pronoun Clarity Checker ──────────────────────────────────────────
+@blog_bp.route('/api/check-pronoun-clarity', methods=['POST'])
+def check_pronoun_clarity_route():
+    """대명사 명확성을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.pronoun_clarity_service import check_pronoun_clarity
+        result = check_pronoun_clarity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '대명사 명확성 검사')
+
+# ── Example Coverage Analyzer ────────────────────────────────────────
+@blog_bp.route('/api/analyze-example-coverage', methods=['POST'])
+def analyze_example_coverage_route():
+    """주장/조언의 예시·근거 커버리지를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.example_coverage_service import analyze_example_coverage
+        result = analyze_example_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '예시 커버리지 분석')
+
+# ── Question-Answer Closure Checker ──────────────────────────────────
+@blog_bp.route('/api/check-qa-closure', methods=['POST'])
+def check_qa_closure_route():
+    """질문-답변 완결성을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality.qa_closure_service import check_qa_closure
+        result = check_qa_closure(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '질문-답변 완결성 검사')
+
+# ── Adverb Overuse Detector ──────────────────────────────────────────
+@blog_bp.route('/api/detect-adverb-overuse', methods=['POST'])
+def detect_adverb_overuse_route():
+    """부사 남용을 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.adverb_overuse_service import detect_adverb_overuse
+        result = detect_adverb_overuse(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '부사 남용 감지')
+
+# ── Clause Overload Detector ─────────────────────────────────────────
+@blog_bp.route('/api/detect-clause-overload', methods=['POST'])
+def detect_clause_overload_route():
+    """문장 내 절 과부하를 감지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.clause_overload_service import detect_clause_overload
+        result = detect_clause_overload(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '절 과부하 감지')
+
+# ── Statistics Coverage Analyzer ─────────────────────────────────────
+@blog_bp.route('/api/analyze-statistics-coverage', methods=['POST'])
+def analyze_statistics_coverage_route():
+    """섹션별 수치 근거 커버리지를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.statistics_coverage_service import analyze_statistics_coverage
+        result = analyze_statistics_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '수치 커버리지 분석')
+
+# ── Simple Alternative Finder ────────────────────────────────────────
+@blog_bp.route('/api/find-simple-alternatives', methods=['POST'])
+def find_simple_alternatives_route():
+    """고난도 어휘의 쉬운 대체어를 제안합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.simple_alternative_service import find_simple_alternatives
+        result = find_simple_alternatives(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '쉬운 대체어 검색')
+
+# ── Heading Term Placement Auditor ───────────────────────────────────
+@blog_bp.route('/api/audit-heading-terms', methods=['POST'])
+def audit_heading_terms_route():
+    """핵심 용어의 헤딩 배치를 점검합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.heading_term_placement_service import audit_heading_term_placement
+        result = audit_heading_term_placement(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '헤딩 용어 배치 점검')
+
+# ── Acronym Expansion Compliance Checker ─────────────────────────────
+@blog_bp.route('/api/check-acronym-expansion', methods=['POST'])
+def check_acronym_expansion_route():
+    """약어의 첫 등장 시 풀어쓰기 여부를 점검합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.acronym_expansion_service import check_acronym_expansion
+        result = check_acronym_expansion(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '약어 풀어쓰기 점검')
+
+@blog_bp.route('/api/detect-actionability-gaps', methods=['POST'])
+def detect_actionability_gaps_route():
+    """실행 가능성 갭 감지 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.actionability_gap_service import detect_actionability_gaps
+        result = detect_actionability_gaps(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '실행 가능성 갭 감지')
+
+@blog_bp.route('/api/check-thesis-frontload', methods=['POST'])
+def check_thesis_frontload_route():
+    """핵심 주장 프론트로드 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.thesis_frontload_service import check_thesis_frontload
+        result = check_thesis_frontload(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '핵심 주장 프론트로드 점검')
+
+@blog_bp.route('/api/detect-list-table-opportunities', methods=['POST'])
+def detect_list_table_opportunities_route():
+    """목록/표 변환 기회 감지 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.list_table_opportunity_service import detect_list_table_opportunities
+        result = detect_list_table_opportunities(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '목록/표 변환 기회 감지')
+
+@blog_bp.route('/api/audit-image-seo', methods=['POST'])
+def audit_image_seo_route():
+    """이미지 SEO 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.image_seo_auditor_service import audit_image_seo
+        result = audit_image_seo(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '이미지 SEO 점검')
+
+@blog_bp.route('/api/audit-source-diversity', methods=['POST'])
+def audit_source_diversity_route():
+    """외부 소스 다양성 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.external_source_diversity_service import audit_external_source_diversity
+        result = audit_external_source_diversity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '외부 소스 다양성 점검')
+
+@blog_bp.route('/api/detect-chapter-breakpoints', methods=['POST'])
+def detect_chapter_breakpoints_route():
+    """챕터 분할점 감지 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.transcript.chapter_breakpoint_service import detect_chapter_breakpoints
+        result = detect_chapter_breakpoints(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '챕터 분할점 감지')
+
+@blog_bp.route('/api/analyze-question-density', methods=['POST'])
+def analyze_question_density_route():
+    """질문 밀도 분석 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.question_density_service import analyze_question_density
+        result = analyze_question_density(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '질문 밀도 분석')
+
+@blog_bp.route('/api/audit-whitespace-formatting', methods=['POST'])
+def audit_whitespace_formatting_route():
+    """공백/포맷 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.whitespace_formatting_service import audit_whitespace_formatting
+        result = audit_whitespace_formatting(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '공백/포맷 점검')
+
+@blog_bp.route('/api/analyze-bullet-density', methods=['POST'])
+def analyze_bullet_density_route():
+    """불릿 리스트 밀도 분석 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.bullet_point_density_service import analyze_bullet_density
+        result = analyze_bullet_density(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '불릿 리스트 밀도 분석')
+
+@blog_bp.route('/api/check-code-block-quality', methods=['POST'])
+def check_code_block_quality_route():
+    """코드 블록 품질 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.code_block_quality_service import check_code_block_quality
+        result = check_code_block_quality(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '코드 블록 품질 점검')
+
+@blog_bp.route('/api/check-paragraph-opening-variety', methods=['POST'])
+def check_paragraph_opening_variety_route():
+    """문단 시작 다양성 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.paragraph_opening_variety_service import check_paragraph_opening_variety
+        result = check_paragraph_opening_variety(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문단 시작 다양성 점검')
+
+@blog_bp.route('/api/check-tone-consistency', methods=['POST'])
+def check_tone_consistency_route():
+    """문체 일관성 점검 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.tone_consistency_service import check_tone_consistency
+        result = check_tone_consistency(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문체 일관성 점검')
+
+@blog_bp.route('/api/detect-linking-verb-overuse', methods=['POST'])
+def detect_linking_verb_overuse_route():
+    """연결 동사 과다 사용 감지 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.linking_verb_overuse_service import detect_linking_verb_overuse
+        result = detect_linking_verb_overuse(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '연결 동사 과다 사용 감지')
+
+@blog_bp.route('/api/validate-instruction-sequence', methods=['POST'])
+def validate_instruction_sequence_route():
+    """절차 시퀀스 검증 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.instruction_sequence_service import validate_instruction_sequence
+        result = validate_instruction_sequence(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '절차 시퀀스 검증')
+
+@blog_bp.route('/api/score-content-depth', methods=['POST'])
+def score_content_depth_route():
+    """콘텐츠 심도 측정 API."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.content_depth_scorer_service import score_content_depth
+        result = score_content_depth(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 심도 측정')
+
+# ── Conclusion Strength Analyzer ──
+@blog_bp.route('/api/analyze-conclusion-strength', methods=['POST'])
+def analyze_conclusion_strength_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.conclusion_strength_service import analyze_conclusion_strength
+        result = analyze_conclusion_strength(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '결론 강도 분석')
+
+# ── Meta Description Quality Checker ──
+@blog_bp.route('/api/check-meta-description-quality', methods=['POST'])
+def check_meta_description_quality_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.meta_description_quality_service import check_meta_description_quality
+        result = check_meta_description_quality(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '메타 디스크립션 품질 검사')
+
+# ── Parenthetical Overuse Checker ──
+@blog_bp.route('/api/check-parenthetical-overuse', methods=['POST'])
+def check_parenthetical_overuse_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.parenthetical_overuse_service import check_parenthetical_overuse
+        result = check_parenthetical_overuse(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '괄호 과다 사용 검사')
+
+# ── Word Frequency Cloud Generator ──
+@blog_bp.route('/api/generate-word-frequency', methods=['POST'])
+def generate_word_frequency_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.media.word_frequency_cloud_service import generate_word_frequency
+        top_n = data.get('top_n', 30)
+        result = generate_word_frequency(content, top_n=top_n)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '단어 빈도 분석')
+
+# ── Anaphora Repetition Detector ──
+@blog_bp.route('/api/detect-anaphora-repetition', methods=['POST'])
+def detect_anaphora_repetition_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.anaphora_repetition_service import detect_anaphora_repetition
+        result = detect_anaphora_repetition(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '수사 반복 감지')
+
+# ── Table of Contents Generator ──
+@blog_bp.route('/api/generate-toc', methods=['POST'])
+def generate_toc_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.content.toc_generator_service import generate_toc
+        max_depth = data.get('max_depth', 3)
+        result = generate_toc(content, max_depth=max_depth)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '목차 생성')
+
+# ── Sentence Connector Variety Analyzer ──
+@blog_bp.route('/api/analyze-connector-variety', methods=['POST'])
+def analyze_connector_variety_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_connector_variety
+        result = analyze_connector_variety(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '연결어 다양성 분석')
+
+# ── Content Freshness Indicator ──
+@blog_bp.route('/api/check-content-freshness', methods=['POST'])
+def check_content_freshness_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.content_freshness_indicator_service import check_content_freshness
+        result = check_content_freshness(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 시의성 평가')
+
+# ── Article Format Template Checker ──
+@blog_bp.route('/api/check-article-format', methods=['POST'])
+def check_article_format_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.content.article_format_template_service import check_article_format
+        result = check_article_format(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '글 형식 템플릿 검사')
+
+# ── Emotional Arc Mapper ──
+@blog_bp.route('/api/map-emotional-arc', methods=['POST'])
+def map_emotional_arc_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.emotional_arc_mapper_service import map_emotional_arc
+        result = map_emotional_arc(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '감정 아크 매핑')
+
+# ── Sentence Length Rhythm Analyzer ──
+@blog_bp.route('/api/analyze-sentence-rhythm', methods=['POST'])
+def analyze_sentence_rhythm_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_sentence_rhythm
+        result = analyze_sentence_rhythm(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문장 리듬 분석')
+
+# ── Title Tag Length Checker ──
+@blog_bp.route('/api/check-title-tag-length', methods=['POST'])
+def check_title_tag_length_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.title_tag_length_service import check_title_tag_length
+        result = check_title_tag_length(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '제목 태그 길이 검사')
+
+# ── Keyword Stuffing Detector ──
+@blog_bp.route('/api/detect-keyword-stuffing', methods=['POST'])
+def detect_keyword_stuffing_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.keyword_stuffing_detector_service import detect_keyword_stuffing
+        result = detect_keyword_stuffing(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '키워드 스터핑 감지')
+
+# ── Sentence Ending Variety ──
+@blog_bp.route('/api/analyze-sentence-ending-variety', methods=['POST'])
+def analyze_sentence_ending_variety_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_sentence_ending_variety
+        result = analyze_sentence_ending_variety(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '종결어미 다양성 분석')
+
+# ── URL Health Checker ──
+@blog_bp.route('/api/check-url-health', methods=['POST'])
+def check_url_health_route():
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.seo.url_health_checker_service import check_url_health
+        result = check_url_health(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'URL 건강 검사')
+
+# ── Passive Construction Ratio ──
+@blog_bp.route('/api/analyze-passive-ratio', methods=['POST'])
+def analyze_passive_ratio_route():
+    """피동/수동 구문 비율을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.passive_construction_ratio_service import analyze_passive_ratio
+        result = analyze_passive_ratio(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '피동 구문 비율 분석')
+
+# ── Average Words Per Sentence ──
+@blog_bp.route('/api/analyze-avg-words-per-sentence', methods=['POST'])
+def analyze_avg_words_per_sentence_route():
+    """문장당 평균 단어 수를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_avg_words_per_sentence
+        result = analyze_avg_words_per_sentence(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문장당 평균 단어 수 분석')
+
+# ── Emoji Usage Analyzer ──
+@blog_bp.route('/api/analyze-emoji-usage', methods=['POST'])
+def analyze_emoji_usage_route():
+    """이모지 사용 패턴을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.emoji_usage_analyzer_service import analyze_emoji_usage
+        result = analyze_emoji_usage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '이모지 사용 분석')
+
+# ── Acronym Consistency Checker ──
+@blog_bp.route('/api/check-acronym-consistency', methods=['POST'])
+def check_acronym_consistency_route():
+    """약어 일관성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.acronym_consistency_checker_service import check_acronym_consistency
+        result = check_acronym_consistency(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '약어 일관성 검사')
+
+# ── Heading Keyword Density ──
+@blog_bp.route('/api/analyze-heading-keyword-density', methods=['POST'])
+def analyze_heading_keyword_density_route():
+    """헤딩 키워드 밀도를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.heading_keyword_density_service import analyze_heading_keyword_density
+        result = analyze_heading_keyword_density(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '헤딩 키워드 밀도 분석')
+
+# ── Content Symmetry Analyzer ──
+@blog_bp.route('/api/analyze-content-symmetry', methods=['POST'])
+def analyze_content_symmetry_route():
+    """콘텐츠 구조적 대칭성을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.content_symmetry_analyzer_service import analyze_content_symmetry
+        result = analyze_content_symmetry(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '콘텐츠 대칭성 분석')
+
+# ── Rhetorical Device Detector ──
+@blog_bp.route('/api/detect-rhetorical-devices', methods=['POST'])
+def detect_rhetorical_devices_route():
+    """수사법을 감지합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.rhetorical_device_detector_service import detect_rhetorical_devices
+        result = detect_rhetorical_devices(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '수사법 감지')
+
+# ── Cliché Detector ──
+@blog_bp.route('/api/detect-cliches', methods=['POST'])
+def detect_cliches_route():
+    """진부한 표현을 감지합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.cliche_detector_service import detect_cliches
+        result = detect_cliches(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '클리셰 감지')
+
+# ── Sentence Complexity Scorer ──
+@blog_bp.route('/api/score-sentence-complexity', methods=['POST'])
+def score_sentence_complexity_route():
+    """문장 복잡도를 평가합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import score_sentence_complexity
+        result = score_sentence_complexity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문장 복잡도 평가')
+
+# ── Gender-Neutral Language Checker ──
+@blog_bp.route('/api/check-gender-neutral', methods=['POST'])
+def check_gender_neutral_route():
+    """성별 포용적 언어 사용을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.gender_neutral_language_service import check_gender_neutral
+        result = check_gender_neutral(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '성별 포용 언어 검사')
+
+# ── Temporal Reference Checker ──
+@blog_bp.route('/api/check-temporal-references', methods=['POST'])
+def check_temporal_references_route():
+    """시제/시간 참조 일관성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.temporal_reference_checker_service import check_temporal_references
+        result = check_temporal_references(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '시제 참조 검사')
+
+# ── Data Visualization Opportunity ──
+@blog_bp.route('/api/find-visualization-opportunities', methods=['POST'])
+def find_visualization_opportunities_route():
+    """데이터 시각화 기회를 찾습니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.data_visualization_opportunity_service import find_visualization_opportunities
+        result = find_visualization_opportunities(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '데이터 시각화 기회 분석')
+
+# ── Sentence Starter Diversity ──
+@blog_bp.route('/api/analyze-sentence-starter-diversity', methods=['POST'])
+def analyze_sentence_starter_diversity_route():
+    """문장 시작어 다양성을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_sentence_starter_diversity
+        result = analyze_sentence_starter_diversity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문장 시작어 다양성 분석')
+
+# ── Average Paragraph Length ──
+@blog_bp.route('/api/analyze-avg-paragraph-length', methods=['POST'])
+def analyze_avg_paragraph_length_route():
+    """단락 평균 길이를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.avg_paragraph_length_service import analyze_avg_paragraph_length
+        result = analyze_avg_paragraph_length(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '단락 평균 길이 분석')
+
+# ── Quotation Usage Analyzer ──
+@blog_bp.route('/api/analyze-quotation-usage', methods=['POST'])
+def analyze_quotation_usage_route():
+    """인용문 사용 패턴을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.quotation_usage_analyzer_service import analyze_quotation_usage
+        result = analyze_quotation_usage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '인용문 사용 분석')
+
+@blog_bp.route('/api/analyze-noun-verb-ratio', methods=['POST'])
+def analyze_noun_verb_ratio_route():
+    """명사/동사 비율을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.noun_verb_ratio_service import analyze_noun_verb_ratio
+        result = analyze_noun_verb_ratio(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '명사/동사 비율 분석')
+
+@blog_bp.route('/api/score-content-scanability', methods=['POST'])
+def score_content_scanability_route():
+    """콘텐츠 스캔 가독성을 평가합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.content_scanability_service import score_content_scanability
+        result = score_content_scanability(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '스캔 가독성 평가')
+
+@blog_bp.route('/api/analyze-passive-active-trend', methods=['POST'])
+def analyze_passive_active_trend_route():
+    """섹션별 능동/피동 비율 추이를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.passive_active_trend_service import analyze_passive_active_trend
+        result = analyze_passive_active_trend(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '능동/피동 추이 분석')
+
+@blog_bp.route('/api/check-material-connection-disclosure', methods=['POST'])
+def check_material_connection_disclosure_route():
+    """제휴/협찬 공시 누락을 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.material_connection_disclosure_service import check_material_connection_disclosure
+        result = check_material_connection_disclosure(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '이해관계 공시 점검')
+
+@blog_bp.route('/api/check-ai-disclosure', methods=['POST'])
+def check_ai_disclosure_route():
+    """AI 작성/보조 표시 누락을 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality.ai_disclosure_checker_service import check_ai_disclosure
+        result = check_ai_disclosure(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'AI 공시 점검')
+
+@blog_bp.route('/api/analyze-tradeoff-coverage', methods=['POST'])
+def analyze_tradeoff_coverage_route():
+    """장단점 균형을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.tradeoff_coverage_analyzer_service import analyze_tradeoff_coverage
+        result = analyze_tradeoff_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '장단점 균형 분석')
+
+@blog_bp.route('/api/check-primary-source-preference', methods=['POST'])
+def check_primary_source_preference_route():
+    """인용 출처의 1차/2차 비율을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.primary_source_preference_service import check_primary_source_preference
+        result = check_primary_source_preference(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '출처 품질 분석')
+
+@blog_bp.route('/api/detect-high-stakes-advice-risk', methods=['POST'])
+def detect_high_stakes_advice_risk_route():
+    """고위험 조언 콘텐츠의 안전성을 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.high_stakes_advice_risk_service import detect_high_stakes_advice_risk
+        result = detect_high_stakes_advice_risk(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, 'YMYL 위험 감지')
+
+@blog_bp.route('/api/check-evaluation-criteria-disclosure', methods=['POST'])
+def check_evaluation_criteria_disclosure_route():
+    """리뷰/비교 글의 평가 기준 공시를 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.evaluation_criteria_disclosure_service import check_evaluation_criteria_disclosure
+        result = check_evaluation_criteria_disclosure(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '평가 기준 공시 점검')
+
+@blog_bp.route('/api/analyze-recommendation-justification', methods=['POST'])
+def analyze_recommendation_justification_route():
+    """추천 항목의 근거 충분성을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality.recommendation_justification_service import analyze_recommendation_justification
+        result = analyze_recommendation_justification(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '추천 근거 분석')
+
+@blog_bp.route('/api/check-prerequisite-disclosure', methods=['POST'])
+def check_prerequisite_disclosure_route():
+    """튜토리얼/가이드의 사전조건 공시를 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.prerequisite_disclosure_service import check_prerequisite_disclosure
+        result = check_prerequisite_disclosure(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '사전조건 공시 점검')
+
+@blog_bp.route('/api/analyze-troubleshooting-coverage', methods=['POST'])
+def analyze_troubleshooting_coverage_route():
+    """가이드의 문제 해결 커버리지를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.troubleshooting_coverage_service import analyze_troubleshooting_coverage
+        result = analyze_troubleshooting_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문제 해결 커버리지 분석')
+
+@blog_bp.route('/api/analyze-extractability', methods=['POST'])
+def analyze_extractability_route():
+    """콘텐츠의 문맥 독립 추출 가능성을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.extractability_analyzer_service import analyze_extractability
+        result = analyze_extractability(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '추출 가능성 분석')
+
+@blog_bp.route('/api/analyze-community-evidence', methods=['POST'])
+def analyze_community_evidence_route():
+    """커뮤니티 근거 포함 여부를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality.community_evidence_service import analyze_community_evidence
+        result = analyze_community_evidence(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '커뮤니티 근거 분석')
+
+@blog_bp.route('/api/check-update-delta-summary', methods=['POST'])
+def check_update_delta_summary_route():
+    """업데이트 변경 요약 블록 존재 여부를 점검합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.content.update_delta_summary_service import check_update_delta_summary
+        result = check_update_delta_summary(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '업데이트 요약 점검')
+
+# ── Audience-Fit Framing Analyzer ──
+@blog_bp.route('/api/analyze-audience-fit-framing', methods=['POST'])
+def analyze_audience_fit_framing_route():
+    """대상 독자/상황/비적합 프레이밍을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.quality.audience_fit_framing_service import analyze_audience_fit_framing
+        result = analyze_audience_fit_framing(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '대상 프레이밍 분석')
+
+# ── Geo Scope Assumption Detector ──
+@blog_bp.route('/api/detect-geo-scope-assumptions', methods=['POST'])
+def detect_geo_scope_assumptions_route():
+    """지역 의존 정보의 범위 라벨 누락을 탐지합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.geo_scope_assumption_service import detect_geo_scope_assumptions
+        result = detect_geo_scope_assumptions(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '지역 범위 가정 탐지')
+
+# ── Absolute Claim Risk Detector ──
+@blog_bp.route('/api/detect-absolute-claim-risk', methods=['POST'])
+def detect_absolute_claim_risk_route():
+    """절대 표현의 위험도를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.absolute_claim_risk_service import detect_absolute_claim_risk
+        result = detect_absolute_claim_risk(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '절대 표현 위험 분석')
+
+# ── Quantifier Specificity Analyzer ──
+@blog_bp.route('/api/analyze-quantifier-specificity', methods=['POST'])
+def analyze_quantifier_specificity_route():
+    """수량 표현의 구체성을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.quantifier_specificity_service import analyze_quantifier_specificity
+        result = analyze_quantifier_specificity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '수량 구체성 분석')
+
+# ── List Parallelism Checker ──
+@blog_bp.route('/api/check-list-parallelism', methods=['POST'])
+def check_list_parallelism_route():
+    """목록 항목의 병렬 구조 일관성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.list_parallelism_service import check_list_parallelism
+        result = check_list_parallelism(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '목록 병렬 구조 검사')
+
+# ── Heading Hierarchy Integrity Checker ──
+@blog_bp.route('/api/check-heading-hierarchy', methods=['POST'])
+def check_heading_hierarchy_route():
+    """마크다운 제목 계층 구조를 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.heading_hierarchy_service import check_heading_hierarchy
+        result = check_heading_hierarchy(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '제목 계층 구조 검사')
+
+# ── Numeric & Unit Consistency Checker ──
+@blog_bp.route('/api/check-numeric-unit-consistency', methods=['POST'])
+def check_numeric_unit_consistency_route():
+    """숫자/단위 표기 일관성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.numeric_unit_consistency_service import check_numeric_unit_consistency
+        result = check_numeric_unit_consistency(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '숫자/단위 일관성 검사')
+
+# ── Step Verification Coverage Analyzer ──
+@blog_bp.route('/api/analyze-step-verification-coverage', methods=['POST'])
+def analyze_step_verification_coverage_route():
+    """가이드 문서의 단계별 검증 기준 커버리지를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.step_verification_coverage_service import analyze_step_verification_coverage
+        result = analyze_step_verification_coverage(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '단계 검증 커버리지 분석')
+
+# ── Comparison Criteria Completeness Checker ──
+@blog_bp.route('/api/check-comparison-criteria-completeness', methods=['POST'])
+def check_comparison_criteria_completeness_route():
+    """비교 콘텐츠의 기준 명시 완전성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.comparison_criteria_completeness_service import check_comparison_criteria_completeness
+        result = check_comparison_criteria_completeness(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '비교 기준 완전성 검사')
+
+# ── Terminology Drift Analyzer ──
+@blog_bp.route('/api/analyze-terminology-drift', methods=['POST'])
+def analyze_terminology_drift_route():
+    """섹션 간 용어 혼용을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.terminology_drift_service import analyze_terminology_drift
+        result = analyze_terminology_drift(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '용어 혼용 분석')
+
+# ── Topic Sentence Alignment Analyzer ──
+@blog_bp.route('/api/analyze-topic-sentence-alignment', methods=['POST'])
+def analyze_topic_sentence_alignment_route():
+    """문단별 주제문 정렬을 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.sentence_analysis_service import analyze_topic_sentence_alignment
+        result = analyze_topic_sentence_alignment(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '주제문 정렬 분석')
+
+# ── Paragraph Unity Checker ──
+@blog_bp.route('/api/check-paragraph-unity', methods=['POST'])
+def check_paragraph_unity_route():
+    """문단별 주제 통일성을 검사합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.paragraph_unity_service import check_paragraph_unity
+        result = check_paragraph_unity(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문단 통일성 검사')
+
+# ── Original Evidence Signal Analyzer ──
+@blog_bp.route('/api/analyze-original-evidence', methods=['POST'])
+def analyze_original_evidence_route():
+    """원본 증거 신호를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.original_evidence_signal_service import analyze_original_evidence
+        result = analyze_original_evidence(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '원본 증거 신호 분석')
+
+# ── Adjacent Paragraph Cohesion Analyzer ──
+@blog_bp.route('/api/analyze-adjacent-cohesion', methods=['POST'])
+def analyze_adjacent_cohesion_route():
+    """인접 문단 간 응집도를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.adjacent_cohesion_service import analyze_adjacent_cohesion
+        result = analyze_adjacent_cohesion(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '문단 응집도 분석')
+
+# ── Claim-Evidence Distance Analyzer ──
+@blog_bp.route('/api/analyze-claim-evidence-distance', methods=['POST'])
+def analyze_claim_evidence_distance_route():
+    """주장-근거 거리를 분석합니다."""
+    try:
+        data = request.get_json(force=True)
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.claim_evidence_distance_service import analyze_claim_evidence_distance
+        result = analyze_claim_evidence_distance(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '주장-근거 거리 분석')
+
+# ── Definition Gap Detector ──
+@blog_bp.route('/api/detect-definition-gaps', methods=['POST'])
+def detect_definition_gaps_route():
+    """정의 없는 전문 용어/약어를 탐지합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.definition_gap_service import detect_definition_gaps
+        result = detect_definition_gaps(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '정의 갭 탐지')
+
+# ── Methodology Transparency Checker ──
+@blog_bp.route('/api/check-methodology-transparency', methods=['POST'])
+def check_methodology_transparency_route():
+    """방법론 투명성을 검사합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.methodology_transparency_service import check_methodology_transparency
+        result = check_methodology_transparency(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '방법론 투명성 검사')
+
+# ── Concept Load Analyzer ──
+@blog_bp.route('/api/analyze-concept-load', methods=['POST'])
+def analyze_concept_load_route():
+    """구간별 인지부하를 분석합니다."""
+    try:
+        data = request.get_json(silent=True) or {}
+        content = data.get('content', '')
+        if not content or not content.strip():
+            return jsonify({'error': '분석할 콘텐츠가 필요합니다.'}), 400
+
+        from services.analysis.concept_load_service import analyze_concept_load
+        result = analyze_concept_load(content)
+        return jsonify(result)
+
+    except Exception as e:
+        return handle_error(e, '인지부하 분석')
 
 
 # ── 스케줄러 상태 조회 ──────────────────────────────────────
