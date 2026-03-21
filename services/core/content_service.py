@@ -766,44 +766,156 @@ def get_transcript(video_id: str) -> TranscriptResult:
         last_error = str(e)
         _log_warning(f"youtube-transcript-api unexpected error for video_id={video_id}: {last_error}")
 
-    # 2순위: watch 페이지 직접 파싱 (무료)
-    _log_info(f"Trying watch page fallback for video_id={video_id}")
-    watch_result = _get_transcript_from_watch_page(video_id)
-    if isinstance(watch_result, str) and watch_result.strip():
-        _log_info(f"Transcript fallback succeeded from watch page for video_id={video_id}")
-        source_meta = {
-            'source_type': 'watch_page',
-            'quality_score': 0.85,
-            'is_auto': False,
-            'language': _detect_language_from_text(watch_result),
+    # ── 병렬 폴백: watch_page + yt-dlp + NLM 동시 실행 ──
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def _try_watch_page():
+        """watch 페이지 직접 파싱."""
+        wr = _get_transcript_from_watch_page(video_id)
+        if isinstance(wr, str) and wr.strip():
+            return ('watch', wr, 0.85, False)
+        return None
+
+    def _try_ytdlp():
+        """yt-dlp 자막 직접 추출."""
+        try:
+            from services.transcript.whisper_service import extract_subtitles_ytdlp
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            text = extract_subtitles_ytdlp(video_url)
+            if text and text.strip():
+                return ('ytdlp', text, 0.9, True)
+        except Exception:
+            pass
+        return None
+
+    def _try_nlm():
+        """NotebookLM을 통한 YouTube 자막 추출."""
+        try:
+            import subprocess
+            env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8'}
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+            # 상태 파일에서 notebook_id 로드
+            state_file = os.path.join('data', 'notebooklm_state.json')
+            notebook_id = None
+            try:
+                with open(state_file, 'r', encoding='utf-8') as f:
+                    state = json.load(f)
+                    notebook_id = state.get('notebook_id')
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+
+            if not notebook_id:
+                return None
+
+            # nlm source add --youtube <url> --wait
+            add_result = subprocess.run(
+                ['nlm', 'source', 'add', notebook_id, '--youtube', video_url, '--wait'],
+                capture_output=True, text=True, encoding='utf-8', errors='replace',
+                timeout=60, env=env,
+            )
+            # cp949 출력 에러는 무시 — 소스 추가 자체는 성공할 수 있음
+
+            # 소스 목록에서 방금 추가한 youtube 소스 찾기
+            list_result = subprocess.run(
+                ['nlm', 'source', 'list', notebook_id, '--json'],
+                capture_output=True, text=True, encoding='utf-8', errors='replace',
+                timeout=30, env=env,
+            )
+            if list_result.returncode != 0:
+                return None
+
+            sources = json.loads(list_result.stdout)
+            # 가장 최근 추가된 youtube 타입 소스 찾기
+            youtube_source = None
+            for src in reversed(sources):
+                if src.get('type') == 'youtube':
+                    youtube_source = src
+                    break
+
+            if not youtube_source:
+                return None
+
+            # 소스 내용 가져오기
+            get_result = subprocess.run(
+                ['nlm', 'source', 'get', youtube_source['id'], '--json'],
+                capture_output=True, text=True, encoding='utf-8', errors='replace',
+                timeout=30, env=env,
+            )
+            if get_result.returncode != 0:
+                return None
+
+            data = json.loads(get_result.stdout)
+            content = data.get('value', {}).get('content', '')
+            if content and content.strip():
+                return ('nlm', content, 0.88, False)
+        except Exception:
+            pass
+        return None
+
+    _log_info(f"Starting parallel fallback (watch_page + yt-dlp + NLM) for video_id={video_id}")
+
+    # 우선순위: watch(0.85) < nlm(0.88) < ytdlp(0.9) — 품질 점수 기준
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(_try_watch_page): 'watch_page',
+            executor.submit(_try_ytdlp): 'ytdlp',
+            executor.submit(_try_nlm): 'nlm',
         }
-        elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-        result = {'text': watch_result, 'source': 'watch', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-        _save_cache(video_id, 'transcript', result)
-        return result
 
-    # 2.5순위: yt-dlp 자막 직접 추출 (음성인식 없이 자막 파일 다운로드)
-    try:
-        from services.transcript.whisper_service import extract_subtitles_ytdlp
-        _log_info(f"Trying yt-dlp subtitle extraction for video_id={video_id}")
-        video_url = f"https://www.youtube.com/watch?v={video_id}"
-        ytdlp_text = extract_subtitles_ytdlp(video_url)
-        if ytdlp_text and ytdlp_text.strip():
-            _log_info(f"Transcript extracted via yt-dlp subtitles for video_id={video_id}")
-            source_meta = {
-                'source_type': 'ytdlp_subtitle',
-                'quality_score': 0.9,
-                'is_auto': True,
-                'language': _detect_language_from_text(ytdlp_text),
-            }
-            elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-            result = {'text': ytdlp_text, 'source': 'ytdlp', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-            _save_cache(video_id, 'transcript', result)
-            return result
-    except Exception as e:
-        _log_warning(f"yt-dlp subtitle extraction failed for video_id={video_id}: {str(e)}")
+        first_result = None
+        for future in as_completed(futures, timeout=90):
+            try:
+                res = future.result()
+                if res is not None:
+                    source_name, text, quality, is_auto = res
+                    _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
+                    # 첫 성공 결과를 즉시 사용 (나머지 취소)
+                    for f in futures:
+                        f.cancel()
+                    source_meta = {
+                        'source_type': source_name,
+                        'quality_score': quality,
+                        'is_auto': is_auto,
+                        'language': _detect_language_from_text(text),
+                    }
+                    elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+                    first_result = {'text': text, 'source': source_name, 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
+                    break
+            except Exception as e:
+                _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
 
-    # 3순위: Supadata API (유료 - 마지막 폴백)
+    if first_result:
+        _save_cache(video_id, 'transcript', first_result)
+        return first_result
+
+    # ── 순차 폴백: 느리거나 유료인 방법들 ──
+
+    # Whisper 음성 인식 (WHISPER_ENABLED=True일 때만, 무료 로컬 처리)
+    whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
+    if whisper_enabled:
+        _log_info(f"Trying Whisper fallback for video_id={video_id}")
+        try:
+            from services.transcript.whisper_service import extract_transcript_whisper
+            whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'large-v3-turbo')
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            whisper_text = extract_transcript_whisper(video_url, whisper_model)
+            if whisper_text and whisper_text.strip():
+                _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
+                source_meta = {
+                    'source_type': 'whisper',
+                    'quality_score': 0.75,
+                    'is_auto': True,
+                    'language': _detect_language_from_text(whisper_text),
+                }
+                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
+                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
+                _save_cache(video_id, 'transcript', result)
+                return result
+        except Exception as e:
+            _log_warning(f"Whisper fallback failed for video_id={video_id}: {str(e)}")
+
+    # Supadata API (유료 - 마지막 폴백)
     if supadata_api_key:
         _log_info(f"Trying Supadata API fallback for video_id={video_id}")
         supadata_result = get_transcript_via_supadata(video_id, supadata_api_key)
@@ -821,30 +933,6 @@ def get_transcript(video_id: str) -> TranscriptResult:
             return result
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
             return supadata_result
-
-    # 4순위: Whisper 음성 인식 (WHISPER_ENABLED=True일 때만)
-    whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
-    if whisper_enabled:
-        _log_info(f"Trying Whisper fallback for video_id={video_id}")
-        try:
-            from services.transcript.whisper_service import extract_transcript_whisper
-            whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            whisper_text = extract_transcript_whisper(video_url, whisper_model)
-            if whisper_text and whisper_text.strip():
-                _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
-                source_meta = {
-                    'source_type': 'whisper',
-                    'quality_score': 0.6,
-                    'is_auto': True,
-                    'language': _detect_language_from_text(whisper_text),
-                }
-                elapsed_ms = round((time.time() - overall_start) * 1000, 1)
-                result = {'text': whisper_text, 'source': 'whisper', 'source_meta': source_meta, 'extraction_time_ms': elapsed_ms}
-                _save_cache(video_id, 'transcript', result)
-                return result
-        except Exception as e:
-            _log_warning(f"Whisper fallback failed for video_id={video_id}: {str(e)}")
 
     # 모든 방법 실패
     if last_error:
