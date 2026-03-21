@@ -195,6 +195,48 @@ class NotebookLmService:
 
         return {'status': 'not_found', 'error': f'artifact {artifact_id}를 찾을 수 없습니다.'}
 
+    # ── 다운로드 ──
+
+    DOWNLOAD_COMMANDS = {
+        'audio': 'audio',
+        'video': 'video',
+        'report': 'report',
+        'slide_deck': 'slide-deck',
+        'quiz': 'quiz',
+    }
+
+    def download(self, artifact_id: str, output_dir: str = None) -> str:
+        """artifact를 파일로 다운로드하고 경로를 반환한다."""
+        import tempfile
+        notebook_id = self._state.get('notebook_id')
+        if not notebook_id:
+            raise RuntimeError('노트북이 없습니다.')
+
+        if output_dir is None:
+            output_dir = tempfile.mkdtemp(prefix='nlm_')
+
+        # artifact 타입 확인
+        status = self.check_status(artifact_id)
+        if status.get('status') != 'completed':
+            raise RuntimeError(f'아직 완료되지 않은 artifact입니다. 상태: {status.get("status")}')
+
+        artifact_type = status.get('type', 'report')
+        download_type = self.DOWNLOAD_COMMANDS.get(artifact_type, 'report')
+
+        ext_map = {'audio': '.mp3', 'video': '.mp4', 'slide_deck': '.pdf', 'slide-deck': '.pdf'}
+        ext = ext_map.get(artifact_type, '.md')
+        output_path = os.path.join(output_dir, f'{artifact_id}{ext}')
+
+        result = self._run_nlm([
+            'download', download_type, notebook_id,
+            '--output', output_path,
+        ], timeout=GENERATE_TIMEOUT)
+
+        if result.returncode != 0:
+            raise RuntimeError(f'다운로드 실패: {result.stderr[:300]}')
+
+        return output_path
+
     # ── 유틸 ──
 
     def _extract_id(self, output: str) -> str:

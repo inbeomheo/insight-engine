@@ -75,9 +75,11 @@ class TestNotebookLmRoutes(unittest.TestCase):
         data = resp.get_json()
         self.assertEqual(data['status'], 'completed')
 
-    def test_download_not_implemented(self):
+    def test_download_error_when_not_ready(self):
+        self.mock_svc.download.side_effect = RuntimeError('아직 완료되지 않은 artifact입니다.')
         resp = self.client.get('/api/notebooklm/download/test-id')
-        self.assertEqual(resp.status_code, 501)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('완료되지 않은', resp.get_json()['error'])
 
 
 if __name__ == '__main__':

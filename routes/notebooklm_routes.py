@@ -1,5 +1,6 @@
 """NotebookLM API 라우트."""
-from flask import Blueprint, jsonify, request
+import os
+from flask import Blueprint, jsonify, request, send_file
 
 from services.notebooklm.notebooklm_service import NotebookLmService
 
@@ -53,5 +54,13 @@ def status(artifact_id):
 
 @notebooklm_bp.route('/download/<artifact_id>', methods=['GET'])
 def download(artifact_id):
-    """콘텐츠 파일 다운로드 (Phase 4에서 완성)."""
-    return jsonify({'error': '다운로드 기능은 아직 구현되지 않았습니다.'}), 501
+    """콘텐츠 파일 다운로드."""
+    try:
+        file_path = _service.download(artifact_id)
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=os.path.basename(file_path),
+        )
+    except RuntimeError as e:
+        return jsonify({'error': str(e)}), 400

@@ -31,7 +31,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -134,7 +134,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const removeReport = useResultStore((s) => s.removeReport);
   const updateReport = useResultStore((s) => s.updateReport);
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
-  const setMindmapModalOpen = useUIStore((s) => s.setMindmapModalOpen);
+
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const { t } = useTranslation();
 
