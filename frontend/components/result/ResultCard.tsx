@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -31,7 +31,8 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, synthesizeTts, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck } from '@/lib/api';
+import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
@@ -131,6 +132,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
+  const updateReport = useResultStore((s) => s.updateReport);
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
   const setMindmapModalOpen = useUIStore((s) => s.setMindmapModalOpen);
   const selectedModel = useSettingsStore((s) => s.selectedModel);
@@ -230,16 +232,45 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     }
   }
 
-  async function handleTts() {
-    if (ttsLoading) return;
-    setPanel('ttsLoading', true);
+  async function handleNotebookLm(contentType: string) {
+    const auth = await notebookLmAuthCheck().catch(() => null);
+    if (!auth?.valid) {
+      toast.error('NotebookLM 인증이 필요합니다. 터미널에서 nlm login을 실행해주세요.');
+      return;
+    }
+    const sourceText = report.transcript || report.content;
     try {
-      const blob = await synthesizeTts(report.content);
-      setPanel('audioBlob', blob);
+      const res = await notebookLmGenerate({
+        type: contentType,
+        url: report.url,
+        source_text: sourceText,
+      });
+      const artifact = { artifact_id: res.artifact_id, content_type: contentType, status: 'in_progress' as const };
+      const existing = report.notebooklm?.artifacts ?? [];
+      updateReport(report.id, { notebooklm: { artifacts: [...existing, artifact] } });
+      toast.success(`NotebookLM ${contentType} 생성 시작`);
+
+      // 폴링
+      const poll = setInterval(async () => {
+        try {
+          const status = await notebookLmStatus(res.artifact_id);
+          if (status.status === 'completed' || status.status === 'failed') {
+            clearInterval(poll);
+            const updated = (report.notebooklm?.artifacts ?? []).map(a =>
+              a.artifact_id === res.artifact_id ? { ...a, status: status.status as 'completed' | 'failed' } : a
+            );
+            // 새로 추가된 artifact도 반영
+            const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
+            updateReport(report.id, { notebooklm: { artifacts: all } });
+            if (status.status === 'completed') toast.success(`NotebookLM ${contentType} 생성 완료!`);
+            else toast.error(`NotebookLM ${contentType} 생성 실패`);
+          }
+        } catch {
+          clearInterval(poll);
+        }
+      }, 5000);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '오디오 생성에 실패했습니다.');
-    } finally {
-      setPanel('ttsLoading', false);
+      toast.error(err instanceof Error ? err.message : 'NotebookLM 생성에 실패했습니다.');
     }
   }
 
@@ -578,6 +609,11 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             </>
           )}
 
+          {/* NotebookLM 섹션 */}
+          {report.notebooklm?.artifacts && (
+            <NotebookLmSection artifacts={report.notebooklm.artifacts} />
+          )}
+
           {/* SEO 섹션 */}
           {report.seo && <SeoSection seo={report.seo} />}
 
@@ -691,17 +727,46 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <Code className="h-3.5 w-3.5 mr-2" />
                 {t('result.promptView')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setMindmapModalOpen(true, report.id)}>
-                <Brain className="h-3.5 w-3.5 mr-2" />
-                {t('result.mindmap')}
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setPanel('rewriteOpen', true)}>
                 <RefreshCw className="h-3.5 w-3.5 mr-2" />
                 플랫폼 변환
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleTts} disabled={ttsLoading}>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleNotebookLm('audio')}>
                 <Headphones className="h-3.5 w-3.5 mr-2" />
-                {ttsLoading ? '변환 중...' : '팟캐스트로 변환'}
+                NLM 팟캐스트
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('video')}>
+                <Layers className="h-3.5 w-3.5 mr-2" />
+                NLM 비디오
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('infographic')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                NLM 인포그래픽
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('slide_deck')}>
+                <Layers className="h-3.5 w-3.5 mr-2" />
+                NLM 슬라이드
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('mindmap')}>
+                <Brain className="h-3.5 w-3.5 mr-2" />
+                NLM 마인드맵
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('quiz')}>
+                <ListChecks className="h-3.5 w-3.5 mr-2" />
+                NLM 퀴즈
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('flashcards')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                NLM 플래시카드
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('briefing')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                NLM 브리핑
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNotebookLm('study_guide')}>
+                <FileText className="h-3.5 w-3.5 mr-2" />
+                NLM 스터디 가이드
               </DropdownMenuItem>
               {(report.url || report.transcript) && (
                 <DropdownMenuItem onClick={handleExtractEvents} disabled={eventLoading}>

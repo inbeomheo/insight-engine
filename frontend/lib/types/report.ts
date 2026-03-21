@@ -173,6 +173,18 @@ export interface Report {
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
   favorite?: boolean;
+  notebooklm?: NotebookLmData;
+}
+
+export interface NotebookLmArtifact {
+  artifact_id: string;
+  content_type: string;
+  status: 'in_progress' | 'completed' | 'failed';
+  error?: string;
+}
+
+export interface NotebookLmData {
+  artifacts: NotebookLmArtifact[];
 }
 
 export type ViewMode = 'compact' | 'full' | 'timeline';

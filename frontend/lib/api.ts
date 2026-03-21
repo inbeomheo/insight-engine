@@ -766,3 +766,24 @@ export async function sentimentFlow(content: string): Promise<SentimentFlowRespo
     body: JSON.stringify({ content }),
   });
 }
+
+// ── NotebookLM ──
+
+export async function notebookLmAuthCheck(): Promise<{ valid: boolean; email?: string; message?: string }> {
+  return request('/api/notebooklm/auth-check');
+}
+
+export async function notebookLmGenerate(params: {
+  type: string;
+  url: string;
+  source_text: string;
+}): Promise<{ artifact_id: string; status: string; content_type: string }> {
+  return request('/api/notebooklm/generate', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
+export async function notebookLmStatus(artifactId: string): Promise<{ status: string; type?: string; error?: string }> {
+  return request(`/api/notebooklm/status/${artifactId}`);
+}
