@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +239,53 @@ class NotebookLmService:
             raise RuntimeError(f'다운로드 실패: {result.stderr[:300]}')
 
         return output_path
+
+    # ── YouTube 자막 추출 (폴백용) ──
+
+    def extract_youtube_transcript(self, video_url: str) -> Optional[str]:
+        """YouTube URL에서 NotebookLM을 통해 자막을 추출한다.
+
+        자막 추출 폴백으로 사용. 노트북이 없으면 None 반환.
+        """
+        notebook_id = self._state.get('notebook_id')
+        if not notebook_id:
+            return None
+
+        try:
+            # YouTube 소스 추가 (--wait로 처리 완료까지 대기)
+            self._run_nlm([
+                'source', 'add', notebook_id,
+                '--youtube', video_url, '--wait',
+            ])
+
+            # 소스 목록에서 가장 최근 youtube 타입 찾기
+            list_result = self._run_nlm(['source', 'list', notebook_id, '--json'])
+            if list_result.returncode != 0:
+                return None
+
+            sources = json.loads(list_result.stdout)
+            youtube_source = None
+            for src in reversed(sources):
+                if src.get('type') == 'youtube':
+                    youtube_source = src
+                    break
+
+            if not youtube_source:
+                return None
+
+            # 소스 내용 가져오기
+            get_result = self._run_nlm(['source', 'get', youtube_source['id'], '--json'])
+            if get_result.returncode != 0:
+                return None
+
+            data = json.loads(get_result.stdout)
+            content = data.get('value', {}).get('content', '')
+            return content if content and content.strip() else None
+
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, RuntimeError):
+            return None
+        except Exception:
+            return None
 
     # ── 유틸 ──
 
