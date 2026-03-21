@@ -680,6 +680,75 @@ def _detect_language_from_text(text: str) -> str:
     return 'en'
 
 
+# ==================== 병렬 폴백 전략 ====================
+
+def _try_watch_page_fallback(video_id: str):
+    """watch 페이지 직접 파싱으로 자막 추출."""
+    wr = _get_transcript_from_watch_page(video_id)
+    if isinstance(wr, str) and wr.strip():
+        return ('watch', wr, 0.85, False)
+    return None
+
+
+def _try_ytdlp_fallback(video_id: str):
+    """yt-dlp로 자막 파일 직접 추출."""
+    try:
+        from services.transcript.whisper_service import extract_subtitles_ytdlp
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        text = extract_subtitles_ytdlp(video_url)
+        if text and text.strip():
+            return ('ytdlp', text, 0.9, True)
+    except Exception:
+        pass
+    return None
+
+
+def _try_nlm_fallback(video_id: str):
+    """NotebookLM을 통한 YouTube 자막 추출."""
+    try:
+        from services.notebooklm.notebooklm_service import NotebookLmService
+        nlm = NotebookLmService()
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        content = nlm.extract_youtube_transcript(video_url)
+        if content:
+            return ('nlm', content, 0.88, False)
+    except Exception:
+        pass
+    return None
+
+
+def _run_parallel_fallbacks(video_id: str, overall_start: float) -> Optional[dict]:
+    """watch_page + yt-dlp + NLM을 병렬 실행하여 첫 성공 결과를 반환."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    _log_info(f"Starting parallel fallback (watch_page + yt-dlp + NLM) for video_id={video_id}")
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(_try_watch_page_fallback, video_id): 'watch_page',
+            executor.submit(_try_ytdlp_fallback, video_id): 'ytdlp',
+            executor.submit(_try_nlm_fallback, video_id): 'nlm',
+        }
+
+        for future in as_completed(futures, timeout=90):
+            try:
+                res = future.result()
+                if res is not None:
+                    source_name, text, quality, is_auto = res
+                    _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
+                    for f in futures:
+                        f.cancel()
+                    return _build_transcript_result(
+                        text, source_name, quality, is_auto, overall_start, video_id,
+                    )
+            except Exception as e:
+                _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
+
+    return None
+
+
+# ==================== 자막 결과 빌더 ====================
+
 def _build_transcript_result(
     text: str, source: str, quality: float, is_auto: bool,
     start_time: float, video_id: str, segments: list = None,
@@ -784,68 +853,9 @@ def get_transcript(video_id: str) -> TranscriptResult:
         _log_warning(f"youtube-transcript-api unexpected error for video_id={video_id}: {last_error}")
 
     # ── 병렬 폴백: watch_page + yt-dlp + NLM 동시 실행 ──
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    def _try_watch_page():
-        """watch 페이지 직접 파싱."""
-        wr = _get_transcript_from_watch_page(video_id)
-        if isinstance(wr, str) and wr.strip():
-            return ('watch', wr, 0.85, False)
-        return None
-
-    def _try_ytdlp():
-        """yt-dlp 자막 직접 추출."""
-        try:
-            from services.transcript.whisper_service import extract_subtitles_ytdlp
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            text = extract_subtitles_ytdlp(video_url)
-            if text and text.strip():
-                return ('ytdlp', text, 0.9, True)
-        except Exception:
-            pass
-        return None
-
-    def _try_nlm():
-        """NotebookLM을 통한 YouTube 자막 추출."""
-        try:
-            from services.notebooklm.notebooklm_service import NotebookLmService
-            nlm = NotebookLmService()
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            content = nlm.extract_youtube_transcript(video_url)
-            if content:
-                return ('nlm', content, 0.88, False)
-        except Exception:
-            pass
-        return None
-
-    _log_info(f"Starting parallel fallback (watch_page + yt-dlp + NLM) for video_id={video_id}")
-
-    # 우선순위: watch(0.85) < nlm(0.88) < ytdlp(0.9) — 품질 점수 기준
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {
-            executor.submit(_try_watch_page): 'watch_page',
-            executor.submit(_try_ytdlp): 'ytdlp',
-            executor.submit(_try_nlm): 'nlm',
-        }
-
-        first_result = None
-        for future in as_completed(futures, timeout=90):
-            try:
-                res = future.result()
-                if res is not None:
-                    source_name, text, quality, is_auto = res
-                    _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
-                    for f in futures:
-                        f.cancel()
-                    first_result = _build_transcript_result(
-                        text, source_name, quality, is_auto, overall_start, video_id,
-                    )
-                    break
-            except Exception as e:
-                _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
-
-    if first_result:
-        return first_result
+    parallel_result = _run_parallel_fallbacks(video_id, overall_start)
+    if parallel_result:
+        return parallel_result
 
     # ── 순차 폴백: 느리거나 유료인 방법들 ──
 
