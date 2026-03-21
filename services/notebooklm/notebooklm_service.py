@@ -126,14 +126,14 @@ class NotebookLmService:
 
     CONTENT_OPTIONS = {
         'audio': ['--format', 'deep_dive', '--language', 'ko'],
-        'video': ['--format', 'explainer', '--style', 'classic'],
-        'infographic': ['--orientation', 'landscape', '--detail', 'detailed', '--style', 'professional'],
-        'slide_deck': ['--format', 'detailed_deck'],
-        'mindmap': [],
-        'quiz': ['--count', '10', '--difficulty', '3'],
-        'flashcards': ['--difficulty', 'medium'],
-        'briefing': ['--format', 'Briefing Doc'],
-        'study_guide': ['--format', 'Study Guide'],
+        'video': ['--format', 'explainer', '--style', 'classic', '--language', 'ko'],
+        'infographic': ['--orientation', 'landscape', '--detail', 'detailed', '--style', 'professional', '--language', 'ko'],
+        'slide_deck': ['--format', 'detailed_deck', '--language', 'ko'],
+        'mindmap': ['--language', 'ko'],
+        'quiz': ['--count', '10', '--difficulty', '3', '--language', 'ko'],
+        'flashcards': ['--difficulty', 'medium', '--language', 'ko'],
+        'briefing': ['--format', 'Briefing Doc', '--language', 'ko'],
+        'study_guide': ['--format', 'Study Guide', '--language', 'ko'],
     }
 
     def generate(self, content_type: str, url: str, source_text: str) -> dict:
