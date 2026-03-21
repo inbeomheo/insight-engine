@@ -808,63 +808,11 @@ def get_transcript(video_id: str) -> TranscriptResult:
     def _try_nlm():
         """NotebookLM을 통한 YouTube 자막 추출."""
         try:
-            import subprocess
-            env = {**os.environ, 'PYTHONUTF8': '1', 'PYTHONIOENCODING': 'utf-8'}
+            from services.notebooklm.notebooklm_service import NotebookLmService
+            nlm = NotebookLmService()
             video_url = f"https://www.youtube.com/watch?v={video_id}"
-
-            # 상태 파일에서 notebook_id 로드
-            state_file = os.path.join('data', 'notebooklm_state.json')
-            notebook_id = None
-            try:
-                with open(state_file, 'r', encoding='utf-8') as f:
-                    state = json.load(f)
-                    notebook_id = state.get('notebook_id')
-            except (FileNotFoundError, json.JSONDecodeError):
-                pass
-
-            if not notebook_id:
-                return None
-
-            # nlm source add --youtube <url> --wait
-            add_result = subprocess.run(
-                ['nlm', 'source', 'add', notebook_id, '--youtube', video_url, '--wait'],
-                capture_output=True, text=True, encoding='utf-8', errors='replace',
-                timeout=60, env=env,
-            )
-            # cp949 출력 에러는 무시 — 소스 추가 자체는 성공할 수 있음
-
-            # 소스 목록에서 방금 추가한 youtube 소스 찾기
-            list_result = subprocess.run(
-                ['nlm', 'source', 'list', notebook_id, '--json'],
-                capture_output=True, text=True, encoding='utf-8', errors='replace',
-                timeout=30, env=env,
-            )
-            if list_result.returncode != 0:
-                return None
-
-            sources = json.loads(list_result.stdout)
-            # 가장 최근 추가된 youtube 타입 소스 찾기
-            youtube_source = None
-            for src in reversed(sources):
-                if src.get('type') == 'youtube':
-                    youtube_source = src
-                    break
-
-            if not youtube_source:
-                return None
-
-            # 소스 내용 가져오기
-            get_result = subprocess.run(
-                ['nlm', 'source', 'get', youtube_source['id'], '--json'],
-                capture_output=True, text=True, encoding='utf-8', errors='replace',
-                timeout=30, env=env,
-            )
-            if get_result.returncode != 0:
-                return None
-
-            data = json.loads(get_result.stdout)
-            content = data.get('value', {}).get('content', '')
-            if content and content.strip():
+            content = nlm.extract_youtube_transcript(video_url)
+            if content:
                 return ('nlm', content, 0.88, False)
         except Exception:
             pass
