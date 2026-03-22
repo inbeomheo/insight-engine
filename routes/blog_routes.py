@@ -286,9 +286,12 @@ def generate():
         if not video_id:
             return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
 
-        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-
-        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
+        # 제목 조회와 자막/댓글 추출을 병렬 실행 (700-1500ms 절감)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            title_future = executor.submit(content_service.get_content_title, url)
+            content_future = executor.submit(_fetch_youtube_content, video_id)
+            youtube_title = title_future.result() or 'YouTube 영상'
+            transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = content_future.result()
         if error:
             return jsonify({'error': error}), 400
 

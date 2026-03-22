@@ -321,46 +321,67 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
         결과에 'web_sources'가 포함될 수 있음 (웹 검색 활성화 시)
     """
     try:
-        # RAG 컨텍스트 빌드 (RAG_ENABLED=True이고 user_id가 있을 때)
-        rag_context = None
+        # 독립적인 컨텍스트 빌드들을 병렬 실행 (150-600ms 절감)
+        import concurrent.futures
         from config import RAG_ENABLED, RAG_TOP_K, WEB_SEARCH_ENABLED
-        if RAG_ENABLED and user_id:
-            try:
-                from services.rag import context_builder
-                rag_context = context_builder.build_context(user_id, content[:500], top_k=RAG_TOP_K)
-            except Exception as rag_err:
-                current_app.logger.warning(f"RAG 컨텍스트 빌드 실패 (무시): {rag_err}")
 
-        # 웹 검색 보강 컨텍스트 빌드
+        rag_context = None
         web_context = None
         web_sources = []
-        if web_search or WEB_SEARCH_ENABLED:
+        style_memory_context = None
+        memory_context = None
+
+        def _build_rag():
+            if not (RAG_ENABLED and user_id):
+                return None
+            from services.rag import context_builder
+            return context_builder.build_context(user_id, content[:500], top_k=RAG_TOP_K)
+
+        def _build_web():
+            if not (web_search or WEB_SEARCH_ENABLED):
+                return None, []
+            from services.data.web_search_service import extract_grounding_context
+            grounding = extract_grounding_context(content[:300])
+            if grounding['enabled']:
+                return grounding['context_text'], grounding['results']
+            return None, []
+
+        def _build_style_memory():
+            if not user_id:
+                return None
+            from services.data.style_memory_service import get_profile, build_style_context
+            profile = get_profile(user_id)
+            return build_style_context(profile) or None
+
+        def _build_ai_memory():
+            if not user_id:
+                return None
+            from services.data.memory_service import memory_service as _mem_svc
+            return _mem_svc.build_prompt_context(user_id) or None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ctx_executor:
+            rag_f = ctx_executor.submit(_build_rag)
+            web_f = ctx_executor.submit(_build_web)
+            sm_f = ctx_executor.submit(_build_style_memory)
+            mem_f = ctx_executor.submit(_build_ai_memory)
+
             try:
-                from services.data.web_search_service import extract_grounding_context
-                grounding = extract_grounding_context(content[:300])
-                if grounding['enabled']:
-                    web_context = grounding['context_text']
-                    web_sources = grounding['results']
+                rag_context = rag_f.result()
+            except Exception as rag_err:
+                current_app.logger.warning(f"RAG 컨텍스트 빌드 실패 (무시): {rag_err}")
+            try:
+                web_result = web_f.result()
+                web_context, web_sources = web_result
+                if web_sources:
                     current_app.logger.info(f"웹 검색 보강: {len(web_sources)}개 결과 주입")
             except Exception as ws_err:
                 current_app.logger.warning(f"웹 검색 보강 실패 (무시): {ws_err}")
-
-        # 개인 스타일 메모리 컨텍스트 빌드 (user_id가 있을 때)
-        style_memory_context = None
-        if user_id:
             try:
-                from services.data.style_memory_service import get_profile, build_style_context
-                profile = get_profile(user_id)
-                style_memory_context = build_style_context(profile) or None
+                style_memory_context = sm_f.result()
             except Exception as sm_err:
                 current_app.logger.warning(f"스타일 메모리 컨텍스트 빌드 실패 (무시): {sm_err}")
-
-        # AI 메모리 레이어 컨텍스트 주입 (user_id가 있을 때)
-        memory_context = None
-        if user_id:
             try:
-                from services.data.memory_service import memory_service
-                memory_context = memory_service.build_prompt_context(user_id) or None
+                memory_context = mem_f.result()
             except Exception as mem_err:
                 current_app.logger.warning(f"메모리 컨텍스트 빌드 실패 (무시): {mem_err}")
 

@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   // Phase 6: 프로덕션 최적화
   compress: true,
   poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'radix-ui'],
+  },
   async headers() {
     return [{
       source: '/_next/static/:path*',

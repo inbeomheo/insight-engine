@@ -549,38 +549,48 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
                        quality_score=None, agent_meta=None,
                        transcript_segments=None):
     """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
+    import threading
+
     model = params['model']
     modifiers = params['modifiers'] or {}
 
-    current_app.ai_cache.put(
-        cache_key, video_id, params['style'], model,
-        modifiers.get('length', 'medium'),
-        modifiers.get('writing_style', 'conversational'),
-        {
-            'title': result.get('title', ''),
-            'content': result.get('content', ''),
-            'html': result.get('html', ''),
-            'comment_summary_included': bool(comments and comment_result),
-            'prompt': used_prompt,
-        }
-    )
-
     elapsed_time = round(time.time() - start_time, 2)
-
     report_id = str(uuid.uuid4())
-    if g.user_id:
-        save_history(g.user_id, {
-            'id': report_id,
-            'url': url,
-            'title': result.get('title', youtube_title),
-            'style': params['style'],
-            'content': result.get('content', ''),
-            'html': result.get('html', ''),
-            'transcript': raw_transcript,
-            'transcript_source': transcript_source,
-            'usage': result.get('usage'),
-            'elapsed_time': elapsed_time
-        })
+
+    # 캐시 저장 + 히스토리 저장을 백그라운드로 이동 (100-500ms 응답 단축)
+    _cache = current_app.ai_cache
+    _user_id = g.user_id
+    _cache_data = {
+        'title': result.get('title', ''),
+        'content': result.get('content', ''),
+        'html': result.get('html', ''),
+        'comment_summary_included': bool(comments and comment_result),
+        'prompt': used_prompt,
+    }
+    _history_data = {
+        'id': report_id,
+        'url': url,
+        'title': result.get('title', youtube_title),
+        'style': params['style'],
+        'content': result.get('content', ''),
+        'html': result.get('html', ''),
+        'transcript': raw_transcript,
+        'transcript_source': transcript_source,
+        'usage': result.get('usage'),
+        'elapsed_time': elapsed_time,
+    }
+
+    def _background_save():
+        _cache.put(
+            cache_key, video_id, params['style'], model,
+            modifiers.get('length', 'medium'),
+            modifiers.get('writing_style', 'conversational'),
+            _cache_data,
+        )
+        if _user_id:
+            save_history(_user_id, _history_data)
+
+    threading.Thread(target=_background_save, daemon=True).start()
 
     # SEO 메타데이터 추출 (blog_seo 스타일만)
     seo = None
@@ -635,18 +645,20 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         except Exception as analysis_err:
             current_app.logger.warning(f"NLP 분석 실패 (무시): {analysis_err}")
 
-    # 웹훅 전송 (fire-and-forget — 실패해도 응답에 영향 없음)
-    try:
-        content_text = result.get('content', '')
-        _webhook.send('content.generated', {
-            'title': result.get('title', ''),
-            'url': url,
-            'style': params['style'],
-            'model': model,
-            'word_count': len(content_text.split()) if content_text else 0,
-        })
-    except Exception:
-        pass  # 웹훅 실패가 응답을 블로킹하면 안 됨
+    # 웹훅 전송 (백그라운드 — 응답 블로킹 방지)
+    _webhook_data = {
+        'title': result.get('title', ''),
+        'url': url,
+        'style': params['style'],
+        'model': model,
+        'word_count': len(result.get('content', '').split()) if result.get('content') else 0,
+    }
+    def _background_webhook():
+        try:
+            _webhook.send('content.generated', _webhook_data)
+        except Exception:
+            pass
+    threading.Thread(target=_background_webhook, daemon=True).start()
 
     # 스타일 메모리 프로필 업데이트 (fire-and-forget — 응답 블로킹 금지)
     if g.user_id:

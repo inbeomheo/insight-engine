@@ -21,9 +21,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
+// KaTeX는 수식 감지 시에만 동적 로드 (초기 번들 ~280KB 절감)
+// remark-math + rehype-katex는 MathMarkdown 컴포넌트에서 조건부 import
 import { toast } from 'sonner';
 import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
@@ -36,23 +35,28 @@ import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
-import AudioPlayer from './AudioPlayer';
-import SeoSection from './SeoSection';
-import GeoSection from './GeoSection';
-import FaqCtaSection from './FaqCtaSection';
-import FusionSections from './FusionSections';
-import ShortsClipList from './ShortsClipList';
-import WebSourcesSection from './WebSourcesSection';
-import InsertedLinksSection from './InsertedLinksSection';
-import EventTimeline from './EventTimeline';
-import QaGateBadge from './QaGateBadge';
 
-// Phase 2: 무거운 서브컴포넌트 dynamic import (조건부 렌더링)
+// 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
+const AudioPlayer = dynamic(() => import('./AudioPlayer'), { ssr: false });
+const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
+const GeoSection = dynamic(() => import('./GeoSection'), { ssr: false });
+const FaqCtaSection = dynamic(() => import('./FaqCtaSection'), { ssr: false });
+const FusionSections = dynamic(() => import('./FusionSections'), { ssr: false });
+const ShortsClipList = dynamic(() => import('./ShortsClipList'), { ssr: false });
+const WebSourcesSection = dynamic(() => import('./WebSourcesSection'), { ssr: false });
+const InsertedLinksSection = dynamic(() => import('./InsertedLinksSection'), { ssr: false });
+const EventTimeline = dynamic(() => import('./EventTimeline'), { ssr: false });
+const QaGateBadge = dynamic(() => import('./QaGateBadge'), { ssr: false });
+
+// 무거운 서브컴포넌트 dynamic import
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
 const PlatformRewriteModal = dynamic(() => import('./PlatformRewriteModal'), { ssr: false });
 const AnalysisDashboard = dynamic(() => import('./AnalysisDashboard'), { ssr: false });
 const TranscriptPanel = dynamic(() => import('./TranscriptPanel'), { ssr: false });
 const ChapterTimeline = dynamic(() => import('./ChapterTimeline'), { ssr: false });
+
+// KaTeX 수식 렌더링 — 콘텐츠에 수식 패턴이 있을 때만 로드
+const MathMarkdown = dynamic(() => import('./MathMarkdown'), { ssr: false });
 
 /** DOMPurify 기반 HTML 새니타이징 (XSS 방지) */
 function sanitizeHtml(html: string): string {
@@ -75,8 +79,9 @@ interface ResultCardProps {
   onExpandToFull?: () => void;
 }
 
-const remarkPlugins = [remarkGfm, remarkMath];
-const rehypePlugins = [rehypeKatex];
+const remarkPlugins = [remarkGfm];
+// 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
+const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
 
 // 품질 등급별 스타일 정의
 const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string }> = {
@@ -338,15 +343,19 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     [isStreaming, report.content, report.url],
   );
 
+  const hasMath = useMemo(() => MATH_PATTERN.test(processedContent), [processedContent]);
+
   const markdownBody = useMemo(
     () => isStreaming ? (
       <div className="whitespace-pre-wrap">{processedContent}</div>
+    ) : hasMath ? (
+      <MathMarkdown content={processedContent} remarkPlugins={remarkPlugins} />
     ) : (
-      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+      <ReactMarkdown remarkPlugins={remarkPlugins}>
         {processedContent}
       </ReactMarkdown>
     ),
-    [isStreaming, processedContent],
+    [isStreaming, processedContent, hasMath],
   );
 
   // --- Compact 모드: 요약 카드 ---

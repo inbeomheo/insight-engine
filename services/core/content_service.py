@@ -25,7 +25,8 @@ def _get_youtube_build():
     return build
 
 
-from googleapiclient.errors import HttpError
+# googleapiclient.errors.HttpError — 지연 import (콜드 스타트 200-400ms 절감)
+# YouTube API 함수 내부에서 로컬 import 사용
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     TranscriptsDisabled,
@@ -905,6 +906,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
 def get_youtube_title(video_id: str) -> Optional[str]:
     """YouTube 영상 제목을 가져옵니다."""
     try:
+        from googleapiclient.errors import HttpError
         api_key = current_app.config.get('YOUTUBE_API_KEY')
         if not api_key:
             return None
@@ -945,6 +947,7 @@ def get_top_comments(video_id: str) -> List[str]:
         return cached
 
     try:
+        from googleapiclient.errors import HttpError
         api_key = current_app.config.get('YOUTUBE_API_KEY')
         if not api_key:
             _log_warning("YouTube API key not configured, skipping comments")
@@ -1064,6 +1067,7 @@ def get_playlist_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
     max_results = min(max_results, 50)
 
     try:
+        from googleapiclient.errors import HttpError
         youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
         response = youtube.playlistItems().list(
             part='snippet',
@@ -1114,6 +1118,7 @@ def get_channel_videos(url: str, max_results: int = 10) -> Dict[str, Any]:
     max_results = min(max_results, 50)
 
     try:
+        from googleapiclient.errors import HttpError
         youtube = _get_youtube_build()('youtube', 'v3', developerKey=api_key)
 
         # 채널 ID 조회

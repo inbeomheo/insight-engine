@@ -7,8 +7,11 @@ import json
 import os
 import random
 import sqlite3
+import threading
 import time
 from typing import Any, Dict, Optional
+
+_local = threading.local()
 
 
 class AICacheService:
@@ -27,10 +30,15 @@ class AICacheService:
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA busy_timeout=5000")
+        """스레드별 + 인스턴스별 연결을 캐싱하여 매 요청마다 connect() 호출 방지"""
+        attr = f'conn_{id(self)}'
+        conn = getattr(_local, attr, None)
+        if conn is None:
+            conn = sqlite3.connect(self.db_path, timeout=5.0, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            setattr(_local, attr, conn)
         return conn
 
     def _init_db(self) -> None:
