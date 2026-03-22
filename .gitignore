@@ -69,3 +69,11 @@ dist/
 *.spec
 *.exe
 nul
+
+# Tool/Agent 캐시
+.agent/
+.agents/
+.cmux/
+.worktrees/
+.understand-anything/
+downloads/
