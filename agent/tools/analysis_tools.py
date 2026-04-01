@@ -81,7 +81,11 @@ def _build_params_schema(sig: inspect.Signature) -> Dict[str, Any]:
         else:
             ptype = _resolve_json_type(annotation)
 
-        props[pname] = {"type": ptype}
+        prop_def: Dict[str, Any] = {"type": ptype}
+        # Gemini 요구: array 타입에 items 필수
+        if ptype == "array":
+            prop_def["items"] = {"type": "string"}
+        props[pname] = prop_def
 
         # 기본값이 없으면 required
         if param.default is inspect.Parameter.empty:

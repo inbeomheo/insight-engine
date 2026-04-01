@@ -59,7 +59,9 @@ def _build_params_schema(sig):
         if ann == int: ptype = "integer"
         elif ann == float: ptype = "number"
         elif ann == bool: ptype = "boolean"
-        props[pname] = {"type": ptype}
+        prop_def = {"type": ptype}
+        if ptype == "array": prop_def["items"] = {"type": "string"}
+        props[pname] = prop_def
         if param.default is inspect.Parameter.empty:
             required.append(pname)
     if not props:

@@ -67,7 +67,9 @@ def _build_schema(sig):
             t = "number"
         elif ann == bool:
             t = "boolean"
-        props[pname] = {"type": t}
+        prop_def = {"type": t}
+        if t == "array": prop_def["items"] = {"type": "string"}
+        props[pname] = prop_def
         if param.default is inspect.Parameter.empty:
             req.append(pname)
     if not props:
