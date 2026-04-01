@@ -180,6 +180,43 @@ def agent_chat_stream():
         return jsonify({"error": f"에이전트 오류: {e}"}), 500
 
 
+@agent_bp.route("/api/agent/sdk", methods=["POST"])
+def agent_sdk_chat():
+    """Claude Code SDK 기반 에이전트 채팅.
+
+    Claude Code 구독으로 동작 — 별도 API 키 불필요.
+
+    Request:
+        {
+            "message": "이 영상 분석해줘: https://youtube.com/...",
+            "toolsets": ["full"],
+            "system_prompt": null,
+            "model": null,
+        }
+    """
+    try:
+        data = request.json or {}
+        message = data.get("message", "").strip()
+        if not message:
+            return jsonify({"error": "메시지가 필요합니다."}), 400
+
+        from agent.sdk_agent import run_sdk_agent_sync
+
+        result = run_sdk_agent_sync(
+            message=message,
+            system_prompt=data.get("system_prompt"),
+            toolsets=data.get("toolsets"),
+            model=data.get("model"),
+            max_turns=data.get("max_turns", 30),
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error("SDK 에이전트 실패: %s", e, exc_info=True)
+        return jsonify({"error": f"SDK 에이전트 오류: {e}"}), 500
+
+
 @agent_bp.route("/api/agent/sessions", methods=["GET"])
 def agent_sessions():
     """에이전트 세션 목록 조회."""
