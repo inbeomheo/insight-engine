@@ -70,6 +70,14 @@ dist/
 *.exe
 nul
 
+# Coverage / test artifacts
+.coverage
+coverage.json
+htmlcov/
+
+# autoresearch 실험 결과
+autoresearch/prompt-tuning/scores/*_results.md
+
 # Tool/Agent 캐시
 .agent/
 .agents/

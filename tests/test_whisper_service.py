@@ -49,9 +49,7 @@ class TestDownloadAudio(unittest.TestCase):
                 result = download_audio('https://youtube.com/watch?v=test')
         self.assertIsNone(result)
 
-    @patch('services.transcript.whisper_service.os.path.getsize', return_value=0)
-    @patch('services.transcript.whisper_service.os.path.exists', return_value=True)
-    def test_empty_audio_file(self, mock_exists, mock_size):
+    def test_empty_audio_file(self):
         """오디오 파일 비어있음 → None"""
         mock_yt_dlp = MagicMock()
         mock_ydl = MagicMock()
@@ -59,10 +57,11 @@ class TestDownloadAudio(unittest.TestCase):
         mock_yt_dlp.YoutubeDL.return_value.__exit__ = MagicMock(return_value=False)
 
         with patch.dict('sys.modules', {'yt_dlp': mock_yt_dlp}):
-            with patch('services.transcript.whisper_service.tempfile.mkstemp', return_value=(5, '/tmp/test.wav')):
-                with patch('services.transcript.whisper_service.os.close'):
-                    with patch('services.transcript.whisper_service.os.remove'):
-                        result = download_audio('https://youtube.com/watch?v=test')
+            with patch('services.transcript.whisper_service.tempfile.mkdtemp', return_value='/tmp/ytdlp_audio_test'):
+                with patch('services.transcript.whisper_service.os.listdir', return_value=['audio.wav']):
+                    with patch('services.transcript.whisper_service.os.path.getsize', return_value=0):
+                        with patch('services.transcript.whisper_service.shutil.rmtree'):
+                            result = download_audio('https://youtube.com/watch?v=test')
         self.assertIsNone(result)
 
 
@@ -122,34 +121,40 @@ class TestTranscribeAudio(unittest.TestCase):
 
 class TestExtractTranscriptWhisper(unittest.TestCase):
 
-    @patch('services.transcript.whisper_service._cleanup_file')
+    # download_audio는 ytdlp_audio_ 접두사 디렉토리 내부 파일을 반환
+    MOCK_AUDIO_DIR = '/tmp/ytdlp_audio_abc123'
+    MOCK_AUDIO_PATH = '/tmp/ytdlp_audio_abc123/audio.wav'
+
+    @patch('services.transcript.whisper_service.shutil.rmtree')
     @patch('services.transcript.whisper_service.transcribe_audio', return_value='변환된 텍스트')
-    @patch('services.transcript.whisper_service.download_audio', return_value='/tmp/audio.wav')
-    def test_success(self, mock_dl, mock_transcribe, mock_cleanup):
-        """전체 파이프라인 성공"""
+    @patch('services.transcript.whisper_service.download_audio')
+    def test_success(self, mock_dl, mock_transcribe, mock_rmtree):
+        """전체 파이프라인 성공 — 디렉토리 정리"""
+        mock_dl.return_value = self.MOCK_AUDIO_PATH
         result = extract_transcript_whisper('https://youtube.com/watch?v=test')
         self.assertEqual(result, '변환된 텍스트')
-        mock_cleanup.assert_called_once_with('/tmp/audio.wav')
+        mock_rmtree.assert_called_once_with(self.MOCK_AUDIO_DIR, ignore_errors=True)
 
-    @patch('services.transcript.whisper_service._cleanup_file')
+    @patch('services.transcript.whisper_service.shutil.rmtree')
     @patch('services.transcript.whisper_service.download_audio', return_value=None)
-    def test_download_fails(self, mock_dl, mock_cleanup):
+    def test_download_fails(self, mock_dl, mock_rmtree):
         """다운로드 실패 → None"""
         result = extract_transcript_whisper('https://youtube.com/watch?v=fail')
         self.assertIsNone(result)
 
-    @patch('services.transcript.whisper_service._cleanup_file')
+    @patch('services.transcript.whisper_service.shutil.rmtree')
     @patch('services.transcript.whisper_service.transcribe_audio', return_value=None)
-    @patch('services.transcript.whisper_service.download_audio', return_value='/tmp/audio.wav')
-    def test_transcribe_fails(self, mock_dl, mock_transcribe, mock_cleanup):
-        """변환 실패 → None, 파일 정리"""
+    @patch('services.transcript.whisper_service.download_audio')
+    def test_transcribe_fails(self, mock_dl, mock_transcribe, mock_rmtree):
+        """변환 실패 → None, 디렉토리 정리"""
+        mock_dl.return_value = self.MOCK_AUDIO_PATH
         result = extract_transcript_whisper('https://youtube.com/watch?v=test')
         self.assertIsNone(result)
-        mock_cleanup.assert_called_once_with('/tmp/audio.wav')
+        mock_rmtree.assert_called_once_with(self.MOCK_AUDIO_DIR, ignore_errors=True)
 
-    @patch('services.transcript.whisper_service._cleanup_file')
+    @patch('services.transcript.whisper_service.shutil.rmtree')
     @patch('services.transcript.whisper_service.download_audio', side_effect=Exception('unexpected'))
-    def test_pipeline_exception(self, mock_dl, mock_cleanup):
+    def test_pipeline_exception(self, mock_dl, mock_rmtree):
         """파이프라인 예외 → None"""
         result = extract_transcript_whisper('https://youtube.com/watch?v=err')
         self.assertIsNone(result)

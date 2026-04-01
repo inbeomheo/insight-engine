@@ -82,14 +82,19 @@ def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | 
 
     try:
         # GPU 가용 시 CUDA + float16, 아니면 CPU + int8
+        # PyTorch 없이도 CTranslate2가 직접 CUDA를 쓸 수 있으므로 양쪽 확인
+        device, compute_type = "cpu", "int8"
         try:
             import torch
             if torch.cuda.is_available():
                 device, compute_type = "cuda", "float16"
-            else:
-                device, compute_type = "cpu", "int8"
         except ImportError:
-            device, compute_type = "cpu", "int8"
+            try:
+                import ctranslate2
+                if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
+                    device, compute_type = "cuda", "float16"
+            except Exception:
+                pass
 
         logger.info("Whisper 모델 로딩: %s (device=%s, compute=%s)", model_size, device, compute_type)
         try:
