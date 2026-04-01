@@ -866,7 +866,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
         _log_info(f"Trying Whisper fallback for video_id={video_id}")
         try:
             from services.transcript.whisper_service import extract_transcript_whisper
-            whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'large-v3-turbo')
+            whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
             video_url = f"https://www.youtube.com/watch?v={video_id}"
             whisper_text = extract_transcript_whisper(video_url, whisper_model)
             if whisper_text and whisper_text.strip():
