@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 환경변수 (배포 시 Cloud Run 콘솔에서 설정)
+.env
+.env.*
+!.env.example
+
+# 테스트
+tests/
+pytest_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node (Tailwind 빌드용 - 빌드 결과물만 필요)
+node_modules/
+package-lock.json
+
+# 문서/설정
+*.md
+!README.md
+LICENSE
+Procfile
+nixpacks.toml
+railway.json
+
+# 기타
+.DS_Store
+*.log
+tmp/
