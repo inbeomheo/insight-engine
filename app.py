@@ -178,6 +178,21 @@ def create_app(test_config=None):
     from routes.notebooklm_routes import notebooklm_bp
     app.register_blueprint(notebooklm_bp)
 
+    # 에이전트 오케스트레이션 라우트
+    from routes.agent_routes import agent_bp
+    app.register_blueprint(agent_bp)
+
+    # 에이전트 도구 디스커버리 (AGENT_MODE_ENABLED=true 시)
+    import config as _cfg
+    if getattr(_cfg, 'AGENT_MODE_ENABLED', False):
+        with app.app_context():
+            try:
+                from agent.tools import discover_tools
+                discover_tools()
+                app.logger.info('에이전트 도구 디스커버리 완료')
+            except Exception as e:
+                app.logger.warning('에이전트 도구 디스커버리 실패 (무시): %s', e)
+
     # 예약 발행 스케줄러 시작
     from services.data.scheduler_worker import start_scheduler
     start_scheduler(app)
