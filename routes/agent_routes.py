@@ -47,7 +47,7 @@ def agent_chat():
 
         session_id = data.get("session_id")
         model = data.get("model")
-        toolsets = data.get("toolsets")
+        toolsets = data.get("toolsets") or ["full"]
         context = data.get("context")
 
         user_id = getattr(g, "user_id", None)
@@ -102,28 +102,32 @@ def agent_chat_stream():
         user_id = getattr(g, "user_id", None)
 
         def generate_sse():
-            events = []
+            import queue
+            import threading
+
+            event_queue = queue.Queue()
+            SENTINEL = object()
 
             def on_delta(text):
-                events.append({"type": "delta", "content": text})
+                event_queue.put({"type": "delta", "content": text})
 
             def on_tool_start(name, args):
-                events.append({"type": "tool_start", "name": name, "args": args})
+                event_queue.put({"type": "tool_start", "name": name, "args": args})
 
             def on_tool_end(name, result_preview, elapsed):
-                events.append({
+                event_queue.put({
                     "type": "tool_end", "name": name,
                     "preview": result_preview[:100], "elapsed": round(elapsed, 2),
                 })
 
             def on_iteration(current, total):
-                events.append({
+                event_queue.put({
                     "type": "progress", "iteration": current, "total": total,
                 })
 
             agent = AIAgent(
                 model=model,
-                toolsets=toolsets,
+                toolsets=toolsets or ["full"],
                 session_id=session_id,
                 user_id=user_id,
                 on_stream_delta=on_delta,
@@ -132,8 +136,6 @@ def agent_chat_stream():
                 on_iteration=on_iteration,
             )
 
-            # 별도 스레드에서 에이전트 실행
-            import threading
             result_holder = [None]
             error_holder = [None]
 
@@ -144,17 +146,21 @@ def agent_chat_stream():
                     )
                 except Exception as e:
                     error_holder[0] = e
+                finally:
+                    event_queue.put(SENTINEL)
 
             thread = threading.Thread(target=run_agent, daemon=True)
             thread.start()
 
-            # 이벤트 폴링 + 전송
-            while thread.is_alive() or events:
-                while events:
-                    event = events.pop(0)
-                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                if thread.is_alive():
-                    thread.join(timeout=0.1)
+            # Queue 기반 이벤트 전달 (race condition 방지)
+            while True:
+                try:
+                    event = event_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+                if event is SENTINEL:
+                    break
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
             # 완료 이벤트
             if error_holder[0]:

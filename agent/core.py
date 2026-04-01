@@ -177,14 +177,19 @@ class AIAgent:
         """
         start_time = time.time()
 
-        # 세션 초기화 (동결 스냅샷)
+        # 세션 초기화: 기존 세션 로드 또는 새로 생성
         if not self._session:
-            self._session = self._memory.create_session(
-                model=self.model,
-                base_system_prompt=self._base_system_prompt,
-                user_id=self.user_id,
-            )
-            self._session_id = self._session.session_id
+            if self._session_id:
+                # 기존 세션 복원
+                self._session = self._memory.get_session(self._session_id)
+            if not self._session:
+                # 새 세션 생성 (동결 스냅샷)
+                self._session = self._memory.create_session(
+                    model=self.model,
+                    base_system_prompt=self._base_system_prompt,
+                    user_id=self.user_id,
+                )
+                self._session_id = self._session.session_id
 
         # 메시지 히스토리 구성
         messages = self._build_initial_messages(user_message, context)
@@ -612,8 +617,18 @@ class AIAgent:
 
     @staticmethod
     def _get_default_model() -> str:
-        """사용 가능한 기본 모델을 반환합니다."""
+        """사용 가능한 기본 모델을 반환합니다.
+
+        우선순위: config.AGENT_DEFAULT_MODEL → 환경변수 기반 자동 선택
+        """
         import os
+        # config.py의 AGENT_DEFAULT_MODEL 우선
+        try:
+            from config import AGENT_DEFAULT_MODEL
+            if AGENT_DEFAULT_MODEL:
+                return AGENT_DEFAULT_MODEL
+        except (ImportError, AttributeError):
+            pass
         if os.getenv("GEMINI_API_KEY"):
             return "gemini/gemini-3-flash-preview"
         if os.getenv("DEEPSEEK_API_KEY"):
