@@ -340,7 +340,8 @@ def _collect_podcast(url: str) -> Dict:
             "팟캐스트 오디오 전사를 위해 WHISPER_ENABLED=true 설정이 필요합니다."
         )
 
-    from services.transcript.whisper_service import download_audio, transcribe_audio, _cleanup_file
+    import shutil
+    from services.transcript.whisper_service import download_audio, transcribe_audio
 
     audio_path = None
     try:
@@ -362,4 +363,8 @@ def _collect_podcast(url: str) -> Dict:
         }
     finally:
         if audio_path:
-            _cleanup_file(audio_path)
+            audio_dir = os.path.dirname(audio_path)
+            if audio_dir and os.path.basename(audio_dir).startswith('ytdlp_audio_'):
+                shutil.rmtree(audio_dir, ignore_errors=True)
+            else:
+                os.remove(audio_path) if os.path.exists(audio_path) else None

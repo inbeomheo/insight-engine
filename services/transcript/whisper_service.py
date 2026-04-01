@@ -4,6 +4,8 @@ YouTube 자막이 없는 영상에 대해 오디오를 추출하고
 faster-whisper로 음성 인식하여 텍스트를 반환합니다.
 """
 import os
+import re
+import shutil
 import tempfile
 import logging
 
@@ -25,15 +27,14 @@ def download_audio(video_url: str) -> str | None:
         logger.error("yt-dlp가 설치되어 있지 않습니다: pip install yt-dlp")
         return None
 
-    tmp_path = None
+    tmp_dir = None
     try:
-        # 임시 파일 생성 (wav 확장자)
-        fd, tmp_path = tempfile.mkstemp(suffix='.wav')
-        os.close(fd)
+        tmp_dir = tempfile.mkdtemp(prefix='ytdlp_audio_')
+        out_template = os.path.join(tmp_dir, 'audio')
 
         ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': tmp_path.replace('.wav', ''),
+            'outtmpl': out_template,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'wav',
@@ -46,25 +47,29 @@ def download_audio(video_url: str) -> str | None:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
 
-        if os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0:
-            return tmp_path
+        # yt-dlp가 실제 생성한 .wav 파일 탐색
+        for f in os.listdir(tmp_dir):
+            fpath = os.path.join(tmp_dir, f)
+            if f.endswith('.wav') and os.path.getsize(fpath) > 0:
+                return fpath
 
-        logger.warning("오디오 다운로드 후 파일이 비어 있거나 없습니다: %s", tmp_path)
-        _cleanup_file(tmp_path)
+        logger.warning("오디오 다운로드 후 wav 파일을 찾을 수 없습니다: %s", tmp_dir)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
         return None
 
     except Exception as e:
         logger.error("오디오 다운로드 실패: %s", str(e))
-        _cleanup_file(tmp_path)
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         return None
 
 
-def transcribe_audio(audio_path: str, model_size: str = 'base') -> str | None:
+def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | None = None) -> str | None:
     """faster-whisper로 오디오를 텍스트로 변환합니다.
 
     Args:
         audio_path: 오디오 파일 경로
-        model_size: Whisper 모델 크기 (tiny, base, small, medium, large-v3)
+        model_size: Whisper 모델 크기 (tiny, base, small, medium, large-v3, large-v3-turbo)
 
     Returns:
         인식된 텍스트. 실패 시 None.
@@ -76,8 +81,27 @@ def transcribe_audio(audio_path: str, model_size: str = 'base') -> str | None:
         return None
 
     try:
-        model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        segments, info = model.transcribe(audio_path)
+        # GPU 가용 시 CUDA + float16, 아니면 CPU + int8
+        try:
+            import torch
+            if torch.cuda.is_available():
+                device, compute_type = "cuda", "float16"
+            else:
+                device, compute_type = "cpu", "int8"
+        except ImportError:
+            device, compute_type = "cpu", "int8"
+
+        logger.info("Whisper 모델 로딩: %s (device=%s, compute=%s)", model_size, device, compute_type)
+        try:
+            model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        except Exception:
+            if device != "cpu":
+                logger.warning("CUDA 초기화 실패, CPU로 폴백합니다")
+                device, compute_type = "cpu", "int8"
+                model = WhisperModel(model_size, device=device, compute_type=compute_type)
+            else:
+                raise
+        segments, info = model.transcribe(audio_path, language=language, beam_size=5)
 
         texts = [segment.text.strip() for segment in segments if segment.text.strip()]
         if not texts:
@@ -155,7 +179,8 @@ def extract_subtitles_ytdlp(video_url: str) -> str | None:
             logger.info("yt-dlp: 다운로드 가능한 자막 없음")
             return None
 
-        raw = open(sub_file, 'r', encoding='utf-8', errors='ignore').read()
+        with open(sub_file, 'r', encoding='utf-8', errors='ignore') as f:
+            raw = f.read()
         text = _parse_subtitle_text(raw)
 
         if text and len(text.strip()) > 50:
@@ -170,13 +195,11 @@ def extract_subtitles_ytdlp(video_url: str) -> str | None:
         return None
     finally:
         if tmp_dir:
-            import shutil
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _parse_subtitle_text(raw: str) -> str:
     """VTT/SRT 자막 파일에서 순수 텍스트만 추출합니다."""
-    import re
     lines = raw.split('\n')
     texts = []
     seen = set()
@@ -235,25 +258,20 @@ def extract_transcript_whisper(video_url: str, model_size: str = 'base') -> str 
         return None
     finally:
         if audio_path:
-            _cleanup_file(audio_path)
+            # download_audio가 tmp_dir 내부 파일을 반환하므로 디렉토리 통째 삭제
+            audio_dir = os.path.dirname(audio_path)
+            if audio_dir and os.path.basename(audio_dir).startswith('ytdlp_audio_'):
+                shutil.rmtree(audio_dir, ignore_errors=True)
+            else:
+                _cleanup_file(audio_path)
 
 
 def _cleanup_file(path: str) -> None:
-    """임시 파일 및 yt-dlp 관련 파생 파일을 안전하게 삭제합니다."""
+    """임시 파일을 안전하게 삭제합니다."""
     if not path:
         return
-    # 기본 파일 삭제
     try:
         if os.path.exists(path):
             os.remove(path)
     except OSError as e:
         logger.warning("임시 파일 삭제 실패: %s (%s)", path, str(e))
-    # yt-dlp가 생성하는 중간 파일 정리 (.part, .ytdl, 확장자 없는 원본 등)
-    base = os.path.splitext(path)[0]
-    for suffix in ('', '.part', '.ytdl', '.webm', '.m4a', '.mp3', '.opus', '.temp'):
-        candidate = base + suffix
-        try:
-            if candidate != path and os.path.exists(candidate):
-                os.remove(candidate)
-        except OSError:
-            pass
