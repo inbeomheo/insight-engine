@@ -71,6 +71,10 @@ export default function CollaborativeEditor({
     };
   }, [contentId, userId, userName]);
 
+  // version을 ref로 참조하여 stale closure 방지
+  const versionRef = useRef(version);
+  useEffect(() => { versionRef.current = version; }, [version]);
+
   // 폴링으로 세션 상태 동기화 (2초 간격)
   useEffect(() => {
     if (!sessionId) return;
@@ -94,7 +98,7 @@ export default function CollaborativeEditor({
         setParticipants(data.participants || []);
 
         // 다른 사용자가 수정한 경우에만 콘텐츠 업데이트
-        if (data.version > version) {
+        if (data.version > versionRef.current) {
           setContent(data.content);
           setVersion(data.version);
         }
@@ -104,7 +108,7 @@ export default function CollaborativeEditor({
     }, 2000);
 
     return () => clearInterval(pollRef.current);
-  }, [sessionId, version, userId]);
+  }, [sessionId, userId]);
 
   // 콘텐츠 변경 시 서버로 전송 (500ms 디바운스)
   const handleChange = useCallback(

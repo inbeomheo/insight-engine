@@ -19,11 +19,11 @@ export class VideoSelectionModal {
         this.modal = document.createElement('div');
         this.modal.className = 'video-modal-overlay';
         this.modal.innerHTML = `
-            <div class="video-modal">
+            <div class="video-modal" role="dialog" aria-modal="true" aria-labelledby="video-modal-title-text">
                 <div class="video-modal-header">
                     <h3 class="video-modal-title">
                         <span class="material-symbols-outlined">playlist_play</span>
-                        <span class="video-modal-title-text">영상 목록</span>
+                        <span class="video-modal-title-text" id="video-modal-title-text">영상 목록</span>
                     </h3>
                     <button class="video-modal-close">
                         <span class="material-symbols-outlined">close</span>
@@ -54,6 +54,9 @@ export class VideoSelectionModal {
         this.modal.querySelector('.video-modal-cancel').addEventListener('click', () => this.close());
         this.modal.querySelector('.video-modal-add').addEventListener('click', () => this._addSelected());
         this.modal.addEventListener('click', (e) => { if (e.target === this.modal) this.close(); });
+        // Escape 키로 닫기
+        this._handleKeyDown = (e) => { if (e.key === 'Escape') this.close(); };
+        document.addEventListener('keydown', this._handleKeyDown);
 
         // 전체 선택
         const selectAllCb = this.modal.querySelector('#video-select-all-cb');
@@ -88,6 +91,9 @@ export class VideoSelectionModal {
 
     close() {
         this.modal.classList.remove('active');
+        if (this._handleKeyDown) {
+            document.removeEventListener('keydown', this._handleKeyDown);
+        }
     }
 
     _renderList(videos, options) {

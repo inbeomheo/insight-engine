@@ -173,11 +173,13 @@ export async function generateStream(
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
+  const timeoutSignal = AbortSignal.timeout(TIMEOUT_MS['/generate'] ?? 300_000);
+  const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const res = await fetch(`${BASE}/generate-stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
-    signal,
+    signal: combinedSignal,
   });
 
   if (!res.ok) {
@@ -355,11 +357,13 @@ export async function runPipeline(
   onEvent: (event: PipelineEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
+  const pipelineTimeoutSignal = AbortSignal.timeout(300_000);
+  const pipelineCombinedSignal = signal ? AbortSignal.any([signal, pipelineTimeoutSignal]) : pipelineTimeoutSignal;
   const res = await fetch(`${BASE}/api/pipeline`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
-    signal,
+    signal: pipelineCombinedSignal,
   });
 
   if (!res.ok) {

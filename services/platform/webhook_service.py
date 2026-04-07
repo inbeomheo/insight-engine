@@ -136,6 +136,8 @@ class WebhookService:
         """웹훅 테스트 전송 (동기, 결과 반환)"""
         if not self.url:
             return {"success": False, "error": "웹훅 URL이 설정되지 않았습니다."}
+        if not _validate_webhook_url(self.url):
+            return {"success": False, "error": "웹훅 URL이 안전하지 않습니다 (SSRF 차단)."}
         payload = {
             "event": "webhook.test",
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

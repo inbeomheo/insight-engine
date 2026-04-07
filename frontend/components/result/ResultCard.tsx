@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback, useReducer } from 'react';
+import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -130,6 +130,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
+  // NotebookLM 폴링 interval cleanup (H-10)
+  const notebookPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (notebookPollRef.current) clearInterval(notebookPollRef.current);
+    };
+  }, []);
+
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
     dispatch({ type: 'SET', key, value });
@@ -255,15 +263,14 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       updateReport(report.id, { notebooklm: { artifacts: [...existing, artifact] } });
       toast.success(`NotebookLM ${contentType} 생성 시작`);
 
-      // 폴링
-      const poll = setInterval(async () => {
+      // 폴링 (ref로 관리하여 언마운트 시 cleanup)
+      if (notebookPollRef.current) clearInterval(notebookPollRef.current);
+      notebookPollRef.current = setInterval(async () => {
         try {
           const status = await notebookLmStatus(res.artifact_id);
           if (status.status === 'completed' || status.status === 'failed') {
-            clearInterval(poll);
-            const updated = (report.notebooklm?.artifacts ?? []).map(a =>
-              a.artifact_id === res.artifact_id ? { ...a, status: status.status as 'completed' | 'failed' } : a
-            );
+            if (notebookPollRef.current) clearInterval(notebookPollRef.current);
+            notebookPollRef.current = null;
             // 새로 추가된 artifact도 반영
             const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
             updateReport(report.id, { notebooklm: { artifacts: all } });
@@ -271,7 +278,8 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             else toast.error(`NotebookLM ${contentType} 생성 실패`);
           }
         } catch {
-          clearInterval(poll);
+          if (notebookPollRef.current) clearInterval(notebookPollRef.current);
+          notebookPollRef.current = null;
         }
       }, 5000);
     } catch (err) {

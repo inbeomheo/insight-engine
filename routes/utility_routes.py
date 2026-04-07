@@ -231,7 +231,15 @@ def api_validate_provider():
     # Ollama는 API 키 대신 base URL로 연결 테스트
     if provider_id == 'ollama':
         import requests as http_requests
+        from services.platform.webhook_service import _validate_webhook_url
         base_url = api_key or provider.get('api_base', 'http://localhost:11434')
+        # SSRF 방지: 프라이빗 IP 차단 (localhost/127.0.0.1은 Ollama 용도로 허용)
+        from urllib.parse import urlparse as _urlparse
+        _parsed = _urlparse(base_url)
+        _host = (_parsed.hostname or '').lower()
+        _allowed_local = {'localhost', '127.0.0.1', '::1'}
+        if _host not in _allowed_local and not _validate_webhook_url(base_url):
+            return jsonify({'valid': False, 'error': '허용되지 않는 URL입니다.'}), 400
         try:
             t0 = time.time()
             resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
@@ -278,6 +286,7 @@ def api_campaign_packs():
 
 
 @blog_bp.route('/api/cache', methods=['DELETE'])
+@require_auth
 def api_clear_cache():
     """캐시를 삭제합니다. video_id 파라미터가 있으면 해당 영상만, 없으면 전체 삭제."""
     data = request.get_json(silent=True) or {}
@@ -696,6 +705,7 @@ def api_feedback_stats(style_id: str):
 # === 팩트체크 (F3-07) ===
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
+@require_auth
 def api_fact_check():
     """콘텐츠의 팩트체크를 수행합니다."""
     data = request.get_json(silent=True) or {}

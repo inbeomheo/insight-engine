@@ -47,8 +47,8 @@ def notion_import():
     if not page_url:
         return jsonify({'error': 'Notion 페이지 URL이 필요합니다.'}), 400
 
-    # API 키: 요청 본문 > 환경변수
-    api_key = data.get('api_key') or os.getenv('NOTION_API_KEY', '')
+    # API 키: 환경변수만 사용 (요청 본문의 키를 수락하면 서버가 프록시로 악용될 수 있음)
+    api_key = os.getenv('NOTION_API_KEY', '')
     if not api_key:
         return jsonify({'error': 'Notion API 키가 설정되지 않았습니다.'}), 400
 
@@ -86,7 +86,7 @@ def gdocs_import():
     if not doc_url:
         return jsonify({'error': 'Google Docs URL이 필요합니다.'}), 400
 
-    api_key = data.get('api_key') or os.getenv('GOOGLE_API_KEY', '')
+    api_key = os.getenv('GOOGLE_API_KEY', '')
 
     try:
         result = extract_google_doc(doc_url, api_key or None)

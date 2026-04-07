@@ -69,3 +69,24 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # 기본 시작 명령 (docker-compose에서 오버라이드)
 CMD ["python", "app.py"]
+
+# ── 스테이지 4: 프론트엔드 전용 이미지 ────────────────────────────────────────
+FROM node:20-alpine AS frontend-runner
+
+WORKDIR /app/frontend
+
+COPY frontend/package*.json ./
+COPY --from=frontend-builder /app/frontend/.next ./.next
+COPY --from=frontend-builder /app/frontend/node_modules ./node_modules
+COPY frontend/public ./public
+COPY frontend/next.config* ./
+
+RUN adduser -D -s /bin/false appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD wget -q --spider http://localhost:3000 || exit 1
+
+CMD ["node_modules/.bin/next", "start", "--port", "3000"]

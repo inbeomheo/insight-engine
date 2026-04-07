@@ -117,7 +117,7 @@ export class PresetManager {
             <div class="preset-item" data-id="${p.id}">
                 <button class="preset-apply-btn" title="${p.name}">
                     <span class="material-symbols-outlined" style="font-size: 14px;">tune</span>
-                    <span class="preset-name">${this._escapeHtml(p.name)}</span>
+                    <span class="preset-name">${this.ui.escapeHtml(p.name)}</span>
                 </button>
                 <button class="preset-delete-btn" title="삭제">
                     <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
@@ -143,9 +143,4 @@ export class PresetManager {
         });
     }
 
-    _escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str || '';
-        return div.innerHTML;
-    }
 }

@@ -104,13 +104,11 @@ def encrypt_api_key(api_key: str) -> str:
     if not api_key:
         return None
     if not _is_encryption_enabled():
-        logger.debug("암호화 비활성화 상태, 원본 저장")
-        return api_key
+        raise ConfigurationError("ENCRYPTION_KEY가 설정되지 않아 API 키를 저장할 수 없습니다. 환경변수 ENCRYPTION_KEY를 설정하세요.")
     try:
         return _get_fernet().encrypt(api_key.encode()).decode()
     except ConfigurationError:
-        logger.warning("암호화 설정 오류, 원본 저장")
-        return api_key
+        raise
 
 
 def decrypt_api_key(encrypted_key: str) -> str:
@@ -172,11 +170,17 @@ def _validate_token(token: str) -> dict:
         return {'valid': False, 'error': '인증에 실패했습니다.', 'code': 'AUTH_FAILED'}
 
 
+_supabase_disabled_warned = False
+
 def require_auth(f: Callable) -> Callable:
     """JWT 토큰 검증 데코레이터"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not is_supabase_enabled():
+            global _supabase_disabled_warned
+            if not _supabase_disabled_warned:
+                logger.warning("Supabase 비활성화 상태: 인증 없이 요청 처리됨 (이후 동일 경고 생략)")
+                _supabase_disabled_warned = True
             g.user_id = None
             return f(*args, **kwargs)
 
@@ -204,7 +208,9 @@ def optional_auth(f: Callable) -> Callable:
 
         token = _extract_bearer_token()
         if token:
-            _validate_token(token)  # 실패해도 무시 (결과 사용 안 함)
+            result = _validate_token(token)
+            if not result['valid']:
+                logger.warning(f"optional_auth 토큰 검증 실패: {result.get('code', 'UNKNOWN')}")
 
         return f(*args, **kwargs)
     return decorated
@@ -681,7 +687,7 @@ def is_admin(user_id: str) -> bool:
             logger.info(f"is_admin: g.user_email 발견: {user_email}")
             result = supabase.table('ie_admins') \
                 .select('user_id') \
-                .eq('user_id', user_email) \
+                .eq('email', user_email) \
                 .limit(1) \
                 .execute()
 

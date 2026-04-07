@@ -212,6 +212,19 @@ def _validate_custom_prompt(custom_prompt):
     if not isinstance(custom_prompt, str):
         return None, 'customPrompt는 문자열이어야 합니다.'
 
+    # 프롬프트 인젝션 패턴 필터링
+    _injection_patterns = [
+        '이전 지시를 무시', '이전 지시사항을 무시', '시스템 프롬프트',
+        'ignore previous', 'ignore all previous', 'ignore above',
+        'disregard previous', 'disregard all', 'forget previous',
+        'system prompt', 'you are now', 'act as',
+        'new instructions', 'override instructions',
+    ]
+    lower_prompt = custom_prompt.lower()
+    for pattern in _injection_patterns:
+        if pattern in lower_prompt:
+            return None, f'허용되지 않는 표현이 포함되어 있습니다: "{pattern}"'
+
     # 길이 제한 (2000자)
     return custom_prompt.strip()[:2000], None
 
