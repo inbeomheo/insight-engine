@@ -173,11 +173,18 @@ export async function generateStream(
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
+  const timeoutMs = TIMEOUT_MS['/generate'] ?? 300_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // 외부 signal 연동
+  if (signal) signal.addEventListener('abort', () => controller.abort());
+
+  try {
   const res = await fetch(`${BASE}/generate-stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
-    signal,
+    signal: controller.signal,
   });
 
   if (!res.ok) {
@@ -188,9 +195,17 @@ export async function generateStream(
   await parseSSEStream<StreamEvent>(
     res.body!.getReader(),
     onEvent,
-    signal,
+    controller.signal,
     () => onEvent({ type: 'error', error: '네트워크 연결이 끊겼습니다. 다시 시도해주세요.' })
   );
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`스트리밍 요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // 배치 생성
@@ -355,24 +370,38 @@ export async function runPipeline(
   onEvent: (event: PipelineEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const res = await fetch(`${BASE}/api/pipeline`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-    signal,
-  });
+  const timeoutMs = 300_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  if (signal) signal.addEventListener('abort', () => controller.abort());
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(`${BASE}/api/pipeline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+
+    await parseSSEStream<PipelineEvent>(
+      res.body!.getReader(),
+      onEvent,
+      controller.signal,
+      () => onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 })
+    );
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`파이프라인 요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  await parseSSEStream<PipelineEvent>(
-    res.body!.getReader(),
-    onEvent,
-    signal,
-    () => onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 })
-  );
 }
 
 // =============================================

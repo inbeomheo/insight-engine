@@ -104,7 +104,7 @@ def encrypt_api_key(api_key: str) -> str:
     if not api_key:
         return None
     if not _is_encryption_enabled():
-        logger.debug("암호화 비활성화 상태, 원본 저장")
+        logger.warning("ENCRYPTION_KEY 미설정: API 키가 평문으로 저장됩니다")
         return api_key
     try:
         return _get_fernet().encrypt(api_key.encode()).decode()
@@ -178,6 +178,7 @@ def require_auth(f: Callable) -> Callable:
     def decorated(*args, **kwargs):
         if not is_supabase_enabled():
             g.user_id = None
+            logger.warning("Supabase 비활성화 상태: 인증 없이 요청 통과")
             return f(*args, **kwargs)
 
         token = _extract_bearer_token()
@@ -204,7 +205,9 @@ def optional_auth(f: Callable) -> Callable:
 
         token = _extract_bearer_token()
         if token:
-            _validate_token(token)  # 실패해도 무시 (결과 사용 안 함)
+            result = _validate_token(token)
+            if not result['valid']:
+                logger.warning(f"optional_auth 토큰 검증 실패: {result.get('code', 'UNKNOWN')}")
 
         return f(*args, **kwargs)
     return decorated
@@ -681,7 +684,7 @@ def is_admin(user_id: str) -> bool:
             logger.info(f"is_admin: g.user_email 발견: {user_email}")
             result = supabase.table('ie_admins') \
                 .select('user_id') \
-                .eq('user_id', user_email) \
+                .eq('email', user_email) \
                 .limit(1) \
                 .execute()
 

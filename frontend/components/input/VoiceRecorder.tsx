@@ -96,8 +96,8 @@ export default function VoiceRecorder({ onRecordingComplete, disabled }: VoiceRe
               <Square className="h-3.5 w-3.5" />
               녹음 중지
             </Button>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="relative flex h-2.5 w-2.5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite" role="status">
+              <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
               </span>

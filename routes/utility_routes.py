@@ -13,6 +13,7 @@ from routes.blog_routes import blog_bp, _extract_client_id, _get_style_prompt, D
 from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from services.data.supabase_service import require_auth
+from services.usage import require_usage
 from services.platform.webhook_service import WebhookService
 from utils.responses import handle_error, sanitize_error_for_client
 
@@ -231,7 +232,25 @@ def api_validate_provider():
     # Ollama는 API 키 대신 base URL로 연결 테스트
     if provider_id == 'ollama':
         import requests as http_requests
+        import ipaddress
+        import socket
+        from urllib.parse import urlparse as _urlparse
         base_url = api_key or provider.get('api_base', 'http://localhost:11434')
+        # SSRF 방지: 클라우드 메타데이터 엔드포인트 차단
+        _parsed = _urlparse(base_url)
+        _hostname = (_parsed.hostname or '').lower()
+        _blocked_hosts = {'169.254.169.254', 'metadata.google.internal', 'metadata.internal'}
+        if _hostname in _blocked_hosts:
+            return jsonify({'valid': False, 'error': '허용되지 않는 URL입니다.'}), 400
+        if _parsed.scheme not in ('http', 'https'):
+            return jsonify({'valid': False, 'error': 'http/https URL만 허용됩니다.'}), 400
+        try:
+            _resolved = socket.gethostbyname(_hostname)
+            _ip = ipaddress.ip_address(_resolved)
+            if _ip.is_link_local:  # 169.254.x.x (메타데이터 대역)
+                return jsonify({'valid': False, 'error': '허용되지 않는 URL입니다.'}), 400
+        except (socket.gaierror, ValueError, OSError):
+            pass  # DNS 해석 실패 시 연결에서 자연스럽게 실패
         try:
             t0 = time.time()
             resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
@@ -278,6 +297,7 @@ def api_campaign_packs():
 
 
 @blog_bp.route('/api/cache', methods=['DELETE'])
+@require_auth
 def api_clear_cache():
     """캐시를 삭제합니다. video_id 파라미터가 있으면 해당 영상만, 없으면 전체 삭제."""
     data = request.get_json(silent=True) or {}
@@ -696,6 +716,8 @@ def api_feedback_stats(style_id: str):
 # === 팩트체크 (F3-07) ===
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
+@require_auth
+@require_usage
 def api_fact_check():
     """콘텐츠의 팩트체크를 수행합니다."""
     data = request.get_json(silent=True) or {}

@@ -97,9 +97,9 @@ export class InlineEditor {
             this.ui.showAlert('저장 완료', 'success');
         });
 
-        // 취소
+        // 취소 (sanitizeHtml로 안전하게 복원)
         cancelBtn.addEventListener('click', () => {
-            body.innerHTML = originalHtml;
+            body.innerHTML = this.ui.sanitizeHtml(originalHtml);
             card.dataset.editing = 'false';
         });
 

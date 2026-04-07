@@ -11,6 +11,7 @@ v3.0 업데이트:
 from typing import Dict, List, Any, Tuple
 import functools
 import os
+import threading
 import time
 
 # prompts 패키지에서 가져오기
@@ -31,7 +32,7 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
     'gemini': os.getenv('GEMINI_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
-    'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
+    'zhipuai': os.getenv('ZHIPUAI_API_KEY', '') or os.getenv('ZAI_API_KEY', ''),
     'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
     'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
@@ -275,6 +276,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
 _providers_cache: Dict[str, Any] = {}
 _providers_cache_time: float = 0.0
 _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
+_providers_cache_lock = threading.Lock()
 
 
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
@@ -287,14 +289,19 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
     if _providers_cache and (now - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
         return _providers_cache
 
-    available = {}
-    for provider_id, api_key in PROVIDER_API_KEYS.items():
-        if api_key and provider_id in SUPPORTED_PROVIDERS:
-            available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+    with _providers_cache_lock:
+        # 더블 체크 (락 대기 중 다른 스레드가 갱신했을 수 있음)
+        if _providers_cache and (time.time() - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
+            return _providers_cache
 
-    _providers_cache = available
-    _providers_cache_time = now
-    return available
+        available = {}
+        for provider_id, api_key in PROVIDER_API_KEYS.items():
+            if api_key and provider_id in SUPPORTED_PROVIDERS:
+                available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+
+        _providers_cache = available
+        _providers_cache_time = time.time()
+        return available
 
 
 @functools.lru_cache(maxsize=128)
@@ -421,6 +428,72 @@ def get_modifier_options() -> Dict[str, Dict[str, Any]]:
     return MODIFIER_OPTIONS
 
 
+# === Phase 9: 인프라 & 성능 설정 ===
+
+# Redis 캐싱 (옵셔널)
+REDIS_URL: str = os.getenv('REDIS_URL', '')
+REDIS_TTL_SECONDS: int = int(os.getenv('REDIS_TTL_SECONDS', '3600'))
+
+# 암호화
+ENCRYPTION_KEY: str = os.getenv('ENCRYPTION_KEY', '')
+
+# Sentry 오류 추적
+SENTRY_DSN: str = os.getenv('SENTRY_DSN', '')
+
+# 환경별 설정
+class Config:
+    """기본 설정"""
+    DEBUG = False
+    TESTING = False
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    LOG_LEVEL = 'DEBUG'
+
+class ProductionConfig(Config):
+    LOG_LEVEL = 'INFO'
+    PREFERRED_URL_SCHEME = 'https'
+
+class TestingConfig(Config):
+    TESTING = True
+    LOG_LEVEL = 'WARNING'
+
+ENV_CONFIGS = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+}
+
+ACTIVE_CONFIG = ENV_CONFIGS.get(
+    os.getenv('FLASK_ENV', 'development'), DevelopmentConfig
+)
+
+# === Phase 10: 고급 AI 설정 ===
+
+# ElevenLabs 음성 복제
+ELEVENLABS_API_KEY: str = os.getenv('ELEVENLABS_API_KEY', '')
+
+# 비디오 생성
+RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
+
+# 번역
+DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
+TRANSLATION_MODEL: str = os.getenv(
+    'TRANSLATION_MODEL',
+    'gemini/gemini-2.5-flash-lite-preview-09-2025'
+)
+
+# 임베딩 모델 (RAG)
+EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
+
+# 파인튜닝
+FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR', './data/finetune')
+FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE', '0.6'))
+
+# 모델 라우터 기본 모드
+MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balanced')
+
+
 __all__ = [
     # API Keys
     'YOUTUBE_API_KEY',
@@ -518,68 +591,3 @@ __all__ = [
     'FINETUNE_OUTPUT_DIR',
     'EMBEDDING_MODEL',
 ]
-
-# === Phase 9: 인프라 & 성능 설정 ===
-
-# Redis 캐싱 (옵셔널)
-REDIS_URL: str = os.getenv('REDIS_URL', '')
-REDIS_TTL_SECONDS: int = int(os.getenv('REDIS_TTL_SECONDS', '3600'))
-
-# 암호화
-ENCRYPTION_KEY: str = os.getenv('ENCRYPTION_KEY', '')
-
-# Sentry 오류 추적
-SENTRY_DSN: str = os.getenv('SENTRY_DSN', '')
-
-# 환경별 설정
-class Config:
-    """기본 설정"""
-    DEBUG = False
-    TESTING = False
-
-class DevelopmentConfig(Config):
-    DEBUG = True
-    LOG_LEVEL = 'DEBUG'
-
-class ProductionConfig(Config):
-    LOG_LEVEL = 'INFO'
-    PREFERRED_URL_SCHEME = 'https'
-
-class TestingConfig(Config):
-    TESTING = True
-    LOG_LEVEL = 'WARNING'
-
-ENV_CONFIGS = {
-    'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'testing': TestingConfig,
-}
-
-ACTIVE_CONFIG = ENV_CONFIGS.get(
-    os.getenv('FLASK_ENV', 'development'), DevelopmentConfig
-)
-
-# === Phase 10: 고급 AI 설정 ===
-
-# ElevenLabs 음성 복제
-ELEVENLABS_API_KEY: str = os.getenv('ELEVENLABS_API_KEY', '')
-
-# 비디오 생성
-RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
-
-# 번역
-DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
-TRANSLATION_MODEL: str = os.getenv(
-    'TRANSLATION_MODEL',
-    'gemini/gemini-2.5-flash-lite-preview-09-2025'
-)
-
-# 임베딩 모델 (RAG)
-EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
-
-# 파인튜닝
-FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR', './data/finetune')
-FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE', '0.6'))
-
-# 모델 라우터 기본 모드
-MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balanced')

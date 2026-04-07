@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 
 /** 단축키 정의 */
@@ -16,20 +16,18 @@ interface ShortcutDef {
 
 /** 글로벌 키보드 단축키 훅 (F5-07) */
 export function useKeyboardShortcuts() {
-  const {
-    setSettingsModalOpen,
-    toggleSidebar,
-    setActiveView,
-  } = useUIStore();
+  const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const setActiveView = useUIStore((s) => s.setActiveView);
 
-  const shortcuts: ShortcutDef[] = [
+  const shortcuts: ShortcutDef[] = useMemo(() => [
     // 설정
     { key: ',', ctrl: true, label: '설정 열기', category: '일반', action: () => setSettingsModalOpen(true) },
     { key: 'b', ctrl: true, label: '사이드바 토글', category: '일반', action: () => toggleSidebar() },
     // 탐색
     { key: '1', alt: true, label: '메인 뷰', category: '탐색', action: () => setActiveView('main') },
     { key: '2', alt: true, label: '캘린더 뷰', category: '탐색', action: () => setActiveView('calendar') },
-  ];
+  ], [setSettingsModalOpen, toggleSidebar, setActiveView]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

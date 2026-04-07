@@ -50,8 +50,9 @@ jobs:
           pip install flake8
           flake8 . --max-line-length=120 --exclude=__pycache__,migrations,node_modules --count --statistics
 
-      - name: 단위 테스트 실행
+      - name: 단위 테스트 실행 + 커버리지
         run: |
+          pip install coverage pytest-cov
           python -m pytest tests/ \
             -v \
             --ignore=tests/e2e \
@@ -59,14 +60,8 @@ jobs:
             -x \
             --timeout=60 \
             -p no:warnings \
+            --cov=. --cov-report=xml \
             2>&1 | head -500
-
-      - name: 커버리지 업로드
-        if: github.ref == 'refs/heads/main'
-        run: |
-          pip install coverage pytest-cov
-          python -m pytest tests/ --ignore=tests/e2e --cov=. --cov-report=xml -q
-        continue-on-error: true
 
   # ── 프론트엔드 테스트 ─────────────────────────────────────────────────────────
   frontend-test:

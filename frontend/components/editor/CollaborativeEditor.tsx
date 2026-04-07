@@ -30,6 +30,7 @@ export default function CollaborativeEditor({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [version, setVersion] = useState(0);
+  const versionRef = useRef(0);
   const [connected, setConnected] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -94,9 +95,10 @@ export default function CollaborativeEditor({
         setParticipants(data.participants || []);
 
         // 다른 사용자가 수정한 경우에만 콘텐츠 업데이트
-        if (data.version > version) {
+        if (data.version > versionRef.current) {
           setContent(data.content);
           setVersion(data.version);
+          versionRef.current = data.version;
         }
       } catch {
         // 폴링 실패 무시
@@ -104,7 +106,7 @@ export default function CollaborativeEditor({
     }, 2000);
 
     return () => clearInterval(pollRef.current);
-  }, [sessionId, version, userId]);
+  }, [sessionId, userId]);
 
   // 콘텐츠 변경 시 서버로 전송 (500ms 디바운스)
   const handleChange = useCallback(

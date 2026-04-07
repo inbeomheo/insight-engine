@@ -94,8 +94,8 @@ def signup():
     if validation_error:
         return validation_error
 
-    if len(password) < 6:
-        return _error_response('비밀번호는 최소 6자 이상이어야 합니다.')
+    if len(password) < 8:
+        return _error_response('비밀번호는 최소 8자 이상이어야 합니다.')
 
     try:
         result = get_supabase().auth.sign_up({'email': email, 'password': password})
@@ -410,7 +410,7 @@ def get_user_history():
         per_page: 페이지당 항목 수 (기본값: 20)
     """
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
 
     data = get_histories(g.user_id, page, per_page)
     histories = data.get('histories', [])
@@ -520,11 +520,29 @@ def update_profile():
 @auth_bp.route('/api/user/password', methods=['PUT'])
 @require_auth
 def change_password():
-    """비밀번호 변경"""
+    """비밀번호 변경 (현재 비밀번호 검증 필수)"""
     data = _get_json_data()
+    current_password = data.get('current_password', '')
     new_password = data.get('new_password', '')
-    if len(new_password) < 6:
-        return _error_response('비밀번호는 6자 이상이어야 합니다.')
+
+    if not current_password:
+        return _error_response('현재 비밀번호를 입력해주세요.')
+
+    if len(new_password) < 8:
+        return _error_response('새 비밀번호는 8자 이상이어야 합니다.')
+
+    # 현재 비밀번호 검증: 이메일로 로그인 시도
+    user_email = getattr(g, 'user_email', None)
+    if not user_email:
+        return _error_response('사용자 이메일 정보를 확인할 수 없습니다.', 400)
+
+    try:
+        get_supabase().auth.sign_in_with_password({
+            'email': user_email,
+            'password': current_password
+        })
+    except Exception:
+        return _error_response('현재 비밀번호가 올바르지 않습니다.')
 
     result = update_user_password(g.user_id, new_password)
     if result['success']:
@@ -618,7 +636,7 @@ def get_admin_contents():
         return error
 
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
     user_id = request.args.get('user_id', None, type=str)
 
     result = get_all_contents(page, per_page, user_id)

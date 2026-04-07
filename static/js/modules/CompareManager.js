@@ -131,7 +131,7 @@ export class CompareManager {
             compareCard.innerHTML = `
                 <div class="compare-error">
                     <span class="material-symbols-outlined">error</span>
-                    <span>${e.message}</span>
+                    <span>${this.ui.escapeHtml(e.message)}</span>
                 </div>
             `;
         }
@@ -186,7 +186,7 @@ export class CompareManager {
                 body.innerHTML = `
                     <div class="compare-error-item">
                         <span class="material-symbols-outlined">warning</span>
-                        <span>${result.error}</span>
+                        <span>${this.ui.escapeHtml(result.error)}</span>
                     </div>
                 `;
                 return;

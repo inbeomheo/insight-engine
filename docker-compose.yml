@@ -50,10 +50,11 @@ services:
     build:
       context: .
       target: final
-    image: insight-engine-frontend:latest
+      dockerfile: Dockerfile
+    image: insight-engine:latest
     container_name: insight-frontend
     restart: unless-stopped
-    command: ["node", "frontend/node_modules/.bin/next", "start", "--port", "3000"]
+    command: ["node", "node_modules/.bin/next", "start", "--port", "3000"]
     working_dir: /app/frontend
     ports:
       - "3000:3000"

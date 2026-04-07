@@ -109,7 +109,8 @@ def format_transcript_with_timestamps(segments: list) -> str:
     try:
         from utils.timestamp_utils import format_segments_for_prompt
         return format_segments_for_prompt(segments)
-    except Exception:
+    except Exception as e:
+        current_app.logger.warning(f"타임스탬프 포매팅 실패: {e}")
         return ""
 
 
@@ -406,15 +407,17 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                     except Exception as e:
                         last_error = e
                         error_str = str(e)
-                        if '1302' not in error_str or attempt >= GLM_RETRY_COUNT - 1:
+                        if '1302' not in error_str:
                             raise
                         current_app.logger.warning(
                             f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
                             f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
                         )
                 # sleep은 락 밖에서 (다른 요청 블로킹 방지)
-                time.sleep(GLM_RETRY_DELAY)
+                if attempt < GLM_RETRY_COUNT - 1:
+                    time.sleep(GLM_RETRY_DELAY)
             else:
+                # 모든 재시도 실패 시
                 raise last_error
         else:
             response = _get_completion()(**completion_kwargs)
@@ -465,7 +468,8 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
 
 def create_content_stream(content: str, model: str, style_prompt: Optional[str] = None,
                           modifiers: Optional[Dict[str, Any]] = None, style_id: Optional[str] = None,
-                          detail_level: Optional[str] = None) -> Generator[Optional[str], None, None]:
+                          detail_level: Optional[str] = None,
+                          user_id: Optional[str] = None) -> Generator[Optional[str], None, None]:
     """
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 토큰을 yield하고, 마지막에 None을 yield합니다.
@@ -474,7 +478,24 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
     Yields:
         str: 토큰 텍스트 또는 None(종료)
     """
-    prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level)
+    # RAG/메모리 컨텍스트 빌드 (create_content와 동일)
+    rag_context = None
+    memory_context = None
+    try:
+        if RAG_ENABLED and user_id:
+            from services.rag import context_builder
+            rag_context = context_builder.build_context(user_id, content[:500], top_k=RAG_TOP_K)
+    except Exception as e:
+        current_app.logger.warning(f"스트리밍 RAG 컨텍스트 빌드 실패 (무시): {e}")
+    try:
+        if user_id:
+            from services.data.memory_service import memory_service as _mem_svc
+            memory_context = _mem_svc.build_prompt_context(user_id) or None
+    except Exception as e:
+        current_app.logger.warning(f"스트리밍 메모리 컨텍스트 빌드 실패 (무시): {e}")
+
+    prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level,
+                           rag_context=rag_context, memory_context=memory_context)
     is_glm = model.startswith("zhipuai/")
 
     # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield

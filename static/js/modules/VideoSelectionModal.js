@@ -19,9 +19,9 @@ export class VideoSelectionModal {
         this.modal = document.createElement('div');
         this.modal.className = 'video-modal-overlay';
         this.modal.innerHTML = `
-            <div class="video-modal">
+            <div class="video-modal" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
                 <div class="video-modal-header">
-                    <h3 class="video-modal-title">
+                    <h3 class="video-modal-title" id="video-modal-title">
                         <span class="material-symbols-outlined">playlist_play</span>
                         <span class="video-modal-title-text">영상 목록</span>
                     </h3>
