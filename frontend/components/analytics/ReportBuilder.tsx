@@ -4,7 +4,7 @@
  */
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 type ChartType = 'line' | 'bar' | 'pie' | 'table';
 
@@ -26,10 +26,11 @@ const AVAILABLE_METRICS = [
 export function ReportBuilder() {
   const [blocks, setBlocks] = useState<ChartBlock[]>([]);
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
+  const idCounter = useRef(0);
 
   const addBlock = (metric: { key: string; label: string; defaultChart: ChartType }) => {
     const newBlock: ChartBlock = {
-      id: `${metric.key}-${Date.now()}`,
+      id: `${metric.key}-${++idCounter.current}`,
       type: metric.defaultChart,
       metric: metric.key,
       title: metric.label,

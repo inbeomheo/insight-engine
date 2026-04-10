@@ -108,7 +108,6 @@ def _split_sentences(content: str) -> list[str]:
 def _detect_in_sentence(sentence: str) -> list[dict]:
     """단일 문장에서 filler/hedge를 감지합니다."""
     detections = []
-    sent_lower = sentence.lower()
 
     # ── 한국어 filler ──
     for phrase, suggestion in _KO_FILLERS.items():

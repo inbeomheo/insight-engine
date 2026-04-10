@@ -154,6 +154,7 @@ export default function MindmapModal() {
                 <Download className="h-4 w-4 mr-1" /> SVG
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownloadPng}>
+{/* eslint-disable-next-line jsx-a11y/alt-text */}
                 <Image className="h-4 w-4 mr-1" /> PNG
               </Button>
             </div>

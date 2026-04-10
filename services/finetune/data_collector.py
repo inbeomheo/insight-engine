@@ -5,7 +5,7 @@ Supabase 히스토리에서 고품질 콘텐츠를 자동으로 선별하여 학
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from .dataset_builder import DatasetBuilder
 from .reward_model import RuleBasedRewardModel

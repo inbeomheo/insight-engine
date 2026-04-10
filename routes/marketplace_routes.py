@@ -5,7 +5,7 @@
 import logging
 
 from flask import Blueprint, request, jsonify, g
-from utils.responses import success_response, error_response, sanitize_error_for_client
+from utils.responses import error_response, sanitize_error_for_client
 from services.data.supabase_service import require_auth
 
 marketplace_bp = Blueprint('marketplace', __name__)

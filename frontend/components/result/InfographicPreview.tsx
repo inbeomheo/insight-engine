@@ -32,7 +32,7 @@ export default function InfographicPreview({ title, content }: InfographicPrevie
       const blob = await res.blob();
       const text = await blob.text();
       setHtmlContent(text);
-    } catch (e) {
+    } catch {
       setError('인포그래픽 생성 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);

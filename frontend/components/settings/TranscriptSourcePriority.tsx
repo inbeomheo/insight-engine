@@ -64,6 +64,7 @@ export const TranscriptSourcePriority = memo(function TranscriptSourcePriority()
 
   // 마운트 시 저장된 우선순위 로드
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSources(loadPriority());
   }, []);
 

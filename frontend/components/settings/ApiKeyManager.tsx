@@ -34,7 +34,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
   useEffect(fetchKeys, []);
 
   const handleCreate = async () => {
-    const result = await createCall.execute(async () => {
+    await createCall.execute(async () => {
       const res = await fetch(apiUrl('/api/keys'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

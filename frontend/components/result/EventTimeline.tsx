@@ -18,8 +18,6 @@ import type {
   VideoEventType,
   VideoEvent,
   ActionItemEvent,
-  KeyPointEvent,
-  QuestionEvent,
   EventSummary,
 } from '@/lib/types';
 

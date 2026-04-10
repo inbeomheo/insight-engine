@@ -126,8 +126,10 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
   return { ...state, ...action.updates };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
@@ -261,9 +263,6 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
           const status = await notebookLmStatus(res.artifact_id);
           if (status.status === 'completed' || status.status === 'failed') {
             clearInterval(poll);
-            const updated = (report.notebooklm?.artifacts ?? []).map(a =>
-              a.artifact_id === res.artifact_id ? { ...a, status: status.status as 'completed' | 'failed' } : a
-            );
             // 새로 추가된 artifact도 반영
             const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
             updateReport(report.id, { notebooklm: { artifacts: all } });
@@ -868,6 +867,7 @@ function keywordOpacity(relevance: number): string {
 
 function NlpAnalysisSection({ analysis }: { analysis: NlpAnalysis }) {
   const [open, setOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { sentiment, keywords, topics } = analysis;
   const cfg = SENTIMENT_CONFIG[sentiment.overall];
 

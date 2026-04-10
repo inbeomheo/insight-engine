@@ -30,6 +30,7 @@ export default function AudioPlayer({ audioBlob, title, onClose }: AudioPlayerPr
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   // audioBlob이 바뀌면 Object URL 재생성
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const url = URL.createObjectURL(audioBlob);
     setAudioUrl(url);
@@ -37,6 +38,7 @@ export default function AudioPlayer({ audioBlob, title, onClose }: AudioPlayerPr
     setCurrentTime(0);
     return () => URL.revokeObjectURL(url);
   }, [audioBlob]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 오디오 이벤트 등록
   useEffect(() => {

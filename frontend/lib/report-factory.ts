@@ -1,4 +1,4 @@
-import type { Report, GenerateResponse, TokenUsage } from './types';
+import type { Report, GenerateResponse } from './types';
 import { formatTime } from './helpers';
 
 type ReportInput = Partial<Report> & {

@@ -20,6 +20,7 @@ export function useMcpPlugins(enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     if (cachedPlugins) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlugins(cachedPlugins);
       return;
     }

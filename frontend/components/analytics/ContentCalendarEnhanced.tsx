@@ -23,6 +23,7 @@ interface ContentCalendarEnhancedProps {
 
 export function ContentCalendarEnhanced({
   items = [],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onMove,
   onAdd,
 }: ContentCalendarEnhancedProps) {

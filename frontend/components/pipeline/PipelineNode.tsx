@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, Settings, Zap, FileText, Search, RefreshCw, ShieldCheck, Send } from 'lucide-react';
+import { Trash2, Zap, FileText, Search, RefreshCw, ShieldCheck, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PipelineStepDef } from './PipelineBuilder';
 

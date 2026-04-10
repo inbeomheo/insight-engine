@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, Play, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PipelineNode from './PipelineNode';
 
@@ -59,6 +59,7 @@ export default function PipelineBuilder({ onRun }: PipelineBuilderProps) {
     );
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const moveStep = useCallback((from: number, to: number) => {
     setSteps((prev) => {
       const next = [...prev];

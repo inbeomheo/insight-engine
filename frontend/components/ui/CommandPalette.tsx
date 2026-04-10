@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search, FileText, Settings, Download, Plus, Calendar,
-  FolderOpen, Zap, BarChart3, Globe
+  Zap, BarChart3, Globe
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
-import { useSettingsStore } from '@/stores/settingsStore';
+
 
 interface Command {
   id: string;
@@ -126,6 +126,7 @@ export default function CommandPalette() {
   }, []);
 
   // 열릴 때 포커스
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -133,6 +134,7 @@ export default function CommandPalette() {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 키보드 네비게이션
   const handleKeyDown = useCallback(
@@ -154,6 +156,7 @@ export default function CommandPalette() {
   // 선택 인덱스가 범위를 벗어나면 리셋
   useEffect(() => {
     if (selectedIndex >= filtered.length) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIndex(Math.max(0, filtered.length - 1));
     }
   }, [filtered.length, selectedIndex]);

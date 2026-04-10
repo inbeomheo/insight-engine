@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from flask import Blueprint, Response, jsonify, request, g, stream_with_context
 
 logger = logging.getLogger(__name__)

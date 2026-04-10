@@ -73,6 +73,7 @@ export default function Home() {
   useEffect(() => {
     const saved = localStorage.getItem('ie_view_mode') as ViewMode | null;
     if (saved && ['compact', 'full', 'timeline'].includes(saved)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode(saved);
     }
   }, []);
@@ -112,6 +113,7 @@ export default function Home() {
   const deferredFiltered = useDeferredValue(filtered);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(INITIAL_RENDER_COUNT);
   }, [searchQuery, styleFilter]);
 
@@ -136,13 +138,13 @@ export default function Home() {
     if (ok) setScheduleTarget(null);
   }, [scheduleTarget, addSchedule]);
 
-  // HelpPanel + GuidedTour 핸들러 — 안정 참조
-  const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
-  const handleCloseTour = useCallback(() => setTourActive(false), []);
-
   // 도움말 패널 + 가이드 투어
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+
+  // HelpPanel + GuidedTour 핸들러 — 안정 참조
+  const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
+  const handleCloseTour = useCallback(() => setTourActive(false), []);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);

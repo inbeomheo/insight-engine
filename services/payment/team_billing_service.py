@@ -4,7 +4,6 @@
 """
 from datetime import datetime, timezone
 from services.core.logging_config import ServiceLogger
-import logging
 
 logger = ServiceLogger('TeamBillingService')
 

@@ -17,7 +17,6 @@ import feedparser as _feedparser
 
 from services.core.logging_config import get_logger
 from services.platform.rss_service import parse_feed
-import logging
 
 logger = get_logger('rss_subscription')
 
@@ -67,7 +66,7 @@ def subscribe(user_id: str, feed_url: str, title: str = '') -> Dict:
     """
     # 피드 유효성 검증 (실제 파싱 시도)
     try:
-        entries = parse_feed(feed_url, max_items=1)
+        parse_feed(feed_url, max_items=1)
     except Exception as e:
         raise ValueError(f"RSS 피드를 파싱할 수 없습니다: {e}")
 

@@ -74,7 +74,7 @@ cd frontend && npx tsc --noEmit
 cd frontend && npx next build
 
 # 3. 기존 pytest (베이스라인 이상)
-python -m pytest tests/ -q --ignore=tests/test_research_agent.py
+python -m pytest tests/ -q
 # passed 수 >= 3399
 
 # 4. 신규 테스트

@@ -9,7 +9,6 @@ Flask는 동기 방식이므로 ThreadPoolExecutor를 사용합니다.
 import html as html_lib
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import markdown
 

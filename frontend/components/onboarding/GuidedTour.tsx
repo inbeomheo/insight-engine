@@ -34,12 +34,14 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const { t } = useTranslation();
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (forceStart) {
       setVisible(true);
       setStep(0);
     }
   }, [forceStart]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 타겟 요소 위치 계산
   const updatePosition = useCallback(() => {
@@ -50,7 +52,7 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
     const rect = target.getBoundingClientRect();
     const placement = TOUR_STEPS[step].placement;
     let top = 0;
-    let left = rect.left + rect.width / 2;
+    const left = rect.left + rect.width / 2;
 
     if (placement === 'bottom') {
       top = rect.bottom + 12;
@@ -65,6 +67,7 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
   }, [visible, step]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updatePosition();
     window.addEventListener('resize', updatePosition);
     return () => window.removeEventListener('resize', updatePosition);

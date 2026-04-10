@@ -77,6 +77,7 @@ export function useSnippets() {
     });
   }, [fetchSnippets]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchSnippets(); }, [fetchSnippets]);
 
   return { snippets, loading, addSnippet, removeSnippet, refresh: fetchSnippets };

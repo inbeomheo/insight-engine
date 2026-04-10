@@ -15,6 +15,7 @@ def test_collect_podcast_cleans_ytdlp_audio_dir_in_finally(tmp_path, monkeypatch
 
     url = "https://example.com/episode.mp3"
     monkeypatch.setenv("WHISPER_ENABLED", "true")
+    monkeypatch.setenv("WHISPER_MODEL_SIZE", "base")
 
     with patch(
         "services.platform.spotify_service.is_spotify_episode_url",

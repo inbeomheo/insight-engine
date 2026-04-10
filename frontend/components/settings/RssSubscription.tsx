@@ -32,6 +32,7 @@ export const RssSubscription = memo(function RssSubscription() {
       return res.json();
     }, 'RSS 구독 목록을 불러올 수 없습니다.');
     if (result) setSubs(result.subscriptions || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listCall.execute]);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export const RssSubscription = memo(function RssSubscription() {
     const url = feedInput.trim();
     if (!url) return;
 
-    const result = await subscribeCall.execute(async () => {
+    await subscribeCall.execute(async () => {
       const res = await fetch(apiUrl('/api/rss/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

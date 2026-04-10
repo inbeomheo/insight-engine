@@ -6,7 +6,6 @@ import hashlib
 import hmac
 import os
 from services.core.logging_config import ServiceLogger
-import logging
 
 logger = ServiceLogger('PaddleService')
 

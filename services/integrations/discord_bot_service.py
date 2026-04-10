@@ -40,7 +40,7 @@ class DiscordBotService:
 
         try:
             from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-            from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
             import binascii
 
             pub_key = Ed25519PublicKey.from_public_bytes(

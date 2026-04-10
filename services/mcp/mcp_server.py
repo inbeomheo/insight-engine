@@ -5,7 +5,7 @@ Model Context Protocol 서버로 외부 AI 에이전트에게 Insight Engine 기
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

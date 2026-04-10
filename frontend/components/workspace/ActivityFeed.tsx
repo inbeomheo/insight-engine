@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Activity, FileText, Send, MessageSquare, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -38,6 +38,7 @@ export default function ActivityFeed({ workspaceId }: ActivityFeedProps) {
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!workspaceId) return;
 
@@ -48,14 +49,15 @@ export default function ActivityFeed({ workspaceId }: ActivityFeedProps) {
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, [workspaceId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  function formatTime(ts: number): string {
+  const formatTime = useCallback(function formatTime(ts: number): string {
     const diff = Date.now() / 1000 - ts;
     if (diff < 60) return '방금 전';
     if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
     return `${Math.floor(diff / 86400)}일 전`;
-  }
+  }, []);
 
   if (loading) {
     return (

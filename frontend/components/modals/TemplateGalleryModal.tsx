@@ -181,6 +181,7 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
 
   async function handleApply(t: PromptTemplate) {
     try {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       const result = await useTemplate(t.id);
       if (onApply) {
         onApply(result.prompt_text);

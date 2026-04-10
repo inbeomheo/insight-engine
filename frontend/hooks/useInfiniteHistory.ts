@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useMemo } from 'react';
 import { useResultStore } from '@/stores/resultStore';
-import type { Report } from '@/lib/types';
+
 
 const PAGE_SIZE = 20;
 

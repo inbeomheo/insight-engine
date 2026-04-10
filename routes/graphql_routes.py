@@ -4,7 +4,6 @@ GraphQL API 라우트 (F7-09)
 순수 Python으로 구현한 최소 GraphQL 엔드포인트.
 주요 쿼리: plugins, schedules, generateContent (mutation)
 """
-import json
 import logging
 import re
 from typing import Any, Optional

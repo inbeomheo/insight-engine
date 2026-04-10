@@ -61,7 +61,6 @@ def _check_duplicate_h1(headings: List[Dict]) -> List[Dict]:
 def _check_empty_sections(content: str, headings: List[Dict]) -> List[Dict]:
     """빈 섹션 (연속된 제목 사이 본문 없음)을 감지합니다."""
     empty = []
-    lines = content.split('\n')
 
     for i in range(len(headings) - 1):
         # 두 제목 사이의 텍스트 확인

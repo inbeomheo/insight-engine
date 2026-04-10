@@ -25,6 +25,7 @@ export default function ProfilePage() {
     const saved = localStorage.getItem('ie_profile');
     if (saved) {
       try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setProfile(JSON.parse(saved));
         return;
       } catch {

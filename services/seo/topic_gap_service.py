@@ -118,7 +118,6 @@ def _calculate_structural_score(text: str) -> float:
 
     score = 0.0
     checks = 0
-    total = 5
 
     # 1. 헤딩 존재 여부
     if _HEADING_PATTERN.search(text):

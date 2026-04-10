@@ -9,7 +9,7 @@ from typing import Dict
 
 from flask import request, jsonify, current_app
 
-from routes.blog_routes import blog_bp, _extract_client_id, _get_style_prompt, DEFAULT_MODEL
+from routes.blog_routes import blog_bp, _extract_client_id, DEFAULT_MODEL
 from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from services.data.supabase_service import require_auth

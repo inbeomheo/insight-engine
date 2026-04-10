@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Loader2, Youtube, Globe, ExternalLink } from 'lucide-react';
+import { Search, Plus, Loader2, Youtube, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { recommendSources, type RecommendedSource } from '@/lib/api';

@@ -221,6 +221,7 @@ export default function ApprovalFlow({ workspaceId, userRole }: ApprovalFlowProp
   }, [workspaceId, activeTab]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadContents();
   }, [loadContents]);
 

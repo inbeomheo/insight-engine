@@ -21,6 +21,7 @@ export default function ScheduleModal({
   onOpenChange,
   title,
   content,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   html,
   onSchedule,
   isLoading,
@@ -29,6 +30,16 @@ export default function ScheduleModal({
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
 
+  function formatLocalDatetime(date: Date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   // 플러그인 로드 후 기본 선택
   useEffect(() => {
     if (plugins.length > 0 && !selectedPlugin) {
@@ -44,15 +55,7 @@ export default function ScheduleModal({
     tomorrow.setHours(9, 0, 0, 0);
     setScheduledAt(formatLocalDatetime(tomorrow));
   }, [open]);
-
-  function formatLocalDatetime(date: Date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    const h = String(date.getHours()).padStart(2, '0');
-    const min = String(date.getMinutes()).padStart(2, '0');
-    return `${y}-${m}-${d}T${h}:${min}`;
-  }
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSubmit() {
     if (!selectedPlugin || !scheduledAt) return;

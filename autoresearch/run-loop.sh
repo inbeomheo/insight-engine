@@ -29,7 +29,7 @@ autoresearch/feature-loop/program.md를 읽고 Round ${round}을 실행해.
 절차: DISCOVER → PLAN → IMPLEMENT → TEST → JUDGE → RECORD
 
 JUDGE 기준:
-- python -m pytest tests/ -q --ignore=tests/test_research_agent.py
+- python -m pytest tests/ -q
 - passed 수가 $(cat autoresearch/feature-loop/baseline.txt) 이상이면 KEEP
 
 KEEP이면:

@@ -209,7 +209,6 @@ def _check_answer_exists(q_info: dict, lines: list) -> None:
     """
     line_idx = q_info['_line_idx']
     sentences_checked = 0
-    answer_excerpt = ''
 
     # 질문 다음 줄부터 탐색
     for i in range(line_idx + 1, len(lines)):

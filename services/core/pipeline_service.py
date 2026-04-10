@@ -143,7 +143,7 @@ def _step_extract_transcript(ctx: dict) -> dict:
 def _step_generate_content(ctx: dict) -> dict:
     """AI 콘텐츠를 생성합니다. (ai_service 래핑)"""
     from services.core import ai_service
-    from prompts import STYLE_PROMPTS, build_full_prompt
+    from prompts import STYLE_PROMPTS
 
     content = ctx.get("truncated_content", "")
     model = ctx.get("model", "")

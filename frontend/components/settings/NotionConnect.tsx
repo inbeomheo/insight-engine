@@ -28,7 +28,7 @@ export default function NotionConnect() {
 
     setMessage(null);
 
-    const result = await testCall.execute(async () => {
+    await testCall.execute(async () => {
       const res = await fetch(apiUrl('/api/notion/import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -39,6 +39,7 @@ const UrlInput = memo(function UrlInput({
   onRemoveUrl,
   onReorderUrl,
   onToggleSettings,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isLoading,
   onGenerate,
 }: UrlInputProps) {

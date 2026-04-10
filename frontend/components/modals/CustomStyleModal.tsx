@@ -35,6 +35,7 @@ export default function CustomStyleModal() {
     ? customStyles.find((s) => s.id === editingCustomStyleId)
     : null;
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (editing) {
       setName(editing.name);
@@ -46,6 +47,7 @@ export default function CustomStyleModal() {
       setPrompt('');
     }
   }, [editing, customStyleModalOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSave() {
     if (!name.trim()) return toast.error('스타일 이름을 입력하세요.');

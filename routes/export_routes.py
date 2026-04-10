@@ -24,7 +24,7 @@ def export_docx():
             return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
 
         from docx import Document
-        from docx.shared import Pt, Inches
+        from docx.shared import Pt
         from docx.enum.text import WD_ALIGN_PARAGRAPH
 
         include_toc = data.get('include_toc', False)
@@ -118,7 +118,7 @@ def _insert_toc(doc, markdown_text):
         return
 
     # 목차 제목
-    toc_heading = doc.add_heading('목차', level=2)
+    doc.add_heading('목차', level=2)
 
     # 최소 레벨 기준으로 들여쓰기
     min_level = min(h[0] for h in headings)
@@ -138,11 +138,9 @@ def _insert_toc(doc, markdown_text):
 def _markdown_to_docx(doc, markdown_text):
     """마크다운 텍스트를 docx Document에 변환하여 추가합니다."""
     from docx.shared import Pt
-    from docx.oxml.ns import qn
 
     lines = markdown_text.split('\n')
     i = 0
-    in_list = False
     in_table = False
     table_rows = []
 

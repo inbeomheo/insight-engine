@@ -48,7 +48,7 @@ export default function ContentStats({ items }: Props) {
     for (const item of items) {
       byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
       if (item.style) byStyle[item.style] = (byStyle[item.style] ?? 0) + 1;
-      if ((item as any).is_pinned) pinned++;
+      if ((item as unknown as Record<string, unknown>).is_pinned) pinned++;
       if (item.status === 'archived') archived++;
     }
 

@@ -4,8 +4,6 @@ F8-01 ~ F8-25 기능에 대한 REST API 엔드포인트.
 """
 import html
 import re
-import time
-import uuid
 from flask import Blueprint, request, jsonify, Response, current_app
 from utils.responses import sanitize_error_for_client, clamp_query_int
 
@@ -186,7 +184,7 @@ def bulk_action():
             else:
                 results['failed'].append(item_id)
 
-        except Exception as e:
+        except Exception:
             results['failed'].append(item_id)
 
     return _json({

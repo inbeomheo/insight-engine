@@ -7,7 +7,6 @@ import { useResultStore } from '@/stores/resultStore';
 import { toast } from 'sonner';
 import type { Report, StreamEvent } from '@/lib/types';
 import { createReport, responseToReport } from '@/lib/report-factory';
-import { formatTime } from '@/lib/helpers';
 
 interface GenerateState {
   activeCount: number;

@@ -36,7 +36,7 @@ class GoogleSheetsService:
 
             sa = json.loads(self._service_account_json)
             # JWT 생성 (서명은 RSA 필요 — 여기서는 구조만 제공)
-            header = base64.urlsafe_b64encode(
+            base64.urlsafe_b64encode(
                 json.dumps({'alg': 'RS256', 'typ': 'JWT'}).encode()
             ).rstrip(b'=').decode()
             now = int(time.time())
@@ -47,7 +47,7 @@ class GoogleSheetsService:
                 'iat': now,
                 'exp': now + 3600,
             }
-            payload = base64.urlsafe_b64encode(
+            base64.urlsafe_b64encode(
                 json.dumps(claims).encode()
             ).rstrip(b'=').decode()
             logger.info("서비스 계정 JWT 생성 (서명 생략 — 실제 운영 시 RSA 서명 필요)")

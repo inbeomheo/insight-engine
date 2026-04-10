@@ -18,6 +18,7 @@ export default function FusionProgress({ isLoading, isFusion }: FusionProgressPr
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isLoading) { setCurrentStep(0); return; }
     const timers = steps.map((_, i) =>
       setTimeout(() => setCurrentStep(i),

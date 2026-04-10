@@ -162,9 +162,6 @@ def _generate_suggestions(found: List[str], level: str) -> List[str]:
         f'{len(found)}개 카테고리 감지.'
     )
 
-    missing = set(_ALL_CATEGORIES.keys()) - set(found)
-    labels = {k: v['label'] for k, v in _ALL_CATEGORIES.items()}
-
     if 'direct_experience' not in found:
         suggestions.append(
             '"직접 사용해 봤습니다" 등 직접 경험을 명시하세요.'

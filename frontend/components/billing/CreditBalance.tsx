@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useState } from 'react';
-import { Coins, TrendingUp } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiUrl } from '@/lib/api';
 

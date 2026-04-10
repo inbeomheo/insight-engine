@@ -10,7 +10,6 @@ import os
 import time
 import urllib.error
 import urllib.request
-from typing import Optional
 
 from ..plugin_interface import MCPPlugin
 

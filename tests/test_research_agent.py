@@ -1,12 +1,13 @@
-"""리서치 에이전트 + 베이스 에이전트 단위 테스트"""
+"""베이스 프레임워크 에이전트 + 리서치 에이전트 단위 테스트"""
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.agent import BaseAgent, AgentEvent, MAX_ITERATIONS
+from services.agents.base_framework import BaseAgent as FrameworkBaseAgent, AgentEvent, MAX_ITERATIONS
+from services.agents.research_agent import ResearchAgent
 
 
-class ConcreteAgent(BaseAgent):
-    """테스트용 구체 에이전트"""
+class ConcreteAgent(FrameworkBaseAgent):
+    """테스트용 구체 에이전트 (plan/execute/reflect 루프)"""
 
     def __init__(self, plan_result=None, exec_result=None, reflect_result=None):
         super().__init__(name="TestAgent", model="test-model")
@@ -25,7 +26,7 @@ class ConcreteAgent(BaseAgent):
 
 
 class TestBaseAgent(unittest.TestCase):
-    """BaseAgent 단위 테스트"""
+    """FrameworkBaseAgent (plan/execute/reflect 루프) 단위 테스트"""
 
     def test_run_single_iteration(self):
         """단일 반복으로 완료되는 에이전트"""
@@ -36,9 +37,8 @@ class TestBaseAgent(unittest.TestCase):
     def test_run_multiple_iterations(self):
         """여러 반복 후 완료되는 에이전트"""
         call_count = {"n": 0}
-        original_reflect = {"done": False, "feedback": "need more"}
 
-        class MultiIterAgent(BaseAgent):
+        class MultiIterAgent(FrameworkBaseAgent):
             def plan(self, task, context):
                 return {"summary": "plan"}
 
@@ -77,53 +77,69 @@ class TestBaseAgent(unittest.TestCase):
 
 
 class TestResearchAgent(unittest.TestCase):
-    """ResearchAgent 단위 테스트"""
+    """ResearchAgent (파이프라인 패턴: execute(context)) 단위 테스트"""
 
-    @patch('services.agent.research_agent.ai_service')
-    @patch('services.agent.research_agent.search_web')
-    @patch('services.agent.research_agent.crawl_article')
-    def test_plan_generates_queries(self, mock_crawl, mock_search, mock_ai):
-        """plan()이 검색 쿼리를 생성하는지 확인"""
-        mock_ai.create_content.return_value = {"content": "AI, 머신러닝, 딥러닝"}
+    @patch.object(ResearchAgent, '_call_ai')
+    def test_execute_parses_ai_response(self, mock_call_ai):
+        """execute()가 AI 응답을 올바르게 파싱하는지 확인"""
+        mock_call_ai.return_value = '''{
+            "main_topic": "인공지능 트렌드",
+            "key_points": ["GPT 발전", "로컬 LLM 부상", "멀티모달 확산"],
+            "target_audience": "개발자",
+            "tone": "교육적",
+            "search_query": "AI trends 2026",
+            "summary": "AI 기술의 최신 트렌드를 다룹니다"
+        }'''
 
-        from services.agent.research_agent import ResearchAgent
         agent = ResearchAgent(model="test-model")
-        plan = agent.plan("인공지능 트렌드", {"task": "인공지능 트렌드"})
+        result = agent.execute({
+            'transcript': '인공지능의 발전은 놀라울 정도입니다...',
+            'style': 'blog_seo',
+        })
 
-        self.assertIn("queries", plan)
-        self.assertTrue(len(plan["queries"]) > 0)
+        self.assertEqual(result['agent'], 'research')
+        self.assertEqual(result['main_topic'], '인공지능 트렌드')
+        self.assertEqual(len(result['key_points']), 3)
 
-    @patch('services.agent.research_agent.ai_service')
-    @patch('services.agent.research_agent.search_web')
-    @patch('services.agent.research_agent.crawl_article')
-    def test_execute_collects_sources(self, mock_crawl, mock_search, mock_ai):
-        """execute()가 소스를 수집하는지 확인"""
-        mock_search.return_value = [
-            {"title": "Test Article", "url": "https://example.com/1"},
-        ]
-        mock_crawl.return_value = "Test article content..."
-        mock_ai.create_content.return_value = {"content": "요약된 내용"}
-
-        from services.agent.research_agent import ResearchAgent
+    @patch.object(ResearchAgent, '_call_ai')
+    def test_execute_handles_empty_transcript(self, mock_call_ai):
+        """자막이 비어있으면 빈 결과 반환"""
         agent = ResearchAgent(model="test-model")
-        result = agent.execute({"queries": ["AI trend"]})
+        result = agent.execute({'transcript': '', 'style': 'blog_seo'})
 
-        self.assertTrue(len(result["sources"]) > 0)
-        self.assertEqual(result["sources"][0]["title"], "Test Article")
+        self.assertEqual(result['agent'], 'research')
+        self.assertEqual(result['main_topic'], '')
+        self.assertEqual(result['key_points'], [])
+        # AI 호출이 없어야 함
+        mock_call_ai.assert_not_called()
 
-    def test_reflect_good_quality(self):
-        """소스가 충분하면 done=True"""
-        from services.agent.research_agent import ResearchAgent
+    @patch.object(ResearchAgent, '_call_ai')
+    def test_execute_handles_ai_failure(self, mock_call_ai):
+        """AI 호출 실패 시 폴백 결과 반환"""
+        mock_call_ai.side_effect = Exception("API 오류")
+
         agent = ResearchAgent(model="test-model")
-        result = agent.reflect({"sources": [{"a": 1}, {"b": 2}, {"c": 3}]})
-        self.assertTrue(result["done"])
+        result = agent.execute({
+            'transcript': '테스트 자막 내용입니다',
+            'style': 'summary',
+        })
 
-    def test_reflect_poor_quality(self):
-        """소스가 없으면 done=False"""
-        from services.agent.research_agent import ResearchAgent
+        self.assertEqual(result['agent'], 'research')
+        self.assertEqual(result['main_topic'], '알 수 없음')
+
+    @patch.object(ResearchAgent, '_call_ai')
+    def test_execute_returns_empty_web_results_without_search_query(self, mock_call_ai):
+        """검색 쿼리가 없으면 웹 검색 결과가 비어있음"""
+        mock_call_ai.return_value = '{"main_topic": "테스트", "key_points": [], "target_audience": "", "tone": "", "search_query": "", "summary": "요약"}'
+
         agent = ResearchAgent(model="test-model")
-        result = agent.reflect({"sources": []})
-        self.assertFalse(result["done"])
+        result = agent.execute({
+            'transcript': '테스트 자막',
+            'style': 'blog_seo',
+        })
+
+        self.assertEqual(result['web_results'], [])
+        self.assertEqual(result['web_context'], '')
 
 
 if __name__ == '__main__':

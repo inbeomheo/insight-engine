@@ -222,10 +222,8 @@ from routes.generation_helpers import (
     _handle_short_content_bypass, _handle_cache_hit,
     _call_ai_with_comments, _save_and_respond,
     _process_single_url,
-    _get_style_prompt, _get_style_label,
-    _handle_direct_text, _handle_audio_upload,
+    _get_style_prompt, _handle_direct_text, _handle_audio_upload,
     _handle_document_upload, _handle_web_source,
-    _apply_output_format,
 )
 
 
@@ -1160,7 +1158,7 @@ def text_to_speech():
     응답:
         audio/mpeg 파일 스트림
     """
-    from config import TTS_ENABLED, TTS_DEFAULT_VOICE, TTS_MAX_CHARS
+    from config import TTS_DEFAULT_VOICE, TTS_MAX_CHARS
     from services.media.tts_service import TTSService
 
     data = request.get_json(silent=True) or {}
@@ -1368,7 +1366,7 @@ def capture_speech():
 @require_auth
 def capture_merge():
     """여러 캡처 결과를 병합"""
-    from services.content.handsfree_capture_service import capture_speech as do_capture, merge_captures, CapturedText
+    from services.content.handsfree_capture_service import capture_speech as do_capture, merge_captures
     data = request.get_json(silent=True) or {}
     texts = data.get('texts', [])
     if not texts:

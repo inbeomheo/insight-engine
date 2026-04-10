@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from services.data.supabase_service import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, api_error_from_exception, sanitize_error_for_client, sanitize_path, clamp_query_int, validate_content_length
+from utils.responses import handle_error, sanitize_error_for_client, sanitize_path, clamp_query_int, validate_content_length
 
 
 def _sanitize_generation_error(error: Exception | str, fallback_message: str) -> str:

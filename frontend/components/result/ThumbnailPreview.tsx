@@ -30,7 +30,7 @@ export default function ThumbnailPreview({ title, keywords = [] }: ThumbnailPrev
         return;
       }
       setImageBase64(data.image_base64);
-    } catch (e) {
+    } catch {
       setError('썸네일 생성 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -67,6 +67,7 @@ export default function ThumbnailPreview({ title, keywords = [] }: ThumbnailPrev
 
       {imageBase64 && (
         <div className="space-y-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`data:image/png;base64,${imageBase64}`}
             alt="AI 생성 썸네일"

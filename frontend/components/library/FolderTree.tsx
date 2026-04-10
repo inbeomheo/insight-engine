@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Folder, FolderOpen, Plus, Trash2, ChevronRight, ChevronDown, FileText } from 'lucide-react';
+import { Folder, FolderOpen, Plus, Trash2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 
@@ -20,6 +20,7 @@ interface FolderTreeProps {
 /** 폴더/카테고리 트리 사이드바 (F5-11) */
 export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderTreeProps) {
   const [folders, setFolders] = useState<FolderItem[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -38,6 +39,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFolders();
   }, [loadFolders]);
 
@@ -75,6 +77,7 @@ export default function FolderTree({ selectedFolderId, onSelectFolder }: FolderT
     }
   }, [selectedFolderId, onSelectFolder, loadFolders]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const toggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);

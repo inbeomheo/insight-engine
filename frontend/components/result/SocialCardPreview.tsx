@@ -28,6 +28,7 @@ export default function SocialCardPreview({ title, description }: SocialCardPrev
     <div className="mt-3 rounded-xl border border-border/50 overflow-hidden bg-muted/20">
       {/* 미리보기 이미지 */}
       <div className="aspect-[1200/630] bg-slate-900 relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={ogUrl}
           alt="소셜 카드 미리보기"

@@ -8,7 +8,6 @@ from datetime import datetime, timedelta, timezone
 
 from services.data.supabase_service import is_supabase_enabled, get_supabase
 from services.core.logging_config import ServiceLogger
-import logging
 
 logger = ServiceLogger('TrialService')
 

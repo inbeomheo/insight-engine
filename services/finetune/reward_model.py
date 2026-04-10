@@ -8,7 +8,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,6 @@ class RuleBasedRewardModel:
         scores['forbidden_penalty'] = max(0.0, 1.0 - forbidden_count * 0.2)
 
         # 4. 한국어 비율
-        import unicodedata
         korean_chars = sum(1 for c in content if '\uAC00' <= c <= '\uD7A3')
         total_alpha = sum(1 for c in content if c.isalpha())
         scores['korean_ratio'] = korean_chars / max(1, total_alpha)

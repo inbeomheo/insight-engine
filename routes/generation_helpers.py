@@ -8,7 +8,6 @@ import uuid
 from flask import current_app, g, jsonify
 
 from services.core import ai_service, content_service
-from services.core.content_service import clear_cache
 from services.data.supabase_service import save_history
 from services.usage.usage_decorator import get_usage_for_response
 from services.platform.webhook_service import WebhookService
@@ -73,7 +72,6 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
     """오디오 파일 → Whisper 전사 → 콘텐츠 생성."""
     import os
     import tempfile
-    from flask import request
     from services.transcript.whisper_service import transcribe_audio, _cleanup_file
 
     whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
@@ -694,7 +692,6 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         params.get('max_chars'),
     )
 
-    from routes.blog_routes import _get_style_label
     return jsonify({
         **result,
         "id": report_id,

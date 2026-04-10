@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, Check, CheckCheck, X, FileText, Calendar, Users, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCheck, X, FileText, Calendar, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 
@@ -60,6 +60,7 @@ export default function NotificationCenter() {
 
   // 30초마다 알림 폴링
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNotifications();
     pollRef.current = setInterval(loadNotifications, 30000);
     return () => clearInterval(pollRef.current);
@@ -96,7 +97,7 @@ export default function NotificationCenter() {
   }, []);
 
   // 상대 시간 포맷
-  const formatTime = (dateStr: string) => {
+  const formatTime = useCallback((dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return '방금';
@@ -104,7 +105,7 @@ export default function NotificationCenter() {
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}시간 전`;
     return `${Math.floor(hours / 24)}일 전`;
-  };
+  }, []);
 
   return (
     <div className="relative">
@@ -132,7 +133,7 @@ export default function NotificationCenter() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-2 w-[360px] bg-white dark:bg-zinc-800 border border-border/60
                           rounded-xl shadow-xl z-50 overflow-hidden"
-               role="menu" aria-expanded={open}>
+               role="listbox" aria-expanded={open}>
             {/* 헤더 */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
               <span className="text-sm font-semibold">알림</span>

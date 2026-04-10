@@ -32,4 +32,9 @@ __all__ = [
     'FrameworkBaseAgent',
     'AgentEvent',
     'AgentOrchestrator',
+    'EVENT_PLAN',
+    'EVENT_EXECUTE',
+    'EVENT_REFLECT',
+    'EVENT_DONE',
+    'EVENT_ERROR',
 ]

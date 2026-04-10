@@ -4,7 +4,6 @@
 콘텐츠를 단락 단위로 분리하여 발행 전 인라인 편집 기능을 제공합니다.
 편집 이력을 메모리에 보관하여 실행 취소(undo)를 지원합니다.
 """
-import logging
 import html as html_lib
 import re
 from ..mcp_apps import BaseMCPApp

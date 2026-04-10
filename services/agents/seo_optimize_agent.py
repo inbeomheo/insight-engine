@@ -6,7 +6,6 @@ SEO 자동 최적화 에이전트 — 키워드 밀도, H2/H3 구조, 내부링�
 """
 import logging
 import re
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 

@@ -30,8 +30,11 @@ class AICacheService:
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
-        """스레드별 + 인스턴스별 연결을 캐싱하여 매 요청마다 connect() 호출 방지"""
-        attr = f'conn_{id(self)}'
+        """스레드별 + 인스턴스별 연결을 캐싱하여 매 요청마다 connect() 호출 방지.
+
+        db_path 해시 기반 키를 사용하여 id() 재사용으로 인한 stale 연결 문제를 방지한다.
+        """
+        attr = f'conn_{hashlib.md5(self.db_path.encode()).hexdigest()}'
         conn = getattr(_local, attr, None)
         if conn is None:
             conn = sqlite3.connect(self.db_path, timeout=5.0, check_same_thread=False)
@@ -190,7 +193,7 @@ class AICacheService:
             if video_id:
                 cursor = conn.execute("DELETE FROM ai_cache WHERE video_id = ?", (video_id,))
             else:
-                cursor = conn.execute("DELETE FROM ai_cache")
+                cursor = conn.execute("DELETE FROM ai_cache WHERE 1=1")
             return cursor.rowcount
 
     def purge_expired(self) -> int:

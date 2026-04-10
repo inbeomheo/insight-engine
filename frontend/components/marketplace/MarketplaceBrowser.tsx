@@ -42,6 +42,7 @@ export default function MarketplaceBrowser() {
 
   useEffect(() => {
     fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
 
   const handleDownload = async (templateId: string) => {

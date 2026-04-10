@@ -86,6 +86,7 @@ export function GraphVisualization({
   useEffect(() => {
     if (!data.nodes.length) return;
     const pos = simpleLayout(data.nodes, data.edges, width, height);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPositions(pos);
   }, [data, width, height]);
 
