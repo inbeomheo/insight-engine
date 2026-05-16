@@ -133,14 +133,32 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Resolve Docker image tags
+        id: docker-meta
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            {
+              echo 'tags<<EOF'
+              echo "insight-engine:pr-${{ github.event.pull_request.number }}"
+              echo "insight-engine:${{ github.sha }}"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo 'tags<<EOF'
+              echo "${DOCKER_USERNAME}/insight-engine:latest"
+              echo "${DOCKER_USERNAME}/insight-engine:${{ github.sha }}"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:latest
-            ${{ secrets.DOCKER_USERNAME }}/insight-engine:${{ github.sha }}
+          tags: ${{ steps.docker-meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
