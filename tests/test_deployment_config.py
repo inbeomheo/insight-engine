@@ -79,3 +79,12 @@ def test_ci_triggers_include_repository_default_branch():
 
     assert 'master' in workflow[True]['push']['branches']
     assert 'master' in workflow[True]['pull_request']['branches']
+
+
+def test_ci_dependency_files_include_imported_test_runtime_modules():
+    requirements = (ROOT / 'requirements.txt').read_text(encoding='utf-8').lower()
+    dev_requirements = (ROOT / 'requirements-dev.txt').read_text(encoding='utf-8').lower()
+
+    assert 'flask-cors' in requirements
+    assert 'claude-code-sdk' in dev_requirements
+    assert 'playwright' in dev_requirements
