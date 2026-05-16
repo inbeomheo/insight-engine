@@ -331,25 +331,49 @@ cd frontend && npx tsc --noEmit
 
 ## Deployment
 
-### Docker
+> **프로덕션 배포 전 필수**: [`docs/PRODUCTION_DEPLOYMENT.md`](docs/PRODUCTION_DEPLOYMENT.md) 체크리스트 확인 (시크릿 로테이션, gunicorn, Redis, Sentry, CSP, 스케줄러 분리).
+
+### Docker Compose (권장)
+
+```bash
+# 1. 환경변수 준비 — 로컬 .env가 노출되었다고 가정하고 모든 키 새로 발급
+cp .env.example .env.production
+$EDITOR .env.production  # 새 키 입력
+
+# 2. 빌드 + 기동 (backend × N, scheduler × 1, redis, nginx)
+docker-compose --env-file .env.production up -d --build
+
+# 3. 헬스체크
+curl -f http://localhost:5001/health
+```
+
+### Single Container
 
 ```bash
 docker build -t insight-engine .
-docker run -p 5001:5001 --env-file .env insight-engine
+docker run -p 5001:5001 --env-file .env.production \
+  -e FLASK_ENV=production \
+  -e REDIS_URL=redis://host.docker.internal:6379/0 \
+  insight-engine
 ```
 
 ### Railway
 
 1. GitHub 저장소 연결
-2. Variables 탭에서 환경변수 설정
-3. 자동 배포
+2. Variables 탭에서 환경변수 설정 — `FLASK_ENV=production`, `REDIS_URL`, `ENCRYPTION_SECRET`, `SENTRY_DSN` 포함
+3. Redis 플러그인 추가 → `REDIS_URL` 자동 주입
+4. 자동 배포 (Dockerfile CMD = gunicorn)
 
-### Manual
+### Bare metal
 
 ```bash
 export FLASK_ENV=production
-export FLASK_DEBUG=0
-gunicorn app:app -b 0.0.0.0:5001
+export REDIS_URL=redis://localhost:6379/0
+export ENCRYPTION_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+# 메인 워커 (HTTP 트래픽)
+RUN_SCHEDULER=0 gunicorn -w 4 -k gthread --threads 8 -b 0.0.0.0:5001 app:app
+# 별도 프로세스: 스케줄러 단일 인스턴스
+RUN_SCHEDULER=1 gunicorn -w 1 -k gthread --threads 2 -b 127.0.0.1:5002 app:app
 ```
 
 ---

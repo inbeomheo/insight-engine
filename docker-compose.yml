@@ -16,7 +16,24 @@ services:
     image: insight-engine-backend:latest
     container_name: insight-backend
     restart: unless-stopped
-    command: ["python", "app.py"]
+    # gunicorn: 멀티 워커 + 스레드 — Flask dev server는 프로덕션에서 사용 금지
+    command:
+      - gunicorn
+      - "-w"
+      - "4"
+      - "-k"
+      - gthread
+      - "--threads"
+      - "8"
+      - "--timeout"
+      - "120"
+      - "-b"
+      - "0.0.0.0:5001"
+      - "--access-logfile"
+      - "-"
+      - "--error-logfile"
+      - "-"
+      - "app:app"
     ports:
       - "5001:5001"
     environment:
@@ -28,7 +45,11 @@ services:
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - REDIS_URL=redis://redis:6379/0
       - CHROMA_DB_PATH=/app/data/chroma_db
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      # 스케줄러는 별도 단일 워커 컨테이너(scheduler)에서만 실행
+      - RUN_SCHEDULER=0
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
     volumes:
       - app_data:/app/data
       - app_cache:/app/cache
@@ -45,6 +66,38 @@ services:
     networks:
       - insight-network
 
+  # 예약 발행 스케줄러 — 단일 워커로 실행되는 전용 컨테이너
+  # 멀티 워커 환경에서 APScheduler 중복 실행을 방지하기 위해 분리됨
+  scheduler:
+    build:
+      context: .
+      target: final
+    image: insight-engine-backend:latest
+    container_name: insight-scheduler
+    restart: unless-stopped
+    command: ["gunicorn", "-w", "1", "-k", "gthread", "--threads", "2", "--timeout", "300", "-b", "0.0.0.0:5001", "app:app"]
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - RUN_SCHEDULER=1
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - ZHIPUAI_API_KEY=${ZHIPUAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_DB_PATH=/app/data/chroma_db
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    volumes:
+      - app_data:/app/data
+      - app_cache:/app/cache
+      - app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - insight-network
+
   # Next.js 프론트엔드
   frontend:
     build:
@@ -53,7 +106,7 @@ services:
     image: insight-engine-frontend:latest
     container_name: insight-frontend
     restart: unless-stopped
-    command: ["node", "frontend/node_modules/.bin/next", "start", "--port", "3000"]
+    command: ["node", "node_modules/.bin/next", "start", "--port", "3000"]
     working_dir: /app/frontend
     ports:
       - "3000:3000"

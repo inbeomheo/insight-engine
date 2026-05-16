@@ -14,6 +14,7 @@ const Header = memo(function Header() {
     <header className="h-14 border-b border-border/60 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm" role="banner">
       <div className="flex items-center gap-3">
         <Button
+          id="menu-toggle-btn"
           variant="ghost"
           size="icon"
           className="h-9 w-9 hover:bg-accent"
@@ -34,6 +35,7 @@ const Header = memo(function Header() {
 
       <div className="flex items-center gap-1">
         <Button
+          id="settings-open-btn"
           variant="ghost"
           size="icon"
           className="h-9 w-9 hover:bg-accent"

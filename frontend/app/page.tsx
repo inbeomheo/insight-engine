@@ -302,6 +302,7 @@ export default function Home() {
                 <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
                   {generationMode === 'individual' && (
                     <Button
+                      id="run-analysis-btn"
                       onClick={handleGenerate}
                       className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"
@@ -340,6 +341,7 @@ export default function Home() {
                   {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
                   {urls.length === 1 && generationMode !== 'individual' && (
                     <Button
+                      id="run-analysis-btn"
                       onClick={handleGenerate}
                       className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
                       size="lg"

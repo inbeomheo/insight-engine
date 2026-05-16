@@ -164,7 +164,7 @@ export default function Sidebar() {
       >
         {/* 새 분석 */}
         <div className="p-3 pb-2">
-          <Button className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm" onClick={handleNewAnalysis}>
+          <Button id="new-analysis-btn" className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm" onClick={handleNewAnalysis}>
             <Plus className="h-4 w-4" />
             <span className="font-medium">{t('sidebar.newAnalysis')}</span>
           </Button>

@@ -103,6 +103,29 @@ def _check_rss_subscriptions():
         logger.error(f"RSS 구독 확인 실패: {e}")
 
 
+def _auto_backup():
+    """자동 백업 — AUTO_BACKUP_INTERVAL_HOURS 환경변수로 활성화."""
+    from services.data import backup_service
+
+    try:
+        result = backup_service.create_backup(triggered_by='auto')
+        if result.get('item_count', 0) > 0:
+            logger.info(
+                "자동 백업 완료: %s (%d items, %d bytes)",
+                result.get('filename'), result['item_count'], result['size_bytes']
+            )
+    except Exception as e:
+        logger.error("자동 백업 실패: %s", e, exc_info=True)
+
+
+def is_scheduler_running() -> bool:
+    """현재 프로세스에서 스케줄러가 실행 중인지 반환 (readiness probe 용)."""
+    try:
+        return bool(scheduler.running)
+    except Exception:
+        return False
+
+
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     try:
@@ -147,8 +170,27 @@ def start_scheduler(app):
             id='rss_subscription_checker',
             replace_existing=True,
         )
+
+        # 자동 백업 — AUTO_BACKUP_INTERVAL_HOURS 설정 시만 활성화
+        import os as _os
+        backup_hours_str = _os.getenv('AUTO_BACKUP_INTERVAL_HOURS', '').strip()
+        backup_job_msg = ''
+        if backup_hours_str:
+            try:
+                backup_hours = max(1, int(backup_hours_str))
+                scheduler.add_job(
+                    _with_context(_auto_backup),
+                    'interval',
+                    hours=backup_hours,
+                    id='auto_backup',
+                    replace_existing=True,
+                )
+                backup_job_msg = f', 자동 백업: {backup_hours}시간'
+            except ValueError:
+                logger.warning("AUTO_BACKUP_INTERVAL_HOURS 값 무효: %s", backup_hours_str)
+
         scheduler.start()
-        logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)")
+        logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분%s)", backup_job_msg)
     except Exception as e:
         logger.error("start_scheduler 실패: %s", e, exc_info=True)
         return None

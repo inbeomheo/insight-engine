@@ -135,6 +135,145 @@ def health():
     return jsonify({'status': 'healthy', 'environment': env, 'api_version': 'v2.0', 'request_count': get_request_count(), 'error_count': get_error_count(), 'error_rate': get_error_rate(), 'memory_usage_mb': mem_mb}), 200
 
 
+@blog_bp.route('/ready')
+def ready():
+    """Readiness probe — 의존성(Redis, Supabase, ChromaDB) 가용성 검증.
+
+    K8s/Docker compose에서 트래픽 라우팅 결정에 사용. `/health`는 liveness
+    (프로세스가 살아있는지)만 보장하고, `/ready`는 실제 요청을 처리할 준비가
+    되었는지 확인합니다.
+
+    Returns:
+        200: 모든 필수 의존성 OK
+        503: 하나 이상의 의존성이 실패 (라우트 응답 본문에 상세)
+    """
+    checks = {}
+    is_ready = True
+
+    # Redis (Rate limiter 백엔드) — REDIS_URL이 설정된 경우만 검증
+    redis_url = os.getenv('REDIS_URL', '').strip()
+    if redis_url:
+        try:
+            import redis as _redis
+            client = _redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+            client.ping()
+            checks['redis'] = 'ok'
+        except Exception as e:
+            checks['redis'] = f'fail: {type(e).__name__}'
+            is_ready = False
+    else:
+        checks['redis'] = 'skipped (REDIS_URL unset)'
+
+    # Supabase — 활성화된 경우만 검증, 미활성은 정상
+    try:
+        from services.data.supabase_service import is_supabase_enabled
+        if is_supabase_enabled():
+            checks['supabase'] = 'ok'
+        else:
+            checks['supabase'] = 'disabled'
+    except Exception as e:
+        checks['supabase'] = f'fail: {type(e).__name__}'
+        # Supabase는 옵셔널이므로 ready 상태에는 영향 안 줌 (로컬 모드 허용)
+
+    # ChromaDB 디렉토리 — RAG_ENABLED일 때만 검증
+    if os.getenv('RAG_ENABLED', 'false').lower() == 'true':
+        chroma_path = os.getenv('CHROMA_DB_PATH', './data/chroma_db')
+        if os.path.isdir(chroma_path) and os.access(chroma_path, os.W_OK):
+            checks['chroma_db'] = 'ok'
+        else:
+            checks['chroma_db'] = f'fail: path not writable ({chroma_path})'
+            is_ready = False
+    else:
+        checks['chroma_db'] = 'disabled'
+
+    # 스케줄러 상태 (이 프로세스가 스케줄러 호스트인 경우)
+    if os.getenv('RUN_SCHEDULER', '').lower() in ('1', 'true', 'yes'):
+        try:
+            from services.data.scheduler_worker import is_scheduler_running
+            checks['scheduler'] = 'running' if is_scheduler_running() else 'stopped'
+            if checks['scheduler'] == 'stopped':
+                is_ready = False
+        except (ImportError, AttributeError):
+            checks['scheduler'] = 'unknown'
+
+    status_code = 200 if is_ready else 503
+    return jsonify({'ready': is_ready, 'checks': checks}), status_code
+
+
+@blog_bp.route('/metrics')
+def metrics():
+    """Prometheus 스타일 metrics 엔드포인트.
+
+    외부 의존성(prometheus-client) 없이 stdlib만으로 text/plain format 생성.
+    Prometheus, Grafana Agent, Datadog 등에서 스크랩 가능.
+
+    환경변수 METRICS_AUTH_TOKEN 설정 시 Authorization: Bearer <token> 요구.
+    """
+    expected_token = os.getenv('METRICS_AUTH_TOKEN', '').strip()
+    if expected_token:
+        auth = request.headers.get('Authorization', '')
+        if not auth.startswith('Bearer ') or auth[7:] != expected_token:
+            return ('# unauthorized\n', 401, {'Content-Type': 'text/plain; charset=utf-8'})
+
+    total_requests = get_request_count()
+    total_errors = get_error_count()
+    error_rate = get_error_rate()
+    active = get_active_requests()
+
+    # 큐 상태
+    queue_summary = {}
+    try:
+        from services.data.publish_queue_service import publish_queue_service
+        queue_summary = publish_queue_service.get_status_summary()
+    except Exception:
+        pass
+
+    # 프로세스 정보
+    import sys as _sys
+    py_version = f"{_sys.version_info.major}.{_sys.version_info.minor}"
+
+    lines = [
+        '# HELP insight_requests_total HTTP 요청 누적 수',
+        '# TYPE insight_requests_total counter',
+        f'insight_requests_total {total_requests}',
+        '# HELP insight_errors_total 5xx 응답 누적 수',
+        '# TYPE insight_errors_total counter',
+        f'insight_errors_total {total_errors}',
+        '# HELP insight_error_rate 누적 에러 비율 (0.0-1.0)',
+        '# TYPE insight_error_rate gauge',
+        f'insight_error_rate {error_rate}',
+        '# HELP insight_active_requests 현재 처리 중인 요청 수',
+        '# TYPE insight_active_requests gauge',
+        f'insight_active_requests {active}',
+    ]
+
+    # 발행 큐 상태별 게이지
+    if queue_summary:
+        lines.append('# HELP insight_publish_queue_items 발행 큐 상태별 항목 수')
+        lines.append('# TYPE insight_publish_queue_items gauge')
+        for status in ('queued', 'publishing', 'success', 'failed'):
+            count = queue_summary.get(status, 0)
+            lines.append(f'insight_publish_queue_items{{status="{status}"}} {count}')
+        lines.append(f'insight_publish_queue_total {queue_summary.get("total", 0)}')
+
+    # 메모리 사용량 (옵션)
+    try:
+        import resource
+        mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        lines.append('# HELP insight_memory_rss_bytes 프로세스 RSS 메모리 사용량 (bytes)')
+        lines.append('# TYPE insight_memory_rss_bytes gauge')
+        lines.append(f'insight_memory_rss_bytes {mem_kb * 1024}')
+    except (ImportError, Exception):
+        pass
+
+    lines.append('# HELP insight_build_info 빌드 정보 (Python 버전)')
+    lines.append('# TYPE insight_build_info gauge')
+    lines.append(f'insight_build_info{{python_version="{py_version}"}} 1')
+
+    body = '\n'.join(lines) + '\n'
+    return (body, 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'})
+
+
 @blog_bp.route('/')
 def home():
     """API 서버 상태를 반환합니다. 프론트엔드는 Next.js에서 제공."""
@@ -661,39 +800,6 @@ def api_clear_ai_cache():
     deleted = current_app.ai_cache.clear(video_id)
     return jsonify({'success': True, 'deleted': deleted})
 
-
-# === 피드백 (F3-06) ===
-
-@blog_bp.route('/api/feedback', methods=['POST'])
-def api_feedback():
-    """사용자 피드백(좋아요/싫어요)을 저장합니다."""
-    data = request.get_json(silent=True) or {}
-    style_id = data.get('style_id', '')
-    content_id = data.get('content_id', '')
-    rating = data.get('rating', '')
-    comment = data.get('comment')
-
-    if not style_id or not content_id or rating not in ('like', 'dislike'):
-        return jsonify({'error': 'style_id, content_id, rating(like/dislike) 필수'}), 400
-
-    from services.data.prompt_optimizer_service import save_feedback
-    result = save_feedback(
-        style_id=style_id,
-        content_id=content_id,
-        rating=rating,
-        comment=comment,
-    )
-    return jsonify(result)
-
-
-@blog_bp.route('/api/feedback/stats/<style_id>', methods=['GET'])
-def api_feedback_stats(style_id: str):
-    """스타일별 피드백 통계를 반환합니다."""
-    from services.data.prompt_optimizer_service import get_feedback_stats
-    return jsonify(get_feedback_stats(style_id))
-
-
-# === 팩트체크 (F3-07) ===
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
 def api_fact_check():

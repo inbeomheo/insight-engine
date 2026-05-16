@@ -4,6 +4,8 @@
 APScheduler를 통해 일정 주기로 자동 실행합니다.
 """
 import json
+import os
+import re
 import uuid
 import time
 import logging
@@ -15,9 +17,23 @@ from services.data import content_library_service
 logger = logging.getLogger(__name__)
 
 BACKUP_DIR = Path('data/backups')
-MAX_BACKUPS = 30  # 최대 보관 백업 수
+MAX_BACKUPS = int(os.getenv('MAX_BACKUPS', '30'))  # 최대 보관 백업 수 (환경변수로 조정 가능)
+
+# Path Traversal 방어 — backup_YYYYMMDD_HHMMSS_xxxxxxxx.json 형식만 허용
+_BACKUP_FILENAME_PATTERN = re.compile(r'^backup_\d{8}_\d{6}_[a-f0-9]{8}\.json$')
 
 _lock = Lock()
+
+
+def _sanitize_filename(filename: str) -> str:
+    """백업 파일명 형식 검증 (Path Traversal 방어).
+
+    Raises:
+        ValueError: 형식이 일치하지 않으면 예외 발생
+    """
+    if not filename or not _BACKUP_FILENAME_PATTERN.match(filename):
+        raise ValueError(f'유효하지 않은 백업 파일명: {filename[:50] if filename else None}')
+    return filename
 
 
 def _now() -> str:
@@ -95,10 +111,18 @@ def list_backups() -> list[dict]:
 def restore_backup(filename: str) -> dict:
     """백업 파일에서 항목을 복원합니다 (덮어쓰기).
 
+    파일명은 Path Traversal 방어를 위해 정규 패턴(backup_*_*.json)만 허용.
+
     Returns:
         {'restored': N, 'skipped': N}
     """
-    path = BACKUP_DIR / filename
+    safe_name = _sanitize_filename(filename)
+    path = BACKUP_DIR / safe_name
+    # 추가 방어: 정규화 후 BACKUP_DIR 내부 경로인지 재확인
+    try:
+        path.resolve().relative_to(BACKUP_DIR.resolve())
+    except ValueError:
+        raise ValueError(f'백업 디렉토리 밖 경로 차단: {filename}')
     if not path.exists():
         raise FileNotFoundError(f'백업 파일 없음: {filename}')
 
@@ -149,7 +173,11 @@ def _prune_old_backups() -> None:
 
 def get_backup_info(filename: str) -> Optional[dict]:
     """백업 파일의 메타데이터를 반환합니다."""
-    path = BACKUP_DIR / filename
+    try:
+        safe_name = _sanitize_filename(filename)
+    except ValueError:
+        return None
+    path = BACKUP_DIR / safe_name
     if not path.exists():
         return None
     payload = json.loads(path.read_text(encoding='utf-8'))

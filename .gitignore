@@ -47,10 +47,13 @@ mockup-*.html
 CODE_REVIEW.html
 
 # Runtime data (사용자 데이터, DB, 로그)
-data/
+# /data — 루트의 data/만 무시 (services/data/ 같은 코드 디렉토리는 추적 유지)
+/data/
 *.sqlite3
 *.jsonl
 publish_queue.json
+publish_queue.json.lock
+publish_queue.json.tmp
 
 # Logs & debug
 *.log
@@ -73,6 +76,7 @@ nul
 # Coverage / test artifacts
 .coverage
 coverage.json
+cov_report.json
 htmlcov/
 
 # autoresearch 실험 결과

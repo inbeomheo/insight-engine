@@ -7,10 +7,11 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 COPY frontend/ ./
 RUN npm run build
+RUN npm prune --omit=dev
 
 # ── 스테이지 2: Python 의존성 ──────────────────────────────────────────────────
 FROM python:3.11-slim AS python-deps
@@ -67,5 +68,6 @@ EXPOSE 5001 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:5001/health || exit 1
 
-# 기본 시작 명령 (docker-compose에서 오버라이드)
-CMD ["python", "app.py"]
+# 기본 시작 명령: gunicorn 프로덕션 WSGI 서버
+# docker-compose 또는 외부 오케스트레이터에서 오버라이드 가능
+CMD ["gunicorn", "-w", "4", "-k", "gthread", "--threads", "8", "--timeout", "120", "-b", "0.0.0.0:5001", "app:app"]

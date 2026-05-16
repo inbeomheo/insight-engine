@@ -22,6 +22,16 @@ _BLOCKED_HOSTNAMES = frozenset({
 })
 
 
+def _build_webhook_payload(event: str, data: dict, now=None) -> dict:
+    """Build the standard webhook payload."""
+    timestamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    return {
+        "event": event,
+        "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "data": data,
+    }
+
+
 def _is_dangerous_ip(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """IP 주소가 사설/루프백/예약/링크로컬인지 검사합니다."""
     if addr.is_private or addr.is_loopback or addr.is_reserved or addr.is_link_local:
@@ -108,11 +118,7 @@ class WebhookService:
         """실제 HTTP POST 전송 (5xx/네트워크 오류만 1회 재시도, 4xx는 즉시 중단)"""
         import time as _time
 
-        payload = {
-            "event": event,
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data": data,
-        }
+        payload = _build_webhook_payload(event, data)
         for attempt in range(2):
             try:
                 resp = requests.post(self.url, json=payload, timeout=self.timeout)
@@ -136,11 +142,10 @@ class WebhookService:
         """웹훅 테스트 전송 (동기, 결과 반환)"""
         if not self.url:
             return {"success": False, "error": "웹훅 URL이 설정되지 않았습니다."}
-        payload = {
-            "event": "webhook.test",
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "data": {"message": "Insight Engine 웹훅 테스트"},
-        }
+        payload = _build_webhook_payload(
+            "webhook.test",
+            {"message": "Insight Engine 웹훅 테스트"},
+        )
         try:
             resp = requests.post(self.url, json=payload, timeout=self.timeout)
             resp.raise_for_status()

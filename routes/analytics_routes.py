@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 
 from extensions import limiter
-from services.data.supabase_service import require_auth
+from services.data.supabase_service import require_auth, require_admin
 from services.analytics.dashboard_service import DashboardService
 from services.analytics.performance_service import PerformanceService
 from services.analytics.cost_tracker_service import CostTrackerService
@@ -66,7 +66,7 @@ def _append_log(message: str) -> None:
 
 # ─── F6-01: 운영 대시보드 고도화 ─────────────────────────────
 @analytics_bp.route('/api/admin/dashboard/extended', methods=['GET'])
-@require_auth
+@require_admin
 def dashboard_extended():
     """운영 대시보드 확장 통계"""
     days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
@@ -79,7 +79,7 @@ def dashboard_extended():
 
 
 @analytics_bp.route('/api/admin/dashboard/record', methods=['POST'])
-@require_auth
+@require_admin
 def dashboard_record():
     """생성 이벤트 기록 (내부 호출용)"""
     data = request.get_json() or {}
@@ -130,7 +130,7 @@ def performance_aggregate():
 
 # ─── F6-05: 비용 추적 ─────────────────────────────────────────
 @analytics_bp.route('/api/admin/costs', methods=['GET'])
-@require_auth
+@require_admin
 def get_costs():
     days = request.args.get('days')
     days_int = safe_int(days, 0) or None
@@ -143,7 +143,7 @@ def get_costs():
 
 # ─── F6-08: ROI 계산기 ───────────────────────────────────────
 @analytics_bp.route('/api/admin/roi', methods=['POST'])
-@require_auth
+@require_admin
 def calculate_roi():
     data = request.get_json() or {}
     result = _roi.calculate_roi(
@@ -236,21 +236,21 @@ def record_behavior():
 
 
 @analytics_bp.route('/api/admin/behavior/features', methods=['GET'])
-@require_auth
+@require_admin
 def feature_frequency():
     days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     return jsonify(_user_behavior.get_feature_frequency(days))
 
 
 @analytics_bp.route('/api/admin/behavior/sessions', methods=['GET'])
-@require_auth
+@require_admin
 def session_stats():
     return jsonify(_user_behavior.get_session_stats())
 
 
 # ─── F6-12: 품질 트렌드 ──────────────────────────────────────
 @analytics_bp.route('/api/admin/quality/trend', methods=['GET'])
-@require_auth
+@require_admin
 def quality_trend():
     days = clamp_query_int(request.args.get('days'), default=30, min_val=1, max_val=365)
     granularity = request.args.get('granularity', 'day')
@@ -264,7 +264,7 @@ def quality_trend():
 
 # ─── F6-13: 스타일별 성과 비교 ───────────────────────────────
 @analytics_bp.route('/api/admin/styles/performance', methods=['GET'])
-@require_auth
+@require_admin
 def style_performance():
     return jsonify({
         'comparison': _style_perf.get_comparison(),
@@ -274,7 +274,7 @@ def style_performance():
 
 # ─── F6-14: 모델별 성능 비교 ─────────────────────────────────
 @analytics_bp.route('/api/admin/models/benchmark', methods=['GET'])
-@require_auth
+@require_admin
 def model_benchmark():
     metric = request.args.get('metric', 'avg_quality')
     return jsonify({
@@ -285,7 +285,7 @@ def model_benchmark():
 
 # ─── F6-15: 실시간 모니터링 ──────────────────────────────────
 @analytics_bp.route('/api/admin/realtime/status', methods=['GET'])
-@require_auth
+@require_admin
 def realtime_status():
     return jsonify({
         'status': _realtime.get_status(),
@@ -295,14 +295,14 @@ def realtime_status():
 
 # ─── F6-16: 이상 탐지 ────────────────────────────────────────
 @analytics_bp.route('/api/admin/anomalies', methods=['GET'])
-@require_auth
+@require_admin
 def get_anomalies():
     limit = clamp_query_int(request.args.get('limit'), default=50, max_val=200)
     return jsonify(_anomaly.get_anomalies(limit))
 
 
 @analytics_bp.route('/api/admin/anomalies/metric', methods=['POST'])
-@require_auth
+@require_admin
 def record_metric():
     data = request.get_json() or {}
     result = _anomaly.record_metric(
@@ -314,7 +314,7 @@ def record_metric():
 
 # ─── F6-18: 데이터 내보내기 ──────────────────────────────────
 @analytics_bp.route('/api/admin/export-data', methods=['GET'])
-@require_auth
+@require_admin
 def export_data():
     """대시보드 데이터를 CSV 또는 JSON으로 내보내기"""
     fmt = request.args.get('format', 'json')
@@ -351,7 +351,7 @@ def export_data():
 
 # ─── F6-23: 주간 다이제스트 ──────────────────────────────────
 @analytics_bp.route('/api/admin/digest', methods=['POST'])
-@require_auth
+@require_admin
 def generate_digest():
     data = request.get_json() or {}
     generations = data.get('generations', [])
@@ -433,7 +433,7 @@ def recent_logs():
 
 # ─── F4-13: 코호트 분석 ──────────────────────────────────────
 @analytics_bp.route('/api/admin/cohort/event', methods=['POST'])
-@require_auth
+@require_admin
 def cohort_record_event():
     """코호트 이벤트 기록"""
     from services.analytics.cohort_service import cohort_service
@@ -452,7 +452,7 @@ def cohort_record_event():
 
 
 @analytics_bp.route('/api/admin/cohort/retention', methods=['GET'])
-@require_auth
+@require_admin
 def cohort_retention():
     """코호트별 잔존율 조회"""
     from services.analytics.cohort_service import cohort_service
@@ -461,7 +461,7 @@ def cohort_retention():
 
 
 @analytics_bp.route('/api/admin/cohort/ltv', methods=['GET'])
-@require_auth
+@require_admin
 def cohort_ltv():
     """사용자 LTV 집계"""
     from services.analytics.cohort_service import cohort_service
@@ -470,7 +470,7 @@ def cohort_ltv():
 
 # ─── F6-03: Google Analytics 4 ────────────────────────────────
 @analytics_bp.route('/api/admin/ga/pageviews', methods=['GET'])
-@require_auth
+@require_admin
 def ga_page_views():
     """GA4 페이지뷰 조회"""
     from services.analytics.ga_service import GAService
@@ -480,7 +480,7 @@ def ga_page_views():
 
 
 @analytics_bp.route('/api/admin/ga/events', methods=['GET'])
-@require_auth
+@require_admin
 def ga_events():
     """GA4 이벤트 카운트 조회"""
     from services.analytics.ga_service import GAService
@@ -491,7 +491,7 @@ def ga_events():
 
 # ─── F6-04: Google Search Console ─────────────────────────────
 @analytics_bp.route('/api/admin/gsc/search-analytics', methods=['GET'])
-@require_auth
+@require_admin
 def gsc_search_analytics():
     """GSC 검색어별 성과 조회"""
     from services.analytics.gsc_service import GSCService
@@ -502,7 +502,7 @@ def gsc_search_analytics():
 
 
 @analytics_bp.route('/api/admin/gsc/top-pages', methods=['GET'])
-@require_auth
+@require_admin
 def gsc_top_pages():
     """GSC 페이지별 검색 성과"""
     from services.analytics.gsc_service import GSCService
@@ -514,7 +514,7 @@ def gsc_top_pages():
 
 # ─── F4-21: 사용자 세그먼트 ───────────────────────────────────
 @analytics_bp.route('/api/admin/segments/update', methods=['POST'])
-@require_auth
+@require_admin
 def segment_update_stats():
     """사용자 통계 업데이트"""
     from services.analytics.segment_service import segment_service
@@ -528,7 +528,7 @@ def segment_update_stats():
 
 
 @analytics_bp.route('/api/admin/segments/classify/<user_id>', methods=['GET'])
-@require_auth
+@require_admin
 def segment_classify(user_id: str):
     """사용자 세그먼트 분류"""
     from services.analytics.segment_service import segment_service
@@ -537,7 +537,7 @@ def segment_classify(user_id: str):
 
 
 @analytics_bp.route('/api/admin/segments/counts', methods=['GET'])
-@require_auth
+@require_admin
 def segment_counts():
     """세그먼트별 사용자 수 집계"""
     from services.analytics.segment_service import segment_service
@@ -545,7 +545,7 @@ def segment_counts():
 
 
 @analytics_bp.route('/api/admin/segments/<segment_id>/users', methods=['GET'])
-@require_auth
+@require_admin
 def segment_users(segment_id: str):
     """특정 세그먼트 사용자 목록"""
     from services.analytics.segment_service import segment_service
@@ -566,14 +566,14 @@ def _get_trend_monitor():
 
 
 @analytics_bp.route('/api/admin/trends/keywords', methods=['GET'])
-@require_auth
+@require_admin
 def trend_keywords():
     """추적 중인 키워드 목록"""
     return jsonify({'keywords': _get_trend_monitor().get_keywords()})
 
 
 @analytics_bp.route('/api/admin/trends/keywords', methods=['POST'])
-@require_auth
+@require_admin
 def trend_add_keyword():
     """추적 키워드 추가"""
     svc = _get_trend_monitor()
@@ -586,7 +586,7 @@ def trend_add_keyword():
 
 
 @analytics_bp.route('/api/admin/trends/keywords', methods=['DELETE'])
-@require_auth
+@require_admin
 def trend_remove_keyword():
     """추적 키워드 제거"""
     svc = _get_trend_monitor()
@@ -599,7 +599,7 @@ def trend_remove_keyword():
 
 
 @analytics_bp.route('/api/admin/trends/fetch', methods=['POST'])
-@require_auth
+@require_admin
 def trend_fetch():
     """Google Trends 데이터 수집"""
     svc = _get_trend_monitor()
@@ -610,14 +610,14 @@ def trend_fetch():
 
 
 @analytics_bp.route('/api/admin/trends/cached', methods=['GET'])
-@require_auth
+@require_admin
 def trend_cached():
     """캐시된 트렌드 데이터 조회"""
     return jsonify(_get_trend_monitor().get_cached())
 
 
 @analytics_bp.route('/api/admin/trends/rising', methods=['POST'])
-@require_auth
+@require_admin
 def trend_rising():
     """급상승 키워드 조회"""
     svc = _get_trend_monitor()

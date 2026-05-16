@@ -209,6 +209,43 @@ def optional_auth(f: Callable) -> Callable:
         return f(*args, **kwargs)
     return decorated
 
+
+def require_admin(f: Callable) -> Callable:
+    """관리자 권한 데코레이터 — require_auth + is_admin 체크 합본
+
+    Supabase 비활성 환경(개발/로컬)에서는 우회되어 통과하므로 프로덕션에서는
+    반드시 Supabase가 활성화되어 있어야 합니다.
+
+    인증 미통과: 401. 인증은 됐지만 관리자 아님: 403.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # 1) 로컬 모드(Supabase 비활성) — 인증 없이 통과 (개발 편의)
+        if not is_supabase_enabled():
+            g.user_id = None
+            return f(*args, **kwargs)
+
+        # 2) 인증 토큰 검증
+        token = _extract_bearer_token()
+        if not token:
+            return jsonify({'error': '인증이 필요합니다.', 'code': 'AUTH_REQUIRED'}), 401
+
+        result = _validate_token(token)
+        if not result['valid']:
+            return jsonify({'error': result['error'], 'code': result['code']}), 401
+
+        # 3) 관리자 권한 검증
+        user_id = getattr(g, 'user_id', None)
+        if not user_id or not is_admin(user_id):
+            logger.warning(f"관리자 권한 거부: user_id={(user_id or '')[:8]}...")
+            return jsonify({
+                'error': '관리자 권한이 필요합니다.',
+                'code': 'ADMIN_REQUIRED',
+            }), 403
+
+        return f(*args, **kwargs)
+    return decorated
+
 # =============================================
 # 히스토리 CRUD
 # =============================================

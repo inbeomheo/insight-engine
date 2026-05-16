@@ -183,18 +183,31 @@ export default defineConfig({
       : []),
   ],
 
-  /* 테스트 서버 자동 실행 */
-  webServer: {
-    command: 'python app.py',
-    url: 'http://localhost:5001',
-    cwd: '../../', // 프로젝트 루트 디렉토리
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    // 테스트 시 Supabase 인증 비활성화 (로그인 없이 모든 기능 사용)
-    env: {
-      ...process.env,
-      SUPABASE_URL: '',
-      SUPABASE_ANON_KEY: '',
+  webServer: [
+    {
+      command: 'python app.py',
+      url: 'http://localhost:5001',
+      cwd: '../../',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        FLASK_ENV: 'testing',
+        RATE_LIMIT_ENABLED: 'false',
+        SUPABASE_URL: '',
+        SUPABASE_ANON_KEY: '',
+      },
     },
-  },
+    {
+      command: 'npm run dev -- --hostname 127.0.0.1 --port 3000',
+      url: 'http://localhost:3000',
+      cwd: '../../frontend',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_API_URL: 'http://localhost:5001',
+      },
+    },
+  ],
 });

@@ -26,290 +26,254 @@ class WorkspaceService:
         if not is_supabase_enabled():
             return {'error': 'Supabase 연결이 필요합니다.'}
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
-                return {'error': 'Supabase 클라이언트 초기화 실패'}
+        supabase = get_supabase()
+        if not supabase:
+            return {'error': 'Supabase 클라이언트 초기화 실패'}
 
-            def operation():
-                # 워크스페이스 생성
-                result = supabase.table('ie_workspaces').insert({
-                    'name': name,
-                    'owner_id': owner_id,
-                }).execute()
+        def operation():
+            # 워크스페이스 생성
+            result = supabase.table('ie_workspaces').insert({
+                'name': name,
+                'owner_id': owner_id,
+            }).execute()
 
-                if not result.data:
-                    return {'error': '워크스페이스 생성 실패'}
+            if not result.data:
+                return {'error': '워크스페이스 생성 실패'}
 
-                workspace = result.data[0]
+            workspace = result.data[0]
 
-                # owner를 멤버로 자동 추가
-                supabase.table('ie_workspace_members').insert({
-                    'workspace_id': workspace['id'],
-                    'user_id': owner_id,
-                    'role': 'owner',
-                }).execute()
+            # owner를 멤버로 자동 추가
+            supabase.table('ie_workspace_members').insert({
+                'workspace_id': workspace['id'],
+                'user_id': owner_id,
+                'role': 'owner',
+            }).execute()
 
-                return workspace
+            return workspace
 
-            return _db_operation('Workspace create', {'error': '워크스페이스 생성 중 오류'}, operation)
-        except Exception as e:
-            logger.error("create_workspace 실패: %s", e, exc_info=True)
-            return {}
+        return _db_operation('Workspace create', {'error': '워크스페이스 생성 중 오류'}, operation)
 
     def list_workspaces(self, user_id: str) -> list:
         """사용자가 속한 워크스페이스 목록"""
         if not is_supabase_enabled():
             return []
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
+        supabase = get_supabase()
+        if not supabase:
+            return []
+
+        def operation():
+            # 멤버 테이블에서 워크스페이스 ID 조회 후 워크스페이스 정보 가져오기
+            members = supabase.table('ie_workspace_members') \
+                .select('workspace_id, role') \
+                .eq('user_id', user_id) \
+                .execute()
+
+            if not members.data:
                 return []
 
-            def operation():
-                # 멤버 테이블에서 워크스페이스 ID 조회 후 워크스페이스 정보 가져오기
-                members = supabase.table('ie_workspace_members') \
-                    .select('workspace_id, role') \
-                    .eq('user_id', user_id) \
-                    .execute()
+            workspace_ids = [m['workspace_id'] for m in members.data]
+            role_map = {m['workspace_id']: m['role'] for m in members.data}
 
-                if not members.data:
-                    return []
+            workspaces = supabase.table('ie_workspaces') \
+                .select('*') \
+                .in_('id', workspace_ids) \
+                .order('created_at', desc=True) \
+                .execute()
 
-                workspace_ids = [m['workspace_id'] for m in members.data]
-                role_map = {m['workspace_id']: m['role'] for m in members.data}
+            # 역할 정보 추가
+            result = []
+            for ws in (workspaces.data or []):
+                ws['my_role'] = role_map.get(ws['id'], 'viewer')
+                result.append(ws)
 
-                workspaces = supabase.table('ie_workspaces') \
-                    .select('*') \
-                    .in_('id', workspace_ids) \
-                    .order('created_at', desc=True) \
-                    .execute()
+            return result
 
-                # 역할 정보 추가
-                result = []
-                for ws in (workspaces.data or []):
-                    ws['my_role'] = role_map.get(ws['id'], 'viewer')
-                    result.append(ws)
-
-                return result
-
-            return _db_operation('Workspace list', [], operation)
-        except Exception as e:
-            logger.error("list_workspaces 실패: %s", e, exc_info=True)
-            return []
+        return _db_operation('Workspace list', [], operation)
 
     def get_workspace(self, workspace_id: str) -> dict | None:
         """워크스페이스 상세 조회"""
         if not is_supabase_enabled():
             return None
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
-                return None
+        supabase = get_supabase()
+        if not supabase:
+            return None
 
-            def operation():
-                result = supabase.table('ie_workspaces') \
-                    .select('*') \
-                    .eq('id', workspace_id) \
-                    .limit(1) \
-                    .execute()
-                return result.data[0] if result.data else None
+        def operation():
+            result = supabase.table('ie_workspaces') \
+                .select('*') \
+                .eq('id', workspace_id) \
+                .limit(1) \
+                .execute()
+            return result.data[0] if result.data else None
 
-            return _db_operation('Workspace get', None, operation)
-        except Exception as e:
-            logger.error("get_workspace 실패: %s", e, exc_info=True)
-            return {}
+        return _db_operation('Workspace get', None, operation)
 
     def is_member(self, workspace_id: str, user_id: str) -> bool:
         """사용자가 해당 워크스페이스의 멤버인지 확인"""
         if not is_supabase_enabled():
             return False
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
-                return False
-
-            def operation():
-                result = supabase.table('ie_workspace_members') \
-                    .select('user_id') \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .limit(1) \
-                    .execute()
-                return bool(result.data)
-
-            return _db_operation('Membership check', False, operation)
-        except Exception as e:
-            logger.error("is_member 실패: %s", e, exc_info=True)
+        supabase = get_supabase()
+        if not supabase:
             return False
+
+        def operation():
+            result = supabase.table('ie_workspace_members') \
+                .select('user_id') \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
+            return bool(result.data)
+
+        return _db_operation('Membership check', False, operation)
 
     def get_members(self, workspace_id: str) -> list:
         """워크스페이스 멤버 목록 (이메일 포함)"""
         if not is_supabase_enabled():
             return []
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
-                return []
-
-            def operation():
-                result = supabase.table('ie_workspace_members') \
-                    .select('user_id, role, joined_at') \
-                    .eq('workspace_id', workspace_id) \
-                    .order('joined_at') \
-                    .execute()
-                return result.data or []
-
-            return _db_operation('Workspace members', [], operation)
-        except Exception as e:
-            logger.error("get_members 실패: %s", e, exc_info=True)
+        supabase = get_supabase()
+        if not supabase:
             return []
+
+        def operation():
+            result = supabase.table('ie_workspace_members') \
+                .select('user_id, role, joined_at') \
+                .eq('workspace_id', workspace_id) \
+                .order('joined_at') \
+                .execute()
+            return result.data or []
+
+        return _db_operation('Workspace members', [], operation)
 
     def invite_member(self, workspace_id: str, user_id: str, role: str = 'editor') -> dict:
         """멤버 초대"""
         if not is_supabase_enabled():
             return {'error': 'Supabase 연결이 필요합니다.'}
 
-        try:
-            if role not in ('editor', 'viewer'):
-                return {'error': '유효하지 않은 역할입니다. (editor, viewer)'}
+        if role not in ('editor', 'viewer'):
+            return {'error': '유효하지 않은 역할입니다. (editor, viewer)'}
 
-            supabase = get_supabase()
-            if not supabase:
-                return {'error': 'Supabase 클라이언트 초기화 실패'}
+        supabase = get_supabase()
+        if not supabase:
+            return {'error': 'Supabase 클라이언트 초기화 실패'}
 
-            def operation():
-                # 이미 멤버인지 확인
-                existing = supabase.table('ie_workspace_members') \
-                    .select('user_id') \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .limit(1) \
-                    .execute()
+        def operation():
+            # 이미 멤버인지 확인
+            existing = supabase.table('ie_workspace_members') \
+                .select('user_id') \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
 
-                if existing.data:
-                    return {'error': '이미 워크스페이스 멤버입니다.'}
+            if existing.data:
+                return {'error': '이미 워크스페이스 멤버입니다.'}
 
-                result = supabase.table('ie_workspace_members').insert({
-                    'workspace_id': workspace_id,
-                    'user_id': user_id,
-                    'role': role,
-                }).execute()
+            result = supabase.table('ie_workspace_members').insert({
+                'workspace_id': workspace_id,
+                'user_id': user_id,
+                'role': role,
+            }).execute()
 
-                return result.data[0] if result.data else {'error': '초대 실패'}
+            return result.data[0] if result.data else {'error': '초대 실패'}
 
-            return _db_operation('Member invite', {'error': '멤버 초대 중 오류'}, operation)
-        except Exception as e:
-            logger.error("invite_member 실패: %s", e, exc_info=True)
-            return {}
+        return _db_operation('Member invite', {'error': '멤버 초대 중 오류'}, operation)
 
     def remove_member(self, workspace_id: str, user_id: str) -> bool:
         """멤버 제거 (owner는 제거 불가)"""
         if not is_supabase_enabled():
             return False
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            # owner 제거 방지
+            member = supabase.table('ie_workspace_members') \
+                .select('role') \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
+
+            if member.data and member.data[0].get('role') == 'owner':
                 return False
 
-            def operation():
-                # owner 제거 방지
-                member = supabase.table('ie_workspace_members') \
-                    .select('role') \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .limit(1) \
-                    .execute()
+            supabase.table('ie_workspace_members') \
+                .delete() \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .execute()
+            return True
 
-                if member.data and member.data[0].get('role') == 'owner':
-                    return False
-
-                supabase.table('ie_workspace_members') \
-                    .delete() \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .execute()
-                return True
-
-            return _db_operation('Member remove', False, operation)
-        except Exception as e:
-            logger.error("remove_member 실패: %s", e, exc_info=True)
-            return False
+        return _db_operation('Member remove', False, operation)
 
     def update_role(self, workspace_id: str, user_id: str, new_role: str) -> bool:
         """멤버 역할 변경 (owner 역할로 변경 불가)"""
         if not is_supabase_enabled():
             return False
 
-        try:
-            if new_role not in ('editor', 'viewer'):
-                return False
-
-            supabase = get_supabase()
-            if not supabase:
-                return False
-
-            def operation():
-                # owner의 역할은 변경 불가
-                member = supabase.table('ie_workspace_members') \
-                    .select('role') \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .limit(1) \
-                    .execute()
-
-                if member.data and member.data[0].get('role') == 'owner':
-                    return False
-
-                supabase.table('ie_workspace_members') \
-                    .update({'role': new_role}) \
-                    .eq('workspace_id', workspace_id) \
-                    .eq('user_id', user_id) \
-                    .execute()
-                return True
-
-            return _db_operation('Role update', False, operation)
-        except Exception as e:
-            logger.error("update_role 실패: %s", e, exc_info=True)
+        if new_role not in ('editor', 'viewer'):
             return False
+
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            # owner의 역할은 변경 불가
+            member = supabase.table('ie_workspace_members') \
+                .select('role') \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .limit(1) \
+                .execute()
+
+            if member.data and member.data[0].get('role') == 'owner':
+                return False
+
+            supabase.table('ie_workspace_members') \
+                .update({'role': new_role}) \
+                .eq('workspace_id', workspace_id) \
+                .eq('user_id', user_id) \
+                .execute()
+            return True
+
+        return _db_operation('Role update', False, operation)
 
     def delete_workspace(self, workspace_id: str, owner_id: str) -> bool:
         """워크스페이스 삭제 (owner만 가능)"""
         if not is_supabase_enabled():
             return False
 
-        try:
-            supabase = get_supabase()
-            if not supabase:
+        supabase = get_supabase()
+        if not supabase:
+            return False
+
+        def operation():
+            # owner 확인
+            ws = supabase.table('ie_workspaces') \
+                .select('owner_id') \
+                .eq('id', workspace_id) \
+                .limit(1) \
+                .execute()
+
+            if not ws.data or ws.data[0].get('owner_id') != owner_id:
                 return False
 
-            def operation():
-                # owner 확인
-                ws = supabase.table('ie_workspaces') \
-                    .select('owner_id') \
-                    .eq('id', workspace_id) \
-                    .limit(1) \
-                    .execute()
+            # CASCADE로 멤버도 자동 삭제
+            supabase.table('ie_workspaces') \
+                .delete() \
+                .eq('id', workspace_id) \
+                .execute()
+            return True
 
-                if not ws.data or ws.data[0].get('owner_id') != owner_id:
-                    return False
-
-                # CASCADE로 멤버도 자동 삭제
-                supabase.table('ie_workspaces') \
-                    .delete() \
-                    .eq('id', workspace_id) \
-                    .execute()
-                return True
-
-            return _db_operation('Workspace delete', False, operation)
-        except Exception as e:
-            logger.error("delete_workspace 실패: %s", e, exc_info=True)
-            return False
+        return _db_operation('Workspace delete', False, operation)
 
     def find_user_by_email(self, email: str) -> str | None:
         """이메일로 사용자 ID 조회 (ie_usage 테이블에서 직접 검색)"""
@@ -427,58 +391,42 @@ class ContentApprovalService:
         if not is_supabase_enabled():
             return {'error': 'Supabase 연결이 필요합니다.'}
 
-        try:
-            role = self._get_member_role(workspace_id, user_id)
-            if not role or role not in ('owner', 'editor'):
-                return {'error': '콘텐츠를 추가할 권한이 없습니다.'}
+        role = self._get_member_role(workspace_id, user_id)
+        if not role or role not in ('owner', 'editor'):
+            return {'error': '콘텐츠를 추가할 권한이 없습니다.'}
 
-            supabase = get_supabase()
-            if not supabase:
-                return {'error': 'Supabase 클라이언트 초기화 실패'}
+        supabase = get_supabase()
+        if not supabase:
+            return {'error': 'Supabase 클라이언트 초기화 실패'}
 
-            def operation():
-                result = supabase.table('ie_workspace_contents').insert({
-                    'workspace_id': workspace_id,
-                    'content_id': content_id,
-                    'title': title,
-                    'status': 'draft',
-                    'author_id': user_id,
-                }).execute()
-                return result.data[0] if result.data else {'error': '콘텐츠 추가 실패'}
+        def operation():
+            result = supabase.table('ie_workspace_contents').insert({
+                'workspace_id': workspace_id,
+                'content_id': content_id,
+                'title': title,
+                'status': 'draft',
+                'author_id': user_id,
+            }).execute()
+            return result.data[0] if result.data else {'error': '콘텐츠 추가 실패'}
 
-            return _db_operation('Content add', {'error': '콘텐츠 추가 중 오류'}, operation)
-        except Exception as e:
-            logger.error("add_content 실패: %s", e, exc_info=True)
-            return {}
+        return _db_operation('Content add', {'error': '콘텐츠 추가 중 오류'}, operation)
 
     def submit_for_review(self, content_id: str, user_id: str) -> dict:
         """draft → review (editor 이상)"""
-        try:
-            return self._transition(content_id, user_id, 'review',
-                                    required_roles=['owner', 'editor'])
-        except Exception as e:
-            logger.error("submit_for_review 실패: %s", e, exc_info=True)
-            return {}
+        return self._transition(content_id, user_id, 'review',
+                                required_roles=['owner', 'editor'])
 
     def approve_content(self, content_id: str, reviewer_id: str) -> dict:
         """review → approved (owner만)"""
-        try:
-            return self._transition(content_id, reviewer_id, 'approved',
-                                    required_roles=['owner'],
-                                    extra_fields={'reviewer_id': reviewer_id})
-        except Exception as e:
-            logger.error("approve_content 실패: %s", e, exc_info=True)
-            return {}
+        return self._transition(content_id, reviewer_id, 'approved',
+                                required_roles=['owner'],
+                                extra_fields={'reviewer_id': reviewer_id})
 
     def reject_content(self, content_id: str, reviewer_id: str, reason: str) -> dict:
         """review → rejected (owner만)"""
-        try:
-            return self._transition(content_id, reviewer_id, 'rejected',
-                                    required_roles=['owner'],
-                                    extra_fields={'reviewer_id': reviewer_id, 'review_note': reason})
-        except Exception as e:
-            logger.error("reject_content 실패: %s", e, exc_info=True)
-            return {}
+        return self._transition(content_id, reviewer_id, 'rejected',
+                                required_roles=['owner'],
+                                extra_fields={'reviewer_id': reviewer_id, 'review_note': reason})
 
     def publish_content(self, content_id: str, user_id: str) -> dict:
         """approved → published (owner만)"""

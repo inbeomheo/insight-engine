@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { reportError } from '@/lib/errorReporting';
 
 export default function Error({
   error,
@@ -9,8 +10,10 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
+
   useEffect(() => {
-    console.error('페이지 에러:', error);
+    reportError(error, { component: 'app/error.tsx', digest: error.digest });
   }, [error]);
 
   return (
@@ -25,12 +28,41 @@ export default function Error({
           <br />
           아래 버튼을 눌러 다시 시도해주세요.
         </p>
-        <button
-          onClick={reset}
-          className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          다시 시도
-        </button>
+
+        {error.digest && (
+          <p className="text-xs text-muted-foreground/70 font-mono">
+            오류 ID: {error.digest}
+          </p>
+        )}
+
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={reset}
+            className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            다시 시도
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            새로고침
+          </button>
+        </div>
+
+        {process.env.NODE_ENV !== 'production' && (
+          <details
+            className="text-left text-xs text-muted-foreground bg-muted/40 rounded-md p-3 mt-4"
+            open={showDetails}
+            onToggle={(e) => setShowDetails((e.target as HTMLDetailsElement).open)}
+          >
+            <summary className="cursor-pointer font-medium">개발 모드: 에러 상세</summary>
+            <pre className="mt-2 whitespace-pre-wrap break-words">
+              {error.name}: {error.message}
+              {error.stack && '\n\n' + error.stack}
+            </pre>
+          </details>
+        )}
       </div>
     </div>
   );

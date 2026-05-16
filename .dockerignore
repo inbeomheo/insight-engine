@@ -38,6 +38,7 @@ coverage.xml
 # Node (Tailwind 빌드용 - 빌드 결과물만 필요)
 node_modules/
 package-lock.json
+!frontend/package-lock.json
 
 # 문서/설정
 *.md

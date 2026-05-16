@@ -149,13 +149,13 @@ def _save_cache(video_id: str, cache_type: str, data: Any) -> None:
 
 
 def clear_cache(video_id: Optional[str] = None) -> int:
-    """캐시를 삭제합니다. video_id가 None이면 전체 삭제."""
-    if not os.path.exists(CACHE_DIR):
-        return 0
-
-    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지)
+    """Clear cache files. When video_id is None, clear all cache files."""
+    # Validate a supplied video_id before checking whether the cache dir exists.
     if video_id is not None:
         _sanitize_video_id(video_id)
+
+    if not os.path.exists(CACHE_DIR):
+        return 0
 
     deleted = 0
     for filename in os.listdir(CACHE_DIR):
@@ -215,8 +215,11 @@ def is_youtube_url(url: str) -> bool:
 
 
 def get_video_id(url: str) -> Optional[str]:
-    """URL에서 YouTube 비디오 ID를 추출합니다."""
-    if not url:
+    """URL에서 YouTube 비디오 ID를 추출합니다.
+
+    YouTube 도메인이 아닌 URL에서는 11자 우연 매칭을 방지하기 위해 None 반환.
+    """
+    if not url or not is_youtube_url(url):
         return None
 
     for pattern in VIDEO_ID_PATTERNS:

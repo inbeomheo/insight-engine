@@ -206,6 +206,7 @@ const UrlInput = memo(function UrlInput({
                   {chipLabel}
                 </span>
                 <button
+                  data-testid="remove-url-button"
                   onClick={() => onRemoveUrl(url)}
                   className="hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-all duration-200 hover:scale-110"
                   aria-label={`${chipLabel} 제거`}

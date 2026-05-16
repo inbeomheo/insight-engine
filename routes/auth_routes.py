@@ -8,7 +8,7 @@ import os
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response, sanitize_error_for_client
 from services.data.supabase_service import (
-    get_supabase, is_supabase_enabled, require_auth,
+    get_supabase, is_supabase_enabled, require_auth, require_admin,
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
@@ -567,7 +567,7 @@ def check_admin():
 
 
 @auth_bp.route('/api/admin/users', methods=['GET'])
-@require_auth
+@require_admin
 def get_admin_users():
     """모든 사용자의 사용량 조회 (관리자 전용)"""
     error = _require_admin()
@@ -579,7 +579,7 @@ def get_admin_users():
 
 
 @auth_bp.route('/api/admin/users/<user_id>/reset', methods=['POST'])
-@require_auth
+@require_admin
 def admin_reset_user(user_id):
     """특정 사용자 사용량 리셋 (관리자 전용)"""
     error = _require_admin()
@@ -592,7 +592,7 @@ def admin_reset_user(user_id):
 
 
 @auth_bp.route('/api/admin/stats', methods=['GET'])
-@require_auth
+@require_admin
 def get_admin_stats():
     """사용량 통계 조회 (관리자 전용)"""
     error = _require_admin()
@@ -604,7 +604,7 @@ def get_admin_stats():
 
 
 @auth_bp.route('/api/admin/contents', methods=['GET'])
-@require_auth
+@require_admin
 def get_admin_contents():
     """모든 사용자의 생성 콘텐츠 조회 (관리자 전용)
 
@@ -626,7 +626,7 @@ def get_admin_contents():
 
 
 @auth_bp.route('/api/admin/contents/<report_id>', methods=['GET'])
-@require_auth
+@require_admin
 def get_admin_content_detail(report_id):
     """특정 콘텐츠 상세 조회 (관리자 전용)"""
     error = _require_admin()
@@ -889,7 +889,7 @@ def delete_workspace(workspace_id):
 # =============================================
 
 @auth_bp.route('/api/admin/dashboard', methods=['GET'])
-@require_auth
+@require_admin
 def admin_dashboard():
     """운영 대시보드 집계 데이터를 반환합니다."""
     error = _require_admin()
@@ -1283,7 +1283,7 @@ def revert_content_to_draft(content_id):
 # =============================================
 
 @auth_bp.route('/api/admin/audit-logs', methods=['GET'])
-@require_auth
+@require_admin
 def get_audit_logs():
     """감사 로그 조회 (관리자 전용)"""
     from services.data.audit_log_service import audit_log_service

@@ -33,6 +33,7 @@ import type {
   SentimentFlowResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
+import { getAccessToken } from './auth';
 
 /** Flask 백엔드 직접 호출 (Next.js 프록시 우회) */
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -43,6 +44,16 @@ export function apiUrl(path: string): string {
 }
 
 const BASE = API_BASE;
+
+/** Authorization 헤더 자동 첨부 — Supabase 미설정 시 no-op */
+async function withAuthHeader(headers: HeadersInit | undefined): Promise<HeadersInit> {
+  const merged = new Headers(headers);
+  if (!merged.has('Authorization')) {
+    const token = await getAccessToken();
+    if (token) merged.set('Authorization', `Bearer ${token}`);
+  }
+  return merged;
+}
 
 const TIMEOUT_MS: Record<string, number> = {
   '/generate': 300_000,
@@ -72,10 +83,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = isFormData ? undefined : { 'Content-Type': 'application/json' };
 
   try {
-    const mergedHeaders = {
+    const mergedHeaders = await withAuthHeader({
       ...headers,
       ...(init?.headers || {}),
-    };
+    });
     const res = await fetch(`${BASE}${url}`, {
       ...init,
       headers: mergedHeaders,
@@ -103,9 +114,13 @@ async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const mergedHeaders = await withAuthHeader({
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    });
     const res = await fetch(`${BASE}${url}`, {
-      headers: { 'Content-Type': 'application/json' },
       ...init,
+      headers: mergedHeaders,
       signal: controller.signal,
     });
     if (!res.ok) {

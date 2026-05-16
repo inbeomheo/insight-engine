@@ -29,7 +29,7 @@ export default function InputWrapper({ focused, error, className, children }: In
         {children}
       </div>
       {error && (
-        <p className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
+        <p role="alert" className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
       )}
     </div>
   );

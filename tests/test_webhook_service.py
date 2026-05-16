@@ -5,11 +5,25 @@ WebhookService 단위 테스트
 import unittest
 from unittest.mock import patch, MagicMock
 
-from services.platform.webhook_service import WebhookService
+from datetime import datetime, timezone
+
+from services.platform.webhook_service import WebhookService, _build_webhook_payload
 
 
 class TestWebhookService(unittest.TestCase):
     """WebhookService 동작 검증"""
+
+    def test_build_webhook_payload_has_contract_shape(self):
+        """Fix the standard webhook payload contract."""
+        payload = _build_webhook_payload(
+            'content.generated',
+            {'title': 'T'},
+            now=datetime(2026, 5, 16, 1, 2, 3, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(payload['event'], 'content.generated')
+        self.assertEqual(payload['timestamp'], '2026-05-16T01:02:03Z')
+        self.assertEqual(payload['data'], {'title': 'T'})
 
     @patch('services.platform.webhook_service.requests.post')
     def test_send_calls_requests_post(self, mock_post):

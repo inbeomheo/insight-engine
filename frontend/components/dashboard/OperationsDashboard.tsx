@@ -3,6 +3,7 @@ import { memo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Clock, CheckCircle, BarChart3 } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
+import { fetchWithAuth } from '@/lib/auth';
 
 interface DashboardData {
   total_generations: number;
@@ -18,7 +19,7 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(apiUrl('/api/admin/dashboard'))
+    fetchWithAuth(apiUrl('/api/admin/dashboard'))
       .then(r => r.json())
       .then(d => {
         if (d.error) setError(d.error);

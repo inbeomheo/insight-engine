@@ -5,8 +5,11 @@
 편집 이력을 메모리에 보관하여 실행 취소(undo)를 지원합니다.
 """
 import html as html_lib
+import logging
 import re
 from ..mcp_apps import BaseMCPApp
+
+logger = logging.getLogger(__name__)
 
 _MAX_HISTORY = 20  # 편집 이력 최대 보관 수
 

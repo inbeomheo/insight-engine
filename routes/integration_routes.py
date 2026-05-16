@@ -1233,7 +1233,7 @@ def webhook_relay():
 # ── 앱 피드백 (F7-24) ──────────────────────────────────────
 
 
-@blog_bp.route('/api/feedback', methods=['POST'])
+@blog_bp.route('/api/feedback/general', methods=['POST'])
 def submit_feedback():
     """앱 내 피드백 수신"""
     data = request.get_json(silent=True) or {}

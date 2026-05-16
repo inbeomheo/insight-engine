@@ -53,13 +53,12 @@ class TestBackupService(unittest.TestCase):
     @patch('services.data.content_library_service.get_item', return_value=None)
     @patch('services.data.content_library_service.create_item')
     def test_restore_backup(self, mock_create, mock_get):
-        """백업 복원 (신규 생성)"""
-        # 백업 파일 수동 생성
+        """백업 복원 (신규 생성) — Path Traversal 방어를 위한 정규 파일명 사용"""
         payload = {
             'backup_id': 'test',
             'items': [{'id': '1', 'title': 'T', 'content': 'C', 'style': '', 'tags': [], 'url': '', 'user_id': '', 'workspace_id': '', 'folder_id': '', 'meta': {}}],
         }
-        fname = 'backup_test.json'
+        fname = 'backup_20260101_000000_abcdef12.json'
         (Path(self.tmpdir) / fname).write_text(json.dumps(payload), encoding='utf-8')
 
         result = backup_service.restore_backup(fname)
@@ -67,12 +66,18 @@ class TestBackupService(unittest.TestCase):
         mock_create.assert_called_once()
 
     def test_restore_nonexistent_raises(self):
-        """없는 백업 파일 복원 → FileNotFoundError"""
+        """없는 백업 파일 복원 → FileNotFoundError (정규 파일명)"""
         with self.assertRaises(FileNotFoundError):
-            backup_service.restore_backup('nonexistent.json')
+            backup_service.restore_backup('backup_20260101_000000_deadbeef.json')
+
+    def test_restore_invalid_filename_raises_value_error(self):
+        """비정규 파일명 → ValueError (Path Traversal 방어)"""
+        for bad in ('../etc/passwd', 'nonexistent.json', 'backup_x.json'):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                backup_service.restore_backup(bad)
 
     def test_get_backup_info(self):
-        """백업 메타데이터 조회"""
+        """백업 메타데이터 조회 (정규 파일명)"""
         payload = {
             'backup_id': 'info-test',
             'created_at': '2026-01-01T00:00:00Z',
@@ -81,7 +86,7 @@ class TestBackupService(unittest.TestCase):
             'triggered_by': 'manual',
             'items': [],
         }
-        fname = 'backup_info_test.json'
+        fname = 'backup_20260101_120000_abcdef34.json'
         (Path(self.tmpdir) / fname).write_text(json.dumps(payload), encoding='utf-8')
 
         info = backup_service.get_backup_info(fname)
@@ -89,8 +94,9 @@ class TestBackupService(unittest.TestCase):
         self.assertEqual(info['item_count'], 5)
 
     def test_get_backup_info_nonexistent(self):
-        """없는 백업 메타데이터 → None"""
+        """없는 백업 메타데이터 → None (비정규 파일명도 None 반환)"""
         self.assertIsNone(backup_service.get_backup_info('bad.json'))
+        self.assertIsNone(backup_service.get_backup_info('backup_20260101_120000_99999999.json'))
 
     @patch('services.data.content_library_service.get_all_items_raw', return_value=[{'id': '1'}])
     def test_prune_old_backups(self, mock_items):

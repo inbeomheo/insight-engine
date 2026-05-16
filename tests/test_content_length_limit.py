@@ -42,26 +42,38 @@ class TestValidateContentLength(unittest.TestCase):
 
 
 class TestFlaskMaxContentLength(unittest.TestCase):
-    """Flask MAX_CONTENT_LENGTH 설정 검증"""
+    """Flask MAX_CONTENT_LENGTH 설정 검증
+
+    기본 25MB (RAG 업로드 허용). MAX_CONTENT_LENGTH_MB 환경변수로 조정 가능.
+    """
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_max_content_length_configured(self, _mock_sb):
-        """앱에 MAX_CONTENT_LENGTH가 설정되어 있는지 확인"""
+        """앱에 MAX_CONTENT_LENGTH가 설정되어 있는지 확인 (기본 25MB)"""
         from app import create_app
         app = create_app()
         self.assertIsNotNone(app.config.get('MAX_CONTENT_LENGTH'))
+        self.assertEqual(app.config['MAX_CONTENT_LENGTH'], 25 * 1024 * 1024)
+
+    @patch.dict('os.environ', {'MAX_CONTENT_LENGTH_MB': '2'})
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_max_content_length_env_override(self, _mock_sb):
+        """MAX_CONTENT_LENGTH_MB 환경변수로 오버라이드 가능"""
+        from app import create_app
+        app = create_app()
         self.assertEqual(app.config['MAX_CONTENT_LENGTH'], 2 * 1024 * 1024)
 
+    @patch.dict('os.environ', {'MAX_CONTENT_LENGTH_MB': '1'})
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_oversized_request_rejected(self, _mock_sb):
-        """MAX_CONTENT_LENGTH 초과 요청이 거부되는지 확인"""
+        """MAX_CONTENT_LENGTH 초과 요청이 거부되는지 확인 (env override로 1MB 한계)"""
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True
         client = app.test_client()
 
-        # MAX_CONTENT_LENGTH보다 큰 데이터 전송
-        big_data = 'x' * (3 * 1024 * 1024)
+        # 1MB 한계를 초과하는 2MB 데이터 전송
+        big_data = 'x' * (2 * 1024 * 1024)
         resp = client.post(
             '/api/qa-check',
             data=big_data,
