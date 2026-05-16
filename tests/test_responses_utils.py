@@ -171,7 +171,13 @@ class TestSanitizePath(unittest.TestCase):
         self.assertTrue(os.path.realpath(result).startswith(os.path.realpath(self.base)))
 
     def test_traversal_blocked(self):
-        for bad in ('../etc/passwd', '../../secret', '..\\windows\\system32'):
+        for bad in (
+            '../etc/passwd',
+            '../../secret',
+            '..\\windows\\system32',
+            'C:\\windows\\system32',
+            '\\\\server\\share',
+        ):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValueError):
                     sanitize_path(bad, self.base)

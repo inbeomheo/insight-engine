@@ -144,30 +144,26 @@ def api_error_from_exception(e: Exception, fallback_message: str = '서버 오�
 
 
 def sanitize_path(user_path: str, allowed_base: str) -> str:
-    """사용자 입력 경로를 허용된 기본 디렉토리 하위로 제한합니다 (Path Traversal 방어).
-
-    '../', 절대 경로, 심볼릭 링크 등을 통한 경로 탈출을 차단합니다.
-
-    Args:
-        user_path: 사용자가 입력한 경로 (상대/절대)
-        allowed_base: 허용된 기본 디렉토리 (예: './data/finetune')
-
-    Returns:
-        allowed_base 하위에 정규화된 안전한 절대 경로
-
-    Raises:
-        ValueError: 경로가 허용 범위를 벗어나는 경우
-    """
+    """Limit a user path to allowed_base and block path traversal."""
+    import ntpath
     import os
 
-    # 기본 디렉토리의 절대 경로
-    base = os.path.realpath(os.path.abspath(allowed_base))
-    # 사용자 경로를 기본 디렉토리 기준으로 결합 후 정규화
-    joined = os.path.realpath(os.path.abspath(os.path.join(base, user_path)))
+    error_message = '경로가 허용 범위를 벗어났습니다'
+    path_text = os.fspath(user_path or '')
+    if '\x00' in path_text:
+        raise ValueError(f'{error_message}: {user_path}')
 
-    # 기본 디렉토리 하위인지 검증 (os.sep 추가로 '/data/finetune2' 같은 형제 디렉토리 차단)
-    if not (joined == base or joined.startswith(base + os.sep)):
-        raise ValueError(f'경로가 허용 범위를 벗어났습니다: {user_path}')
+    # Block Windows-style drives/UNC paths consistently on every OS.
+    if ntpath.splitdrive(path_text)[0] or ntpath.isabs(path_text):
+        raise ValueError(f'{error_message}: {user_path}')
+
+    normalized_user_path = path_text.replace('\\', os.sep).replace('/', os.sep)
+
+    base = os.path.realpath(os.path.abspath(allowed_base))
+    joined = os.path.realpath(os.path.abspath(os.path.join(base, normalized_user_path)))
+
+    if os.path.commonpath([base, joined]) != base:
+        raise ValueError(f'{error_message}: {user_path}')
 
     return joined
 

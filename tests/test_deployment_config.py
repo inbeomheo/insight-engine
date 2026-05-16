@@ -86,5 +86,6 @@ def test_ci_dependency_files_include_imported_test_runtime_modules():
     dev_requirements = (ROOT / 'requirements-dev.txt').read_text(encoding='utf-8').lower()
 
     assert 'flask-cors' in requirements
+    assert 'duckduckgo-search' in requirements
     assert 'claude-code-sdk' in dev_requirements
     assert 'playwright' in dev_requirements
