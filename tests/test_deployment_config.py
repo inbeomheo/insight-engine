@@ -1,4 +1,4 @@
-﻿"""Deployment/CI configuration invariants."""
+ef"""Deployment/CI configuration invariants."""
 from pathlib import Path
 
 import yaml
@@ -44,7 +44,6 @@ def test_ci_installs_test_dependencies_and_gates_docker_on_e2e_smoke():
     assert jobs['docker-build']['needs'] == ['backend-test', 'frontend-test', 'e2e-smoke']
 
 
-
 def test_dockerignore_keeps_frontend_lockfile_for_npm_ci():
     dockerignore = (ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines()
 
@@ -60,7 +59,6 @@ def test_compose_nginx_bind_mount_source_exists():
         assert (ROOT / source).exists(), f'missing compose bind source: {source}'
 
 
-
 def test_ci_docker_build_runs_for_pull_requests_without_push():
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8'))
     docker_job = workflow['jobs']['docker-build']
@@ -71,7 +69,17 @@ def test_ci_docker_build_runs_for_pull_requests_without_push():
 
     assert "github.event_name == 'pull_request'" in docker_job.get('if', '')
     assert build_step['with']['push'] == "${{ github.event_name != 'pull_request' }}"
+    assert build_step['with']['tags'] == "${{ steps.docker-meta.outputs.tags }}"
 
+
+def test_ci_docker_build_uses_secret_free_pull_request_tags():
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8'))
+    docker_steps = workflow['jobs']['docker-build']['steps']
+    tag_step = next(step for step in docker_steps if step.get('id') == 'docker-meta')
+
+    assert "github.event_name" in tag_step['run']
+    assert 'insight-engine:pr-' in tag_step['run']
+    assert 'DOCKER_USERNAME' in tag_step['env']
 
 
 def test_ci_triggers_include_repository_default_branch():
