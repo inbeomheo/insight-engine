@@ -165,17 +165,18 @@ class TestGenerateRoute(_Base):
         self.assertEqual(resp.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.generation_helpers._handle_web_source')
+    @patch('routes.blog_routes._handle_web_source')
     def test_generate_non_youtube_url(self, mock_web, _):
         """비YouTube URL은 _handle_web_source로 라우팅."""
         mock_web.return_value = ({'title': '웹', 'content': '결과'}, 200)
         resp = self.client.post('/generate',
                                 json={'url': 'https://example.com/article'},
                                 headers=_H)
-        self.assertIn(resp.status_code, [200, 400, 500])
+        self.assertEqual(resp.status_code, 200)
+        mock_web.assert_called_once()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.generation_helpers._handle_direct_text')
+    @patch('routes.blog_routes._handle_direct_text')
     def test_generate_direct_text(self, mock_direct, _):
         """직접 텍스트 입력 모드."""
         # _handle_direct_text는 Flask Response를 반환해야 함
@@ -187,7 +188,8 @@ class TestGenerateRoute(_Base):
         resp = self.client.post('/generate',
                                 json={'content': '충분히 긴 텍스트입니다. ' * 10},
                                 headers=_H)
-        self.assertIn(resp.status_code, [200, 400, 500])
+        self.assertEqual(resp.status_code, 200)
+        mock_direct.assert_called_once()
 
 
 # ── /regenerate 엔드포인트 ──────────────────────────────────────
