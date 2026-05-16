@@ -1,4 +1,4 @@
-ef"""Deployment/CI configuration invariants."""
+"""Deployment/CI configuration invariants."""
 from pathlib import Path
 
 import yaml
