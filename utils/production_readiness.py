@@ -4,6 +4,40 @@ from urllib.parse import urlparse
 
 LOCAL_CORS_HOSTS = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
 PLACEHOLDER_ENCRYPTION_SECRETS = {'your-encryption-secret-key-here', 'change-me'}
+DEVELOPMENT_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: https: blob:; "
+    "font-src 'self' data: https:; "
+    "connect-src 'self' https: wss:; "
+    "media-src 'self' https: blob:; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+PRODUCTION_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self'; "
+    "img-src 'self' data: https: blob:; "
+    "font-src 'self' data: https:; "
+    "connect-src 'self' https: wss:; "
+    "media-src 'self' https: blob:; "
+    "object-src 'none'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "upgrade-insecure-requests"
+)
+UNSAFE_PRODUCTION_CSP_TOKENS = ("'unsafe-inline'", "'unsafe-eval'")
+
+
+def default_content_security_policy(flask_env: str) -> str:
+    """Return the default CSP for the current runtime environment."""
+    if (flask_env or '').strip().lower() == 'production':
+        return PRODUCTION_CONTENT_SECURITY_POLICY
+    return DEVELOPMENT_CONTENT_SECURITY_POLICY
 
 
 def parse_cors_origins(raw_origins: str) -> list[str]:
@@ -49,14 +83,32 @@ def production_security_errors(
     return errors
 
 
+def content_security_policy_errors(flask_env: str, content_security_policy: str) -> list[str]:
+    """Return production CSP errors for unsafe script execution sources."""
+    if (flask_env or '').strip().lower() != 'production':
+        return []
+
+    csp = content_security_policy or default_content_security_policy(flask_env)
+    return [
+        f'CONTENT_SECURITY_POLICY must not include {token} in production'
+        for token in UNSAFE_PRODUCTION_CSP_TOKENS
+        if token in csp
+    ]
+
+
 def validate_production_security_config(
     flask_env: str,
     allowed_origins: list[str],
     metrics_token: str,
     encryption_secret: str,
+    content_security_policy: str | None = None,
 ) -> None:
     """Raise when production security configuration is unsafe."""
     errors = production_security_errors(flask_env, allowed_origins, metrics_token, encryption_secret)
+    errors.extend(content_security_policy_errors(
+        flask_env,
+        content_security_policy or default_content_security_policy(flask_env),
+    ))
     if errors:
         raise RuntimeError('; '.join(errors))
 
@@ -75,6 +127,10 @@ def production_readiness_errors(env: dict[str, str]) -> list[str]:
         parse_cors_origins(env.get('CORS_ORIGINS', '')),
         env.get('METRICS_AUTH_TOKEN', ''),
         env.get('ENCRYPTION_SECRET', ''),
+    ))
+    errors.extend(content_security_policy_errors(
+        security_env,
+        env.get('CONTENT_SECURITY_POLICY') or default_content_security_policy(security_env),
     ))
 
     if not (env.get('REDIS_URL') or '').strip():

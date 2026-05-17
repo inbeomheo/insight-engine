@@ -55,6 +55,32 @@ class TestProductionSecurityConfig(unittest.TestCase):
 
         self.assertIn('ENCRYPTION_SECRET', str(ctx.exception))
 
+
+    def test_production_default_csp_excludes_unsafe_script_sources(self):
+        from app import create_app
+
+        with self._production_env():
+            os.environ.pop('CONTENT_SECURITY_POLICY', None)
+            app = create_app({'TESTING': True})
+            response = app.test_client().get('/health')
+
+        csp = response.headers['Content-Security-Policy']
+        self.assertIn('script-src', csp)
+        self.assertNotIn("'unsafe-inline'", csp)
+        self.assertNotIn("'unsafe-eval'", csp)
+
+    def test_production_rejects_unsafe_custom_csp(self):
+        from app import create_app
+
+        with self._production_env(
+            CONTENT_SECURITY_POLICY="default-src 'self'; script-src 'self' 'unsafe-eval'"
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                create_app({'TESTING': True})
+
+        self.assertIn('CONTENT_SECURITY_POLICY', str(ctx.exception))
+        self.assertIn('unsafe-eval', str(ctx.exception))
+
     def test_development_allows_localhost_cors_without_metrics_token(self):
         from app import create_app
 

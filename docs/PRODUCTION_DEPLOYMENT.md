@@ -189,3 +189,8 @@ ENCRYPTION_SECRET=replace_with_32_plus_random_secret \
 REDIS_URL=redis://redis:6379/0 \
 npm run verify:production
 ```
+
+
+## Production CSP guard
+
+`FLASK_ENV=production` uses a strict default Content-Security-Policy and rejects `CONTENT_SECURITY_POLICY` values containing `'unsafe-inline'` or `'unsafe-eval'`.

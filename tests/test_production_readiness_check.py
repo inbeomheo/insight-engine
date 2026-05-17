@@ -70,6 +70,22 @@ def test_readiness_check_reports_all_required_vars_when_environment_is_empty():
     assert 'REDIS_URL' in output
 
 
+def test_readiness_check_rejects_unsafe_production_csp():
+    result = _run_readiness_check({
+        'FLASK_ENV': 'production',
+        'CORS_ORIGINS': 'https://app.example.com',
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'CONTENT_SECURITY_POLICY': "default-src 'self'; script-src 'self' 'unsafe-inline'",
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'CONTENT_SECURITY_POLICY' in output
+    assert 'unsafe-inline' in output
+
+
 def test_package_json_exposes_verify_production_script():
     package_json = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
 

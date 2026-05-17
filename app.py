@@ -9,7 +9,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from utils.production_readiness import parse_cors_origins, validate_production_security_config
+from utils.production_readiness import (
+    default_content_security_policy,
+    parse_cors_origins,
+    validate_production_security_config,
+)
 
 try:
     from dotenv import load_dotenv
@@ -62,14 +66,17 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # CORS: 프론트엔드(Next.js)에서 Flask를 직접 호출할 수 있도록 허용
+    flask_env = os.getenv('FLASK_ENV', '')
     allowed_origins = parse_cors_origins(
         os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001')
     )
+    _csp_header = os.getenv('CONTENT_SECURITY_POLICY') or default_content_security_policy(flask_env)
     validate_production_security_config(
-        os.getenv('FLASK_ENV', ''),
+        flask_env,
         allowed_origins,
         os.getenv('METRICS_AUTH_TOKEN', ''),
         os.getenv('ENCRYPTION_SECRET', ''),
+        _csp_header,
     )
     CORS(app, origins=allowed_origins, supports_credentials=True)
 
@@ -138,21 +145,7 @@ def create_app(test_config=None):
                 _perf_logger.warning('느린 응답: %s %s %.1fms', request.method, request.path, elapsed_ms)
         return response
 
-    # 보안 헤더 설정
-    # CSP는 환경변수로 오버라이드 가능. 기본값은 Next.js 프론트엔드 + 외부 AI API 호출을 허용
-    _default_csp = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https: blob:; "
-        "font-src 'self' data: https:; "
-        "connect-src 'self' https: wss:; "
-        "media-src 'self' https: blob:; "
-        "frame-ancestors 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'"
-    )
-    _csp_header = os.getenv('CONTENT_SECURITY_POLICY', _default_csp)
+    # Security headers
     _permissions_policy = (
         "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
     )
