@@ -1,4 +1,5 @@
 """Production readiness validation helpers."""
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -138,6 +139,18 @@ def backup_configuration_errors(env: dict[str, str]) -> list[str]:
             errors.append(f'MAX_BACKUPS must be at least {MIN_PRODUCTION_BACKUP_RETENTION} in production')
     except ValueError:
         errors.append('MAX_BACKUPS must be an integer')
+
+    backup_dir_raw = (env.get('APP_DATA_BACKUP_DIR') or '').strip()
+    if not backup_dir_raw:
+        errors.append('APP_DATA_BACKUP_DIR is required for production app_data volume backups')
+    else:
+        app_data_dir = Path((env.get('APP_DATA_DIR') or 'data').strip()).resolve()
+        backup_dir = Path(backup_dir_raw).resolve()
+        try:
+            backup_dir.relative_to(app_data_dir)
+            errors.append('APP_DATA_BACKUP_DIR must be outside APP_DATA_DIR')
+        except ValueError:
+            pass
 
     return errors
 

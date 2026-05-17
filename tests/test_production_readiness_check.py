@@ -31,6 +31,7 @@ def test_readiness_check_passes_with_safe_minimum_production_env():
         'REDIS_URL': 'redis://redis:6379/0',
         'AUTO_BACKUP_INTERVAL_HOURS': '6',
         'MAX_BACKUPS': '30',
+        'APP_DATA_BACKUP_DIR': '/mnt/backups/insight-engine',
     })
 
     assert result.returncode == 0
@@ -119,6 +120,43 @@ def test_readiness_check_rejects_invalid_backup_interval():
     output = result.stdout + result.stderr
     assert result.returncode == 1
     assert 'AUTO_BACKUP_INTERVAL_HOURS' in output
+
+
+def test_readiness_check_requires_external_app_data_backup_dir():
+    result = _run_readiness_check({
+        'FLASK_ENV': 'production',
+        'CORS_ORIGINS': 'https://app.example.com',
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '6',
+        'MAX_BACKUPS': '30',
+        'APP_DATA_DIR': '/app/data',
+        'APP_DATA_BACKUP_DIR': '',
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'APP_DATA_BACKUP_DIR' in output
+
+
+def test_readiness_check_rejects_app_data_backup_dir_inside_app_data():
+    result = _run_readiness_check({
+        'FLASK_ENV': 'production',
+        'CORS_ORIGINS': 'https://app.example.com',
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '6',
+        'MAX_BACKUPS': '30',
+        'APP_DATA_DIR': '/app/data',
+        'APP_DATA_BACKUP_DIR': '/app/data/backups',
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'APP_DATA_BACKUP_DIR' in output
+    assert 'outside APP_DATA_DIR' in output
 
 
 def test_package_json_exposes_verify_production_script():

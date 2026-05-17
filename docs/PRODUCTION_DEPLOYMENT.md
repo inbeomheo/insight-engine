@@ -189,6 +189,8 @@ ENCRYPTION_SECRET=replace_with_32_plus_random_secret \
 REDIS_URL=redis://redis:6379/0 \
 AUTO_BACKUP_INTERVAL_HOURS=6 \
 MAX_BACKUPS=30 \
+APP_DATA_DIR=/app/data \
+APP_DATA_BACKUP_DIR=/mnt/backups/insight-engine \
 npm run verify:production
 ```
 
@@ -206,3 +208,16 @@ Responses include `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resou
 ## Production backup readiness gate
 
 `npm run verify:production` now fails unless `AUTO_BACKUP_INTERVAL_HOURS` is configured as a positive integer and `MAX_BACKUPS` keeps at least 7 retained backups in production.
+
+
+## app_data backup/restore rehearsal
+
+Use the app_data volume backup tool before production cutover and after backup storage changes:
+
+```bash
+APP_DATA_DIR=/app/data APP_DATA_BACKUP_DIR=/mnt/backups/insight-engine npm run verify:app-data-backup
+python scripts/backup_app_data.py backup --source /app/data --backup-dir /mnt/backups/insight-engine
+python scripts/backup_app_data.py restore /mnt/backups/insight-engine/app_data_backup_YYYYMMDD_HHMMSS.zip --target /tmp/app_data_restore
+```
+
+The readiness gate requires `APP_DATA_BACKUP_DIR` to be outside `APP_DATA_DIR` so backups do not recursively live on the same data volume.
