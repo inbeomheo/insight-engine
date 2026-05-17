@@ -13,8 +13,7 @@ from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from services.data.supabase_service import require_auth
 from services.ops.client_tracker_service import ClientTracker
-from services.platform.webhook_service import WebhookService
-from utils.responses import handle_error, sanitize_error_for_client
+from utils.responses import handle_error
 
 _CLIENT_TRACKER_SERVICE = ClientTracker()
 _CLIENT_TRACKER: Dict[str, float] = _CLIENT_TRACKER_SERVICE.clients
@@ -331,28 +330,13 @@ def generate_style():
 @require_auth
 def webhook_test():
     """웹훅 URL로 테스트 페이로드를 전송합니다."""
-    data = request.get_json(silent=True) or {}
-    url = data.get('url', '').strip()
-    if not url:
-        return jsonify({'success': False, 'error': '웹훅 URL이 필요합니다.'}), 400
+    from services.platform.webhook_test_service import run_webhook_test
 
-    test_svc = WebhookService(url=url, enabled=True)
-    try:
-        result = test_svc.test()
-    except Exception as e:
-        current_app.logger.error(f"Webhook test failed: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': '[서버 오류] 웹훅 테스트 중 문제가 발생했습니다.'}), 500
-
-    if not result.get('success'):
-        result = {
-            **result,
-            'error': sanitize_error_for_client(result.get('error', '웹훅 테스트 실패'))
-        }
-        if str(result.get('error', '')).startswith('[서버 오류]'):
-            result['error'] = '[서버 오류] 웹훅 테스트에 실패했습니다.'
-
-    status = 200 if result.get('success') else 400
-    return jsonify(result), status
+    payload, status_code = run_webhook_test(
+        request.get_json(silent=True) or {},
+        log_error=current_app.logger.error,
+    )
+    return jsonify(payload), status_code
 
 
 @blog_bp.route('/api/playlist-videos', methods=['POST'])
