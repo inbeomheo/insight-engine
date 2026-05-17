@@ -10,6 +10,7 @@ from typing import Dict
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp, _extract_client_id, DEFAULT_MODEL
+from services.content.playlist_video_service import PlaylistVideoService
 from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from services.data.supabase_service import require_auth
@@ -23,6 +24,11 @@ _CLIENT_TRACKER: Dict[str, float] = _CLIENT_TRACKER_SERVICE.clients
 # 재생목록/채널 조회 결과 캐시 (5분 TTL)
 _PLAYLIST_CACHE: Dict[str, dict] = {}
 _PLAYLIST_CACHE_TTL: int = 300  # 초
+_playlist_video_service = PlaylistVideoService(
+    content_api=content_service,
+    cache=_PLAYLIST_CACHE,
+    ttl_seconds=_PLAYLIST_CACHE_TTL,
+)
 
 # 현재 처리 중인 요청 수 (active_requests 카운터)
 _active_requests_counter: int = 0
@@ -539,31 +545,8 @@ def playlist_videos():
         if not url:
             return jsonify({'error': 'URL이 필요합니다.'}), 400
 
-        # 캐시 키: URL + max_results
-        cache_key = f"{url}|{max_results}"
-        now = time.time()
-
-        # 캐시 히트 확인 (TTL 5분)
-        cached = _PLAYLIST_CACHE.get(cache_key)
-        if cached and (now - cached['ts']) < _PLAYLIST_CACHE_TTL:
-            result = cached['data']
-            result['cached'] = True
-            return jsonify(result)
-
-        if content_service.is_playlist_url(url):
-            result = content_service.get_playlist_videos(url, max_results)
-        elif content_service.is_channel_url(url):
-            result = content_service.get_channel_videos(url, max_results)
-        else:
-            return jsonify({'error': '유효한 채널 또는 재생목록 URL이 아닙니다.'}), 400
-
-        if 'error' in result:
-            return jsonify(result), 400
-
-        # 성공 결과를 캐시에 저장
-        _PLAYLIST_CACHE[cache_key] = {'data': dict(result), 'ts': now}
-
-        return jsonify(result)
+        result, status_code = _playlist_video_service.get_videos(url, max_results)
+        return jsonify(result), status_code
 
     except Exception as e:
         current_app.logger.error(f"Playlist videos failed: {e}")
