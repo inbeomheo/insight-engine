@@ -363,14 +363,16 @@ def playlist_videos():
 def api_recommend_sources():
     """주제 기반 소스 추천"""
     try:
-        data = request.get_json(silent=True) or {}
-        topic = data.get('topic', '').strip()
-        if not topic:
-            return jsonify({'error': '주제를 입력해주세요.'}), 400
-
+        from services.content.source_recommendation_request_service import (
+            build_source_recommendation_response,
+        )
         from services.content.source_recommender_service import recommend_sources
-        sources = recommend_sources(topic)
-        return jsonify({'sources': sources})
+
+        payload, status_code = build_source_recommendation_response(
+            request.get_json(silent=True) or {},
+            recommend_sources_func=recommend_sources,
+        )
+        return jsonify(payload), status_code
 
     except ValueError as e:
         return handle_error(str(e))
