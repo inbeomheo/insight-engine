@@ -31,6 +31,7 @@ PRODUCTION_CONTENT_SECURITY_POLICY = (
     "upgrade-insecure-requests"
 )
 UNSAFE_PRODUCTION_CSP_TOKENS = ("'unsafe-inline'", "'unsafe-eval'")
+MIN_PRODUCTION_BACKUP_RETENTION = 7
 
 
 def default_content_security_policy(flask_env: str) -> str:
@@ -113,6 +114,34 @@ def validate_production_security_config(
         raise RuntimeError('; '.join(errors))
 
 
+def backup_configuration_errors(env: dict[str, str]) -> list[str]:
+    """Return production backup scheduling/retention configuration errors."""
+    if (env.get('FLASK_ENV') or '').strip().lower() != 'production':
+        return []
+
+    errors: list[str] = []
+    interval_raw = (env.get('AUTO_BACKUP_INTERVAL_HOURS') or '').strip()
+    if not interval_raw:
+        errors.append('AUTO_BACKUP_INTERVAL_HOURS is required in production')
+    else:
+        try:
+            interval_hours = int(interval_raw)
+            if interval_hours < 1:
+                errors.append('AUTO_BACKUP_INTERVAL_HOURS must be at least 1')
+        except ValueError:
+            errors.append('AUTO_BACKUP_INTERVAL_HOURS must be an integer number of hours')
+
+    max_backups_raw = (env.get('MAX_BACKUPS') or '30').strip()
+    try:
+        max_backups = int(max_backups_raw)
+        if max_backups < MIN_PRODUCTION_BACKUP_RETENTION:
+            errors.append(f'MAX_BACKUPS must be at least {MIN_PRODUCTION_BACKUP_RETENTION} in production')
+    except ValueError:
+        errors.append('MAX_BACKUPS must be an integer')
+
+    return errors
+
+
 def production_readiness_errors(env: dict[str, str]) -> list[str]:
     """Return offline deployment readiness errors for environment variables."""
     flask_env = (env.get('FLASK_ENV') or '').strip().lower()
@@ -135,5 +164,9 @@ def production_readiness_errors(env: dict[str, str]) -> list[str]:
 
     if not (env.get('REDIS_URL') or '').strip():
         errors.append('REDIS_URL is required for shared production rate limits')
+
+    backup_env = dict(env)
+    backup_env['FLASK_ENV'] = security_env
+    errors.extend(backup_configuration_errors(backup_env))
 
     return errors

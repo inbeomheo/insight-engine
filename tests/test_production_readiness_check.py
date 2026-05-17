@@ -29,6 +29,8 @@ def test_readiness_check_passes_with_safe_minimum_production_env():
         'METRICS_AUTH_TOKEN': 'metrics-token',
         'ENCRYPTION_SECRET': 'x' * 32,
         'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '6',
+        'MAX_BACKUPS': '30',
     })
 
     assert result.returncode == 0
@@ -84,6 +86,39 @@ def test_readiness_check_rejects_unsafe_production_csp():
     assert result.returncode == 1
     assert 'CONTENT_SECURITY_POLICY' in output
     assert 'unsafe-inline' in output
+
+
+def test_readiness_check_requires_automatic_backup_configuration():
+    result = _run_readiness_check({
+        'FLASK_ENV': 'production',
+        'CORS_ORIGINS': 'https://app.example.com',
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '',
+        'MAX_BACKUPS': '3',
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'AUTO_BACKUP_INTERVAL_HOURS' in output
+    assert 'MAX_BACKUPS' in output
+
+
+def test_readiness_check_rejects_invalid_backup_interval():
+    result = _run_readiness_check({
+        'FLASK_ENV': 'production',
+        'CORS_ORIGINS': 'https://app.example.com',
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '0',
+        'MAX_BACKUPS': '30',
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'AUTO_BACKUP_INTERVAL_HOURS' in output
 
 
 def test_package_json_exposes_verify_production_script():

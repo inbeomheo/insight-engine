@@ -187,6 +187,8 @@ CORS_ORIGINS=https://app.example.com \
 METRICS_AUTH_TOKEN=replace_with_random_token \
 ENCRYPTION_SECRET=replace_with_32_plus_random_secret \
 REDIS_URL=redis://redis:6379/0 \
+AUTO_BACKUP_INTERVAL_HOURS=6 \
+MAX_BACKUPS=30 \
 npm run verify:production
 ```
 
@@ -199,3 +201,8 @@ npm run verify:production
 ## Browser isolation headers
 
 Responses include `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`, `X-Permitted-Cross-Domain-Policies: none`, and HTTPS responses use HSTS `max-age=63072000; includeSubDomains; preload`.
+
+
+## Production backup readiness gate
+
+`npm run verify:production` now fails unless `AUTO_BACKUP_INTERVAL_HOURS` is configured as a positive integer and `MAX_BACKUPS` keeps at least 7 retained backups in production.
