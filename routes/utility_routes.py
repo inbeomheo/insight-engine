@@ -4,7 +4,6 @@
 import json
 import os
 import threading
-import time
 from typing import Dict
 
 from flask import request, jsonify, current_app
@@ -258,57 +257,15 @@ def api_validate_provider():
     provider_id = data.get('provider_id', '')
     api_key = data.get('api_key', '')
 
-    if not provider_id:
-        return jsonify({'valid': False, 'error': 'provider_id가 필요합니다.'}), 400
-
     from config import SUPPORTED_PROVIDERS
+    from services.core.provider_validation_service import validate_provider_credentials
 
-    if provider_id not in SUPPORTED_PROVIDERS:
-        return jsonify({'valid': False, 'error': f'지원하지 않는 프로바이더: {provider_id}'}), 400
-
-    provider = SUPPORTED_PROVIDERS[provider_id]
-    models = provider.get('models', [])
-    if not models:
-        return jsonify({'valid': False, 'error': '사용 가능한 모델이 없습니다.'}), 400
-
-    test_model = models[0]['id']
-
-    # Ollama는 API 키 대신 base URL로 연결 테스트
-    if provider_id == 'ollama':
-        import requests as http_requests
-        base_url = api_key or provider.get('api_base', 'http://localhost:11434')
-        try:
-            t0 = time.time()
-            resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
-            latency_ms = round((time.time() - t0) * 1000)
-            resp.raise_for_status()
-            return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
-        except Exception as e:
-            return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
-
-    if not api_key:
-        return jsonify({'valid': False, 'error': 'API 키가 필요합니다.'}), 400
-
-    # LiteLLM으로 소량 토큰 호출 테스트
-    try:
-        import litellm
-
-        kwargs = {
-            'model': test_model,
-            'messages': [{'role': 'user', 'content': 'Hi'}],
-            'max_tokens': 5,
-            'api_key': api_key,
-        }
-        # api_base가 있는 프로바이더 (zhipuai, openrouter 등)
-        if provider.get('api_base'):
-            kwargs['api_base'] = provider['api_base']
-
-        t0 = time.time()
-        litellm.completion(**kwargs)
-        latency_ms = round((time.time() - t0) * 1000)
-        return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
-    except Exception as e:
-        return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
+    payload, status_code = validate_provider_credentials(
+        provider_id=provider_id,
+        api_key=api_key,
+        supported_providers=SUPPORTED_PROVIDERS,
+    )
+    return jsonify(payload), status_code
 
 
 @blog_bp.route('/api/providers/campaign-packs', methods=['GET'])
