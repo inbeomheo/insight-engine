@@ -50,6 +50,17 @@ def test_ci_opts_javascript_actions_into_node24_runtime():
     assert workflow['env']['FORCE_JAVASCRIPT_ACTIONS_TO_NODE24'] == 'true'
 
 
+def test_ci_uses_node24_action_major_versions():
+    workflow_text = (ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8')
+
+    assert 'actions/checkout@v5' in workflow_text
+    assert 'actions/setup-node@v5' in workflow_text
+    assert 'actions/setup-python@v6' in workflow_text
+    assert 'actions/checkout@v4' not in workflow_text
+    assert 'actions/setup-node@v4' not in workflow_text
+    assert 'actions/setup-python@v5' not in workflow_text
+
+
 def test_dockerignore_keeps_frontend_lockfile_for_npm_ci():
     dockerignore = (ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines()
 
