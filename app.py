@@ -56,6 +56,7 @@ def _validate_production_security_config(
     flask_env: str,
     allowed_origins: list[str],
     metrics_token: str,
+    encryption_secret: str,
 ) -> None:
     """프로덕션에서 위험한 기본 보안 설정으로 부팅하지 못하게 합니다."""
     if (flask_env or '').strip().lower() != 'production':
@@ -77,6 +78,13 @@ def _validate_production_security_config(
 
     if not (metrics_token or '').strip():
         raise RuntimeError('METRICS_AUTH_TOKEN 환경변수가 필요합니다. /metrics를 보호하세요.')
+
+    normalized_secret = (encryption_secret or '').strip()
+    if (
+        len(normalized_secret) < 32
+        or normalized_secret in {'your-encryption-secret-key-here', 'change-me'}
+    ):
+        raise RuntimeError('ENCRYPTION_SECRET 환경변수는 32자 이상 랜덤 시크릿이어야 합니다.')
 
 
 def create_app(test_config=None):
@@ -102,6 +110,7 @@ def create_app(test_config=None):
         os.getenv('FLASK_ENV', ''),
         allowed_origins,
         os.getenv('METRICS_AUTH_TOKEN', ''),
+        os.getenv('ENCRYPTION_SECRET', ''),
     )
     CORS(app, origins=allowed_origins, supports_credentials=True)
 

@@ -13,6 +13,7 @@ class TestProductionSecurityConfig(unittest.TestCase):
             'SUPABASE_ENABLED': 'false',
             'CORS_ORIGINS': 'https://app.example.com',
             'METRICS_AUTH_TOKEN': 'metrics-secret',
+            'ENCRYPTION_SECRET': 'x' * 32,
         }
         env.update(overrides)
         return patch.dict(os.environ, env, clear=False)
@@ -44,6 +45,15 @@ class TestProductionSecurityConfig(unittest.TestCase):
                 create_app({'TESTING': True})
 
         self.assertIn('METRICS_AUTH_TOKEN', str(ctx.exception))
+
+    def test_production_requires_strong_encryption_secret(self):
+        from app import create_app
+
+        with self._production_env(ENCRYPTION_SECRET='short'):
+            with self.assertRaises(RuntimeError) as ctx:
+                create_app({'TESTING': True})
+
+        self.assertIn('ENCRYPTION_SECRET', str(ctx.exception))
 
     def test_development_allows_localhost_cors_without_metrics_token(self):
         from app import create_app

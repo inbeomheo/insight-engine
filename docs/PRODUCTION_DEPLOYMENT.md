@@ -26,6 +26,8 @@
 | `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API → **Rotate JWT secret** |
 | `ENCRYPTION_SECRET` | `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
 
+`FLASK_ENV=production`에서는 `ENCRYPTION_SECRET`이 32자 미만이거나 기본 placeholder이면 부팅을 차단합니다.
+
 ### 1-3. 절차
 
 1. 위 콘솔에서 **기존 키 즉시 revoke**
