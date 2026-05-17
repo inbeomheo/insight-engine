@@ -413,20 +413,11 @@ def api_schema():
 @blog_bp.route('/feed.xml', methods=['GET'])
 def rss_feed():
     """최근 생성 콘텐츠를 RSS 2.0 XML로 발행합니다."""
-    from xml.etree.ElementTree import Element, SubElement, tostring
     from flask import Response
+    from services.content.rss_feed_service import build_rss_feed_xml
     from services.data.supabase_service import is_supabase_enabled
 
-    channel_title = 'Insight Engine'
     channel_link = request.host_url.rstrip('/')
-    channel_desc = 'AI로 생성된 최신 콘텐츠 피드'
-
-    rss = Element('rss', version='2.0')
-    channel = SubElement(rss, 'channel')
-    SubElement(channel, 'title').text = channel_title
-    SubElement(channel, 'link').text = channel_link
-    SubElement(channel, 'description').text = channel_desc
-    SubElement(channel, 'language').text = 'ko'
 
     # Supabase 활성화 시 최근 히스토리에서 가져오기
     items = []
@@ -438,18 +429,7 @@ def rss_feed():
         except Exception:
             pass
 
-    for item_data in items:
-        item = SubElement(channel, 'item')
-        SubElement(item, 'title').text = item_data.get('title', '제목 없음')
-        SubElement(item, 'description').text = (item_data.get('content', '') or '')[:500]
-        SubElement(item, 'pubDate').text = item_data.get('created_at', '')
-        report_id = item_data.get('report_id', '')
-        if report_id:
-            SubElement(item, 'guid').text = report_id
-
-    xml_bytes = tostring(rss, encoding='unicode', xml_declaration=False)
-    xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_bytes
-
+    xml_str = build_rss_feed_xml(channel_link, items)
     return Response(xml_str, mimetype='application/rss+xml; charset=utf-8')
 
 
