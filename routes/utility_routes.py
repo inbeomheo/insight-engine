@@ -464,15 +464,15 @@ def api_fact_check():
 @blog_bp.route('/api/seo-optimize', methods=['POST'])
 def api_seo_optimize():
     """콘텐츠의 SEO를 분석하고 최적화 제안을 반환합니다."""
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    keywords = data.get('keywords', [])
-    if not content:
-        return jsonify({'error': 'content 필수'}), 400
-
     from services.agents.seo_optimize_agent import optimize_seo
-    result = optimize_seo(content, keywords)
-    return jsonify(result)
+    from services.seo.seo_optimize_request_service import build_seo_optimize_response
+
+    payload, status_code = build_seo_optimize_response(
+        request.get_json(silent=True) or {},
+        optimize_seo_func=optimize_seo,
+        required_error='content 필수',
+    )
+    return jsonify(payload), status_code
 
 
 # === 표절 감지 (F3-09) ===

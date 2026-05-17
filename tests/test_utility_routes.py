@@ -695,6 +695,28 @@ class TestAnalysisEndpoints(_BaseTestCase):
                     self.assertEqual(resp.status_code, 200,
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')
 
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.agents.seo_optimize_agent.optimize_seo')
+    @patch('services.seo.seo_optimize_request_service.build_seo_optimize_response')
+    def test_seo_optimize_uses_request_service(self, mock_build, mock_optimize, _):
+        mock_optimize.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 208)
+
+        resp = self.client.post(
+            '/api/seo-optimize',
+            json={'content': 'sample content', 'keywords': ['seo']},
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 208)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'content': 'sample content', 'keywords': ['seo']})
+        self.assertEqual(mock_build.call_args.kwargs['required_error'], 'content \ud544\uc218')
+        self.assertIs(mock_build.call_args.kwargs['optimize_seo_func'], mock_optimize)
+
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.quality.plagiarism_service.check_plagiarism')
     @patch('services.analysis.content_analysis_request_service.build_single_field_analysis_response')
