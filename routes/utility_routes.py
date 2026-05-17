@@ -289,74 +289,20 @@ def api_clear_cache():
 
 @blog_bp.route('/api/recommend-style', methods=['POST'])
 def recommend_style():
-    """YouTube 제목을 분석하여 최적의 스타일과 모디파이어를 AI로 추천합니다.
-    API 키는 서버 환경변수에서 자동으로 로드됩니다.
+    """YouTube ??? ???? ??? ???? ?????? AI? ?????.
+    API ?? ?? ?????? ???? ?????.
     """
-    title: str | None = None  # P1 버그 수정: 예외 발생 전 title 미정의 방지
+    from services.content.style_recommendation_service import recommend_content_style
+
     try:
-        data = request.get_json(silent=True) or {}
-        url = data.get('url')
-        model = data.get('model', DEFAULT_MODEL)
-
-        if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
-        if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
-
-        video_id = content_service.get_video_id(url)
-        if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
-
-        title = content_service.get_content_title(url) or 'YouTube 영상'
-
-        style_options = current_app.config.get('STYLE_OPTIONS', [])
-        style_list = ', '.join([f"{s[0]}({s[1]})" for s in style_options])
-
-        prompt = f"""다음 YouTube 영상 제목을 분석하여 가장 적합한 콘텐츠 스타일을 추천해주세요.
-
-영상 제목: {title}
-
-사용 가능한 스타일: {style_list}
-
-다음 JSON 형식으로만 응답해주세요 (다른 텍스트 없이):
-{{
-    "style": "추천 스타일 ID",
-    "reason": "추천 이유 (20자 이내)",
-    "modifiers": {{
-        "length": "short|medium|long",
-        "tone": "professional|friendly|humorous",
-        "emoji": "use|none"
-    }}
-}}"""
-
-        response = ai_service.create_content(
-            prompt,
-            model,
-            style_prompt=""
+        payload, status_code = recommend_content_style(
+            request.get_json(silent=True) or {},
+            content_api=content_service,
+            ai_client=ai_service,
+            style_options=current_app.config.get('STYLE_OPTIONS', []),
+            default_model=DEFAULT_MODEL,
         )
-
-        import re
-        content = response.get('content', '')
-        json_match = re.search(r'\{[\s\S]*\}', content)
-        if json_match:
-            recommendation = json.loads(json_match.group())
-            recommendation['title'] = title
-            return jsonify(recommendation)
-
-        return jsonify({
-            'style': 'detailed',
-            'reason': '기본 추천',
-            'modifiers': {'length': 'medium', 'tone': 'professional', 'emoji': 'none'},
-            'title': title
-        })
-
-    except json.JSONDecodeError:
-        return jsonify({
-            'style': 'detailed',
-            'reason': 'AI 응답 파싱 실패',
-            'modifiers': {'length': 'medium', 'tone': 'professional', 'emoji': 'none'},
-            'title': title or 'YouTube 영상'
-        })
+        return jsonify(payload), status_code
     except Exception as e:
         current_app.logger.error(f"Recommend style failed: {e}")
         return handle_error(str(e))
