@@ -610,16 +610,15 @@ def freshness_check_route():
 def generate_quiz_route():
     """콘텐츠에서 퀴즈를 자동 생성합니다."""
     try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        count = data.get('count', 5)
-
-        if not content or not content.strip():
-            return jsonify({'error': '퀴즈를 생성할 콘텐츠가 필요합니다.'}), 400
-
+        from services.content.quiz_generation_request_service import build_quiz_generation_response
         from services.content.quiz_generator_service import generate_quiz
-        result = generate_quiz(content, count)
-        return jsonify(result)
+
+        payload, status_code = build_quiz_generation_response(
+            request.get_json(silent=True) or {},
+            generate_quiz_func=generate_quiz,
+            required_error='퀴즈를 생성할 콘텐츠가 필요합니다.',
+        )
+        return jsonify(payload), status_code
 
     except Exception as e:
         return handle_error(e, '퀴즈 생성')

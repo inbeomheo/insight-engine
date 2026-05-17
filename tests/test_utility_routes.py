@@ -695,6 +695,31 @@ class TestAnalysisEndpoints(_BaseTestCase):
                     self.assertEqual(resp.status_code, 200,
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')
 
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.content.quiz_generator_service.generate_quiz')
+    @patch('services.content.quiz_generation_request_service.build_quiz_generation_response')
+    def test_generate_quiz_uses_request_service(self, mock_build, mock_generate, _):
+        mock_generate.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 212)
+
+        resp = self.client.post(
+            '/api/generate-quiz',
+            json={'content': 'sample content', 'count': 3},
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 212)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'content': 'sample content', 'count': 3})
+        self.assertEqual(
+            mock_build.call_args.kwargs['required_error'],
+            '\ud034\uc988\ub97c \uc0dd\uc131\ud560 \ucf58\ud150\uce20\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.',
+        )
+        self.assertIs(mock_build.call_args.kwargs['generate_quiz_func'], mock_generate)
+
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.seo.freshness_monitor_service.check_freshness')
     @patch('services.seo.freshness_check_request_service.build_freshness_check_response')
