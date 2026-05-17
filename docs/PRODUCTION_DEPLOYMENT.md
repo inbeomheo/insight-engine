@@ -191,6 +191,7 @@ AUTO_BACKUP_INTERVAL_HOURS=6 \
 MAX_BACKUPS=30 \
 APP_DATA_DIR=/app/data \
 APP_DATA_BACKUP_DIR=/mnt/backups/insight-engine \
+PUBLISH_QUEUE_BACKEND=redis \
 npm run verify:production
 ```
 
@@ -221,3 +222,8 @@ python scripts/backup_app_data.py restore /mnt/backups/insight-engine/app_data_b
 ```
 
 The readiness gate requires `APP_DATA_BACKUP_DIR` to be outside `APP_DATA_DIR` so backups do not recursively live on the same data volume.
+
+
+## Production publish queue backend
+
+Use `PUBLISH_QUEUE_BACKEND=redis` in production. The queue service stores the queue JSON in Redis under `PUBLISH_QUEUE_REDIS_KEY` (default `insight:publish_queue`) and uses a Redis lock for enqueue/process/cancel/retry critical sections. File-backed queue mode remains only for local/single-host fallback.

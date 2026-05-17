@@ -35,6 +35,12 @@ QUEUE_LOCK_FILE = QUEUE_FILE + '.lock'
 FILELOCK_TIMEOUT = 5.0  # 초 — 다른 프로세스가 너무 오래 잡고 있으면 포기
 
 
+def _create_redis_client(redis_url: str):
+    """Create a Redis client lazily so file backend/test imports do not require Redis."""
+    import redis
+    return redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=3)
+
+
 class PublishQueueService:
     """발행 큐 관리 — 상태 머신 + 재시도 정책 (멀티 프로세스 안전)"""
 
@@ -44,17 +50,36 @@ class PublishQueueService:
 
     def __init__(self):
         self._queue: list[dict] = []
-        self._lock = Lock()  # 프로세스 내 스레드 락
-        if _FILELOCK_AVAILABLE:
-            os.makedirs(os.path.dirname(QUEUE_LOCK_FILE), exist_ok=True)
-            self._file_lock = FileLock(QUEUE_LOCK_FILE, timeout=FILELOCK_TIMEOUT)
-        else:
+        self._lock = Lock()  # process-local thread lock
+        self._backend = os.getenv('PUBLISH_QUEUE_BACKEND', 'file').strip().lower()
+        self._redis = None
+        self._redis_key = os.getenv('PUBLISH_QUEUE_REDIS_KEY', 'insight:publish_queue')
+
+        if self._backend == 'redis':
+            redis_url = os.getenv('PUBLISH_QUEUE_REDIS_URL') or os.getenv('REDIS_URL')
+            if not redis_url:
+                raise RuntimeError('REDIS_URL or PUBLISH_QUEUE_REDIS_URL is required for Redis publish queue')
+            self._redis = _create_redis_client(redis_url)
             self._file_lock = None
-            logger.warning("filelock 미설치 — 멀티 프로세스 안전성 보장 안 됨 (개발 폴백)")
+        elif self._backend == 'file':
+            if _FILELOCK_AVAILABLE:
+                os.makedirs(os.path.dirname(QUEUE_LOCK_FILE), exist_ok=True)
+                self._file_lock = FileLock(QUEUE_LOCK_FILE, timeout=FILELOCK_TIMEOUT)
+            else:
+                self._file_lock = None
+                logger.warning("filelock unavailable; multi-process safety is not guaranteed in file backend")
+        else:
+            raise RuntimeError(f'Unsupported publish queue backend: {self._backend}')
         self._load_queue()
 
     def _acquire_file_lock(self):
-        """파일 락 컨텍스트 매니저 (filelock 없으면 no-op)."""
+        """Distributed lock context manager for file or Redis backends."""
+        if self._backend == 'redis':
+            return self._redis.lock(
+                f'{self._redis_key}:lock',
+                timeout=30,
+                blocking_timeout=FILELOCK_TIMEOUT,
+            )
         if self._file_lock is None:
             from contextlib import nullcontext
             return nullcontext()
@@ -67,6 +92,10 @@ class PublishQueueService:
         쓰기 충돌을 막습니다. 임시 파일 → rename 패턴으로 부분 쓰기 손상 방지.
         """
         try:
+            if self._backend == 'redis':
+                self._redis.set(self._redis_key, json.dumps(self._queue, ensure_ascii=False, default=str))
+                return
+
             queue_dir = os.path.dirname(QUEUE_FILE)
             os.makedirs(queue_dir, exist_ok=True)
             tmp_path = QUEUE_FILE + '.tmp'
@@ -87,6 +116,16 @@ class PublishQueueService:
         다른 프로세스의 최신 변경을 반영합니다 (호출자가 self._lock 보유 필요).
         """
         try:
+            if self._backend == 'redis':
+                raw = self._redis.get(self._redis_key)
+                if raw:
+                    if isinstance(raw, bytes):
+                        raw = raw.decode('utf-8')
+                    self._queue = json.loads(raw)
+                else:
+                    self._queue = []
+                return
+
             if os.path.exists(QUEUE_FILE):
                 with open(QUEUE_FILE, 'r', encoding='utf-8') as f:
                     self._queue = json.load(f)

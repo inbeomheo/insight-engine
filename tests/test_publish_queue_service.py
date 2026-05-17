@@ -5,6 +5,28 @@ from unittest.mock import patch
 from services.data.publish_queue_service import PublishQueueService
 
 
+class _FakeRedisLock:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class _FakeRedis:
+    def __init__(self):
+        self.values = {}
+
+    def get(self, key):
+        return self.values.get(key)
+
+    def set(self, key, value):
+        self.values[key] = value
+
+    def lock(self, *args, **kwargs):
+        return _FakeRedisLock()
+
+
 class TestPublishQueueService(unittest.TestCase):
 
     def setUp(self):
@@ -139,6 +161,31 @@ class TestPublishQueueService(unittest.TestCase):
         self.assertIsNotNone(sanitized['next_retry_at'])
         # ISO 형식인지 확인
         self.assertIn('T', sanitized['next_retry_at'])
+
+    def test_redis_backend_persists_queue_across_instances(self):
+        """Redis backend stores queue outside local files for multi-node deployments."""
+        fake_redis = _FakeRedis()
+        env = {
+            'PUBLISH_QUEUE_BACKEND': 'redis',
+            'REDIS_URL': 'redis://redis:6379/0',
+            'PUBLISH_QUEUE_REDIS_KEY': 'test:publish_queue',
+        }
+
+        with patch.dict('os.environ', env, clear=False), \
+             patch('services.data.publish_queue_service._create_redis_client', return_value=fake_redis):
+            worker_a = PublishQueueService()
+            worker_b = PublishQueueService()
+
+            item = worker_a.enqueue('c1', 'title', 'body', 'plugin1', 'u1')
+            self.assertTrue(item.get('id'))
+            self.assertIn('test:publish_queue', fake_redis.values)
+            self.assertEqual(len(worker_b.get_queue_status()), 0)
+
+            worker_b.enqueue('c2', 'title2', 'body2', 'plugin1', 'u1')
+
+        import json
+        stored = json.loads(fake_redis.values['test:publish_queue'])
+        self.assertEqual({item['content_id'] for item in stored}, {'c1', 'c2'})
 
 
 if __name__ == '__main__':

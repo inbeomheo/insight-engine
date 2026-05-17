@@ -155,6 +155,21 @@ def backup_configuration_errors(env: dict[str, str]) -> list[str]:
     return errors
 
 
+def publish_queue_backend_errors(env: dict[str, str]) -> list[str]:
+    """Return production errors for non-distributed publish queue storage."""
+    if (env.get('FLASK_ENV') or '').strip().lower() != 'production':
+        return []
+
+    backend = (env.get('PUBLISH_QUEUE_BACKEND') or 'file').strip().lower()
+    if backend != 'redis':
+        return ['PUBLISH_QUEUE_BACKEND must be redis in production']
+
+    if not ((env.get('PUBLISH_QUEUE_REDIS_URL') or env.get('REDIS_URL') or '').strip()):
+        return ['REDIS_URL or PUBLISH_QUEUE_REDIS_URL is required for redis publish queue']
+
+    return []
+
+
 def production_readiness_errors(env: dict[str, str]) -> list[str]:
     """Return offline deployment readiness errors for environment variables."""
     flask_env = (env.get('FLASK_ENV') or '').strip().lower()
@@ -181,5 +196,6 @@ def production_readiness_errors(env: dict[str, str]) -> list[str]:
     backup_env = dict(env)
     backup_env['FLASK_ENV'] = security_env
     errors.extend(backup_configuration_errors(backup_env))
+    errors.extend(publish_queue_backend_errors(backup_env))
 
     return errors
