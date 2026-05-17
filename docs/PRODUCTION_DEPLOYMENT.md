@@ -59,7 +59,8 @@
 - [x] `CORS_ORIGINS` 환경변수로 도메인 화이트리스트
 - [x] CSRF Origin/Referer 검증 (`app.py`)
 - [x] `Content-Security-Policy` 헤더 기본 적용
-- [ ] 프로덕션 도메인으로 `CORS_ORIGINS` 좁히기 (localhost 제거)
+- [x] `FLASK_ENV=production`에서 localhost/wildcard/non-HTTPS `CORS_ORIGINS` 부팅 차단
+- [ ] 실제 프로덕션 도메인으로 `CORS_ORIGINS` 설정
 - [ ] CSP `'unsafe-inline'` / `'unsafe-eval'` 제거 검토 (Next.js 인라인 스크립트 nonce 적용 시)
 
 ### 2-4. 관측
@@ -68,6 +69,7 @@
 - [x] 프론트엔드 `window.Sentry` 폴백 (`frontend/lib/errorReporting.ts`) — SDK 없어도 console fallback
 - [x] `X-Response-Time` 헤더 + 1초 초과 시 warn 로그
 - [x] `/metrics` Prometheus 스타일 — `METRICS_AUTH_TOKEN` 으로 토큰 보호 가능
+- [x] `FLASK_ENV=production`에서 `METRICS_AUTH_TOKEN` 미설정 시 부팅 차단
 - [x] `/health` (liveness) + `/ready` (readiness with Redis/Supabase/ChromaDB 검사)
 - [ ] 프론트엔드 `@sentry/nextjs` 실제 설치 (선택, 절차는 아래 2-6 참조)
 - [ ] 로그 수집 (Railway, CloudWatch, Loki 등)

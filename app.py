@@ -44,6 +44,41 @@ if _sentry_dsn:
         logging.getLogger(__name__).warning('Sentry 초기화 실패 (무시): %s', _sentry_err)
 
 
+_LOCAL_CORS_HOSTS = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
+
+
+def _parse_cors_origins(raw_origins: str) -> list[str]:
+    """CORS_ORIGINS 값을 쉼표 기준으로 정리합니다."""
+    return [origin.strip() for origin in (raw_origins or '').split(',') if origin.strip()]
+
+
+def _validate_production_security_config(
+    flask_env: str,
+    allowed_origins: list[str],
+    metrics_token: str,
+) -> None:
+    """프로덕션에서 위험한 기본 보안 설정으로 부팅하지 못하게 합니다."""
+    if (flask_env or '').strip().lower() != 'production':
+        return
+
+    if not allowed_origins:
+        raise RuntimeError('CORS_ORIGINS 환경변수가 필요합니다. 프로덕션 도메인을 명시하세요.')
+
+    for origin in allowed_origins:
+        if origin in {'*', 'null', 'file://'}:
+            raise RuntimeError(f'CORS_ORIGINS에 안전하지 않은 origin이 포함되었습니다: {origin}')
+
+        parsed = urlparse(origin)
+        host = (parsed.hostname or '').lower()
+        if parsed.scheme != 'https' or not host:
+            raise RuntimeError(f'CORS_ORIGINS는 https origin이어야 합니다: {origin}')
+        if host in _LOCAL_CORS_HOSTS or host.endswith('.local'):
+            raise RuntimeError(f'CORS_ORIGINS에 로컬 origin이 포함되었습니다: {origin}')
+
+    if not (metrics_token or '').strip():
+        raise RuntimeError('METRICS_AUTH_TOKEN 환경변수가 필요합니다. /metrics를 보호하세요.')
+
+
 def create_app(test_config=None):
     """Flask 애플리케이션 인스턴스를 생성하고 설정합니다."""
     load_dotenv()
@@ -60,8 +95,15 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # CORS: 프론트엔드(Next.js)에서 Flask를 직접 호출할 수 있도록 허용
-    allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
-    CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
+    allowed_origins = _parse_cors_origins(
+        os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001')
+    )
+    _validate_production_security_config(
+        os.getenv('FLASK_ENV', ''),
+        allowed_origins,
+        os.getenv('METRICS_AUTH_TOKEN', ''),
+    )
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
     app.config.from_object('config')
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
