@@ -33,3 +33,14 @@ def build_cache_deletion_response(
         "message": "전체 캐시가 삭제되었습니다.",
         "deleted": deleted,
     }
+
+
+def build_ai_cache_deletion_response(
+    data: Mapping[str, Any],
+    *,
+    ai_cache: Any,
+) -> dict[str, Any]:
+    """Delete AI result cache and build the `/api/cache/ai` response payload."""
+    video_id = data.get("videoId")
+    deleted = ai_cache.clear(video_id)
+    return {"success": True, "deleted": deleted}

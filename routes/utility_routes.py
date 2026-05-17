@@ -615,10 +615,11 @@ def rss_feed():
 @require_auth
 def api_clear_ai_cache():
     """AI 결과 캐시를 삭제합니다. videoId가 있으면 해당 영상만."""
+    from services.core.cache_deletion_service import build_ai_cache_deletion_response
+
     data = request.get_json(silent=True) or {}
-    video_id = data.get('videoId')
-    deleted = current_app.ai_cache.clear(video_id)
-    return jsonify({'success': True, 'deleted': deleted})
+    payload = build_ai_cache_deletion_response(data, ai_cache=current_app.ai_cache)
+    return jsonify(payload)
 
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
