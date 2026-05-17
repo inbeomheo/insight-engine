@@ -589,18 +589,16 @@ def optimize_headline_route():
 def freshness_check_route():
     """콘텐츠의 신선도를 평가합니다."""
     try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        published_date = data.get('published_date', '')
-
-        if not content or not content.strip():
-            return jsonify({'error': '평가할 콘텐츠가 필요합니다.'}), 400
-        if not published_date:
-            return jsonify({'error': '발행일(published_date)이 필요합니다. ISO 8601 형식 (예: 2025-06-15)'}), 400
-
+        from services.seo.freshness_check_request_service import build_freshness_check_response
         from services.seo.freshness_monitor_service import check_freshness
-        result = check_freshness(content, published_date)
-        return jsonify(result)
+
+        payload, status_code = build_freshness_check_response(
+            request.get_json(silent=True) or {},
+            check_freshness_func=check_freshness,
+            required_content_error='평가할 콘텐츠가 필요합니다.',
+            required_published_date_error='발행일(published_date)이 필요합니다. ISO 8601 형식 (예: 2025-06-15)',
+        )
+        return jsonify(payload), status_code
 
     except Exception as e:
         return handle_error(e, '콘텐츠 신선도 체크')

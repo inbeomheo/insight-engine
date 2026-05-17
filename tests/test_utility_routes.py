@@ -695,7 +695,37 @@ class TestAnalysisEndpoints(_BaseTestCase):
                     self.assertEqual(resp.status_code, 200,
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.seo.freshness_monitor_service.check_freshness')
+    @patch('services.seo.freshness_check_request_service.build_freshness_check_response')
+    def test_freshness_check_uses_request_service(self, mock_build, mock_check, _):
+        mock_check.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 211)
 
+        resp = self.client.post(
+            '/api/freshness-check',
+            json={'content': 'sample content', 'published_date': '2026-05-17'},
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 211)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(
+            data_arg,
+            {'content': 'sample content', 'published_date': '2026-05-17'},
+        )
+        self.assertEqual(
+            mock_build.call_args.kwargs['required_content_error'],
+            '\ud3c9\uac00\ud560 \ucf58\ud150\uce20\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.',
+        )
+        self.assertTrue(
+            mock_build.call_args.kwargs['required_published_date_error'].startswith(
+                '\ubc1c\ud589\uc77c'
+            )
+        )
+        self.assertIs(mock_build.call_args.kwargs['check_freshness_func'], mock_check)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.seo.headline_optimizer_service.optimize_headline')
