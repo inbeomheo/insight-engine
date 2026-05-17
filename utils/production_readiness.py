@@ -1,0 +1,83 @@
+"""Production readiness validation helpers."""
+from urllib.parse import urlparse
+
+
+LOCAL_CORS_HOSTS = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
+PLACEHOLDER_ENCRYPTION_SECRETS = {'your-encryption-secret-key-here', 'change-me'}
+
+
+def parse_cors_origins(raw_origins: str) -> list[str]:
+    """Return non-empty CORS origins from a comma-separated env value."""
+    return [origin.strip() for origin in (raw_origins or '').split(',') if origin.strip()]
+
+
+def production_security_errors(
+    flask_env: str,
+    allowed_origins: list[str],
+    metrics_token: str,
+    encryption_secret: str,
+) -> list[str]:
+    """Return production-only security configuration errors."""
+    if (flask_env or '').strip().lower() != 'production':
+        return []
+
+    errors: list[str] = []
+
+    if not allowed_origins:
+        errors.append('CORS_ORIGINS must list production HTTPS origins')
+    else:
+        for origin in allowed_origins:
+            if origin in {'*', 'null', 'file://'}:
+                errors.append(f'CORS_ORIGINS contains an unsafe origin: {origin}')
+                continue
+
+            parsed = urlparse(origin)
+            host = (parsed.hostname or '').lower()
+            if parsed.scheme != 'https' or not host:
+                errors.append(f'CORS_ORIGINS entries must be HTTPS origins: {origin}')
+                continue
+            if host in LOCAL_CORS_HOSTS or host.endswith('.local'):
+                errors.append(f'CORS_ORIGINS contains a local origin: {origin}')
+
+    if not (metrics_token or '').strip():
+        errors.append('METRICS_AUTH_TOKEN is required to protect /metrics')
+
+    normalized_secret = (encryption_secret or '').strip()
+    if len(normalized_secret) < 32 or normalized_secret in PLACEHOLDER_ENCRYPTION_SECRETS:
+        errors.append('ENCRYPTION_SECRET must be a random secret with at least 32 characters')
+
+    return errors
+
+
+def validate_production_security_config(
+    flask_env: str,
+    allowed_origins: list[str],
+    metrics_token: str,
+    encryption_secret: str,
+) -> None:
+    """Raise when production security configuration is unsafe."""
+    errors = production_security_errors(flask_env, allowed_origins, metrics_token, encryption_secret)
+    if errors:
+        raise RuntimeError('; '.join(errors))
+
+
+def production_readiness_errors(env: dict[str, str]) -> list[str]:
+    """Return offline deployment readiness errors for environment variables."""
+    flask_env = (env.get('FLASK_ENV') or '').strip().lower()
+    errors: list[str] = []
+
+    if flask_env != 'production':
+        errors.append('FLASK_ENV must be production')
+
+    security_env = env.get('FLASK_ENV', '') if flask_env == 'production' else 'production'
+    errors.extend(production_security_errors(
+        security_env,
+        parse_cors_origins(env.get('CORS_ORIGINS', '')),
+        env.get('METRICS_AUTH_TOKEN', ''),
+        env.get('ENCRYPTION_SECRET', ''),
+    ))
+
+    if not (env.get('REDIS_URL') or '').strip():
+        errors.append('REDIS_URL is required for shared production rate limits')
+
+    return errors

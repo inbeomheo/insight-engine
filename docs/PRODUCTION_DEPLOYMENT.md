@@ -175,3 +175,17 @@ Next.js 프론트엔드 인증이 통합되었습니다. (`fcda20f` 이후 커�
 ### 5-3. 6개 라우트 파일이 1,000줄 이상
 
 `utility_routes` (3,350), `advanced_routes` (2,341), `integration_routes` (1,981), `auth_routes` (1,432), `blog_routes` (1,381), `content_mgmt_routes` (1,008). 동작에는 문제 없지만 변경 시 blast radius가 큽니다. 점진적 분할 권장.
+
+
+## Production env verification
+
+Run this gate after loading real production secrets, or in CI with masked variables:
+
+```bash
+FLASK_ENV=production \
+CORS_ORIGINS=https://app.example.com \
+METRICS_AUTH_TOKEN=replace_with_random_token \
+ENCRYPTION_SECRET=replace_with_32_plus_random_secret \
+REDIS_URL=redis://redis:6379/0 \
+npm run verify:production
+```
