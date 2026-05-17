@@ -193,7 +193,9 @@ def metrics():
 @blog_bp.route('/')
 def home():
     """API 서버 상태를 반환합니다. 프론트엔드는 Next.js에서 제공."""
-    return jsonify({'status': 'ok', 'message': 'Insight Engine API Server'})
+    from services.ops.status_service import build_home_status_payload
+
+    return jsonify(build_home_status_payload())
 
 
 @blog_bp.route('/api/heartbeat', methods=['POST'])
