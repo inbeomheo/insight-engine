@@ -405,47 +405,9 @@ def api_wordcloud():
 @blog_bp.route('/api/schema', methods=['GET'])
 def api_schema():
     """API 파라미터 OpenAPI 스키마를 반환합니다."""
-    schema = {
-        'openapi': '3.0.0',
-        'info': {'title': 'Insight Engine API', 'version': '1.0.0'},
-        'paths': {
-            '/generate': {
-                'post': {
-                    'summary': 'AI 콘텐츠 생성',
-                    'requestBody': {
-                        'content': {
-                            'application/json': {
-                                'schema': {
-                                    'type': 'object',
-                                    'required': ['url', 'model', 'style'],
-                                    'properties': {
-                                        'url': {'type': 'string', 'description': 'YouTube 영상 URL'},
-                                        'model': {'type': 'string', 'description': 'AI 모델 ID'},
-                                        'style': {'type': 'string', 'description': '콘텐츠 스타일 ID'},
-                                        'modifiers': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'length': {'type': 'string', 'enum': ['short', 'medium', 'long']},
-                                                'writing_style': {'type': 'string', 'enum': ['conversational', 'explanatory', 'casual', 'expert']},
-                                                'language': {'type': 'string', 'enum': ['ko', 'en', 'ja']},
-                                            },
-                                        },
-                                        'detail_level': {'type': 'string', 'enum': ['brief', 'standard', 'deep'], 'default': 'standard'},
-                                        'output_format': {'type': 'string', 'enum': ['html', 'markdown', 'plain'], 'default': 'html'},
-                                        'max_chars': {'type': 'integer', 'minimum': 100, 'maximum': 50000},
-                                        'include_transcript': {'type': 'boolean', 'default': False},
-                                        'web_search': {'type': 'boolean', 'default': False},
-                                        'agent_mode': {'type': 'boolean', 'default': False},
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-    }
-    return jsonify(schema)
+    from services.data.api_schema_service import build_api_schema
+
+    return jsonify(build_api_schema())
 
 
 @blog_bp.route('/feed.xml', methods=['GET'])
