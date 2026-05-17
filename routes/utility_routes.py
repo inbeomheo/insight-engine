@@ -514,14 +514,16 @@ def api_readability():
 @blog_bp.route('/api/sentiment-flow', methods=['POST'])
 def api_sentiment_flow():
     """콘텐츠의 문단별 감정 흐름을 분석합니다."""
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    if not content:
-        return jsonify({'error': 'content 필수'}), 400
-
+    from services.analysis.content_analysis_request_service import build_single_field_analysis_response
     from services.analysis.nlp_analysis_service import analyze_sentiment_flow
-    result = analyze_sentiment_flow(content)
-    return jsonify(result)
+
+    payload, status_code = build_single_field_analysis_response(
+        request.get_json(silent=True) or {},
+        field_name='content',
+        required_error='content 필수',
+        analysis_func=analyze_sentiment_flow,
+    )
+    return jsonify(payload), status_code
 
 
 # === NPS 피드백 (F4-20) ===

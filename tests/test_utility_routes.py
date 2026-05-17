@@ -720,6 +720,24 @@ class TestAnalysisEndpoints(_BaseTestCase):
         self.assertEqual(mock_build.call_args.kwargs['required_error'], 'text \ud544\uc218')
         self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_analyze)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.analysis.nlp_analysis_service.analyze_sentiment_flow')
+    @patch('services.analysis.content_analysis_request_service.build_single_field_analysis_response')
+    def test_sentiment_flow_uses_single_field_analysis_helper(self, mock_build, mock_analyze, _):
+        mock_analyze.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 206)
+
+        resp = self.client.post('/api/sentiment-flow', json={'content': 'sample content'}, headers=_H)
+
+        self.assertEqual(resp.status_code, 206)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'content': 'sample content'})
+        self.assertEqual(mock_build.call_args.kwargs['field_name'], 'content')
+        self.assertEqual(mock_build.call_args.kwargs['required_error'], 'content \ud544\uc218')
+        self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_analyze)
+
 # ── RSS 피드 ──────────────────────────────────────
 
 
