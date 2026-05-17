@@ -447,14 +447,16 @@ def api_clear_ai_cache():
 @blog_bp.route('/api/fact-check', methods=['POST'])
 def api_fact_check():
     """콘텐츠의 팩트체크를 수행합니다."""
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    if not content:
-        return jsonify({'error': 'content 필수'}), 400
-
+    from services.analysis.content_analysis_request_service import build_single_field_analysis_response
     from services.agents.fact_check_agent import fact_check
-    result = fact_check(content)
-    return jsonify(result)
+
+    payload, status_code = build_single_field_analysis_response(
+        request.get_json(silent=True) or {},
+        field_name='content',
+        required_error='content 필수',
+        analysis_func=fact_check,
+    )
+    return jsonify(payload), status_code
 
 
 # === SEO 최적화 (F3-08) ===
