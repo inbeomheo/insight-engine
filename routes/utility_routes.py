@@ -274,27 +274,15 @@ def api_campaign_packs():
 @blog_bp.route('/api/cache', methods=['DELETE'])
 def api_clear_cache():
     """캐시를 삭제합니다. video_id 파라미터가 있으면 해당 영상만, 없으면 전체 삭제."""
+    from services.core.cache_deletion_service import build_cache_deletion_response
+
     data = request.get_json(silent=True) or {}
-    video_id = data.get('videoId')
-
-    # URL에서 video_id 추출 (URL이 전달된 경우)
-    url = data.get('url')
-    if url and not video_id:
-        video_id = content_service.get_video_id(url)
-
-    deleted = clear_cache(video_id)
-
-    if video_id:
-        return jsonify({
-            'success': True,
-            'message': f'영상 {video_id}의 캐시가 삭제되었습니다.',
-            'deleted': deleted
-        })
-    return jsonify({
-        'success': True,
-        'message': '전체 캐시가 삭제되었습니다.',
-        'deleted': deleted
-    })
+    payload = build_cache_deletion_response(
+        data,
+        get_video_id=content_service.get_video_id,
+        clear_cache_func=clear_cache,
+    )
+    return jsonify(payload)
 
 
 @blog_bp.route('/api/recommend-style', methods=['POST'])
