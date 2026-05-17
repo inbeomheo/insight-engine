@@ -44,6 +44,12 @@ def test_ci_installs_test_dependencies_and_gates_docker_on_e2e_smoke():
     assert jobs['docker-build']['needs'] == ['backend-test', 'frontend-test', 'e2e-smoke']
 
 
+def test_ci_opts_javascript_actions_into_node24_runtime():
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8'))
+
+    assert workflow['env']['FORCE_JAVASCRIPT_ACTIONS_TO_NODE24'] == 'true'
+
+
 def test_dockerignore_keeps_frontend_lockfile_for_npm_ci():
     dockerignore = (ROOT / '.dockerignore').read_text(encoding='utf-8').splitlines()
 
