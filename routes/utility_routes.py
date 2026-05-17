@@ -224,26 +224,15 @@ def api_providers():
     환경변수에 API 키가 설정된 프로바이더만 반환됩니다.
     """
     from config import get_available_providers, SUPADATA_API_KEY
+    from services.core.provider_catalog_service import build_provider_catalog_response
 
     providers = get_available_providers()
     styles = current_app.config.get('STYLE_OPTIONS', [])
-
-    # 각 프로바이더에 model_count 필드 추가
-    enriched = {}
-    for pid, pdata in providers.items():
-        models = pdata.get('models', [])
-        enriched[pid] = {
-            **pdata,
-            'model_count': len(models),
-            'default_model': models[0]['id'] if models else None,
-        }
-
-    return jsonify({
-        'providers': enriched,
-        'styles': [{'id': s[0], 'name': s[1]} for s in styles],
-        'supadataConfigured': bool(SUPADATA_API_KEY),
-        'hasAutoFallback': True
-    })
+    return jsonify(build_provider_catalog_response(
+        providers=providers,
+        styles=styles,
+        supadata_api_key=SUPADATA_API_KEY,
+    ))
 
 
 @blog_bp.route('/api/ollama/health', methods=['GET'])
@@ -326,11 +315,9 @@ def api_validate_provider():
 def api_campaign_packs():
     """사용 가능한 캠페인 팩 목록을 반환합니다."""
     from config import CAMPAIGN_PACKS
-    packs = {
-        pack_id: {**pack, 'id': pack_id}
-        for pack_id, pack in CAMPAIGN_PACKS.items()
-    }
-    return jsonify({'packs': packs})
+    from services.core.provider_catalog_service import build_campaign_packs_response
+
+    return jsonify(build_campaign_packs_response(CAMPAIGN_PACKS))
 
 
 @blog_bp.route('/api/cache', methods=['DELETE'])
