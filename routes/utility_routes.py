@@ -220,7 +220,6 @@ def metrics():
     error_rate = get_error_rate()
     active = get_active_requests()
 
-    # 큐 상태
     queue_summary = {}
     try:
         from services.data.publish_queue_service import publish_queue_service
@@ -228,49 +227,26 @@ def metrics():
     except Exception:
         pass
 
-    # 프로세스 정보
     import sys as _sys
     py_version = f"{_sys.version_info.major}.{_sys.version_info.minor}"
 
-    lines = [
-        '# HELP insight_requests_total HTTP 요청 누적 수',
-        '# TYPE insight_requests_total counter',
-        f'insight_requests_total {total_requests}',
-        '# HELP insight_errors_total 5xx 응답 누적 수',
-        '# TYPE insight_errors_total counter',
-        f'insight_errors_total {total_errors}',
-        '# HELP insight_error_rate 누적 에러 비율 (0.0-1.0)',
-        '# TYPE insight_error_rate gauge',
-        f'insight_error_rate {error_rate}',
-        '# HELP insight_active_requests 현재 처리 중인 요청 수',
-        '# TYPE insight_active_requests gauge',
-        f'insight_active_requests {active}',
-    ]
-
-    # 발행 큐 상태별 게이지
-    if queue_summary:
-        lines.append('# HELP insight_publish_queue_items 발행 큐 상태별 항목 수')
-        lines.append('# TYPE insight_publish_queue_items gauge')
-        for status in ('queued', 'publishing', 'success', 'failed'):
-            count = queue_summary.get(status, 0)
-            lines.append(f'insight_publish_queue_items{{status="{status}"}} {count}')
-        lines.append(f'insight_publish_queue_total {queue_summary.get("total", 0)}')
-
-    # 메모리 사용량 (옵션)
+    memory_rss_bytes = None
     try:
         import resource
-        mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        lines.append('# HELP insight_memory_rss_bytes 프로세스 RSS 메모리 사용량 (bytes)')
-        lines.append('# TYPE insight_memory_rss_bytes gauge')
-        lines.append(f'insight_memory_rss_bytes {mem_kb * 1024}')
+        memory_rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
     except (ImportError, Exception):
         pass
 
-    lines.append('# HELP insight_build_info 빌드 정보 (Python 버전)')
-    lines.append('# TYPE insight_build_info gauge')
-    lines.append(f'insight_build_info{{python_version="{py_version}"}} 1')
-
-    body = '\n'.join(lines) + '\n'
+    from services.ops.metrics_service import build_prometheus_metrics
+    body = build_prometheus_metrics(
+        total_requests=total_requests,
+        total_errors=total_errors,
+        error_rate=error_rate,
+        active_requests=active,
+        queue_summary=queue_summary,
+        memory_rss_bytes=memory_rss_bytes,
+        python_version=py_version,
+    )
     return (body, 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'})
 
 
