@@ -237,17 +237,11 @@ def api_providers():
 @blog_bp.route('/api/ollama/health', methods=['GET'])
 def api_ollama_health():
     """Ollama 서버 연결 상태를 확인합니다."""
-    import requests as http_requests
+    from services.integrations.ollama_health_service import check_ollama_health
 
     base_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
-    try:
-        resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
-        resp.raise_for_status()
-        data = resp.json()
-        models = [m.get('name', '') for m in data.get('models', [])]
-        return jsonify({'ok': True, 'models': models, 'base_url': base_url})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': sanitize_error_for_client(str(e)), 'base_url': base_url}), 503
+    payload, status_code = check_ollama_health(base_url=base_url)
+    return jsonify(payload), status_code
 
 
 @blog_bp.route('/api/providers/validate', methods=['POST'])
