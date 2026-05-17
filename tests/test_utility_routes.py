@@ -702,6 +702,24 @@ class TestAnalysisEndpoints(_BaseTestCase):
         self.assertEqual(mock_build.call_args.kwargs['required_error'], 'content \ud544\uc218')
         self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_check)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.analysis.readability_service.analyze_readability')
+    @patch('services.analysis.content_analysis_request_service.build_single_field_analysis_response')
+    def test_readability_uses_single_field_analysis_helper(self, mock_build, mock_analyze, _):
+        mock_analyze.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 203)
+
+        resp = self.client.post('/api/readability', json={'text': 'sample text'}, headers=_H)
+
+        self.assertEqual(resp.status_code, 203)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'text': 'sample text'})
+        self.assertEqual(mock_build.call_args.kwargs['field_name'], 'text')
+        self.assertEqual(mock_build.call_args.kwargs['required_error'], 'text \ud544\uc218')
+        self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_analyze)
+
 # ── RSS 피드 ──────────────────────────────────────
 
 

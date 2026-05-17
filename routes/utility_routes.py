@@ -497,14 +497,16 @@ def api_plagiarism_check():
 @blog_bp.route('/api/readability', methods=['POST'])
 def api_readability():
     """콘텐츠의 가독성 점수를 분석합니다."""
-    data = request.get_json(silent=True) or {}
-    text = data.get('text', '')
-    if not text:
-        return jsonify({'error': 'text 필수'}), 400
-
+    from services.analysis.content_analysis_request_service import build_single_field_analysis_response
     from services.analysis.readability_service import analyze_readability
-    result = analyze_readability(text)
-    return jsonify(result)
+
+    payload, status_code = build_single_field_analysis_response(
+        request.get_json(silent=True) or {},
+        field_name='text',
+        required_error='text 필수',
+        analysis_func=analyze_readability,
+    )
+    return jsonify(payload), status_code
 
 
 # === 감정 흐름 분석 (F3-11) ===
