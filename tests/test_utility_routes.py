@@ -696,6 +696,31 @@ class TestAnalysisEndpoints(_BaseTestCase):
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')
 
 
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.seo.headline_optimizer_service.optimize_headline')
+    @patch('services.seo.headline_optimize_request_service.build_headline_optimize_response')
+    def test_optimize_headline_uses_request_service(self, mock_build, mock_optimize, _):
+        mock_optimize.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 210)
+
+        resp = self.client.post(
+            '/api/optimize-headline',
+            json={'title': 'sample title', 'content': 'sample content'},
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 210)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'title': 'sample title', 'content': 'sample content'})
+        self.assertEqual(
+            mock_build.call_args.kwargs['required_error'],
+            '\ubd84\uc11d\ud560 \uc81c\ubaa9\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.',
+        )
+        self.assertIs(mock_build.call_args.kwargs['optimize_headline_func'], mock_optimize)
+
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.agents.seo_optimize_agent.optimize_seo')
     @patch('services.seo.seo_optimize_request_service.build_seo_optimize_response')

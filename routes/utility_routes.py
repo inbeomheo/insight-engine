@@ -569,16 +569,15 @@ def grade_content_route():
 def optimize_headline_route():
     """제목을 분석하고 최적화 제안을 반환합니다."""
     try:
-        data = request.get_json(silent=True) or {}
-        title = data.get('title', '')
-        content = data.get('content', '')
-
-        if not title or not title.strip():
-            return jsonify({'error': '분석할 제목이 필요합니다.'}), 400
-
+        from services.seo.headline_optimize_request_service import build_headline_optimize_response
         from services.seo.headline_optimizer_service import optimize_headline
-        result = optimize_headline(title, content)
-        return jsonify(result)
+
+        payload, status_code = build_headline_optimize_response(
+            request.get_json(silent=True) or {},
+            optimize_headline_func=optimize_headline,
+            required_error='분석할 제목이 필요합니다.',
+        )
+        return jsonify(payload), status_code
 
     except Exception as e:
         return handle_error(e, '헤드라인 최적화')
