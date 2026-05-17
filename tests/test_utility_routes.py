@@ -684,6 +684,23 @@ class TestAnalysisEndpoints(_BaseTestCase):
                     self.assertEqual(resp.status_code, 200,
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.quality.plagiarism_service.check_plagiarism')
+    @patch('services.analysis.content_analysis_request_service.build_single_field_analysis_response')
+    def test_plagiarism_check_uses_single_field_analysis_helper(self, mock_build, mock_check, _):
+        mock_check.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 202)
+
+        resp = self.client.post('/api/plagiarism-check', json={'content': 'sample content'}, headers=_H)
+
+        self.assertEqual(resp.status_code, 202)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'content': 'sample content'})
+        self.assertEqual(mock_build.call_args.kwargs['field_name'], 'content')
+        self.assertEqual(mock_build.call_args.kwargs['required_error'], 'content \ud544\uc218')
+        self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_check)
 
 # ── RSS 피드 ──────────────────────────────────────
 

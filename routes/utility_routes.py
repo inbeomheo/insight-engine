@@ -480,14 +480,16 @@ def api_seo_optimize():
 @blog_bp.route('/api/plagiarism-check', methods=['POST'])
 def api_plagiarism_check():
     """콘텐츠의 표절/중복 여부를 검사합니다."""
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    if not content:
-        return jsonify({'error': 'content 필수'}), 400
-
+    from services.analysis.content_analysis_request_service import build_single_field_analysis_response
     from services.quality.plagiarism_service import check_plagiarism
-    result = check_plagiarism(content)
-    return jsonify(result)
+
+    payload, status_code = build_single_field_analysis_response(
+        request.get_json(silent=True) or {},
+        field_name='content',
+        required_error='content 필수',
+        analysis_func=check_plagiarism,
+    )
+    return jsonify(payload), status_code
 
 
 # === 가독성 분석 (F3-10) ===
