@@ -13,10 +13,12 @@ from routes.blog_routes import blog_bp, _extract_client_id, DEFAULT_MODEL
 from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from services.data.supabase_service import require_auth
+from services.ops.client_tracker_service import ClientTracker
 from services.platform.webhook_service import WebhookService
 from utils.responses import handle_error, sanitize_error_for_client
 
-_CLIENT_TRACKER: Dict[str, float] = {}
+_CLIENT_TRACKER_SERVICE = ClientTracker()
+_CLIENT_TRACKER: Dict[str, float] = _CLIENT_TRACKER_SERVICE.clients
 
 # 재생목록/채널 조회 결과 캐시 (5분 TTL)
 _PLAYLIST_CACHE: Dict[str, dict] = {}
@@ -88,10 +90,7 @@ def get_active_requests() -> int:
 
 def _cleanup_stale_clients():
     """5분 이상 heartbeat 없는 클라이언트 정리."""
-    now = time.time()
-    stale = [cid for cid, ts in _CLIENT_TRACKER.items() if now - ts > 300]
-    for cid in stale:
-        del _CLIENT_TRACKER[cid]
+    _CLIENT_TRACKER_SERVICE.cleanup_stale()
 
 
 @blog_bp.route('/health')
@@ -198,7 +197,7 @@ def api_heartbeat():
     client_id = _extract_client_id(request)
     if not client_id:
         return jsonify({'ok': False, 'error': 'clientId required'}), 400
-    _CLIENT_TRACKER[client_id] = time.time()
+    _CLIENT_TRACKER_SERVICE.heartbeat(client_id)
     _cleanup_stale_clients()
     return jsonify({'ok': True})
 
@@ -209,7 +208,7 @@ def api_close():
     client_id = _extract_client_id(request)
     if not client_id:
         return jsonify({'ok': False, 'error': 'clientId required'}), 400
-    _CLIENT_TRACKER.pop(client_id, None)
+    _CLIENT_TRACKER_SERVICE.close(client_id)
     return jsonify({'ok': True})
 
 
