@@ -81,6 +81,23 @@ class TestProductionSecurityConfig(unittest.TestCase):
         self.assertIn('CONTENT_SECURITY_POLICY', str(ctx.exception))
         self.assertIn('unsafe-eval', str(ctx.exception))
 
+
+    def test_security_headers_include_browser_isolation_defaults(self):
+        from app import create_app
+
+        with self._production_env():
+            os.environ.pop('CONTENT_SECURITY_POLICY', None)
+            app = create_app({'TESTING': True})
+            response = app.test_client().get('/health', base_url='https://app.example.com')
+
+        self.assertEqual(response.headers['Cross-Origin-Opener-Policy'], 'same-origin')
+        self.assertEqual(response.headers['Cross-Origin-Resource-Policy'], 'same-origin')
+        self.assertEqual(response.headers['X-Permitted-Cross-Domain-Policies'], 'none')
+        hsts = response.headers['Strict-Transport-Security']
+        self.assertIn('max-age=63072000', hsts)
+        self.assertIn('includeSubDomains', hsts)
+        self.assertIn('preload', hsts)
+
     def test_development_allows_localhost_cors_without_metrics_token(self):
         from app import create_app
 

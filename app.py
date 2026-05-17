@@ -159,9 +159,12 @@ def create_app(test_config=None):
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['Content-Security-Policy'] = _csp_header
         response.headers['Permissions-Policy'] = _permissions_policy
+        response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+        response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+        response.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
         # HTTPS 환경에서만 HSTS 활성화
         if request.is_secure:
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
         return response
 
     # CSRF 보호 (Origin 헤더 검증)

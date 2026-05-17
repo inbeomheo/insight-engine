@@ -194,3 +194,8 @@ npm run verify:production
 ## Production CSP guard
 
 `FLASK_ENV=production` uses a strict default Content-Security-Policy and rejects `CONTENT_SECURITY_POLICY` values containing `'unsafe-inline'` or `'unsafe-eval'`.
+
+
+## Browser isolation headers
+
+Responses include `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin`, `X-Permitted-Cross-Domain-Policies: none`, and HTTPS responses use HSTS `max-age=63072000; includeSubDomains; preload`.
