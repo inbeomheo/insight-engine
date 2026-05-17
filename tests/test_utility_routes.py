@@ -504,6 +504,17 @@ class TestNPSFeedback(_BaseTestCase):
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.platform.nps_feedback_service.build_nps_feedback_response')
+    def test_nps_uses_feedback_service(self, mock_build, _):
+        mock_build.return_value = ({'normalized': True}, 209)
+
+        resp = self.client.post('/api/feedback/nps', json={'score': 7}, headers=_H)
+
+        self.assertEqual(resp.status_code, 209)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once_with({'score': 7}, user_id='anonymous')
+
 
 # ── AI 캐시 삭제 ──────────────────────────────────────
 

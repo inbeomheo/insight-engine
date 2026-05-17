@@ -532,20 +532,13 @@ def api_sentiment_flow():
 def submit_nps_feedback():
     """NPS 점수 + 피드백 제출"""
     from flask import g
-    data = request.get_json(silent=True) or {}
-    score = data.get('score')
-    feedback = data.get('feedback', '')
+    from services.platform.nps_feedback_service import build_nps_feedback_response
 
-    if score is None or not (0 <= int(score) <= 10):
-        return jsonify({'error': 'score는 0~10 사이여야 합니다.'}), 400
-
-    # 인메모리 저장 (프로덕션에서는 DB)
-    entry = {
-        'user_id': getattr(g, 'user_id', 'anonymous'),
-        'score': int(score),
-        'feedback': feedback,
-    }
-    return jsonify({'success': True, **entry})
+    payload, status_code = build_nps_feedback_response(
+        request.get_json(silent=True) or {},
+        user_id=getattr(g, 'user_id', 'anonymous'),
+    )
+    return jsonify(payload), status_code
 
 
 # ── 콘텐츠 종합 등급 평가 ──────────────────────────────
