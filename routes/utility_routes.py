@@ -386,16 +386,14 @@ def api_recommend_sources():
 def api_wordcloud():
     """텍스트에서 워드클라우드 SVG를 생성합니다."""
     try:
-        data = request.get_json(silent=True) or {}
-        text = data.get('text', '')
-        max_words = min(int(data.get('max_words', 60)), 100)
-
-        if not text:
-            return jsonify({'error': '텍스트가 필요합니다.'}), 400
-
+        from services.media.wordcloud_request_service import build_wordcloud_response
         from services.media.wordcloud_service import generate_wordcloud
-        svg = generate_wordcloud(text, max_words=max_words)
-        return jsonify({'svg': svg})
+
+        payload, status_code = build_wordcloud_response(
+            request.get_json(silent=True) or {},
+            generate_wordcloud_func=generate_wordcloud,
+        )
+        return jsonify(payload), status_code
 
     except ValueError as e:
         return handle_error(str(e))
