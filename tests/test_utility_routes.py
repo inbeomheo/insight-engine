@@ -738,6 +738,28 @@ class TestAnalysisEndpoints(_BaseTestCase):
         self.assertEqual(mock_build.call_args.kwargs['required_error'], 'content \ud544\uc218')
         self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_analyze)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.quality.content_grader_service.grade_content')
+    @patch('services.analysis.content_analysis_request_service.build_single_field_analysis_response')
+    def test_grade_content_uses_single_field_analysis_helper(self, mock_build, mock_grade, _):
+        mock_grade.return_value = {'direct': True}
+        mock_build.return_value = ({'normalized': True}, 207)
+
+        resp = self.client.post('/api/grade-content', json={'content': 'sample content'}, headers=_H)
+
+        self.assertEqual(resp.status_code, 207)
+        self.assertEqual(resp.get_json(), {'normalized': True})
+        mock_build.assert_called_once()
+        data_arg = mock_build.call_args.args[0]
+        self.assertEqual(data_arg, {'content': 'sample content'})
+        self.assertEqual(mock_build.call_args.kwargs['field_name'], 'content')
+        self.assertEqual(
+            mock_build.call_args.kwargs['required_error'],
+            '\ud3c9\uac00\ud560 \ucf58\ud150\uce20\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.',
+        )
+        self.assertTrue(mock_build.call_args.kwargs['strip_strings'])
+        self.assertIs(mock_build.call_args.kwargs['analysis_func'], mock_grade)
+
 # ── RSS 피드 ──────────────────────────────────────
 
 

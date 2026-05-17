@@ -554,15 +554,17 @@ def submit_nps_feedback():
 def grade_content_route():
     """콘텐츠를 종합 평가하여 A~F 등급을 반환합니다."""
     try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-
-        if not content or not content.strip():
-            return jsonify({'error': '평가할 콘텐츠가 필요합니다.'}), 400
-
+        from services.analysis.content_analysis_request_service import build_single_field_analysis_response
         from services.quality.content_grader_service import grade_content
-        result = grade_content(content)
-        return jsonify(result)
+
+        payload, status_code = build_single_field_analysis_response(
+            request.get_json(silent=True) or {},
+            field_name='content',
+            required_error='평가할 콘텐츠가 필요합니다.',
+            analysis_func=grade_content,
+            strip_strings=True,
+        )
+        return jsonify(payload), status_code
 
     except Exception as e:
         return handle_error(e, '콘텐츠 등급 평가')

@@ -55,3 +55,16 @@ def test_build_single_field_analysis_response_propagates_analyzer_errors():
             required_error="content required",
             analysis_func=fail,
         )
+
+
+def test_build_single_field_analysis_response_can_reject_blank_strings():
+    payload, status = build_single_field_analysis_response(
+        {"content": "   "},
+        field_name="content",
+        required_error="blank content",
+        analysis_func=lambda content: {"ok": True},
+        strip_strings=True,
+    )
+
+    assert status == 400
+    assert payload == {"error": "blank content"}
