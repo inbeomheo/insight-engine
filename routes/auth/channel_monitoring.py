@@ -2,7 +2,7 @@
 
 auth_routes.py에서 분리됨. namespace 경유 호출 패턴 유지.
 """
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from routes import auth_routes as _ar
 from routes.auth_routes import auth_bp
