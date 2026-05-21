@@ -1,134 +1,34 @@
 """
 Supabase 서비스 모듈
 데이터베이스 연동 및 사용자 인증 처리
+
+Issue #17 (소PR A): 인프라 헬퍼는 `src/shared/infrastructure/supabase_client.py`로
+이전되었으며, 본 파일은 호환성 유지를 위해 동일 심볼을 re-export 한다.
+신규 호출처는 새 위치를 직접 import할 것:
+
+    from src.shared.infrastructure.supabase_client import (
+        get_supabase, is_supabase_enabled, encrypt_api_key, decrypt_api_key,
+    )
 """
 import os
-import base64
-import hashlib
 from functools import wraps
 from typing import Callable
 from flask import request, jsonify, g
-def _lazy_create_client(url, key):
-    """supabase.create_client를 지연 로딩합니다 (cold start 최적화: ~1.5초 절감)."""
-    from supabase import create_client
-    return create_client(url, key)
-from cryptography.fernet import Fernet
 
 from services.core.logging_config import supabase_logger as logger
 from services.exceptions import ConfigurationError
 
-# Supabase 클라이언트 초기화
-_supabase_client = None
-_supabase_admin = None  # Admin 클라이언트 (service_role key)
-_fernet_instance: Fernet = None
-_encryption_enabled: bool = None  # 암호화 활성화 여부
-
-
-def get_supabase():
-    """Supabase 클라이언트 싱글톤"""
-    global _supabase_client
-
-    if _supabase_client is None:
-        url = os.getenv('SUPABASE_URL')
-        key = os.getenv('SUPABASE_ANON_KEY')
-
-        if not url or not key:
-            return None
-
-        _supabase_client = _lazy_create_client(url, key)
-
-    return _supabase_client
-
-
-def is_supabase_enabled() -> bool:
-    """Supabase 활성화 여부 (환경변수 기반)."""
-    return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
-
-
-def _get_admin_client():
-    """Supabase Admin 클라이언트 (service_role key - 계정 삭제 등)"""
-    global _supabase_admin
-
-    if _supabase_admin is None:
-        url = os.getenv('SUPABASE_URL')
-        service_role_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-
-        if not url or not service_role_key:
-            logger.warning("SUPABASE_SERVICE_ROLE_KEY 미설정 - admin 기능 비활성화")
-            return None
-
-        _supabase_admin = _lazy_create_client(url, service_role_key)
-
-    return _supabase_admin
-
-
-def _is_encryption_enabled() -> bool:
-    """암호화 활성화 여부 확인"""
-    global _encryption_enabled
-    if _encryption_enabled is None:
-        secret = os.getenv('ENCRYPTION_SECRET')
-        _encryption_enabled = bool(secret and secret.strip())
-        if not _encryption_enabled:
-            logger.warning("ENCRYPTION_SECRET이 설정되지 않았습니다. API 키 암호화가 비활성화됩니다.")
-    return _encryption_enabled
-
-
-def _get_fernet() -> Fernet:
-    """Fernet 인스턴스 싱글톤 (암호화용)
-
-    Raises:
-        ConfigurationError: ENCRYPTION_SECRET 환경변수가 설정되지 않은 경우
-    """
-    global _fernet_instance
-
-    if _fernet_instance is None:
-        secret = os.getenv('ENCRYPTION_SECRET')
-
-        if not secret or not secret.strip():
-            raise ConfigurationError(
-                "ENCRYPTION_SECRET 환경변수가 필요합니다. API 키 암호화를 위해 설정해주세요.",
-                config_key='ENCRYPTION_SECRET'
-            )
-
-        key = hashlib.sha256(secret.encode()).digest()
-        _fernet_instance = Fernet(base64.urlsafe_b64encode(key))
-
-    return _fernet_instance
-
-
-def encrypt_api_key(api_key: str) -> str:
-    """API 키 암호화
-
-    암호화가 비활성화된 경우 원본 반환 (개발 환경용)
-    """
-    if not api_key:
-        return None
-    if not _is_encryption_enabled():
-        logger.debug("암호화 비활성화 상태, 원본 저장")
-        return api_key
-    try:
-        return _get_fernet().encrypt(api_key.encode()).decode()
-    except ConfigurationError:
-        logger.warning("암호화 설정 오류, 원본 저장")
-        return api_key
-
-
-def decrypt_api_key(encrypted_key: str) -> str:
-    """API 키 복호화
-
-    암호화가 비활성화된 경우 원본 반환
-    """
-    if not encrypted_key:
-        return None
-    if not _is_encryption_enabled():
-        return encrypted_key
-    try:
-        return _get_fernet().decrypt(encrypted_key.encode()).decode()
-    except ConfigurationError:
-        return encrypted_key
-    except Exception as e:
-        logger.warning(f"API 키 복호화 실패: {e}")
-        return None
+# 인프라 헬퍼 re-export (호환 shim) — 신규 호출처는 src.shared.infrastructure 사용 권장
+from src.shared.infrastructure.supabase_client import (  # noqa: F401
+    _get_admin_client,
+    _get_fernet,
+    _is_encryption_enabled,
+    _lazy_create_client,
+    decrypt_api_key,
+    encrypt_api_key,
+    get_supabase,
+    is_supabase_enabled,
+)
 
 # =============================================
 # 인증 헬퍼 및 데코레이터

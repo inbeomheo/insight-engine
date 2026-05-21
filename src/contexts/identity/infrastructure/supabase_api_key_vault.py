@@ -23,17 +23,19 @@ class SupabaseApiKeyVault(IApiKeyVault):
     """
 
     def _get_client(self):
-        from services.data.supabase_service import get_supabase, is_supabase_enabled
+        from src.shared.infrastructure.supabase_client import (
+            get_supabase, is_supabase_enabled,
+        )
         if not is_supabase_enabled():
             return None
         return get_supabase()
 
     def _encrypt(self, plaintext: str) -> str:
-        from services.data.supabase_service import encrypt_api_key
+        from src.shared.infrastructure.supabase_client import encrypt_api_key
         return encrypt_api_key(plaintext)
 
     def _decrypt(self, encrypted: str) -> str:
-        from services.data.supabase_service import decrypt_api_key
+        from src.shared.infrastructure.supabase_client import decrypt_api_key
         return decrypt_api_key(encrypted)
 
     @staticmethod

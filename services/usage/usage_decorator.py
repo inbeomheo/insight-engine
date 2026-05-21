@@ -14,7 +14,7 @@ blog_routes.py의 중복 코드 제거
 from functools import wraps
 from flask import g, jsonify, make_response
 
-from services.data.supabase_service import is_supabase_enabled
+from src.shared.infrastructure.supabase_client import is_supabase_enabled
 from services.usage.usage_service import UsageService, ADMIN_USAGE
 from services.core.logging_config import ServiceLogger
 

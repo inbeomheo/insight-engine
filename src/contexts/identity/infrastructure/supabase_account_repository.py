@@ -70,7 +70,9 @@ class SupabaseAccountRepository(IAccountRepository):
         Supabase 미설정(개발 모드) 시 None 반환.
         """
         # lazy import — 본 클래스를 import해도 supabase 미설치 환경에서 폭발하지 않도록
-        from services.data.supabase_service import get_supabase, is_supabase_enabled
+        from src.shared.infrastructure.supabase_client import (
+            get_supabase, is_supabase_enabled,
+        )
 
         if not is_supabase_enabled():
             return None
@@ -78,7 +80,7 @@ class SupabaseAccountRepository(IAccountRepository):
 
     def _get_admin_client(self) -> Optional[Any]:
         """Supabase service_role 클라이언트 (admin API용)."""
-        from services.data.supabase_service import _get_admin_client
+        from src.shared.infrastructure.supabase_client import _get_admin_client
 
         return _get_admin_client()
 

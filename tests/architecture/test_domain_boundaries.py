@@ -106,24 +106,22 @@ def test_flask_current_app_not_in_domain_modules():
 # B. services.data.supabase_service 직결 import 베이스라인
 # ---------------------------------------------------------------------------
 
-# 2026-05-21 측정 기준: services/ + routes/ 에서 supabase_service를 직접 import하는
-# 파일 중 services/data/* 외부에 있는 파일 44개.
-# Phase 2(Identity&Access ACL)에서 services/data/api_key_service.py와
-# auth 서브도메인을 정리하면서 0으로 줄여야 한다.
+# 2026-05-21 최초 측정: 비-data 도메인에서 supabase_service 직결 import 44 파일.
+# 2026-05-21 Issue #17 소PR A: 인프라 헬퍼(`get_supabase`, `is_supabase_enabled`,
+#   `_get_admin_client`, `encrypt_api_key`, `decrypt_api_key`)를
+#   `src/shared/infrastructure/supabase_client.py`로 이전. 순수 인프라만 쓰던
+#   6 파일(services/finetune, services/payment/*, services/platform/referral_service,
+#   services/usage/credit_service, services/usage/usage_decorator)이 베이스라인에서 제거됨.
+#   → 38 파일로 감소.
 #
-# TODO(Phase 2): 우선순위
-#   1. routes/auth/* — require_auth 데코레이터를 contexts/identity/web 로 이관
-#   2. services/usage/* — Identity&Access ACL 경유로 변경
-#   3. services/payment/*, services/platform/referral_service.py — 동일
-#   4. routes/* 의 require_auth — 마지막 (대량)
+# 다음 단계:
+#   - 소PR B (Issue #17): `require_auth` 등 인증 데코레이터를
+#     `src/contexts/identity/interface/auth_decorators.py`로 이관 → routes 34건 제거
+#   - 소PR C (Issue #17): Identity CRUD(`is_admin`/`get_usage`/`decrement_usage`)
+#     호출자를 `AccountService` 경유로 변경 → services/usage/* 제거
+#   - 소PR D (Issue #17): routes 직접 `.table()` 호출 정리
 SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = {
     # services/ (비-data 서브도메인)
-    "services/finetune/data_collector.py",
-    "services/payment/subscription_service.py",
-    "services/payment/trial_service.py",
-    "services/platform/referral_service.py",
-    "services/usage/credit_service.py",
-    "services/usage/usage_decorator.py",
     "services/usage/usage_service.py",
     # routes/
     "routes/advanced/fusion.py",

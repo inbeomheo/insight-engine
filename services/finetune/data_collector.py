@@ -49,8 +49,8 @@ class AutoDataCollector:
             수집 결과 통계
         """
         try:
-            from services.data.supabase_service import get_supabase_client
-            client = get_supabase_client()
+            from src.shared.infrastructure.supabase_client import get_supabase
+            client = get_supabase()
             if not client:
                 return {'error': 'Supabase 미연결'}
 
