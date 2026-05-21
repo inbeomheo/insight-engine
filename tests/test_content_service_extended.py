@@ -207,7 +207,9 @@ class TestCreateHttpSession(unittest.TestCase):
 
     def test_creates_session_no_proxy(self):
         from services.core.content_service import _create_http_session
-        with patch('services.core.content_service._get_proxy_config', return_value=None):
+        # _create_http_session은 services.transcript._shared.create_http_session의 alias.
+        # _shared 모듈의 get_proxy_config를 patch해야 효과가 있다.
+        with patch('services.transcript._shared.get_proxy_config', return_value=None):
             session = _create_http_session()
             self.assertIsInstance(session, requests.Session)
             self.assertIn('User-Agent', session.headers)
@@ -216,7 +218,7 @@ class TestCreateHttpSession(unittest.TestCase):
         from services.core.content_service import _create_http_session
         def fake_proxy(proxy_type):
             return 'http://proxy:8080' if proxy_type == 'HTTP' else None
-        with patch('services.core.content_service._get_proxy_config', side_effect=fake_proxy):
+        with patch('services.transcript._shared.get_proxy_config', side_effect=fake_proxy):
             session = _create_http_session()
             self.assertIn('http', session.proxies)
 
