@@ -9,10 +9,12 @@ from flask import current_app, jsonify, request
 
 from routes.blog_routes import blog_bp, DEFAULT_MODEL
 from services.core import ai_service, content_service
+from services.data.supabase_service import require_auth
 from utils.responses import handle_error
 
 
 @blog_bp.route('/api/recommend-style', methods=['POST'])
+@require_auth
 def recommend_style():
     """YouTube 제목을 분석하여 최적의 스타일과 모디파이어를 AI로 추천합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
@@ -87,6 +89,7 @@ def recommend_style():
 
 
 @blog_bp.route('/api/generate-style', methods=['POST'])
+@require_auth
 def generate_style():
     """YouTube 제목과 자막을 분석하여 맞춤형 프롬프트를 AI로 생성합니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
