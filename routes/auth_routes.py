@@ -312,85 +312,10 @@ def get_current_user():
             401
         )
 
-# =============================================
-# API 키 관리
-# =============================================
 
-def _mask_api_key(key):
-    """API 키 마스킹 (보안 강화)
-
-    기존: 8자 + 4자 = 12자 노출
-    변경: 4자 + 2자 = 6자 노출
-    """
-    if not key:
-        return None
-    if len(key) <= 8:
-        return '****'
-    return f'{key[:4]}...{key[-2:]}'
-
-
-@auth_bp.route('/api/user/keys', methods=['GET'])
-@require_auth
-def get_user_keys():
-    """사용자 API 키 조회"""
-    keys = get_api_keys(g.user_id)
-    masked_keys = {
-        k: _mask_api_key(v) if k != 'selectedProvider' else v
-        for k, v in keys.items()
-    }
-    return jsonify({'keys': masked_keys, 'selectedProvider': keys.get('selectedProvider')})
-
-
-@auth_bp.route('/api/user/keys', methods=['POST'])
-@require_auth
-def save_user_keys():
-    """사용자 API 키 저장"""
-    if save_api_keys(g.user_id, _get_json_data()):
-        return _success_response()
-    return _error_response('API 키 저장에 실패했습니다.', 500)
-
-
-# =============================================
-# 커스텀 스타일 관리
-# =============================================
-
-@auth_bp.route('/api/user/styles', methods=['GET'])
-@require_auth
-def get_user_styles():
-    """사용자 커스텀 스타일 조회"""
-    return jsonify({'styles': get_custom_styles(g.user_id)})
-
-
-@auth_bp.route('/api/user/styles', methods=['POST'])
-@require_auth
-def save_user_style():
-    """사용자 커스텀 스타일 저장"""
-    if save_custom_style(g.user_id, _get_json_data()):
-        return _success_response()
-    return _error_response('스타일 저장에 실패했습니다.', 500)
-
-
-@auth_bp.route('/api/user/styles/<style_id>', methods=['DELETE'])
-@require_auth
-def delete_user_style(style_id):
-    """사용자 커스텀 스타일 삭제"""
-    if delete_custom_style(g.user_id, style_id):
-        return _success_response()
-    return _error_response('삭제에 실패했습니다.', 500)
-
-
-# =============================================
-# 사용량 조회
-# =============================================
-
-@auth_bp.route('/api/user/usage', methods=['GET'])
-@require_auth
-def get_user_usage():
-    """사용자 사용량 조회 (남은 횟수, 최대 횟수)"""
-    usage = get_usage(g.user_id)
-    # 관리자 여부 추가
-    usage['is_admin'] = is_admin(g.user_id)
-    return jsonify(usage)
+# 사용자 설정(API 키/커스텀 스타일/사용량) 라우트는 routes/auth/user_settings.py로 분리됨.
+# 테스트가 import하는 _mask_api_key 헬퍼는 호환성 위해 여기서 re-export.
+from routes.auth.user_settings import _mask_api_key  # noqa: E402,F401
 
 
 # =============================================
