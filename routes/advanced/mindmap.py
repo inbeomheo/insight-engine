@@ -6,7 +6,7 @@ from flask import current_app, jsonify, request
 from routes.blog_routes import blog_bp, DEFAULT_MODEL
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 from utils.responses import handle_error, validate_content_length

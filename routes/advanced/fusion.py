@@ -3,7 +3,7 @@ from flask import current_app, jsonify, request
 
 from routes.blog_routes import blog_bp
 from extensions import limiter
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from utils.responses import handle_error
 

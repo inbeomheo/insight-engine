@@ -7,7 +7,7 @@ import re as re_module
 from flask import request, jsonify, current_app, send_file
 
 from routes.blog_routes import blog_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import handle_error
 
 

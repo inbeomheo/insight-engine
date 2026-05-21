@@ -8,7 +8,8 @@ from flask import request, jsonify, g
 
 from routes.blog_routes import blog_bp
 from utils.responses import success_response, error_response, sanitize_error_for_client
-from services.data.supabase_service import require_auth, is_supabase_enabled
+from src.contexts.identity.interface.auth_decorators import require_auth
+from src.shared.infrastructure.supabase_client import is_supabase_enabled
 
 logger = logging.getLogger(__name__)
 

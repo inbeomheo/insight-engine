@@ -3,7 +3,7 @@ from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp
 from routes.integrations._shared import sanitize_result_message
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import handle_error
 
 

@@ -7,8 +7,9 @@ import os
 
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response, sanitize_error_for_client
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data.supabase_service import (
-    get_supabase, is_supabase_enabled, require_auth,
+    get_supabase, is_supabase_enabled,
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,

@@ -26,8 +26,9 @@ from utils.responses import handle_error, sanitize_error_for_client, api_error_f
 
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data.supabase_service import (
-    require_auth, is_supabase_enabled, save_history
+    is_supabase_enabled, save_history
 )
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response

@@ -110,57 +110,30 @@ def test_flask_current_app_not_in_domain_modules():
 # 2026-05-21 Issue #17 소PR A: 인프라 헬퍼(`get_supabase`, `is_supabase_enabled`,
 #   `_get_admin_client`, `encrypt_api_key`, `decrypt_api_key`)를
 #   `src/shared/infrastructure/supabase_client.py`로 이전. 순수 인프라만 쓰던
-#   6 파일(services/finetune, services/payment/*, services/platform/referral_service,
-#   services/usage/credit_service, services/usage/usage_decorator)이 베이스라인에서 제거됨.
-#   → 38 파일로 감소.
+#   6 파일이 베이스라인에서 제거됨. → 38 파일
+# 2026-05-21 Issue #17 소PR B-1: `require_auth` 등 인증 데코레이터를
+#   `src/contexts/identity/interface/auth_decorators.py`로 이전 + 33 단일 import
+#   라우트 갱신 + payment_routes.py / auth_routes.py / blog_routes.py 다중 import
+#   재구성. routes 32 파일이 베이스라인에서 제거됨. → 6 파일.
+#   잔존: auth_routes.py / blog_routes.py (다중 함수 import — 소PR C 대상),
+#         generation_helpers.py (save_history), utility/external.py (lazy
+#         SupabaseService 참조), advanced_routes.py (lazy is_supabase_enabled),
+#         usage_service.py (Identity CRUD 호출).
 #
 # 다음 단계:
-#   - 소PR B (Issue #17): `require_auth` 등 인증 데코레이터를
-#     `src/contexts/identity/interface/auth_decorators.py`로 이관 → routes 34건 제거
-#   - 소PR C (Issue #17): Identity CRUD(`is_admin`/`get_usage`/`decrement_usage`)
-#     호출자를 `AccountService` 경유로 변경 → services/usage/* 제거
-#   - 소PR D (Issue #17): routes 직접 `.table()` 호출 정리
+#   - 소PR B-2: `inject_auth_context` (g.auth 미들웨어) 추가 — UserAccount Aggregate 주입
+#   - 소PR C: Identity CRUD(`is_admin`/`get_usage`/`decrement_usage`) 호출자를
+#     `AccountService` 경유로 변경 → services/usage/usage_service.py + 라우트 다중 import 정리
+#   - 소PR D: routes 직접 `.table()` 호출 7건 정리
 SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = {
     # services/ (비-data 서브도메인)
     "services/usage/usage_service.py",
-    # routes/
-    "routes/advanced/fusion.py",
-    "routes/advanced/mindmap.py",
-    "routes/advanced/rewrite.py",
+    # routes/ (다중 import 또는 lazy 잔존)
     "routes/advanced_routes.py",
-    "routes/analytics_routes.py",
-    "routes/auth/admin.py",
-    "routes/auth/channel_monitoring.py",
-    "routes/auth/history_account.py",
-    "routes/auth/misc.py",
-    "routes/auth/user_settings.py",
-    "routes/auth/workspace.py",
     "routes/auth_routes.py",
-    "routes/blog/templates.py",
-    "routes/blog/transcript_workspace.py",
-    "routes/blog/voice_capture.py",
     "routes/blog_routes.py",
-    "routes/content_mgmt/backup_io.py",
-    "routes/content_mgmt/trash_pin.py",
-    "routes/content_mgmt_routes.py",
-    "routes/export_routes.py",
     "routes/generation_helpers.py",
-    "routes/graphql_routes.py",
-    "routes/integrations/automation.py",
-    "routes/integrations/imports.py",
-    "routes/integrations/knowledge.py",
-    "routes/integrations/mcp_plugins.py",
-    "routes/integrations/misc.py",
-    "routes/integrations/workflow.py",
-    "routes/marketplace_routes.py",
-    "routes/payment/crypto.py",
-    "routes/payment/paddle.py",
-    "routes/payment_routes.py",
-    "routes/utility/content_meta.py",
     "routes/utility/external.py",
-    "routes/utility/feedback_quality.py",
-    "routes/utility/generation.py",
-    "routes/utility_routes.py",
 }
 
 

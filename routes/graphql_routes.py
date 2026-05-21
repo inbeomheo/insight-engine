@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from flask import Blueprint, request, jsonify, current_app, g
 
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage.usage_service import UsageService
 
 graphql_bp = Blueprint('graphql', __name__)

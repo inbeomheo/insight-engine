@@ -7,7 +7,7 @@ from flask import g, jsonify, request
 
 from routes import auth_routes as _ar
 from routes.auth_routes import auth_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 # ── 워크스페이스 CRUD/멤버 ─────────────────────────────

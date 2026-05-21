@@ -6,7 +6,7 @@ from flask import g, jsonify
 
 from routes import auth_routes as _ar
 from routes.auth_routes import auth_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 @auth_bp.route('/api/admin/dashboard', methods=['GET'])

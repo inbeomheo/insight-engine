@@ -14,7 +14,7 @@ from routes.generation_helpers import (
 from extensions import limiter
 from config import get_model_max_tokens, CAMPAIGN_PACKS
 from services.core import ai_service, content_service
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 from utils.responses import handle_error, sanitize_error_for_client, sanitize_path, clamp_query_int, validate_content_length

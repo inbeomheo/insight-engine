@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, Response, stream_with_context
 
 from extensions import limiter
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.analytics.dashboard_service import DashboardService
 from services.analytics.performance_service import PerformanceService
 from services.analytics.cost_tracker_service import CostTrackerService

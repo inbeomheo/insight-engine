@@ -2,7 +2,7 @@
 from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 # ── OpenAPI 문서 (F7-08) ──────────────────────────────────────

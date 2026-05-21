@@ -7,7 +7,7 @@ import re
 from flask import Blueprint, request, jsonify, Response, current_app
 from utils.responses import sanitize_error_for_client, clamp_query_int
 
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data import content_library_service
 from services.data import archive_service
 from services.data import lock_service

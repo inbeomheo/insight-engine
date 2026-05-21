@@ -4,16 +4,18 @@ Supabase 서비스 모듈
 
 Issue #17 (소PR A): 인프라 헬퍼는 `src/shared/infrastructure/supabase_client.py`로
 이전되었으며, 본 파일은 호환성 유지를 위해 동일 심볼을 re-export 한다.
+Issue #17 (소PR B-1): 인증 데코레이터(`require_auth` 등)는
+`src/contexts/identity/interface/auth_decorators.py`로 이전. 본 파일은 shim re-export.
+
 신규 호출처는 새 위치를 직접 import할 것:
 
     from src.shared.infrastructure.supabase_client import (
         get_supabase, is_supabase_enabled, encrypt_api_key, decrypt_api_key,
     )
+    from src.contexts.identity.interface.auth_decorators import require_auth
 """
 import os
-from functools import wraps
-from typing import Callable
-from flask import request, jsonify, g
+from flask import request, g
 
 from services.core.logging_config import supabase_logger as logger
 from services.exceptions import ConfigurationError
@@ -30,84 +32,12 @@ from src.shared.infrastructure.supabase_client import (  # noqa: F401
     is_supabase_enabled,
 )
 
-# =============================================
-# 인증 헬퍼 및 데코레이터
-# =============================================
-
-def _extract_bearer_token() -> str:
-    """Authorization 헤더에서 Bearer 토큰 추출"""
-    auth_header = request.headers.get('Authorization', '')
-    return auth_header[7:] if auth_header.startswith('Bearer ') else None
-
-
-def _validate_token(token: str) -> dict:
-    """토큰 검증 및 g 객체에 사용자 정보 설정
-
-    Returns:
-        dict: {'valid': bool, 'error': str|None, 'code': str|None}
-    """
-    try:
-        supabase = get_supabase()
-        user = supabase.auth.get_user(token)
-        g.user_id = user.user.id
-        g.user_email = user.user.email  # 이메일도 저장
-        g.access_token = token
-        logger.info(f"토큰 검증 성공: user_id={user.user.id[:8]}..., email={user.user.email}")
-        return {'valid': True, 'error': None, 'code': None}
-    except Exception as e:
-        error_str = str(e).lower()
-
-        # 토큰 만료 감지
-        if 'expired' in error_str or 'token has expired' in error_str:
-            logger.debug("토큰 만료")
-            return {'valid': False, 'error': '인증 토큰이 만료되었습니다.', 'code': 'TOKEN_EXPIRED'}
-
-        # 무효 토큰 감지
-        if 'invalid' in error_str or 'malformed' in error_str:
-            logger.debug("무효 토큰")
-            return {'valid': False, 'error': '유효하지 않은 토큰입니다.', 'code': 'TOKEN_INVALID'}
-
-        # 기타 인증 오류
-        logger.warning(f"토큰 검증 실패: {e}")
-        return {'valid': False, 'error': '인증에 실패했습니다.', 'code': 'AUTH_FAILED'}
-
-
-def require_auth(f: Callable) -> Callable:
-    """JWT 토큰 검증 데코레이터"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not is_supabase_enabled():
-            g.user_id = None
-            return f(*args, **kwargs)
-
-        token = _extract_bearer_token()
-        if not token:
-            return jsonify({'error': '인증이 필요합니다.', 'code': 'AUTH_REQUIRED'}), 401
-
-        result = _validate_token(token)
-        if not result['valid']:
-            return jsonify({'error': result['error'], 'code': result['code']}), 401
-
-        return f(*args, **kwargs)
-    return decorated
-
-
-def optional_auth(f: Callable) -> Callable:
-    """선택적 인증 (로그인 안해도 사용 가능)"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        g.user_id = None
-        g.access_token = None
-
-        if not is_supabase_enabled():
-            return f(*args, **kwargs)
-
-        token = _extract_bearer_token()
-        if token:
-            _validate_token(token)  # 실패해도 무시 (결과 사용 안 함)
-
-        return f(*args, **kwargs)
-    return decorated
+# 인증 데코레이터 re-export (호환 shim) — 신규 호출처는 contexts.identity.interface 사용 권장
+from src.contexts.identity.interface.auth_decorators import (  # noqa: F401
+    _extract_bearer_token,
+    _validate_token,
+    require_auth,
+)
 
 # =============================================
 # 히스토리 CRUD

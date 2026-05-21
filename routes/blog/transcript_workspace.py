@@ -8,7 +8,7 @@ from flask import current_app, jsonify
 
 from routes.blog_routes import blog_bp
 from services.core import content_service
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import sanitize_error_for_client
 
 
