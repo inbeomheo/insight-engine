@@ -11,9 +11,8 @@ from flask import current_app, jsonify, request
 from routes.blog_routes import blog_bp, _extract_client_id
 from utils.responses import sanitize_error_for_client
 
-# 카운터/트래커는 utility_routes의 글로벌 상태를 그대로 사용한다.
-# 분리 시 임포트해 와서 동일한 객체를 공유.
-from routes.utility_routes import (
+# 카운터/트래커는 공용 _state 모듈에서 import (순환 import 방지).
+from routes.utility._state import (
     _CLIENT_TRACKER,
     _cleanup_stale_clients,
     get_error_count,
