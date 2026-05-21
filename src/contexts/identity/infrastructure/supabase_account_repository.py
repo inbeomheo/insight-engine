@@ -16,12 +16,34 @@ Phase 2-d/e/f에서 `find_by_id`, `find_by_email`, `save`를 본격 구현하면
 from __future__ import annotations
 
 import logging
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from src.contexts.identity.application.ports import IAccountRepository
+from src.contexts.identity.domain.constants import DEFAULT_DAILY_LIMIT
 from src.contexts.identity.domain.exceptions import QuotaExceeded
-from src.contexts.identity.domain.user_account import UserAccount
+from src.contexts.identity.domain.user_account import (
+    ApiKey,
+    CreditBalance,
+    RbacRole,
+    UsageQuota,
+    UserAccount,
+)
 from src.shared.domain.value_objects import AccountId
+
+# 기존 `services/data/supabase_service`의 `ie_api_keys` 테이블은
+# 단일 row에 provider별 컬럼(`gemini_key`, `deepseek_key` ...)을 가진 형태.
+# Domain 모델은 ApiKey의 list이므로 컬럼명 → provider 매핑이 필요하다.
+_API_KEY_COLUMN_TO_PROVIDER: dict[str, str] = {
+    "gemini_key": "gemini",
+    "deepseek_key": "deepseek",
+    "zhipu_key": "zhipu",
+    "openai_key": "openai",
+    "anthropic_key": "anthropic",
+    "openrouter_key": "openrouter",
+    "youtube_key": "youtube",
+    "supadata_key": "supadata",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -54,26 +76,335 @@ class SupabaseAccountRepository(IAccountRepository):
             return None
         return get_supabase()
 
+    def _get_admin_client(self) -> Optional[Any]:
+        """Supabase service_role 클라이언트 (admin API용)."""
+        from services.data.supabase_service import _get_admin_client
+
+        return _get_admin_client()
+
+    # ---- 내부 매핑 헬퍼 ----------------------------------------------------
+
+    def _load_usage_quota(self, client: Any, user_id: str) -> UsageQuota:
+        """`ie_usage` 테이블에서 사용량을 읽어 `UsageQuota`로 변환.
+
+        스키마: `usage_count` (남은 횟수), `max_usage` (총 한도).
+        도메인은 `used_today` (이미 사용한 횟수)로 표현하므로 변환 필요:
+            used_today = max_usage - usage_count
+        레코드가 없으면 기본값 (`UsageQuota.create_default()`).
+        """
+        try:
+            res = (
+                client.table("ie_usage")
+                .select("usage_count, max_usage")
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            rows = getattr(res, "data", None) or []
+            if not rows:
+                return UsageQuota.create_default()
+            row = rows[0]
+            max_usage = int(row.get("max_usage") or DEFAULT_DAILY_LIMIT)
+            remaining = int(row.get("usage_count") or 0)
+            used_today = max(0, max_usage - remaining)
+            return UsageQuota(daily_limit=max_usage, used_today=used_today)
+        except Exception as exc:
+            logger.warning(
+                "ie_usage 조회 실패 — 기본값 사용 (user_id=%s, error=%s)",
+                user_id,
+                exc,
+            )
+            return UsageQuota.create_default()
+
+    def _load_api_keys(self, client: Any, user_id: str) -> list[ApiKey]:
+        """`ie_api_keys` 테이블에서 API 키 메타데이터를 읽어 ApiKey 목록 생성.
+
+        평문은 도메인에 보관하지 않으므로 `masked_key`만 채운다.
+        실제 평문 노출은 `IApiKeyVault.reveal()`을 통해서만 가능.
+        """
+        try:
+            res = (
+                client.table("ie_api_keys")
+                .select("*")
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            rows = getattr(res, "data", None) or []
+            if not rows:
+                return []
+            row = rows[0]
+            created_at = self._parse_timestamp(row.get("created_at"))
+            keys: list[ApiKey] = []
+            for column, provider in _API_KEY_COLUMN_TO_PROVIDER.items():
+                encrypted = row.get(column)
+                if not encrypted:
+                    continue
+                # 평문 복호화 금지 (도메인 보호) — 항상 마스킹된 형태로만.
+                masked = self._mask(encrypted)
+                try:
+                    keys.append(
+                        ApiKey(
+                            provider=provider,
+                            masked_key=masked,
+                            label="default",
+                            is_active=True,
+                            created_at=created_at,
+                        )
+                    )
+                except Exception as inner_exc:
+                    logger.warning(
+                        "ApiKey 변환 실패 (provider=%s, error=%s)",
+                        provider,
+                        inner_exc,
+                    )
+            return keys
+        except Exception as exc:
+            logger.warning(
+                "ie_api_keys 조회 실패 (user_id=%s, error=%s)", user_id, exc
+            )
+            return []
+
+    def _load_credits(self, client: Any, user_id: str) -> CreditBalance:
+        """`ie_credits.balance` 읽기. 없으면 0."""
+        try:
+            res = (
+                client.table("ie_credits")
+                .select("balance")
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            rows = getattr(res, "data", None) or []
+            if not rows:
+                return CreditBalance()
+            balance = int(rows[0].get("balance") or 0)
+            return CreditBalance(balance=max(0, balance))
+        except Exception as exc:
+            logger.warning(
+                "ie_credits 조회 실패 (user_id=%s, error=%s)", user_id, exc
+            )
+            return CreditBalance()
+
+    def _load_roles(self, user_id: str) -> list[RbacRole]:
+        """`is_admin()` 결과 + 기본 owner 역할 부여.
+
+        현재 시스템은 admin/일반 사용자만 구분하므로,
+        admin이면 `RbacRole('admin')`, 아니면 `RbacRole('owner')` (자기 소유).
+        """
+        try:
+            from services.data.supabase_service import is_admin
+
+            roles: list[RbacRole] = []
+            if is_admin(user_id):
+                roles.append(RbacRole(name="admin"))
+            else:
+                roles.append(RbacRole(name="owner"))
+            return roles
+        except Exception as exc:
+            logger.warning(
+                "is_admin 조회 실패 — owner로 기본값 (user_id=%s, error=%s)",
+                user_id,
+                exc,
+            )
+            return [RbacRole(name="owner")]
+
+    @staticmethod
+    def _mask(secret: str) -> str:
+        """평문/암호문에 관계없이 마지막 4자리만 노출하는 마스킹."""
+        if not secret or len(secret) <= 4:
+            return "****"
+        return "****" + secret[-4:]
+
+    @staticmethod
+    def _parse_timestamp(value: Any) -> datetime:
+        """Supabase timestamp 문자열 → datetime (timezone-aware)."""
+        if isinstance(value, datetime):
+            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if isinstance(value, str) and value:
+            try:
+                # Supabase는 ISO8601 (예: '2026-05-21T13:00:00+00:00')
+                # 'Z' suffix는 fromisoformat이 못 읽으므로 변환
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    def _extract_email_from_user(user_obj: Any) -> Optional[str]:
+        """Supabase admin.get_user_by_id 응답에서 이메일 추출.
+
+        응답 형식이 SDK 버전마다 다를 수 있어 다양한 경로를 시도한다.
+        """
+        if user_obj is None:
+            return None
+        # supabase-py: user_obj가 dict-like (User 모델)
+        user = getattr(user_obj, "user", user_obj)
+        email = getattr(user, "email", None)
+        if email:
+            return str(email)
+        # dict-style fallback
+        if isinstance(user, dict):
+            return user.get("email")
+        return None
+
     # ---- IAccountRepository 구현 ------------------------------------------
 
     def find_by_id(self, account_id: AccountId) -> Optional[UserAccount]:
-        """주어진 `AccountId`로 UserAccount를 조회.
+        """주어진 `AccountId`로 UserAccount Aggregate를 조립하여 반환.
 
-        Phase 2 다음 단계에서 완성 — 현재는 인터페이스만 정의.
-        본격 구현 시 `auth.users` + `ie_usage` + `ie_api_keys` + `ie_admins`를
-        조인하여 Aggregate를 복원한다.
+        다음 소스를 합성한다:
+        1. `auth.users` (admin API) — 이메일
+        2. `ie_usage` — UsageQuota
+        3. `ie_api_keys` — ApiKey 목록 (masked만)
+        4. `ie_credits` — CreditBalance
+        5. `ie_admins` (`is_admin()`) — RbacRole
+
+        Supabase 미설정 또는 사용자 미존재 시 None.
         """
-        raise NotImplementedError(
-            "Phase 2 다음 단계에서 완성 — auth.users/ie_usage/ie_api_keys 조인 필요"
+        client = self._get_client()
+        if client is None:
+            logger.debug(
+                "Supabase 비활성 — find_by_id 반환 None (account_id=%s)",
+                account_id,
+            )
+            return None
+
+        user_id = str(account_id)
+        admin = self._get_admin_client()
+        email: Optional[str] = None
+        if admin is not None:
+            try:
+                user_resp = admin.auth.admin.get_user_by_id(user_id)
+                email = self._extract_email_from_user(user_resp)
+            except Exception as exc:
+                logger.warning(
+                    "auth.admin.get_user_by_id 실패 (user_id=%s, error=%s)",
+                    user_id,
+                    exc,
+                )
+        if not email:
+            # 이메일을 못 가져오면 Aggregate 불변식(__init__의 email 검증)을 만족 못 함.
+            # 사용자 미존재이거나 admin 미설정이면 None 반환.
+            logger.info(
+                "UserAccount.find_by_id: 이메일 미확인 — None 반환 (user_id=%s)",
+                user_id,
+            )
+            return None
+
+        quota = self._load_usage_quota(client, user_id)
+        credits = self._load_credits(client, user_id)
+        api_keys = self._load_api_keys(client, user_id)
+        roles = self._load_roles(user_id)
+
+        return UserAccount(
+            account_id=account_id,
+            email=email,
+            quota=quota,
+            credits=credits,
+            api_keys=api_keys,
+            roles=roles,
         )
 
     def find_by_email(self, email: str) -> Optional[UserAccount]:
-        """이메일로 UserAccount를 조회."""
-        raise NotImplementedError("Phase 2 다음 단계에서 완성")
+        """이메일로 UserAccount를 조회.
+
+        Supabase는 직접적인 이메일 검색 API가 없으므로 admin
+        `list_users()`를 페이지 단위로 탐색한다. 결과 발견 시 `find_by_id`에
+        위임하여 Aggregate를 조립한다.
+
+        주의: 대규모 사용자 환경에서는 비효율 — Phase 5에서 `ie_usage_with_email`
+        뷰 또는 별도 인덱스 활용으로 개선 예정.
+        """
+        if not email or "@" not in email:
+            return None
+        admin = self._get_admin_client()
+        if admin is None:
+            logger.debug(
+                "Supabase admin 비활성 — find_by_email 반환 None (email=%s)",
+                email,
+            )
+            return None
+
+        try:
+            users_resp = admin.auth.admin.list_users()
+            # supabase-py 응답: list[User] 또는 obj.users
+            users = users_resp if isinstance(users_resp, list) else getattr(
+                users_resp, "users", []
+            )
+            target_email = email.strip().lower()
+            for user in users or []:
+                u_email = getattr(user, "email", None) or (
+                    user.get("email") if isinstance(user, dict) else None
+                )
+                if u_email and str(u_email).strip().lower() == target_email:
+                    u_id = getattr(user, "id", None) or (
+                        user.get("id") if isinstance(user, dict) else None
+                    )
+                    if u_id:
+                        return self.find_by_id(AccountId(value=str(u_id)))
+        except Exception as exc:
+            logger.warning(
+                "auth.admin.list_users 실패 (email=%s, error=%s)", email, exc
+            )
+        return None
 
     def save(self, account: UserAccount) -> None:
-        """UserAccount의 변경 사항을 저장소에 반영."""
-        raise NotImplementedError("Phase 2 다음 단계에서 완성")
+        """UserAccount의 변경 사항을 저장소에 upsert.
+
+        반영 항목:
+        - `ie_usage` : usage_count (= daily_limit - used_today), max_usage
+        - `ie_credits`: balance
+
+        반영하지 않는 항목 (다른 책임):
+        - `auth.users.email` — Identity Provider 영역, 직접 수정 금지
+        - `api_keys` — `IApiKeyVault` 책임 (평문 보유)
+        - `roles` (admin) — 별도 관리자 도구로 수정
+
+        TODO(Phase 7 — 트랜잭션):
+            현재 두 테이블 upsert가 별도 호출이라 부분 실패 가능. Supabase RPC
+            (PL/pgSQL 트랜잭션)로 묶을 것.
+        """
+        client = self._get_client()
+        if client is None:
+            logger.debug(
+                "Supabase 비활성 — save no-op (account_id=%s)",
+                account.account_id,
+            )
+            return
+
+        user_id = str(account.account_id)
+        today = date.today().isoformat()
+
+        # 1) ie_usage upsert
+        try:
+            quota = account.quota
+            remaining = max(0, quota.daily_limit - quota.used_today)
+            client.table("ie_usage").upsert(
+                {
+                    "user_id": user_id,
+                    "usage_count": remaining,
+                    "max_usage": quota.daily_limit,
+                    "last_reset_date": today,
+                }
+            ).execute()
+        except Exception as exc:
+            logger.warning(
+                "ie_usage upsert 실패 (user_id=%s, error=%s)", user_id, exc
+            )
+
+        # 2) ie_credits upsert
+        try:
+            client.table("ie_credits").upsert(
+                {
+                    "user_id": user_id,
+                    "balance": account.credits.balance,
+                }
+            ).execute()
+        except Exception as exc:
+            logger.warning(
+                "ie_credits upsert 실패 (user_id=%s, error=%s)", user_id, exc
+            )
 
     def consume_quota_atomic(self, account_id: AccountId, amount: int = 1) -> int:
         """기존 `UsageService.decrement_atomic` 행동을 인터페이스 뒤로 캡슐화.
