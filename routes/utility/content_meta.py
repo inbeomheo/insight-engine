@@ -565,9 +565,3 @@ def scheduler_status():
         'jobs': jobs,
         'total_jobs': len(jobs),
     })
-
-# ============================================================
-# 분리된 utility 서브 라우트 — 부수효과 import
-# - routes/utility/operations.py: 헬스/heartbeat/providers/ollama (8개)
-# ============================================================
-from routes import utility as _utility_subroutes  # noqa: E402,F401
