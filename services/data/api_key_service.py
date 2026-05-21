@@ -1,6 +1,20 @@
 """
 API 키 발급/관리 서비스
 사용자별 API 키 CRUD + 사용량 추적
+
+Phase 2-f: 내부 구현을 `SupabaseApiKeyVault`(Identity & Access BC) 어댑터로 위임.
+외부 API 시그니처/반환 형식/예외 동작은 100% 호환 유지.
+
+기존 책임:
+- IE 자체 발급 API 키 (`ie_xxx`) 의 해시 기반 CRUD/검증
+- Supabase 활성 시 `ie_user_api_keys` 사용, 비활성 시 로컬 JSON 폴백
+
+Vault 위임 정책:
+- `create_key`/`revoke_key` 의 부수 효과 (마스킹된 ApiKey 도메인 객체 생성) 를
+  SupabaseApiKeyVault 의 `store`/`revoke` 로 best-effort 위임 (예외는 격리).
+- `key_hash` 기반 검증/조회 (`validate_key`, `list_keys`) 는 Vault 가 지원하지
+  않는 도메인이므로 본 파일에서 직접 Supabase 호출 유지.
+- 환경변수 폴백은 두 곳에 독립적으로 유지 (Vault 비활성 ↔ 본 서비스 폴백).
 """
 import json
 import os
@@ -49,6 +63,62 @@ def _mask_key(key: str) -> str:
     return f"{key[:7]}...{key[-4:]}"
 
 
+# ---------------------------------------------------------------------------
+# Vault 위임 헬퍼 (Identity & Access BC 어댑터)
+# ---------------------------------------------------------------------------
+
+def _get_vault():
+    """SupabaseApiKeyVault 인스턴스를 lazy 로 생성.
+
+    Vault 모듈 import 실패 또는 인스턴스화 실패 시 None 반환 → 기존 로컬 로직 유지.
+    예외는 본 서비스의 외부 계약에 영향이 없어야 하므로 격리한다.
+    """
+    try:
+        from src.contexts.identity.infrastructure.supabase_api_key_vault import (
+            SupabaseApiKeyVault,
+        )
+        return SupabaseApiKeyVault()
+    except Exception as e:  # noqa: BLE001 — Vault 가용성은 best-effort
+        logger.debug("Vault 인스턴스화 실패 (격리): %s", e)
+        return None
+
+
+def _vault_store_safe(user_id: str, name: str, raw_key: str) -> None:
+    """Vault.store 호출을 best-effort 로 수행.
+
+    반환값(ApiKey 도메인 객체)은 외부 계약에서 노출되지 않으므로 무시한다.
+    외부 시그니처/응답은 본 모듈의 기존 dict 그대로 유지된다.
+    """
+    vault = _get_vault()
+    if vault is None:
+        return
+    try:
+        # 본 서비스는 IE 자체 발급 키이므로 provider="ie", label=사용자 지정 name.
+        vault.store(
+            account_id=user_id,
+            provider='ie',
+            plaintext_key=raw_key,
+            label=name or 'default',
+        )
+    except Exception as e:  # noqa: BLE001 — 외부 계약 보호
+        logger.debug("Vault.store 위임 실패 (격리): %s", e)
+
+
+def _vault_revoke_safe(user_id: str, name: str) -> None:
+    """Vault.revoke 호출을 best-effort 로 수행."""
+    vault = _get_vault()
+    if vault is None:
+        return
+    try:
+        vault.revoke(
+            account_id=user_id,
+            provider='ie',
+            label=name or 'default',
+        )
+    except Exception as e:  # noqa: BLE001 — 외부 계약 보호
+        logger.debug("Vault.revoke 위임 실패 (격리): %s", e)
+
+
 class ApiKeyService:
     """사용자 API 키 관리"""
 
@@ -82,6 +152,8 @@ class ApiKeyService:
                     client = get_supabase()
                     result = client.table('ie_user_api_keys').insert(key_data).execute()
                     key_id = result.data[0]['id'] if result.data else key_hash[:12]
+                    # Vault 어댑터에 동등한 마스킹 객체 등록 (best-effort)
+                    _vault_store_safe(user_id, name, raw_key)
                     return {'key': raw_key, 'key_id': key_id, 'name': name}
                 except Exception as e:
                     logger.error(f"API 키 생성 실패: {e}")
@@ -95,6 +167,8 @@ class ApiKeyService:
             user_keys.append(key_data)
             data[user_id] = user_keys
             _save_local(data)
+            # 로컬 모드에서도 Vault 위임 (Supabase 비활성 시 Vault 도 메모리 no-op)
+            _vault_store_safe(user_id, name, raw_key)
             return {'key': raw_key, 'key_id': key_id, 'name': name}
         except Exception as e:
             logger.error("create_key 실패: %s", e, exc_info=True)
@@ -107,6 +181,10 @@ class ApiKeyService:
 
         Returns:
             [{'key_id': str, 'name': str, 'key_preview': str, 'usage_count': int, ...}]
+
+        Note:
+            Vault 어댑터는 단일 키 (provider, label) 단위 reveal/store/revoke 만 지원하므로
+            목록 조회는 본 파일에서 직접 Supabase 를 호출한다. (작업 지시에 따른 의도된 분리)
         """
         try:
             if is_supabase_enabled():
@@ -154,8 +232,17 @@ class ApiKeyService:
             if is_supabase_enabled():
                 try:
                     client = get_supabase()
+                    # Vault 위임을 위해 비활성화 대상의 name(label) 조회
+                    try:
+                        target = client.table('ie_user_api_keys').select('name') \
+                            .eq('id', key_id).eq('user_id', user_id).maybe_single().execute()
+                        target_name = (target.data or {}).get('name', 'default')
+                    except Exception:
+                        target_name = 'default'
+
                     client.table('ie_user_api_keys').update({'is_active': False}) \
                         .eq('id', key_id).eq('user_id', user_id).execute()
+                    _vault_revoke_safe(user_id, target_name)
                     return True
                 except Exception as e:
                     logger.error(f"API 키 삭제 실패: {e}")
@@ -168,6 +255,7 @@ class ApiKeyService:
                 if k.get('id') == key_id:
                     k['is_active'] = False
                     _save_local(data)
+                    _vault_revoke_safe(user_id, k.get('name', 'default'))
                     return True
             return False
         except Exception as e:
@@ -181,6 +269,10 @@ class ApiKeyService:
 
         Returns:
             {'user_id': str, 'name': str} 또는 None
+
+        Note:
+            검증은 key_hash 기반 역조회가 필요한데 Vault 어댑터는 (account_id, provider, label)
+            기반 reveal 만 제공하므로 위임 불가능 — 본 파일에서 기존 로직 유지.
         """
         try:
             key_hash = _hash_key(raw_key)
