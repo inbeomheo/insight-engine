@@ -45,11 +45,13 @@ def api_docs():
 
 
 # ── 앱 피드백 (F7-24) ──────────────────────────────────────
+# 주의: 콘텐츠 품질 피드백(좋아요/싫어요)은 routes/utility/feedback_quality.py의
+# `/api/feedback`이 담당. 여기는 앱 일반 의견(별점+코멘트)이므로 경로를 분리한다.
 
 
-@blog_bp.route('/api/feedback', methods=['POST'])
+@blog_bp.route('/api/app-feedback', methods=['POST'])
 def submit_feedback():
-    """앱 내 피드백 수신"""
+    """앱 내 일반 피드백 수신 (별점 + 코멘트 + 페이지)."""
     data = request.get_json(silent=True) or {}
     feedback_type = data.get('type', 'general')
     rating = data.get('rating', 0)

@@ -19,14 +19,14 @@ interface FeedbackPayload {
 }
 
 interface FeedbackWidgetProps {
-  /** 피드백 수신 API 엔드포인트 (기본: /api/feedback) */
+  /** 피드백 수신 API 엔드포인트 (기본: /api/app-feedback) */
   apiEndpoint?: string;
   /** 위젯 제목 */
   title?: string;
 }
 
 export default function FeedbackWidget({
-  apiEndpoint = '/api/feedback',
+  apiEndpoint = '/api/app-feedback',
   title = '피드백 남기기',
 }: FeedbackWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
