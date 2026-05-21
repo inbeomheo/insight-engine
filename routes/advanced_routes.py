@@ -28,62 +28,6 @@ def _sanitize_generation_error(error: Exception | str, fallback_message: str) ->
     return safe_message
 
 
-@blog_bp.route('/api/mindmap', methods=['POST'])
-@require_auth
-@require_usage
-def generate_mindmap():
-    """기존 콘텐츠를 마인드맵 형식의 마크다운으로 변환합니다.
-    API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
-    """
-    try:
-        start_time = time.time()
-        data = request.get_json(silent=True) or {}
-        content = data.get('content')
-        model = data.get('model', DEFAULT_MODEL)
-
-        if not content:
-            return jsonify({'error': '마인드맵으로 변환할 콘텐츠가 필요합니다.'}), 400
-
-        length_error = validate_content_length(content)
-        if length_error:
-            return jsonify({'error': length_error}), 400
-
-        # MINDMAP_PROMPT 가져오기
-        style_prompts = current_app.config.get('STYLE_PROMPTS', {})
-        mindmap_prompt = style_prompts.get('mindmap', '')
-
-        if not mindmap_prompt:
-            return jsonify({'error': '마인드맵 프롬프트가 설정되지 않았습니다.'}), 500
-
-        # 콘텐츠 길이 제한 (토큰 절약)
-        max_tokens = get_model_max_tokens(model)
-        truncated_content = content_service.truncate_text(content, min(max_tokens, 50000))
-
-        result = ai_service.create_content(
-            truncated_content,
-            model,
-            mindmap_prompt
-        )
-
-        elapsed_time = round(time.time() - start_time, 2)
-
-        # 마인드맵용 마크다운 콘텐츠 반환
-        return jsonify({
-            'success': True,
-            'markdown': result.get('content', ''),
-            'usage': result.get('usage'),
-            'elapsed_time': elapsed_time,
-            'quota': get_usage_for_response()
-        })
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Mindmap generation failed: {e}")
-        return handle_error(str(e))
-
-
 @blog_bp.route('/api/generate-multi', methods=['POST'])
 @limiter.limit("5/minute")
 @require_auth
@@ -316,128 +260,6 @@ def generate_campaign():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Campaign generation failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/generate-fusion', methods=['POST'])
-@limiter.limit("5/minute")
-@require_auth
-@require_usage
-def generate_fusion():
-    """퓨전 생성: N개 URL → 융합 1편"""
-    data = request.get_json()
-    urls = data.get('urls', [])
-    style_id = data.get('style', 'blog_seo')
-    model = data.get('model', '')
-    modifiers = data.get('modifiers', {})
-    enable_web_research = data.get('enable_web_research', True)
-    enable_deep_comments = data.get('enable_deep_comments', True)
-
-    if not urls or len(urls) < 2:
-        return jsonify({'error': '[입력 오류] 퓨전 분석은 최소 2개 URL이 필요합니다'}), 400
-    if len(urls) > 5:
-        return jsonify({'error': '[입력 오류] 퓨전 분석은 최대 5개 URL까지 가능합니다'}), 400
-    if not model:
-        return jsonify({'error': '[입력 오류] 모델을 선택해주세요'}), 400
-
-    try:
-        from services.core import fusion_service
-        result = fusion_service.generate_fusion(
-            urls=urls,
-            style_id=style_id,
-            model=model,
-            modifiers=modifiers,
-            enable_web_research=enable_web_research,
-            enable_deep_comments=enable_deep_comments
-        )
-
-        return jsonify(result)
-
-    except ValueError as e:
-        return handle_error(f'[입력 오류] {str(e)}')
-    except Exception as e:
-        current_app.logger.error('퓨전 생성 실패: %s', e, exc_info=True)
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/rewrite/platforms')
-def rewrite_platforms():
-    """지원하는 리라이트 플랫폼 목록을 반환합니다."""
-    from config import PLATFORM_PRESETS
-    platforms = []
-    for name, preset in PLATFORM_PRESETS.items():
-        platforms.append({
-            'name': name,
-            'max_chars': preset['max_chars'],
-            'tone': preset['tone'],
-            'format': preset['format'],
-            'icon_emoji': preset.get('icon_emoji', ''),
-        })
-    return jsonify({'available_platforms': platforms})
-
-
-@blog_bp.route('/api/rewrite', methods=['POST'])
-@require_auth
-@require_usage
-def rewrite_content():
-    """콘텐츠를 특정 플랫폼 형식으로 변환합니다."""
-    try:
-        start_time = time.time()
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        platform = data.get('platform', '')
-        model = data.get('model', DEFAULT_MODEL)
-
-        if not content:
-            return jsonify({'error': '변환할 콘텐츠가 필요합니다.'}), 400
-        length_error = validate_content_length(content)
-        if length_error:
-            return jsonify({'error': length_error}), 400
-        if not platform:
-            return jsonify({'error': '대상 플랫폼을 선택해주세요.'}), 400
-
-        from services.content.rewrite_service import rewrite_for_platform
-        result = rewrite_for_platform(content, platform, model)
-
-        if 'error' in result:
-            safe_result = dict(result)
-            safe_result['error'] = _sanitize_generation_error(
-                result.get('error'),
-                '[서버 오류] 콘텐츠 변환 중 문제가 발생했습니다.'
-            )
-            return jsonify(safe_result), 400
-
-        elapsed_time = round(time.time() - start_time, 2)
-
-        return jsonify({
-            **result,
-            'elapsed_time': elapsed_time,
-            'quota': get_usage_for_response(),
-        })
-    except Exception as e:
-        current_app.logger.error(f"Rewrite failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/qa-check', methods=['POST'])
-def qa_check():
-    """콘텐츠 QA 검증을 실행합니다."""
-    try:
-        import time as _time
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        rules = data.get('rules')
-
-        if not content:
-            return jsonify({'error': '검증할 콘텐츠가 필요합니다.'}), 400
-
-        from services.quality.qa_gate_service import check_quality
-        t0 = _time.monotonic()
-        result = check_quality(content, rules)
-        result['check_duration_ms'] = round((_time.monotonic() - t0) * 1000, 1)
-        return jsonify(result)
-    except Exception as e:
-        current_app.logger.error(f"QA check failed: {e}")
         return handle_error(str(e))
 
 
@@ -1218,3 +1040,12 @@ def finetune_collect_local():
     except Exception as e:
         current_app.logger.error(f"Finetune collect-local failed: {e}")
         return handle_error(str(e))
+
+# ============================================================
+# 분리된 라우트 패키지 — 부수효과 import로 자동 등록
+# - routes/advanced/mindmap.py
+# - routes/advanced/fusion.py
+# - routes/advanced/rewrite.py
+# - routes/advanced/qa.py
+# ============================================================
+from routes import advanced as _advanced_subroutes  # noqa: E402,F401

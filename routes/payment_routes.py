@@ -619,56 +619,6 @@ def get_team_member_usage(team_id):
 
 
 # =============================================
-# Paddle 결제 API (F4-16)
-# =============================================
-
-@blog_bp.route('/api/paddle/status', methods=['GET'])
-@require_auth
-def paddle_status():
-    """Paddle 설정 상태 조회"""
-    from services.payment.paddle_service import paddle_service
-    return jsonify({'configured': paddle_service.is_configured})
-
-
-@blog_bp.route('/api/paddle/webhook', methods=['POST'])
-def paddle_webhook():
-    """Paddle 웹훅 수신 (서명 검증 포함)"""
-    from services.payment.paddle_service import paddle_service
-
-    payload = request.get_data()
-    signature = request.headers.get('Paddle-Signature', '')
-
-    if not paddle_service.verify_webhook(payload, signature):
-        return error_response('[인증 실패] Paddle 웹훅 서명 검증에 실패했습니다.', 400)
-
-    data = request.get_json(silent=True) or {}
-    event_type = data.get('event_type', '')
-    event_data = data.get('data', {})
-
-    try:
-        result = paddle_service.handle_webhook(event_type, event_data)
-        return jsonify(result)
-    except Exception as e:
-        return _payment_exception_response(
-            'Paddle 웹훅 처리 오류',
-            e,
-            '[결제 오류] Paddle 웹훅 처리에 실패했습니다.'
-        )
-
-
-@blog_bp.route('/api/paddle/subscription/<subscription_id>', methods=['GET'])
-@require_auth
-def paddle_get_subscription(subscription_id):
-    """Paddle 구독 정보 조회"""
-    from services.payment.paddle_service import paddle_service
-
-    sub = paddle_service.get_subscription(subscription_id)
-    if not sub:
-        return error_response('구독 정보를 찾을 수 없습니다.', 404)
-    return jsonify(sub)
-
-
-# =============================================
 # 하이브리드 과금 API (F4-11)
 # =============================================
 
@@ -751,79 +701,10 @@ def billing_reset_monthly():
     return jsonify(result)
 
 
-# =============================================
-# 암호화폐 결제 API (F4-17)
-# =============================================
 
-@blog_bp.route('/api/crypto/charge', methods=['POST'])
-@require_auth
-def crypto_create_charge():
-    """암호화폐 결제 요청 생성"""
-    from services.payment.crypto_service import crypto_service
-
-    if not crypto_service.is_configured:
-        return error_response('Coinbase Commerce가 설정되지 않았습니다.', 503)
-
-    data = request.get_json(silent=True) or {}
-    amount = data.get('amount')
-    if not amount or float(amount) <= 0:
-        return error_response('유효한 amount가 필요합니다.')
-
-    try:
-        result = crypto_service.create_charge(
-            user_id=g.user_id,
-            amount=float(amount),
-            currency=data.get('currency', 'USD'),
-            description=data.get('description', ''),
-        )
-        if 'error' in result:
-            return _safe_payment_error_response(
-                result['error'],
-                '[결제 오류] 암호화폐 결제 요청 생성에 실패했습니다.',
-                500
-            )
-        return jsonify(result), 201
-    except Exception as e:
-        return _payment_exception_response(
-            '암호화폐 결제 요청 생성 오류',
-            e,
-            '[결제 오류] 암호화폐 결제 요청 생성에 실패했습니다.'
-        )
-
-
-@blog_bp.route('/api/crypto/charge/<charge_id>', methods=['GET'])
-@require_auth
-def crypto_get_charge(charge_id):
-    """암호화폐 결제 요청 단건 조회"""
-    from services.payment.crypto_service import crypto_service
-
-    charge = crypto_service.get_charge(charge_id)
-    if not charge:
-        return error_response('결제 요청을 찾을 수 없습니다.', 404)
-    return jsonify(charge)
-
-
-@blog_bp.route('/api/crypto/webhook', methods=['POST'])
-def crypto_webhook():
-    """Coinbase Commerce 웹훅 수신"""
-    from services.payment.crypto_service import crypto_service
-
-    payload = request.get_data()
-    signature = request.headers.get('X-CC-Webhook-Signature', '')
-
-    if not crypto_service.verify_webhook(payload, signature):
-        return error_response('웹훅 서명 검증 실패', 401)
-
-    data = request.get_json(silent=True) or {}
-    event_type = data.get('type', '')
-    event_data = data.get('data', {})
-
-    try:
-        result = crypto_service.handle_webhook(event_type, event_data)
-        return jsonify(result)
-    except Exception as e:
-        return _payment_exception_response(
-            '암호화폐 웹훅 처리 오류',
-            e,
-            '[결제 오류] 웹훅 처리 중 문제가 발생했습니다.'
-        )
+# ============================================================
+# 분리된 결제 서브 라우트 — 부수효과 import
+# - routes/payment/paddle.py: F4-16 Paddle 결제
+# - routes/payment/crypto.py: F4-17 암호화폐 결제
+# ============================================================
+from routes import payment as _payment_subroutes  # noqa: E402,F401

@@ -1,21 +1,63 @@
 """
 YouTube 콘텐츠 서비스
 자막, 댓글, 제목 추출 기능 제공
+
+자막 폴백 4단계 구현은 services/transcript/fallbacks/ 패키지에 분리되어 있다.
+공통 헬퍼/상수는 services/transcript/_shared.py 참조.
 """
 from __future__ import annotations
 
-import html as html_module
 import json
 import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Union
-from xml.etree import ElementTree
 
 import functools
 
 import requests
 from flask import current_app
+
+# 공통 상수/타입/헬퍼는 services/transcript/_shared 에서 import
+from services.transcript._shared import (
+    CaptionTrack,
+    HTTP_TIMEOUT,
+    PREFERRED_LANGUAGES,
+    SUPADATA_API_URL,
+    TIMEOUT_CONNECT,
+    TIMEOUT_READ_LONG,
+    TIMEOUT_READ_MEDIUM,
+    TIMEOUT_READ_SHORT,
+    TranscriptResult,
+    USER_AGENT,
+    create_http_session as _create_http_session,
+    get_proxy_config as _get_proxy_config,
+    log_info as _log_info,
+    log_warning as _log_warning,
+)
+
+# 자막 폴백 함수들은 services/transcript/fallbacks/ 에서 import
+from services.transcript.fallbacks.supadata import (
+    get_transcript_via_supadata,
+)
+from services.transcript.fallbacks.youtube_api import (
+    build_ytt_api as _build_ytt_api,
+    detect_auto_caption as _detect_auto_caption,
+    extract_segments_from_transcript as _extract_segments_from_transcript,
+    extract_text_from_transcript as _extract_text_from_transcript,
+    fetch_transcript_with_api as _fetch_transcript_with_api,
+    order_transcript_tracks as _order_transcript_tracks,
+)
+from services.transcript.fallbacks.watch_page import (
+    download_caption_from_url as _download_caption_from_url,
+    extract_caption_tracks as _extract_caption_tracks,
+    extract_yt_initial_player_response as _extract_yt_initial_player_response,
+    get_transcript_from_watch_page as _get_transcript_from_watch_page,
+    is_safe_caption_url as _is_safe_caption_url,
+    parse_timedtext_xml as _parse_timedtext_xml,
+    parse_vtt as _parse_vtt,
+    pick_caption_track as _pick_caption_track,
+)
 
 
 @functools.lru_cache(maxsize=1)
@@ -55,22 +97,8 @@ except ImportError:
     RequestBlocked = IpBlocked = AgeRestricted = PoTokenRequired = _YTBase
     VideoUnplayable = InvalidVideoId = YouTubeRequestFailed = CouldNotRetrieveTranscript = _YTBase
 
-# Type aliases
-TranscriptResult = Union[str, Dict[str, str]]
-CaptionTrack = Dict[str, Any]
-
-# Constants
-SUPADATA_API_URL: str = "https://api.supadata.ai/v1/youtube/transcript"
-PREFERRED_LANGUAGES: tuple[str, ...] = ("ko", "en")
+# 재시도 최대 횟수 (자막 API)
 MAX_RETRY_ATTEMPTS: int = 3
-USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-
-# P2 버그 #8: HTTP 타임아웃 상수 정의
-TIMEOUT_CONNECT: int = 5        # 연결 타임아웃 (초)
-TIMEOUT_READ_SHORT: int = 10    # 짧은 읽기 타임아웃
-TIMEOUT_READ_MEDIUM: int = 20   # 중간 읽기 타임아웃
-TIMEOUT_READ_LONG: int = 30     # 긴 읽기 타임아웃 (기본)
-HTTP_TIMEOUT: tuple[int, int] = (TIMEOUT_CONNECT, TIMEOUT_READ_LONG)  # (connect, read)
 
 # YouTube URL Patterns
 YOUTUBE_URL_REGEX = re.compile(
@@ -150,12 +178,12 @@ def _save_cache(video_id: str, cache_type: str, data: Any) -> None:
 
 def clear_cache(video_id: Optional[str] = None) -> int:
     """캐시를 삭제합니다. video_id가 None이면 전체 삭제."""
-    if not os.path.exists(CACHE_DIR):
-        return 0
-
-    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지)
+    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지) — 캐시 디렉토리 존재 여부와 무관하게 입력 검증 선행
     if video_id is not None:
         _sanitize_video_id(video_id)
+
+    if not os.path.exists(CACHE_DIR):
+        return 0
 
     deleted = 0
     for filename in os.listdir(CACHE_DIR):
@@ -226,430 +254,12 @@ def get_video_id(url: str) -> Optional[str]:
     return None
 
 
-# ==================== HTTP Client ====================
-
-def _create_http_session() -> requests.Session:
-    """HTTP 세션을 생성하고 헤더/프록시를 설정합니다."""
-    session = requests.Session()
-    session.headers.update({
-        "User-Agent": USER_AGENT,
-        "Accept-Encoding": "gzip, deflate",
-        "Accept-Language": "en-US,en;q=0.9"
-    })
-
-    http_proxy = _get_proxy_config('HTTP')
-    https_proxy = _get_proxy_config('HTTPS')
-
-    if http_proxy or https_proxy:
-        session.proxies = {}
-        if http_proxy:
-            session.proxies['http'] = http_proxy
-        if https_proxy:
-            session.proxies['https'] = https_proxy
-
-    return session
-
-
-def _get_proxy_config(proxy_type: str) -> Optional[str]:
-    """프록시 설정을 가져옵니다."""
-    config_key = f'YT_{proxy_type}_PROXY'
-    env_key = f'{proxy_type}_PROXY'
-
-    try:
-        proxy = current_app.config.get(config_key)
-    except RuntimeError:
-        proxy = None
-
-    return proxy or os.getenv(config_key) or os.getenv(env_key)
-
-
-# ==================== Supadata API ====================
-
-def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[TranscriptResult]:
-    """Supadata API를 통해 YouTube 자막을 가져옵니다."""
-    if not api_key:
-        return None
-
-    try:
-        response = requests.get(
-            SUPADATA_API_URL,
-            params={"videoId": video_id, "text": "true"},
-            headers={"x-api-key": api_key},
-            timeout=HTTP_TIMEOUT
-        )
-
-        if response.status_code == 200:
-            data = response.json()
-            content = data.get("content", "")
-            if content:
-                return content
-
-            transcript = data.get("transcript", [])
-            if transcript:
-                texts = [item.get("text", "") for item in transcript if item.get("text")]
-                return " ".join(texts)
-            _log_warning(f"Supadata returned empty content for video_id={video_id}")
-            return None
-
-        if response.status_code == 401:
-            return {'error': 'Supadata API 키가 유효하지 않습니다.'}
-        if response.status_code == 402:
-            return {'error': 'Supadata API 사용량이 초과되었습니다. 플랜을 업그레이드하세요.'}
-
-        _log_warning(f"Supadata API returned status {response.status_code} for video_id={video_id}")
-        return None
-
-    except requests.exceptions.Timeout:
-        _log_warning(f"Supadata API timeout for video_id={video_id}")
-        return None
-    except requests.exceptions.RequestException as e:
-        _log_warning(f"Supadata API request failed for video_id={video_id}: {str(e)}")
-        return None
-
-
-# ==================== YouTube Transcript API ====================
-
-def _build_ytt_api() -> YouTubeTranscriptApi:
-    """YouTubeTranscriptApi 인스턴스를 생성합니다."""
-    try:
-        http_client = _create_http_session()
-        return YouTubeTranscriptApi(http_client=http_client)
-    except Exception:
-        return YouTubeTranscriptApi()
-
-
-def _order_transcript_tracks(tracks: List[Any]) -> List[Any]:
-    """자막 트랙을 우선순위에 따라 정렬합니다."""
-    ordered: List[Any] = []
-    seen: set = set()
-    for is_generated in [False, True]:
-        for lang in PREFERRED_LANGUAGES:
-            for t in tracks:
-                tid = id(t)
-                if tid not in seen and getattr(t, 'is_generated', False) == is_generated and getattr(t, 'language_code', '') == lang:
-                    ordered.append(t)
-                    seen.add(tid)
-        for t in tracks:
-            tid = id(t)
-            if tid not in seen and getattr(t, 'is_generated', False) == is_generated:
-                ordered.append(t)
-                seen.add(tid)
-    return ordered
-
-
-def _fetch_transcript_with_api(ytt_api: YouTubeTranscriptApi, video_id: str) -> Optional[Any]:
-    """youtube-transcript-api를 사용하여 자막을 가져옵니다."""
-    fetched = None
-
-    if hasattr(ytt_api, "fetch") and hasattr(ytt_api, "list"):
-        try:
-            fetched = ytt_api.fetch(video_id, languages=PREFERRED_LANGUAGES)
-        except (NoTranscriptFound, PoTokenRequired, YouTubeRequestFailed, CouldNotRetrieveTranscript):
-            transcript_list = ytt_api.list(video_id)
-            ordered_tracks = _order_transcript_tracks(list(transcript_list))
-
-            for track in ordered_tracks:
-                try:
-                    fetched = track.fetch()
-                    break
-                except (PoTokenRequired, YouTubeRequestFailed, CouldNotRetrieveTranscript):
-                    continue
-    else:
-        # 구버전 폴백
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            ordered_tracks = _order_transcript_tracks(list(transcript_list))
-
-            for track in ordered_tracks:
-                try:
-                    fetched = track.fetch()
-                    break
-                except Exception:
-                    continue
-        except Exception:
-            try:
-                fetched = YouTubeTranscriptApi.get_transcript(video_id, languages=PREFERRED_LANGUAGES)
-            except Exception:
-                fetched = None
-
-    return fetched
-
-
-def _extract_text_from_transcript(fetched: Any) -> Optional[str]:
-    """자막 객체에서 텍스트를 추출합니다."""
-    texts: List[str] = []
-    try:
-        for snippet in fetched:
-            text = getattr(snippet, 'text', None)
-            if text is None and isinstance(snippet, dict):
-                text = snippet.get('text')
-            if text:
-                texts.append(text)
-    except TypeError:
-        if hasattr(fetched, 'to_raw_data'):
-            for item in fetched.to_raw_data():
-                text = item.get('text')
-                if text:
-                    texts.append(text)
-
-    return " ".join(texts) if texts else None
-
-
-def _extract_segments_from_transcript(fetched: Any) -> List[Dict[str, Any]]:
-    """자막 객체에서 타임스탬프가 포함된 세그먼트 목록을 추출합니다.
-
-    Args:
-        fetched: youtube-transcript-api가 반환한 자막 객체
-
-    Returns:
-        세그먼트 목록 [{'start': float, 'text': str, 'duration': float}, ...]
-        타임스탬프 정보가 없으면 빈 리스트
-    """
-    segments: List[Dict[str, Any]] = []
-    try:
-        for snippet in fetched:
-            # FetchedTranscript snippet 또는 dict
-            start = getattr(snippet, 'start', None)
-            text = getattr(snippet, 'text', None)
-            duration = getattr(snippet, 'duration', None)
-
-            if start is None and isinstance(snippet, dict):
-                start = snippet.get('start')
-                text = snippet.get('text')
-                duration = snippet.get('duration', 0)
-
-            if start is not None and text:
-                segments.append({
-                    'start': float(start),
-                    'text': text.strip(),
-                    'duration': float(duration) if duration is not None else 0.0,
-                })
-    except TypeError:
-        if hasattr(fetched, 'to_raw_data'):
-            for item in fetched.to_raw_data():
-                start = item.get('start')
-                text = item.get('text')
-                if start is not None and text:
-                    segments.append({
-                        'start': float(start),
-                        'text': text.strip(),
-                        'duration': float(item.get('duration', 0)),
-                    })
-
-    return segments
-
-
-# ==================== Watch Page Fallback ====================
-
-def _extract_yt_initial_player_response(html_text: str) -> Optional[Dict[str, Any]]:
-    """HTML에서 ytInitialPlayerResponse를 추출합니다."""
-    if not isinstance(html_text, str) or not html_text:
-        return None
-
-    patterns = [
-        r"ytInitialPlayerResponse\s*=\s*(\{.*?\})\s*;",
-        r"var\s+ytInitialPlayerResponse\s*=\s*(\{.*?\})\s*;",
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, html_text, flags=re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except json.JSONDecodeError:
-                continue
-    return None
-
-
-def _extract_caption_tracks(player_response: Optional[Dict[str, Any]]) -> List[CaptionTrack]:
-    """플레이어 응답에서 자막 트랙을 추출합니다."""
-    try:
-        captions = (player_response or {}).get('captions', {})
-        renderer = captions.get('playerCaptionsTracklistRenderer', {})
-        tracks = renderer.get('captionTracks', [])
-        return tracks if isinstance(tracks, list) else []
-    except Exception:
-        return []
-
-
-def _pick_caption_track(
-    tracks: List[CaptionTrack],
-    preferred: tuple[str, ...] = PREFERRED_LANGUAGES
-) -> Optional[CaptionTrack]:
-    """우선순위에 따라 자막 트랙을 선택합니다."""
-    if not isinstance(tracks, list) or not tracks:
-        return None
-
-    pref_list = list(preferred or ())
-
-    def score(track: CaptionTrack) -> tuple[int, int]:
-        lang = (track or {}).get('languageCode', '')
-        is_asr = (track or {}).get('kind') == 'asr'
-        try:
-            lang_idx = pref_list.index(lang)
-        except ValueError:
-            lang_idx = len(pref_list) + 10
-        return (lang_idx, 1 if is_asr else 0)
-
-    return min(tracks, key=score)
-
-
-def _parse_vtt(vtt_text: str) -> str:
-    """VTT 형식의 자막을 파싱합니다."""
-    if not isinstance(vtt_text, str) or not vtt_text.strip():
-        return ""
-
-    lines: List[str] = []
-    for raw in vtt_text.splitlines():
-        line = raw.strip('\ufeff').strip()
-        if not line or line.upper().startswith('WEBVTT') or '-->' in line:
-            continue
-        if re.match(r'^\d+$', line):
-            continue
-        line = re.sub(r'<[^>]+>', '', line).strip()
-        if line:
-            lines.append(line)
-
-    return " ".join(lines)
-
-
-def _parse_timedtext_xml(xml_text: str) -> str:
-    """TimedText XML을 파싱합니다."""
-    if not isinstance(xml_text, str) or not xml_text.strip():
-        return ""
-
-    try:
-        root = ElementTree.fromstring(xml_text)
-    except ElementTree.ParseError:
-        return ""
-
-    texts: List[str] = []
-    for node in root.findall('.//text'):
-        if node.text:
-            texts.append(html_module.unescape(node.text).replace('\n', ' ').strip())
-
-    return " ".join(filter(None, texts))
-
-
-def _is_safe_caption_url(url: str) -> bool:
-    """자막 URL이 YouTube 도메인인지 검증합니다 (SSRF 방지)."""
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(url)
-        if parsed.scheme not in ('http', 'https'):
-            return False
-        host = (parsed.hostname or '').lower()
-        return host.endswith('.youtube.com') or host.endswith('.google.com') or host.endswith('.googlevideo.com')
-    except Exception:
-        return False
-
-
-def _download_caption_from_url(base_url: str) -> str:
-    """자막 URL에서 자막을 다운로드합니다.
-
-    P2 버그 #8: 타임아웃 상수 사용 및 예외 처리 강화
-    """
-    if not isinstance(base_url, str) or not base_url:
-        return ""
-
-    if not _is_safe_caption_url(base_url):
-        _log_warning(f"안전하지 않은 자막 URL 차단: {base_url[:60]}")
-        return ""
-
-    url = base_url
-    if 'fmt=' not in url:
-        url += ('&' if '?' in url else '?') + 'fmt=vtt'
-
-    headers = {
-        "User-Agent": USER_AGENT,
-        "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
-    }
-
-    try:
-        response = requests.get(url, headers=headers, timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT),
-                                allow_redirects=False)
-        response.raise_for_status()
-        text = response.text or ""
-
-        if text.lstrip().startswith('WEBVTT'):
-            return _parse_vtt(text)
-        if '<transcript' in text or '<text' in text:
-            return _parse_timedtext_xml(text)
-
-        return text.strip()
-
-    except requests.exceptions.Timeout:
-        _log_warning(f"Caption download timeout: {url[:50]}...")
-        return ""
-    except requests.exceptions.HTTPError as e:
-        _log_warning(f"Caption download HTTP error: {e.response.status_code if e.response else 'unknown'}")
-        return ""
-    except requests.exceptions.RequestException as e:
-        _log_warning(f"Caption download failed: {str(e)[:100]}")
-        return ""
-
-
-def _get_transcript_from_watch_page(video_id: str) -> TranscriptResult:
-    """Watch 페이지에서 직접 자막을 가져옵니다."""
-    if not video_id:
-        return {'error': '유효하지 않은 YouTube video_id입니다.'}
-
-    try:
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
-        }
-        watch_url = f"https://www.youtube.com/watch?v={video_id}"
-
-        response = requests.get(watch_url, headers=headers, timeout=HTTP_TIMEOUT)
-        response.raise_for_status()
-
-        player = _extract_yt_initial_player_response(response.text)
-        tracks = _extract_caption_tracks(player)
-        track = _pick_caption_track(tracks)
-
-        if not track:
-            return {'error': 'watch 페이지에서 자막 트랙(captionTracks)을 찾지 못했습니다.'}
-
-        text = _download_caption_from_url(track.get('baseUrl', ''))
-        if not text:
-            return {'error': 'watch 페이지 자막 다운로드에 실패했습니다.'}
-
-        return text
-
-    except Exception as e:
-        return {'error': f'watch 페이지 자막 폴백 실패: {str(e)}'}
-
-
 # ==================== Main Transcript Function ====================
-
-def _log_info(message: str) -> None:
-    """안전하게 로그를 기록합니다."""
-    try:
-        current_app.logger.info(message)
-    except RuntimeError:
-        pass
-
-
-def _log_warning(message: str) -> None:
-    """안전하게 경고 로그를 기록합니다."""
-    try:
-        current_app.logger.warning(message)
-    except RuntimeError:
-        pass
-
-
-def _detect_auto_caption(ytt_api: YouTubeTranscriptApi, video_id: str) -> bool:
-    """현재 가져온 자막이 자동 생성(ASR)인지 판별합니다."""
-    try:
-        if hasattr(ytt_api, 'list'):
-            transcript_list = ytt_api.list(video_id)
-            for track in transcript_list:
-                if getattr(track, 'is_generated', False):
-                    return True
-    except Exception:
-        pass
-    return False
+#
+# HTTP 세션, 프록시, Supadata/YouTube API/Watch Page 폴백 함수들,
+# 그리고 _log_info / _log_warning / _detect_auto_caption 등은
+# 모두 services/transcript/_shared.py 및 services/transcript/fallbacks/
+# 패키지에서 alias 형태로 import된다 (파일 상단 참조).
 
 
 def _detect_language_from_text(text: str) -> str:
