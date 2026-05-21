@@ -178,12 +178,12 @@ def _save_cache(video_id: str, cache_type: str, data: Any) -> None:
 
 def clear_cache(video_id: Optional[str] = None) -> int:
     """캐시를 삭제합니다. video_id가 None이면 전체 삭제."""
-    if not os.path.exists(CACHE_DIR):
-        return 0
-
-    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지)
+    # video_id가 지정된 경우 형식 검증 (Path Traversal 방지) — 캐시 디렉토리 존재 여부와 무관하게 입력 검증 선행
     if video_id is not None:
         _sanitize_video_id(video_id)
+
+    if not os.path.exists(CACHE_DIR):
+        return 0
 
     deleted = 0
     for filename in os.listdir(CACHE_DIR):

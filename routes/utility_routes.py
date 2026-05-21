@@ -105,7 +105,10 @@ def api_clear_cache():
     if url and not video_id:
         video_id = content_service.get_video_id(url)
 
-    deleted = clear_cache(video_id)
+    try:
+        deleted = clear_cache(video_id)
+    except ValueError as e:
+        return jsonify({'error': f'[입력 오류] 잘못된 videoId 형식: {e}'}), 400
 
     if video_id:
         return jsonify({
