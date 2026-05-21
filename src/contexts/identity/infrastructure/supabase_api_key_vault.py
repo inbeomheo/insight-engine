@@ -5,6 +5,7 @@
 기존 api_key_service는 deprecation shim으로 남기고 단계적으로 본 어댑터로 대체 예정.
 """
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 from src.contexts.identity.application.ports import IApiKeyVault
 from src.contexts.identity.domain.user_account import ApiKey
@@ -63,13 +64,12 @@ class SupabaseApiKeyVault(IApiKeyVault):
                 "SupabaseApiKeyVault.store: Supabase 비활성, 메모리 마스킹만 (account=%s, provider=%s)",
                 account_id, provider
             )
-            from datetime import datetime
             return ApiKey(
                 provider=provider,
                 masked_key=self._mask(plaintext_key),
                 label=label,
                 is_active=True,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
 
         try:
@@ -81,13 +81,12 @@ class SupabaseApiKeyVault(IApiKeyVault):
                 'encrypted_key': encrypted,
                 'is_active': True,
             }).execute()
-            from datetime import datetime
             return ApiKey(
                 provider=provider,
                 masked_key=self._mask(plaintext_key),
                 label=label,
                 is_active=True,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
         except Exception as e:
             logger.error("SupabaseApiKeyVault.store 실패: %s", e)

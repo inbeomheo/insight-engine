@@ -273,7 +273,16 @@ class SupabaseAccountRepository(IAccountRepository):
         user_id = str(account_id)
         admin = self._get_admin_client()
         email: Optional[str] = None
-        if admin is not None:
+        if admin is None:
+            # service_role 키 미설정 — 운영에서는 모든 find_by_id가 실패하므로
+            # 운영자가 즉시 인지할 수 있게 warning + 추적 가능한 메시지 로깅.
+            # silent None은 운영 디버깅을 어렵게 하므로 명시적 경고로 처리.
+            logger.warning(
+                "SUPABASE_SERVICE_ROLE_KEY 미설정 — find_by_id로 이메일 조회 불가. "
+                "운영 환경이면 service_role 키를 설정해야 합니다 (user_id=%s)",
+                user_id,
+            )
+        else:
             try:
                 user_resp = admin.auth.admin.get_user_by_id(user_id)
                 email = self._extract_email_from_user(user_resp)
@@ -306,12 +315,23 @@ class SupabaseAccountRepository(IAccountRepository):
             roles=roles,
         )
 
+    # find_by_email 페이지네이션 한도 — 무한 루프 방지.
+    # 1000 users/page × 10 pages = 최대 10,000명 스캔.
+    # 이 한도를 넘는 운영 환경은 ie_usage_with_email 뷰 등 별도 인덱스 활용으로 전환 필요.
+    _FIND_BY_EMAIL_PER_PAGE: int = 1000
+    _FIND_BY_EMAIL_MAX_PAGES: int = 10
+
     def find_by_email(self, email: str) -> Optional[UserAccount]:
         """이메일로 UserAccount를 조회.
 
         Supabase는 직접적인 이메일 검색 API가 없으므로 admin
-        `list_users()`를 페이지 단위로 탐색한다. 결과 발견 시 `find_by_id`에
-        위임하여 Aggregate를 조립한다.
+        `list_users(page, per_page)`를 페이지 단위로 순회 탐색한다.
+        결과 발견 시 `find_by_id`에 위임하여 Aggregate를 조립한다.
+
+        페이지네이션 정책:
+        - per_page = `_FIND_BY_EMAIL_PER_PAGE` (1000)
+        - 최대 페이지 = `_FIND_BY_EMAIL_MAX_PAGES` (10) → 최대 10,000명 스캔
+        - 한도 초과 시 warning 로그 + None (fail-silent 방지)
 
         주의: 대규모 사용자 환경에서는 비효율 — Phase 5에서 `ie_usage_with_email`
         뷰 또는 별도 인덱스 활용으로 개선 예정.
@@ -320,33 +340,82 @@ class SupabaseAccountRepository(IAccountRepository):
             return None
         admin = self._get_admin_client()
         if admin is None:
-            logger.debug(
-                "Supabase admin 비활성 — find_by_email 반환 None (email=%s)",
+            logger.warning(
+                "SUPABASE_SERVICE_ROLE_KEY 미설정 — find_by_email로 조회 불가 (email=%s)",
                 email,
             )
             return None
 
-        try:
-            users_resp = admin.auth.admin.list_users()
+        target_email = email.strip().lower()
+        for page in range(1, self._FIND_BY_EMAIL_MAX_PAGES + 1):
+            try:
+                users_resp = admin.auth.admin.list_users(
+                    page=page, per_page=self._FIND_BY_EMAIL_PER_PAGE
+                )
+            except TypeError:
+                # 일부 supabase-py 버전은 page/per_page kwarg를 받지 않음 — 1회만 호출
+                try:
+                    users_resp = admin.auth.admin.list_users()
+                except Exception as exc:
+                    logger.warning(
+                        "auth.admin.list_users 실패 (email=%s, error=%s)",
+                        email,
+                        exc,
+                    )
+                    return None
+                # 호환 모드 — 단일 페이지로 처리하고 종료
+                users = users_resp if isinstance(users_resp, list) else getattr(
+                    users_resp, "users", []
+                )
+                return self._scan_users_for_email(users or [], target_email)
+            except Exception as exc:
+                logger.warning(
+                    "auth.admin.list_users 실패 (email=%s, page=%d, error=%s)",
+                    email,
+                    page,
+                    exc,
+                )
+                return None
+
             # supabase-py 응답: list[User] 또는 obj.users
             users = users_resp if isinstance(users_resp, list) else getattr(
                 users_resp, "users", []
             )
-            target_email = email.strip().lower()
-            for user in users or []:
-                u_email = getattr(user, "email", None) or (
-                    user.get("email") if isinstance(user, dict) else None
-                )
-                if u_email and str(u_email).strip().lower() == target_email:
-                    u_id = getattr(user, "id", None) or (
-                        user.get("id") if isinstance(user, dict) else None
-                    )
-                    if u_id:
-                        return self.find_by_id(AccountId(value=str(u_id)))
-        except Exception as exc:
-            logger.warning(
-                "auth.admin.list_users 실패 (email=%s, error=%s)", email, exc
+            users = list(users or [])
+            if not users:
+                # 빈 페이지 = 더 이상 사용자 없음
+                return None
+
+            found = self._scan_users_for_email(users, target_email)
+            if found is not None:
+                return found
+
+            # 마지막 페이지 (per_page 미만 반환) — 더 순회할 필요 없음
+            if len(users) < self._FIND_BY_EMAIL_PER_PAGE:
+                return None
+
+        # MAX_PAGES 초과 — 운영자가 인지하도록 warning
+        logger.warning(
+            "find_by_email 페이지 한도(%d) 초과 — 사용자를 못 찾았거나 환경이 너무 큼 (email=%s)",
+            self._FIND_BY_EMAIL_MAX_PAGES,
+            email,
+        )
+        return None
+
+    def _scan_users_for_email(
+        self, users: list, target_email: str
+    ) -> Optional[UserAccount]:
+        """단일 페이지 내에서 이메일 일치 사용자를 찾아 `find_by_id` 위임."""
+        for user in users:
+            u_email = getattr(user, "email", None) or (
+                user.get("email") if isinstance(user, dict) else None
             )
+            if u_email and str(u_email).strip().lower() == target_email:
+                u_id = getattr(user, "id", None) or (
+                    user.get("id") if isinstance(user, dict) else None
+                )
+                if u_id:
+                    return self.find_by_id(AccountId(value=str(u_id)))
         return None
 
     def save(self, account: UserAccount) -> None:

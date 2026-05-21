@@ -62,6 +62,12 @@ class TestVaultWithoutSupabase:
         assert key.is_active is True
         assert "5678" in key.masked_key
         assert "*" in key.masked_key
+        # M1: datetime.utcnow() deprecated → datetime.now(timezone.utc)
+        # created_at은 timezone-aware여야 함 (tzinfo 존재)
+        assert key.created_at.tzinfo is not None, (
+            "ApiKey.created_at은 timezone-aware datetime이어야 함 "
+            "(datetime.utcnow() 사용 금지)"
+        )
 
     def test_store_raises_on_short_key(self, account_id):
         """8자 미만 키는 InvalidApiKey."""
@@ -125,6 +131,8 @@ class TestVaultWithMockedSupabase:
         # 반환 VO 검증
         assert key.provider == "deepseek"
         assert "5678" in key.masked_key
+        # M1: created_at은 timezone-aware
+        assert key.created_at.tzinfo is not None
 
     def test_reveal_decrypts_active_key(self, account_id):
         """정상: 활성 행을 찾아 _decrypt 결과를 반환."""

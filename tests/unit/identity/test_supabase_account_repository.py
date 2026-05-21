@@ -271,6 +271,195 @@ class TestFindById:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# find_by_id — admin (service_role) 미설정 시 동작
+# ---------------------------------------------------------------------------
+
+
+class TestFindByIdAdminUnavailable:
+    """SUPABASE_SERVICE_ROLE_KEY 미설정 시 warning 로그 + None 반환."""
+
+    def test_warning_logged_when_admin_none(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        repo = SupabaseAccountRepository()
+        # client는 활성, admin은 None
+        repo._get_client = MagicMock(return_value=MagicMock())  # type: ignore[method-assign]
+        repo._get_admin_client = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        with caplog.at_level(
+            logging.WARNING,
+            logger="src.contexts.identity.infrastructure.supabase_account_repository",
+        ):
+            result = repo.find_by_id(AccountId(value="some-user-id"))
+
+        assert result is None
+        # 운영자가 인지할 수 있는 warning 로그
+        assert any(
+            "SUPABASE_SERVICE_ROLE_KEY 미설정" in r.message
+            for r in caplog.records
+        ), f"warning 로그가 남지 않음: {[r.message for r in caplog.records]}"
+
+
+# ---------------------------------------------------------------------------
+# find_by_email — 페이지네이션
+# ---------------------------------------------------------------------------
+
+
+class TestFindByEmailPagination:
+    """list_users(page, per_page) 페이지 순회 + 한도 검증."""
+
+    def _make_user(self, user_id: str, email: str) -> MagicMock:
+        u = MagicMock()
+        u.id = user_id
+        u.email = email
+        return u
+
+    def teardown_method(self) -> None:
+        patch.stopall()
+
+    def test_admin_none_returns_none_with_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        repo = SupabaseAccountRepository()
+        repo._get_admin_client = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        with caplog.at_level(
+            logging.WARNING,
+            logger="src.contexts.identity.infrastructure.supabase_account_repository",
+        ):
+            result = repo.find_by_email("anyone@example.com")
+
+        assert result is None
+        assert any(
+            "SUPABASE_SERVICE_ROLE_KEY 미설정" in r.message
+            for r in caplog.records
+        )
+
+    def test_finds_user_in_second_page(self) -> None:
+        """1000+1 사용자: 첫 페이지엔 없고 두 번째 페이지에서 발견."""
+        repo = SupabaseAccountRepository()
+        mock_admin = MagicMock()
+
+        # 페이지 1: 1000명 (대상 없음), 페이지 2: 1명 (대상 있음)
+        per_page = repo._FIND_BY_EMAIL_PER_PAGE
+        page1_users = [
+            self._make_user(f"u{i}", f"u{i}@example.com") for i in range(per_page)
+        ]
+        target_user = self._make_user("target-id", "target@example.com")
+        page2_users = [target_user]
+
+        def list_users_side_effect(page: int = 1, per_page: int = 1000) -> MagicMock:
+            resp = MagicMock()
+            if page == 1:
+                resp.users = page1_users
+            elif page == 2:
+                resp.users = page2_users
+            else:
+                resp.users = []
+            return resp
+
+        mock_admin.auth.admin.list_users.side_effect = list_users_side_effect
+        repo._get_admin_client = MagicMock(return_value=mock_admin)  # type: ignore[method-assign]
+        # find_by_id를 가벼운 mock으로 (Aggregate 조립은 별도 테스트에서 검증)
+        sentinel_account = MagicMock()
+        repo.find_by_id = MagicMock(return_value=sentinel_account)  # type: ignore[method-assign]
+
+        result = repo.find_by_email("target@example.com")
+
+        assert result is sentinel_account
+        # 두 번 호출되어야 함 (page=1, page=2)
+        assert mock_admin.auth.admin.list_users.call_count == 2
+        # find_by_id가 target-id로 호출되었는지
+        repo.find_by_id.assert_called_once()
+        called_account_id = repo.find_by_id.call_args[0][0]
+        assert str(called_account_id) == "target-id"
+
+    def test_returns_none_when_last_page_partial(self) -> None:
+        """마지막 페이지(per_page 미만)에서 미발견 → 더 이상 순회 안 함."""
+        repo = SupabaseAccountRepository()
+        mock_admin = MagicMock()
+
+        # 50명 (per_page=1000 미만) — 1페이지로 끝남
+        users = [self._make_user(f"u{i}", f"u{i}@x.com") for i in range(50)]
+        resp = MagicMock()
+        resp.users = users
+        mock_admin.auth.admin.list_users.return_value = resp
+        repo._get_admin_client = MagicMock(return_value=mock_admin)  # type: ignore[method-assign]
+
+        result = repo.find_by_email("notfound@x.com")
+
+        assert result is None
+        # 첫 페이지만 호출
+        assert mock_admin.auth.admin.list_users.call_count == 1
+
+    def test_page_limit_exceeded_logs_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """모든 페이지가 가득 차고도 미발견 → MAX_PAGES warning."""
+        repo = SupabaseAccountRepository()
+        mock_admin = MagicMock()
+        per_page = repo._FIND_BY_EMAIL_PER_PAGE
+        # 항상 1000명짜리 페이지 반환 (대상 이메일 없음)
+        users = [self._make_user(f"u{i}", f"u{i}@x.com") for i in range(per_page)]
+
+        def list_users_side_effect(page: int = 1, per_page: int = 1000) -> MagicMock:
+            resp = MagicMock()
+            resp.users = users
+            return resp
+
+        mock_admin.auth.admin.list_users.side_effect = list_users_side_effect
+        repo._get_admin_client = MagicMock(return_value=mock_admin)  # type: ignore[method-assign]
+
+        with caplog.at_level(
+            logging.WARNING,
+            logger="src.contexts.identity.infrastructure.supabase_account_repository",
+        ):
+            result = repo.find_by_email("nope@x.com")
+
+        assert result is None
+        assert mock_admin.auth.admin.list_users.call_count == repo._FIND_BY_EMAIL_MAX_PAGES
+        assert any(
+            "페이지 한도" in r.message for r in caplog.records
+        ), f"한도 초과 warning 누락: {[r.message for r in caplog.records]}"
+
+    def test_legacy_list_users_without_kwargs(self) -> None:
+        """구버전 supabase-py: list_users()가 page/per_page kwarg 미지원 → TypeError → 1회만 호출."""
+        repo = SupabaseAccountRepository()
+        mock_admin = MagicMock()
+
+        target_user = self._make_user("legacy-id", "legacy@example.com")
+        users = [target_user]
+
+        call_count = {"with_kwargs": 0, "without_kwargs": 0}
+
+        def list_users_side_effect(*args, **kwargs):
+            if kwargs:
+                call_count["with_kwargs"] += 1
+                raise TypeError("list_users() got unexpected keyword argument")
+            call_count["without_kwargs"] += 1
+            resp = MagicMock()
+            resp.users = users
+            return resp
+
+        mock_admin.auth.admin.list_users.side_effect = list_users_side_effect
+        repo._get_admin_client = MagicMock(return_value=mock_admin)  # type: ignore[method-assign]
+        sentinel = MagicMock()
+        repo.find_by_id = MagicMock(return_value=sentinel)  # type: ignore[method-assign]
+
+        result = repo.find_by_email("legacy@example.com")
+
+        assert result is sentinel
+        # kwargs 시도 1회 + 호환 모드 1회
+        assert call_count["with_kwargs"] == 1
+        assert call_count["without_kwargs"] == 1
+
+
+# ---------------------------------------------------------------------------
+# save
+# ---------------------------------------------------------------------------
+
+
 class TestSave:
     def test_save_upserts_usage_and_credits(self) -> None:
         mock_client = MagicMock()
