@@ -8,6 +8,7 @@
 - content_evaluation: 콘텐츠 종합 평가 (등급/헤드라인/퀴즈/CTA 등)
 - text_structure: 문장/단락/연결어/구조 분석
 - text_quality: 표현 품질 (군더더기/어휘/톤/클리셰)
+- seo_aeo: SEO/AEO/EEAT/구조화 데이터
 """
 from routes.utility import (  # noqa: F401 — 부수효과 import
     content_evaluation,
@@ -15,6 +16,7 @@ from routes.utility import (  # noqa: F401 — 부수효과 import
     feedback_quality,
     generation,
     operations,
+    seo_aeo,
     text_quality,
     text_structure,
 )
