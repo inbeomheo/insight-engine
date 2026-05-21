@@ -11,11 +11,9 @@ from routes.auth_routes import auth_bp
 from services.data.supabase_service import require_auth
 
 
-def _require_admin():
-    """관리자 권한 확인 (auth_routes.is_admin patch를 통과하도록 namespace 접근)"""
-    if not _ar.is_admin(g.user_id):
-        return _ar._error_response('관리자 권한이 필요합니다.', 403)
-    return None
+# 관리자 권한 헬퍼는 routes/auth_routes.py에 단일 정의됨.
+# `@patch('routes.auth_routes.is_admin')`이 정상 작동하도록 namespace를 통해 호출.
+_require_admin = _ar._require_admin
 
 
 @auth_bp.route('/api/admin/check', methods=['GET'])
