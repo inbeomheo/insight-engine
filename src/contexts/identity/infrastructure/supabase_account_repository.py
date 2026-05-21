@@ -15,12 +15,21 @@ Phase 2-d/e/f에서 `find_by_id`, `find_by_email`, `save`를 본격 구현하면
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from src.contexts.identity.application.ports import IAccountRepository
 from src.contexts.identity.domain.exceptions import QuotaExceeded
 from src.contexts.identity.domain.user_account import UserAccount
 from src.shared.domain.value_objects import AccountId
+
+logger = logging.getLogger(__name__)
+
+
+# Supabase 비활성 / RPC 실패 시 사용량 차단을 풀어주는 개발 모드 sentinel.
+# 운영 환경에서 이 값이 반환되면 경고 로그가 남으므로 사후 추적 가능하다.
+# Phase 7 (Publishing 트랜잭션) 에서 RPC 트랜잭션 + 환불 로직과 통합 예정.
+_UNLIMITED_DEV_QUOTA: int = 999
 
 
 class SupabaseAccountRepository(IAccountRepository):
@@ -73,16 +82,27 @@ class SupabaseAccountRepository(IAccountRepository):
 
         - `{"success": true, "new_count": N}` → N 반환
         - `{"success": false, "reason": "no_usage_left"}` → `QuotaExceeded`
-        - 그 외 예외/실패 → 기존 동작 모방하여 999 반환 (개발 모드 등에서 차단 X)
+        - 그 외 예외/실패 → `_UNLIMITED_DEV_QUOTA` 반환 + warning 로그
+          (개발 모드/장애 시 사용자가 막히지 않도록 fallback, 운영 추적은 로그로)
 
         주의: `amount > 1` 차감은 RPC가 지원하지 않으므로 반복 호출이 필요하다.
         본 메서드는 단일 차감(`amount=1`) 기준으로 동작하며,
         호출자는 amount만큼 반복 호출하거나 별도 RPC를 구현해야 한다.
+
+        TODO(Phase 7 — Publishing 트랜잭션):
+            - 차감과 콘텐츠 생성을 원자적으로 묶기 위해 `IUsageGateway.refund`
+              구현 + Saga 패턴 도입.
+            - `_UNLIMITED_DEV_QUOTA` fallback은 그때 제거 (장애 시 503 응답).
         """
         client = self._get_client()
         if client is None:
-            # Supabase 비활성 (개발 모드) — 기본 허용
-            return 999
+            # Supabase 비활성 (개발 모드) — 기본 허용 + 추적용 디버그 로그
+            logger.debug(
+                "Supabase 비활성 상태 — _UNLIMITED_DEV_QUOTA fallback "
+                "(account_id=%s)",
+                account_id,
+            )
+            return _UNLIMITED_DEV_QUOTA
 
         try:
             res = client.rpc(
@@ -105,10 +125,17 @@ class SupabaseAccountRepository(IAccountRepository):
             )
         except QuotaExceeded:
             raise
-        except Exception:
-            # 기존 동작 모방: 인프라 실패 시 기본 허용 (운영 가시성은 별도 로깅 필요)
-            # TODO(Phase 2 후속): 여기서 silent 999 반환은 위험 — 로깅/모니터링 추가
-            return 999
+        except Exception as exc:
+            # 인프라 실패 시 기본 허용 — 운영 가시성을 위해 warning 로그 (with stack)
+            # 한도 초과는 위에서 명시적 QuotaExceeded로 raise 되므로 여기 도달하지 않음.
+            logger.warning(
+                "consume_quota_atomic RPC 실패 — _UNLIMITED_DEV_QUOTA fallback "
+                "(account_id=%s, error=%s)",
+                account_id,
+                exc,
+                exc_info=True,
+            )
+            return _UNLIMITED_DEV_QUOTA
 
 
 __all__ = [

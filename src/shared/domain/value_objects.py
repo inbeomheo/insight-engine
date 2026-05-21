@@ -81,20 +81,50 @@ class WorkspaceId:
 
 @dataclass(frozen=True, slots=True)
 class Money:
-    """통화 금액 (정수 cents 단위).
+    """통화 금액 (정수 최소 단위 = cents/원).
 
-    실수 부동소수점 오차를 피하기 위해 항상 정수 cents로 보관한다.
-    예: `Money(1000, "USD")` = $10.00.
+    API 사양
+    --------
+    - `amount_cents`는 **항상 정수**이며 통화의 최소 단위로 표현된다.
+      - USD/EUR: cents (예: `Money(1000, "USD")` = $10.00)
+      - KRW: 원 단위 정수 (KRW는 분수 단위가 없으므로 `Money(1000, "KRW")` = ₩1,000)
+      - JPY: 엔 단위 정수 (JPY도 분수 단위 미사용)
+    - 부동소수점 오차를 회피하기 위해 float 입력은 금지된다.
+
+    생성 방법
+    --------
+    - 직접 생성: `Money(amount_cents=1000, currency="USD")` (저수준, 명시적)
+    - 팩토리: `Money.from_won(1000)` / `Money.from_cents(1000)` (의도 명확)
+    - `bool` 입력은 `int` 서브타입이지만 명백히 의미가 다르므로 금지된다.
     """
 
     amount_cents: int
     currency: str = "USD"
 
     def __post_init__(self) -> None:
-        if not isinstance(self.amount_cents, int):
-            raise ValueError("Money.amount_cents must be an integer (cents)")
+        # bool은 int의 서브타입이지만 의도된 사용이 아님
+        if isinstance(self.amount_cents, bool) or not isinstance(self.amount_cents, int):
+            raise ValueError("Money.amount_cents must be an integer (cents/원)")
         if not isinstance(self.currency, str) or len(self.currency) != 3:
             raise ValueError("Money.currency must be a 3-letter ISO code")
+
+    # ----- 팩토리 메서드 -------------------------------------------------
+    @classmethod
+    def from_cents(cls, cents: int, currency: str = "USD") -> "Money":
+        """정수 cents (또는 통화의 최소 단위)로부터 생성.
+
+        예: `Money.from_cents(1000, "USD")` → $10.00
+        """
+        return cls(amount_cents=cents, currency=currency)
+
+    @classmethod
+    def from_won(cls, won: int) -> "Money":
+        """원(KRW) 단위 정수로부터 생성.
+
+        KRW는 분수 단위가 없으므로 `won` 그대로 `amount_cents`에 저장된다.
+        예: `Money.from_won(1000)` → ₩1,000
+        """
+        return cls(amount_cents=won, currency="KRW")
 
     def _check_currency(self, other: "Money") -> None:
         if self.currency != other.currency:
