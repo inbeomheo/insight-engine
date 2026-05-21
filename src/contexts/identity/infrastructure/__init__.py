@@ -8,7 +8,15 @@ DI 컨테이너 또는 부트스트랩 코드가 `IAccountRepository`에 본 구
 from src.contexts.identity.infrastructure.supabase_account_repository import (
     SupabaseAccountRepository,
 )
+from src.contexts.identity.infrastructure.supabase_api_key_vault import (
+    SupabaseApiKeyVault,
+)
+from src.contexts.identity.infrastructure.supabase_usage_gateway import (
+    SupabaseUsageGateway,
+)
 
 __all__ = [
     "SupabaseAccountRepository",
+    "SupabaseApiKeyVault",
+    "SupabaseUsageGateway",
 ]

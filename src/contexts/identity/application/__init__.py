@@ -4,6 +4,7 @@
 `use_cases.py`는 도메인 객체와 포트를 조합한 비즈니스 흐름을 표현한다.
 """
 
+from src.contexts.identity.application.account_service import AccountService
 from src.contexts.identity.application.ports import (
     IAccountRepository,
     IApiKeyVault,
@@ -15,6 +16,7 @@ from src.contexts.identity.application.use_cases import (
 )
 
 __all__ = [
+    "AccountService",
     "EnforceQuotaUseCase",
     "IAccountRepository",
     "IApiKeyVault",
