@@ -9,9 +9,11 @@
 - text_structure: 문장/단락/연결어/구조 분석
 - text_quality: 표현 품질 (군더더기/어휘/톤/클리셰)
 - seo_aeo: SEO/AEO/EEAT/구조화 데이터
+- content_meta: 콘텐츠 메타데이터 (페르소나/브랜드/투명성/위험)
 """
 from routes.utility import (  # noqa: F401 — 부수효과 import
     content_evaluation,
+    content_meta,
     external,
     feedback_quality,
     generation,
