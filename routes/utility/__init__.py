@@ -6,6 +6,7 @@
 - generation: AI 스타일 추천/생성 (2개)
 - external: 웹훅/재생목록/추천소스/워드클라우드/스키마/RSS (6개)
 - content_evaluation: 콘텐츠 종합 평가 (등급/헤드라인/퀴즈/CTA 등)
+- text_structure: 문장/단락/연결어/구조 분석
 """
 from routes.utility import (  # noqa: F401 — 부수효과 import
     content_evaluation,
@@ -13,4 +14,5 @@ from routes.utility import (  # noqa: F401 — 부수효과 import
     feedback_quality,
     generation,
     operations,
+    text_structure,
 )
