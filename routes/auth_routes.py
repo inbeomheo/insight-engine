@@ -548,95 +548,13 @@ def delete_account():
     return _error_response('계정 삭제에 실패했습니다.', 500)
 
 
-# =============================================
-# 관리자 API
-# =============================================
-
+# 관리자 권한 헬퍼 (admin 라우트는 routes/auth/admin.py로 분리됨,
+# 본 헬퍼는 다른 라우트에서도 재사용되므로 여기 유지)
 def _require_admin():
-    """관리자 권한 확인"""
+    """관리자 권한 확인."""
     if not is_admin(g.user_id):
         return _error_response('관리자 권한이 필요합니다.', 403)
     return None
-
-
-@auth_bp.route('/api/admin/check', methods=['GET'])
-@require_auth
-def check_admin():
-    """현재 사용자가 관리자인지 확인"""
-    return jsonify({'is_admin': is_admin(g.user_id)})
-
-
-@auth_bp.route('/api/admin/users', methods=['GET'])
-@require_auth
-def get_admin_users():
-    """모든 사용자의 사용량 조회 (관리자 전용)"""
-    error = _require_admin()
-    if error:
-        return error
-
-    users = get_all_users_usage()
-    return jsonify({'users': users})
-
-
-@auth_bp.route('/api/admin/users/<user_id>/reset', methods=['POST'])
-@require_auth
-def admin_reset_user(user_id):
-    """특정 사용자 사용량 리셋 (관리자 전용)"""
-    error = _require_admin()
-    if error:
-        return error
-
-    if reset_user_usage(user_id):
-        return _success_response({'message': f'사용자 {user_id}의 사용량이 리셋되었습니다.'})
-    return _error_response('리셋에 실패했습니다.', 500)
-
-
-@auth_bp.route('/api/admin/stats', methods=['GET'])
-@require_auth
-def get_admin_stats():
-    """사용량 통계 조회 (관리자 전용)"""
-    error = _require_admin()
-    if error:
-        return error
-
-    stats = get_usage_stats()
-    return jsonify(stats)
-
-
-@auth_bp.route('/api/admin/contents', methods=['GET'])
-@require_auth
-def get_admin_contents():
-    """모든 사용자의 생성 콘텐츠 조회 (관리자 전용)
-
-    Query Parameters:
-        page: 페이지 번호 (기본값: 1)
-        per_page: 페이지당 항목 수 (기본값: 20)
-        user_id: 특정 사용자 필터 (선택)
-    """
-    error = _require_admin()
-    if error:
-        return error
-
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
-    user_id = request.args.get('user_id', None, type=str)
-
-    result = get_all_contents(page, per_page, user_id)
-    return jsonify(result)
-
-
-@auth_bp.route('/api/admin/contents/<report_id>', methods=['GET'])
-@require_auth
-def get_admin_content_detail(report_id):
-    """특정 콘텐츠 상세 조회 (관리자 전용)"""
-    error = _require_admin()
-    if error:
-        return error
-
-    content = get_content_detail(report_id)
-    if not content:
-        return _error_response('콘텐츠를 찾을 수 없습니다.', 404)
-    return jsonify(content)
 
 
 # =============================================
@@ -1430,3 +1348,9 @@ def sso_disable(workspace_id):
     if 'error' in result:
         return _error_response(result['error'])
     return jsonify(result)
+
+# ============================================================
+# 분리된 auth 서브 라우트 — 부수효과 import
+# - routes/auth/admin.py: 관리자 라우트 (6개)
+# ============================================================
+from routes import auth as _auth_subroutes  # noqa: E402,F401
