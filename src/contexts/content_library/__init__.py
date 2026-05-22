@@ -29,6 +29,26 @@ def save_history_entry(user_id: str, data: dict) -> dict | None:
     )
 
 
+def save_many_history_entries(user_id: str, data_list: list[dict]) -> int:
+    """편의 함수 — 다수 HistoryEntry를 단일 batch INSERT.
+
+    각 dict에서 HistoryEntry 변환 실패 항목은 silent skip. user_id 누락 시 0.
+    """
+    if not user_id or not data_list:
+        return 0
+    from .domain.history_entry import HistoryEntry
+    from .infrastructure.supabase_history_repository import (
+        SupabaseHistoryRepository,
+    )
+    entries: list[HistoryEntry] = []
+    for d in data_list:
+        try:
+            entries.append(HistoryEntry.from_dict(d, user_id))
+        except ValueError:
+            continue
+    return SupabaseHistoryRepository().save_many(entries)
+
+
 def list_history_entries(
     user_id: str, page: int = 1, per_page: int = 20
 ) -> dict:
@@ -79,6 +99,7 @@ def delete_history_entry(user_id: str, report_id: str) -> bool:
 
 __all__ = [
     "save_history_entry",
+    "save_many_history_entries",
     "list_history_entries",
     "update_history_entry",
     "toggle_favorite",

@@ -17,6 +17,13 @@ class IHistoryRepository(ABC):
         """HistoryEntry 저장. 저장된 row dict 반환 (Supabase 응답 형식 호환)."""
 
     @abstractmethod
+    def save_many(self, entries: list[HistoryEntry]) -> int:
+        """다수 HistoryEntry를 단일 트랜잭션으로 저장. 저장된 개수 반환.
+
+        구현체는 단일 INSERT (Supabase batch) 또는 fallback (N회 save)로 처리.
+        """
+
+    @abstractmethod
     def list_for_user(
         self,
         user_id: str,

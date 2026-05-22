@@ -24,6 +24,10 @@ class FakeRepo(IHistoryRepository):
         self.saved.append(entry)
         return {"saved": True, "report_id": str(entry.report_id)}
 
+    def save_many(self, entries):
+        self.saved.extend(entries)
+        return len(entries)
+
     def list_for_user(self, user_id, page=1, per_page=20):
         return {**self.list_response, "page": page, "per_page": per_page}
 

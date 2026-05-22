@@ -610,32 +610,10 @@ def generate_batch():
                         'elapsed_time': None
                     })
 
-            # 배치 INSERT (1회 DB 호출) — get_supabase는 이미 상위에서 import됨
+            # 배치 INSERT — Content/Library BC에 위임 (sanitize + batch INSERT 통합 처리)
             if histories_to_save:
-                supabase = get_supabase()
-                if supabase:
-                    try:
-                        def sanitize_text(text, max_length=50000):
-                            """입력 텍스트 검증 및 길이 제한"""
-                            if not isinstance(text, str):
-                                return ""
-                            return text[:max_length]
-
-                        batch_data = [{
-                            'user_id': g.user_id,
-                            'report_id': sanitize_text(h.get('id', ''), 100),
-                            'url': sanitize_text(h.get('url', ''), 500),
-                            'title': sanitize_text(h.get('title', ''), 500),
-                            'style': sanitize_text(h.get('style', ''), 50),
-                            'content': sanitize_text(h.get('content', ''), 100000),
-                            'html': sanitize_text(h.get('html', ''), 200000),
-                            'transcript': sanitize_text(h.get('transcript', ''), 10000),
-                            'usage': h.get('usage'),
-                            'elapsed_time': h.get('elapsed_time')
-                        } for h in histories_to_save]
-                        supabase.table('ie_histories').insert(batch_data).execute()
-                    except Exception as e:
-                        current_app.logger.warning(f"배치 히스토리 저장 실패: {e}")
+                from src.contexts.content_library import save_many_history_entries
+                save_many_history_entries(g.user_id, histories_to_save)
 
         return jsonify({
             'success': True,

@@ -1,11 +1,18 @@
 """채널 모니터링 + 운영 대시보드 라우트.
 
 auth_routes.py에서 분리됨. namespace 경유 호출 패턴 유지.
+채널 모니터 CRUD는 Channel Monitoring BC (`src/contexts/channel_monitoring/`)
+경유로 통합 — 직접 `.table()` 호출 제거.
 """
 from flask import g, jsonify
 
 from routes import auth_routes as _ar
 from routes.auth_routes import auth_bp
+from src.contexts.channel_monitoring import (
+    delete_channel_monitor as _delete_monitor,
+    list_channel_monitors as _list_monitors,
+    register_channel_monitor as _register_monitor,
+)
 from src.contexts.identity.interface.auth_decorators import require_auth
 
 
@@ -138,13 +145,7 @@ def get_channel_monitors():
         return error
 
     try:
-        client = _ar.get_supabase()
-        result = client.table('ie_channel_monitors') \
-            .select('*') \
-            .eq('user_id', g.user_id) \
-            .order('created_at', desc=True) \
-            .execute()
-        return jsonify({'monitors': result.data or []})
+        return jsonify({'monitors': _list_monitors(g.user_id)})
     except Exception as e:
         return _ar._exception_error_response(
             '모니터 조회 오류',
@@ -162,27 +163,12 @@ def create_channel_monitor():
         return error
 
     data = _ar._get_json_data()
-    channel_id = data.get('channel_id', '').strip()
-    if not channel_id:
+    if not (data.get('channel_id') or '').strip():
         return _ar._error_response('채널 ID가 필요합니다.')
 
     try:
-        client = _ar.get_supabase()
-        row = {
-            'user_id': g.user_id,
-            'channel_id': channel_id,
-            'channel_title': data.get('channel_title', ''),
-            'style_id': data.get('style_id', 'blog_seo'),
-            'modifiers': data.get('modifiers', {
-                'length': 'medium',
-                'writing_style': 'conversational',
-                'language': 'ko',
-            }),
-            'interval_minutes': data.get('interval_minutes', 30),
-            'is_active': True,
-        }
-        result = client.table('ie_channel_monitors').insert(row).execute()
-        return jsonify(result.data[0] if result.data else {}), 201
+        created = _register_monitor(g.user_id, data)
+        return jsonify(created or {}), 201
     except Exception as e:
         return _ar._exception_error_response(
             '모니터 등록 오류',
@@ -200,12 +186,7 @@ def delete_channel_monitor(monitor_id):
         return error
 
     try:
-        client = _ar.get_supabase()
-        client.table('ie_channel_monitors') \
-            .delete() \
-            .eq('id', monitor_id) \
-            .eq('user_id', g.user_id) \
-            .execute()
+        _delete_monitor(g.user_id, monitor_id)
         return _ar._success_response()
     except Exception as e:
         return _ar._exception_error_response(
