@@ -7,7 +7,7 @@ from flask import Response, current_app, request
 from routes.content_mgmt._shared import _err, _get_json, _json
 from routes.content_mgmt_routes import content_mgmt_bp
 from services.data import backup_service, data_migration_service
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 # ══════════════════════════════════════════════════════════════════

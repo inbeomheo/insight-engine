@@ -31,33 +31,32 @@ class TestHelperFunctions(unittest.TestCase):
     """모듈 레벨 헬퍼 함수 (increment/get 카운터)."""
 
     def test_increment_request_count(self):
+        # 카운터 상태는 routes.utility._state 모듈에 정의됨 (순환 import 제거 후)
         from routes.utility_routes import (
             increment_request_count, get_request_count,
-            _total_request_count_lock
         )
-        import routes.utility_routes as mod
+        import routes.utility._state as mod
         original = mod._total_request_count
         increment_request_count()
         self.assertEqual(get_request_count(), original + 1)
         # 복원
-        with _total_request_count_lock:
+        with mod._total_request_count_lock:
             mod._total_request_count = original
 
     def test_increment_error_count(self):
         from routes.utility_routes import (
             increment_error_count, get_error_count,
-            _total_error_count_lock
         )
-        import routes.utility_routes as mod
+        import routes.utility._state as mod
         original = mod._total_error_count
         increment_error_count()
         self.assertEqual(get_error_count(), original + 1)
-        with _total_error_count_lock:
+        with mod._total_error_count_lock:
             mod._total_error_count = original
 
     def test_get_error_rate_zero_requests(self):
         from routes.utility_routes import get_error_rate
-        import routes.utility_routes as mod
+        import routes.utility._state as mod
         orig_req = mod._total_request_count
         orig_err = mod._total_error_count
         mod._total_request_count = 0
@@ -68,7 +67,7 @@ class TestHelperFunctions(unittest.TestCase):
 
     def test_get_error_rate_nonzero(self):
         from routes.utility_routes import get_error_rate
-        import routes.utility_routes as mod
+        import routes.utility._state as mod
         orig_req = mod._total_request_count
         orig_err = mod._total_error_count
         mod._total_request_count = 100
@@ -82,7 +81,7 @@ class TestHelperFunctions(unittest.TestCase):
             increment_active_requests, decrement_active_requests,
             get_active_requests
         )
-        import routes.utility_routes as mod
+        import routes.utility._state as mod
         orig = mod._active_requests_counter
         mod._active_requests_counter = 0
         increment_active_requests()

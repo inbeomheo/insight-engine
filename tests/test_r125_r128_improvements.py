@@ -84,10 +84,11 @@ class TestErrorRateTracking(unittest.TestCase):
     def setUp(self):
         """카운터 초기화"""
         import routes.utility_routes as ur
+        import routes.utility._state as ur_state
         self._ur = ur
-        # 카운터 리셋
-        ur._total_request_count = 0
-        ur._total_error_count = 0
+        # 카운터는 _state 모듈에 정의됨 (utility_routes는 re-export만 함)
+        ur_state._total_request_count = 0
+        ur_state._total_error_count = 0
 
     def test_increment_error_count(self):
         """에러 카운터 증가"""

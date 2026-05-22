@@ -3,7 +3,7 @@ from flask import g, jsonify, request
 
 from routes.blog_routes import blog_bp
 from routes.payment._shared import payment_exception_response, safe_payment_error_response
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import error_response
 
 

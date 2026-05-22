@@ -2,7 +2,7 @@
 import os
 import logging
 
-import chromadb
+from services.rag.chroma_client_factory import get_chroma_client
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class VectorStore:
     def __init__(self, db_path: str = './data/chroma_db'):
         os.makedirs(db_path, exist_ok=True)
-        self._client = chromadb.PersistentClient(path=db_path)
+        # 프로세스 단위 싱글톤 클라이언트 사용 — video_qa_service와 동일 디렉토리 충돌 방지
+        self._client = get_chroma_client(db_path)
 
     def _get_collection(self, user_id: str):
         """사용자별 컬렉션 반환 (없으면 생성)"""

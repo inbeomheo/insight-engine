@@ -44,12 +44,20 @@ DEFAULT_QA_MODEL = "chatmock/gpt-5.4"
 
 
 def _get_chroma_client() -> Optional[Any]:
-    """ChromaDB PersistentClient를 반환합니다. 사용 불가 시 None."""
+    """ChromaDB PersistentClient를 반환합니다. 사용 불가 시 None.
+
+    services/rag/vector_store.py와 동일 디렉토리에 별개 인스턴스가 생기지 않도록
+    services.rag.chroma_client_factory.get_chroma_client()를 통해 싱글톤을 공유한다.
+    """
     if not _CHROMA_AVAILABLE:
         return None
-    db_path = os.environ.get("CHROMA_DB_PATH", "./data/chroma_db")
-    os.makedirs(db_path, exist_ok=True)
-    return chromadb.PersistentClient(path=db_path)
+    try:
+        from services.rag.chroma_client_factory import get_chroma_client
+        db_path = os.environ.get("CHROMA_DB_PATH", "./data/chroma_db")
+        return get_chroma_client(db_path)
+    except ImportError:
+        # chromadb 자체가 없는 경우 — _CHROMA_AVAILABLE 플래그와 일관성 유지
+        return None
 
 
 def _get_video_collection(client: Any, video_id: str):

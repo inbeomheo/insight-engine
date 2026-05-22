@@ -69,6 +69,10 @@ def create_app(test_config=None):
     def _start_timer():
         request._start_time = _time.perf_counter()
 
+    # Issue #17 소PR B-2: g.auth 슬롯 초기화 (UserAccount Aggregate는 require_auth가 채움)
+    from src.contexts.identity.interface.auth_decorators import inject_auth_context
+    app.before_request(inject_auth_context)
+
     @app.after_request
     def _log_response_time(response):
         start = getattr(request, '_start_time', None)

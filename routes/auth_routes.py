@@ -7,8 +7,9 @@ import os
 
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response, sanitize_error_for_client
+from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data.supabase_service import (
-    get_supabase, is_supabase_enabled, require_auth,
+    get_supabase, is_supabase_enabled,
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
@@ -313,13 +314,9 @@ def get_current_user():
         )
 
 
-# 사용자 설정(API 키/커스텀 스타일/사용량) 라우트는 routes/auth/user_settings.py로 분리됨.
-# 테스트가 import하는 _mask_api_key 헬퍼는 호환성 위해 여기서 re-export.
-from routes.auth.user_settings import _mask_api_key  # noqa: E402,F401
-
-
-# 관리자 권한 헬퍼 (admin 라우트는 routes/auth/admin.py로 분리됨,
-# 본 헬퍼는 다른 라우트에서도 재사용되므로 여기 유지)
+# 관리자 권한 헬퍼 — 단일 정의 (admin.py와 channel_monitoring.py에서 공유).
+# is_admin은 namespace 호출이므로 `@patch('routes.auth_routes.is_admin')` 그대로 동작.
+# 서브패키지 import 전에 미리 정의해 admin.py가 `_ar._require_admin`을 안전하게 참조 가능.
 def _require_admin():
     """관리자 권한 확인."""
     if not is_admin(g.user_id):
@@ -327,9 +324,14 @@ def _require_admin():
     return None
 
 
+# 사용자 설정(API 키/커스텀 스타일/사용량) 라우트는 routes/auth/user_settings.py로 분리됨.
+# 테스트가 import하는 _mask_api_key 헬퍼는 호환성 위해 여기서 re-export.
+# (이 import가 routes.auth 패키지 __init__을 트리거해 admin/channel_monitoring 등을 로드)
+from routes.auth.user_settings import _mask_api_key  # noqa: E402,F401
+
 
 # ============================================================
-# 분리된 auth 서브 라우트 — 부수효과 import
+# 분리된 auth 서브 라우트 — 부수효과 import (이미 위 import로 로드되었음)
 # - routes/auth/admin.py: 관리자 라우트 (6개)
 # ============================================================
 from routes import auth as _auth_subroutes  # noqa: E402,F401

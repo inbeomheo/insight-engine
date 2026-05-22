@@ -6,7 +6,7 @@ routes/blog/__init__.py에서 부수효과 import만 하면 활성화된다.
 from flask import request, jsonify, g
 
 from routes.blog_routes import blog_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import handle_error
 
 

@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS ie_histories (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 1-3. API 키 저장 테이블 (암호화됨)
+-- 1-3. API 키 저장 테이블 (사용자 설정 패널 — provider별 컬럼, 사용자당 1행)
 CREATE TABLE IF NOT EXISTS ie_api_keys (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
@@ -49,6 +49,40 @@ CREATE TABLE IF NOT EXISTS ie_api_keys (
     selected_provider TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 1-3b. 사용자 API 키 (다중 행 — 통합 스키마 v3)
+-- 두 도메인을 한 테이블에 공존:
+--   (a) IE 자체 발급 토큰 (services/data/api_key_service.py)
+--       — Authorization Bearer로 외부에서 IE API 호출용. (name, key_hash, key_prefix)
+--   (b) 외부 LLM BYO 키 (src/contexts/identity/.../supabase_api_key_vault.py)
+--       — 콘텐츠 생성 시 사용자 자기 키로 호출. (provider, label, encrypted_key)
+-- 한 행은 둘 중 하나만 채움 (CHECK 제약).
+CREATE TABLE IF NOT EXISTS ie_user_api_keys (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+    -- (a) IE 자체 발급 토큰 컬럼
+    name TEXT,
+    key_hash TEXT,
+    key_prefix TEXT,
+    usage_count INT NOT NULL DEFAULT 0,
+    last_used_at TIMESTAMPTZ,
+
+    -- (b) 외부 LLM BYO 키 컬럼
+    provider TEXT,
+    label TEXT,
+    encrypted_key TEXT,
+
+    -- 공통
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- 한 행은 두 도메인 중 하나에 속해야 한다
+    CONSTRAINT ie_user_api_keys_row_kind CHECK (
+        key_hash IS NOT NULL OR encrypted_key IS NOT NULL
+    )
 );
 
 -- 1-4. 커스텀 스타일 테이블
@@ -166,6 +200,25 @@ CREATE POLICY "Users can delete own api_keys"
     ON ie_api_keys FOR DELETE
     USING (auth.uid() = user_id);
 
+-- ie_user_api_keys 테이블 RLS (다중 행 통합 테이블)
+ALTER TABLE ie_user_api_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own user_api_keys"
+    ON ie_user_api_keys FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own user_api_keys"
+    ON ie_user_api_keys FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own user_api_keys"
+    ON ie_user_api_keys FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own user_api_keys"
+    ON ie_user_api_keys FOR DELETE
+    USING (auth.uid() = user_id);
+
 -- ie_custom_styles 테이블 RLS
 ALTER TABLE ie_custom_styles ENABLE ROW LEVEL SECURITY;
 
@@ -201,6 +254,19 @@ CREATE INDEX IF NOT EXISTS idx_ie_histories_user_id ON ie_histories(user_id);
 CREATE INDEX IF NOT EXISTS idx_ie_histories_created_at ON ie_histories(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ie_custom_styles_user_id ON ie_custom_styles(user_id);
 
+-- ie_user_api_keys 인덱스
+-- IE 토큰 검증(key_hash 역조회) 가속 — 활성 토큰만 인덱싱
+CREATE INDEX IF NOT EXISTS idx_ie_user_api_keys_hash
+    ON ie_user_api_keys(key_hash)
+    WHERE key_hash IS NOT NULL AND is_active = true;
+-- 사용자별 목록 조회
+CREATE INDEX IF NOT EXISTS idx_ie_user_api_keys_user
+    ON ie_user_api_keys(user_id, is_active);
+-- BYO 키 upsert용 partial unique — 같은 (user, provider, label) 조합은 한 행만
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ie_user_api_keys_provider
+    ON ie_user_api_keys(user_id, provider, label)
+    WHERE provider IS NOT NULL;
+
 -- =============================================
 -- 5. 트리거: updated_at 자동 업데이트
 -- =============================================
@@ -217,6 +283,7 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS ie_usage_updated_at ON ie_usage;
 DROP TRIGGER IF EXISTS ie_histories_updated_at ON ie_histories;
 DROP TRIGGER IF EXISTS ie_api_keys_updated_at ON ie_api_keys;
+DROP TRIGGER IF EXISTS ie_user_api_keys_updated_at ON ie_user_api_keys;
 DROP TRIGGER IF EXISTS ie_custom_styles_updated_at ON ie_custom_styles;
 
 -- 트리거 생성
@@ -230,6 +297,10 @@ CREATE TRIGGER ie_histories_updated_at
 
 CREATE TRIGGER ie_api_keys_updated_at
     BEFORE UPDATE ON ie_api_keys
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER ie_user_api_keys_updated_at
+    BEFORE UPDATE ON ie_user_api_keys
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER ie_custom_styles_updated_at

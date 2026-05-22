@@ -8,7 +8,7 @@ utility_routes.py에서 분리됨:
 from flask import current_app, g, jsonify, request
 
 from routes.blog_routes import blog_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 @blog_bp.route('/api/cache/ai', methods=['DELETE'])

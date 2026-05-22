@@ -1,6 +1,20 @@
 """
 API 키 발급/관리 서비스
-사용자별 API 키 CRUD + 사용량 추적
+IE 자체 발급 API 키 (`ie_xxx`) 의 해시 기반 CRUD/검증.
+
+도메인 분리 (Issue #16 결론):
+- 본 서비스: IE 자체 발급 토큰 (Authorization Bearer 헤더로 외부에서 IE API 호출).
+  컬럼 (key_hash, key_prefix, name) 사용.
+- `SupabaseApiKeyVault` (Identity BC): 외부 LLM BYO 키(GEMINI/DEEPSEEK 등) 암호화 저장.
+  컬럼 (provider, label, encrypted_key) 사용.
+
+두 시스템은 같은 `ie_user_api_keys` 테이블을 사용하지만 컬럼이 분리되어 있고,
+각 행은 CHECK 제약 (`key_hash IS NOT NULL OR encrypted_key IS NOT NULL`) 으로
+한 도메인에만 속한다. 이전 best-effort 위임(`_vault_store_safe` 등)은
+도메인 불일치로 제거됨 — 외부 시그니처/동작은 100% 유지.
+
+저장소:
+- Supabase 활성 시 `ie_user_api_keys`, 비활성 시 로컬 JSON 폴백
 """
 import json
 import os
@@ -10,7 +24,6 @@ from datetime import datetime, timezone
 
 from services.data.supabase_service import is_supabase_enabled, get_supabase
 from services.core.logging_config import ServiceLogger
-import logging
 
 logger = ServiceLogger('ApiKeyService')
 

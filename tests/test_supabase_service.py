@@ -57,20 +57,20 @@ class TestEncryptDecryptApiKey(unittest.TestCase):
 
 class TestIsEncryptionEnabled(unittest.TestCase):
 
-    @patch('services.data.supabase_service._encryption_enabled', None)
+    # Issue #17 소PR A: 인프라 헬퍼가 src.shared.infrastructure.supabase_client로 이전됨.
+    # `_encryption_enabled` 모듈 변수는 이제 새 모듈에 있어 patch 경로를 갱신.
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': ''}, clear=False)
     def test_no_secret(self):
         """시크릿 없음 → False"""
-        import services.data.supabase_service as mod
+        import src.shared.infrastructure.supabase_client as mod
         mod._encryption_enabled = None
         result = _is_encryption_enabled()
         self.assertFalse(result)
 
-    @patch('services.data.supabase_service._encryption_enabled', None)
     @patch.dict('os.environ', {'ENCRYPTION_SECRET': 'my-secret'}, clear=False)
     def test_with_secret(self):
         """시크릿 있음 → True"""
-        import services.data.supabase_service as mod
+        import src.shared.infrastructure.supabase_client as mod
         mod._encryption_enabled = None
         result = _is_encryption_enabled()
         self.assertTrue(result)

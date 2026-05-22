@@ -5,7 +5,7 @@ blog_routes.py에서 분리됨.
 from flask import request, jsonify
 
 from routes.blog_routes import blog_bp
-from services.data.supabase_service import require_auth
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 
 @blog_bp.route('/api/capture/speech', methods=['POST'])
