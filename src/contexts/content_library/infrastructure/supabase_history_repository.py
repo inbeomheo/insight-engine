@@ -118,5 +118,30 @@ class SupabaseHistoryRepository(IHistoryRepository):
         from services.data.supabase_service import delete_history as _delete
         return _delete(user_id, report_id)
 
+    def fetch_recent_for_admin(self, days: int = 7) -> list[dict]:
+        """모든 사용자의 최근 N일 히스토리 raw 조회 (admin 대시보드용).
+
+        통계 가공은 호출처가 담당. Supabase 비활성/예외 시 빈 리스트.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        client = get_supabase()
+        if client is None:
+            return []
+        try:
+            since = (
+                datetime.now(timezone.utc) - timedelta(days=days)
+            ).isoformat()
+            result = (
+                client.table(self._TABLE)
+                .select("created_at,style,elapsed_time,success,content")
+                .gte("created_at", since)
+                .execute()
+            )
+            return result.data or []
+        except Exception as exc:
+            logger.error("admin 히스토리 통계 조회 실패: %s", exc)
+            return []
+
 
 __all__ = ["SupabaseHistoryRepository"]

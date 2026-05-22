@@ -27,21 +27,12 @@ def admin_dashboard():
     if not _ar.is_supabase_enabled():
         return jsonify({'error': 'Supabase 미연결'}), 503
 
-    supabase = _ar.get_supabase()
-    if not supabase:
-        return jsonify({'error': 'Supabase 연결 실패'}), 503
-
     try:
-        from datetime import datetime, timedelta, timezone
-        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        from src.contexts.content_library import fetch_admin_history_stats
+        from src.contexts.identity import fetch_daily_usage_history
 
-        # 히스토리 통계
-        histories = supabase.table('ie_histories') \
-            .select('created_at,style,elapsed_time,success,content') \
-            .gte('created_at', week_ago) \
-            .execute()
-
-        items = histories.data or []
+        # 히스토리 raw 조회 (Content/Library BC) + 가공 (라우트 책임)
+        items = fetch_admin_history_stats(days=7)
         total = len(items)
         success_count = sum(1 for i in items if i.get('success', True))
 
@@ -62,16 +53,11 @@ def admin_dashboard():
         avg_time = round(total_time / total, 2) if total > 0 else 0
         avg_content_length = round(total_content_length / content_count) if content_count > 0 else 0
 
-        # 사용량 통계
-        usage_data = supabase.table('ie_usage') \
-            .select('date,used_count') \
-            .gte('date', week_ago[:10]) \
-            .order('date', desc=True) \
-            .execute()
-
+        # 사용량 통계 (Identity BC — admin: account_id=None으로 전체 조회)
+        usage_data = fetch_daily_usage_history(account_id=None, days=7)
         daily_usage = [
             {'date': u['date'], 'count': u.get('used_count', 0)}
-            for u in (usage_data.data or [])
+            for u in usage_data
         ]
 
         # 가장 많이 사용된 스타일 상위 3개

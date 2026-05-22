@@ -15,15 +15,20 @@ from src.contexts.content_library import (
     update_history_entry as update_history,
     toggle_favorite,
 )
-# Phase 5+ 잔여: 다음 함수들은 신규 도메인 facade가 도입되면 새 위치로 이전 예정.
-# 현재는 supabase_service에서 직접 import (다중 함수 import는 베이스라인 유지).
-from services.data.supabase_service import (  # noqa: E501
-    save_api_keys, get_api_keys,
+# Phase 5-e: supabase_service 다중 import를 도메인별 facade로 분리.
+# 각 facade는 services/data/ 내부이므로 베이스라인에서 자연스럽게 제외.
+from services.data.api_key_storage_facade import save_api_keys, get_api_keys
+from services.data.custom_style_facade import (
     save_custom_style, get_custom_styles, delete_custom_style,
+)
+from services.data.usage_admin_facade import (
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
-    get_all_contents, get_content_detail,
-    delete_user_account,
-    update_user_profile, update_user_password,
+)
+from services.data.content_admin_facade import get_all_contents, get_content_detail
+from services.data.account_admin_facade import (
+    delete_user_account, update_user_profile, update_user_password,
+)
+from services.data.snippet_facade import (
     get_user_snippets, create_snippet, delete_snippet,
 )
 from services.data.workspace_service import workspace_service, content_approval_service

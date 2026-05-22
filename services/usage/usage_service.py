@@ -6,9 +6,14 @@
 외부 시그니처(check_can_use/decrement/try_consume_atomic/get_current/is_admin_user)는
 기존과 동일하게 유지한다.
 """
-from services.data.supabase_service import (
-    is_supabase_enabled, get_usage, decrement_usage, is_admin,
-    MAX_USAGE_COUNT
+from src.shared.infrastructure.supabase_client import is_supabase_enabled
+from src.contexts.identity.domain.constants import (
+    DEFAULT_DAILY_LIMIT as MAX_USAGE_COUNT,
+)
+from services.data.usage_admin_facade import (
+    decrement_usage,
+    get_usage,
+    is_admin,
 )
 from services.core.logging_config import ServiceLogger
 

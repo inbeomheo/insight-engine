@@ -125,20 +125,21 @@ def test_flask_current_app_not_in_domain_modules():
 # 2026-05-22 Issue #19 Phase 5-b: routes/blog_routes.py의 history import를
 #   Content/Library BC로, 인프라 import를 src.shared.infrastructure로 분리.
 #   라인 616의 lazy `get_supabase` import도 상단 인프라 import로 통합. → 2 파일.
-#   잔존: auth_routes.py (다중 함수 import — Phase 5-c+ 대상, 신규 도메인 facade 필요),
-#         usage_service.py (Identity CRUD 호출 — Phase 5-e 대상).
+# 2026-05-22 Issue #19 Phase 5-c: Channel Monitoring BC 도입 +
+#   `routes/auth/channel_monitoring.py` .table() 3건 + `blog_routes.py:636`
+#   배치 INSERT BC 위임. supabase_service import 변화 없음 (.table() 7→3).
+# 2026-05-22 Issue #19 Phase 5-d: Content/Library `fetch_admin_history_stats`
+#   + Identity `fetch_daily_usage_history` 편의 함수 추가. admin_dashboard 2건 +
+#   payment_routes 1건 .table() 정리. payment_routes:288의 잘못된
+#   `__import__('services.supabase_service', ...)` dead code도 함께 정정. .table() 3→0.
+# 2026-05-22 Issue #19 Phase 5-e: services/data/ 아래 도메인별 facade 6종 신설
+#   (api_key_storage/custom_style/snippet/usage_admin/content_admin/account_admin).
+#   routes/auth_routes.py 13 함수 다중 import를 facade로 분리. services/usage/
+#   usage_service.py를 src.shared + identity.domain.constants + usage_admin_facade
+#   조합으로 재구성. → **0 파일** 달성.
 #
-# 다음 단계:
-#   - Phase 5-c: Channel Monitoring BC 도입 (routes/auth/channel_monitoring.py .table() 5건)
-#   - Phase 5-d: routes/payment_routes.py:288 + blog_routes.py:638 .table() 정리
-#   - Phase 5-e: auth_routes.py 다중 import 분리 — custom_styles/snippets/admin
-#     도메인 facade 신설 필요. Identity BC IUsageGateway 보강 → usage_service.py 정리
-SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = {
-    # services/ (비-data 서브도메인)
-    "services/usage/usage_service.py",
-    # routes/ (다중 import 잔존)
-    "routes/auth_routes.py",
-}
+# 베이스라인 완전 해소 (44 → 0). Issue #19 완료.
+SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = set()
 
 
 def _files_importing_supabase_service_directly() -> Set[str]:

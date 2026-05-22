@@ -278,22 +278,14 @@ def get_my_usage():
         usage = UsageService.get_current(g.user_id)
         sub = subscription_service.get_subscription(g.user_id)
 
-        # 최근 7일 사용 기록 (Supabase 연결 시)
+        # 최근 7일 사용 기록 — Identity BC daily_usage_history 위임.
+        # (이전 코드는 `__import__('services.supabase_service', ...)`로 잘못된 경로를 참조해
+        #  ModuleNotFoundError → try/except로 항상 silent fail → daily_usage 항상 빈 리스트였음.
+        #  본 마이그레이션으로 실제 동작하도록 수정.)
         daily_usage = []
         if is_supabase_enabled():
-            try:
-                from datetime import datetime, timedelta, timezone
-                client = __import__('services.supabase_service', fromlist=['get_supabase']).get_supabase()
-                week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()[:10]
-                result = client.table('ie_usage') \
-                    .select('date, used_count') \
-                    .eq('user_id', g.user_id) \
-                    .gte('date', week_ago) \
-                    .order('date', desc=False) \
-                    .execute()
-                daily_usage = result.data or []
-            except Exception:
-                pass
+            from src.contexts.identity import fetch_daily_usage_history
+            daily_usage = fetch_daily_usage_history(account_id=g.user_id, days=7)
 
         return jsonify({
             'credits': balance,

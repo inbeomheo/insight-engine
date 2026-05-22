@@ -86,6 +86,17 @@ def toggle_favorite(user_id: str, report_id: str) -> dict:
     )
 
 
+def fetch_admin_history_stats(days: int = 7) -> list[dict]:
+    """편의 함수 — 모든 사용자 최근 N일 히스토리 raw 조회 (admin 대시보드).
+
+    통계 가공은 호출처 담당. Supabase 비활성/예외 시 빈 리스트.
+    """
+    from .infrastructure.supabase_history_repository import (
+        SupabaseHistoryRepository,
+    )
+    return SupabaseHistoryRepository().fetch_recent_for_admin(days)
+
+
 def delete_history_entry(user_id: str, report_id: str) -> bool:
     """편의 함수 — DeleteHistoryEntryUseCase 단축 호출."""
     from .application.use_cases import DeleteHistoryEntryUseCase
@@ -104,4 +115,5 @@ __all__ = [
     "update_history_entry",
     "toggle_favorite",
     "delete_history_entry",
+    "fetch_admin_history_stats",
 ]
