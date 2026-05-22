@@ -27,9 +27,8 @@ from utils.responses import handle_error, sanitize_error_for_client, api_error_f
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
-from services.data.supabase_service import (
-    is_supabase_enabled, save_history
-)
+from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
+from src.contexts.content_library import save_history_entry as save_history
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 
@@ -611,33 +610,10 @@ def generate_batch():
                         'elapsed_time': None
                     })
 
-            # 배치 INSERT (1회 DB 호출)
+            # 배치 INSERT — Content/Library BC에 위임 (sanitize + batch INSERT 통합 처리)
             if histories_to_save:
-                from services.data.supabase_service import get_supabase
-                supabase = get_supabase()
-                if supabase:
-                    try:
-                        def sanitize_text(text, max_length=50000):
-                            """입력 텍스트 검증 및 길이 제한"""
-                            if not isinstance(text, str):
-                                return ""
-                            return text[:max_length]
-
-                        batch_data = [{
-                            'user_id': g.user_id,
-                            'report_id': sanitize_text(h.get('id', ''), 100),
-                            'url': sanitize_text(h.get('url', ''), 500),
-                            'title': sanitize_text(h.get('title', ''), 500),
-                            'style': sanitize_text(h.get('style', ''), 50),
-                            'content': sanitize_text(h.get('content', ''), 100000),
-                            'html': sanitize_text(h.get('html', ''), 200000),
-                            'transcript': sanitize_text(h.get('transcript', ''), 10000),
-                            'usage': h.get('usage'),
-                            'elapsed_time': h.get('elapsed_time')
-                        } for h in histories_to_save]
-                        supabase.table('ie_histories').insert(batch_data).execute()
-                    except Exception as e:
-                        current_app.logger.warning(f"배치 히스토리 저장 실패: {e}")
+                from src.contexts.content_library import save_many_history_entries
+                save_many_history_entries(g.user_id, histories_to_save)
 
         return jsonify({
             'success': True,

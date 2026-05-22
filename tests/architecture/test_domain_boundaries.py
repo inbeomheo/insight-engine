@@ -115,26 +115,31 @@ def test_flask_current_app_not_in_domain_modules():
 #   `src/contexts/identity/interface/auth_decorators.py`로 이전 + 33 단일 import
 #   라우트 갱신 + payment_routes.py / auth_routes.py / blog_routes.py 다중 import
 #   재구성. routes 32 파일이 베이스라인에서 제거됨. → 6 파일.
-#   잔존: auth_routes.py / blog_routes.py (다중 함수 import — 소PR C 대상),
-#         generation_helpers.py (save_history), utility/external.py (lazy
-#         SupabaseService 참조), advanced_routes.py (lazy is_supabase_enabled),
-#         usage_service.py (Identity CRUD 호출).
+# 2026-05-22 Issue #19 Phase 5-a: Content/Library BC 골격 + `save_history_entry`
+#   편의 함수 도입. routes/generation_helpers.py가 새 BC를 경유하도록 마이그레이션.
+#   추가로 routes/advanced_routes.py + routes/utility/external.py의 lazy
+#   `is_supabase_enabled` import를 `src.shared.infrastructure.supabase_client`로
+#   직접 치환. utility/external.py의 `SupabaseService.get_histories(...)` 호출은
+#   클래스 자체가 존재하지 않는 dead code였음 (try/except로 silent fail) — 명시적
+#   빈 리스트로 단순화. → 3 파일.
+# 2026-05-22 Issue #19 Phase 5-b: routes/blog_routes.py의 history import를
+#   Content/Library BC로, 인프라 import를 src.shared.infrastructure로 분리.
+#   라인 616의 lazy `get_supabase` import도 상단 인프라 import로 통합. → 2 파일.
+# 2026-05-22 Issue #19 Phase 5-c: Channel Monitoring BC 도입 +
+#   `routes/auth/channel_monitoring.py` .table() 3건 + `blog_routes.py:636`
+#   배치 INSERT BC 위임. supabase_service import 변화 없음 (.table() 7→3).
+# 2026-05-22 Issue #19 Phase 5-d: Content/Library `fetch_admin_history_stats`
+#   + Identity `fetch_daily_usage_history` 편의 함수 추가. admin_dashboard 2건 +
+#   payment_routes 1건 .table() 정리. payment_routes:288의 잘못된
+#   `__import__('services.supabase_service', ...)` dead code도 함께 정정. .table() 3→0.
+# 2026-05-22 Issue #19 Phase 5-e: services/data/ 아래 도메인별 facade 6종 신설
+#   (api_key_storage/custom_style/snippet/usage_admin/content_admin/account_admin).
+#   routes/auth_routes.py 13 함수 다중 import를 facade로 분리. services/usage/
+#   usage_service.py를 src.shared + identity.domain.constants + usage_admin_facade
+#   조합으로 재구성. → **0 파일** 달성.
 #
-# 다음 단계:
-#   - 소PR B-2: `inject_auth_context` (g.auth 미들웨어) 추가 — UserAccount Aggregate 주입
-#   - 소PR C: Identity CRUD(`is_admin`/`get_usage`/`decrement_usage`) 호출자를
-#     `AccountService` 경유로 변경 → services/usage/usage_service.py + 라우트 다중 import 정리
-#   - 소PR D: routes 직접 `.table()` 호출 7건 정리
-SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = {
-    # services/ (비-data 서브도메인)
-    "services/usage/usage_service.py",
-    # routes/ (다중 import 또는 lazy 잔존)
-    "routes/advanced_routes.py",
-    "routes/auth_routes.py",
-    "routes/blog_routes.py",
-    "routes/generation_helpers.py",
-    "routes/utility/external.py",
-}
+# 베이스라인 완전 해소 (44 → 0). Issue #19 완료.
+SUPABASE_DIRECT_IMPORT_BASELINE: Set[str] = set()
 
 
 def _files_importing_supabase_service_directly() -> Set[str]:

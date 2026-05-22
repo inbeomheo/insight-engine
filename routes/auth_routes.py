@@ -8,16 +8,28 @@ import os
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response, sanitize_error_for_client
 from src.contexts.identity.interface.auth_decorators import require_auth
-from services.data.supabase_service import (
-    get_supabase, is_supabase_enabled,
-    save_api_keys, get_api_keys,
+from src.shared.infrastructure.supabase_client import get_supabase, is_supabase_enabled
+from src.contexts.content_library import (
+    list_history_entries as get_histories,
+    delete_history_entry as delete_history,
+    update_history_entry as update_history,
+    toggle_favorite,
+)
+# Phase 5-e: supabase_service 다중 import를 도메인별 facade로 분리.
+# 각 facade는 services/data/ 내부이므로 베이스라인에서 자연스럽게 제외.
+from services.data.api_key_storage_facade import save_api_keys, get_api_keys
+from services.data.custom_style_facade import (
     save_custom_style, get_custom_styles, delete_custom_style,
+)
+from services.data.usage_admin_facade import (
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
-    get_all_contents, get_content_detail,
-    get_histories, delete_history, update_history, toggle_favorite,
-    delete_user_account,
-    update_user_profile, update_user_password,
-    get_user_snippets, create_snippet, delete_snippet
+)
+from services.data.content_admin_facade import get_all_contents, get_content_detail
+from services.data.account_admin_facade import (
+    delete_user_account, update_user_profile, update_user_password,
+)
+from services.data.snippet_facade import (
+    get_user_snippets, create_snippet, delete_snippet,
 )
 from services.data.workspace_service import workspace_service, content_approval_service
 

@@ -274,7 +274,7 @@ def run_pipeline():
     """
     from services.core.pipeline_service import PipelineEngine, PIPELINE_PRESETS
     from services.usage.usage_service import UsageService
-    from services.data.supabase_service import is_supabase_enabled
+    from src.shared.infrastructure.supabase_client import is_supabase_enabled
 
     try:
         params = _get_request_data(request)
