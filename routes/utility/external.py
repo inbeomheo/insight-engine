@@ -178,7 +178,7 @@ def api_schema():
 def rss_feed():
     """최근 생성 콘텐츠를 RSS 2.0 XML로 발행합니다."""
     from xml.etree.ElementTree import Element, SubElement, tostring
-    from services.data.supabase_service import is_supabase_enabled
+    from src.shared.infrastructure.supabase_client import is_supabase_enabled
 
     channel_title = 'Insight Engine'
     channel_link = request.host_url.rstrip('/')
@@ -191,15 +191,11 @@ def rss_feed():
     SubElement(channel, 'description').text = channel_desc
     SubElement(channel, 'language').text = 'ko'
 
-    # Supabase 활성화 시 최근 히스토리에서 가져오기
-    items = []
-    if is_supabase_enabled():
-        try:
-            from services.data.supabase_service import SupabaseService
-            result = SupabaseService.get_histories(limit=20)
-            items = result.get('histories', [])
-        except Exception:
-            pass
+    # RSS 피드: 공개 히스토리 조회 미구현 — Phase 5+에서 공개 콘텐츠 BC 도입 시 연결 예정.
+    # 기존 `SupabaseService.get_histories(limit=20)` 호출은 클래스 자체가 존재하지 않아
+    # 항상 빈 결과였음 (dead code, try/except로 silent fail). 명시적 빈 리스트로 단순화.
+    items: list = []
+    _ = is_supabase_enabled  # noqa: F841 — 후속 PR에서 공개 콘텐츠 BC 도입 시 사용 예정
 
     for item_data in items:
         item = SubElement(channel, 'item')

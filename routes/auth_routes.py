@@ -8,16 +8,23 @@ import os
 from flask import Blueprint, request, jsonify, g
 from utils.responses import success_response, error_response, sanitize_error_for_client
 from src.contexts.identity.interface.auth_decorators import require_auth
-from services.data.supabase_service import (
-    get_supabase, is_supabase_enabled,
+from src.shared.infrastructure.supabase_client import get_supabase, is_supabase_enabled
+from src.contexts.content_library import (
+    list_history_entries as get_histories,
+    delete_history_entry as delete_history,
+    update_history_entry as update_history,
+    toggle_favorite,
+)
+# Phase 5+ 잔여: 다음 함수들은 신규 도메인 facade가 도입되면 새 위치로 이전 예정.
+# 현재는 supabase_service에서 직접 import (다중 함수 import는 베이스라인 유지).
+from services.data.supabase_service import (  # noqa: E501
     save_api_keys, get_api_keys,
     save_custom_style, get_custom_styles, delete_custom_style,
     get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
     get_all_contents, get_content_detail,
-    get_histories, delete_history, update_history, toggle_favorite,
     delete_user_account,
     update_user_profile, update_user_password,
-    get_user_snippets, create_snippet, delete_snippet
+    get_user_snippets, create_snippet, delete_snippet,
 )
 from services.data.workspace_service import workspace_service, content_approval_service
 

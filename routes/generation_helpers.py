@@ -8,7 +8,7 @@ import uuid
 from flask import current_app, g, jsonify
 
 from services.core import ai_service, content_service
-from services.data.supabase_service import save_history
+from src.contexts.content_library import save_history_entry as save_history
 from services.usage.usage_decorator import get_usage_for_response
 from services.platform.webhook_service import WebhookService
 from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED

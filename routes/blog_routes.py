@@ -27,9 +27,8 @@ from utils.responses import handle_error, sanitize_error_for_client, api_error_f
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
-from services.data.supabase_service import (
-    is_supabase_enabled, save_history
-)
+from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
+from src.contexts.content_library import save_history_entry as save_history
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 
@@ -611,9 +610,8 @@ def generate_batch():
                         'elapsed_time': None
                     })
 
-            # 배치 INSERT (1회 DB 호출)
+            # 배치 INSERT (1회 DB 호출) — get_supabase는 이미 상위에서 import됨
             if histories_to_save:
-                from services.data.supabase_service import get_supabase
                 supabase = get_supabase()
                 if supabase:
                     try:
