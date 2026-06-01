@@ -347,3 +347,4 @@ from routes.auth.user_settings import _mask_api_key  # noqa: E402,F401
 # - routes/auth/admin.py: 관리자 라우트 (6개)
 # ============================================================
 from routes import auth as _auth_subroutes  # noqa: E402,F401
+from routes.auth.channel_monitoring import admin_dashboard  # noqa: E402,F401

@@ -7,7 +7,7 @@ import re
 from flask import current_app, jsonify
 
 from routes.blog_routes import blog_bp
-from services.core import content_service
+from routes import blog_routes as _blog_routes
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import sanitize_error_for_client
 
@@ -29,7 +29,7 @@ def get_structured_transcript(video_id):
         return jsonify({'error': '유효하지 않은 video_id 형식입니다.'}), 400
 
     try:
-        transcript_data = content_service.get_transcript(video_id)
+        transcript_data = _blog_routes.content_service.get_transcript(video_id)
     except Exception as exc:
         current_app.logger.error(f'자막 조회 오류: {exc}')
         return jsonify({'error': '자막 조회에 실패했습니다.'}), 500

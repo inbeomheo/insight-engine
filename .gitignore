@@ -85,3 +85,6 @@ autoresearch/prompt-tuning/scores/*_results.md
 .worktrees/
 .understand-anything/
 downloads/
+# Source modules under services/data are not runtime data
+!services/data/
+!services/data/*.py

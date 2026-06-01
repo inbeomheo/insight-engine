@@ -17,6 +17,7 @@
 import concurrent.futures
 import html as html_lib
 import json
+import os
 import time
 import uuid
 
@@ -34,7 +35,7 @@ from services.usage.usage_decorator import get_usage_for_response
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'zhipuai/GLM-4.5-Air'
+DEFAULT_MODEL = os.getenv('DEFAULT_MODEL', 'chatmock/gpt-5.5')
 DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -225,6 +226,7 @@ from routes.generation_helpers import (
     _get_style_prompt, _handle_direct_text, _handle_audio_upload,
     _handle_document_upload, _handle_web_source,
 )
+from routes import generation_helpers as _generation_helpers
 
 
 # ── 핵심 생성 엔드포인트 ──────────────────────────────────────
@@ -249,7 +251,7 @@ def generate():
 
         # ── 직접 텍스트 입력 모드 ──
         if not url and direct_content and len(direct_content.strip()) >= 50:
-            return _handle_direct_text(params, start_time)
+            return _generation_helpers._handle_direct_text(params, start_time)
 
         # ── 파일 업로드 모드 (오디오 / 문서) ──
         uploaded_file = request.files.get('file')
@@ -272,7 +274,7 @@ def generate():
         source_type = params.get('source_type') or detect_source_type(url)
         if source_type != SOURCE_YOUTUBE:
             try:
-                return _handle_web_source(params, url, source_type, start_time)
+                return _generation_helpers._handle_web_source(params, url, source_type, start_time)
             except ValueError as e:
                 return handle_error(str(e))
 

@@ -256,6 +256,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
         'name': 'ChatMock',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
+            {'id': 'chatmock/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
             {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
         ]
     },
@@ -277,6 +278,22 @@ _providers_cache_time: float = 0.0
 _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
 
 
+def _is_placeholder_api_key(value: str) -> bool:
+    """Return True for .env.example/demo values that should not enable providers."""
+    normalized = (value or '').strip().lower()
+    if not normalized:
+        return True
+    placeholder_tokens = (
+        '...',
+        'your-',
+        'your_',
+        'example',
+        'placeholder',
+        'dummy-',
+    )
+    return any(token in normalized for token in placeholder_tokens)
+
+
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
     """API 키가 설정된 프로바이더만 반환합니다.
     Ollama는 API 키 불필요 — OLLAMA_BASE_URL이 설정되어 있으면 활성화.
@@ -289,7 +306,16 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 
     available = {}
     for provider_id, api_key in PROVIDER_API_KEYS.items():
-        if api_key and provider_id in SUPPORTED_PROVIDERS:
+        if provider_id not in SUPPORTED_PROVIDERS:
+            continue
+        if provider_id == 'chatmock':
+            available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+            continue
+        if provider_id == 'ollama':
+            if api_key and not _is_placeholder_api_key(api_key):
+                available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
+            continue
+        if api_key and not _is_placeholder_api_key(api_key):
             available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
 
     _providers_cache = available

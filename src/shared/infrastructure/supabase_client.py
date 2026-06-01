@@ -44,20 +44,34 @@ def get_supabase():
     global _supabase_client
 
     if _supabase_client is None:
+        if not is_supabase_enabled():
+            return None
+
         url = os.getenv('SUPABASE_URL')
         key = os.getenv('SUPABASE_ANON_KEY')
-
-        if not url or not key:
-            return None
 
         _supabase_client = _lazy_create_client(url, key)
 
     return _supabase_client
 
 
+def _is_placeholder_value(value: str | None) -> bool:
+    """`.env.example` 안내값은 실제 설정으로 보지 않는다."""
+    if not value:
+        return True
+    normalized = value.strip().lower()
+    return normalized in {
+        "your-anon-key",
+        "your-service-role-key",
+        "https://your-project.supabase.co",
+    } or "your-project" in normalized
+
+
 def is_supabase_enabled() -> bool:
     """Supabase 활성화 여부 (환경변수 기반)."""
-    return bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_ANON_KEY'))
+    url = os.getenv('SUPABASE_URL')
+    key = os.getenv('SUPABASE_ANON_KEY')
+    return not (_is_placeholder_value(url) or _is_placeholder_value(key))
 
 
 def _get_admin_client():

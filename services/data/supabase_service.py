@@ -14,6 +14,8 @@ Issue #17 (소PR B-1): 인증 데코레이터(`require_auth` 등)는
     )
     from src.contexts.identity.interface.auth_decorators import require_auth
 """
+import base64
+import hashlib
 import os
 from flask import request, g
 
@@ -38,6 +40,69 @@ from src.contexts.identity.interface.auth_decorators import (  # noqa: F401
     _validate_token,
     require_auth,
 )
+
+
+_fernet_instance = None
+_encryption_enabled = None
+_supabase_admin = None
+
+
+def _is_encryption_enabled() -> bool:
+    """??? ?? ?? shim. ???? ?? ???? ????? ? ?? ? ????."""
+    global _encryption_enabled
+    secret = os.getenv('ENCRYPTION_SECRET')
+    _encryption_enabled = bool(secret and secret.strip())
+    if not _encryption_enabled:
+        logger.warning(
+            "ENCRYPTION_SECRET? ???? ?????. API ? ???? ???????."
+        )
+    return _encryption_enabled
+
+
+def _get_fernet():
+    """Fernet 인스턴스 생성 shim. 기존 테스트/patch 경로와 호환한다."""
+    global _fernet_instance
+    if _fernet_instance is None:
+        secret = os.getenv('ENCRYPTION_SECRET')
+        if not secret or not secret.strip():
+            raise ConfigurationError(
+                "ENCRYPTION_SECRET 환경변수가 필요합니다. "
+                "API 키 암호화를 위해 설정해주세요.",
+                config_key='ENCRYPTION_SECRET',
+            )
+        from cryptography.fernet import Fernet
+        key = hashlib.sha256(secret.encode()).digest()
+        _fernet_instance = Fernet(base64.urlsafe_b64encode(key))
+    return _fernet_instance
+
+
+def encrypt_api_key(api_key: str) -> str:
+    """API 키 암호화 shim. 기존 patch 경로 호환을 위해 로컬 헬퍼를 참조한다."""
+    if not api_key:
+        return None
+    if not _is_encryption_enabled():
+        logger.debug("암호화 비활성화 상태, 원본 저장")
+        return api_key
+    try:
+        return _get_fernet().encrypt(api_key.encode()).decode()
+    except ConfigurationError:
+        logger.warning("암호화 설정 오류, 원본 저장")
+        return api_key
+
+
+def decrypt_api_key(encrypted_key: str) -> str:
+    """API 키 복호화 shim. 기존 patch 경로 호환을 위해 로컬 헬퍼를 참조한다."""
+    if not encrypted_key:
+        return None
+    if not _is_encryption_enabled():
+        return encrypted_key
+    try:
+        return _get_fernet().decrypt(encrypted_key.encode()).decode()
+    except ConfigurationError:
+        return encrypted_key
+    except Exception as e:
+        logger.warning(f"API 키 복호화 실패: {e}")
+        return None
 
 # =============================================
 # 히스토리 CRUD

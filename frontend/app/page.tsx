@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
+import TextInput from '@/components/input/TextInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
@@ -61,7 +62,7 @@ export default function Home() {
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
-  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+  const { isLoading, error, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
@@ -287,6 +288,12 @@ export default function Home() {
                   onGenerate={handleGenerate}
                 />
                 <SettingsPopover />
+
+                {urls.length === 0 && (
+                  <div className="mt-4">
+                    <TextInput onGenerate={generateFromText} isLoading={isLoading} />
+                  </div>
+                )}
 
                 {/* 생성 모드 선택 + 퓨전 옵션 */}
                 {urls.length >= 2 && (

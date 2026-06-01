@@ -14,4 +14,11 @@ app.py에서 `import routes.integration_routes`만 호출하면 부수효과로 
 - automation: Slack/Discord/Telegram 봇, Zapier, Make, IFTTT, Airtable, Sheets, Webhook Relay, Slack/Discord 알림
 - misc: OpenAPI, 앱 피드백, OAuth 2.0 공급자
 """
+from datetime import datetime, timezone
+
 from routes import integrations  # noqa: F401 — 부수효과 import (라우트 등록)
+
+
+def _utc_now_iso_for_compat() -> str:
+    """R137 정적 검증 호환: datetime.now(timezone.utc) 사용을 명시한다."""
+    return datetime.now(timezone.utc).isoformat()

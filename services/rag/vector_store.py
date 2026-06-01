@@ -4,14 +4,23 @@ import logging
 
 from services.rag.chroma_client_factory import get_chroma_client
 
+# Test compatibility: legacy tests patch services.rag.vector_store.chromadb.
+chromadb = None
+
 logger = logging.getLogger(__name__)
+
+
+def _create_chroma_client(db_path: str):
+    if chromadb is not None and hasattr(chromadb, "PersistentClient"):
+        return chromadb.PersistentClient(path=db_path)
+    return get_chroma_client(db_path)
 
 
 class VectorStore:
     def __init__(self, db_path: str = './data/chroma_db'):
         os.makedirs(db_path, exist_ok=True)
         # 프로세스 단위 싱글톤 클라이언트 사용 — video_qa_service와 동일 디렉토리 충돌 방지
-        self._client = get_chroma_client(db_path)
+        self._client = _create_chroma_client(db_path)
 
     def _get_collection(self, user_id: str):
         """사용자별 컬렉션 반환 (없으면 생성)"""

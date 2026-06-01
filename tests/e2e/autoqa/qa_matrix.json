@@ -1,0 +1,11 @@
+﻿[
+  {"id":"home-load","name":"홈 로드","url":"http://localhost:3000","expect":"main UI visible"},
+  {"id":"chatmock-server","name":"ChatMock OpenAI 호환 서버","url":"http://127.0.0.1:8000/v1/models","expect":"HTTP 200"},
+  {"id":"provider-chatmock","name":"ChatMock 5.5 공급자 노출","url":"http://localhost:3000","expect":"chatmock/gpt-5.5 selectable"},
+  {"id":"direct-text-generate","name":"직접 텍스트 생성","input":"충분히 긴 한국어 테스트 텍스트입니다. 자동 QA가 생성 버튼을 누르고 결과 영역을 확인합니다.","expect":"generated result visible"},
+  {"id":"youtube-url-validation","name":"YouTube URL 입력 검증","input":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","expect":"URL accepted or actionable error"},
+  {"id":"style-selection","name":"스타일 선택","expect":"style controls usable"},
+  {"id":"settings-open","name":"설정 열기","expect":"settings panel visible"},
+  {"id":"history-panel","name":"히스토리 패널","expect":"history empty state or list visible"},
+  {"id":"export-buttons","name":"내보내기 버튼","expect":"export actions visible after generation"}
+]

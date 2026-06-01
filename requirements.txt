@@ -1,5 +1,8 @@
 flask==3.0.0
+flask-cors>=4.0.0
 Flask-Limiter>=3.0.0
+pytest>=8.0.0
+playwright>=1.40.0
 redis>=5.0.0
 python-dotenv==1.0.1
 youtube_transcript_api>=1.1.0
@@ -17,6 +20,7 @@ APScheduler>=3.10.0
 chromadb>=0.4.0
 PyPDF2>=3.0.0
 networkx>=3.0
+duckduckgo-search>=6.0.0
 edge-tts>=6.1.0
 feedparser>=6.0.0
 trafilatura>=2.0.0
