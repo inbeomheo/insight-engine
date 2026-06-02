@@ -280,14 +280,15 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
 
     context.route("**/api/notebooklm/generate", notebook_generate)
     context.route("**/api/notebooklm/status/*", lambda route: fulfill_json(route, {"status": "completed", "type": "qa"}))
-    context.route(
-        "**/api/notebooklm/rendered-download/*",
-        lambda route: route.fulfill(
+    def notebook_rendered_download(route) -> None:
+        calls["notebooklm_downloads"].append({"url": route.request.url})
+        route.fulfill(
             status=200,
             headers={"Content-Type": "text/markdown", "Content-Disposition": "attachment; filename=qa-study-guide.md"},
             body="# QA NotebookLM markdown\n\nThis simulates a stale backend markdown attachment.",
-        ),
-    )
+        )
+
+    context.route("**/api/notebooklm/rendered-download/*", notebook_rendered_download)
     context.route(
         "**/api/notebooklm/view/*",
         lambda route: route.fulfill(
@@ -986,6 +987,7 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     calls: dict[str, list[dict[str, Any]]] = {
         "schedule": [],
         "notebooklm": [],
+        "notebooklm_downloads": [],
         "rewrite": [],
         "events": [],
         "video_qa": [],
@@ -1014,11 +1016,12 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
                 page.locator("[data-testid='notebooklm-download-artifact']").first.click(timeout=10_000)
             download = download_info.value
             filename = download.suggested_filename
-            html_ok = filename.lower().endswith(".html")
+            hit_rendered_download = len(calls["notebooklm_downloads"]) > 0
+            html_ok = filename.lower().endswith(".html") and hit_rendered_download
             report.record(
                 "notebooklm-html-download-extension",
                 html_ok,
-                f"download={filename}" if html_ok else f"expected .html, got {filename}",
+                f"download={filename}" if html_ok else f"expected .html via rendered-download, got {filename}, hits={len(calls['notebooklm_downloads'])}",
             )
         except Exception as exc:
             report.record("notebooklm-html-download-extension", False, repr(exc))

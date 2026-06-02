@@ -56,7 +56,7 @@ function downloadHtml(html: string, filename: string) {
 }
 
 async function saveMarkdownArtifactAsHtml(artifactId: string) {
-  const response = await fetch(apiUrl(`/api/notebooklm/view/${artifactId}`));
+  const response = await fetch(apiUrl(`/api/notebooklm/rendered-download/${artifactId}`));
   if (!response.ok) throw new Error(`NotebookLM HTML 저장 실패: HTTP ${response.status}`);
 
   const text = await response.text();
