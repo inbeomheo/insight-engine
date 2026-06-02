@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 04:00:08
+- Generated: 2026-06-03 04:11:48
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -30,6 +30,7 @@
 | result-workbench-copy-readable | Result Workbench 카피 | Result Workbench 빠른 액션이 읽히는 한국어이고 물음표 placeholder가 없다 |
 | result-workbench-sections | Result Workbench 섹션형 액션 허브 | 읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다 |
 | result-workbench-read-actions | Result Workbench 읽기 액션 | 읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다 |
+| result-workbench-preview-actions | Result Workbench 미리보기 액션 | 읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다 |
 | result-workbench-nlm-all | Result Workbench 전체 NLM 산출물 | 팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
@@ -71,6 +72,7 @@
 | result-workbench-copy-readable | PASS | tests/e2e/autoqa/artifacts/result-workbench-copy-readable.png |
 | result-workbench-sections | PASS | tests/e2e/autoqa/artifacts/result-workbench-sections.png |
 | result-workbench-read-actions | PASS | tests/e2e/autoqa/artifacts/result-workbench-read-actions.png |
+| result-workbench-preview-actions | PASS | tests/e2e/autoqa/artifacts/result-workbench-preview-actions.png |
 | result-workbench-nlm-all | PASS | tests/e2e/autoqa/artifacts/result-workbench-nlm-all.png |
 | history-panel | PASS | tests/e2e/autoqa/artifacts/history-panel.png |
 | export-buttons | PASS | tests/e2e/autoqa/artifacts/export-buttons.png |

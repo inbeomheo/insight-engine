@@ -120,6 +120,12 @@
     "expect": "읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다"
   },
   {
+    "id": "result-workbench-preview-actions",
+    "name": "Result Workbench 미리보기 액션",
+    "url": "http://localhost:3000",
+    "expect": "읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다"
+  },
+  {
     "id": "result-workbench-nlm-all",
     "name": "Result Workbench 전체 NLM 산출물",
     "url": "http://localhost:3000",

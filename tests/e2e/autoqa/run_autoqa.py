@@ -989,6 +989,30 @@ def main() -> int:
                 workbench_visible and not missing_read_actions,
                 screenshot(page, "result-workbench-read-actions.png") if workbench_visible and not missing_read_actions else f"missing={missing_read_actions}",
             )
+            preview_action_ids = [
+                "workbench-action-preview-markdown",
+                "workbench-action-preview-html",
+                "workbench-action-timeline",
+            ]
+            missing_preview_actions = [test_id for test_id in preview_action_ids if workbench.locator(f"[data-testid='{test_id}']").count() == 0]
+            preview_execution_ok = False
+            preview_evidence = f"missing={missing_preview_actions}"
+            if workbench_visible and not missing_preview_actions:
+                workbench.locator("[data-testid='workbench-action-preview-markdown']").click(timeout=10_000)
+                page.locator("[data-testid='result-markdown-preview']").wait_for(state="visible", timeout=10_000)
+                markdown_ok = page.locator("[data-testid='result-markdown-preview']").is_visible()
+                workbench.locator("[data-testid='workbench-action-preview-html']").click(timeout=10_000)
+                page.locator("[data-testid='result-html-preview']").wait_for(state="visible", timeout=10_000)
+                html_ok = page.locator("[data-testid='result-html-preview']").is_visible()
+                workbench.locator("[data-testid='workbench-action-timeline']").click(timeout=10_000)
+                timeline_ok = workbench.locator("[data-testid='workbench-action-timeline']").get_attribute("aria-pressed") == "true"
+                preview_execution_ok = markdown_ok and html_ok and timeline_ok
+                preview_evidence = screenshot(page, "result-workbench-preview-actions.png") if preview_execution_ok else f"markdown={markdown_ok}; html={html_ok}; timeline={timeline_ok}"
+            report.record(
+                "result-workbench-preview-actions",
+                preview_execution_ok,
+                preview_evidence,
+            )
             nlm_action_ids = [
                 "workbench-action-nlm-audio",
                 "workbench-action-nlm-video",

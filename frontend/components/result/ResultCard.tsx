@@ -95,6 +95,7 @@ interface PanelState {
   collapsed: boolean;
   hasExpanded: boolean;
   copiedField: string | null;
+  readPreviewMode: 'rendered' | 'markdown' | 'html' | 'timeline';
   chatOpen: boolean;
   showTranscript: boolean;
   audioBlob: Blob | null;
@@ -111,6 +112,7 @@ type PanelAction =
 
 const panelInitial: PanelState = {
   collapsed: false, hasExpanded: true, copiedField: null,
+  readPreviewMode: 'rendered',
   chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
   rewriteOpen: false,
@@ -129,7 +131,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, readPreviewMode, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -372,6 +374,104 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     ),
     [isStreaming, processedContent, hasMath],
   );
+  const videoId = report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1];
+
+  const readPreviewBody = useMemo(() => {
+    if (readPreviewMode === 'markdown') {
+      return (
+        <pre
+          data-testid="result-markdown-preview"
+          className="max-h-[560px] overflow-auto whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-50"
+        >
+          {processedContent}
+        </pre>
+      );
+    }
+
+    if (readPreviewMode === 'html') {
+      return (
+        <div
+          data-testid="result-html-preview"
+          className="prose max-w-none rounded-2xl border border-slate-200 bg-white p-4 text-[15.5px] leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(report.html || report.content) }}
+        />
+      );
+    }
+
+    const wantsTimeline = readPreviewMode === 'timeline' || viewMode === 'timeline';
+    if (wantsTimeline && report.chapters && report.chapters.length > 0) {
+      return (
+        <>
+          <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
+          <div className="mt-5 space-y-4">
+            {report.chapters.map((ch, i) => (
+              <div key={i} className="border-l-2 border-primary/30 pl-4">
+                <h4 className="text-sm font-semibold mb-1">{ch.title}</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">{ch.summary}</p>
+              </div>
+            ))}
+          </div>
+          <details className="mt-5">
+            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              전체 콘텐츠 보기
+            </summary>
+            <div className="prose max-w-none text-[15.5px] leading-relaxed mt-3">
+              {markdownBody}
+            </div>
+          </details>
+        </>
+      );
+    }
+
+    if (wantsTimeline && report.transcript_segments && report.transcript_segments.length > 0) {
+      return (
+        <TranscriptPanel
+          segments={report.transcript_segments}
+          videoId={videoId}
+        />
+      );
+    }
+
+    if (wantsTimeline) {
+      return (
+        <>
+          <div className="text-xs text-muted-foreground mb-3 px-3 py-2 bg-muted/30 rounded-md">
+            이 콘텐츠에는 챕터나 자막 타임라인 데이터가 없어 전체 보기로 표시합니다.
+          </div>
+          <div data-testid="result-rendered-preview" className="prose max-w-none text-[15.5px] leading-relaxed">
+            {markdownBody}
+          </div>
+        </>
+      );
+    }
+
+    if (showTranscript && report.transcript_segments && report.transcript_segments.length > 0) {
+      return (
+        <TranscriptPanel
+          segments={report.transcript_segments}
+          videoId={videoId}
+        />
+      );
+    }
+
+    return (
+      <div data-testid="result-rendered-preview" className="prose max-w-none text-[15.5px] leading-relaxed">
+        {markdownBody}
+      </div>
+    );
+  }, [
+    markdownBody,
+    processedContent,
+    readPreviewMode,
+    report.chapters,
+    report.content,
+    report.html,
+    report.transcript_segments,
+    report.url,
+    showTranscript,
+    videoId,
+    viewMode,
+  ]);
 
   // --- Compact 모드: 요약 카드 ---
   if (viewMode === 'compact') {
@@ -577,64 +677,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
       {hasExpanded && (
       <CardContent className="px-6 pb-5 pt-4 border-t border-border/50" style={{ display: collapsed ? 'none' : undefined }}>
-          {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
-          {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
-            <>
-              <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
-              <div className="mt-5 space-y-4">
-                {report.chapters.map((ch, i) => (
-                  <div key={i} className="border-l-2 border-primary/30 pl-4">
-                    <h4 className="text-sm font-semibold mb-1">{ch.title}</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{ch.summary}</p>
-                  </div>
-                ))}
-              </div>
-              {/* 타임라인 모드에서도 전체 콘텐츠 접기 가능하도록 표시 */}
-              <details className="mt-5">
-                <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                  전체 콘텐츠 보기
-                </summary>
-                <div className="prose max-w-none text-[15.5px] leading-relaxed mt-3">
-                  {markdownBody}
-                </div>
-              </details>
-            </>
-          ) : viewMode === 'timeline' ? (
-            <>
-              {/* 챕터 데이터 없음 — Full 모드로 폴백 */}
-              <div className="text-xs text-muted-foreground mb-3 px-3 py-2 bg-muted/30 rounded-md">
-                이 콘텐츠에는 챕터 데이터가 없어 전체 보기로 표시합니다.
-              </div>
-              {showTranscript && report.transcript_segments && report.transcript_segments.length > 0 ? (
-                <TranscriptPanel
-                  segments={report.transcript_segments}
-                  videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
-                />
-              ) : (
-                <div className="prose max-w-none text-[15.5px] leading-relaxed">
-                  {markdownBody}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {showTranscript && report.transcript_segments && report.transcript_segments.length > 0 ? (
-                <TranscriptPanel
-                  segments={report.transcript_segments}
-                  videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
-                />
-              ) : (
-                <div className="prose max-w-none text-[15.5px] leading-relaxed">
-                  {markdownBody}
-                </div>
-              )}
-
-              {/* 챕터 타임라인 (full 모드에서만 기존 위치에 표시) */}
-              {report.chapters && report.chapters.length > 0 && (
-                <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
-              )}
-            </>
-          )}
+          {readPreviewBody}
 
           {/* NotebookLM 섹션 */}
           {report.notebooklm?.artifacts && (
@@ -759,6 +802,55 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               >
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />{showTranscript ? '요약 보기' : '자막 보기'}
               </Button>
+            </div>
+            <div className="mt-3 border-t border-slate-200/70 pt-3">
+              <p className="mb-2 text-[11px] font-semibold text-slate-400">미리보기 전환</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  data-testid="workbench-action-preview-rendered"
+                  type="button"
+                  variant={readPreviewMode === 'rendered' ? 'default' : 'outline'}
+                  size="sm"
+                  className={workbenchButtonClass}
+                  onClick={() => setPanel('readPreviewMode', 'rendered')}
+                  aria-pressed={readPreviewMode === 'rendered'}
+                >
+                  <FileText className="h-3.5 w-3.5" />본문 보기
+                </Button>
+                <Button
+                  data-testid="workbench-action-preview-markdown"
+                  type="button"
+                  variant={readPreviewMode === 'markdown' ? 'default' : 'outline'}
+                  size="sm"
+                  className={workbenchButtonClass}
+                  onClick={() => setPanel('readPreviewMode', 'markdown')}
+                  aria-pressed={readPreviewMode === 'markdown'}
+                >
+                  <Code className="h-3.5 w-3.5" />Markdown
+                </Button>
+                <Button
+                  data-testid="workbench-action-preview-html"
+                  type="button"
+                  variant={readPreviewMode === 'html' ? 'default' : 'outline'}
+                  size="sm"
+                  className={workbenchButtonClass}
+                  onClick={() => setPanel('readPreviewMode', 'html')}
+                  aria-pressed={readPreviewMode === 'html'}
+                >
+                  <Type className="h-3.5 w-3.5" />HTML
+                </Button>
+                <Button
+                  data-testid="workbench-action-timeline"
+                  type="button"
+                  variant={readPreviewMode === 'timeline' ? 'default' : 'outline'}
+                  size="sm"
+                  className={workbenchButtonClass}
+                  onClick={() => setPanel('readPreviewMode', 'timeline')}
+                  aria-pressed={readPreviewMode === 'timeline'}
+                >
+                  <ListChecks className="h-3.5 w-3.5" />타임라인
+                </Button>
+              </div>
             </div>
           </section>
 
