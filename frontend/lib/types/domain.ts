@@ -52,6 +52,7 @@ export interface McpPublishRequest {
   plugin_id: string;
   title: string;
   content: string;
+  options?: Record<string, unknown>;
 }
 
 export interface McpPublishResponse {

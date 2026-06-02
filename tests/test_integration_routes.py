@@ -219,6 +219,33 @@ class TestMCPRoutes(_Base):
         self.assertEqual(resp.status_code, 200)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.mcp.plugin_registry.execute')
+    def test_mcp_publish_passes_plugin_options(self, mock_exec, _):
+        mock_exec.return_value = {'success': True, 'url': 'https://wp.example.com/post/1'}
+        resp = self.client.post('/api/mcp/publish',
+                                json={'plugin_id': 'wordpress',
+                                      'title': '테스트',
+                                      'content': '콘텐츠',
+                                      'options': {
+                                          'site_url': 'https://wp.example.com',
+                                          'username': 'writer',
+                                          'app_password': 'secret',
+                                          'status': 'draft',
+                                      }},
+                                headers=_H)
+
+        self.assertEqual(resp.status_code, 200)
+        mock_exec.assert_called_once_with(
+            'wordpress',
+            '콘텐츠',
+            '테스트',
+            site_url='https://wp.example.com',
+            username='writer',
+            app_password='secret',
+            status='draft',
+        )
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry.execute',
            side_effect=Exception('plugin error'))
     def test_mcp_publish_exception(self, mock_exec, _):

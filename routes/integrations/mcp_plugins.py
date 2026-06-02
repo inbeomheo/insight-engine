@@ -34,8 +34,12 @@ def mcp_publish():
     if not plugin_id or not title or not content:
         return jsonify({"error": "plugin_id, title, content는 필수입니다."}), 400
 
+    options = data.get('options') or data.get('config') or {}
+    if not isinstance(options, dict):
+        options = {}
+
     try:
-        result = plugin_registry.execute(plugin_id, content, title)
+        result = plugin_registry.execute(plugin_id, content, title, **options)
     except Exception as e:
         current_app.logger.error('MCP publish failed: %s', e, exc_info=True)
         return jsonify({'error': '[서버 오류] 플러그인 발행 중 문제가 발생했습니다.'}), 500
