@@ -1,4 +1,4 @@
-﻿import { CalendarDays, Download, FileText, Sparkles, Wand2 } from 'lucide-react';
+import { CalendarDays, Download, FileText, Settings, Sparkles, Wand2 } from 'lucide-react';
 
 export const STUDIO_STEPS = [
   { id: 'source', label: '소스 입력', description: 'URL, 텍스트, 파일, 음성을 준비합니다.' },
@@ -13,6 +13,7 @@ export const QUICK_ACTIONS = [
   { id: 'nlm', label: 'NLM 산출물', icon: Sparkles },
   { id: 'rewrite', label: '플랫폼 변환', icon: Wand2 },
   { id: 'prompt', label: '프롬프트', icon: FileText },
+  { id: 'settings', label: '설정', icon: Settings },
 ] as const;
 
 export function getGenerateLabel(sourceCount: number, mode: string): string {

@@ -54,6 +54,24 @@
     "expect": "visible result workbench quick actions"
   },
   {
+    "id": "right-panel-settings",
+    "name": "Right panel settings",
+    "url": "http://localhost:3000",
+    "expect": "right panel shows current model/style/mode settings"
+  },
+  {
+    "id": "right-panel-nlm",
+    "name": "Right panel NLM artifacts",
+    "url": "http://localhost:3000",
+    "expect": "right panel summarizes recent NotebookLM artifacts by status"
+  },
+  {
+    "id": "right-panel-quick-actions",
+    "name": "Right panel quick actions",
+    "url": "http://localhost:3000",
+    "expect": "quick actions navigate to calendar/settings/workbench targets"
+  },
+  {
     "id": "youtube-url-validation",
     "name": "YouTube URL 입력 검증",
     "input": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

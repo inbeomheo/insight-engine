@@ -399,6 +399,64 @@ def seed_menu_context(context) -> None:
     )
 
 
+def seed_right_panel_context(context) -> None:
+    report = menu_report_fixture()
+    report["notebooklm"] = {
+        "artifacts": [
+            {"artifact_id": "rp-briefing", "content_type": "briefing", "status": "completed"},
+            {"artifact_id": "rp-audio", "content_type": "audio", "status": "in_progress"},
+            {"artifact_id": "rp-quiz", "content_type": "quiz", "status": "failed"},
+        ]
+    }
+    context.add_init_script(
+        f"""
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.setItem('ie_view_mode', 'full');
+        localStorage.setItem('insight-engine-reports', JSON.stringify({json.dumps([report], ensure_ascii=False)}));
+        """
+    )
+
+
+def run_right_panel_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": []})))
+    seed_right_panel_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[right-panel] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[right-panel] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        panel = page.locator("[data-testid='studio-right-panel']")
+        panel.wait_for(state="visible", timeout=60_000)
+
+        settings_ok = (
+            panel.locator("[data-testid='right-panel-setting-style']").count() == 1
+            and panel.locator("[data-testid='right-panel-setting-mode']").count() == 1
+            and panel.locator("[data-testid='right-panel-setting-model']").count() == 1
+        )
+        report.record("right-panel-settings", settings_ok, screenshot(page, "right-panel-settings.png") if settings_ok else panel.inner_text(timeout=5_000)[:500])
+
+        nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
+        report.record("right-panel-nlm", nlm_count >= 3, f"nlm_count={nlm_count}")
+
+        page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
+        calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
+        if not calendar_visible:
+            page.locator("[data-testid='content-calendar']").wait_for(state="visible", timeout=10_000)
+            calendar_visible = True
+        report.record("right-panel-quick-actions", calendar_visible, screenshot(page, "right-panel-calendar.png") if calendar_visible else "calendar not opened")
+    except Exception as exc:
+        fail_png = screenshot(page, "right-panel-fail.png")
+        report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def close_dialogs(page) -> None:
     page.keyboard.press("Escape")
     page.wait_for_timeout(250)
@@ -796,6 +854,7 @@ def main() -> int:
             report.record("export-buttons", False, repr(exc))
 
         run_seeded_menu_action_suite(browser, report)
+        run_right_panel_suite(browser, report)
 
         browser.close()
 

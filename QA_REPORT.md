@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 02:06:24
+- Generated: 2026-06-03 02:17:09
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -19,6 +19,9 @@
 | direct-text-generate | 직접 텍스트 생성 | generated result visible |
 | text-dock-generate | ??? Dock ?? | Generate Dock handles direct text source |
 | result-workbench | ?? ??? | visible result workbench quick actions |
+| right-panel-settings | Right panel settings | right panel shows current model/style/mode settings |
+| right-panel-nlm | Right panel NLM artifacts | right panel summarizes recent NotebookLM artifacts by status |
+| right-panel-quick-actions | Right panel quick actions | quick actions navigate to calendar/settings/workbench targets |
 | youtube-url-validation | YouTube URL 입력 검증 | URL accepted or actionable error |
 | style-selection | 스타일 선택 | style controls usable |
 | settings-open | 설정 열기 | settings panel visible |
@@ -33,7 +36,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 API, 50달러로 시작하기', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5와 API 활용 핵심 정리', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | source-file-generate | PASS | tests/e2e/autoqa/artifacts/source-file-generate.png |
@@ -72,10 +75,24 @@
 | menu-action:예약-발행 | PASS | tests/e2e/autoqa/artifacts/menu-schedule.png |
 | menu-action:공유 | PASS | clipboard_len=197 |
 | menu-action:삭제 | PASS | card_removed=True |
+| right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
+| right-panel-nlm | PASS | nlm_count=3 |
+| right-panel-quick-actions | PASS | tests/e2e/autoqa/artifacts/right-panel-calendar.png |
+
+## Browser Console Errors
+
+- `[right-panel] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- I`
 
 ## Notes
 
 - Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.
+- ???? console error? ?? ??? ??????.
 
 ## Fixes Applied
 

@@ -84,7 +84,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
   }
 
   return (
-    <div className="space-y-4">
+    <div data-testid="content-calendar" className="space-y-4">
       {/* 월 네비게이션 */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="icon" onClick={prevMonth}>
