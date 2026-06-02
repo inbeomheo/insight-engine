@@ -36,6 +36,18 @@ class TestExportHtml(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_markdown_content_is_rendered_to_html(self, _mock_sb):
+        """content로 받은 마크다운은 raw MD가 아니라 HTML로 내려간다."""
+        resp = self.client.post('/api/export/html',
+                                json={'title': '문서', 'content': '# 섹션\n\n**굵게** 본문'},
+                                headers=_HEADERS)
+        self.assertEqual(resp.status_code, 200)
+        html = resp.data.decode('utf-8')
+        self.assertIn('<h1>섹션</h1>', html)
+        self.assertIn('<strong>굵게</strong>', html)
+        self.assertNotIn('**굵게**', html)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_includes_inline_css(self, _mock_sb):
         """인라인 CSS 포함."""
         resp = self.client.post('/api/export/html',

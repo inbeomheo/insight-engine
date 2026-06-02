@@ -2,6 +2,7 @@
 내보내기 라우트 — DOCX 변환
 """
 import io
+import html as html_lib
 import re as re_module
 
 from flask import request, jsonify, current_app, send_file
@@ -659,6 +660,25 @@ def _build_html_toc(html_content):
     return '<nav class="toc"><h2>목차</h2><ul>' + '\n'.join(items) + '</ul></nav>'
 
 
+def _render_html_export_body(data):
+    explicit_html = data.get('html') or ''
+    if explicit_html:
+        return explicit_html
+
+    markdown_content = data.get('content', '') or ''
+    if not markdown_content:
+        return ''
+
+    try:
+        import markdown as md_lib
+        return md_lib.markdown(
+            markdown_content,
+            extensions=['tables', 'fenced_code', 'nl2br'],
+        )
+    except Exception:
+        return f'<pre>{html_lib.escape(markdown_content)}</pre>'
+
+
 @blog_bp.route('/api/export/html', methods=['POST'])
 @require_auth
 def export_html():
@@ -670,7 +690,7 @@ def export_html():
     try:
         data = request.get_json(silent=True) or {}
         title = data.get('title', 'AI 생성 결과')
-        html_content = data.get('html', '') or data.get('content', '')
+        html_content = _render_html_export_body(data)
         dark_mode = data.get('dark_mode', False)
         print_friendly = data.get('print_friendly', False)
 

@@ -354,6 +354,7 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
     context.route("**/api/video-qa", video_qa)
 
     export_payloads = {
+        "html": ("qa-menu.html", "text/html", "<!doctype html><html><body><h1>html mock</h1></body></html>"),
         "docx": ("qa-menu.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx mock"),
         "markdown": ("qa-menu.md", "text/markdown", "# markdown mock"),
         "txt": ("qa-menu.txt", "text/plain", "txt mock"),
