@@ -1,6 +1,12 @@
 import { STORAGE_KEYS } from './constants';
 import type { Report, CustomStyle } from './types';
 
+export interface WordPressDefaults {
+  site_url: string;
+  username: string;
+  status: string;
+}
+
 function safeGet<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
@@ -63,6 +69,13 @@ export const saveOllamaBaseUrl = (url: string) => ollamaStorage.save(url);
 const webhookStorage = makeStorage<string>(STORAGE_KEYS.WEBHOOK_URL, '');
 export const loadWebhookUrl = webhookStorage.load;
 export const saveWebhookUrl = (url: string) => webhookStorage.save(url);
+
+const wordpressDefaultsStorage = makeStorage<WordPressDefaults>(
+  STORAGE_KEYS.WORDPRESS_DEFAULTS,
+  { site_url: '', username: '', status: 'draft' }
+);
+export const loadWordPressDefaults = wordpressDefaultsStorage.load;
+export const saveWordPressDefaults = (defaults: WordPressDefaults) => wordpressDefaultsStorage.save(defaults);
 
 const onboardingStorage = makeStorage<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);
 export const isOnboardingDone = onboardingStorage.load;

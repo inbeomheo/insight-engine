@@ -11,6 +11,9 @@ import {
   saveOllamaBaseUrl,
   loadWebhookUrl,
   saveWebhookUrl,
+  loadWordPressDefaults,
+  saveWordPressDefaults,
+  type WordPressDefaults,
 } from '@/lib/storage';
 
 interface SettingsState {
@@ -43,6 +46,9 @@ interface SettingsState {
   // 웹훅
   webhookUrl: string;
   setWebhookUrl: (url: string) => void;
+
+  wordpressDefaults: WordPressDefaults;
+  setWordPressDefaults: (defaults: Partial<WordPressDefaults>) => void;
 
   // 생성 모드 & 퓨전 옵션
   generationMode: GenerationMode;
@@ -77,6 +83,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   customStyles: [],
   ollamaBaseUrl: '',
   webhookUrl: '',
+  wordpressDefaults: { site_url: '', username: '', status: 'draft' },
   generationMode: 'individual',
   enableWebResearch: true,
   enableDeepComments: true,
@@ -131,6 +138,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ webhookUrl: url });
   },
 
+  setWordPressDefaults: (defaults) => {
+    const next = { ...get().wordpressDefaults, ...defaults };
+    saveWordPressDefaults(next);
+    set({ wordpressDefaults: next });
+  },
+
   setGenerationMode: (mode) => set({ generationMode: mode }),
   setEnableWebResearch: (v) => set({ enableWebResearch: v }),
   setEnableDeepComments: (v) => set({ enableDeepComments: v }),
@@ -145,6 +158,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       customStyles: loadCustomStyles(),
       ollamaBaseUrl: loadOllamaBaseUrl(),
       webhookUrl: loadWebhookUrl(),
+      wordpressDefaults: loadWordPressDefaults(),
     });
   },
 }));

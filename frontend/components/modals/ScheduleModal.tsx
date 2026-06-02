@@ -31,6 +31,7 @@ export default function ScheduleModal({
 }: ScheduleModalProps) {
   const plugins = useMcpPlugins(open);
   const webhookUrl = useSettingsStore((s) => s.webhookUrl);
+  const wordpressDefaults = useSettingsStore((s) => s.wordpressDefaults);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [wordpressOptions, setWordpressOptions] = useState({
@@ -73,8 +74,14 @@ export default function ScheduleModal({
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
     setScheduledAt(formatLocalDatetime(tomorrow));
+    setWordpressOptions({
+      site_url: wordpressDefaults.site_url,
+      username: wordpressDefaults.username,
+      app_password: '',
+      status: wordpressDefaults.status || 'draft',
+    });
     setNaverOptions((prev) => ({ ...prev, webhook_url: prev.webhook_url || webhookUrl }));
-  }, [open, webhookUrl]);
+  }, [open, webhookUrl, wordpressDefaults]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function compactOptions(values: Record<string, string>) {

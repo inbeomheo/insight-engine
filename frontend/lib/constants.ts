@@ -42,6 +42,7 @@ export const STORAGE_KEYS = {
   ONBOARDING_DONE: 'insight-engine-onboarding-done',
   OLLAMA_BASE_URL: 'insight-engine-ollama-base-url',
   WEBHOOK_URL: 'insight-engine-webhook-url',
+  WORDPRESS_DEFAULTS: 'insight-engine-wordpress-defaults',
 } as const;
 
 export const YOUTUBE_URL_REGEX =

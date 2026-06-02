@@ -26,6 +26,7 @@ export default function SettingsPopover() {
     customStyles,
     ollamaBaseUrl,
     webhookUrl,
+    wordpressDefaults,
     enableWebSearch,
     setSelectedProvider,
     setSelectedModel,
@@ -33,6 +34,7 @@ export default function SettingsPopover() {
     setModifiers,
     setOllamaBaseUrl,
     setWebhookUrl,
+    setWordPressDefaults,
     setEnableWebSearch,
   } = useSettingsStore();
 
@@ -276,9 +278,60 @@ export default function SettingsPopover() {
 
       {/* 웹훅 연동 */}
       <WebhookSection webhookUrl={webhookUrl} setWebhookUrl={setWebhookUrl} />
+      <WordPressDefaultsSection
+        defaults={wordpressDefaults}
+        setDefaults={setWordPressDefaults}
+      />
 
       {/* 지식 베이스 */}
       <KnowledgeManager />
+    </div>
+  );
+}
+
+function WordPressDefaultsSection({
+  defaults,
+  setDefaults,
+}: {
+  defaults: { site_url: string; username: string; status: string };
+  setDefaults: (defaults: Partial<{ site_url: string; username: string; status: string }>) => void;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-muted-foreground mb-2 block">
+        WordPress 예약 기본값
+      </label>
+      <div className="grid gap-2">
+        <input
+          data-testid="settings-wordpress-site-url"
+          type="url"
+          value={defaults.site_url}
+          onChange={(e) => setDefaults({ site_url: e.target.value })}
+          placeholder="https://example.com"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <input
+          data-testid="settings-wordpress-username"
+          value={defaults.username}
+          onChange={(e) => setDefaults({ username: e.target.value })}
+          placeholder="WordPress 사용자명"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <select
+          data-testid="settings-wordpress-status"
+          value={defaults.status}
+          onChange={(e) => setDefaults({ status: e.target.value })}
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value="draft">임시글</option>
+          <option value="publish">즉시 공개</option>
+          <option value="pending">검토 대기</option>
+          <option value="private">비공개</option>
+        </select>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Application Password는 보안을 위해 예약 등록 시에만 입력합니다.
+      </p>
     </div>
   );
 }

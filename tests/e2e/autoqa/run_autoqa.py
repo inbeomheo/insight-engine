@@ -413,6 +413,11 @@ def seed_menu_context(context) -> None:
         localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
         localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
         localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.setItem('insight-engine-wordpress-defaults', JSON.stringify({{
+            site_url: 'https://stored.wp.example.com',
+            username: 'stored-writer',
+            status: 'pending',
+        }}));
         localStorage.setItem('ie_view_mode', 'full');
         localStorage.setItem('insight-engine-reports', JSON.stringify({json.dumps([report], ensure_ascii=False)}));
         localStorage.removeItem('insight_engine_pinned_ids');
@@ -1174,27 +1179,29 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         dialog = page.locator("[role='dialog']").last
         dialog.wait_for(state="visible", timeout=10_000)
         dialog.locator("select").first.select_option("wordpress", timeout=10_000)
-        dialog.locator("[data-testid='schedule-option-wordpress-site-url']").fill("https://wp.example.com")
-        dialog.locator("[data-testid='schedule-option-wordpress-username']").fill("qa-writer")
+        prefill_ok = (
+            dialog.locator("[data-testid='schedule-option-wordpress-site-url']").input_value(timeout=10_000) == "https://stored.wp.example.com"
+            and dialog.locator("[data-testid='schedule-option-wordpress-username']").input_value(timeout=10_000) == "stored-writer"
+            and dialog.locator("[data-testid='schedule-option-wordpress-status']").input_value(timeout=10_000) == "pending"
+        )
         dialog.locator("[data-testid='schedule-option-wordpress-app-password']").fill("qa-secret")
-        dialog.locator("[data-testid='schedule-option-wordpress-status']").select_option("draft")
         dialog.locator("button", has_text="예약 등록").click(timeout=10_000)
         ok = wait_until(lambda: len(calls["schedule"]) > before, 10_000, page)
         payload = calls["schedule"][-1] if ok else {}
         options = payload.get("options") or payload.get("plugin_options") or {}
         options_ok = (
             payload.get("target_plugin") == "wordpress"
-            and options.get("site_url") == "https://wp.example.com"
-            and options.get("username") == "qa-writer"
+            and options.get("site_url") == "https://stored.wp.example.com"
+            and options.get("username") == "stored-writer"
             and options.get("app_password") == "qa-secret"
-            and options.get("status") == "draft"
+            and options.get("status") == "pending"
         )
         schedule_png = screenshot(page, "menu-schedule.png")
         redacted_payload = json.loads(json.dumps(payload, ensure_ascii=False))
         redacted_options = redacted_payload.get("options") or redacted_payload.get("plugin_options") or {}
         if isinstance(redacted_options, dict) and "app_password" in redacted_options:
             redacted_options["app_password"] = "***"
-        record_action("예약 발행", ok and options_ok, schedule_png if ok and options_ok else f"payload={redacted_payload}")
+        record_action("예약 발행", prefill_ok and ok and options_ok, schedule_png if prefill_ok and ok and options_ok else f"prefill_ok={prefill_ok}; payload={redacted_payload}")
     except Exception as exc:
         record_action("예약 발행", False, repr(exc))
         close_dialogs(page)
