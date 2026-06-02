@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, Headphones, ListChecks, RefreshCw, AlertTriangle,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, ListChecks, RefreshCw, AlertTriangle,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -900,9 +900,6 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               </div>
             )}
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              <Button data-testid="workbench-action-nlm-audio" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('audio')}>
-                <Headphones className="h-3.5 w-3.5 text-indigo-600" />팟캐스트
-              </Button>
               <Button data-testid="workbench-action-nlm-video" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('video')}>
                 <Layers className="h-3.5 w-3.5 text-indigo-600" />비디오
               </Button>
@@ -1017,10 +1014,6 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 플랫폼 변환
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleNotebookLm('audio')}>
-                <Headphones className="h-3.5 w-3.5 mr-2" />
-                NLM 팟캐스트
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleNotebookLm('video')}>
                 <Layers className="h-3.5 w-3.5 mr-2" />
                 NLM 비디오

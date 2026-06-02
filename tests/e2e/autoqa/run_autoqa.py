@@ -28,7 +28,6 @@ MENU_EXPECTED_LABELS = [
     "전체 복사",
     "프롬프트 보기",
     "플랫폼 변환",
-    "NLM 팟캐스트",
     "NLM 비디오",
     "NLM 인포그래픽",
     "NLM 슬라이드",
@@ -51,7 +50,6 @@ MENU_EXPECTED_LABELS = [
 ]
 
 NOTEBOOK_MENU_TYPES = {
-    "NLM 팟캐스트": "audio",
     "NLM 비디오": "video",
     "NLM 인포그래픽": "infographic",
     "NLM 슬라이드": "slide_deck",
@@ -1097,7 +1095,6 @@ def main() -> int:
                 preview_evidence,
             )
             nlm_action_ids = [
-                "workbench-action-nlm-audio",
                 "workbench-action-nlm-video",
                 "workbench-action-nlm-infographic",
                 "workbench-action-nlm-slide-deck",
@@ -1112,6 +1109,15 @@ def main() -> int:
                 "result-workbench-nlm-all",
                 workbench_visible and not missing_nlm_actions,
                 screenshot(page, "result-workbench-nlm-all.png") if workbench_visible and not missing_nlm_actions else f"missing={missing_nlm_actions}",
+            )
+            podcast_removed = (
+                workbench.locator("[data-testid='workbench-action-nlm-audio']").count() == 0
+                and page.get_by_text("NLM 팟캐스트").count() == 0
+            )
+            report.record(
+                "result-workbench-nlm-podcast-removed",
+                workbench_visible and podcast_removed,
+                "NLM 팟캐스트 액션 없음" if podcast_removed else screenshot(page, "result-workbench-nlm-podcast-removed-fail.png"),
             )
         except Exception as exc:
             fail_png = screenshot(page, "direct-text-generate-fail.png")

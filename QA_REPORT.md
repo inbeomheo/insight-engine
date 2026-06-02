@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 04:50:55
+- Generated: 2026-06-03 05:03:07
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -33,7 +33,8 @@
 | result-workbench-read-actions | Result Workbench 읽기 액션 | 읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다 |
 | result-workbench-preview-actions | Result Workbench 미리보기 액션 | 읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다 |
 | result-workbench-export-status | Result Workbench 내보내기 실행 상태 | Workbench 내보내기 버튼을 실행하면 다운로드와 함께 섹션 안에 완료 상태가 남는다 |
-| result-workbench-nlm-all | Result Workbench 전체 NLM 산출물 | 팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다 |
+| result-workbench-nlm-all | Result Workbench 전체 NLM 산출물 | 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다 |
+| result-workbench-nlm-podcast-removed | Result Workbench NLM 팟캐스트 제거 | 사용하지 않는 NLM 팟캐스트 액션은 Workbench와 메뉴에 보이지 않는다 |
 | workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
@@ -79,6 +80,7 @@
 | result-workbench-read-actions | PASS | tests/e2e/autoqa/artifacts/result-workbench-read-actions.png |
 | result-workbench-preview-actions | PASS | tests/e2e/autoqa/artifacts/result-workbench-preview-actions.png |
 | result-workbench-nlm-all | PASS | tests/e2e/autoqa/artifacts/result-workbench-nlm-all.png |
+| result-workbench-nlm-podcast-removed | PASS | NLM 팟캐스트 액션 없음 |
 | history-panel | PASS | tests/e2e/autoqa/artifacts/history-panel.png |
 | export-buttons | PASS | tests/e2e/autoqa/artifacts/export-buttons.png |
 | notebooklm-view-download-labels | PASS | tests/e2e/autoqa/artifacts/notebooklm-view-download-labels.png |
@@ -87,7 +89,6 @@
 | menu-action:전체-복사 | PASS | clipboard_len=127 |
 | menu-action:프롬프트-보기 | PASS | tests/e2e/autoqa/artifacts/menu-prompt-view.png |
 | menu-action:플랫폼-변환 | PASS | tests/e2e/autoqa/artifacts/menu-platform-convert.png |
-| menu-action:NLM-팟캐스트 | PASS | type=audio |
 | menu-action:NLM-비디오 | PASS | type=video |
 | menu-action:NLM-인포그래픽 | PASS | type=infographic |
 | menu-action:NLM-슬라이드 | PASS | type=slide_deck |

@@ -141,7 +141,13 @@
     "id": "result-workbench-nlm-all",
     "name": "Result Workbench 전체 NLM 산출물",
     "url": "http://localhost:3000",
-    "expect": "팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다"
+    "expect": "비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다"
+  },
+  {
+    "id": "result-workbench-nlm-podcast-removed",
+    "name": "Result Workbench NLM 팟캐스트 제거",
+    "url": "http://localhost:3000",
+    "expect": "사용하지 않는 NLM 팟캐스트 액션은 Workbench와 메뉴에 보이지 않는다"
   },
   {
     "id": "workbench-nlm-auth-notice",
