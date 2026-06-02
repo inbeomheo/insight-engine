@@ -14,6 +14,9 @@ import {
   loadWordPressDefaults,
   saveWordPressDefaults,
   type WordPressDefaults,
+  loadNaverDefaults,
+  saveNaverDefaults,
+  type NaverDefaults,
 } from '@/lib/storage';
 
 interface SettingsState {
@@ -49,6 +52,8 @@ interface SettingsState {
 
   wordpressDefaults: WordPressDefaults;
   setWordPressDefaults: (defaults: Partial<WordPressDefaults>) => void;
+  naverDefaults: NaverDefaults;
+  setNaverDefaults: (defaults: Partial<NaverDefaults>) => void;
 
   // 생성 모드 & 퓨전 옵션
   generationMode: GenerationMode;
@@ -84,6 +89,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   ollamaBaseUrl: '',
   webhookUrl: '',
   wordpressDefaults: { site_url: '', username: '', status: 'draft' },
+  naverDefaults: { webhook_url: '', blog_id: '', category: '', tags: '' },
   generationMode: 'individual',
   enableWebResearch: true,
   enableDeepComments: true,
@@ -144,6 +150,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ wordpressDefaults: next });
   },
 
+  setNaverDefaults: (defaults) => {
+    const next = { ...get().naverDefaults, ...defaults };
+    saveNaverDefaults(next);
+    set({ naverDefaults: next });
+  },
+
   setGenerationMode: (mode) => set({ generationMode: mode }),
   setEnableWebResearch: (v) => set({ enableWebResearch: v }),
   setEnableDeepComments: (v) => set({ enableDeepComments: v }),
@@ -159,6 +171,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       ollamaBaseUrl: loadOllamaBaseUrl(),
       webhookUrl: loadWebhookUrl(),
       wordpressDefaults: loadWordPressDefaults(),
+      naverDefaults: loadNaverDefaults(),
     });
   },
 }));

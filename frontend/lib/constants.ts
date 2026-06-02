@@ -43,6 +43,7 @@ export const STORAGE_KEYS = {
   OLLAMA_BASE_URL: 'insight-engine-ollama-base-url',
   WEBHOOK_URL: 'insight-engine-webhook-url',
   WORDPRESS_DEFAULTS: 'insight-engine-wordpress-defaults',
+  NAVER_DEFAULTS: 'insight-engine-naver-defaults',
 } as const;
 
 export const YOUTUBE_URL_REGEX =

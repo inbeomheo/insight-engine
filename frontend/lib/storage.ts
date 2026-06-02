@@ -7,6 +7,13 @@ export interface WordPressDefaults {
   status: string;
 }
 
+export interface NaverDefaults {
+  webhook_url: string;
+  blog_id: string;
+  category: string;
+  tags: string;
+}
+
 function safeGet<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
@@ -76,6 +83,13 @@ const wordpressDefaultsStorage = makeStorage<WordPressDefaults>(
 );
 export const loadWordPressDefaults = wordpressDefaultsStorage.load;
 export const saveWordPressDefaults = (defaults: WordPressDefaults) => wordpressDefaultsStorage.save(defaults);
+
+const naverDefaultsStorage = makeStorage<NaverDefaults>(
+  STORAGE_KEYS.NAVER_DEFAULTS,
+  { webhook_url: '', blog_id: '', category: '', tags: '' }
+);
+export const loadNaverDefaults = naverDefaultsStorage.load;
+export const saveNaverDefaults = (defaults: NaverDefaults) => naverDefaultsStorage.save(defaults);
 
 const onboardingStorage = makeStorage<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);
 export const isOnboardingDone = onboardingStorage.load;

@@ -419,6 +419,12 @@ def seed_menu_context(context) -> None:
             username: 'stored-writer',
             status: 'pending',
         }}));
+        localStorage.setItem('insight-engine-naver-defaults', JSON.stringify({{
+            webhook_url: 'https://stored.naver.example.com/webhook',
+            blog_id: 'stored-blog',
+            category: 'AI 자동화',
+            tags: 'ai,자동화',
+        }}));
         localStorage.setItem('ie_view_mode', 'full');
         localStorage.setItem('insight-engine-reports', JSON.stringify({json.dumps([report], ensure_ascii=False)}));
         localStorage.removeItem('insight_engine_pinned_ids');
@@ -1207,6 +1213,38 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         record_action("예약 발행", prefill_ok and ok and options_ok, schedule_png if prefill_ok and ok and options_ok else f"prefill_ok={prefill_ok}; payload={redacted_payload}")
     except Exception as exc:
         record_action("예약 발행", False, repr(exc))
+        close_dialogs(page)
+
+    try:
+        before = len(calls["schedule"])
+        click_menu_label(page, "예약 발행")
+        dialog = page.locator("[role='dialog']").last
+        dialog.wait_for(state="visible", timeout=10_000)
+        dialog.locator("select").first.select_option("naver_blog", timeout=10_000)
+        prefill_ok = (
+            dialog.locator("[data-testid='schedule-option-naver-webhook-url']").input_value(timeout=10_000) == "https://stored.naver.example.com/webhook"
+            and dialog.locator("[data-testid='schedule-option-naver-blog-id']").input_value(timeout=10_000) == "stored-blog"
+            and dialog.locator("[data-testid='schedule-option-naver-category']").input_value(timeout=10_000) == "AI 자동화"
+            and dialog.locator("[data-testid='schedule-option-naver-tags']").input_value(timeout=10_000) == "ai,자동화"
+        )
+        dialog.locator("button", has_text="예약 등록").click(timeout=10_000)
+        ok = wait_until(lambda: len(calls["schedule"]) > before, 10_000, page)
+        payload = calls["schedule"][-1] if ok else {}
+        options = payload.get("options") or payload.get("plugin_options") or {}
+        options_ok = (
+            payload.get("target_plugin") == "naver_blog"
+            and options.get("webhook_url") == "https://stored.naver.example.com/webhook"
+            and options.get("blog_id") == "stored-blog"
+            and options.get("category") == "AI 자동화"
+            and options.get("tags") == "ai,자동화"
+        )
+        report.record(
+            "menu-schedule-naver-defaults",
+            prefill_ok and ok and options_ok,
+            f"payload={payload}" if prefill_ok and ok and options_ok else f"prefill_ok={prefill_ok}; payload={payload}",
+        )
+    except Exception as exc:
+        report.record("menu-schedule-naver-defaults", False, repr(exc))
         close_dialogs(page)
 
     try:

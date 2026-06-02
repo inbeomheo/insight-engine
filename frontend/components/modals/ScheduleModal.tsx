@@ -32,6 +32,7 @@ export default function ScheduleModal({
   const plugins = useMcpPlugins(open);
   const webhookUrl = useSettingsStore((s) => s.webhookUrl);
   const wordpressDefaults = useSettingsStore((s) => s.wordpressDefaults);
+  const naverDefaults = useSettingsStore((s) => s.naverDefaults);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [wordpressOptions, setWordpressOptions] = useState({
@@ -80,8 +81,13 @@ export default function ScheduleModal({
       app_password: '',
       status: wordpressDefaults.status || 'draft',
     });
-    setNaverOptions((prev) => ({ ...prev, webhook_url: prev.webhook_url || webhookUrl }));
-  }, [open, webhookUrl, wordpressDefaults]);
+    setNaverOptions({
+      webhook_url: naverDefaults.webhook_url || webhookUrl,
+      blog_id: naverDefaults.blog_id,
+      category: naverDefaults.category,
+      tags: naverDefaults.tags,
+    });
+  }, [open, webhookUrl, wordpressDefaults, naverDefaults]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function compactOptions(values: Record<string, string>) {

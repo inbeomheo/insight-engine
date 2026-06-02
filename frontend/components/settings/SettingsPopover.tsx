@@ -27,6 +27,7 @@ export default function SettingsPopover() {
     ollamaBaseUrl,
     webhookUrl,
     wordpressDefaults,
+    naverDefaults,
     enableWebSearch,
     setSelectedProvider,
     setSelectedModel,
@@ -35,6 +36,7 @@ export default function SettingsPopover() {
     setOllamaBaseUrl,
     setWebhookUrl,
     setWordPressDefaults,
+    setNaverDefaults,
     setEnableWebSearch,
   } = useSettingsStore();
 
@@ -282,9 +284,63 @@ export default function SettingsPopover() {
         defaults={wordpressDefaults}
         setDefaults={setWordPressDefaults}
       />
+      <NaverDefaultsSection
+        defaults={naverDefaults}
+        setDefaults={setNaverDefaults}
+      />
 
       {/* 지식 베이스 */}
       <KnowledgeManager />
+    </div>
+  );
+}
+
+function NaverDefaultsSection({
+  defaults,
+  setDefaults,
+}: {
+  defaults: { webhook_url: string; blog_id: string; category: string; tags: string };
+  setDefaults: (defaults: Partial<{ webhook_url: string; blog_id: string; category: string; tags: string }>) => void;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-muted-foreground mb-2 block">
+        네이버 블로그 예약 기본값
+      </label>
+      <div className="grid gap-2">
+        <input
+          data-testid="settings-naver-webhook-url"
+          type="url"
+          value={defaults.webhook_url}
+          onChange={(e) => setDefaults({ webhook_url: e.target.value })}
+          placeholder="네이버 발행 웹훅 URL"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <input
+          data-testid="settings-naver-blog-id"
+          value={defaults.blog_id}
+          onChange={(e) => setDefaults({ blog_id: e.target.value })}
+          placeholder="블로그 ID"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <input
+          data-testid="settings-naver-category"
+          value={defaults.category}
+          onChange={(e) => setDefaults({ category: e.target.value })}
+          placeholder="카테고리"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <input
+          data-testid="settings-naver-tags"
+          value={defaults.tags}
+          onChange={(e) => setDefaults({ tags: e.target.value })}
+          placeholder="태그, 쉼표로 구분"
+          className="h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        예약 발행에서 반복 입력하는 네이버 옵션을 미리 채웁니다.
+      </p>
     </div>
   );
 }
