@@ -119,7 +119,8 @@ def _phase2_analyze(
 
 
 def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[str, Any],
-                    enable_web_research: bool = True, enable_deep_comments: bool = True) -> Dict[str, Any]:
+                    enable_web_research: bool = True, enable_deep_comments: bool = True,
+                    detail_level: str = 'standard', web_search: bool = False) -> Dict[str, Any]:
     """퓨전 파이프라인 실행: Phase 1(수집) → Phase 2(분석) → Phase 3(생성)
 
     Args:
@@ -161,6 +162,7 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     final_result = ai_service.create_content(
         content=fusion_context, model=model,
         style_prompt=combined_prompt, modifiers=modifiers, style_id=style_id,
+        detail_level=detail_level, web_search=web_search,
     )
     total_tokens = phase2_tokens + final_result.get('usage', {}).get('total_tokens', 0)
 

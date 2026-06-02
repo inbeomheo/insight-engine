@@ -209,13 +209,14 @@ export async function generateBatch(
   model: string,
   style: string,
   modifiers: GenerateRequest['modifiers'],
-  customPrompt?: string
+  customPrompt?: string,
+  options?: Pick<GenerateRequest, 'detail_level' | 'web_search' | 'agent_mode'>,
 ) {
   return request<{ results: Array<GenerateResponse & { url: string; success: boolean }> }>(
     '/generate-batch',
     {
       method: 'POST',
-      body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+      body: JSON.stringify({ urls, model, style, modifiers, customPrompt, ...options }),
     }
   );
 }
@@ -232,11 +233,12 @@ export async function generateMerged(
   model: string,
   style: string,
   modifiers: Modifiers,
-  customPrompt?: string
+  customPrompt?: string,
+  options?: Pick<GenerateRequest, 'detail_level' | 'web_search' | 'agent_mode'>,
 ): Promise<MergedGenerateResponse> {
   return request('/api/generate-merged', {
     method: 'POST',
-    body: JSON.stringify({ urls, model, style, modifiers, customPrompt }),
+    body: JSON.stringify({ urls, model, style, modifiers, customPrompt, ...options }),
   });
 }
 
@@ -293,6 +295,9 @@ export interface FusionRequest {
   modifiers?: Modifiers;
   enable_web_research?: boolean;
   enable_deep_comments?: boolean;
+  detail_level?: GenerateRequest['detail_level'];
+  web_search?: boolean;
+  agent_mode?: boolean;
 }
 
 export interface FusionResponse {

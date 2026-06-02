@@ -90,6 +90,18 @@
     "expect": "직접 텍스트 생성도 상세도, 웹 보강, 에이전트 설정을 /generate 요청에 포함한다"
   },
   {
+    "id": "merged-advanced-request-options",
+    "name": "통합 생성 고급 옵션 요청 반영",
+    "url": "http://localhost:3000",
+    "expect": "통합 생성도 상세도, 웹 보강, 에이전트 설정을 /api/generate-merged 요청에 포함한다"
+  },
+  {
+    "id": "fusion-advanced-request-options",
+    "name": "퓨전 생성 고급 옵션 요청 반영",
+    "url": "http://localhost:3000",
+    "expect": "퓨전 생성도 상세도, 웹 보강, 에이전트, 웹 리서치, 댓글 설정을 /api/generate-fusion 요청에 포함한다"
+  },
+  {
     "id": "text-dock-generate",
     "name": "텍스트 Generate Dock 생성",
     "url": "http://localhost:3000",

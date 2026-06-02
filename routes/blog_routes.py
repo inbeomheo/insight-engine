@@ -738,6 +738,7 @@ def generate_merged():
             merged_content, params['model'], style_prompt,
             return_prompt=True, modifiers=params['modifiers'],
             style_id=params['style'],
+            web_search=params.get('web_search', False),
             detail_level=params.get('detail_level'),
         )
 

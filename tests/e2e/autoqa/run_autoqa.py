@@ -724,6 +724,124 @@ def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_url_mode_advanced_request_suite(browser, report: QaReport) -> None:
+    captured: dict[str, list[dict[str, Any]]] = {"merged": [], "fusion": []}
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def body_json(route) -> dict[str, Any]:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        return data if isinstance(data, dict) else {}
+
+    def merged(route) -> None:
+        payload = body_json(route)
+        captured["merged"].append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "id": "qa-merged-advanced",
+                "title": "QA 통합 고급 옵션",
+                "content": "# QA 통합 고급 옵션",
+                "html": "<h1>QA 통합 고급 옵션</h1>",
+                "usage": {"total_tokens": 10},
+                "elapsed_time": 0.1,
+                "transcript_source": "qa",
+                "prompt": "qa merged",
+                "cached": False,
+                "comment_summary_included": False,
+                "source_videos": [],
+            }, ensure_ascii=False),
+        )
+
+    def fusion(route) -> None:
+        payload = body_json(route)
+        captured["fusion"].append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "title": "QA 퓨전 고급 옵션",
+                "content": "# QA 퓨전 고급 옵션",
+                "html": "<h1>QA 퓨전 고급 옵션</h1>",
+                "usage": {"total_tokens": 10},
+                "fusion_meta": {"processing_time": 0.1},
+                "sections": {},
+            }, ensure_ascii=False),
+        )
+
+    context.route("**/api/generate-merged", merged)
+    context.route("**/api/generate-fusion", fusion)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[url-advanced] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[url-advanced] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=wr4nCMUy1dk")
+        page.locator("#url-input").press("Enter")
+        page.locator("[data-testid='blueprint-detail-level']").get_by_text("심층").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-web-search']").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-agent-mode']").click(timeout=10_000)
+
+        page.get_by_text("통합").click(timeout=10_000)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+        merged_sent = wait_until(lambda: len(captured["merged"]) > 0, 10_000, page)
+        merged_payload = captured["merged"][-1] if captured["merged"] else {}
+        merged_ok = (
+            merged_sent
+            and merged_payload.get("detail_level") == "deep"
+            and merged_payload.get("web_search") is True
+            and merged_payload.get("agent_mode") is True
+        )
+        report.record(
+            "merged-advanced-request-options",
+            merged_ok,
+            f"payload={merged_payload}" if merged_ok else f"missing advanced options; payload={merged_payload}",
+        )
+
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=aaaaaaaaaaa")
+        page.locator("#url-input").press("Enter")
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=bbbbbbbbbbb")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+        page.get_by_text("퓨전").click(timeout=10_000)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+        fusion_sent = wait_until(lambda: len(captured["fusion"]) > 0, 10_000, page)
+        fusion_payload = captured["fusion"][-1] if captured["fusion"] else {}
+        fusion_ok = (
+            fusion_sent
+            and fusion_payload.get("detail_level") == "deep"
+            and fusion_payload.get("web_search") is True
+            and fusion_payload.get("agent_mode") is True
+            and fusion_payload.get("enable_web_research") is True
+            and fusion_payload.get("enable_deep_comments") is True
+        )
+        report.record(
+            "fusion-advanced-request-options",
+            fusion_ok,
+            f"payload={fusion_payload}" if fusion_ok else f"missing advanced options; payload={fusion_payload}",
+        )
+    except Exception as exc:
+        if not any(row["case"] == "merged-advanced-request-options" for row in report.rows):
+            report.record("merged-advanced-request-options", False, repr(exc))
+        if not any(row["case"] == "fusion-advanced-request-options" for row in report.rows):
+            report.record("fusion-advanced-request-options", False, repr(exc))
+    finally:
+        context.close()
+
+
 def close_dialogs(page) -> None:
     page.keyboard.press("Escape")
     page.wait_for_timeout(250)
@@ -1338,6 +1456,7 @@ def main() -> int:
         run_seeded_menu_action_suite(browser, report)
         run_notebooklm_auth_notice_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
+        run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
 

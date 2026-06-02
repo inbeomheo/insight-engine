@@ -21,6 +21,8 @@ def generate_fusion():
     modifiers = data.get('modifiers', {})
     enable_web_research = data.get('enable_web_research', True)
     enable_deep_comments = data.get('enable_deep_comments', True)
+    detail_level = data.get('detail_level', 'standard')
+    web_search = bool(data.get('web_search', False))
 
     if not urls or len(urls) < 2:
         return jsonify({'error': '[입력 오류] 퓨전 분석은 최소 2개 URL이 필요합니다'}), 400
@@ -37,7 +39,9 @@ def generate_fusion():
             model=model,
             modifiers=modifiers,
             enable_web_research=enable_web_research,
-            enable_deep_comments=enable_deep_comments
+            enable_deep_comments=enable_deep_comments,
+            detail_level=detail_level,
+            web_search=web_search,
         )
 
         return jsonify(result)

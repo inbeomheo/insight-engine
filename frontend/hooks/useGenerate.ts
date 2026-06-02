@@ -30,7 +30,16 @@ export function useGenerate() {
   });
   const abortRef = useRef<AbortController | null>(null);
   const rafRef = useRef(false);
-  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore();
+  const {
+    selectedModel,
+    selectedStyle,
+    modifiers,
+    enableWebSearch,
+    enableWebResearch,
+    enableDeepComments,
+    enableAgentMode,
+    detailLevel,
+  } = useSettingsStore();
   const { addReport, updateReport } = useResultStore();
 
   const generateSingle = useCallback(
@@ -131,7 +140,11 @@ export function useGenerate() {
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers);
+        const res = await generateBatch(urls, selectedModel, selectedStyle, modifiers, undefined, {
+          detail_level: detailLevel,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
+        });
         let ts = Date.now();
         const failedUrls: string[] = [];
 
@@ -161,7 +174,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport, generateSingle]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport, generateSingle]
   );
 
   const generateMergedUrls = useCallback(
@@ -178,7 +191,11 @@ export function useGenerate() {
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers);
+        const res = await generateMerged(urls, selectedModel, selectedStyle, modifiers, undefined, {
+          detail_level: detailLevel,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
+        });
         const report = responseToReport(res, urls[0], selectedStyle, {
           id: res.id || crypto.randomUUID(),
           youtube_title: res.source_videos?.[0]?.title || '',
@@ -195,7 +212,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport]
   );
 
   const generateFusionUrls = useCallback(
@@ -212,7 +229,6 @@ export function useGenerate() {
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       try {
-        const { enableWebResearch, enableDeepComments } = useSettingsStore.getState();
         const result = await generateFusion({
           urls,
           style: selectedStyle,
@@ -220,6 +236,9 @@ export function useGenerate() {
           modifiers,
           enable_web_research: enableWebResearch,
           enable_deep_comments: enableDeepComments,
+          detail_level: detailLevel,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
         });
 
         const report = createReport({
@@ -243,7 +262,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableWebResearch, enableDeepComments, enableAgentMode, addReport]
   );
 
   const generateFromText = useCallback(
