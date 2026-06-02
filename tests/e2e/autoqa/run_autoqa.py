@@ -354,6 +354,37 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
         context.route(f"**/api/export/{fmt}", handler)
 
 
+def install_upload_generate_mock(context, calls: list[dict[str, Any]]):
+    def upload_generate(route) -> None:
+        request = route.request
+        content_type = request.headers.get("content-type", "")
+        if request.method != "POST" or "multipart/form-data" not in content_type:
+            route.continue_()
+            return
+
+        body = request.post_data_buffer or b""
+        source_kind = "audio" if b"qa-voice.webm" in body else "file"
+        calls.append({"kind": source_kind, "content_type": content_type})
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "title": f"QA {source_kind} upload",
+                "content": f"# QA {source_kind} upload\n\nGenerated from uploaded source.",
+                "html": f"<h1>QA {source_kind} upload</h1><p>Generated from uploaded source.</p>",
+                "usage": {"total_tokens": 42},
+                "elapsed_time": 0.2,
+                "transcript_source": f"{source_kind}_upload",
+                "prompt": "upload qa",
+                "cached": False,
+                "comment_summary_included": False,
+            }),
+        )
+
+    context.route("**/generate", upload_generate)
+    return upload_generate
+
+
 def seed_menu_context(context) -> None:
     report = menu_report_fixture()
     context.add_init_script(
@@ -646,6 +677,38 @@ def main() -> int:
             report.write()
             browser.close()
             return report.failures
+
+        for case_id, tab_test_id, panel_test_id, filename, content in [
+            ("source-file-generate", "source-tab-file", "file-source-panel", "qa-upload.docx", b"qa docx upload"),
+            ("source-voice-generate", "source-tab-voice", "voice-source-panel", "qa-voice.webm", b"qa audio upload"),
+        ]:
+            upload_calls: list[dict[str, Any]] = []
+            upload_handler = install_upload_generate_mock(context, upload_calls)
+            source_path = ARTIFACTS / filename
+            source_path.write_bytes(content)
+            try:
+                page.locator(f"[data-testid='{tab_test_id}']").click(timeout=10_000)
+                page.locator(f"[data-testid='{panel_test_id}']").wait_for(state="visible", timeout=10_000)
+                file_input = page.locator(f"[data-testid='{panel_test_id}'] input[type='file']").first
+                file_input.set_input_files(str(source_path))
+                page.get_by_text(filename).wait_for(state="visible", timeout=10_000)
+                dock_button = page.locator("[data-testid='generate-dock-button']")
+                if not dock_button.is_enabled():
+                    raise AssertionError("Generate Dock button should be enabled after upload")
+                before = len(upload_calls)
+                dock_button.click(timeout=10_000)
+                ok_call = wait_until(lambda: len(upload_calls) > before, 10_000, page)
+                page.locator("[data-report-id]").first.wait_for(state="visible", timeout=30_000)
+                png = screenshot(page, f"{case_id}.png")
+                report.record(case_id, ok_call, png if ok_call else f"upload calls={upload_calls}")
+            except Exception as exc:
+                fail_png = screenshot(page, f"{case_id}-fail.png")
+                report.record(case_id, False, f"{repr(exc)}; screenshot={fail_png}")
+            finally:
+                context.unroute("**/generate", upload_handler)
+                page.evaluate("localStorage.removeItem('insight-engine-reports')")
+                page.reload(wait_until="domcontentloaded", timeout=60_000)
+                page.locator("#url-input").wait_for(state="visible", timeout=60_000)
 
         try:
             open_generation_settings(page)

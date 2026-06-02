@@ -15,7 +15,7 @@ import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
 import StudioShell from '@/components/studio/StudioShell';
 import StudioHero from '@/components/studio/StudioHero';
-import SourceComposer from '@/components/studio/SourceComposer';
+import SourceComposer, { type SourceComposerSnapshot } from '@/components/studio/SourceComposer';
 import OutputBlueprint from '@/components/studio/OutputBlueprint';
 import GenerateDock from '@/components/studio/GenerateDock';
 import StudioRightPanel from '@/components/studio/StudioRightPanel';
@@ -64,12 +64,14 @@ export default function Home() {
 
   const generationMode = useSettingsStore((s) => s.generationMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
-  const { isLoading, error, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+  const { isLoading, error, generateFromText, generateFromFile, generateFromAudio, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
-  const [sourceDraft, setSourceDraft] = useState<{ mode: 'url' | 'text'; text: string; textValid: boolean }>({
+  const [sourceDraft, setSourceDraft] = useState<SourceComposerSnapshot>({
     mode: 'url',
     text: '',
     textValid: false,
+    file: null,
+    audioFile: null,
   });
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
@@ -220,14 +222,22 @@ export default function Home() {
   }, [urls, generateBatchUrls, removeUrl]);
 
   const handleGenerateStudio = useCallback(async () => {
-    if (urls.length > 0) {
+    if (sourceDraft.mode === 'url' && urls.length > 0) {
       await handleGenerate();
       return;
     }
-    if (sourceDraft.textValid) {
+    if (sourceDraft.mode === 'text' && sourceDraft.textValid) {
       await generateFromText(sourceDraft.text);
+      return;
     }
-  }, [urls.length, handleGenerate, sourceDraft.text, sourceDraft.textValid, generateFromText]);
+    if (sourceDraft.mode === 'file' && sourceDraft.file) {
+      await generateFromFile(sourceDraft.file);
+      return;
+    }
+    if (sourceDraft.mode === 'voice' && sourceDraft.audioFile) {
+      await generateFromAudio(sourceDraft.audioFile);
+    }
+  }, [urls.length, handleGenerate, sourceDraft, generateFromText, generateFromFile, generateFromAudio]);
 
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
   const handleGenerateMerged = useCallback(async () => {
@@ -245,8 +255,15 @@ export default function Home() {
     if (ok) startTransition(() => submitted.forEach(removeUrl));
   }, [urls, generateFusionUrls, removeUrl]);
 
-  const studioSourceCount = urls.length > 0 ? urls.length : sourceDraft.textValid ? 1 : 0;
-  const studioGenerationMode = urls.length > 0 ? generationMode : 'individual';
+  const studioSourceCount =
+    sourceDraft.mode === 'url'
+      ? urls.length
+      : sourceDraft.mode === 'text'
+        ? (sourceDraft.textValid ? 1 : 0)
+        : sourceDraft.mode === 'file'
+          ? (sourceDraft.file ? 1 : 0)
+          : (sourceDraft.audioFile ? 1 : 0);
+  const studioGenerationMode = sourceDraft.mode === 'url' ? generationMode : 'individual';
 
   return (
     <>
@@ -296,6 +313,8 @@ export default function Home() {
                     isLoading={isLoading}
                     onGenerateUrl={handleGenerate}
                     onGenerateText={generateFromText}
+                    onGenerateFile={generateFromFile}
+                    onGenerateAudio={generateFromAudio}
                     onStateChange={setSourceDraft}
                   />
                   <SettingsPopover />

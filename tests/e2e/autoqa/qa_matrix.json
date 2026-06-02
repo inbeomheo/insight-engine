@@ -12,6 +12,18 @@
     "expect": "studio shell and composer visible"
   },
   {
+    "id": "source-file-generate",
+    "name": "Source file generate",
+    "url": "http://localhost:3000",
+    "expect": "file tab accepts upload and Generate Dock creates a result"
+  },
+  {
+    "id": "source-voice-generate",
+    "name": "Source voice generate",
+    "url": "http://localhost:3000",
+    "expect": "voice tab accepts audio upload and Generate Dock creates a result"
+  },
+  {
     "id": "chatmock-server",
     "name": "ChatMock OpenAI 호환 서버",
     "url": "http://127.0.0.1:8000/v1/models",

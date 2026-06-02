@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
+import {
+  generate,
+  generateStream,
+  generateBatch,
+  generateMerged,
+  generateFusion,
+  generateFromFile as apiGenerateFromFile,
+  generateFromAudio as apiGenerateFromAudio,
+} from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
 import { toast } from 'sonner';
@@ -239,10 +247,10 @@ export function useGenerate() {
   );
 
   const generateFromText = useCallback(
-    async (text: string) => {
+    async (text: string): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
@@ -258,12 +266,70 @@ export function useGenerate() {
         const report = responseToReport(res, '', selectedStyle);
         addReport(report);
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
         setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, addReport],
+  );
+
+  const generateFromFile = useCallback(
+    async (file: File): Promise<boolean> => {
+      if (!selectedModel) {
+        setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
+        return false;
+      }
+
+      setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
+
+      try {
+        const res = await apiGenerateFromFile(file, {
+          model: selectedModel,
+          style: selectedStyle,
+          modifiers,
+          detail_level: detailLevel,
+        });
+        addReport(responseToReport(res, `file:${file.name}`, selectedStyle));
+        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '파일 생성 실패';
+        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        return false;
+      }
+    },
+    [selectedModel, selectedStyle, modifiers, detailLevel, addReport],
+  );
+
+  const generateFromAudio = useCallback(
+    async (file: File): Promise<boolean> => {
+      if (!selectedModel) {
+        setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
+        return false;
+      }
+
+      setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
+
+      try {
+        const res = await apiGenerateFromAudio(file, {
+          model: selectedModel,
+          style: selectedStyle,
+          modifiers,
+          detail_level: detailLevel,
+        });
+        addReport(responseToReport(res, `audio:${file.name}`, selectedStyle));
+        setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '음성 생성 실패';
+        setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        return false;
+      }
+    },
+    [selectedModel, selectedStyle, modifiers, detailLevel, addReport],
   );
 
   const abort = useCallback(() => {
@@ -271,5 +337,5 @@ export function useGenerate() {
     setState((s) => ({ ...s, activeCount: 0, isLoading: false }));
   }, []);
 
-  return { ...state, generateSingle, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls, abort };
+  return { ...state, generateSingle, generateFromText, generateFromFile, generateFromAudio, generateBatchUrls, generateMergedUrls, generateFusionUrls, abort };
 }
