@@ -309,10 +309,16 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
           ))}
         </div>
       </section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <button
+        type="button"
+        data-testid="right-panel-schedule-card"
+        className="rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40"
+        onClick={() => setActiveView('calendar')}
+      >
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><CalendarDays className="h-4 w-4 text-indigo-600" /> 예약</div>
         <p className="mt-2 text-xs text-slate-500">예약된 발행 {schedulesCount}개</p>
-      </section>
+        <p className="mt-2 text-[11px] font-medium text-indigo-600">캘린더로 이동</p>
+      </button>
     </div>
   );
 }

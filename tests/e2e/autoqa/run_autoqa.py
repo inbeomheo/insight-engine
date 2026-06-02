@@ -562,6 +562,20 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         except Exception as exc:
             report.record("right-panel-recent-result-focus", False, repr(exc))
 
+        try:
+            panel.locator("[data-testid='right-panel-schedule-card']").click(timeout=10_000)
+            schedule_card_calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
+            if not schedule_card_calendar_visible:
+                page.locator("[data-testid='content-calendar']").wait_for(state="visible", timeout=10_000)
+                schedule_card_calendar_visible = True
+            report.record(
+                "right-panel-schedule-card",
+                schedule_card_calendar_visible,
+                screenshot(page, "right-panel-schedule-card.png") if schedule_card_calendar_visible else "calendar not opened",
+            )
+        except Exception as exc:
+            report.record("right-panel-schedule-card", False, repr(exc))
+
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
         calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
         if not calendar_visible:
@@ -577,6 +591,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         report.record("right-panel-export-all", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-rewrite-action", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-recent-result-focus", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-schedule-card", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
