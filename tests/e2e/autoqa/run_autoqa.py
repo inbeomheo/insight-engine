@@ -424,6 +424,47 @@ def seed_right_panel_context(context) -> None:
     )
 
 
+def run_notebooklm_auth_notice_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1100}, accept_downloads=True)
+    context.route(
+        "**/api/notebooklm/auth-check",
+        lambda route: route.fulfill(
+            status=401,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "valid": False,
+                    "message": "NotebookLM 인증이 필요합니다. 터미널에서 nlm login을 실행해주세요.",
+                },
+                ensure_ascii=False,
+            ),
+        ),
+    )
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[nlm-auth] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[nlm-auth] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id='qa-menu-report']").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='workbench-action-nlm-study-guide']").click(timeout=10_000)
+        notice = page.locator("[data-testid='workbench-nlm-auth-notice']")
+        notice.wait_for(state="visible", timeout=10_000)
+        notice_text = notice.inner_text(timeout=5_000)
+        ok = "nlm login" in notice_text and "NotebookLM" in notice_text
+        report.record(
+            "workbench-nlm-auth-notice",
+            ok,
+            screenshot(page, "workbench-nlm-auth-notice.png") if ok else notice_text[:300],
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "workbench-nlm-auth-notice-fail.png")
+        report.record("workbench-nlm-auth-notice", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_right_panel_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": []})))
@@ -1080,6 +1121,7 @@ def main() -> int:
             report.record("export-buttons", False, repr(exc))
 
         run_seeded_menu_action_suite(browser, report)
+        run_notebooklm_auth_notice_suite(browser, report)
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
 

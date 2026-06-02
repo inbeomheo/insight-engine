@@ -33,7 +33,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
-          <p className="text-xs text-indigo-900/60">브라우저 보기는 화면에서 읽기용으로 열고, 원본 저장은 NotebookLM이 만든 .md/.pdf/.mp3 파일을 그대로 받습니다.</p>
+          <p className="text-xs text-indigo-900/60">브라우저 보기는 화면에서 읽기용으로 열고, HTML 저장은 Markdown 산출물을 웹 문서로 저장합니다. PDF/MP3/MP4는 원본 형식 그대로 받습니다.</p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
           <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-emerald-700"><CheckCircle2 className="h-3 w-3" />완료 {completed}</span>

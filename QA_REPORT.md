@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 04:28:50
+- Generated: 2026-06-03 04:39:31
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -33,6 +33,7 @@
 | result-workbench-read-actions | Result Workbench 읽기 액션 | 읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다 |
 | result-workbench-preview-actions | Result Workbench 미리보기 액션 | 읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다 |
 | result-workbench-nlm-all | Result Workbench 전체 NLM 산출물 | 팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다 |
+| workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
@@ -105,6 +106,7 @@
 | menu-action:예약-발행 | PASS | tests/e2e/autoqa/artifacts/menu-schedule.png |
 | menu-action:공유 | PASS | clipboard_len=197 |
 | menu-action:삭제 | PASS | card_removed=True |
+| workbench-nlm-auth-notice | PASS | tests/e2e/autoqa/artifacts/workbench-nlm-auth-notice.png |
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
 | right-panel-nlm | PASS | nlm_count=3 |
 | right-panel-action-guidance | PASS | tests/e2e/autoqa/artifacts/right-panel-action-guidance.png |
@@ -113,6 +115,7 @@
 
 ## Browser Console Errors
 
+- `[nlm-auth] Failed to load resource: the server responded with a status of 401 (Unauthorized)`
 - `[right-panel] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
 
 - A server/client branch `if (typeof window !== 'undefined')`.

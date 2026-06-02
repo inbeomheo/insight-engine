@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, Headphones, ListChecks, RefreshCw,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, Headphones, ListChecks, RefreshCw, AlertTriangle,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -96,6 +96,7 @@ interface PanelState {
   hasExpanded: boolean;
   copiedField: string | null;
   readPreviewMode: 'rendered' | 'markdown' | 'html' | 'timeline';
+  notebookLmAuthNotice: string | null;
   chatOpen: boolean;
   showTranscript: boolean;
   audioBlob: Blob | null;
@@ -113,6 +114,7 @@ type PanelAction =
 const panelInitial: PanelState = {
   collapsed: false, hasExpanded: true, copiedField: null,
   readPreviewMode: 'rendered',
+  notebookLmAuthNotice: null,
   chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
   rewriteOpen: false,
@@ -131,7 +133,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, readPreviewMode, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -241,7 +243,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   }
 
   async function handleNotebookLm(contentType: string) {
-    dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
+    dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false, notebookLmAuthNotice: null } });
 
     const currentArtifacts = () => (
       useResultStore
@@ -272,7 +274,9 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     const auth = await notebookLmAuthCheck().catch(() => null);
     if (!auth?.valid) {
       removePendingArtifact();
-      toast.error('NotebookLM 인증이 필요합니다. 터미널에서 nlm login을 실행해주세요.');
+      const message = auth?.message || 'NotebookLM 인증이 필요합니다. 터미널에서 nlm login을 실행해주세요.';
+      setPanel('notebookLmAuthNotice', message);
+      toast.error(message);
       return;
     }
 
@@ -874,6 +878,20 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
           <section data-testid="workbench-section-nlm" className={workbenchSectionClass}>
             <p className="mb-2 text-xs font-semibold text-slate-500">NLM 산출물</p>
+            {notebookLmAuthNotice && (
+              <div
+                data-testid="workbench-nlm-auth-notice"
+                className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">NotebookLM 인증이 필요합니다</p>
+                    <p className="mt-1">{notebookLmAuthNotice}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <Button data-testid="workbench-action-nlm-audio" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('audio')}>
                 <Headphones className="h-3.5 w-3.5 text-indigo-600" />팟캐스트
