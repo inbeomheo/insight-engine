@@ -512,7 +512,22 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         "status": "pending",
         "created_at": today.isoformat(),
     }
-    context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": [seeded_schedule]}, ensure_ascii=False)))
+    seeded_naver_schedule = {
+        "id": "qa-calendar-naver",
+        "title": "캘린더 네이버 예약",
+        "content": "네이버 예약 캘린더 옵션 검증",
+        "target_plugin": "naver_blog",
+        "plugin_options": {
+            "webhook_url": "https://qa-webhook-secret.example.com/naver",
+            "blog_id": "qa-naver",
+            "category": "AI 자동화",
+            "tags": "ai,자동화",
+        },
+        "scheduled_at": today.replace(hour=10, minute=30, second=0, microsecond=0).isoformat(),
+        "status": "pending",
+        "created_at": today.isoformat(),
+    }
+    context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": [seeded_schedule, seeded_naver_schedule]}, ensure_ascii=False)))
     seed_right_panel_context(context)
     page = context.new_page()
     page.on("console", lambda msg: report.console_errors.append(f"[right-panel] {msg.text}") if msg.type == "error" else None)
@@ -642,15 +657,26 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         try:
             page.locator(f"button[aria-label='{today_key} 날짜 선택']").click(timeout=10_000)
             calendar_text = page.locator("[data-testid='content-calendar']").inner_text(timeout=10_000)
-            label_ok = "WordPress" in calendar_text and "wordpress" not in calendar_text
-            secret_ok = "qa-secret" not in calendar_text and "app_password" not in calendar_text
+            label_ok = "WordPress" in calendar_text and "네이버 블로그" in calendar_text and "wordpress" not in calendar_text and "naver_blog" not in calendar_text
+            secret_ok = "qa-secret" not in calendar_text and "app_password" not in calendar_text and "qa-webhook-secret" not in calendar_text and "webhook_url" not in calendar_text
             report.record(
                 "calendar-plugin-labels",
                 label_ok and secret_ok,
                 screenshot(page, "calendar-plugin-labels.png") if label_ok and secret_ok else calendar_text[:500],
             )
+            naver_summary_ok = (
+                "블로그 qa-naver" in calendar_text
+                and "카테고리 AI 자동화" in calendar_text
+                and "#ai #자동화" in calendar_text
+            )
+            report.record(
+                "calendar-naver-safe-options",
+                naver_summary_ok and secret_ok,
+                screenshot(page, "calendar-naver-safe-options.png") if naver_summary_ok and secret_ok else calendar_text[:500],
+            )
         except Exception as exc:
             report.record("calendar-plugin-labels", False, repr(exc))
+            report.record("calendar-naver-safe-options", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")

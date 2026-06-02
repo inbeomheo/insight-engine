@@ -252,6 +252,12 @@
     "expect": "예약 캘린더가 내부 플러그인 ID 대신 사용자용 플랫폼명과 안전한 옵션 요약을 표시하고 비밀값은 노출하지 않는다"
   },
   {
+    "id": "calendar-naver-safe-options",
+    "name": "캘린더 네이버 안전 옵션",
+    "url": "http://localhost:3000",
+    "expect": "네이버 예약은 블로그 ID, 카테고리, 태그를 읽기 좋게 표시하고 웹훅 URL은 숨긴다"
+  },
+  {
     "id": "menu-schedule-naver-defaults",
     "name": "네이버 예약 기본값",
     "url": "http://localhost:3000",

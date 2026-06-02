@@ -71,16 +71,35 @@ function pluginLabel(pluginId: string) {
   return PLUGIN_LABELS[pluginId] ?? pluginId;
 }
 
+function formatTagSummary(value: unknown) {
+  const rawTags = Array.isArray(value)
+    ? value.filter((tag): tag is string => typeof tag === 'string')
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+
+  return rawTags
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((tag) => (tag.startsWith('#') ? tag : `#${tag}`))
+    .join(' ');
+}
+
 function pluginOptionSummary(post: ScheduledPost) {
   const options = post.plugin_options ?? {};
   const parts: string[] = [];
   const status = typeof options.status === 'string' ? options.status : '';
   const siteUrl = typeof options.site_url === 'string' ? options.site_url : '';
   const blogId = typeof options.blog_id === 'string' ? options.blog_id : '';
+  const category = typeof options.category === 'string' ? options.category : '';
+  const tags = formatTagSummary(options.tags);
 
   if (status) parts.push(PUBLISH_STATUS_LABELS[status] ?? status);
   if (siteUrl) parts.push(siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''));
   if (blogId) parts.push(`블로그 ${blogId}`);
+  if (category) parts.push(`카테고리 ${category}`);
+  if (tags) parts.push(tags);
 
   return parts.join(' · ');
 }
