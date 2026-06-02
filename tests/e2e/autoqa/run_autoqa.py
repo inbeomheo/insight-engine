@@ -923,6 +923,16 @@ def main() -> int:
             ok = page.locator("[data-report-id]").count() > 0 and not alert_text
             report.record("direct-text-generate", ok, gen_png if ok else f"alert={alert_text}; screenshot={gen_png}")
             report.record("text-dock-generate", ok, gen_png if ok else f"alert={alert_text}; screenshot={gen_png}")
+            toolbar = page.locator("[data-testid='studio-result-toolbar']").first
+            toolbar_visible = toolbar.count() > 0 and toolbar.is_visible()
+            toolbar_text = toolbar.inner_text(timeout=10_000) if toolbar_visible else ""
+            toolbar_required = ["Result Workbench", "전체 결과", "표시 중", "필터"]
+            toolbar_missing = [label for label in toolbar_required if label not in toolbar_text]
+            report.record(
+                "studio-result-toolbar",
+                toolbar_visible and not toolbar_missing,
+                screenshot(page, "studio-result-toolbar.png") if toolbar_visible and not toolbar_missing else f"missing={toolbar_missing}; text={toolbar_text[:300]!r}",
+            )
             workbench = page.locator("[data-testid='result-workbench']").first
             workbench_visible = workbench.count() > 0 and workbench.is_visible()
             report.record("result-workbench", workbench_visible, screenshot(page, "result-workbench.png") if workbench_visible else "workbench panel missing")

@@ -9,8 +9,6 @@ import Sidebar from '@/components/layout/Sidebar';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
-import ViewModeSelector from '@/components/result/ViewModeSelector';
-import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
 import StudioShell from '@/components/studio/StudioShell';
@@ -19,6 +17,7 @@ import SourceComposer, { type SourceComposerSnapshot } from '@/components/studio
 import OutputBlueprint from '@/components/studio/OutputBlueprint';
 import GenerateDock from '@/components/studio/GenerateDock';
 import StudioRightPanel from '@/components/studio/StudioRightPanel';
+import StudioResultToolbar from '@/components/studio/StudioResultToolbar';
 
 // Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
 const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
@@ -335,10 +334,13 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60">
-                  <FilterBar />
-                  {reports.length > 0 && <ViewModeSelector mode={viewMode} onChange={handleViewModeChange} />}
-                </div>
+                <StudioResultToolbar
+                  totalCount={reports.length}
+                  filteredCount={deferredFiltered.length}
+                  visibleCount={visibleCount}
+                  viewMode={viewMode}
+                  onViewModeChange={handleViewModeChange}
+                />
 
                 <div className="space-y-4">
                   {isLoading && generationMode === 'fusion' && <FusionProgress isLoading={isLoading} isFusion={true} />}

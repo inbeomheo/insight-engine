@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 03:17:00
+- Generated: 2026-06-03 03:26:21
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -25,6 +25,7 @@
 | direct-text-generate | 직접 텍스트 생성 | 생성 결과가 보인다 |
 | text-dock-generate | 텍스트 Generate Dock 생성 | Generate Dock이 직접 텍스트 소스를 처리한다 |
 | result-workbench | Result Workbench 패널 | 생성 결과에 빠른 workbench 액션이 보인다 |
+| studio-result-toolbar | 스튜디오 결과 툴바 | 결과 영역이 결과 수, 필터, 보기 모드, 현재 표시 수를 스튜디오 톤으로 요약한다 |
 | result-workbench-copy-readable | Result Workbench 카피 | Result Workbench 빠른 액션이 읽히는 한국어이고 물음표 placeholder가 없다 |
 | result-workbench-sections | Result Workbench 섹션형 액션 허브 | 읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
@@ -61,6 +62,7 @@
 | youtube-url-validation | PASS | tests/e2e/autoqa/artifacts/youtube-url-validation.png |
 | direct-text-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
 | text-dock-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
+| studio-result-toolbar | PASS | tests/e2e/autoqa/artifacts/studio-result-toolbar.png |
 | result-workbench | PASS | tests/e2e/autoqa/artifacts/result-workbench.png |
 | result-workbench-copy-readable | PASS | tests/e2e/autoqa/artifacts/result-workbench-copy-readable.png |
 | result-workbench-sections | PASS | tests/e2e/autoqa/artifacts/result-workbench-sections.png |

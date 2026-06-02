@@ -90,6 +90,12 @@
     "expect": "생성 결과에 빠른 workbench 액션이 보인다"
   },
   {
+    "id": "studio-result-toolbar",
+    "name": "스튜디오 결과 툴바",
+    "url": "http://localhost:3000",
+    "expect": "결과 영역이 결과 수, 필터, 보기 모드, 현재 표시 수를 스튜디오 톤으로 요약한다"
+  },
+  {
     "id": "result-workbench-copy-readable",
     "name": "Result Workbench 카피",
     "url": "http://localhost:3000",
