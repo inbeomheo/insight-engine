@@ -217,6 +217,11 @@ def menu_report_fixture() -> dict[str, Any]:
         "transcript_source": "qa_seed",
         "cached": False,
         "comment_summary_included": False,
+        "notebooklm": {
+            "artifacts": [
+                {"artifact_id": "qa-study-guide", "content_type": "study_guide", "status": "completed"},
+            ],
+        },
         "time": "방금 전",
         "createdAt": int(time.time() * 1000),
         "transcript": "00:00 소개. 00:30 핵심 요약. 01:00 실행 항목.",
@@ -537,6 +542,13 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     try:
         page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
         page.locator("[data-report-id='qa-menu-report']").wait_for(state="visible", timeout=60_000)
+        nlm_text = page.locator("[data-testid='notebooklm-artifact']").first.inner_text(timeout=10_000)
+        nlm_labels_ok = "브라우저 보기" in nlm_text and "원본 MD 저장" in nlm_text
+        report.record(
+            "notebooklm-view-download-labels",
+            nlm_labels_ok,
+            screenshot(page, "notebooklm-view-download-labels.png") if nlm_labels_ok else nlm_text[:300],
+        )
         menu = open_action_menu(page)
         visible_labels = [line.strip() for line in menu.inner_text(timeout=5_000).splitlines() if line.strip()]
         missing = [label for label in MENU_EXPECTED_LABELS if label not in visible_labels]
@@ -773,6 +785,20 @@ def main() -> int:
                 "studio-copy-polish",
                 not missing_copy,
                 screenshot(page, "studio-copy-polish.png") if not missing_copy else f"missing={missing_copy}",
+            )
+            advanced_controls = [
+                "blueprint-web-search",
+                "blueprint-web-research",
+                "blueprint-deep-comments",
+                "blueprint-agent-mode",
+                "blueprint-detail-level",
+                "blueprint-model-summary",
+            ]
+            missing_controls = [test_id for test_id in advanced_controls if page.locator(f"[data-testid='{test_id}']").count() == 0]
+            report.record(
+                "output-blueprint-advanced",
+                not missing_controls,
+                screenshot(page, "output-blueprint-advanced.png") if not missing_controls else f"missing={missing_controls}",
             )
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")

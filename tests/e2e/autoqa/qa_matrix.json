@@ -18,6 +18,12 @@
     "expect": "core studio labels and empty states show readable Korean copy"
   },
   {
+    "id": "output-blueprint-advanced",
+    "name": "Output blueprint advanced controls",
+    "url": "http://localhost:3000",
+    "expect": "advanced blueprint controls expose web search, research, comments, detail level, agent, and model summary"
+  },
+  {
     "id": "header-status-summary",
     "name": "Header status summary",
     "url": "http://localhost:3000",
@@ -82,6 +88,12 @@
     "name": "Right panel NLM artifacts",
     "url": "http://localhost:3000",
     "expect": "right panel summarizes recent NotebookLM artifacts by status"
+  },
+  {
+    "id": "notebooklm-view-download-labels",
+    "name": "NotebookLM view vs original save labels",
+    "url": "http://localhost:3000",
+    "expect": "completed NotebookLM artifacts clearly separate browser viewing from original markdown download"
   },
   {
     "id": "right-panel-quick-actions",
