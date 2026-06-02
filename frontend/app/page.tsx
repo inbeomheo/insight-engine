@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Youtube, Layers, X } from 'lucide-react';
+import { Layers, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -18,6 +18,7 @@ import OutputBlueprint from '@/components/studio/OutputBlueprint';
 import GenerateDock from '@/components/studio/GenerateDock';
 import StudioRightPanel from '@/components/studio/StudioRightPanel';
 import StudioResultToolbar from '@/components/studio/StudioResultToolbar';
+import WorkbenchEmptyState from '@/components/studio/WorkbenchEmptyState';
 
 // Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
 const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
@@ -201,6 +202,14 @@ export default function Home() {
     [addUrl],
   );
 
+  const handleFocusSourceComposer = useCallback(() => {
+    const target = document.querySelector('#url-input');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (target instanceof HTMLInputElement) {
+      setTimeout(() => target.focus(), 250);
+    }
+  }, []);
+
   // 프로바이더 로드
   useProviders();
 
@@ -272,7 +281,7 @@ export default function Home() {
       {isDragOver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/50 pointer-events-none animate-fade-in shadow-inner">
           <div className="flex flex-col items-center gap-3 text-primary">
-            <Youtube className="h-12 w-12 opacity-60 animate-bounce" />
+            <Layers className="h-12 w-12 opacity-60 animate-bounce" />
             <p className="text-lg font-medium">{t('urlInput.dragDrop')}</p>
           </div>
         </div>
@@ -380,11 +389,7 @@ export default function Home() {
                   )}
 
                   {!isLoading && reports.length === 0 && (
-                    <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/60 p-10 text-center">
-                      <Youtube className="mx-auto mb-4 h-10 w-10 text-indigo-300" />
-                      <h3 className="text-lg font-semibold">아직 결과가 없습니다</h3>
-                      <p className="mt-2 text-sm text-slate-500">소스를 추가하고 콘텐츠를 생성하면 여기에 작업 카드가 표시됩니다.</p>
-                    </div>
+                    <WorkbenchEmptyState onFocusSource={handleFocusSourceComposer} />
                   )}
                 </div>
 

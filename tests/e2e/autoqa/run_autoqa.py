@@ -786,6 +786,16 @@ def main() -> int:
                 not missing_copy,
                 screenshot(page, "studio-copy-polish.png") if not missing_copy else f"missing={missing_copy}",
             )
+            empty_state = page.locator("[data-testid='studio-empty-state']").first
+            empty_visible = empty_state.count() > 0 and empty_state.is_visible()
+            empty_text = empty_state.inner_text(timeout=10_000) if empty_visible else ""
+            empty_required = ["1. 소스 입력", "2. 산출물 설계", "3. Generate Dock", "4. Result Workbench"]
+            empty_missing = [label for label in empty_required if label not in empty_text]
+            report.record(
+                "studio-empty-state-guidance",
+                empty_visible and not empty_missing,
+                screenshot(page, "studio-empty-state-guidance.png") if empty_visible and not empty_missing else f"missing={empty_missing}; text={empty_text[:300]!r}",
+            )
             readable_copy = [
                 "분석할 소스를 준비하세요",
                 "텍스트",
