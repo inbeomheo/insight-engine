@@ -286,6 +286,11 @@
     "expect": "설정 패널이 보인다"
   },
   {
+    "id": "settings-popover-scroll",
+    "name": "설정 패널 스크롤",
+    "expect": "설정 항목이 많아도 패널이 화면 밖으로 잘리지 않고 내부 스크롤로 접근 가능하다"
+  },
+  {
     "id": "history-panel",
     "name": "히스토리 패널",
     "expect": "히스토리 빈 상태 또는 목록이 보인다"

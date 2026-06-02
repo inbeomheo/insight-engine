@@ -1442,10 +1442,32 @@ def main() -> int:
         try:
             open_generation_settings(page)
             settings_png = screenshot(page, "settings-open.png")
-            dialog_text = page.locator("[role='dialog']").inner_text(timeout=5_000)
+            dialog = page.locator("[role='dialog']")
+            dialog_text = dialog.inner_text(timeout=5_000)
             ok = "ChatMock" in dialog_text or "GPT-5.5" in dialog_text or "5.5" in dialog_text
             report.record("settings-open", True, settings_png)
             report.record("provider-chatmock", ok, "settings popover contains ChatMock/GPT-5.5" if ok else dialog_text[:300])
+            metrics = dialog.evaluate(
+                """el => {
+                    const rect = el.getBoundingClientRect();
+                    const style = getComputedStyle(el);
+                    return {
+                        top: rect.top,
+                        bottom: rect.bottom,
+                        viewportHeight: window.innerHeight,
+                        scrollHeight: el.scrollHeight,
+                        clientHeight: el.clientHeight,
+                        overflowY: style.overflowY,
+                    };
+                }"""
+            )
+            fits = metrics["top"] >= 8 and metrics["bottom"] <= metrics["viewportHeight"] - 8
+            scrolls = metrics["scrollHeight"] <= metrics["clientHeight"] or metrics["overflowY"] in ("auto", "scroll")
+            report.record(
+                "settings-popover-scroll",
+                fits and scrolls,
+                f"metrics={metrics}" if fits and scrolls else f"clipped_or_unscrollable={metrics}",
+            )
 
             style_buttons = page.locator("[role='dialog'] button[aria-pressed]")
             style_count = style_buttons.count()

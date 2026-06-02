@@ -91,7 +91,7 @@ export default function SettingsPopover() {
       role="dialog"
       aria-label="생성 설정"
       aria-describedby="settings-popover-desc"
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 w-[420px] bg-popover border border-border rounded-xl shadow-lg p-5 space-y-5"
+      className="fixed left-1/2 top-20 z-40 max-h-[calc(100vh-6rem)] w-[420px] max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-5 shadow-lg space-y-5"
     >
       <p id="settings-popover-desc" className="sr-only">AI 모델, 스타일, 길이, 문체, 언어 등 콘텐츠 생성 옵션을 설정합니다.</p>
       {/* AI 모델 */}
