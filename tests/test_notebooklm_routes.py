@@ -81,6 +81,25 @@ class TestNotebookLmRoutes(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn('완료되지 않은', resp.get_json()['error'])
 
+    def test_view_markdown_renders_html_inline(self):
+        import os
+        import tempfile
+
+        fd, path = tempfile.mkstemp(suffix='.md')
+        os.close(fd)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write('# NotebookLM 결과\n\n본문입니다.')
+
+        self.mock_svc.download.return_value = path
+        try:
+            resp = self.client.get('/api/notebooklm/view/test-id')
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('text/html', resp.content_type)
+            self.assertNotIn('attachment', resp.headers.get('Content-Disposition', ''))
+            self.assertIn('NotebookLM 결과', resp.get_data(as_text=True))
+        finally:
+            os.remove(path)
+
 
 if __name__ == '__main__':
     unittest.main()

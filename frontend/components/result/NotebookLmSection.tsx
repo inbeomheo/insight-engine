@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 import type { NotebookLmArtifact } from '@/lib/types';
 
-const TYPE_META: Record<string, { label: string; icon: typeof Music }> = {
-  audio: { label: '팟캐스트', icon: Music },
-  video: { label: '비디오', icon: Video },
-  infographic: { label: '인포그래픽', icon: Image },
-  slide_deck: { label: '슬라이드', icon: FileText },
-  mindmap: { label: '마인드맵', icon: Brain },
-  quiz: { label: '퀴즈', icon: HelpCircle },
-  flashcards: { label: '플래시카드', icon: BookOpen },
-  briefing: { label: '브리핑', icon: FileText },
-  study_guide: { label: '스터디 가이드', icon: BookOpen },
+const TYPE_META: Record<string, { label: string; icon: typeof Music; downloadLabel?: string }> = {
+  audio: { label: '팟캐스트', icon: Music, downloadLabel: 'MP3' },
+  video: { label: '비디오', icon: Video, downloadLabel: 'MP4' },
+  infographic: { label: '인포그래픽', icon: Image, downloadLabel: 'MD' },
+  slide_deck: { label: '슬라이드', icon: FileText, downloadLabel: 'PDF' },
+  mindmap: { label: '마인드맵', icon: Brain, downloadLabel: 'MD' },
+  quiz: { label: '퀴즈', icon: HelpCircle, downloadLabel: 'MD' },
+  flashcards: { label: '플래시카드', icon: BookOpen, downloadLabel: 'MD' },
+  briefing: { label: '브리핑', icon: FileText, downloadLabel: 'MD' },
+  study_guide: { label: '스터디 가이드', icon: BookOpen, downloadLabel: 'MD' },
 };
 
 interface NotebookLmSectionProps {
@@ -33,12 +33,12 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
-          <p className="text-xs text-indigo-900/60">?? ???, ???, ??? ???? ?? ??? ?????.</p>
+          <p className="text-xs text-indigo-900/60">보기는 브라우저로 열고, 다운로드는 NotebookLM 원본 파일을 받습니다.</p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-emerald-700"><CheckCircle2 className="h-3 w-3" />?? {completed}</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-indigo-700"><Loader2 className="h-3 w-3" />?? {running}</span>
-          {failed > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-red-700"><AlertTriangle className="h-3 w-3" />?? {failed}</span>}
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-emerald-700"><CheckCircle2 className="h-3 w-3" />완료 {completed}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-indigo-700"><Loader2 className="h-3 w-3" />진행 {running}</span>
+          {failed > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-red-700"><AlertTriangle className="h-3 w-3" />실패 {failed}</span>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -88,17 +88,36 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
           }
 
           return (
-            <Button
+            <div
               key={a.artifact_id}
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-xl bg-white/90 text-xs gap-1.5"
-              onClick={() => window.open(apiUrl(`/api/notebooklm/view/${a.artifact_id}`), '_blank')}
+              data-testid="notebooklm-artifact"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-white/90 px-2 py-1.5 text-xs shadow-sm"
             >
-              <Icon className="h-3.5 w-3.5" />
-              {meta.label} 보기
-              <ExternalLink className="h-3 w-3" />
-            </Button>
+              <Icon className="h-3.5 w-3.5 text-indigo-700" />
+              <span className="font-medium text-slate-700">{meta.label}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="notebooklm-view-artifact"
+                className="h-6 gap-1 rounded-lg px-2 text-xs"
+                onClick={() => window.open(apiUrl(`/api/notebooklm/view/${a.artifact_id}`), '_blank')}
+              >
+                보기
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="notebooklm-download-artifact"
+                className="h-6 gap-1 rounded-lg px-2 text-xs text-muted-foreground"
+                onClick={() => window.open(apiUrl(`/api/notebooklm/download/${a.artifact_id}`), '_blank')}
+              >
+                원본 {meta.downloadLabel ?? 'MD'}
+                <Download className="h-3 w-3" />
+              </Button>
+            </div>
           );
         })}
       </div>
