@@ -60,8 +60,7 @@ def _markdown_html_name(file_path):
 def auth_check():
     """NotebookLM 인증 상태 확인."""
     result = _service.check_auth()
-    status_code = 200 if result.get('valid') else 401
-    return jsonify(result), status_code
+    return jsonify(result), 200
 
 
 @notebooklm_bp.route('/generate', methods=['POST'])

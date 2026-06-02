@@ -13,7 +13,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
+  const [locale, setLocaleState] = useState<Locale>('ko');
 
   const setLocale = useCallback(async (newLocale: Locale) => {
     await loadLocale(newLocale);
@@ -21,10 +21,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     storeLocale(newLocale);
   }, []);
 
-  // 초기 로케일이 ko가 아닌 경우 동적 로드
+  // Keep the first server/client render identical; apply stored locale after hydration.
   useEffect(() => {
-    if (locale !== 'ko') loadLocale(locale).then(() => setLocaleState(l => l));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const stored = getStoredLocale();
+    if (stored !== 'ko') {
+      loadLocale(stored).then(() => setLocaleState(stored));
+    }
+  }, []);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) =>

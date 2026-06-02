@@ -443,7 +443,7 @@ def run_notebooklm_auth_notice_suite(browser, report: QaReport) -> None:
     context.route(
         "**/api/notebooklm/auth-check",
         lambda route: route.fulfill(
-            status=401,
+            status=200,
             content_type="application/json",
             body=json.dumps(
                 {

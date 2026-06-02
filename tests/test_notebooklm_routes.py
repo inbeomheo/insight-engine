@@ -30,7 +30,10 @@ class TestNotebookLmRoutes(unittest.TestCase):
     def test_auth_check_invalid(self):
         self.mock_svc.check_auth.return_value = {'valid': False, 'message': 'nlm login 필요'}
         resp = self.client.get('/api/notebooklm/auth-check')
-        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertFalse(data['valid'])
+        self.assertEqual(data['message'], 'nlm login 필요')
 
     def test_generate_missing_fields(self):
         self.mock_svc.check_auth.return_value = {'valid': True}

@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 06:57:53
+- Generated: 2026-06-03 07:06:45
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -66,7 +66,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 회귀 테스트 요약', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 회귀 테스트 요약', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
@@ -140,7 +140,6 @@
 
 ## Browser Console Errors
 
-- `[nlm-auth] Failed to load resource: the server responded with a status of 401 (Unauthorized)`
 - `[right-panel] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
 
 - A server/client branch `if (typeof window !== 'undefined')`.
