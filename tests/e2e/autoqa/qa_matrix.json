@@ -174,6 +174,12 @@
     "expect": "완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다"
   },
   {
+    "id": "right-panel-export-all",
+    "name": "우측 패널 전체 내보내기",
+    "url": "http://localhost:3000",
+    "expect": "우측 패널 내보내기 빠른 액션이 전체 결과 Markdown 다운로드와 완료 상태를 남긴다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",

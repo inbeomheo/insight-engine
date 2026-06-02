@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock3, ExternalLink, FileText, Sparkles, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
@@ -52,7 +53,42 @@ function artifactStatus(artifact: NotebookLmArtifact) {
   return STATUS_META[artifact.status as keyof typeof STATUS_META] ?? STATUS_META.in_progress;
 }
 
+function buildWorkspaceMarkdown(reports: Report[]) {
+  const createdAt = new Date().toLocaleString('ko-KR');
+  const body = reports.map((report, index) => [
+    `## ${index + 1}. ${report.title || '제목 없음'}`,
+    '',
+    `- 스타일: ${getStyleLabel(report.style)}`,
+    `- 소스: ${report.url || report.youtube_title || '텍스트/파일 소스'}`,
+    `- 생성 시간: ${report.time || '-'}`,
+    '',
+    report.content || report.html || '',
+  ].join('\n')).join('\n\n---\n\n');
+
+  return [
+    '# Insight Studio 전체 내보내기',
+    '',
+    `- 내보낸 시간: ${createdAt}`,
+    `- 결과 수: ${reports.length}개`,
+    '',
+    '---',
+    '',
+    body,
+  ].join('\n');
+}
+
+function downloadMarkdown(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function StudioRightPanel({ reports, sourceCount, schedulesCount }: StudioRightPanelProps) {
+  const [quickNotice, setQuickNotice] = useState<string | null>(null);
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const selectedProvider = useSettingsStore((s) => s.selectedProvider);
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
@@ -74,7 +110,23 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  function handleExportAll() {
+    if (reports.length === 0) {
+      setQuickNotice('내보낼 결과가 없습니다');
+      scrollTo('[data-testid="result-workbench"]');
+      return;
+    }
+
+    const date = new Date().toISOString().slice(0, 10);
+    downloadMarkdown(`insight-studio-export-${date}.md`, buildWorkspaceMarkdown(reports));
+    setQuickNotice(`전체 내보내기 완료 · ${reports.length}개 결과`);
+  }
+
   function handleQuickAction(id: string) {
+    if (id === 'export') {
+      handleExportAll();
+      return;
+    }
     if (id === 'schedule') {
       setActiveView('calendar');
       return;
@@ -150,6 +202,14 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
             <p>NLM</p>
           </div>
         </div>
+        {quickNotice && (
+          <div
+            data-testid="quick-action-export-status"
+            className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700"
+          >
+            {quickNotice}
+          </div>
+        )}
         <div className="mt-3 grid grid-cols-2 gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;

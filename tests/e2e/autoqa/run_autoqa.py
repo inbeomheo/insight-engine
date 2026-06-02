@@ -499,6 +499,26 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             screenshot(page, "right-panel-action-guidance.png") if not missing_guidance and not status_missing else f"missing={missing_guidance}; status_missing={status_missing}",
         )
 
+        try:
+            with page.expect_download(timeout=8_000) as download_info:
+                panel.locator("[data-testid='quick-action-export']").click(timeout=10_000)
+            download = download_info.value
+            notice = panel.locator("[data-testid='quick-action-export-status']")
+            notice.wait_for(state="visible", timeout=10_000)
+            notice_text = notice.inner_text(timeout=5_000)
+            export_ok = (
+                download.suggested_filename.lower().endswith(".md")
+                and "전체" in notice_text
+                and "완료" in notice_text
+            )
+            report.record(
+                "right-panel-export-all",
+                export_ok,
+                f"download={download.suggested_filename}; notice={notice_text}" if export_ok else screenshot(page, "right-panel-export-all-fail.png"),
+            )
+        except Exception as exc:
+            report.record("right-panel-export-all", False, repr(exc))
+
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
         calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
         if not calendar_visible:
@@ -510,6 +530,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-action-guidance", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-export-all", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
