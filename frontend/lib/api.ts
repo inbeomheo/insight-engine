@@ -355,6 +355,8 @@ export async function createSchedule(data: {
   html?: string;
   target_plugin: string;
   scheduled_at: string;
+  options?: Record<string, unknown>;
+  plugin_options?: Record<string, unknown>;
 }): Promise<ScheduledPost> {
   return request('/api/schedule', {
     method: 'POST',

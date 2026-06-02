@@ -416,12 +416,16 @@ CREATE TABLE IF NOT EXISTS ie_scheduled_posts (
     content TEXT NOT NULL,
     html TEXT,
     target_plugin TEXT NOT NULL,
+    plugin_options JSONB DEFAULT '{}'::jsonb,
     scheduled_at TIMESTAMPTZ NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'published', 'failed', 'cancelled')),
     error_message TEXT,
     published_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE ie_scheduled_posts
+    ADD COLUMN IF NOT EXISTS plugin_options JSONB DEFAULT '{}'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_scheduled_posts_user ON ie_scheduled_posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_posts_status ON ie_scheduled_posts(status, scheduled_at);

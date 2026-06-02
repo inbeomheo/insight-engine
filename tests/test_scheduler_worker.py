@@ -32,6 +32,32 @@ class TestCheckAndPublish(unittest.TestCase):
     @patch('services.data.scheduler_worker.logger')
     @patch('services.data.schedule_service.schedule_service')
     @patch('services.mcp.plugin_registry')
+    def test_publish_with_plugin_options(self, mock_registry, mock_schedule, mock_logger):
+        mock_schedule.get_due_posts.return_value = [
+            {
+                'id': 'p-opt',
+                'target_plugin': 'wordpress',
+                'content': 'body',
+                'title': 'title',
+                'plugin_options': {'site_url': 'https://wp.example.com', 'status': 'draft'},
+            }
+        ]
+        mock_registry.execute.return_value = {'success': True, 'url': 'https://wp.example.com/p/1'}
+
+        from services.data.scheduler_worker import check_and_publish
+        check_and_publish()
+
+        mock_registry.execute.assert_called_once_with(
+            'wordpress',
+            'body',
+            'title',
+            site_url='https://wp.example.com',
+            status='draft',
+        )
+
+    @patch('services.data.scheduler_worker.logger')
+    @patch('services.data.schedule_service.schedule_service')
+    @patch('services.mcp.plugin_registry')
     def test_failed_publish(self, mock_registry, mock_schedule, mock_logger):
         mock_schedule.get_due_posts.return_value = [
             {'id': 'p2', 'target_plugin': 'wp', 'content': 'c', 'title': 't'}

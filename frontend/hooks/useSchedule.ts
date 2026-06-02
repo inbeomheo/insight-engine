@@ -25,6 +25,8 @@ export function useSchedule(enabled = true) {
       html?: string;
       target_plugin: string;
       scheduled_at: string;
+      options?: Record<string, unknown>;
+      plugin_options?: Record<string, unknown>;
     }) => {
       setIsLoading(true);
       try {

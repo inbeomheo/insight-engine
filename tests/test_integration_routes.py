@@ -382,6 +382,31 @@ class TestScheduleRoutes(_Base):
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     @patch('services.data.schedule_service.schedule_service')
+    def test_schedule_create_passes_plugin_options(self, mock_sched, _):
+        mock_sched.create.return_value = {'id': 's2', 'status': 'pending'}
+        resp = self.client.post('/api/schedule',
+                                json={'title': '제목', 'content': '내용',
+                                      'target_plugin': 'wordpress',
+                                      'scheduled_at': '2026-04-15T10:00:00Z',
+                                      'options': {
+                                          'site_url': 'https://wp.example.com',
+                                          'username': 'writer',
+                                          'app_password': 'secret',
+                                      }},
+                                headers=_H)
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(
+            mock_sched.create.call_args.kwargs['plugin_options'],
+            {
+                'site_url': 'https://wp.example.com',
+                'username': 'writer',
+                'app_password': 'secret',
+            },
+        )
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.data.schedule_service.schedule_service')
     def test_schedule_create_returns_none(self, mock_sched, _):
         mock_sched.create.return_value = None
         resp = self.client.post('/api/schedule',

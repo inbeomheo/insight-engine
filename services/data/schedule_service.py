@@ -20,7 +20,8 @@ class ScheduleService:
     """예약 발행 CRUD 서비스"""
 
     def create(self, user_id: str, title: str, content: str, html: str | None,
-               target_plugin: str, scheduled_at: str) -> dict | None:
+               target_plugin: str, scheduled_at: str,
+               plugin_options: dict | None = None) -> dict | None:
         """예약 생성
 
         Args:
@@ -29,8 +30,11 @@ class ScheduleService:
         Returns:
             생성된 예약 dict 또는 None
         """
+        if not isinstance(plugin_options, dict):
+            plugin_options = {}
+
         if is_supabase_enabled():
-            return self._db_create(user_id, title, content, html, target_plugin, scheduled_at)
+            return self._db_create(user_id, title, content, html, target_plugin, scheduled_at, plugin_options)
 
         try:
             # scheduled_at ISO 8601 유효성 검증 (잘못된 값이면 get_due_posts에서 크래시)
@@ -50,6 +54,7 @@ class ScheduleService:
                 'html': html,
                 'target_plugin': target_plugin,
                 'scheduled_at': scheduled_at,
+                'plugin_options': plugin_options,
                 'status': 'pending',
                 'error_message': None,
                 'published_url': None,
@@ -130,7 +135,7 @@ class ScheduleService:
 
     # --- Supabase DB 구현 ---
 
-    def _db_create(self, user_id, title, content, html, target_plugin, scheduled_at):
+    def _db_create(self, user_id, title, content, html, target_plugin, scheduled_at, plugin_options):
         try:
             supabase = get_supabase()
             result = supabase.table('ie_scheduled_posts').insert({
@@ -140,6 +145,7 @@ class ScheduleService:
                 'html': html,
                 'target_plugin': target_plugin,
                 'scheduled_at': scheduled_at,
+                'plugin_options': plugin_options,
             }).execute()
             return result.data[0] if result.data else None
         except Exception as e:

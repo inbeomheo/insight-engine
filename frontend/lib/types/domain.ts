@@ -69,6 +69,7 @@ export interface ScheduledPost {
   content: string;
   html?: string;
   target_plugin: string;
+  plugin_options?: Record<string, unknown>;
   scheduled_at: string;
   status: 'pending' | 'published' | 'failed' | 'cancelled';
   error_message?: string;

@@ -92,6 +92,9 @@ def schedule_create():
     html = data.get('html')
     target_plugin = data.get('target_plugin')
     scheduled_at = data.get('scheduled_at')
+    plugin_options = data.get('plugin_options') or data.get('options') or {}
+    if not isinstance(plugin_options, dict):
+        plugin_options = {}
 
     if not title or not content or not target_plugin or not scheduled_at:
         return jsonify({'error': 'title, content, target_plugin, scheduled_at는 필수입니다.'}), 400
@@ -103,6 +106,7 @@ def schedule_create():
         html=html,
         target_plugin=target_plugin,
         scheduled_at=scheduled_at,
+        plugin_options=plugin_options,
     )
     if post is None:
         return jsonify({'error': '예약 생성에 실패했습니다.'}), 500

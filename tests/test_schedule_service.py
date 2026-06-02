@@ -32,6 +32,23 @@ class TestScheduleServiceMemory(unittest.TestCase):
         self.assertEqual(post['user_id'], self.user_id)
 
     @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
+    def test_create_stores_plugin_options(self, _):
+        post = self.svc.create(
+            user_id=self.user_id,
+            title='테스트 제목',
+            content='테스트 내용',
+            html=None,
+            target_plugin='wordpress',
+            scheduled_at='2026-03-02T09:00:00+00:00',
+            plugin_options={'site_url': 'https://wp.example.com', 'status': 'draft'},
+        )
+
+        self.assertEqual(
+            post['plugin_options'],
+            {'site_url': 'https://wp.example.com', 'status': 'draft'},
+        )
+
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     def test_list_by_user(self, _):
         self.svc.create(self.user_id, '제목1', '내용1', None, 'wp', '2026-03-01T09:00:00+00:00')
         self.svc.create(self.user_id, '제목2', '내용2', None, 'wp', '2026-03-02T09:00:00+00:00')
@@ -128,6 +145,34 @@ class TestCheckAndPublish(unittest.TestCase):
         # 상태가 published로 변경됨
         self.assertEqual(_memory_store[post['id']]['status'], 'published')
         self.assertEqual(_memory_store[post['id']]['published_url'], 'https://example.com/1')
+
+    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
+    @patch('services.mcp.plugin_registry')
+    def test_check_and_publish_passes_plugin_options(self, mock_registry, _):
+        from services.data.scheduler_worker import check_and_publish
+        from services.data.schedule_service import schedule_service
+
+        past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+        schedule_service.create(
+            'user1',
+            '제목',
+            '내용',
+            None,
+            'wordpress',
+            past,
+            plugin_options={'site_url': 'https://wp.example.com', 'status': 'draft'},
+        )
+        mock_registry.execute.return_value = {'success': True, 'url': 'https://example.com/1'}
+
+        check_and_publish()
+
+        mock_registry.execute.assert_called_once_with(
+            'wordpress',
+            '내용',
+            '제목',
+            site_url='https://wp.example.com',
+            status='draft',
+        )
 
     @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
     @patch('services.mcp.plugin_registry')

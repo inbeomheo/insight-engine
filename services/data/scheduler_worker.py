@@ -29,10 +29,15 @@ def check_and_publish():
         for post in due_posts:
             post_id = post['id']
             try:
+                plugin_options = post.get('plugin_options') or post.get('options') or {}
+                if not isinstance(plugin_options, dict):
+                    plugin_options = {}
+
                 result = plugin_registry.execute(
                     post['target_plugin'],
                     post['content'],
                     post['title'],
+                    **plugin_options,
                 )
                 if result.get('success'):
                     schedule_service.update_status(
