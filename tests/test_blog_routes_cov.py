@@ -257,6 +257,39 @@ class TestGenerateBatchRoute(_Base):
                                 headers=_H)
         self.assertEqual(resp.status_code, 429)
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.usage.usage_service.UsageService.try_consume_atomic')
+    @patch('routes.blog_routes._process_single_url')
+    def test_batch_passes_advanced_options_to_worker(self, mock_worker, mock_usage, _):
+        captured = {}
+
+        def fake_worker(*args, **kwargs):
+            captured.update(kwargs)
+            return {
+                'success': False,
+                'url': args[1],
+                'title': '테스트',
+                'error': '테스트 종료',
+            }
+
+        mock_usage.return_value = (True, {'remaining': 5})
+        mock_worker.side_effect = fake_worker
+
+        resp = self.client.post('/generate-batch',
+                                json={
+                                    'urls': ['https://youtube.com/watch?v=abc123'],
+                                    'model': 'zhipuai/test',
+                                    'detail_level': 'deep',
+                                    'web_search': True,
+                                    'agent_mode': True,
+                                },
+                                headers=_H)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(captured['detail_level'], 'deep')
+        self.assertTrue(captured['web_search'])
+        self.assertTrue(captured['agent_mode'])
+
 
 # ── 템플릿 API ──────────────────────────────────────
 

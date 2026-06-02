@@ -90,6 +90,12 @@
     "expect": "직접 텍스트 생성도 상세도, 웹 보강, 에이전트 설정을 /generate 요청에 포함한다"
   },
   {
+    "id": "batch-advanced-request-options",
+    "name": "개별 배치 생성 고급 옵션 요청 반영",
+    "url": "http://localhost:3000",
+    "expect": "2개 이상 URL의 개별 배치 생성도 상세도, 웹 보강, 에이전트 설정을 /generate-batch 요청에 포함한다"
+  },
+  {
     "id": "merged-advanced-request-options",
     "name": "통합 생성 고급 옵션 요청 반영",
     "url": "http://localhost:3000",

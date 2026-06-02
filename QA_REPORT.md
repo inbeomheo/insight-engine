@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 06:50:39
+- Generated: 2026-06-03 06:57:53
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -25,6 +25,7 @@
 | provider-chatmock | ChatMock 5.5 공급자 노출 | chatmock/gpt-5.5를 선택할 수 있다 |
 | direct-text-generate | 직접 텍스트 생성 | 생성 결과가 보인다 |
 | direct-text-advanced-request-options | 직접 텍스트 고급 옵션 요청 반영 | 직접 텍스트 생성도 상세도, 웹 보강, 에이전트 설정을 /generate 요청에 포함한다 |
+| batch-advanced-request-options | 개별 배치 생성 고급 옵션 요청 반영 | 2개 이상 URL의 개별 배치 생성도 상세도, 웹 보강, 에이전트 설정을 /generate-batch 요청에 포함한다 |
 | merged-advanced-request-options | 통합 생성 고급 옵션 요청 반영 | 통합 생성도 상세도, 웹 보강, 에이전트 설정을 /api/generate-merged 요청에 포함한다 |
 | fusion-advanced-request-options | 퓨전 생성 고급 옵션 요청 반영 | 퓨전 생성도 상세도, 웹 보강, 에이전트, 웹 리서치, 댓글 설정을 /api/generate-fusion 요청에 포함한다 |
 | text-dock-generate | 텍스트 Generate Dock 생성 | Generate Dock이 직접 텍스트 소스를 처리한다 |
@@ -65,7 +66,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 API 회귀 테스트 요약', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 회귀 테스트 요약', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
@@ -122,6 +123,7 @@
 | menu-action:삭제 | PASS | card_removed=True |
 | workbench-nlm-auth-notice | PASS | tests/e2e/autoqa/artifacts/workbench-nlm-auth-notice.png |
 | direct-text-advanced-request-options | PASS | payload={'url': '', 'model': 'chatmock/gpt-5.5', 'style': 'blog_seo', 'modifiers': {'length': 'medium', 'writing_style': 'conversational', 'language': 'ko'}, 'content': 'Direct text advanced option QA source. This text is intentionally longer than fifty characters so generation is enabled.', 'web_search': True, 'agent_mode': True, 'detail_level': 'deep'} |
+| batch-advanced-request-options | PASS | payload={'urls': ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=wr4nCMUy1dk'], 'model': 'chatmock/gpt-5.5', 'style': 'blog_seo', 'modifiers': {'length': 'medium', 'writing_style': 'conversational', 'language': 'ko'}, 'detail_level': 'deep', 'web_search': True, 'agent_mode': True} |
 | merged-advanced-request-options | PASS | payload={'urls': ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=wr4nCMUy1dk'], 'model': 'chatmock/gpt-5.5', 'style': 'blog_seo', 'modifiers': {'length': 'medium', 'writing_style': 'conversational', 'language': 'ko'}, 'detail_level': 'deep', 'web_search': True, 'agent_mode': True} |
 | fusion-advanced-request-options | PASS | payload={'urls': ['https://www.youtube.com/watch?v=aaaaaaaaaaa', 'https://www.youtube.com/watch?v=bbbbbbbbbbb'], 'style': 'blog_seo', 'model': 'chatmock/gpt-5.5', 'modifiers': {'length': 'medium', 'writing_style': 'conversational', 'language': 'ko'}, 'enable_web_research': True, 'enable_deep_comments': True, 'detail_level': 'deep', 'web_search': True, 'agent_mode': True} |
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |

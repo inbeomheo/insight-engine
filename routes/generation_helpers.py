@@ -723,7 +723,17 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
     })
 
 
-def _process_single_url(app, url, model, style, modifiers, custom_prompt):
+def _process_single_url(
+    app,
+    url,
+    model,
+    style,
+    modifiers,
+    custom_prompt,
+    detail_level='standard',
+    web_search=False,
+    agent_mode=False,
+):
     """배치 처리에서 단일 URL을 처리하는 헬퍼 함수입니다.
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     """
@@ -771,7 +781,9 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
             result, used_prompt = ai_service.create_content(
                 content, model, style_prompt,
                 return_prompt=True, modifiers=modifiers,
-                style_id=style
+                style_id=style,
+                web_search=web_search,
+                detail_level=detail_level,
             )
 
             return {

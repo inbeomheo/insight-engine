@@ -724,6 +724,82 @@ def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
+    captured: list[dict[str, Any]] = []
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def batch(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        payload = data if isinstance(data, dict) else {}
+        captured.append(payload)
+        urls = payload.get("urls") if isinstance(payload.get("urls"), list) else []
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "success": True,
+                "results": [
+                    {
+                        "success": True,
+                        "url": url,
+                        "title": f"QA 배치 {idx + 1}",
+                        "content": "# QA 배치\n\n고급 옵션 배치 요청입니다.",
+                        "html": "<h1>QA 배치</h1>",
+                    }
+                    for idx, url in enumerate(urls)
+                ],
+                "total_processed": len(urls),
+                "successful": len(urls),
+                "failed": 0,
+            }, ensure_ascii=False),
+        )
+
+    context.route("**/generate-batch", batch)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[batch-advanced] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[batch-advanced] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=wr4nCMUy1dk")
+        page.locator("#url-input").press("Enter")
+        page.locator("[data-testid='blueprint-detail-level']").get_by_text("심층").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-web-search']").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-agent-mode']").click(timeout=10_000)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+
+        sent = wait_until(lambda: len(captured) > 0, 10_000, page)
+        payload = captured[-1] if captured else {}
+        ok = (
+            sent
+            and payload.get("detail_level") == "deep"
+            and payload.get("web_search") is True
+            and payload.get("agent_mode") is True
+            and len(payload.get("urls", [])) == 2
+        )
+        report.record(
+            "batch-advanced-request-options",
+            ok,
+            f"payload={payload}" if ok else f"missing advanced options; payload={payload}",
+        )
+    except Exception as exc:
+        report.record("batch-advanced-request-options", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_url_mode_advanced_request_suite(browser, report: QaReport) -> None:
     captured: dict[str, list[dict[str, Any]]] = {"merged": [], "fusion": []}
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -1456,6 +1532,7 @@ def main() -> int:
         run_seeded_menu_action_suite(browser, report)
         run_notebooklm_auth_notice_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
+        run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)

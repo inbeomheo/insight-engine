@@ -499,6 +499,10 @@ def generate_batch():
         style = data.get('style', DEFAULT_STYLE)
         modifiers = data.get('modifiers')
         custom_prompt = data.get('customPrompt')
+        raw_detail = data.get('detail_level')
+        detail_level = raw_detail if raw_detail in {'brief', 'standard', 'deep'} else 'standard'
+        web_search = bool(data.get('web_search', False))
+        agent_mode = bool(data.get('agent_mode', False))
 
         current_app.logger.info(f"URLs to process: {urls}, Model: {model}, Style: {style}")
 
@@ -518,7 +522,12 @@ def generate_batch():
             current_app.logger.info(f"Starting to process {len(urls)} URLs sequentially ({model})")
             for i, url in enumerate(urls):
                 try:
-                    result = _process_single_url(app, url, model, style, modifiers, custom_prompt)
+                    result = _process_single_url(
+                        app, url, model, style, modifiers, custom_prompt,
+                        detail_level=detail_level,
+                        web_search=web_search,
+                        agent_mode=agent_mode,
+                    )
                     results[i] = result
                     current_app.logger.info(f"Completed processing URL {i + 1}: {result.get('success', False)}")
 
@@ -539,7 +548,10 @@ def generate_batch():
                 future_to_index = {
                     executor.submit(
                         _process_single_url, app, url, model, style,
-                        modifiers, custom_prompt
+                        modifiers, custom_prompt,
+                        detail_level=detail_level,
+                        web_search=web_search,
+                        agent_mode=agent_mode,
                     ): i for i, url in enumerate(urls)
                 }
 
