@@ -192,6 +192,12 @@
     "expect": "우측 패널 플랫폼 변환 빠른 액션이 최근 결과의 플랫폼별 카피 변환 모달을 연다"
   },
   {
+    "id": "right-panel-recent-result-focus",
+    "name": "우측 패널 최근 결과 이동",
+    "url": "http://localhost:3000",
+    "expect": "우측 패널 최근 결과를 클릭하면 해당 결과 카드로 이동하고 포커스 상태가 남는다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",

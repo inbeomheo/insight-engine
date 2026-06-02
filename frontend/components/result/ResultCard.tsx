@@ -98,6 +98,7 @@ interface PanelState {
   readPreviewMode: 'rendered' | 'markdown' | 'html' | 'timeline';
   notebookLmAuthNotice: string | null;
   exportNotice: string | null;
+  focusedFromPanel: boolean;
   chatOpen: boolean;
   showTranscript: boolean;
   audioBlob: Blob | null;
@@ -117,6 +118,7 @@ const panelInitial: PanelState = {
   readPreviewMode: 'rendered',
   notebookLmAuthNotice: null,
   exportNotice: null,
+  focusedFromPanel: false,
   chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
   rewriteOpen: false,
@@ -135,7 +137,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, exportNotice, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, exportNotice, focusedFromPanel, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -152,6 +154,19 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
     window.addEventListener('insight-engine-open-rewrite', openRewrite);
     return () => window.removeEventListener('insight-engine-open-rewrite', openRewrite);
+  }, [onExpandToFull, report.id, setPanel]);
+
+  useEffect(() => {
+    const focusReport = (event: Event) => {
+      const detail = (event as CustomEvent<{ reportId?: string }>).detail;
+      if (detail?.reportId !== report.id) return;
+      onExpandToFull?.();
+      setPanel('focusedFromPanel', true);
+      window.setTimeout(() => setPanel('focusedFromPanel', false), 2500);
+    };
+
+    window.addEventListener('insight-engine-focus-report', focusReport);
+    return () => window.removeEventListener('insight-engine-focus-report', focusReport);
   }, [onExpandToFull, report.id, setPanel]);
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
@@ -544,7 +559,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
-    <Card className="overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-sm shadow-slate-200/60 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+    <Card className={`overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-sm shadow-slate-200/60 transition-all duration-200 hover:border-slate-300 hover:shadow-md ${focusedFromPanel ? 'ring-2 ring-indigo-400 shadow-indigo-100' : ''}`}>
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
         {/* 뱃지 + 액션 */}

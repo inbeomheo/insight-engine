@@ -123,6 +123,12 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
     setQuickNotice(`전체 내보내기 완료 · ${reports.length}개 결과`);
   }
 
+  function focusReport(reportId: string) {
+    setActiveReportId(reportId);
+    window.dispatchEvent(new CustomEvent('insight-engine-focus-report', { detail: { reportId } }));
+    document.querySelector(`[data-report-id="${reportId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   function handleQuickAction(id: string) {
     if (id === 'export') {
       handleExportAll();
@@ -289,7 +295,18 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> 최근 결과</div>
         <div className="mt-3 space-y-2">
-          {latest.length === 0 ? <p className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p> : latest.map((report) => <div key={report.id} className="rounded-2xl bg-slate-50 p-3"><p className="line-clamp-2 text-xs font-medium text-slate-800">{report.title}</p><p className="mt-1 text-[11px] text-slate-500">{report.style}</p></div>)}
+          {latest.length === 0 ? <p className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p> : latest.map((report) => (
+            <button
+              key={report.id}
+              type="button"
+              data-testid="right-panel-recent-result"
+              className="w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-indigo-50"
+              onClick={() => focusReport(report.id)}
+            >
+              <p className="line-clamp-2 text-xs font-medium text-slate-800">{report.title}</p>
+              <p className="mt-1 text-[11px] text-slate-500">{report.style}</p>
+            </button>
+          ))}
         </div>
       </section>
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">

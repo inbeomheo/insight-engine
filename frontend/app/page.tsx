@@ -367,6 +367,7 @@ export default function Home() {
                     <div
                       key={r.id}
                       data-report-id={r.id}
+                      data-focused={activeReportId === r.id ? 'true' : undefined}
                       className={cn(
                         'transition-all duration-300',
                         activeReportId === r.id && 'rounded-2xl ring-2 ring-primary/30 shadow-md shadow-primary/5'
