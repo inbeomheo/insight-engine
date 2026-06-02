@@ -34,6 +34,12 @@ const NLM_LABELS: Record<string, string> = {
   study_guide: '스터디 가이드',
 };
 
+const DETAIL_LABELS = {
+  brief: '간단',
+  standard: '표준',
+  deep: '심층',
+} as const;
+
 const QUICK_ACTION_GUIDE: Record<string, { description: string; target: string }> = {
   export: { description: 'HTML, DOCX, MD, ZIP 저장으로 이동', target: '내보내기' },
   schedule: { description: '예약 캘린더와 발행 일정을 확인', target: '캘린더' },
@@ -94,6 +100,11 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
   const generationMode = useSettingsStore((s) => s.generationMode);
   const modifiers = useSettingsStore((s) => s.modifiers);
+  const detailLevel = useSettingsStore((s) => s.detailLevel);
+  const enableWebSearch = useSettingsStore((s) => s.enableWebSearch);
+  const enableWebResearch = useSettingsStore((s) => s.enableWebResearch);
+  const enableDeepComments = useSettingsStore((s) => s.enableDeepComments);
+  const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setActiveView = useUIStore((s) => s.setActiveView);
   const setActiveReportId = useUIStore((s) => s.setActiveReportId);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
@@ -106,6 +117,13 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   const firstCompletedNlm = nlmArtifacts.find(({ artifact }) => artifact.status === 'completed');
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
   const modifierSummary = getModifierSummary(modifiers);
+  const advancedSummary = [
+    `상세도 ${DETAIL_LABELS[detailLevel]}`,
+    `웹 보강 ${enableWebSearch ? '켜짐' : '꺼짐'}`,
+    `웹 리서치 ${enableWebResearch ? '켜짐' : '꺼짐'}`,
+    `댓글 ${enableDeepComments ? '켜짐' : '꺼짐'}`,
+    `에이전트 ${enableAgentMode ? '켜짐' : '꺼짐'}`,
+  ].join(' · ');
 
   function scrollTo(selector: string) {
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -201,6 +219,9 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
           </div>
           <div data-testid="right-panel-modifier-summary" className="rounded-2xl bg-slate-50 p-3 text-slate-600">
             {modifierSummary}
+          </div>
+          <div data-testid="right-panel-advanced-summary" className="rounded-2xl bg-slate-50 p-3 text-slate-600">
+            {advancedSummary}
           </div>
         </div>
       </section>

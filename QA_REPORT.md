@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 06:06:28
+- Generated: 2026-06-03 06:15:06
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -37,6 +37,7 @@
 | result-workbench-nlm-podcast-removed | Result Workbench NLM 팟캐스트 제거 | 사용하지 않는 NLM 팟캐스트 액션은 Workbench와 메뉴에 보이지 않는다 |
 | workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
+| right-panel-advanced-summary | 우측 패널 고급 설정 요약 | 우측 패널 현재 설정에 상세도, 웹 보강, 웹 리서치, 댓글 분석, 에이전트 상태가 함께 표시된다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
 | right-panel-nlm-quick-view | 우측 패널 NLM 바로 보기 | 우측 패널 NLM 산출물 빠른 액션이 최근 완료 산출물 보기 창을 연다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
@@ -118,6 +119,7 @@
 | menu-action:삭제 | PASS | card_removed=True |
 | workbench-nlm-auth-notice | PASS | tests/e2e/autoqa/artifacts/workbench-nlm-auth-notice.png |
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
+| right-panel-advanced-summary | PASS | tests/e2e/autoqa/artifacts/right-panel-advanced-summary.png |
 | right-panel-nlm | PASS | nlm_count=3 |
 | right-panel-nlm-quick-view | PASS | url=http://127.0.0.1:5001/api/notebooklm/view/rp-briefing |
 | right-panel-action-guidance | PASS | tests/e2e/autoqa/artifacts/right-panel-action-guidance.png |

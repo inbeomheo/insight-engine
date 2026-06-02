@@ -499,6 +499,16 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         )
         report.record("right-panel-settings", settings_ok, screenshot(page, "right-panel-settings.png") if settings_ok else panel.inner_text(timeout=5_000)[:500])
 
+        advanced_summary = panel.locator("[data-testid='right-panel-advanced-summary']")
+        advanced_text = advanced_summary.inner_text(timeout=5_000) if advanced_summary.count() == 1 else ""
+        advanced_required = ["상세도 표준", "웹 보강 꺼짐", "웹 리서치 켜짐", "댓글 켜짐", "에이전트 꺼짐"]
+        advanced_missing = [token for token in advanced_required if token not in advanced_text]
+        report.record(
+            "right-panel-advanced-summary",
+            advanced_summary.count() == 1 and not advanced_missing,
+            screenshot(page, "right-panel-advanced-summary.png") if advanced_summary.count() == 1 and not advanced_missing else f"missing={advanced_missing}; text={advanced_text[:300]!r}",
+        )
+
         nlm_ok = wait_until(lambda: panel.locator("[data-testid='right-panel-nlm-artifact']").count() >= 3, 10_000, page)
         nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
         report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")

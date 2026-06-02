@@ -162,6 +162,12 @@
     "expect": "우측 패널에 현재 모델/스타일/모드가 표시된다"
   },
   {
+    "id": "right-panel-advanced-summary",
+    "name": "우측 패널 고급 설정 요약",
+    "url": "http://localhost:3000",
+    "expect": "우측 패널 현재 설정에 상세도, 웹 보강, 웹 리서치, 댓글 분석, 에이전트 상태가 함께 표시된다"
+  },
+  {
     "id": "right-panel-nlm",
     "name": "우측 패널 NLM 산출물",
     "url": "http://localhost:3000",
