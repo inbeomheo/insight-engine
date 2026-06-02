@@ -139,7 +139,15 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
 /** 파일 업로드용 FormData 빌더 (generateFromFile/Audio 공용) */
 function buildFileFormData(
   file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+  opts: {
+    model: string;
+    style: string;
+    modifiers?: Modifiers;
+    customPrompt?: string;
+    detail_level?: string;
+    web_search?: boolean;
+    agent_mode?: boolean;
+  },
 ): FormData {
   const fd = new FormData();
   fd.append('file', file);
@@ -148,13 +156,15 @@ function buildFileFormData(
   if (opts.modifiers) fd.append('modifiers', JSON.stringify(opts.modifiers));
   if (opts.customPrompt) fd.append('customPrompt', opts.customPrompt);
   if (opts.detail_level) fd.append('detail_level', opts.detail_level);
+  fd.append('web_search', String(Boolean(opts.web_search)));
+  fd.append('agent_mode', String(Boolean(opts.agent_mode)));
   return fd;
 }
 
 // 파일 업로드 생성 (PDF/DOCX)
 export async function generateFromFile(
   file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string; web_search?: boolean; agent_mode?: boolean },
 ): Promise<GenerateResponse> {
   return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
@@ -162,7 +172,7 @@ export async function generateFromFile(
 // 오디오 파일 업로드 생성 (음성 메모, 팟캐스트 녹음)
 export async function generateFromAudio(
   file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
+  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string; web_search?: boolean; agent_mode?: boolean },
 ): Promise<GenerateResponse> {
   return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }

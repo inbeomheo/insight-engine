@@ -133,6 +133,8 @@ def _get_request_data(req):
             'max_chars': max_chars,
             'include_transcript': include_transcript,
             'enable_citations': enable_citations,
+            'web_search': bool(data.get('web_search', False)),
+            'agent_mode': bool(data.get('agent_mode', False)),
         }
 
     # form 데이터에서 modifiers JSON 파싱 (파일 업로드 시 FormData로 전송)
@@ -161,6 +163,8 @@ def _get_request_data(req):
         'max_chars': None,
         'include_transcript': False,
         'enable_citations': False,
+        'web_search': str(req.form.get('web_search', '')).lower() == 'true',
+        'agent_mode': str(req.form.get('agent_mode', '')).lower() == 'true',
     }
 
 

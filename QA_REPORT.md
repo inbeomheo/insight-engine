@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 06:15:06
+- Generated: 2026-06-03 06:25:46
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -24,6 +24,7 @@
 | chatmock-server | ChatMock OpenAI 호환 서버 | HTTP 200과 gpt-5.5 모델이 반환된다 |
 | provider-chatmock | ChatMock 5.5 공급자 노출 | chatmock/gpt-5.5를 선택할 수 있다 |
 | direct-text-generate | 직접 텍스트 생성 | 생성 결과가 보인다 |
+| direct-text-advanced-request-options | 직접 텍스트 고급 옵션 요청 반영 | 직접 텍스트 생성도 상세도, 웹 보강, 에이전트 설정을 /generate 요청에 포함한다 |
 | text-dock-generate | 텍스트 Generate Dock 생성 | Generate Dock이 직접 텍스트 소스를 처리한다 |
 | result-workbench | Result Workbench 패널 | 생성 결과에 빠른 workbench 액션이 보인다 |
 | studio-result-toolbar | 스튜디오 결과 툴바 | 결과 영역이 결과 수, 필터, 보기 모드, 현재 표시 수를 스튜디오 톤으로 요약한다 |
@@ -118,6 +119,7 @@
 | menu-action:공유 | PASS | clipboard_len=197 |
 | menu-action:삭제 | PASS | card_removed=True |
 | workbench-nlm-auth-notice | PASS | tests/e2e/autoqa/artifacts/workbench-nlm-auth-notice.png |
+| direct-text-advanced-request-options | PASS | payload={'url': '', 'model': 'chatmock/gpt-5.5', 'style': 'blog_seo', 'modifiers': {'length': 'medium', 'writing_style': 'conversational', 'language': 'ko'}, 'content': 'Direct text advanced option QA source. This text is intentionally longer than fifty characters so generation is enabled.', 'web_search': True, 'agent_mode': True, 'detail_level': 'deep'} |
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
 | right-panel-advanced-summary | PASS | tests/e2e/autoqa/artifacts/right-panel-advanced-summary.png |
 | right-panel-nlm | PASS | nlm_count=3 |

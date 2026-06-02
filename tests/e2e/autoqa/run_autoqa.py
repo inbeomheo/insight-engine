@@ -654,6 +654,76 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
+    captured: list[dict[str, Any]] = []
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def generate(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        captured.append(data if isinstance(data, dict) else {})
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "title": "QA 고급 옵션 요청",
+                "content": "# QA 고급 옵션 요청\n\n요청 옵션 검증 결과입니다.",
+                "html": "<h1>QA 고급 옵션 요청</h1>",
+                "usage": {"total_tokens": 12},
+                "elapsed_time": 0.1,
+                "transcript_source": "direct_input",
+                "prompt": "qa advanced request",
+                "cached": False,
+                "comment_summary_included": False,
+            }, ensure_ascii=False),
+        )
+
+    context.route("**/generate", generate)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[direct-advanced] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[direct-advanced] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+        textarea = page.locator("textarea").first
+        textarea.fill(
+            "Direct text advanced option QA source. "
+            "This text is intentionally longer than fifty characters so generation is enabled."
+        )
+        page.locator("[data-testid='blueprint-detail-level']").get_by_text("심층").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-web-search']").click(timeout=10_000)
+        page.locator("[data-testid='blueprint-agent-mode']").click(timeout=10_000)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+
+        sent = wait_until(lambda: len(captured) > 0, 10_000, page)
+        payload = captured[-1] if captured else {}
+        ok = (
+            sent
+            and payload.get("detail_level") == "deep"
+            and payload.get("web_search") is True
+            and payload.get("agent_mode") is True
+        )
+        report.record(
+            "direct-text-advanced-request-options",
+            ok,
+            f"payload={payload}" if ok else f"missing advanced options; payload={payload}",
+        )
+    except Exception as exc:
+        report.record("direct-text-advanced-request-options", False, repr(exc))
+    finally:
+        context.close()
+
+
 def close_dialogs(page) -> None:
     page.keyboard.press("Escape")
     page.wait_for_timeout(250)
@@ -1267,6 +1337,7 @@ def main() -> int:
 
         run_seeded_menu_action_suite(browser, report)
         run_notebooklm_auth_notice_suite(browser, report)
+        run_direct_text_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
 

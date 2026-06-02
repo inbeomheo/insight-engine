@@ -262,6 +262,9 @@ export function useGenerate() {
           style: selectedStyle,
           modifiers,
           content: text,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
+          detail_level: detailLevel,
         });
         const report = responseToReport(res, '', selectedStyle);
         addReport(report);
@@ -273,7 +276,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport],
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport],
   );
 
   const generateFromFile = useCallback(
@@ -291,6 +294,8 @@ export function useGenerate() {
           style: selectedStyle,
           modifiers,
           detail_level: detailLevel,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
         });
         addReport(responseToReport(res, `file:${file.name}`, selectedStyle));
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
@@ -301,7 +306,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, addReport],
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport],
   );
 
   const generateFromAudio = useCallback(
@@ -319,6 +324,8 @@ export function useGenerate() {
           style: selectedStyle,
           modifiers,
           detail_level: detailLevel,
+          web_search: enableWebSearch,
+          agent_mode: enableAgentMode,
         });
         addReport(responseToReport(res, `audio:${file.name}`, selectedStyle));
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
@@ -329,7 +336,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, addReport],
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport],
   );
 
   const abort = useCallback(() => {

@@ -49,6 +49,7 @@ def _handle_direct_text(params: dict, start_time: float):
         truncated_content, params['model'], style_prompt,
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
+        web_search=params.get('web_search', False),
         detail_level=params.get('detail_level'),
     )
 
@@ -103,6 +104,7 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
         truncated_content, params['model'], style_prompt,
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
+        web_search=params.get('web_search', False),
         detail_level=params.get('detail_level'),
     )
 
@@ -140,6 +142,7 @@ def _handle_document_upload(params: dict, uploaded_file, start_time: float):
         truncated_content, params['model'], style_prompt,
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
+        web_search=params.get('web_search', False),
         detail_level=params.get('detail_level'),
     )
 
@@ -186,6 +189,7 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
         truncated_content, params['model'], style_prompt,
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
+        web_search=params.get('web_search', False),
         detail_level=params.get('detail_level'),
     )
 

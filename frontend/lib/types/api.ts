@@ -11,6 +11,9 @@ export interface GenerateRequest {
   customPrompt?: string;
   /** 직접 텍스트 입력 (URL 대신 사용) */
   content?: string;
+  web_search?: boolean;
+  agent_mode?: boolean;
+  detail_level?: 'brief' | 'standard' | 'deep';
 }
 
 export interface GenerateResponse {
