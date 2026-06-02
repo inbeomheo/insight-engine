@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Download, ExternalLink, Music, Video, Image, FileText, Brain, HelpCircle, BookOpen } from 'lucide-react';
+import { Loader2, Download, ExternalLink, Music, Video, Image, FileText, Brain, HelpCircle, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 import type { NotebookLmArtifact } from '@/lib/types';
@@ -24,9 +24,23 @@ interface NotebookLmSectionProps {
 export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
   if (!artifacts || artifacts.length === 0) return null;
 
+  const completed = artifacts.filter((a) => a.status === 'completed').length;
+  const running = artifacts.filter((a) => a.status === 'in_progress').length;
+  const failed = artifacts.filter((a) => a.status === 'failed').length;
+
   return (
     <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
+          <p className="text-xs text-indigo-900/60">?? ???, ???, ??? ???? ?? ??? ?????.</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5 text-[11px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-emerald-700"><CheckCircle2 className="h-3 w-3" />?? {completed}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-indigo-700"><Loader2 className="h-3 w-3" />?? {running}</span>
+          {failed > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-red-700"><AlertTriangle className="h-3 w-3" />?? {failed}</span>}
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
         {artifacts.map((a) => {
           const meta = TYPE_META[a.content_type] ?? { label: a.content_type, icon: FileText };
@@ -34,7 +48,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
 
           if (a.status === 'in_progress') {
             return (
-              <div key={a.artifact_id} className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-md px-2.5 py-1.5">
+              <div key={a.artifact_id} className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-white/80 px-3 py-2 text-xs text-indigo-800 shadow-sm">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span>{meta.label} 생성 중...</span>
               </div>
@@ -43,7 +57,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
 
           if (a.status === 'failed') {
             return (
-              <div key={a.artifact_id} className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 rounded-md px-2.5 py-1.5">
+              <div key={a.artifact_id} className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
                 <Icon className="h-3.5 w-3.5" />
                 <span>{meta.label} 실패</span>
               </div>
@@ -78,7 +92,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
               key={a.artifact_id}
               variant="outline"
               size="sm"
-              className="h-7 text-xs gap-1.5"
+              className="h-8 rounded-xl bg-white/90 text-xs gap-1.5"
               onClick={() => window.open(apiUrl(`/api/notebooklm/view/${a.artifact_id}`), '_blank')}
             >
               <Icon className="h-3.5 w-3.5" />

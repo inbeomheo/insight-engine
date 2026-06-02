@@ -723,6 +723,50 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       )}
 
       {/* 푸터 */}
+      {/* Studio Workbench */}
+      <div className="border-t border-slate-200/70 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 px-6 py-4" data-testid="result-workbench">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Result Workbench</p>
+            <p className="text-sm text-slate-500">??? ??? ??, ??, NLM ??, ????, ???? ?? ?????.</p>
+          </div>
+          <span className="text-xs text-slate-400">{(report.notebooklm?.artifacts?.length ?? 0)} NLM ? {charCount.toLocaleString()}?</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => copyText(report.content, 'content')}>
+            <Copy className="h-3.5 w-3.5 text-indigo-600" />
+            ?? ??
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => setPanel('rewriteOpen', true)}>
+            <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />
+            ??? ??
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => handleNotebookLm('study_guide')}>
+            <Brain className="h-3.5 w-3.5 text-indigo-600" />
+            NLM ???
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={handleExportDocx}>
+            <Download className="h-3.5 w-3.5 text-indigo-600" />
+            DOCX
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => onSchedule(report)}>
+            <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+            ??
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-10 justify-start gap-2 rounded-xl bg-white/80"
+            onClick={handleExtractEvents}
+            disabled={eventLoading || !(report.url || report.transcript)}
+          >
+            <ListChecks className="h-3.5 w-3.5 text-indigo-600" />
+            {eventLoading ? '?? ?...' : '???'}
+          </Button>
+        </div>
+      </div>
+
       <div className="px-6 py-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Zap className="h-3 w-3" />

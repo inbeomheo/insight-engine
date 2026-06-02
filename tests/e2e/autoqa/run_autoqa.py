@@ -707,6 +707,9 @@ def main() -> int:
             alert_text = page.locator("[role='alert']").inner_text(timeout=1000) if page.locator("[role='alert']").count() else ""
             ok = page.locator("[data-report-id]").count() > 0 and not alert_text
             report.record("direct-text-generate", ok, gen_png if ok else f"alert={alert_text}; screenshot={gen_png}")
+            workbench = page.locator("[data-testid='result-workbench']").first
+            workbench_visible = workbench.count() > 0 and workbench.is_visible()
+            report.record("result-workbench", workbench_visible, screenshot(page, "result-workbench.png") if workbench_visible else "workbench panel missing")
         except Exception as exc:
             fail_png = screenshot(page, "direct-text-generate-fail.png")
             report.record("direct-text-generate", False, f"{repr(exc)}; screenshot={fail_png}")

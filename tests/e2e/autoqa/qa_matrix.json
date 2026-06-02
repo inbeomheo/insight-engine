@@ -30,6 +30,12 @@
     "expect": "generated result visible"
   },
   {
+    "id": "result-workbench",
+    "name": "?? ???",
+    "url": "http://localhost:3000",
+    "expect": "visible result workbench quick actions"
+  },
+  {
     "id": "youtube-url-validation",
     "name": "YouTube URL 입력 검증",
     "input": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
