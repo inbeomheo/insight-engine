@@ -40,7 +40,6 @@ import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
 import { useSchedule } from '@/hooks/useSchedule';
-import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import type { Report, ViewMode } from '@/lib/types';
@@ -66,7 +65,6 @@ export default function Home() {
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
-  const mcpPlugins = useMcpPlugins();
   const { t } = useTranslation();
 
   // 뷰 모드 — localStorage 연동
@@ -420,7 +418,6 @@ export default function Home() {
                     <ResultCard
                       report={r}
                       searchQuery={searchQuery}
-                      mcpPlugins={mcpPlugins}
                       onSchedule={handleScheduleOpen}
                       viewMode={viewMode}
                       onExpandToFull={handleExpandToFull}

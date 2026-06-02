@@ -8,6 +8,6 @@
   {"id":"settings-open","name":"설정 열기","expect":"settings panel visible"},
   {"id":"history-panel","name":"히스토리 패널","expect":"history empty state or list visible"},
   {"id":"export-buttons","name":"내보내기 버튼","expect":"export actions visible after generation"},
-  {"id":"menu-all-items","name":"결과 카드 전체 액션 메뉴","expect":"all copy, prompt, NLM, export, publish, schedule, share, delete actions are visible"},
-  {"id":"menu-action-clicks","name":"결과 카드 전체 액션 실행","expect":"each menu item can be clicked and produces the expected UI/API/download side effect with external services mocked"}
+  {"id":"menu-all-items","name":"결과 카드 전체 액션 메뉴","expect":"all copy, prompt, NLM, export, schedule, share, delete actions are visible and direct CMS publish actions are absent"},
+  {"id":"menu-action-clicks","name":"결과 카드 전체 액션 실행","expect":"each remaining menu item can be clicked and produces the expected UI/API/download side effect with external services mocked"}
 ]

@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-02 23:25:40
+- Generated: 2026-06-03 00:03:55
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -19,8 +19,8 @@
 | settings-open | 설정 열기 | settings panel visible |
 | history-panel | 히스토리 패널 | history empty state or list visible |
 | export-buttons | 내보내기 버튼 | export actions visible after generation |
-| menu-all-items | 결과 카드 전체 액션 메뉴 | all copy, prompt, NLM, export, publish, schedule, share, delete actions are visible |
-| menu-action-clicks | 결과 카드 전체 액션 실행 | each menu item can be clicked and produces the expected UI/API/download side effect with external services mocked |
+| menu-all-items | 결과 카드 전체 액션 메뉴 | all copy, prompt, NLM, export, schedule, share, delete actions are visible and direct CMS publish actions are absent |
+| menu-action-clicks | 결과 카드 전체 액션 실행 | each remaining menu item can be clicked and produces the expected UI/API/download side effect with external services mocked |
 
 ## Results
 
@@ -28,7 +28,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 API, 핵심만 빠르게 보기', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 공개: 도입 전 핵심 체크', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | settings-open | PASS | tests/e2e/autoqa/artifacts/settings-open.png |
 | provider-chatmock | PASS | settings popover contains ChatMock/GPT-5.5 |
@@ -59,17 +59,13 @@
 | menu-action:텍스트-txt | PASS | download=QA 전체 메뉴 테스트 리포트.txt |
 | menu-action:패키지-zip | PASS | download=QA 전체 메뉴 테스트 리포트.zip |
 | menu-action:PDF-인쇄 | PASS | print_called=True |
-| menu-action:네이버-블로그-발행 | PASS | plugin_id=naver_blog |
-| menu-action:WordPress-발행 | PASS | plugin_id=wordpress |
-| menu-action:Medium-발행 | PASS | plugin_id=medium |
-| menu-action:Substack-발행 | PASS | plugin_id=substack |
 | menu-action:예약-발행 | PASS | tests/e2e/autoqa/artifacts/menu-schedule.png |
 | menu-action:공유 | PASS | clipboard_len=197 |
 | menu-action:삭제 | PASS | card_removed=True |
 
 ## Notes
 
-- Result-card action menu QA mocks NotebookLM, CMS publish, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.
+- Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.
 
 ## Fixes Applied
 
@@ -79,7 +75,7 @@
 - `tests/e2e/autoqa/*`: Added ChatMock 5.5 server wrapper, QA matrix, Playwright QA runner, and Windows stack runner/cleanup script.
 - QA CORS/CSRF path is verified with explicit `CORS_ORIGINS`, `Origin`, and `Referer` headers matching browser execution.
 - Export-menu QA now scopes clicks to the generated result card, avoiding the Next.js dev overlay.
-- Result-card action-menu QA now clicks every copy, prompt, platform, NLM, event, chat, export, publish, schedule, share, and delete item with external side effects mocked.
+- Result-card action-menu QA now clicks every copy, prompt, platform, NLM, event, chat, export, schedule, share, and delete item with external side effects mocked.
 
 ## Summary
 

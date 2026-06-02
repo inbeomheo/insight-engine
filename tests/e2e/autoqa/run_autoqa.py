@@ -45,10 +45,6 @@ MENU_EXPECTED_LABELS = [
     "텍스트 (.txt)",
     "패키지 (.zip)",
     "PDF 인쇄",
-    "네이버 블로그 발행",
-    "WordPress 발행",
-    "Medium 발행",
-    "Substack 발행",
     "예약 발행",
     "공유",
     "삭제",
@@ -64,13 +60,6 @@ NOTEBOOK_MENU_TYPES = {
     "NLM 플래시카드": "flashcards",
     "NLM 브리핑": "briefing",
     "NLM 스터디 가이드": "study_guide",
-}
-
-PUBLISH_MENU_PLUGINS = {
-    "네이버 블로그 발행": "naver_blog",
-    "WordPress 발행": "wordpress",
-    "Medium 발행": "medium",
-    "Substack 발행": "substack",
 }
 
 EXPORT_MENU_EXTENSIONS = {
@@ -144,7 +133,7 @@ class QaReport:
             "- `tests/e2e/autoqa/*`: Added ChatMock 5.5 server wrapper, QA matrix, Playwright QA runner, and Windows stack runner/cleanup script.",
             "- QA CORS/CSRF path is verified with explicit `CORS_ORIGINS`, `Origin`, and `Referer` headers matching browser execution.",
             "- Export-menu QA now scopes clicks to the generated result card, avoiding the Next.js dev overlay.",
-            "- Result-card action-menu QA now clicks every copy, prompt, platform, NLM, event, chat, export, publish, schedule, share, and delete item with external side effects mocked.",
+            "- Result-card action-menu QA now clicks every copy, prompt, platform, NLM, event, chat, export, schedule, share, and delete item with external side effects mocked.",
             "",
             "## Summary",
             "",
@@ -262,13 +251,6 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
             return {}
 
     context.route("**/api/mcp/plugins", lambda route: fulfill_json(route, {"plugins": plugins}))
-
-    def publish(route) -> None:
-        payload = request_payload(route)
-        calls["publish"].append(payload)
-        fulfill_json(route, {"success": True, "message": f"{payload.get('plugin_id')} mock publish ok"})
-
-    context.route("**/api/mcp/publish", publish)
 
     def schedule(route) -> None:
         payload = request_payload(route)
@@ -418,7 +400,6 @@ def click_menu_label(page, label: str) -> None:
 
 def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     calls: dict[str, list[dict[str, Any]]] = {
-        "publish": [],
         "schedule": [],
         "notebooklm": [],
         "rewrite": [],
@@ -440,8 +421,14 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         menu = open_action_menu(page)
         visible_labels = [line.strip() for line in menu.inner_text(timeout=5_000).splitlines() if line.strip()]
         missing = [label for label in MENU_EXPECTED_LABELS if label not in visible_labels]
+        removed_publish = ["네이버 블로그 발행", "WordPress 발행", "Medium 발행", "Substack 발행"]
+        still_visible = [label for label in removed_publish if label in visible_labels]
         menu_png = screenshot(page, "menu-all-items.png")
-        report.record("menu-all-items", not missing, menu_png if not missing else f"missing={missing}; labels={visible_labels}")
+        report.record(
+            "menu-all-items",
+            not missing and not still_visible,
+            menu_png if not missing and not still_visible else f"missing={missing}; still_visible={still_visible}; labels={visible_labels}",
+        )
         close_dialogs(page)
     except Exception as exc:
         report.record("menu-all-items", False, repr(exc))
@@ -564,19 +551,6 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     except Exception as exc:
         record_action("PDF 인쇄", False, repr(exc))
 
-    for label, plugin_id in PUBLISH_MENU_PLUGINS.items():
-        try:
-            before = len(calls["publish"])
-            click_menu_label(page, label)
-            ok = wait_until(
-                lambda: len(calls["publish"]) > before and calls["publish"][-1].get("plugin_id") == plugin_id,
-                10_000,
-                page,
-            )
-            record_action(label, ok, f"plugin_id={calls['publish'][-1].get('plugin_id') if calls['publish'] else None}")
-        except Exception as exc:
-            record_action(label, False, repr(exc))
-
     try:
         before = len(calls["schedule"])
         click_menu_label(page, "예약 발행")
@@ -608,7 +582,7 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     except Exception as exc:
         record_action("삭제", False, repr(exc))
 
-    report.notes.append("Result-card action menu QA mocks NotebookLM, CMS publish, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.")
+    report.notes.append("Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.")
     context.close()
 
 
