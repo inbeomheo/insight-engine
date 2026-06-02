@@ -168,11 +168,13 @@ def open_generation_settings(page) -> None:
 
 
 def click_text_generate(page) -> None:
+    page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+    page.wait_for_timeout(300)
     textarea = page.locator("textarea").first
     textarea.wait_for(state="visible", timeout=20_000)
     qa_text = (
-        "??? ? ??? ??? ??????. ?? QA? ChatMock 5.5 ??? ?? "
-        "?? ??? ?? ??? ?? ????? ?????. ?? ??? ?? ?? ?????."
+        "?? QA? ??? ? ??? ??? ??????. ChatMock 5.5 ??? "
+        "?? ??? ?? ??? ?? ????? ?????. ?? ??? ??? ???."
     )
     textarea.fill(qa_text)
     page.wait_for_timeout(300)
@@ -641,6 +643,8 @@ def main() -> int:
             page.wait_for_timeout(1000)
             home_png = screenshot(page, "home-load.png")
             report.record("home-load", page.locator("#url-input").count() > 0, home_png)
+            studio_visible = page.get_by_text("AI Content Studio").count() > 0 or page.get_by_text("Source Composer").count() > 0
+            report.record("studio-layout", studio_visible, "studio hero/source composer visible" if studio_visible else screenshot(page, "studio-layout-fail.png"))
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")
             report.write()
@@ -709,7 +713,7 @@ def main() -> int:
 
         try:
             page.locator("header button").first.click(timeout=5_000)
-            page.locator("aside").wait_for(state="visible", timeout=10_000)
+            page.locator("aside[role='navigation']").wait_for(state="visible", timeout=10_000)
             history_png = screenshot(page, "history-panel.png")
             report.record("history-panel", True, history_png)
         except Exception as exc:
