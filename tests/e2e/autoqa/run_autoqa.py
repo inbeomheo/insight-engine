@@ -279,6 +279,22 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
 
     context.route("**/api/notebooklm/generate", notebook_generate)
     context.route("**/api/notebooklm/status/*", lambda route: fulfill_json(route, {"status": "completed", "type": "qa"}))
+    context.route(
+        "**/api/notebooklm/rendered-download/*",
+        lambda route: route.fulfill(
+            status=200,
+            headers={"Content-Type": "text/markdown", "Content-Disposition": "attachment; filename=qa-study-guide.md"},
+            body="# QA NotebookLM markdown\n\nThis simulates a stale backend markdown attachment.",
+        ),
+    )
+    context.route(
+        "**/api/notebooklm/view/*",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="text/html; charset=utf-8",
+            body="<!doctype html><html><body><h1>QA NotebookLM HTML</h1></body></html>",
+        ),
+    )
 
     def rewrite(route) -> None:
         payload = request_payload(route)
@@ -683,6 +699,19 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
             nlm_labels_ok,
             screenshot(page, "notebooklm-view-download-labels.png") if nlm_labels_ok else nlm_text[:300],
         )
+        try:
+            with page.expect_download(timeout=10_000) as download_info:
+                page.locator("[data-testid='notebooklm-download-artifact']").first.click(timeout=10_000)
+            download = download_info.value
+            filename = download.suggested_filename
+            html_ok = filename.lower().endswith(".html")
+            report.record(
+                "notebooklm-html-download-extension",
+                html_ok,
+                f"download={filename}" if html_ok else f"expected .html, got {filename}",
+            )
+        except Exception as exc:
+            report.record("notebooklm-html-download-extension", False, repr(exc))
         menu = open_action_menu(page)
         visible_labels = [line.strip() for line in menu.inner_text(timeout=5_000).splitlines() if line.strip()]
         missing = [label for label in MENU_EXPECTED_LABELS if label not in visible_labels]

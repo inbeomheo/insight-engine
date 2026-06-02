@@ -17,6 +17,57 @@ const TYPE_META: Record<string, { label: string; icon: typeof Music; downloadLab
   study_guide: { label: '스터디 가이드', icon: BookOpen, downloadLabel: 'MD' },
 };
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function markdownFallbackHtml(markdown: string, title: string) {
+  const safeTitle = escapeHtml(title);
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${safeTitle}</title>
+  <style>
+    body { max-width: 860px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.7; color: #111827; }
+    pre { white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+  </style>
+</head>
+<body><pre>${escapeHtml(markdown)}</pre></body>
+</html>`;
+}
+
+function downloadHtml(html: string, filename: string) {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function saveMarkdownArtifactAsHtml(artifactId: string) {
+  const response = await fetch(apiUrl(`/api/notebooklm/view/${artifactId}`));
+  if (!response.ok) throw new Error(`NotebookLM HTML 저장 실패: HTTP ${response.status}`);
+
+  const text = await response.text();
+  const trimmed = text.trimStart().toLowerCase();
+  const isHtml = response.headers.get('content-type')?.includes('text/html')
+    || trimmed.startsWith('<!doctype')
+    || trimmed.startsWith('<html');
+  const filename = `${artifactId}.html`;
+  downloadHtml(isHtml ? text : markdownFallbackHtml(text, filename), filename);
+}
+
 interface NotebookLmSectionProps {
   artifacts: NotebookLmArtifact[];
 }
@@ -46,9 +97,6 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
           const meta = TYPE_META[a.content_type] ?? { label: a.content_type, icon: FileText };
           const Icon = meta.icon;
           const isMarkdownArtifact = (meta.downloadLabel ?? 'MD') === 'MD';
-          const downloadUrl = isMarkdownArtifact
-            ? `/api/notebooklm/rendered-download/${a.artifact_id}`
-            : `/api/notebooklm/download/${a.artifact_id}`;
           const downloadLabel = isMarkdownArtifact
             ? 'HTML 저장'
             : `원본 ${meta.downloadLabel ?? '파일'} 저장`;
@@ -119,7 +167,13 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
                 size="sm"
                 data-testid="notebooklm-download-artifact"
                 className="h-6 gap-1 rounded-lg px-2 text-xs text-muted-foreground"
-                onClick={() => window.open(apiUrl(downloadUrl), '_blank')}
+                onClick={() => {
+                  if (isMarkdownArtifact) {
+                    void saveMarkdownArtifactAsHtml(a.artifact_id);
+                  } else {
+                    window.open(apiUrl(`/api/notebooklm/download/${a.artifact_id}`), '_blank');
+                  }
+                }}
               >
                 {downloadLabel}
                 <Download className="h-3 w-3" />

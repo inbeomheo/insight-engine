@@ -180,6 +180,12 @@
     "expect": "완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다"
   },
   {
+    "id": "notebooklm-html-download-extension",
+    "name": "NotebookLM HTML 저장 확장자",
+    "url": "http://localhost:3000",
+    "expect": "Markdown 산출물의 HTML 저장 버튼은 백엔드가 MD attachment를 보내도 .html 파일로 저장한다"
+  },
+  {
     "id": "right-panel-export-all",
     "name": "우측 패널 전체 내보내기",
     "url": "http://localhost:3000",

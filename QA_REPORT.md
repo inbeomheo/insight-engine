@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 05:54:42
+- Generated: 2026-06-03 06:06:28
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -40,6 +40,7 @@
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
 | right-panel-nlm-quick-view | 우측 패널 NLM 바로 보기 | 우측 패널 NLM 산출물 빠른 액션이 최근 완료 산출물 보기 창을 연다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
+| notebooklm-html-download-extension | NotebookLM HTML 저장 확장자 | Markdown 산출물의 HTML 저장 버튼은 백엔드가 MD attachment를 보내도 .html 파일로 저장한다 |
 | right-panel-export-all | 우측 패널 전체 내보내기 | 우측 패널 내보내기 빠른 액션이 전체 결과 Markdown 다운로드와 완료 상태를 남긴다 |
 | right-panel-rewrite-action | 우측 패널 플랫폼 변환 실행 | 우측 패널 플랫폼 변환 빠른 액션이 최근 결과의 플랫폼별 카피 변환 모달을 연다 |
 | right-panel-recent-result-focus | 우측 패널 최근 결과 이동 | 우측 패널 최근 결과를 클릭하면 해당 결과 카드로 이동하고 포커스 상태가 남는다 |
@@ -89,6 +90,7 @@
 | history-panel | PASS | tests/e2e/autoqa/artifacts/history-panel.png |
 | export-buttons | PASS | tests/e2e/autoqa/artifacts/export-buttons.png |
 | notebooklm-view-download-labels | PASS | tests/e2e/autoqa/artifacts/notebooklm-view-download-labels.png |
+| notebooklm-html-download-extension | PASS | download=qa-study-guide.html |
 | menu-all-items | PASS | tests/e2e/autoqa/artifacts/menu-all-items.png |
 | menu-action:제목-복사 | PASS | clipboard_len=16 |
 | menu-action:전체-복사 | PASS | clipboard_len=127 |
