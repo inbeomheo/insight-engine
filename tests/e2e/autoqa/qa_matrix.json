@@ -114,6 +114,12 @@
     "expect": "읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다"
   },
   {
+    "id": "result-workbench-nlm-all",
+    "name": "Result Workbench 전체 NLM 산출물",
+    "url": "http://localhost:3000",
+    "expect": "팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다"
+  },
+  {
     "id": "right-panel-settings",
     "name": "우측 패널 설정 요약",
     "url": "http://localhost:3000",

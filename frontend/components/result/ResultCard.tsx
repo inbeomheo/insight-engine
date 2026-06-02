@@ -768,15 +768,30 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
           <section data-testid="workbench-section-nlm" className={workbenchSectionClass}>
             <p className="mb-2 text-xs font-semibold text-slate-500">NLM 산출물</p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <Button data-testid="workbench-action-nlm-audio" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('audio')}>
                 <Headphones className="h-3.5 w-3.5 text-indigo-600" />팟캐스트
+              </Button>
+              <Button data-testid="workbench-action-nlm-video" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('video')}>
+                <Layers className="h-3.5 w-3.5 text-indigo-600" />비디오
+              </Button>
+              <Button data-testid="workbench-action-nlm-infographic" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('infographic')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />인포그래픽
               </Button>
               <Button data-testid="workbench-action-nlm-slide-deck" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('slide_deck')}>
                 <Layers className="h-3.5 w-3.5 text-indigo-600" />슬라이드
               </Button>
+              <Button data-testid="workbench-action-nlm-mindmap" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('mindmap')}>
+                <Brain className="h-3.5 w-3.5 text-indigo-600" />마인드맵
+              </Button>
               <Button data-testid="workbench-action-nlm-quiz" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('quiz')}>
                 <ListChecks className="h-3.5 w-3.5 text-indigo-600" />퀴즈
+              </Button>
+              <Button data-testid="workbench-action-nlm-flashcards" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('flashcards')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />플래시카드
+              </Button>
+              <Button data-testid="workbench-action-nlm-briefing" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('briefing')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />브리핑
               </Button>
               <Button data-testid="workbench-action-nlm-study-guide" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('study_guide')}>
                 <Brain className="h-3.5 w-3.5 text-indigo-600" />NLM 가이드

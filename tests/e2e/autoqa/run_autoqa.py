@@ -977,6 +977,23 @@ def main() -> int:
                 workbench_visible and not missing_sections,
                 screenshot(page, "result-workbench-sections.png") if workbench_visible and not missing_sections else f"missing={missing_sections}",
             )
+            nlm_action_ids = [
+                "workbench-action-nlm-audio",
+                "workbench-action-nlm-video",
+                "workbench-action-nlm-infographic",
+                "workbench-action-nlm-slide-deck",
+                "workbench-action-nlm-mindmap",
+                "workbench-action-nlm-quiz",
+                "workbench-action-nlm-flashcards",
+                "workbench-action-nlm-briefing",
+                "workbench-action-nlm-study-guide",
+            ]
+            missing_nlm_actions = [test_id for test_id in nlm_action_ids if workbench.locator(f"[data-testid='{test_id}']").count() == 0]
+            report.record(
+                "result-workbench-nlm-all",
+                workbench_visible and not missing_nlm_actions,
+                screenshot(page, "result-workbench-nlm-all.png") if workbench_visible and not missing_nlm_actions else f"missing={missing_nlm_actions}",
+            )
         except Exception as exc:
             fail_png = screenshot(page, "direct-text-generate-fail.png")
             report.record("direct-text-generate", False, f"{repr(exc)}; screenshot={fail_png}")
