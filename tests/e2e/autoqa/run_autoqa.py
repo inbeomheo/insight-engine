@@ -116,7 +116,7 @@ class QaReport:
         if self.console_errors:
             lines.extend(["", "## Browser Console Errors", ""])
             for err in self.console_errors[:40]:
-                lines.append(f"- `{err[:500]}`")
+                lines.append(f"- `{err[:6000]}`")
         if self.notes:
             lines.extend(["", "## Notes", ""])
             for note in self.notes:
@@ -142,7 +142,7 @@ class QaReport:
 
 def screenshot(page, name: str) -> str:
     path = ARTIFACTS / name
-    page.screenshot(path=str(path), full_page=True)
+    page.screenshot(path=str(path), full_page=True, caret="initial")
     return _rel(path)
 
 
@@ -1542,6 +1542,16 @@ def main() -> int:
     if report.console_errors:
         # Known browser extension / dev noise should not fail QA; actual app errors are visible in report.
         report.notes.append("브라우저 console error는 참고용으로 기록했습니다.")
+
+    hydration_errors = [
+        err for err in report.console_errors
+        if "hydrated" in err.lower() or "hydration" in err.lower()
+    ]
+    report.record(
+        "no-hydration-console-errors",
+        not hydration_errors,
+        "clean" if not hydration_errors else hydration_errors[0][:6000],
+    )
 
     report.write()
     return report.failures

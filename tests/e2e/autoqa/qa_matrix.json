@@ -192,6 +192,12 @@
     "expect": "우측 패널 현재 설정에 상세도, 웹 보강, 웹 리서치, 댓글 분석, 에이전트 상태가 함께 표시된다"
   },
   {
+    "id": "no-hydration-console-errors",
+    "name": "Hydration 콘솔 경고 없음",
+    "url": "http://localhost:3000",
+    "expect": "SSR/클라이언트 초기 렌더 불일치로 인한 React hydration 경고가 콘솔에 남지 않는다"
+  },
+  {
     "id": "right-panel-nlm",
     "name": "우측 패널 NLM 산출물",
     "url": "http://localhost:3000",

@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 07:06:45
+- Generated: 2026-06-03 07:26:49
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -42,6 +42,7 @@
 | workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
 | right-panel-advanced-summary | 우측 패널 고급 설정 요약 | 우측 패널 현재 설정에 상세도, 웹 보강, 웹 리서치, 댓글 분석, 에이전트 상태가 함께 표시된다 |
+| no-hydration-console-errors | Hydration 콘솔 경고 없음 | SSR/클라이언트 초기 렌더 불일치로 인한 React hydration 경고가 콘솔에 남지 않는다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
 | right-panel-nlm-quick-view | 우측 패널 NLM 바로 보기 | 우측 패널 NLM 산출물 빠른 액션이 최근 완료 산출물 보기 창을 연다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
@@ -137,21 +138,11 @@
 | right-panel-schedule-card | PASS | tests/e2e/autoqa/artifacts/right-panel-schedule-card.png |
 | right-panel-quick-actions | PASS | tests/e2e/autoqa/artifacts/right-panel-calendar.png |
 | mobile-right-panel-drawer | PASS | tests/e2e/autoqa/artifacts/mobile-right-panel-drawer.png |
-
-## Browser Console Errors
-
-- `[right-panel] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
-
-- A server/client branch `if (typeof window !== 'undefined')`.
-- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
-- Date formatting in a user's locale which doesn't match the server.
-- External changing data without sending a snapshot of it along with the HTML.
-- I`
+| no-hydration-console-errors | PASS | clean |
 
 ## Notes
 
 - Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.
-- 브라우저 console error는 참고용으로 기록했습니다.
 
 ## Fixes Applied
 
