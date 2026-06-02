@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Youtube, Layers } from 'lucide-react';
+import { Youtube, Layers, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -60,7 +60,7 @@ export default function Home() {
 
   const selectedProvider = useSettingsStore((s) => s.selectedProvider);
   const selectedModel = useSettingsStore((s) => s.selectedModel);
-  const modelLabel = selectedModel || selectedProvider || '?? ??';
+  const modelLabel = selectedModel || selectedProvider || '자동 선택';
 
   const generationMode = useSettingsStore((s) => s.generationMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
@@ -150,10 +150,13 @@ export default function Home() {
   // 도움말 패널 + 가이드 투어
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+  const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
 
   // HelpPanel + GuidedTour 핸들러 — 안정 참조
   const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
   const handleCloseTour = useCallback(() => setTourActive(false), []);
+  const handleOpenMobileRightPanel = useCallback(() => setMobileRightPanelOpen(true), []);
+  const handleCloseMobileRightPanel = useCallback(() => setMobileRightPanelOpen(false), []);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -283,7 +286,7 @@ export default function Home() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         sidebar={<Sidebar />}
-        header={<Header />}
+        header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} />}
         rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} />}
         main={(
           <>
@@ -396,6 +399,37 @@ export default function Home() {
           </>
         )}
       />
+
+      {mobileRightPanelOpen && (
+        <div data-testid="mobile-right-panel" className="fixed inset-0 z-[70] xl:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
+            aria-label="작업 패널 닫기"
+            onClick={handleCloseMobileRightPanel}
+          />
+          <aside className="absolute right-0 top-0 h-full w-[min(360px,92vw)] border-l border-slate-200 bg-white shadow-2xl">
+            <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
+              <p className="text-sm font-semibold text-slate-950">작업 패널</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="mobile-right-panel-close"
+                className="h-8 w-8"
+                onClick={handleCloseMobileRightPanel}
+                aria-label="작업 패널 닫기"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="h-[calc(100%-3.5rem)]">
+              <StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} />
+            </div>
+          </aside>
+        </div>
+      )}
+
 
       <SettingsModal />
       <PromptModal />

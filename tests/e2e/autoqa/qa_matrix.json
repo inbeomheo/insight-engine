@@ -12,6 +12,18 @@
     "expect": "studio shell and composer visible"
   },
   {
+    "id": "header-status-summary",
+    "name": "Header status summary",
+    "url": "http://localhost:3000",
+    "expect": "header shows current model and work status"
+  },
+  {
+    "id": "mobile-right-panel-drawer",
+    "name": "Mobile right panel drawer",
+    "url": "http://localhost:3000",
+    "expect": "mobile header opens the studio work panel drawer"
+  },
+  {
     "id": "source-file-generate",
     "name": "Source file generate",
     "url": "http://localhost:3000",

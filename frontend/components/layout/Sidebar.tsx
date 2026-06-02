@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +78,10 @@ export default function Sidebar() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile, setSidebarOpen]);
 
   const handleHistoryClick = useCallback((id: string) => {
     setActiveReportId(id);

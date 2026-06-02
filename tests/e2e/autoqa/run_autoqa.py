@@ -439,8 +439,9 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         )
         report.record("right-panel-settings", settings_ok, screenshot(page, "right-panel-settings.png") if settings_ok else panel.inner_text(timeout=5_000)[:500])
 
+        nlm_ok = wait_until(lambda: panel.locator("[data-testid='right-panel-nlm-artifact']").count() >= 3, 10_000, page)
         nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
-        report.record("right-panel-nlm", nlm_count >= 3, f"nlm_count={nlm_count}")
+        report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")
 
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
         calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
@@ -453,6 +454,37 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
+def run_mobile_studio_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 390, "height": 844}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[mobile] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[mobile] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        trigger = page.locator("[data-testid='mobile-right-panel-trigger']")
+        trigger.wait_for(state="visible", timeout=10_000)
+        trigger.click(timeout=10_000)
+        drawer = page.locator("[data-testid='mobile-right-panel']")
+        drawer.wait_for(state="visible", timeout=10_000)
+        ok = drawer.locator("[data-testid='studio-right-panel']").count() > 0
+        report.record("mobile-right-panel-drawer", ok, screenshot(page, "mobile-right-panel-drawer.png") if ok else drawer.inner_text(timeout=5_000)[:500])
+    except Exception as exc:
+        fail_png = screenshot(page, "mobile-right-panel-drawer-fail.png")
+        report.record("mobile-right-panel-drawer", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
 
@@ -730,6 +762,11 @@ def main() -> int:
             report.record("home-load", page.locator("#url-input").count() > 0, home_png)
             studio_visible = page.get_by_text("AI Content Studio").count() > 0 or page.get_by_text("Source Composer").count() > 0
             report.record("studio-layout", studio_visible, "studio hero/source composer visible" if studio_visible else screenshot(page, "studio-layout-fail.png"))
+            header_ok = (
+                page.locator("[data-testid='header-model-badge']").count() > 0
+                and page.locator("[data-testid='header-status-badge']").count() > 0
+            )
+            report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")
             report.write()
@@ -855,6 +892,7 @@ def main() -> int:
 
         run_seeded_menu_action_suite(browser, report)
         run_right_panel_suite(browser, report)
+        run_mobile_studio_suite(browser, report)
 
         browser.close()
 

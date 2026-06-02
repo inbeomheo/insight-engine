@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 02:17:09
+- Generated: 2026-06-03 02:28:32
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -12,6 +12,8 @@
 |---|---|---|
 | home-load | 홈 로드 | main UI visible |
 | studio-layout | ???? ???? | studio shell and composer visible |
+| header-status-summary | Header status summary | header shows current model and work status |
+| mobile-right-panel-drawer | Mobile right panel drawer | mobile header opens the studio work panel drawer |
 | source-file-generate | Source file generate | file tab accepts upload and Generate Dock creates a result |
 | source-voice-generate | Source voice generate | voice tab accepts audio upload and Generate Dock creates a result |
 | chatmock-server | ChatMock OpenAI 호환 서버 | HTTP 200 |
@@ -36,9 +38,10 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5와 API 활용 핵심 정리', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 변화 요약', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
+| header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
 | source-file-generate | PASS | tests/e2e/autoqa/artifacts/source-file-generate.png |
 | source-voice-generate | PASS | tests/e2e/autoqa/artifacts/source-voice-generate.png |
 | settings-open | PASS | tests/e2e/autoqa/artifacts/settings-open.png |
@@ -78,6 +81,7 @@
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
 | right-panel-nlm | PASS | nlm_count=3 |
 | right-panel-quick-actions | PASS | tests/e2e/autoqa/artifacts/right-panel-calendar.png |
+| mobile-right-panel-drawer | PASS | tests/e2e/autoqa/artifacts/mobile-right-panel-drawer.png |
 
 ## Browser Console Errors
 
