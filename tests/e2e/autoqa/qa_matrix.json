@@ -114,6 +114,12 @@
     "expect": "읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다"
   },
   {
+    "id": "result-workbench-read-actions",
+    "name": "Result Workbench 읽기 액션",
+    "url": "http://localhost:3000",
+    "expect": "읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다"
+  },
+  {
     "id": "result-workbench-nlm-all",
     "name": "Result Workbench 전체 NLM 산출물",
     "url": "http://localhost:3000",
@@ -133,9 +139,9 @@
   },
   {
     "id": "notebooklm-view-download-labels",
-    "name": "NotebookLM 보기/원본 저장 라벨",
+    "name": "NotebookLM 보기/HTML 저장 라벨",
     "url": "http://localhost:3000",
-    "expect": "완료된 NotebookLM 산출물이 브라우저 보기와 원본 저장을 명확히 구분한다"
+    "expect": "완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다"
   },
   {
     "id": "right-panel-quick-actions",

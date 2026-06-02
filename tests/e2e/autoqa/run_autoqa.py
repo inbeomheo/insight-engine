@@ -543,7 +543,7 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
         page.locator("[data-report-id='qa-menu-report']").wait_for(state="visible", timeout=60_000)
         nlm_text = page.locator("[data-testid='notebooklm-artifact']").first.inner_text(timeout=10_000)
-        nlm_labels_ok = "브라우저 보기" in nlm_text and "원본 MD 저장" in nlm_text
+        nlm_labels_ok = "브라우저 보기" in nlm_text and "HTML 저장" in nlm_text and "원본 MD 저장" not in nlm_text
         report.record(
             "notebooklm-view-download-labels",
             nlm_labels_ok,
@@ -976,6 +976,18 @@ def main() -> int:
                 "result-workbench-sections",
                 workbench_visible and not missing_sections,
                 screenshot(page, "result-workbench-sections.png") if workbench_visible and not missing_sections else f"missing={missing_sections}",
+            )
+            read_action_ids = [
+                "workbench-action-copy-title",
+                "workbench-action-copy-content",
+                "workbench-action-copy-rich",
+                "workbench-action-toggle-transcript",
+            ]
+            missing_read_actions = [test_id for test_id in read_action_ids if workbench.locator(f"[data-testid='{test_id}']").count() == 0]
+            report.record(
+                "result-workbench-read-actions",
+                workbench_visible and not missing_read_actions,
+                screenshot(page, "result-workbench-read-actions.png") if workbench_visible and not missing_read_actions else f"missing={missing_read_actions}",
             )
             nlm_action_ids = [
                 "workbench-action-nlm-audio",

@@ -45,6 +45,13 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
         {artifacts.map((a) => {
           const meta = TYPE_META[a.content_type] ?? { label: a.content_type, icon: FileText };
           const Icon = meta.icon;
+          const isMarkdownArtifact = (meta.downloadLabel ?? 'MD') === 'MD';
+          const downloadUrl = isMarkdownArtifact
+            ? `/api/notebooklm/rendered-download/${a.artifact_id}`
+            : `/api/notebooklm/download/${a.artifact_id}`;
+          const downloadLabel = isMarkdownArtifact
+            ? 'HTML 저장'
+            : `원본 ${meta.downloadLabel ?? '파일'} 저장`;
 
           if (a.status === 'in_progress') {
             return (
@@ -112,9 +119,9 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
                 size="sm"
                 data-testid="notebooklm-download-artifact"
                 className="h-6 gap-1 rounded-lg px-2 text-xs text-muted-foreground"
-                onClick={() => window.open(apiUrl(`/api/notebooklm/download/${a.artifact_id}`), '_blank')}
+                onClick={() => window.open(apiUrl(downloadUrl), '_blank')}
               >
-                원본 {meta.downloadLabel ?? 'MD'} 저장
+                {downloadLabel}
                 <Download className="h-3 w-3" />
               </Button>
             </div>

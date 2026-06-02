@@ -745,6 +745,20 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               <Button data-testid="workbench-action-copy-content" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.content, 'content')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />본문 복사
               </Button>
+              <Button data-testid="workbench-action-copy-rich" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={copyRich}>
+                <Type className="h-3.5 w-3.5 text-indigo-600" />리치 복사
+              </Button>
+              <Button
+                data-testid="workbench-action-toggle-transcript"
+                type="button"
+                variant="outline"
+                size="sm"
+                className={workbenchButtonClass}
+                onClick={() => setPanel('showTranscript', !showTranscript)}
+                disabled={!report.transcript_segments || report.transcript_segments.length === 0}
+              >
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />{showTranscript ? '요약 보기' : '자막 보기'}
+              </Button>
             </div>
           </section>
 

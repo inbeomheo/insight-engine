@@ -100,6 +100,29 @@ class TestNotebookLmRoutes(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_rendered_download_markdown_saves_html_attachment(self):
+        import os
+        import tempfile
+
+        fd, path = tempfile.mkstemp(suffix='.md')
+        os.close(fd)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write('# NotebookLM Result\n\nBody text')
+
+        self.mock_svc.download.return_value = path
+        try:
+            resp = self.client.get('/api/notebooklm/rendered-download/test-id')
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn('text/html', resp.content_type)
+            disposition = resp.headers.get('Content-Disposition', '')
+            self.assertIn('attachment', disposition)
+            self.assertIn('.html', disposition)
+            self.assertNotIn('.md', disposition)
+            body = resp.get_data(as_text=True)
+            self.assertIn('<h1>NotebookLM Result</h1>', body)
+        finally:
+            os.remove(path)
+
 
 if __name__ == '__main__':
     unittest.main()
