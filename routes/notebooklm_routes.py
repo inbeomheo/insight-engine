@@ -44,6 +44,16 @@ def _render_markdown_html(file_path):
 </html>"""
 
 
+def _markdown_html_attachment(file_path):
+    filename = os.path.basename(file_path)
+    html_name = os.path.splitext(filename)[0] + '.html'
+    return Response(
+        _render_markdown_html(file_path),
+        content_type='text/html; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{html_name}"'},
+    )
+
+
 @notebooklm_bp.route('/auth-check', methods=['GET'])
 def auth_check():
     """NotebookLM 인증 상태 확인."""
@@ -92,6 +102,8 @@ def download(artifact_id):
     """콘텐츠 파일 다운로드."""
     try:
         file_path = _service.download(artifact_id)
+        if os.path.basename(file_path).lower().endswith(('.md', '.markdown')):
+            return _markdown_html_attachment(file_path)
         return send_file(
             file_path,
             as_attachment=True,
@@ -130,12 +142,7 @@ def rendered_download(artifact_id):
         lower_name = filename.lower()
 
         if lower_name.endswith(('.md', '.markdown')):
-            html_name = os.path.splitext(filename)[0] + '.html'
-            return Response(
-                _render_markdown_html(file_path),
-                content_type='text/html; charset=utf-8',
-                headers={'Content-Disposition': f'attachment; filename="{html_name}"'},
-            )
+            return _markdown_html_attachment(file_path)
 
         return send_file(
             file_path,
