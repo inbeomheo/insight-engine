@@ -448,6 +448,18 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
         report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")
 
+        guided_action_ids = ["export", "schedule", "nlm", "rewrite", "prompt", "settings"]
+        missing_guidance = [
+            action_id for action_id in guided_action_ids
+            if panel.locator(f"[data-testid='quick-action-{action_id}-desc']").count() == 0
+        ]
+        status_missing = panel.locator("[data-testid='quick-action-workspace-status']").count() == 0
+        report.record(
+            "right-panel-action-guidance",
+            not missing_guidance and not status_missing,
+            screenshot(page, "right-panel-action-guidance.png") if not missing_guidance and not status_missing else f"missing={missing_guidance}; status_missing={status_missing}",
+        )
+
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
         calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
         if not calendar_visible:
@@ -458,6 +470,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-action-guidance", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()

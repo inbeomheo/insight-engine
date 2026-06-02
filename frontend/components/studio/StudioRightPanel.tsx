@@ -33,6 +33,15 @@ const NLM_LABELS: Record<string, string> = {
   study_guide: '스터디 가이드',
 };
 
+const QUICK_ACTION_GUIDE: Record<string, { description: string; target: string }> = {
+  export: { description: 'HTML, DOCX, MD, ZIP 저장으로 이동', target: '내보내기' },
+  schedule: { description: '예약 캘린더와 발행 일정을 확인', target: '캘린더' },
+  nlm: { description: 'NotebookLM 산출물 상태와 보기로 이동', target: 'NLM' },
+  rewrite: { description: '플랫폼별 재작성 도구로 이동', target: '개선' },
+  prompt: { description: '최근 결과의 생성 프롬프트 확인', target: '프롬프트' },
+  settings: { description: '모델, 키, 워크스페이스 설정 열기', target: '설정' },
+};
+
 function flattenArtifacts(reports: Report[]) {
   return reports.flatMap((report) =>
     (report.notebooklm?.artifacts ?? []).map((artifact) => ({ artifact, report })),
@@ -127,9 +136,24 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 빠른 액션</div>
+        <div data-testid="quick-action-workspace-status" className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+          <div className="rounded-2xl bg-emerald-50 px-2 py-2 text-emerald-700">
+            <p className="text-sm font-bold">{reports.length}</p>
+            <p>결과</p>
+          </div>
+          <div className="rounded-2xl bg-indigo-50 px-2 py-2 text-indigo-700">
+            <p className="text-sm font-bold">{schedulesCount}</p>
+            <p>예약</p>
+          </div>
+          <div className="rounded-2xl bg-violet-50 px-2 py-2 text-violet-700">
+            <p className="text-sm font-bold">{nlmCount}</p>
+            <p>NLM</p>
+          </div>
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
+            const guide = QUICK_ACTION_GUIDE[action.id] ?? { description: '작업 영역으로 이동', target: 'Workbench' };
             return (
               <button
                 key={action.id}
@@ -137,8 +161,16 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
                 data-testid={`quick-action-${action.id}`}
                 className="rounded-2xl bg-slate-50 p-3 text-left text-xs text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700"
                 onClick={() => handleQuickAction(action.id)}
+                aria-label={`${action.label} - ${guide.description}`}
               >
-                <Icon className="mb-2 h-4 w-4 text-indigo-600" />{action.label}
+                <div className="flex items-center justify-between gap-2">
+                  <Icon className="h-4 w-4 text-indigo-600" />
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{guide.target}</span>
+                </div>
+                <p className="mt-2 font-semibold text-slate-800">{action.label}</p>
+                <p data-testid={`quick-action-${action.id}-desc`} className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
+                  {guide.description}
+                </p>
               </button>
             );
           })}
