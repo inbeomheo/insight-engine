@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Download, Music, Video, Image, FileText, Brain, HelpCircle, BookOpen } from 'lucide-react';
+import { Loader2, Download, ExternalLink, Music, Video, Image, FileText, Brain, HelpCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 import type { NotebookLmArtifact } from '@/lib/types';
@@ -79,11 +79,11 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
               variant="outline"
               size="sm"
               className="h-7 text-xs gap-1.5"
-              onClick={() => window.open(apiUrl(`/api/notebooklm/download/${a.artifact_id}`), '_blank')}
+              onClick={() => window.open(apiUrl(`/api/notebooklm/view/${a.artifact_id}`), '_blank')}
             >
               <Icon className="h-3.5 w-3.5" />
-              {meta.label}
-              <Download className="h-3 w-3" />
+              {meta.label} 보기
+              <ExternalLink className="h-3 w-3" />
             </Button>
           );
         })}

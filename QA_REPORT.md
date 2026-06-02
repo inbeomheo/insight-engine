@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 00:21:03
+- Generated: 2026-06-03 00:52:11
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -28,7 +28,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='원문 확인이 먼저예요: ChatMock 5.5 API 요약 보류', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 업데이트 핵심 정리', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | settings-open | PASS | tests/e2e/autoqa/artifacts/settings-open.png |
 | provider-chatmock | PASS | settings popover contains ChatMock/GPT-5.5 |
