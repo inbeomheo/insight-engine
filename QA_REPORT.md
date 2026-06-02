@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 02:49:29
+- Generated: 2026-06-03 03:00:24
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -10,30 +10,32 @@
 
 | ID | Name | Expect |
 |---|---|---|
-| home-load | 홈 로드 | main UI visible |
-| studio-layout | ???? ???? | studio shell and composer visible |
-| studio-copy-polish | Studio copy polish | core studio labels and empty states show readable Korean copy |
-| output-blueprint-advanced | Output blueprint advanced controls | advanced blueprint controls expose web search, research, comments, detail level, agent, and model summary |
-| header-status-summary | Header status summary | header shows current model and work status |
-| mobile-right-panel-drawer | Mobile right panel drawer | mobile header opens the studio work panel drawer |
-| source-file-generate | Source file generate | file tab accepts upload and Generate Dock creates a result |
-| source-voice-generate | Source voice generate | voice tab accepts audio upload and Generate Dock creates a result |
-| chatmock-server | ChatMock OpenAI 호환 서버 | HTTP 200 |
-| provider-chatmock | ChatMock 5.5 공급자 노출 | chatmock/gpt-5.5 selectable |
-| direct-text-generate | 직접 텍스트 생성 | generated result visible |
-| text-dock-generate | ??? Dock ?? | Generate Dock handles direct text source |
-| result-workbench | ?? ??? | visible result workbench quick actions |
-| right-panel-settings | Right panel settings | right panel shows current model/style/mode settings |
-| right-panel-nlm | Right panel NLM artifacts | right panel summarizes recent NotebookLM artifacts by status |
-| notebooklm-view-download-labels | NotebookLM view vs original save labels | completed NotebookLM artifacts clearly separate browser viewing from original markdown download |
-| right-panel-quick-actions | Right panel quick actions | quick actions navigate to calendar/settings/workbench targets |
-| youtube-url-validation | YouTube URL 입력 검증 | URL accepted or actionable error |
-| style-selection | 스타일 선택 | style controls usable |
-| settings-open | 설정 열기 | settings panel visible |
-| history-panel | 히스토리 패널 | history empty state or list visible |
-| export-buttons | 내보내기 버튼 | export actions visible after generation |
-| menu-all-items | 결과 카드 전체 액션 메뉴 | all copy, prompt, NLM, export, schedule, share, delete actions are visible and direct CMS publish actions are absent |
-| menu-action-clicks | 결과 카드 전체 액션 실행 | each remaining menu item can be clicked and produces the expected UI/API/download side effect with external services mocked |
+| home-load | 홈 로드 | 메인 UI가 보인다 |
+| studio-layout | 스튜디오 레이아웃 | 스튜디오 shell과 composer가 보인다 |
+| studio-copy-polish | 스튜디오 핵심 카피 | 핵심 스튜디오 라벨과 빈 상태가 읽히는 한국어로 표시된다 |
+| studio-copy-readable | 스튜디오 깨진 카피 방지 | 보이는 스튜디오/소스/우측 패널 카피에 물음표 placeholder가 없다 |
+| output-blueprint-advanced | Output Blueprint 고급 컨트롤 | 웹 보강, 웹 리서치, 댓글 분석, 상세도, 에이전트, 모델 요약 컨트롤이 보인다 |
+| header-status-summary | 헤더 상태 요약 | 헤더에 현재 모델과 작업 상태가 표시된다 |
+| mobile-right-panel-drawer | 모바일 작업 패널 Drawer | 모바일 헤더에서 Studio 작업 패널을 열 수 있다 |
+| source-file-generate | 파일 소스 생성 | 파일 탭에서 업로드 후 Generate Dock으로 결과를 만든다 |
+| source-voice-generate | 음성 소스 생성 | 음성 탭에서 오디오 업로드 후 Generate Dock으로 결과를 만든다 |
+| chatmock-server | ChatMock OpenAI 호환 서버 | HTTP 200과 gpt-5.5 모델이 반환된다 |
+| provider-chatmock | ChatMock 5.5 공급자 노출 | chatmock/gpt-5.5를 선택할 수 있다 |
+| direct-text-generate | 직접 텍스트 생성 | 생성 결과가 보인다 |
+| text-dock-generate | 텍스트 Generate Dock 생성 | Generate Dock이 직접 텍스트 소스를 처리한다 |
+| result-workbench | Result Workbench 패널 | 생성 결과에 빠른 workbench 액션이 보인다 |
+| result-workbench-copy-readable | Result Workbench 카피 | Result Workbench 빠른 액션이 읽히는 한국어이고 물음표 placeholder가 없다 |
+| right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
+| right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
+| notebooklm-view-download-labels | NotebookLM 보기/원본 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 원본 저장을 명확히 구분한다 |
+| right-panel-quick-actions | 우측 패널 빠른 액션 | 빠른 액션이 캘린더/설정/workbench 대상으로 이동한다 |
+| youtube-url-validation | YouTube URL 입력 검증 | URL이 허용되거나 실행 가능한 오류가 표시된다 |
+| style-selection | 스타일 선택 | 스타일 컨트롤을 사용할 수 있다 |
+| settings-open | 설정 열기 | 설정 패널이 보인다 |
+| history-panel | 히스토리 패널 | 히스토리 빈 상태 또는 목록이 보인다 |
+| export-buttons | 내보내기 버튼 | 생성 후 내보내기 액션이 보인다 |
+| menu-all-items | 결과 카드 전체 액션 메뉴 | 복사, 프롬프트, NLM, 내보내기, 예약, 공유, 삭제 액션이 보이고 직접 CMS 발행 액션은 없다 |
+| menu-action-clicks | 결과 카드 전체 액션 실행 | 남은 메뉴 항목을 클릭하면 예상 UI/API/download side effect가 발생한다 |
 
 ## Results
 
@@ -41,11 +43,12 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 API 도입 핵심 요약', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 회귀 테스트 요약', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
 | studio-copy-polish | PASS | tests/e2e/autoqa/artifacts/studio-copy-polish.png |
+| studio-copy-readable | PASS | tests/e2e/autoqa/artifacts/studio-copy-readable.png |
 | output-blueprint-advanced | PASS | tests/e2e/autoqa/artifacts/output-blueprint-advanced.png |
 | source-file-generate | PASS | tests/e2e/autoqa/artifacts/source-file-generate.png |
 | source-voice-generate | PASS | tests/e2e/autoqa/artifacts/source-voice-generate.png |
@@ -56,6 +59,7 @@
 | direct-text-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
 | text-dock-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
 | result-workbench | PASS | tests/e2e/autoqa/artifacts/result-workbench.png |
+| result-workbench-copy-readable | PASS | tests/e2e/autoqa/artifacts/result-workbench-copy-readable.png |
 | history-panel | PASS | tests/e2e/autoqa/artifacts/history-panel.png |
 | export-buttons | PASS | tests/e2e/autoqa/artifacts/export-buttons.png |
 | notebooklm-view-download-labels | PASS | tests/e2e/autoqa/artifacts/notebooklm-view-download-labels.png |
@@ -102,7 +106,7 @@
 ## Notes
 
 - Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.
-- ???? console error? ?? ??? ??????.
+- 브라우저 console error는 참고용으로 기록했습니다.
 
 ## Fixes Applied
 

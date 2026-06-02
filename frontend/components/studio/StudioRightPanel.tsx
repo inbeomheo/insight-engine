@@ -16,27 +16,27 @@ interface StudioRightPanelProps {
 }
 
 const MODE_LABELS: Record<string, string> = {
-  individual: '?? ??',
-  combined: '?? ???',
-  fusion: '?? ??',
+  individual: '개별 생성',
+  combined: '통합 생성',
+  fusion: '퓨전 분석',
 };
 
 const STATUS_META = {
-  completed: { label: '??', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700' },
-  in_progress: { label: '??', icon: Clock3, className: 'bg-indigo-50 text-indigo-700' },
-  failed: { label: '??', icon: XCircle, className: 'bg-red-50 text-red-700' },
+  completed: { label: '완료', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700' },
+  in_progress: { label: '진행', icon: Clock3, className: 'bg-indigo-50 text-indigo-700' },
+  failed: { label: '실패', icon: XCircle, className: 'bg-red-50 text-red-700' },
 } as const;
 
 const NLM_LABELS: Record<string, string> = {
-  audio: '????',
-  video: '???',
-  infographic: '?????',
-  slide_deck: '????',
-  mindmap: '????',
-  quiz: '??',
-  flashcards: '?????',
-  briefing: '???',
-  study_guide: '??? ???',
+  audio: '팟캐스트',
+  video: '비디오',
+  infographic: '인포그래픽',
+  slide_deck: '슬라이드',
+  mindmap: '마인드맵',
+  quiz: '퀴즈',
+  flashcards: '플래시카드',
+  briefing: '브리핑',
+  study_guide: '스터디 가이드',
 };
 
 function flattenArtifacts(reports: Report[]) {
@@ -64,7 +64,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   const nlmCount = reports.reduce((sum, report) => sum + (report.notebooklm?.artifacts?.length ?? 0), 0);
   const latest = reports.slice(0, 4);
   const firstReport = reports[0];
-  const modelLabel = selectedModel || selectedProvider || '?? ??';
+  const modelLabel = selectedModel || selectedProvider || '자동 선택';
 
   function scrollTo(selector: string) {
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -97,41 +97,41 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
     <div data-testid="studio-right-panel" className="flex h-full flex-col gap-4 overflow-y-auto p-4">
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Workspace</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">?? ??</h2>
+        <h2 className="mt-1 text-lg font-semibold text-slate-950">작업 요약</h2>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{sourceCount}</p><p className="text-slate-500">??</p></div>
-          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{reports.length}</p><p className="text-slate-500">??</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{sourceCount}</p><p className="text-slate-500">소스</p></div>
+          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{reports.length}</p><p className="text-slate-500">결과</p></div>
           <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{nlmCount}</p><p className="text-slate-500">NLM</p></div>
         </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-          <Sparkles className="h-4 w-4 text-indigo-600" /> ?? ??
+          <Sparkles className="h-4 w-4 text-indigo-600" /> 현재 설정
         </div>
         <div className="mt-3 space-y-2 text-xs">
           <div data-testid="right-panel-setting-model" className="rounded-2xl bg-slate-50 p-3">
-            <p className="text-slate-500">??</p>
+            <p className="text-slate-500">모델</p>
             <p className="mt-1 truncate font-semibold text-slate-900">{modelLabel}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div data-testid="right-panel-setting-style" className="rounded-2xl bg-slate-50 p-3">
-              <p className="text-slate-500">???</p>
+              <p className="text-slate-500">스타일</p>
               <p className="mt-1 font-semibold text-slate-900">{getStyleLabel(selectedStyle)}</p>
             </div>
             <div data-testid="right-panel-setting-mode" className="rounded-2xl bg-slate-50 p-3">
-              <p className="text-slate-500">??</p>
+              <p className="text-slate-500">모드</p>
               <p className="mt-1 font-semibold text-slate-900">{MODE_LABELS[generationMode] ?? generationMode}</p>
             </div>
           </div>
           <div className="rounded-2xl bg-slate-50 p-3 text-slate-600">
-            {modifiers.length} ? {modifiers.writing_style} ? {modifiers.language}
+            {modifiers.length} · {modifiers.writing_style} · {modifiers.language}
           </div>
         </div>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> ?? ??</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 빠른 액션</div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
@@ -151,10 +151,10 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       </section>
 
       <section data-testid="right-panel-nlm-artifacts" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> ?? NLM ???</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 최근 NLM 산출물</div>
         <div className="mt-3 space-y-2">
           {nlmArtifacts.length === 0 ? (
-            <p className="text-xs text-slate-500">?? NLM ???? ????.</p>
+            <p className="text-xs text-slate-500">아직 NLM 산출물이 없습니다.</p>
           ) : nlmArtifacts.map(({ artifact, report }) => {
             const status = artifactStatus(artifact);
             const StatusIcon = status.icon;
@@ -177,7 +177,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
                     className="mt-2 h-7 gap-1 rounded-lg px-2 text-xs"
                     onClick={() => window.open(apiUrl(`/api/notebooklm/view/${artifact.artifact_id}`), '_blank')}
                   >
-                    ?? <ExternalLink className="h-3 w-3" />
+                    보기 <ExternalLink className="h-3 w-3" />
                   </Button>
                 )}
               </div>
@@ -187,14 +187,14 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> ?? ??</div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> 최근 결과</div>
         <div className="mt-3 space-y-2">
-          {latest.length === 0 ? <p className="text-xs text-slate-500">?? ??? ??? ????.</p> : latest.map((report) => <div key={report.id} className="rounded-2xl bg-slate-50 p-3"><p className="line-clamp-2 text-xs font-medium text-slate-800">{report.title}</p><p className="mt-1 text-[11px] text-slate-500">{report.style}</p></div>)}
+          {latest.length === 0 ? <p className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p> : latest.map((report) => <div key={report.id} className="rounded-2xl bg-slate-50 p-3"><p className="line-clamp-2 text-xs font-medium text-slate-800">{report.title}</p><p className="mt-1 text-[11px] text-slate-500">{report.style}</p></div>)}
         </div>
       </section>
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><CalendarDays className="h-4 w-4 text-indigo-600" /> ??</div>
-        <p className="mt-2 text-xs text-slate-500">??? ?? {schedulesCount}?</p>
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><CalendarDays className="h-4 w-4 text-indigo-600" /> 예약</div>
+        <p className="mt-2 text-xs text-slate-500">예약된 발행 {schedulesCount}개</p>
       </section>
     </div>
   );

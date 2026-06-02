@@ -728,22 +728,22 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Result Workbench</p>
-            <p className="text-sm text-slate-500">??? ??? ??, ??, NLM ??, ????, ???? ?? ?????.</p>
+            <p className="text-sm text-slate-500">메뉴 없이 복사, 변환, NLM 산출물, 내보내기, 예약까지 바로 처리합니다.</p>
           </div>
-          <span className="text-xs text-slate-400">{(report.notebooklm?.artifacts?.length ?? 0)} NLM ? {charCount.toLocaleString()}?</span>
+          <span className="text-xs text-slate-400">{(report.notebooklm?.artifacts?.length ?? 0)} NLM · {charCount.toLocaleString()}자</span>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => copyText(report.content, 'content')}>
             <Copy className="h-3.5 w-3.5 text-indigo-600" />
-            ?? ??
+            본문 복사
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => setPanel('rewriteOpen', true)}>
             <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />
-            ??? ??
+            플랫폼 변환
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => handleNotebookLm('study_guide')}>
             <Brain className="h-3.5 w-3.5 text-indigo-600" />
-            NLM ???
+            NLM 가이드
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={handleExportDocx}>
             <Download className="h-3.5 w-3.5 text-indigo-600" />
@@ -751,7 +751,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => onSchedule(report)}>
             <Calendar className="h-3.5 w-3.5 text-indigo-600" />
-            ??
+            예약
           </Button>
           <Button
             type="button"
@@ -762,7 +762,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             disabled={eventLoading || !(report.url || report.transcript)}
           >
             <ListChecks className="h-3.5 w-3.5 text-indigo-600" />
-            {eventLoading ? '?? ?...' : '???'}
+            {eventLoading ? '추출 중...' : '이벤트'}
           </Button>
         </div>
       </div>

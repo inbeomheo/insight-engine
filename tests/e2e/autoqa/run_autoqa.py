@@ -740,7 +740,7 @@ def main() -> int:
     try:
         payload = {
             "url": "",
-            "content": "?? API ??????. ChatMock 5.5 ??? ?? ??? ??? ??? ???. ? ??? 50?? ????.",
+            "content": "직접 API 회귀 테스트입니다. ChatMock 5.5 경로로 짧은 한국어 요약을 생성합니다. 이 문장은 50자 이상입니다.",
             "model": MODEL_ID,
             "style": "summary",
             "modifiers": {"length": "short", "writing_style": "conversational", "language": "ko"},
@@ -785,6 +785,25 @@ def main() -> int:
                 "studio-copy-polish",
                 not missing_copy,
                 screenshot(page, "studio-copy-polish.png") if not missing_copy else f"missing={missing_copy}",
+            )
+            readable_copy = [
+                "분석할 소스를 준비하세요",
+                "텍스트",
+                "파일",
+                "음성",
+                "작업 요약",
+                "현재 설정",
+                "빠른 액션",
+                "최근 NLM 산출물",
+                "최근 결과",
+            ]
+            body_text = page.locator("body").inner_text(timeout=10_000)
+            missing_readable = [label for label in readable_copy if label not in body_text]
+            has_mojibake = "??" in body_text
+            report.record(
+                "studio-copy-readable",
+                not missing_readable and not has_mojibake,
+                screenshot(page, "studio-copy-readable.png") if not missing_readable and not has_mojibake else f"missing={missing_readable}; has_mojibake={has_mojibake}",
             )
             advanced_controls = [
                 "blueprint-web-search",
@@ -898,6 +917,14 @@ def main() -> int:
             workbench = page.locator("[data-testid='result-workbench']").first
             workbench_visible = workbench.count() > 0 and workbench.is_visible()
             report.record("result-workbench", workbench_visible, screenshot(page, "result-workbench.png") if workbench_visible else "workbench panel missing")
+            workbench_text = workbench.inner_text(timeout=10_000) if workbench_visible else ""
+            expected_workbench_copy = ["본문 복사", "플랫폼 변환", "NLM 가이드", "예약", "이벤트"]
+            missing_workbench_copy = [label for label in expected_workbench_copy if label not in workbench_text]
+            report.record(
+                "result-workbench-copy-readable",
+                workbench_visible and not missing_workbench_copy and "??" not in workbench_text,
+                screenshot(page, "result-workbench-copy-readable.png") if workbench_visible and not missing_workbench_copy and "??" not in workbench_text else f"missing={missing_workbench_copy}; text={workbench_text[:300]!r}",
+            )
         except Exception as exc:
             fail_png = screenshot(page, "direct-text-generate-fail.png")
             report.record("direct-text-generate", False, f"{repr(exc)}; screenshot={fail_png}")
@@ -931,7 +958,7 @@ def main() -> int:
 
     if report.console_errors:
         # Known browser extension / dev noise should not fail QA; actual app errors are visible in report.
-        report.notes.append("???? console error? ?? ??? ??????.")
+        report.notes.append("브라우저 console error는 참고용으로 기록했습니다.")
 
     report.write()
     return report.failures

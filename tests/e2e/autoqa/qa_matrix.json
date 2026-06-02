@@ -3,138 +3,150 @@
     "id": "home-load",
     "name": "홈 로드",
     "url": "http://localhost:3000",
-    "expect": "main UI visible"
+    "expect": "메인 UI가 보인다"
   },
   {
     "id": "studio-layout",
-    "name": "???? ????",
+    "name": "스튜디오 레이아웃",
     "url": "http://localhost:3000",
-    "expect": "studio shell and composer visible"
+    "expect": "스튜디오 shell과 composer가 보인다"
   },
   {
     "id": "studio-copy-polish",
-    "name": "Studio copy polish",
+    "name": "스튜디오 핵심 카피",
     "url": "http://localhost:3000",
-    "expect": "core studio labels and empty states show readable Korean copy"
+    "expect": "핵심 스튜디오 라벨과 빈 상태가 읽히는 한국어로 표시된다"
+  },
+  {
+    "id": "studio-copy-readable",
+    "name": "스튜디오 깨진 카피 방지",
+    "url": "http://localhost:3000",
+    "expect": "보이는 스튜디오/소스/우측 패널 카피에 물음표 placeholder가 없다"
   },
   {
     "id": "output-blueprint-advanced",
-    "name": "Output blueprint advanced controls",
+    "name": "Output Blueprint 고급 컨트롤",
     "url": "http://localhost:3000",
-    "expect": "advanced blueprint controls expose web search, research, comments, detail level, agent, and model summary"
+    "expect": "웹 보강, 웹 리서치, 댓글 분석, 상세도, 에이전트, 모델 요약 컨트롤이 보인다"
   },
   {
     "id": "header-status-summary",
-    "name": "Header status summary",
+    "name": "헤더 상태 요약",
     "url": "http://localhost:3000",
-    "expect": "header shows current model and work status"
+    "expect": "헤더에 현재 모델과 작업 상태가 표시된다"
   },
   {
     "id": "mobile-right-panel-drawer",
-    "name": "Mobile right panel drawer",
+    "name": "모바일 작업 패널 Drawer",
     "url": "http://localhost:3000",
-    "expect": "mobile header opens the studio work panel drawer"
+    "expect": "모바일 헤더에서 Studio 작업 패널을 열 수 있다"
   },
   {
     "id": "source-file-generate",
-    "name": "Source file generate",
+    "name": "파일 소스 생성",
     "url": "http://localhost:3000",
-    "expect": "file tab accepts upload and Generate Dock creates a result"
+    "expect": "파일 탭에서 업로드 후 Generate Dock으로 결과를 만든다"
   },
   {
     "id": "source-voice-generate",
-    "name": "Source voice generate",
+    "name": "음성 소스 생성",
     "url": "http://localhost:3000",
-    "expect": "voice tab accepts audio upload and Generate Dock creates a result"
+    "expect": "음성 탭에서 오디오 업로드 후 Generate Dock으로 결과를 만든다"
   },
   {
     "id": "chatmock-server",
     "name": "ChatMock OpenAI 호환 서버",
     "url": "http://127.0.0.1:8000/v1/models",
-    "expect": "HTTP 200"
+    "expect": "HTTP 200과 gpt-5.5 모델이 반환된다"
   },
   {
     "id": "provider-chatmock",
     "name": "ChatMock 5.5 공급자 노출",
     "url": "http://localhost:3000",
-    "expect": "chatmock/gpt-5.5 selectable"
+    "expect": "chatmock/gpt-5.5를 선택할 수 있다"
   },
   {
     "id": "direct-text-generate",
     "name": "직접 텍스트 생성",
-    "input": "충분히 긴 한국어 테스트 텍스트입니다. 자동 QA가 생성 버튼을 누르고 결과 영역을 확인합니다.",
-    "expect": "generated result visible"
+    "input": "충분한 길이의 한국어 테스트 텍스트입니다. 자동 QA가 생성 버튼을 누르고 결과 영역을 확인합니다.",
+    "expect": "생성 결과가 보인다"
   },
   {
     "id": "text-dock-generate",
-    "name": "??? Dock ??",
+    "name": "텍스트 Generate Dock 생성",
     "url": "http://localhost:3000",
-    "expect": "Generate Dock handles direct text source"
+    "expect": "Generate Dock이 직접 텍스트 소스를 처리한다"
   },
   {
     "id": "result-workbench",
-    "name": "?? ???",
+    "name": "Result Workbench 패널",
     "url": "http://localhost:3000",
-    "expect": "visible result workbench quick actions"
+    "expect": "생성 결과에 빠른 workbench 액션이 보인다"
+  },
+  {
+    "id": "result-workbench-copy-readable",
+    "name": "Result Workbench 카피",
+    "url": "http://localhost:3000",
+    "expect": "Result Workbench 빠른 액션이 읽히는 한국어이고 물음표 placeholder가 없다"
   },
   {
     "id": "right-panel-settings",
-    "name": "Right panel settings",
+    "name": "우측 패널 설정 요약",
     "url": "http://localhost:3000",
-    "expect": "right panel shows current model/style/mode settings"
+    "expect": "우측 패널에 현재 모델/스타일/모드가 표시된다"
   },
   {
     "id": "right-panel-nlm",
-    "name": "Right panel NLM artifacts",
+    "name": "우측 패널 NLM 산출물",
     "url": "http://localhost:3000",
-    "expect": "right panel summarizes recent NotebookLM artifacts by status"
+    "expect": "우측 패널이 최근 NotebookLM 산출물 상태를 요약한다"
   },
   {
     "id": "notebooklm-view-download-labels",
-    "name": "NotebookLM view vs original save labels",
+    "name": "NotebookLM 보기/원본 저장 라벨",
     "url": "http://localhost:3000",
-    "expect": "completed NotebookLM artifacts clearly separate browser viewing from original markdown download"
+    "expect": "완료된 NotebookLM 산출물이 브라우저 보기와 원본 저장을 명확히 구분한다"
   },
   {
     "id": "right-panel-quick-actions",
-    "name": "Right panel quick actions",
+    "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",
-    "expect": "quick actions navigate to calendar/settings/workbench targets"
+    "expect": "빠른 액션이 캘린더/설정/workbench 대상으로 이동한다"
   },
   {
     "id": "youtube-url-validation",
     "name": "YouTube URL 입력 검증",
     "input": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "expect": "URL accepted or actionable error"
+    "expect": "URL이 허용되거나 실행 가능한 오류가 표시된다"
   },
   {
     "id": "style-selection",
     "name": "스타일 선택",
-    "expect": "style controls usable"
+    "expect": "스타일 컨트롤을 사용할 수 있다"
   },
   {
     "id": "settings-open",
     "name": "설정 열기",
-    "expect": "settings panel visible"
+    "expect": "설정 패널이 보인다"
   },
   {
     "id": "history-panel",
     "name": "히스토리 패널",
-    "expect": "history empty state or list visible"
+    "expect": "히스토리 빈 상태 또는 목록이 보인다"
   },
   {
     "id": "export-buttons",
     "name": "내보내기 버튼",
-    "expect": "export actions visible after generation"
+    "expect": "생성 후 내보내기 액션이 보인다"
   },
   {
     "id": "menu-all-items",
     "name": "결과 카드 전체 액션 메뉴",
-    "expect": "all copy, prompt, NLM, export, schedule, share, delete actions are visible and direct CMS publish actions are absent"
+    "expect": "복사, 프롬프트, NLM, 내보내기, 예약, 공유, 삭제 액션이 보이고 직접 CMS 발행 액션은 없다"
   },
   {
     "id": "menu-action-clicks",
     "name": "결과 카드 전체 액션 실행",
-    "expect": "each remaining menu item can be clicked and produces the expected UI/API/download side effect with external services mocked"
+    "expect": "남은 메뉴 항목을 클릭하면 예상 UI/API/download side effect가 발생한다"
   }
 ]
