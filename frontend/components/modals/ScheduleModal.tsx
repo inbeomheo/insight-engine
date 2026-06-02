@@ -5,6 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Send } from 'lucide-react';
 import { useMcpPlugins } from '@/hooks/useMcpPlugins';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+type ScheduleOptions = Record<string, unknown>;
 
 interface ScheduleModalProps {
   open: boolean;
@@ -12,7 +15,7 @@ interface ScheduleModalProps {
   title: string;
   content: string;
   html?: string;
-  onSchedule: (data: { target_plugin: string; scheduled_at: string }) => void;
+  onSchedule: (data: { target_plugin: string; scheduled_at: string; options?: ScheduleOptions }) => void;
   isLoading?: boolean;
 }
 
@@ -27,8 +30,24 @@ export default function ScheduleModal({
   isLoading,
 }: ScheduleModalProps) {
   const plugins = useMcpPlugins(open);
+  const webhookUrl = useSettingsStore((s) => s.webhookUrl);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [wordpressOptions, setWordpressOptions] = useState({
+    site_url: '',
+    username: '',
+    app_password: '',
+    status: 'draft',
+  });
+  const [naverOptions, setNaverOptions] = useState({
+    webhook_url: '',
+    blog_id: '',
+    category: '',
+    tags: '',
+  });
+
+  const isWordPress = selectedPlugin === 'wordpress';
+  const isNaver = selectedPlugin === 'naver_blog' || selectedPlugin === 'naver';
 
   function formatLocalDatetime(date: Date) {
     const y = date.getFullYear();
@@ -54,13 +73,33 @@ export default function ScheduleModal({
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
     setScheduledAt(formatLocalDatetime(tomorrow));
-  }, [open]);
+    setNaverOptions((prev) => ({ ...prev, webhook_url: prev.webhook_url || webhookUrl }));
+  }, [open, webhookUrl]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  function compactOptions(values: Record<string, string>) {
+    return Object.fromEntries(
+      Object.entries(values)
+        .map(([key, value]) => [key, value.trim()])
+        .filter(([, value]) => value)
+    );
+  }
+
+  function buildPluginOptions(): ScheduleOptions {
+    if (isWordPress) return compactOptions(wordpressOptions);
+    if (isNaver) return compactOptions(naverOptions);
+    return {};
+  }
 
   function handleSubmit() {
     if (!selectedPlugin || !scheduledAt) return;
     const isoDate = new Date(scheduledAt).toISOString();
-    onSchedule({ target_plugin: selectedPlugin, scheduled_at: isoDate });
+    const options = buildPluginOptions();
+    onSchedule({
+      target_plugin: selectedPlugin,
+      scheduled_at: isoDate,
+      ...(Object.keys(options).length ? { options } : {}),
+    });
   }
 
   const canSubmit = selectedPlugin && scheduledAt && !isLoading;
@@ -103,6 +142,79 @@ export default function ScheduleModal({
             </select>
           )}
         </div>
+
+        {isWordPress && (
+          <div data-testid="schedule-options-wordpress" className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs font-semibold text-muted-foreground">WordPress 연결 설정</p>
+            <input
+              data-testid="schedule-option-wordpress-site-url"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="https://example.com"
+              value={wordpressOptions.site_url}
+              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, site_url: e.target.value }))}
+            />
+            <input
+              data-testid="schedule-option-wordpress-username"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="사용자명"
+              value={wordpressOptions.username}
+              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, username: e.target.value }))}
+            />
+            <input
+              data-testid="schedule-option-wordpress-app-password"
+              type="password"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Application Password"
+              value={wordpressOptions.app_password}
+              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, app_password: e.target.value }))}
+            />
+            <select
+              data-testid="schedule-option-wordpress-status"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={wordpressOptions.status}
+              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="draft">임시글</option>
+              <option value="publish">즉시 공개</option>
+              <option value="pending">검토 대기</option>
+              <option value="private">비공개</option>
+            </select>
+          </div>
+        )}
+
+        {isNaver && (
+          <div data-testid="schedule-options-naver" className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs font-semibold text-muted-foreground">네이버 블로그 연결 설정</p>
+            <input
+              data-testid="schedule-option-naver-webhook-url"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="네이버 발행 웹훅 URL"
+              value={naverOptions.webhook_url}
+              onChange={(e) => setNaverOptions((prev) => ({ ...prev, webhook_url: e.target.value }))}
+            />
+            <input
+              data-testid="schedule-option-naver-blog-id"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="블로그 ID"
+              value={naverOptions.blog_id}
+              onChange={(e) => setNaverOptions((prev) => ({ ...prev, blog_id: e.target.value }))}
+            />
+            <input
+              data-testid="schedule-option-naver-category"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="카테고리"
+              value={naverOptions.category}
+              onChange={(e) => setNaverOptions((prev) => ({ ...prev, category: e.target.value }))}
+            />
+            <input
+              data-testid="schedule-option-naver-tags"
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="태그, 쉼표로 구분"
+              value={naverOptions.tags}
+              onChange={(e) => setNaverOptions((prev) => ({ ...prev, tags: e.target.value }))}
+            />
+          </div>
+        )}
 
         {/* 날짜/시간 선택 */}
         <div className="space-y-2">

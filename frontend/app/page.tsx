@@ -135,7 +135,7 @@ export default function Home() {
     if (!open) setScheduleTarget(null);
   }, []);
 
-  const handleScheduleSubmit = useCallback(async (data: { target_plugin: string; scheduled_at: string }) => {
+  const handleScheduleSubmit = useCallback(async (data: { target_plugin: string; scheduled_at: string; options?: Record<string, unknown> }) => {
     const target = scheduleTarget;
     if (!target) return;
     const ok = await addSchedule({

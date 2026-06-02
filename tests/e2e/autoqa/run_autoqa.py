@@ -1143,10 +1143,28 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         click_menu_label(page, "예약 발행")
         dialog = page.locator("[role='dialog']").last
         dialog.wait_for(state="visible", timeout=10_000)
+        dialog.locator("select").first.select_option("wordpress", timeout=10_000)
+        dialog.locator("[data-testid='schedule-option-wordpress-site-url']").fill("https://wp.example.com")
+        dialog.locator("[data-testid='schedule-option-wordpress-username']").fill("qa-writer")
+        dialog.locator("[data-testid='schedule-option-wordpress-app-password']").fill("qa-secret")
+        dialog.locator("[data-testid='schedule-option-wordpress-status']").select_option("draft")
         dialog.locator("button", has_text="예약 등록").click(timeout=10_000)
         ok = wait_until(lambda: len(calls["schedule"]) > before, 10_000, page)
+        payload = calls["schedule"][-1] if ok else {}
+        options = payload.get("options") or payload.get("plugin_options") or {}
+        options_ok = (
+            payload.get("target_plugin") == "wordpress"
+            and options.get("site_url") == "https://wp.example.com"
+            and options.get("username") == "qa-writer"
+            and options.get("app_password") == "qa-secret"
+            and options.get("status") == "draft"
+        )
         schedule_png = screenshot(page, "menu-schedule.png")
-        record_action("예약 발행", ok, schedule_png if ok else "schedule API not called")
+        redacted_payload = json.loads(json.dumps(payload, ensure_ascii=False))
+        redacted_options = redacted_payload.get("options") or redacted_payload.get("plugin_options") or {}
+        if isinstance(redacted_options, dict) and "app_password" in redacted_options:
+            redacted_options["app_password"] = "***"
+        record_action("예약 발행", ok and options_ok, schedule_png if ok and options_ok else f"payload={redacted_payload}")
     except Exception as exc:
         record_action("예약 발행", False, repr(exc))
         close_dialogs(page)
