@@ -90,6 +90,12 @@
     "expect": "Result Workbench 빠른 액션이 읽히는 한국어이고 물음표 placeholder가 없다"
   },
   {
+    "id": "result-workbench-sections",
+    "name": "Result Workbench 섹션형 액션 허브",
+    "url": "http://localhost:3000",
+    "expect": "읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다"
+  },
+  {
     "id": "right-panel-settings",
     "name": "우측 패널 설정 요약",
     "url": "http://localhost:3000",

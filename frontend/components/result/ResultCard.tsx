@@ -402,6 +402,9 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     );
   }
 
+  const workbenchButtonClass = 'h-9 justify-start gap-2 rounded-xl bg-white/80 px-3 text-xs';
+  const workbenchSectionClass = 'rounded-2xl border border-slate-200/80 bg-white/65 p-3 shadow-sm';
+
   return (
     <ReportProvider report={report}>
     <>
@@ -725,45 +728,104 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       {/* 푸터 */}
       {/* Studio Workbench */}
       <div className="border-t border-slate-200/70 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 px-6 py-4" data-testid="result-workbench">
-        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Result Workbench</p>
             <p className="text-sm text-slate-500">메뉴 없이 복사, 변환, NLM 산출물, 내보내기, 예약까지 바로 처리합니다.</p>
           </div>
           <span className="text-xs text-slate-400">{(report.notebooklm?.artifacts?.length ?? 0)} NLM · {charCount.toLocaleString()}자</span>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => copyText(report.content, 'content')}>
-            <Copy className="h-3.5 w-3.5 text-indigo-600" />
-            본문 복사
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => setPanel('rewriteOpen', true)}>
-            <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />
-            플랫폼 변환
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => handleNotebookLm('study_guide')}>
-            <Brain className="h-3.5 w-3.5 text-indigo-600" />
-            NLM 가이드
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={handleExportDocx}>
-            <Download className="h-3.5 w-3.5 text-indigo-600" />
-            DOCX
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-10 justify-start gap-2 rounded-xl bg-white/80" onClick={() => onSchedule(report)}>
-            <Calendar className="h-3.5 w-3.5 text-indigo-600" />
-            예약
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-10 justify-start gap-2 rounded-xl bg-white/80"
-            onClick={handleExtractEvents}
-            disabled={eventLoading || !(report.url || report.transcript)}
-          >
-            <ListChecks className="h-3.5 w-3.5 text-indigo-600" />
-            {eventLoading ? '추출 중...' : '이벤트'}
-          </Button>
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <section data-testid="workbench-section-read" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">읽기</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-copy-title" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.title, 'title')}>
+                <Copy className="h-3.5 w-3.5 text-indigo-600" />제목 복사
+              </Button>
+              <Button data-testid="workbench-action-copy-content" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.content, 'content')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />본문 복사
+              </Button>
+            </div>
+          </section>
+
+          <section data-testid="workbench-section-improve" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">개선</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-prompt" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPromptModalOpen(true, report.prompt)}>
+                <Code className="h-3.5 w-3.5 text-indigo-600" />프롬프트
+              </Button>
+              <Button data-testid="workbench-action-rewrite" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('rewriteOpen', true)}>
+                <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />플랫폼 변환
+              </Button>
+              <Button data-testid="workbench-action-events" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExtractEvents} disabled={eventLoading || !(report.url || report.transcript)}>
+                <ListChecks className="h-3.5 w-3.5 text-indigo-600" />{eventLoading ? '추출 중...' : '이벤트'}
+              </Button>
+              <Button data-testid="workbench-action-video-qa" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('chatOpen', true)} disabled={!report.url}>
+                <Bot className="h-3.5 w-3.5 text-indigo-600" />영상 Q&A
+              </Button>
+            </div>
+          </section>
+
+          <section data-testid="workbench-section-nlm" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">NLM 산출물</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-nlm-audio" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('audio')}>
+                <Headphones className="h-3.5 w-3.5 text-indigo-600" />팟캐스트
+              </Button>
+              <Button data-testid="workbench-action-nlm-slide-deck" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('slide_deck')}>
+                <Layers className="h-3.5 w-3.5 text-indigo-600" />슬라이드
+              </Button>
+              <Button data-testid="workbench-action-nlm-quiz" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('quiz')}>
+                <ListChecks className="h-3.5 w-3.5 text-indigo-600" />퀴즈
+              </Button>
+              <Button data-testid="workbench-action-nlm-study-guide" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('study_guide')}>
+                <Brain className="h-3.5 w-3.5 text-indigo-600" />NLM 가이드
+              </Button>
+            </div>
+          </section>
+
+          <section data-testid="workbench-section-export" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">내보내기</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Button data-testid="workbench-action-export-html" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportHtml}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />HTML
+              </Button>
+              <Button data-testid="workbench-action-export-docx" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportDocx}>
+                <Download className="h-3.5 w-3.5 text-indigo-600" />DOCX
+              </Button>
+              <Button data-testid="workbench-action-export-md" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('markdown')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />MD
+              </Button>
+              <Button data-testid="workbench-action-export-txt" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('txt')}>
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />TXT
+              </Button>
+              <Button data-testid="workbench-action-export-zip" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('zip')}>
+                <Download className="h-3.5 w-3.5 text-indigo-600" />ZIP
+              </Button>
+              <Button data-testid="workbench-action-print" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handlePrint}>
+                <Printer className="h-3.5 w-3.5 text-indigo-600" />PDF
+              </Button>
+            </div>
+          </section>
+
+          <section data-testid="workbench-section-publish" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">배포</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-schedule" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => onSchedule(report)}>
+                <Calendar className="h-3.5 w-3.5 text-indigo-600" />예약
+              </Button>
+              <Button data-testid="workbench-action-share" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleShare}>
+                <Share2 className="h-3.5 w-3.5 text-indigo-600" />공유
+              </Button>
+            </div>
+          </section>
+
+          <section data-testid="workbench-section-manage" className={workbenchSectionClass}>
+            <p className="mb-2 text-xs font-semibold text-slate-500">관리</p>
+            <Button data-testid="workbench-action-delete" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={() => removeReport(report.id)}>
+              <Trash2 className="h-3.5 w-3.5" />삭제
+            </Button>
+          </section>
         </div>
       </div>
 

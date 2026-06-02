@@ -925,6 +925,29 @@ def main() -> int:
                 workbench_visible and not missing_workbench_copy and "??" not in workbench_text,
                 screenshot(page, "result-workbench-copy-readable.png") if workbench_visible and not missing_workbench_copy and "??" not in workbench_text else f"missing={missing_workbench_copy}; text={workbench_text[:300]!r}",
             )
+            workbench_sections = [
+                "workbench-section-read",
+                "workbench-section-improve",
+                "workbench-section-nlm",
+                "workbench-section-export",
+                "workbench-section-publish",
+                "workbench-section-manage",
+            ]
+            workbench_actions = [
+                "workbench-action-copy-content",
+                "workbench-action-prompt",
+                "workbench-action-rewrite",
+                "workbench-action-nlm-study-guide",
+                "workbench-action-export-docx",
+                "workbench-action-schedule",
+                "workbench-action-delete",
+            ]
+            missing_sections = [test_id for test_id in workbench_sections + workbench_actions if workbench.locator(f"[data-testid='{test_id}']").count() == 0]
+            report.record(
+                "result-workbench-sections",
+                workbench_visible and not missing_sections,
+                screenshot(page, "result-workbench-sections.png") if workbench_visible and not missing_sections else f"missing={missing_sections}",
+            )
         except Exception as exc:
             fail_png = screenshot(page, "direct-text-generate-fail.png")
             report.record("direct-text-generate", False, f"{repr(exc)}; screenshot={fail_png}")
