@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 05:28:20
+- Generated: 2026-06-03 05:37:12
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -38,6 +38,7 @@
 | workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
+| right-panel-nlm-quick-view | 우측 패널 NLM 바로 보기 | 우측 패널 NLM 산출물 빠른 액션이 최근 완료 산출물 보기 창을 연다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
 | right-panel-export-all | 우측 패널 전체 내보내기 | 우측 패널 내보내기 빠른 액션이 전체 결과 Markdown 다운로드와 완료 상태를 남긴다 |
 | right-panel-rewrite-action | 우측 패널 플랫폼 변환 실행 | 우측 패널 플랫폼 변환 빠른 액션이 최근 결과의 플랫폼별 카피 변환 모달을 연다 |
@@ -114,6 +115,7 @@
 | workbench-nlm-auth-notice | PASS | tests/e2e/autoqa/artifacts/workbench-nlm-auth-notice.png |
 | right-panel-settings | PASS | tests/e2e/autoqa/artifacts/right-panel-settings.png |
 | right-panel-nlm | PASS | nlm_count=3 |
+| right-panel-nlm-quick-view | PASS | url=http://127.0.0.1:5001/api/notebooklm/view/rp-briefing |
 | right-panel-action-guidance | PASS | tests/e2e/autoqa/artifacts/right-panel-action-guidance.png |
 | right-panel-export-all | PASS | download=insight-studio-export-2026-06-02.md; notice=전체 내보내기 완료 · 1개 결과 |
 | right-panel-rewrite-action | PASS | tests/e2e/autoqa/artifacts/right-panel-rewrite-action.png |

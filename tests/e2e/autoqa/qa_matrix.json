@@ -168,6 +168,12 @@
     "expect": "우측 패널이 최근 NotebookLM 산출물 상태를 요약한다"
   },
   {
+    "id": "right-panel-nlm-quick-view",
+    "name": "우측 패널 NLM 바로 보기",
+    "url": "http://localhost:3000",
+    "expect": "우측 패널 NLM 산출물 빠른 액션이 최근 완료 산출물 보기 창을 연다"
+  },
+  {
     "id": "notebooklm-view-download-labels",
     "name": "NotebookLM 보기/HTML 저장 라벨",
     "url": "http://localhost:3000",

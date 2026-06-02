@@ -103,6 +103,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   const nlmCount = reports.reduce((sum, report) => sum + (report.notebooklm?.artifacts?.length ?? 0), 0);
   const latest = reports.slice(0, 4);
   const firstReport = reports[0];
+  const firstCompletedNlm = nlmArtifacts.find(({ artifact }) => artifact.status === 'completed');
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
   const modifierSummary = getModifierSummary(modifiers);
 
@@ -143,6 +144,10 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       return;
     }
     if (id === 'nlm') {
+      if (firstCompletedNlm) {
+        window.open(apiUrl(`/api/notebooklm/view/${firstCompletedNlm.artifact.artifact_id}`), '_blank');
+        return;
+      }
       scrollTo('[data-testid="notebooklm-artifact"], [data-testid="result-workbench"]');
       return;
     }

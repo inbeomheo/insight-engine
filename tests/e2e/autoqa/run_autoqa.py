@@ -487,6 +487,22 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
         report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")
 
+        try:
+            with page.expect_popup(timeout=8_000) as popup_info:
+                panel.locator("[data-testid='quick-action-nlm']").click(timeout=10_000)
+            popup = popup_info.value
+            popup.wait_for_load_state("domcontentloaded", timeout=10_000)
+            popup_url = popup.url
+            url_ok = "/api/notebooklm/view/rp-briefing" in popup_url
+            popup.close()
+            report.record(
+                "right-panel-nlm-quick-view",
+                url_ok,
+                f"url={popup_url}" if url_ok else screenshot(page, "right-panel-nlm-quick-view-fail.png"),
+            )
+        except Exception as exc:
+            report.record("right-panel-nlm-quick-view", False, repr(exc))
+
         guided_action_ids = ["export", "schedule", "nlm", "rewrite", "prompt", "settings"]
         missing_guidance = [
             action_id for action_id in guided_action_ids
@@ -542,6 +558,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-nlm-quick-view", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-action-guidance", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-export-all", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-rewrite-action", False, f"{repr(exc)}; screenshot={fail_png}")
