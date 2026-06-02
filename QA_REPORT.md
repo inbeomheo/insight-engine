@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 02:28:32
+- Generated: 2026-06-03 02:35:52
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -12,6 +12,7 @@
 |---|---|---|
 | home-load | 홈 로드 | main UI visible |
 | studio-layout | ???? ???? | studio shell and composer visible |
+| studio-copy-polish | Studio copy polish | core studio labels and empty states show readable Korean copy |
 | header-status-summary | Header status summary | header shows current model and work status |
 | mobile-right-panel-drawer | Mobile right panel drawer | mobile header opens the studio work panel drawer |
 | source-file-generate | Source file generate | file tab accepts upload and Generate Dock creates a result |
@@ -38,10 +39,11 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='ChatMock 5.5 API 변화 요약', source=direct_input |
+| direct-text-api | PASS | title='원문 확인이 먼저 필요해요', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
+| studio-copy-polish | PASS | tests/e2e/autoqa/artifacts/studio-copy-polish.png |
 | source-file-generate | PASS | tests/e2e/autoqa/artifacts/source-file-generate.png |
 | source-voice-generate | PASS | tests/e2e/autoqa/artifacts/source-voice-generate.png |
 | settings-open | PASS | tests/e2e/autoqa/artifacts/settings-open.png |

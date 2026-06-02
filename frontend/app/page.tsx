@@ -294,7 +294,7 @@ export default function Home() {
               href="#main-content"
               className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm"
             >
-              ???? ????
+              본문으로 이동
             </a>
 
             <StudioHero modelLabel={modelLabel} resultCount={reports.length} />
@@ -372,7 +372,7 @@ export default function Home() {
                         className="gap-2 text-xs hover:shadow-md active:scale-[0.98] transition-all duration-200"
                       >
                         <Layers className="h-3.5 w-3.5" />
-                        ? ?? ({deferredFiltered.length - visibleCount}? ??)
+                        더 보기 ({deferredFiltered.length - visibleCount}개 남음)
                       </Button>
                     </div>
                   )}
@@ -380,8 +380,8 @@ export default function Home() {
                   {!isLoading && reports.length === 0 && (
                     <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/60 p-10 text-center">
                       <Youtube className="mx-auto mb-4 h-10 w-10 text-indigo-300" />
-                      <h3 className="text-lg font-semibold">? ???? ??????</h3>
-                      <p className="mt-2 text-sm text-slate-500">??? ???? ??? ??? ???? ??? ??? ????.</p>
+                      <h3 className="text-lg font-semibold">아직 결과가 없습니다</h3>
+                      <p className="mt-2 text-sm text-slate-500">소스를 추가하고 콘텐츠를 생성하면 여기에 작업 카드가 표시됩니다.</p>
                     </div>
                   )}
                 </div>

@@ -12,6 +12,12 @@
     "expect": "studio shell and composer visible"
   },
   {
+    "id": "studio-copy-polish",
+    "name": "Studio copy polish",
+    "url": "http://localhost:3000",
+    "expect": "core studio labels and empty states show readable Korean copy"
+  },
+  {
     "id": "header-status-summary",
     "name": "Header status summary",
     "url": "http://localhost:3000",

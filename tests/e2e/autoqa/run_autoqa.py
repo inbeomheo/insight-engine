@@ -767,6 +767,13 @@ def main() -> int:
                 and page.locator("[data-testid='header-status-badge']").count() > 0
             )
             report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
+            expected_copy = ["요약", "튜토리얼", "앱 아이디어", "뉴스레터", "짧게", "보통", "길게", "대화체", "설명체", "한국어", "아직 결과가 없습니다"]
+            missing_copy = [label for label in expected_copy if page.get_by_text(label, exact=True).count() == 0]
+            report.record(
+                "studio-copy-polish",
+                not missing_copy,
+                screenshot(page, "studio-copy-polish.png") if not missing_copy else f"missing={missing_copy}",
+            )
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")
             report.write()
