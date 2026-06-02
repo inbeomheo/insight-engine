@@ -45,13 +45,15 @@ def _render_markdown_html(file_path):
 
 
 def _markdown_html_attachment(file_path):
-    filename = os.path.basename(file_path)
-    html_name = os.path.splitext(filename)[0] + '.html'
     return Response(
         _render_markdown_html(file_path),
         content_type='text/html; charset=utf-8',
-        headers={'Content-Disposition': f'attachment; filename="{html_name}"'},
+        headers={'Content-Disposition': f'attachment; filename="{_markdown_html_name(file_path)}"'},
     )
+
+
+def _markdown_html_name(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0] + '.html'
 
 
 @notebooklm_bp.route('/auth-check', methods=['GET'])
@@ -122,7 +124,11 @@ def view(artifact_id):
         lower_name = filename.lower()
 
         if lower_name.endswith(('.md', '.markdown')):
-            return Response(_render_markdown_html(file_path), content_type='text/html; charset=utf-8')
+            return Response(
+                _render_markdown_html(file_path),
+                content_type='text/html; charset=utf-8',
+                headers={'Content-Disposition': f'inline; filename="{_markdown_html_name(file_path)}"'},
+            )
 
         return send_file(
             file_path,

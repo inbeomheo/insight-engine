@@ -100,6 +100,25 @@ class TestNotebookLmRoutes(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_view_markdown_suggests_html_filename_when_saved(self):
+        import os
+        import tempfile
+
+        fd, path = tempfile.mkstemp(prefix='nlm-view-', suffix='.md')
+        os.close(fd)
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write('# NotebookLM 보기\n\n저장해도 HTML이어야 합니다.')
+
+        self.mock_svc.download.return_value = path
+        try:
+            resp = self.client.get('/api/notebooklm/view/test-id')
+            disposition = resp.headers.get('Content-Disposition', '')
+            self.assertIn('inline', disposition)
+            self.assertIn('.html', disposition)
+            self.assertNotIn('.md', disposition)
+        finally:
+            os.remove(path)
+
     def test_rendered_download_markdown_saves_html_attachment(self):
         import os
         import tempfile
