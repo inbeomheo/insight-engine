@@ -24,7 +24,7 @@ import remarkGfm from 'remark-gfm';
 // KaTeX는 수식 감지 시에만 동적 로드 (초기 번들 ~280KB 절감)
 // remark-math + rehype-katex는 MathMarkdown 컴포넌트에서 조건부 import
 import { toast } from 'sonner';
-import type { Report, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
+import type { Report, QualityScore, NlpAnalysis, ViewMode, NotebookLmArtifact } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -239,32 +239,65 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   }
 
   async function handleNotebookLm(contentType: string) {
+    dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
+
+    const currentArtifacts = () => (
+      useResultStore
+        .getState()
+        .reports
+        .find((r) => r.id === report.id)
+        ?.notebooklm
+        ?.artifacts ?? []
+    );
+    const writeArtifacts = (artifacts: NotebookLmArtifact[]) => {
+      updateReport(report.id, { notebooklm: { artifacts } });
+    };
+
+    const sourceText = report.transcript || report.content;
+    const sourceUrl = report.url || `direct:${report.id}`;
+    const tempId = `pending-${contentType}-${Date.now()}`;
+    const pendingArtifact: NotebookLmArtifact = {
+      artifact_id: tempId,
+      content_type: contentType,
+      status: 'in_progress',
+    };
+    writeArtifacts([...currentArtifacts(), pendingArtifact]);
+
+    const removePendingArtifact = () => {
+      writeArtifacts(currentArtifacts().filter((a) => a.artifact_id !== tempId));
+    };
+
     const auth = await notebookLmAuthCheck().catch(() => null);
     if (!auth?.valid) {
+      removePendingArtifact();
       toast.error('NotebookLM 인증이 필요합니다. 터미널에서 nlm login을 실행해주세요.');
       return;
     }
-    const sourceText = report.transcript || report.content;
+
     try {
       const res = await notebookLmGenerate({
         type: contentType,
-        url: report.url,
+        url: sourceUrl,
         source_text: sourceText,
       });
-      const artifact = { artifact_id: res.artifact_id, content_type: contentType, status: 'in_progress' as const };
-      const existing = report.notebooklm?.artifacts ?? [];
-      updateReport(report.id, { notebooklm: { artifacts: [...existing, artifact] } });
+      const artifact: NotebookLmArtifact = {
+        artifact_id: res.artifact_id,
+        content_type: contentType,
+        status: 'in_progress',
+      };
+      writeArtifacts(currentArtifacts().map((a) => (a.artifact_id === tempId ? artifact : a)));
       toast.success(`NotebookLM ${contentType} 생성 시작`);
 
-      // 폴링
       const poll = setInterval(async () => {
         try {
           const status = await notebookLmStatus(res.artifact_id);
           if (status.status === 'completed' || status.status === 'failed') {
             clearInterval(poll);
-            // 새로 추가된 artifact도 반영
-            const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
-            updateReport(report.id, { notebooklm: { artifacts: all } });
+            writeArtifacts(currentArtifacts().map((a) => (
+              a.artifact_id === res.artifact_id
+                ? { ...a, status: status.status as 'completed' | 'failed' }
+                : a
+            )));
             if (status.status === 'completed') toast.success(`NotebookLM ${contentType} 생성 완료!`);
             else toast.error(`NotebookLM ${contentType} 생성 실패`);
           }
@@ -273,6 +306,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
         }
       }, 5000);
     } catch (err) {
+      removePendingArtifact();
       toast.error(err instanceof Error ? err.message : 'NotebookLM 생성에 실패했습니다.');
     }
   }
