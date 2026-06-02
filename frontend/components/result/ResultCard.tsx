@@ -97,6 +97,7 @@ interface PanelState {
   copiedField: string | null;
   readPreviewMode: 'rendered' | 'markdown' | 'html' | 'timeline';
   notebookLmAuthNotice: string | null;
+  exportNotice: string | null;
   chatOpen: boolean;
   showTranscript: boolean;
   audioBlob: Blob | null;
@@ -115,6 +116,7 @@ const panelInitial: PanelState = {
   collapsed: false, hasExpanded: true, copiedField: null,
   readPreviewMode: 'rendered',
   notebookLmAuthNotice: null,
+  exportNotice: null,
   chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
   rewriteOpen: false,
@@ -133,7 +135,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, exportNotice, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -185,8 +187,10 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
       a.download = `${report.title.slice(0, 50)}.docx`;
       a.click();
       URL.revokeObjectURL(url);
+      setPanel('exportNotice', 'DOCX 내보내기 완료');
       toast.success(t('result.docxSuccess'));
     } catch {
+      setPanel('exportNotice', 'DOCX 내보내기 실패');
       toast.error(t('result.docxError'));
     }
   }
@@ -205,6 +209,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     a.download = `${report.title.slice(0, 50)}.html`;
     a.click();
     URL.revokeObjectURL(url);
+    setPanel('exportNotice', 'HTML 내보내기 완료');
     toast.success(t('result.htmlSuccess'));
   }
 
@@ -236,8 +241,10 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       a.download = `${report.title.slice(0, 50)}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
+      setPanel('exportNotice', `${ext.toUpperCase()} 내보내기 완료`);
       toast.success(`${ext.toUpperCase()} 내보내기 완료`);
     } catch {
+      setPanel('exportNotice', `${format.toUpperCase()} 내보내기 실패`);
       toast.error('내보내기에 실패했습니다.');
     }
   }
@@ -925,6 +932,14 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
           <section data-testid="workbench-section-export" className={workbenchSectionClass}>
             <p className="mb-2 text-xs font-semibold text-slate-500">내보내기</p>
+            {exportNotice && (
+              <div
+                data-testid="workbench-export-status"
+                className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700"
+              >
+                {exportNotice}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Button data-testid="workbench-action-export-html" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportHtml}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />HTML

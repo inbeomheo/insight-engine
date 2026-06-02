@@ -132,6 +132,12 @@
     "expect": "읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다"
   },
   {
+    "id": "result-workbench-export-status",
+    "name": "Result Workbench 내보내기 실행 상태",
+    "url": "http://localhost:3000",
+    "expect": "Workbench 내보내기 버튼을 실행하면 다운로드와 함께 섹션 안에 완료 상태가 남는다"
+  },
+  {
     "id": "result-workbench-nlm-all",
     "name": "Result Workbench 전체 NLM 산출물",
     "url": "http://localhost:3000",

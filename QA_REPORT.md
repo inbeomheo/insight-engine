@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 04:39:31
+- Generated: 2026-06-03 04:50:55
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -32,6 +32,7 @@
 | result-workbench-sections | Result Workbench 섹션형 액션 허브 | 읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다 |
 | result-workbench-read-actions | Result Workbench 읽기 액션 | 읽기 섹션에서 제목/본문 복사, 리치 복사, 자막/요약 토글을 바로 실행할 수 있다 |
 | result-workbench-preview-actions | Result Workbench 미리보기 액션 | 읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다 |
+| result-workbench-export-status | Result Workbench 내보내기 실행 상태 | Workbench 내보내기 버튼을 실행하면 다운로드와 함께 섹션 안에 완료 상태가 남는다 |
 | result-workbench-nlm-all | Result Workbench 전체 NLM 산출물 | 팟캐스트, 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드가 Workbench에서 바로 보인다 |
 | workbench-nlm-auth-notice | Workbench NLM 인증 안내 | NotebookLM 인증이 없을 때 토스트만이 아니라 Workbench NLM 섹션 안에 nlm login 안내가 남는다 |
 | right-panel-settings | 우측 패널 설정 요약 | 우측 패널에 현재 모델/스타일/모드가 표시된다 |
@@ -102,6 +103,7 @@
 | menu-action:마크다운-md | PASS | download=QA 전체 메뉴 테스트 리포트.md |
 | menu-action:텍스트-txt | PASS | download=QA 전체 메뉴 테스트 리포트.txt |
 | menu-action:패키지-zip | PASS | download=QA 전체 메뉴 테스트 리포트.zip |
+| result-workbench-export-status | PASS | tests/e2e/autoqa/artifacts/result-workbench-export-status.png |
 | menu-action:PDF-인쇄 | PASS | print_called=True |
 | menu-action:예약-발행 | PASS | tests/e2e/autoqa/artifacts/menu-schedule.png |
 | menu-action:공유 | PASS | clipboard_len=197 |

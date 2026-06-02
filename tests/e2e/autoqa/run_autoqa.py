@@ -721,6 +721,24 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
             record_action(label, False, repr(exc))
 
     try:
+        card = page.locator("[data-report-id='qa-menu-report']").first
+        card.scroll_into_view_if_needed(timeout=10_000)
+        with page.expect_download(timeout=15_000) as download_info:
+            card.locator("[data-testid='workbench-action-export-md']").click(timeout=10_000)
+        download = download_info.value
+        notice = card.locator("[data-testid='workbench-export-status']")
+        notice.wait_for(state="visible", timeout=10_000)
+        notice_text = notice.inner_text(timeout=5_000)
+        ok = download.suggested_filename.lower().endswith(".md") and "MD" in notice_text and "완료" in notice_text
+        report.record(
+            "result-workbench-export-status",
+            ok,
+            screenshot(page, "result-workbench-export-status.png") if ok else f"download={download.suggested_filename}; notice={notice_text[:300]}",
+        )
+    except Exception as exc:
+        report.record("result-workbench-export-status", False, repr(exc))
+
+    try:
         page.evaluate(
             """
             window.__qaPrintCalled = false;
