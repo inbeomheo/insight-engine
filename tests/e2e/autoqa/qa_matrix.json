@@ -30,6 +30,12 @@
     "expect": "Generate Dock과 우측 패널이 raw 설정값 대신 사용자용 한국어 라벨을 보여준다"
   },
   {
+    "id": "generate-dock-source-summary",
+    "name": "Generate Dock 소스 종류 요약",
+    "url": "http://localhost:3000",
+    "expect": "텍스트/파일/음성처럼 현재 선택한 소스 종류가 Generate Dock 요약에 표시된다"
+  },
+  {
     "id": "output-blueprint-advanced",
     "name": "Output Blueprint 고급 컨트롤",
     "url": "http://localhost:3000",

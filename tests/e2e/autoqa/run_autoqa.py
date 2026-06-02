@@ -837,6 +837,17 @@ def main() -> int:
                 not missing_status_labels and not raw_status_labels,
                 screenshot(page, "studio-status-labels.png") if not missing_status_labels and not raw_status_labels else f"missing={missing_status_labels}; raw={raw_status_labels}",
             )
+            page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+            page.locator("[data-testid='text-source-panel'] textarea").fill(
+                "Generate Dock source summary QA text. This source is long enough to become a valid text input."
+            )
+            page.wait_for_timeout(300)
+            dock_summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=10_000)
+            report.record(
+                "generate-dock-source-summary",
+                "텍스트 소스" in dock_summary and "소스 1개" in dock_summary,
+                screenshot(page, "generate-dock-source-summary.png") if "텍스트 소스" in dock_summary and "소스 1개" in dock_summary else dock_summary,
+            )
             advanced_controls = [
                 "blueprint-web-search",
                 "blueprint-web-research",
@@ -870,7 +881,7 @@ def main() -> int:
                 page.locator(f"[data-testid='{panel_test_id}']").wait_for(state="visible", timeout=10_000)
                 file_input = page.locator(f"[data-testid='{panel_test_id}'] input[type='file']").first
                 file_input.set_input_files(str(source_path))
-                page.get_by_text(filename).wait_for(state="visible", timeout=10_000)
+                page.locator(f"[data-testid='{panel_test_id}']").get_by_text(filename).wait_for(state="visible", timeout=10_000)
                 dock_button = page.locator("[data-testid='generate-dock-button']")
                 if not dock_button.is_enabled():
                     raise AssertionError("Generate Dock button should be enabled after upload")

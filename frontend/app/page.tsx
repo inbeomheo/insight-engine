@@ -274,6 +274,14 @@ export default function Home() {
         : sourceDraft.mode === 'file'
           ? (sourceDraft.file ? 1 : 0)
           : (sourceDraft.audioFile ? 1 : 0);
+  const studioSourceLabel =
+    sourceDraft.mode === 'url'
+      ? (urls.length > 0 ? 'URL 소스' : 'URL 소스 대기')
+      : sourceDraft.mode === 'text'
+        ? (sourceDraft.textValid ? '텍스트 소스' : '텍스트 소스 준비 중')
+        : sourceDraft.mode === 'file'
+          ? (sourceDraft.file ? `파일 소스 · ${sourceDraft.file.name}` : '파일 소스 대기')
+          : (sourceDraft.audioFile ? `음성 소스 · ${sourceDraft.audioFile.name}` : '음성 소스 대기');
   const studioGenerationMode = sourceDraft.mode === 'url' ? generationMode : 'individual';
 
   return (
@@ -395,6 +403,7 @@ export default function Home() {
 
                 <GenerateDock
                   sourceCount={studioSourceCount}
+                  sourceLabel={studioSourceLabel}
                   mode={studioGenerationMode}
                   isLoading={isLoading}
                   onGenerate={handleGenerateStudio}
