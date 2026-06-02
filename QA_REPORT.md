@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 05:11:26
+- Generated: 2026-06-03 05:28:20
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -40,6 +40,7 @@
 | right-panel-nlm | 우측 패널 NLM 산출물 | 우측 패널이 최근 NotebookLM 산출물 상태를 요약한다 |
 | notebooklm-view-download-labels | NotebookLM 보기/HTML 저장 라벨 | 완료된 NotebookLM 산출물이 브라우저 보기와 HTML 저장을 명확히 구분하고 원본 MD 저장으로 오인되지 않는다 |
 | right-panel-export-all | 우측 패널 전체 내보내기 | 우측 패널 내보내기 빠른 액션이 전체 결과 Markdown 다운로드와 완료 상태를 남긴다 |
+| right-panel-rewrite-action | 우측 패널 플랫폼 변환 실행 | 우측 패널 플랫폼 변환 빠른 액션이 최근 결과의 플랫폼별 카피 변환 모달을 연다 |
 | right-panel-quick-actions | 우측 패널 빠른 액션 | 빠른 액션이 캘린더/설정/workbench 대상으로 이동한다 |
 | right-panel-action-guidance | 우측 패널 빠른 액션 안내 | 각 빠른 액션이 어떤 작업 영역으로 이동하는지 짧은 설명과 대상 상태를 보여준다 |
 | youtube-url-validation | YouTube URL 입력 검증 | URL이 허용되거나 실행 가능한 오류가 표시된다 |
@@ -115,6 +116,7 @@
 | right-panel-nlm | PASS | nlm_count=3 |
 | right-panel-action-guidance | PASS | tests/e2e/autoqa/artifacts/right-panel-action-guidance.png |
 | right-panel-export-all | PASS | download=insight-studio-export-2026-06-02.md; notice=전체 내보내기 완료 · 1개 결과 |
+| right-panel-rewrite-action | PASS | tests/e2e/autoqa/artifacts/right-panel-rewrite-action.png |
 | right-panel-quick-actions | PASS | tests/e2e/autoqa/artifacts/right-panel-calendar.png |
 | mobile-right-panel-drawer | PASS | tests/e2e/autoqa/artifacts/mobile-right-panel-drawer.png |
 

@@ -180,6 +180,12 @@
     "expect": "우측 패널 내보내기 빠른 액션이 전체 결과 Markdown 다운로드와 완료 상태를 남긴다"
   },
   {
+    "id": "right-panel-rewrite-action",
+    "name": "우측 패널 플랫폼 변환 실행",
+    "url": "http://localhost:3000",
+    "expect": "우측 패널 플랫폼 변환 빠른 액션이 최근 결과의 플랫폼별 카피 변환 모달을 연다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",

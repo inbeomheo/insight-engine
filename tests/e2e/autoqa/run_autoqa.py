@@ -519,6 +519,19 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         except Exception as exc:
             report.record("right-panel-export-all", False, repr(exc))
 
+        try:
+            panel.locator("[data-testid='quick-action-rewrite']").click(timeout=10_000)
+            rewrite_title = page.get_by_text("플랫폼별 카피 변환")
+            rewrite_title.wait_for(state="visible", timeout=10_000)
+            report.record(
+                "right-panel-rewrite-action",
+                True,
+                screenshot(page, "right-panel-rewrite-action.png"),
+            )
+            page.keyboard.press("Escape")
+        except Exception as exc:
+            report.record("right-panel-rewrite-action", False, repr(exc))
+
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
         calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
         if not calendar_visible:
@@ -531,6 +544,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         report.record("right-panel-nlm", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-action-guidance", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-export-all", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("right-panel-rewrite-action", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("right-panel-quick-actions", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()

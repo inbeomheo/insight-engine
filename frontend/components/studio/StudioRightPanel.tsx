@@ -146,6 +146,14 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       scrollTo('[data-testid="notebooklm-artifact"], [data-testid="result-workbench"]');
       return;
     }
+    if (id === 'rewrite') {
+      if (firstReport) {
+        setActiveReportId(firstReport.id);
+        window.dispatchEvent(new CustomEvent('insight-engine-open-rewrite', { detail: { reportId: firstReport.id } }));
+      }
+      scrollTo('[data-testid="result-workbench"]');
+      return;
+    }
     scrollTo('[data-testid="result-workbench"]');
   }
 

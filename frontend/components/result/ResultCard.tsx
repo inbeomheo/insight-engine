@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback, useReducer } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback, useReducer } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -141,6 +141,18 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
     dispatch({ type: 'SET', key, value });
   }, []);
+
+  useEffect(() => {
+    const openRewrite = (event: Event) => {
+      const detail = (event as CustomEvent<{ reportId?: string }>).detail;
+      if (detail?.reportId && detail.reportId !== report.id) return;
+      onExpandToFull?.();
+      setPanel('rewriteOpen', true);
+    };
+
+    window.addEventListener('insight-engine-open-rewrite', openRewrite);
+    return () => window.removeEventListener('insight-engine-open-rewrite', openRewrite);
+  }, [onExpandToFull, report.id, setPanel]);
 
   // Zustand selector — 함수 참조만 구독 (전체 스토어 구독 방지)
   const removeReport = useResultStore((s) => s.removeReport);
