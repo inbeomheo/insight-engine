@@ -66,6 +66,11 @@ export default function Home() {
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
   const { isLoading, error, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
+  const [sourceDraft, setSourceDraft] = useState<{ mode: 'url' | 'text'; text: string; textValid: boolean }>({
+    mode: 'url',
+    text: '',
+    textValid: false,
+  });
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
   const { t } = useTranslation();
@@ -214,6 +219,16 @@ export default function Home() {
     if (ok) startTransition(() => submitted.forEach(removeUrl));
   }, [urls, generateBatchUrls, removeUrl]);
 
+  const handleGenerateStudio = useCallback(async () => {
+    if (urls.length > 0) {
+      await handleGenerate();
+      return;
+    }
+    if (sourceDraft.textValid) {
+      await generateFromText(sourceDraft.text);
+    }
+  }, [urls.length, handleGenerate, sourceDraft.text, sourceDraft.textValid, generateFromText]);
+
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
   const handleGenerateMerged = useCallback(async () => {
     if (urls.length < 2) return;
@@ -229,6 +244,9 @@ export default function Home() {
     const ok = await generateFusionUrls(submitted);
     if (ok) startTransition(() => submitted.forEach(removeUrl));
   }, [urls, generateFusionUrls, removeUrl]);
+
+  const studioSourceCount = urls.length > 0 ? urls.length : sourceDraft.textValid ? 1 : 0;
+  const studioGenerationMode = urls.length > 0 ? generationMode : 'individual';
 
   return (
     <>
@@ -249,7 +267,7 @@ export default function Home() {
         onDrop={handleDrop}
         sidebar={<Sidebar />}
         header={<Header />}
-        rightPanel={<StudioRightPanel reports={reports} sourceCount={urls.length} schedulesCount={schedules.length} />}
+        rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} />}
         main={(
           <>
             <a
@@ -278,6 +296,7 @@ export default function Home() {
                     isLoading={isLoading}
                     onGenerateUrl={handleGenerate}
                     onGenerateText={generateFromText}
+                    onStateChange={setSourceDraft}
                   />
                   <SettingsPopover />
                 </div>
@@ -346,10 +365,10 @@ export default function Home() {
                 </div>
 
                 <GenerateDock
-                  sourceCount={urls.length}
-                  mode={generationMode}
+                  sourceCount={studioSourceCount}
+                  mode={studioGenerationMode}
                   isLoading={isLoading}
-                  onGenerate={handleGenerate}
+                  onGenerate={handleGenerateStudio}
                   onGenerateMerged={handleGenerateMerged}
                   onGenerateFusion={handleGenerateFusion}
                 />

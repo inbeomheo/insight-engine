@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 01:34:09
+- Generated: 2026-06-03 01:43:01
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -15,6 +15,7 @@
 | chatmock-server | ChatMock OpenAI 호환 서버 | HTTP 200 |
 | provider-chatmock | ChatMock 5.5 공급자 노출 | chatmock/gpt-5.5 selectable |
 | direct-text-generate | 직접 텍스트 생성 | generated result visible |
+| text-dock-generate | ??? Dock ?? | Generate Dock handles direct text source |
 | result-workbench | ?? ??? | visible result workbench quick actions |
 | youtube-url-validation | YouTube URL 입력 검증 | URL accepted or actionable error |
 | style-selection | 스타일 선택 | style controls usable |
@@ -30,7 +31,7 @@
 |---|---|---|
 | chatmock-server | PASS | /v1/models ids=['gpt-5.5', 'gpt-5', 'gpt-5.1', 'gpt-5.2', 'gpt-5.4', 'gpt-5.3-codex'] |
 | provider-chatmock-api | PASS | first_model=chatmock/gpt-5.5 |
-| direct-text-api | PASS | title='API·ChatMock 5.5 요약 전 원문 확인 필요', source=direct_input |
+| direct-text-api | PASS | title='ChatMock 5.5 API 내용 확인 필요', source=direct_input |
 | home-load | PASS | tests/e2e/autoqa/artifacts/home-load.png |
 | studio-layout | PASS | studio hero/source composer visible |
 | settings-open | PASS | tests/e2e/autoqa/artifacts/settings-open.png |
@@ -38,6 +39,7 @@
 | style-selection | PASS | style buttons=22 |
 | youtube-url-validation | PASS | tests/e2e/autoqa/artifacts/youtube-url-validation.png |
 | direct-text-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
+| text-dock-generate | PASS | tests/e2e/autoqa/artifacts/direct-text-generate.png |
 | result-workbench | PASS | tests/e2e/autoqa/artifacts/result-workbench.png |
 | history-panel | PASS | tests/e2e/autoqa/artifacts/history-panel.png |
 | export-buttons | PASS | tests/e2e/autoqa/artifacts/export-buttons.png |

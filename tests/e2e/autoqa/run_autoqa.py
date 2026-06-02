@@ -173,20 +173,16 @@ def click_text_generate(page) -> None:
     textarea = page.locator("textarea").first
     textarea.wait_for(state="visible", timeout=20_000)
     qa_text = (
-        "?? QA? ??? ? ??? ??? ??????. ChatMock 5.5 ??? "
-        "?? ??? ?? ??? ?? ????? ?????. ?? ??? ??? ???."
+        "This is a long direct text source for the studio Generate Dock QA. "
+        "It verifies that text input is treated as a real source and can create a result card."
     )
     textarea.fill(qa_text)
     page.wait_for_timeout(300)
-    textarea.evaluate(
-        """el => {
-            const outer = el.closest('div');
-            const root = outer && outer.parentElement ? outer.parentElement : el.parentElement;
-            const buttons = root ? root.querySelectorAll('button') : [];
-            if (!buttons.length) throw new Error('text generate button not found');
-            buttons[buttons.length - 1].click();
-        }"""
-    )
+    dock_button = page.locator("[data-testid='generate-dock-button']")
+    dock_button.wait_for(state="visible", timeout=10_000)
+    if not dock_button.is_enabled():
+        raise AssertionError("Generate Dock button should be enabled for valid text source")
+    dock_button.click(timeout=10_000)
 
 
 def wait_until(predicate, timeout_ms: int = 5_000, page=None) -> bool:
@@ -707,6 +703,7 @@ def main() -> int:
             alert_text = page.locator("[role='alert']").inner_text(timeout=1000) if page.locator("[role='alert']").count() else ""
             ok = page.locator("[data-report-id]").count() > 0 and not alert_text
             report.record("direct-text-generate", ok, gen_png if ok else f"alert={alert_text}; screenshot={gen_png}")
+            report.record("text-dock-generate", ok, gen_png if ok else f"alert={alert_text}; screenshot={gen_png}")
             workbench = page.locator("[data-testid='result-workbench']").first
             workbench_visible = workbench.count() > 0 and workbench.is_visible()
             report.record("result-workbench", workbench_visible, screenshot(page, "result-workbench.png") if workbench_visible else "workbench panel missing")

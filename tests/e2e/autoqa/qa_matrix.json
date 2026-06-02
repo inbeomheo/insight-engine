@@ -30,6 +30,12 @@
     "expect": "generated result visible"
   },
   {
+    "id": "text-dock-generate",
+    "name": "??? Dock ??",
+    "url": "http://localhost:3000",
+    "expect": "Generate Dock handles direct text source"
+  },
+  {
     "id": "result-workbench",
     "name": "?? ???",
     "url": "http://localhost:3000",
