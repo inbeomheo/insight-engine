@@ -5,6 +5,7 @@ import os
 import pathlib
 import time
 import traceback
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -482,7 +483,24 @@ def run_notebooklm_auth_notice_suite(browser, report: QaReport) -> None:
 
 def run_right_panel_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
-    context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": []})))
+    today = datetime.now(timezone.utc)
+    today_key = today.strftime("%Y-%m-%d")
+    seeded_schedule = {
+        "id": "qa-calendar-wordpress",
+        "title": "캘린더 WordPress 예약",
+        "content": "예약 캘린더 라벨 검증",
+        "target_plugin": "wordpress",
+        "plugin_options": {
+            "site_url": "https://wp.example.com",
+            "username": "qa-writer",
+            "app_password": "qa-secret",
+            "status": "draft",
+        },
+        "scheduled_at": today.replace(hour=9, minute=0, second=0, microsecond=0).isoformat(),
+        "status": "pending",
+        "created_at": today.isoformat(),
+    }
+    context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": [seeded_schedule]}, ensure_ascii=False)))
     seed_right_panel_context(context)
     page = context.new_page()
     page.on("console", lambda msg: report.console_errors.append(f"[right-panel] {msg.text}") if msg.type == "error" else None)
@@ -609,6 +627,18 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             page.locator("[data-testid='content-calendar']").wait_for(state="visible", timeout=10_000)
             calendar_visible = True
         report.record("right-panel-quick-actions", calendar_visible, screenshot(page, "right-panel-calendar.png") if calendar_visible else "calendar not opened")
+        try:
+            page.locator(f"button[aria-label='{today_key} 날짜 선택']").click(timeout=10_000)
+            calendar_text = page.locator("[data-testid='content-calendar']").inner_text(timeout=10_000)
+            label_ok = "WordPress" in calendar_text and "wordpress" not in calendar_text
+            secret_ok = "qa-secret" not in calendar_text and "app_password" not in calendar_text
+            report.record(
+                "calendar-plugin-labels",
+                label_ok and secret_ok,
+                screenshot(page, "calendar-plugin-labels.png") if label_ok and secret_ok else calendar_text[:500],
+            )
+        except Exception as exc:
+            report.record("calendar-plugin-labels", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")

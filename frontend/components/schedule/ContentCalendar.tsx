@@ -52,6 +52,39 @@ const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   cancelled: { label: '취소', className: 'bg-muted text-muted-foreground border-border' },
 };
 
+const PLUGIN_LABELS: Record<string, string> = {
+  wordpress: 'WordPress',
+  naver_blog: '네이버 블로그',
+  naver: '네이버 블로그',
+  medium: 'Medium',
+  substack: 'Substack',
+};
+
+const PUBLISH_STATUS_LABELS: Record<string, string> = {
+  draft: '임시글',
+  publish: '공개',
+  pending: '검토 대기',
+  private: '비공개',
+};
+
+function pluginLabel(pluginId: string) {
+  return PLUGIN_LABELS[pluginId] ?? pluginId;
+}
+
+function pluginOptionSummary(post: ScheduledPost) {
+  const options = post.plugin_options ?? {};
+  const parts: string[] = [];
+  const status = typeof options.status === 'string' ? options.status : '';
+  const siteUrl = typeof options.site_url === 'string' ? options.site_url : '';
+  const blogId = typeof options.blog_id === 'string' ? options.blog_id : '';
+
+  if (status) parts.push(PUBLISH_STATUS_LABELS[status] ?? status);
+  if (siteUrl) parts.push(siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+  if (blogId) parts.push(`블로그 ${blogId}`);
+
+  return parts.join(' · ');
+}
+
 export default function ContentCalendar({ schedules, onDelete }: ContentCalendarProps) {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -199,7 +232,10 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
                       </div>
                       <p className="text-sm font-medium truncate">{post.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {post.target_plugin}
+                        <span data-testid="calendar-plugin-label">{pluginLabel(post.target_plugin)}</span>
+                        {pluginOptionSummary(post) && (
+                          <span> · {pluginOptionSummary(post)}</span>
+                        )}
                       </p>
                       {post.error_message && (
                         <p className="text-xs text-red-500 mt-1">{post.error_message}</p>

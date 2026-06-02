@@ -246,6 +246,12 @@
     "expect": "우측 패널 하단 예약 카드를 클릭하면 예약 캘린더로 이동한다"
   },
   {
+    "id": "calendar-plugin-labels",
+    "name": "캘린더 발행 대상 라벨",
+    "url": "http://localhost:3000",
+    "expect": "예약 캘린더가 내부 플러그인 ID 대신 사용자용 플랫폼명과 안전한 옵션 요약을 표시하고 비밀값은 노출하지 않는다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",
