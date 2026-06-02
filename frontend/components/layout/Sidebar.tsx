@@ -154,7 +154,7 @@ export default function Sidebar() {
 
       <aside
         className={cn(
-          'w-[260px] border-r border-border/60 bg-[#F8FAFC] dark:bg-zinc-900 flex flex-col h-full shrink-0 z-50',
+          'w-[280px] border-r border-white/70 bg-white/75 backdrop-blur-xl dark:bg-zinc-900 flex flex-col h-full shrink-0 z-50',
           'transition-all duration-200 ease-out',
           'fixed lg:relative',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-full lg:w-0 lg:border-0 lg:overflow-hidden'

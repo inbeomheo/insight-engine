@@ -379,7 +379,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     return (
       <ReportProvider report={report}>
       <Card
-        className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow cursor-pointer"
+        className="overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-sm shadow-slate-200/60 hover:shadow-md transition-shadow cursor-pointer"
         onClick={onExpandToFull}
       >
         <div className="px-4 py-3">
@@ -418,7 +418,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
-    <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm hover:border-border/60 transition-all duration-200">
+    <Card className="overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-sm shadow-slate-200/60 hover:shadow-md hover:border-slate-300 transition-all duration-200">
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
         {/* 뱃지 + 액션 */}
@@ -731,6 +731,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
         <div className="flex items-center gap-0.5">
           {/* 더보기 메뉴 */}
+          <span className="mr-2 hidden text-xs font-medium text-slate-400 sm:inline">Workbench</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴" aria-haspopup="menu">

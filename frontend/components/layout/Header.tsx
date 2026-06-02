@@ -11,7 +11,7 @@ const Header = memo(function Header() {
   const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), [setSettingsModalOpen]);
 
   return (
-    <header className="h-14 border-b border-border/60 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm" role="banner">
+    <header className="h-16 border-b border-white/70 flex items-center justify-between px-4 shrink-0 bg-white/75 dark:bg-zinc-900/80 backdrop-blur-xl" role="banner">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -27,7 +27,7 @@ const Header = memo(function Header() {
             <Sparkles className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="font-bold text-[15px] tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            Insight Engine
+            Insight Studio
           </span>
         </div>
       </div>

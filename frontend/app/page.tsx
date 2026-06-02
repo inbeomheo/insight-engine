@@ -2,13 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2 } from 'lucide-react';
+import { Youtube, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import UrlInput from '@/components/input/UrlInput';
-import TextInput from '@/components/input/TextInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
@@ -16,8 +13,12 @@ import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
-import GenerationModeSelector from '@/components/input/GenerationModeSelector';
-import FusionOptions from '@/components/input/FusionOptions';
+import StudioShell from '@/components/studio/StudioShell';
+import StudioHero from '@/components/studio/StudioHero';
+import SourceComposer from '@/components/studio/SourceComposer';
+import OutputBlueprint from '@/components/studio/OutputBlueprint';
+import GenerateDock from '@/components/studio/GenerateDock';
+import StudioRightPanel from '@/components/studio/StudioRightPanel';
 
 // Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
 const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
@@ -57,9 +58,11 @@ export default function Home() {
   const activeReportId = useUIStore((s) => s.activeReportId);
   const activeView = useUIStore((s) => s.activeView);
 
+  const selectedProvider = useSettingsStore((s) => s.selectedProvider);
+  const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const modelLabel = selectedModel || selectedProvider || '?? ??';
+
   const generationMode = useSettingsStore((s) => s.generationMode);
-  const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
-  const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
   const { isLoading, error, generateFromText, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
@@ -228,23 +231,9 @@ export default function Home() {
   }, [urls, generateFusionUrls, removeUrl]);
 
   return (
-    <div
-      className="flex h-screen overflow-hidden relative"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {/* 스킵 내비게이션 (접근성) */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm"
-      >
-        본문으로 건너뛰기
-      </a>
-      {/* 드래그 오버레이 */}
+    <>
       {isDragOver && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/50 rounded-xl pointer-events-none animate-fade-in shadow-inner">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md border-2 border-dashed border-primary/50 pointer-events-none animate-fade-in shadow-inner">
           <div className="flex flex-col items-center gap-3 text-primary">
             <Youtube className="h-12 w-12 opacity-60 animate-bounce" />
             <p className="text-lg font-medium">{t('urlInput.dragDrop')}</p>
@@ -252,214 +241,124 @@ export default function Home() {
         </div>
       )}
 
-      {/* 사이드바 */}
-      <Sidebar />
+      <StudioShell
+        className="relative"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        sidebar={<Sidebar />}
+        header={<Header />}
+        rightPanel={<StudioRightPanel reports={reports} sourceCount={urls.length} schedulesCount={schedules.length} />}
+        main={(
+          <>
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm"
+            >
+              ???? ????
+            </a>
 
-      {/* 메인 영역 */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+            <StudioHero modelLabel={modelLabel} resultCount={reports.length} />
 
-        {/* 콘텐츠 */}
-        <main className="flex-1 overflow-hidden" id="main-content" role="main">
-          <ScrollArea className="h-full">
-            <div className="px-4 sm:px-8 lg:px-12 py-4 sm:py-6">
-
-              {/* 캘린더 뷰 */}
-              {activeView === 'calendar' && (
-                <div className="max-w-3xl mx-auto">
-                  <h2 className="text-xl font-semibold mb-6">{t('calendar.title')}</h2>
-                  <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
+            {activeView === 'calendar' ? (
+              <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60">
+                <h2 className="mb-6 text-xl font-semibold">{t('calendar.title')}</h2>
+                <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
+              </section>
+            ) : (
+              <>
+                <div className="relative">
+                  <SourceComposer
+                    urls={urls}
+                    onAddUrl={addUrl}
+                    onAddUrls={addUrls}
+                    onRemoveUrl={removeUrl}
+                    onToggleSettings={handleToggleSettings}
+                    isLoading={isLoading}
+                    onGenerateUrl={handleGenerate}
+                    onGenerateText={generateFromText}
+                  />
+                  <SettingsPopover />
                 </div>
-              )}
 
-              {/* 메인 뷰 (콘텐츠 생성) */}
-              {activeView === 'main' && <>
-              {/* URL 입력 영역 */}
-              <div className="relative mb-10">
-                <UrlInput
-                  urls={urls}
-                  onAddUrl={addUrl}
-                  onAddUrls={addUrls}
-                  onRemoveUrl={removeUrl}
-                  onToggleSettings={handleToggleSettings}
+                <OutputBlueprint />
+
+                {error && (
+                  <div
+                    role="alert"
+                    aria-live="polite"
+                    className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 shadow-sm shadow-red-100"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/60">
+                  <FilterBar />
+                  {reports.length > 0 && <ViewModeSelector mode={viewMode} onChange={handleViewModeChange} />}
+                </div>
+
+                <div className="space-y-4">
+                  {isLoading && generationMode === 'fusion' && <FusionProgress isLoading={isLoading} isFusion={true} />}
+                  {isLoading && <LoadingSkeleton />}
+
+                  {deferredFiltered.slice(0, visibleCount).map((r) => (
+                    <div
+                      key={r.id}
+                      data-report-id={r.id}
+                      className={cn(
+                        'transition-all duration-300',
+                        activeReportId === r.id && 'rounded-2xl ring-2 ring-primary/30 shadow-md shadow-primary/5'
+                      )}
+                    >
+                      <ResultCard
+                        report={r}
+                        searchQuery={searchQuery}
+                        onSchedule={handleScheduleOpen}
+                        viewMode={viewMode}
+                        onExpandToFull={handleExpandToFull}
+                      />
+                    </div>
+                  ))}
+
+                  {visibleCount < deferredFiltered.length && (
+                    <div className="text-center py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleLoadMore}
+                        className="gap-2 text-xs hover:shadow-md active:scale-[0.98] transition-all duration-200"
+                      >
+                        <Layers className="h-3.5 w-3.5" />
+                        ? ?? ({deferredFiltered.length - visibleCount}? ??)
+                      </Button>
+                    </div>
+                  )}
+
+                  {!isLoading && reports.length === 0 && (
+                    <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/60 p-10 text-center">
+                      <Youtube className="mx-auto mb-4 h-10 w-10 text-indigo-300" />
+                      <h3 className="text-lg font-semibold">? ???? ??????</h3>
+                      <p className="mt-2 text-sm text-slate-500">??? ???? ??? ??? ???? ??? ??? ????.</p>
+                    </div>
+                  )}
+                </div>
+
+                <GenerateDock
+                  sourceCount={urls.length}
+                  mode={generationMode}
                   isLoading={isLoading}
                   onGenerate={handleGenerate}
+                  onGenerateMerged={handleGenerateMerged}
+                  onGenerateFusion={handleGenerateFusion}
                 />
-                <SettingsPopover />
+              </>
+            )}
+          </>
+        )}
+      />
 
-                {urls.length === 0 && (
-                  <div className="mt-4">
-                    <TextInput onGenerate={generateFromText} isLoading={isLoading} />
-                  </div>
-                )}
-
-                {/* 생성 모드 선택 + 퓨전 옵션 */}
-                {urls.length >= 2 && (
-                  <div className="mt-3 animate-fade-in">
-                    <GenerationModeSelector />
-                    <FusionOptions />
-                  </div>
-                )}
-              </div>
-
-              {/* 생성 버튼 (URL이 있을 때) */}
-              {urls.length > 0 && (
-                <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
-                  {generationMode === 'individual' && (
-                    <Button
-                      onClick={handleGenerate}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {urls.length === 1
-                        ? t('generateButton.singleUrl')
-                        : t('generateButton.multipleUrls', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {generationMode === 'combined' && urls.length >= 2 && (
-                    <Button
-                      onClick={handleGenerateMerged}
-                      variant="outline"
-                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-md shadow-primary/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
-                      {t('generateButton.combined', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {generationMode === 'fusion' && urls.length >= 2 && (
-                    <Button
-                      onClick={handleGenerateFusion}
-                      variant="outline"
-                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-md shadow-purple-500/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
-                      {t('generateButton.fusion', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
-                  {urls.length === 1 && generationMode !== 'individual' && (
-                    <Button
-                      onClick={handleGenerate}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {t('generateButton.singleUrl')}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {/* 에이전트 모드 토글 */}
-              {urls.length > 0 && generationMode === 'individual' && (
-                <div className="flex justify-center mb-2 animate-fade-in">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={enableAgentMode}
-                    aria-label="에이전트 모드 토글"
-                    onClick={() => setEnableAgentMode(!enableAgentMode)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50',
-                      enableAgentMode
-                        ? 'bg-violet-500/10 border-violet-400/40 text-violet-500'
-                        : 'bg-muted/40 border-border/40 text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    <Bot className="h-3.5 w-3.5" />
-                    에이전트 모드 {enableAgentMode ? 'ON' : 'OFF'}
-                  </button>
-                </div>
-              )}
-
-              {/* 에러 */}
-              {error && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in flex items-center gap-2 shadow-sm shadow-destructive/5"
-                >
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              {/* 필터 + 뷰 모드 선택 */}
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <FilterBar />
-                {reports.length > 0 && (
-                  <ViewModeSelector mode={viewMode} onChange={handleViewModeChange} />
-                )}
-              </div>
-
-              {/* 결과 카드 / 빈 상태 */}
-              <div className="w-full space-y-4">
-                {isLoading && generationMode === 'fusion' && (
-                  <FusionProgress isLoading={isLoading} isFusion={true} />
-                )}
-                {isLoading && <LoadingSkeleton />}
-
-                {deferredFiltered.slice(0, visibleCount).map((r) => (
-                  <div
-                    key={r.id}
-                    data-report-id={r.id}
-                    className={cn(
-                      'transition-all duration-300',
-                      activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl shadow-md shadow-primary/5'
-                    )}
-                  >
-                    <ResultCard
-                      report={r}
-                      searchQuery={searchQuery}
-                      onSchedule={handleScheduleOpen}
-                      viewMode={viewMode}
-                      onExpandToFull={handleExpandToFull}
-                    />
-                  </div>
-                ))}
-                {visibleCount < deferredFiltered.length && (
-                  <div className="text-center py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleLoadMore}
-                      className="gap-2 text-xs hover:shadow-md active:scale-[0.98] transition-all duration-200"
-                    >
-                      <Layers className="h-3.5 w-3.5" />
-                      더 보기 ({deferredFiltered.length - visibleCount}개 남음)
-                    </Button>
-                  </div>
-                )}
-
-                {/* 빈 상태 */}
-                {!isLoading && reports.length === 0 && (
-                  <div className="text-center py-12 sm:py-24">
-                    <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center rounded-3xl border border-indigo-100/50">
-                      <Youtube className="h-9 w-9 text-indigo-300" />
-                    </div>
-                    <h3 className="font-semibold text-lg text-foreground/80 mb-2">{t('emptyState.title')}</h3>
-                    <p className="text-sm text-muted-foreground/60 leading-relaxed">
-                      {t('emptyState.description').split('\n').map((line, i) => (
-                        <span key={i}>{line}{i === 0 && <br />}</span>
-                      ))}
-                    </p>
-                  </div>
-                )}
-              </div>
-              </>}
-            </div>
-          </ScrollArea>
-        </main>
-      </div>
-
-      {/* 모달 */}
       <SettingsModal />
       <PromptModal />
       <MindmapModal />
@@ -467,14 +366,8 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
-
-      {/* 도움말 패널 */}
       <HelpPanel open={helpOpen} onClose={handleCloseHelp} />
-
-      {/* 가이드 투어 */}
       <GuidedTour forceStart={tourActive} onClose={handleCloseTour} />
-
-      {/* 예약 발행 모달 — 페이지 레벨 1개 */}
       <ScheduleModal
         open={!!scheduleTarget}
         onOpenChange={handleScheduleOpenChange}
@@ -484,6 +377,6 @@ export default function Home() {
         isLoading={scheduleLoading}
         onSchedule={handleScheduleSubmit}
       />
-    </div>
+    </>
   );
 }

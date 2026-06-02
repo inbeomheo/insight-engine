@@ -25,8 +25,8 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
   if (!artifacts || artifacts.length === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-border/40 pt-3">
-      <p className="text-xs font-medium text-muted-foreground mb-2">NotebookLM</p>
+    <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
       <div className="flex flex-wrap gap-2">
         {artifacts.map((a) => {
           const meta = TYPE_META[a.content_type] ?? { label: a.content_type, icon: FileText };

@@ -51,8 +51,8 @@
   --radius: 0.625rem;
 
   /* Indigo 테마 (기존 Insight Engine과 동일) */
-  --background: #ffffff;
-  --foreground: #111827;
+  --background: #F6F7FB;
+  --foreground: #0F172A;
   --card: #ffffff;
   --card-foreground: #111827;
   --popover: #ffffff;
@@ -61,13 +61,13 @@
   --primary-foreground: #ffffff;
   --secondary: #F3F4F6;
   --secondary-foreground: #111827;
-  --muted: #F9FAFB;
-  --muted-foreground: #6B7280;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
   --accent: #EEF2FF;
   --accent-foreground: #4F46E5;
   --destructive: #ef4444;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
+  --border: #E2E8F0;
+  --input: #CBD5E1;
   --ring: rgba(79, 70, 229, 0.3);
 
   --chart-1: #4F46E5;
@@ -231,3 +231,7 @@
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
+
+
+.studio-card { @apply rounded-[24px] border border-slate-200/80 bg-white shadow-sm shadow-slate-200/60; }
+.studio-panel { @apply rounded-[28px] border border-white/70 bg-white/80 shadow-sm shadow-slate-200/70 backdrop-blur-xl; }
