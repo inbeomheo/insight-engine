@@ -7,19 +7,13 @@ import { getStyleLabel } from '@/lib/helpers';
 import type { NotebookLmArtifact, Report } from '@/lib/types';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
-import { QUICK_ACTIONS } from './studioConfig';
+import { getGenerationModeLabel, getModifierSummary, QUICK_ACTIONS } from './studioConfig';
 
 interface StudioRightPanelProps {
   reports: Report[];
   sourceCount: number;
   schedulesCount: number;
 }
-
-const MODE_LABELS: Record<string, string> = {
-  individual: '개별 생성',
-  combined: '통합 생성',
-  fusion: '퓨전 분석',
-};
 
 const STATUS_META = {
   completed: { label: '완료', icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700' },
@@ -65,6 +59,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   const latest = reports.slice(0, 4);
   const firstReport = reports[0];
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
+  const modifierSummary = getModifierSummary(modifiers);
 
   function scrollTo(selector: string) {
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -121,11 +116,11 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
             </div>
             <div data-testid="right-panel-setting-mode" className="rounded-2xl bg-slate-50 p-3">
               <p className="text-slate-500">모드</p>
-              <p className="mt-1 font-semibold text-slate-900">{MODE_LABELS[generationMode] ?? generationMode}</p>
+              <p className="mt-1 font-semibold text-slate-900">{getGenerationModeLabel(generationMode)}</p>
             </div>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-3 text-slate-600">
-            {modifiers.length} · {modifiers.writing_style} · {modifiers.language}
+          <div data-testid="right-panel-modifier-summary" className="rounded-2xl bg-slate-50 p-3 text-slate-600">
+            {modifierSummary}
           </div>
         </div>
       </section>

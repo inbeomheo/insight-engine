@@ -24,6 +24,12 @@
     "expect": "보이는 스튜디오/소스/우측 패널 카피에 물음표 placeholder가 없다"
   },
   {
+    "id": "studio-status-labels",
+    "name": "스튜디오 상태 요약 라벨",
+    "url": "http://localhost:3000",
+    "expect": "Generate Dock과 우측 패널이 raw 설정값 대신 사용자용 한국어 라벨을 보여준다"
+  },
+  {
     "id": "output-blueprint-advanced",
     "name": "Output Blueprint 고급 컨트롤",
     "url": "http://localhost:3000",

@@ -805,6 +805,15 @@ def main() -> int:
                 not missing_readable and not has_mojibake,
                 screenshot(page, "studio-copy-readable.png") if not missing_readable and not has_mojibake else f"missing={missing_readable}; has_mojibake={has_mojibake}",
             )
+            status_label_required = ["모드 개별 생성", "보통 · 대화체 · 한국어"]
+            status_label_forbidden = ["모드 individual", "medium · conversational · ko"]
+            missing_status_labels = [label for label in status_label_required if label not in body_text]
+            raw_status_labels = [label for label in status_label_forbidden if label in body_text]
+            report.record(
+                "studio-status-labels",
+                not missing_status_labels and not raw_status_labels,
+                screenshot(page, "studio-status-labels.png") if not missing_status_labels and not raw_status_labels else f"missing={missing_status_labels}; raw={raw_status_labels}",
+            )
             advanced_controls = [
                 "blueprint-web-search",
                 "blueprint-web-research",

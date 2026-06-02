@@ -1,4 +1,5 @@
 import { CalendarDays, Download, FileText, Settings, Sparkles, Wand2 } from 'lucide-react';
+import { LANGUAGE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS } from '@/lib/constants';
 
 export const STUDIO_STEPS = [
   { id: 'source', label: '소스 입력', description: 'URL, 텍스트, 파일, 음성을 준비합니다.' },
@@ -15,6 +16,28 @@ export const QUICK_ACTIONS = [
   { id: 'prompt', label: '프롬프트', icon: FileText },
   { id: 'settings', label: '설정', icon: Settings },
 ] as const;
+
+export const GENERATION_MODE_LABELS: Record<string, string> = {
+  individual: '개별 생성',
+  combined: '통합 생성',
+  fusion: '퓨전 분석',
+};
+
+function optionLabel(options: Array<{ value: string; label: string }>, value?: string, fallback?: string): string {
+  return options.find((option) => option.value === value)?.label ?? fallback ?? value ?? '';
+}
+
+export function getGenerationModeLabel(mode: string): string {
+  return GENERATION_MODE_LABELS[mode] ?? mode;
+}
+
+export function getModifierSummary(modifiers: { length?: string; writing_style?: string; language?: string }): string {
+  return [
+    optionLabel(LENGTH_OPTIONS, modifiers.length, '보통'),
+    optionLabel(WRITING_STYLE_OPTIONS, modifiers.writing_style, '대화체'),
+    optionLabel(LANGUAGE_OPTIONS, modifiers.language, '한국어'),
+  ].join(' · ');
+}
 
 export function getGenerateLabel(sourceCount: number, mode: string): string {
   if (sourceCount <= 0) return '소스를 추가하면 생성할 수 있습니다';

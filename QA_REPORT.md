@@ -1,6 +1,6 @@
 # QA_REPORT
 
-- Generated: 2026-06-03 03:08:38
+- Generated: 2026-06-03 03:17:00
 - Frontend: `http://127.0.0.1:3000`
 - Backend: `http://127.0.0.1:5001`
 - ChatMock: `http://127.0.0.1:8000/v1`
@@ -14,6 +14,7 @@
 | studio-layout | 스튜디오 레이아웃 | 스튜디오 shell과 composer가 보인다 |
 | studio-copy-polish | 스튜디오 핵심 카피 | 핵심 스튜디오 라벨과 빈 상태가 읽히는 한국어로 표시된다 |
 | studio-copy-readable | 스튜디오 깨진 카피 방지 | 보이는 스튜디오/소스/우측 패널 카피에 물음표 placeholder가 없다 |
+| studio-status-labels | 스튜디오 상태 요약 라벨 | Generate Dock과 우측 패널이 raw 설정값 대신 사용자용 한국어 라벨을 보여준다 |
 | output-blueprint-advanced | Output Blueprint 고급 컨트롤 | 웹 보강, 웹 리서치, 댓글 분석, 상세도, 에이전트, 모델 요약 컨트롤이 보인다 |
 | header-status-summary | 헤더 상태 요약 | 헤더에 현재 모델과 작업 상태가 표시된다 |
 | mobile-right-panel-drawer | 모바일 작업 패널 Drawer | 모바일 헤더에서 Studio 작업 패널을 열 수 있다 |
@@ -50,6 +51,7 @@
 | header-status-summary | PASS | tests/e2e/autoqa/artifacts/header-status-summary.png |
 | studio-copy-polish | PASS | tests/e2e/autoqa/artifacts/studio-copy-polish.png |
 | studio-copy-readable | PASS | tests/e2e/autoqa/artifacts/studio-copy-readable.png |
+| studio-status-labels | PASS | tests/e2e/autoqa/artifacts/studio-status-labels.png |
 | output-blueprint-advanced | PASS | tests/e2e/autoqa/artifacts/output-blueprint-advanced.png |
 | source-file-generate | PASS | tests/e2e/autoqa/artifacts/source-file-generate.png |
 | source-voice-generate | PASS | tests/e2e/autoqa/artifacts/source-voice-generate.png |
