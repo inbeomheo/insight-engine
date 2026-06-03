@@ -43,18 +43,26 @@ const FilterBar = memo(function FilterBar() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <Input
+          data-testid="result-filter-search"
           type="search"
           value={localQuery}
           onChange={(e) => setLocalQuery(e.target.value)}
           placeholder="결과 검색..."
           className="pl-9 h-10 text-sm"
           aria-label="결과 검색"
+          aria-describedby="result-filter-search-help"
         />
+        <p id="result-filter-search-help" data-testid="result-filter-search-help" className="sr-only">
+          제목과 본문에서 결과를 검색합니다.
+        </p>
       </div>
       <Select value={styleFilter || 'all'} onValueChange={(v) => setStyleFilter(v === 'all' ? '' : v)}>
-        <SelectTrigger className="h-10 text-sm w-36">
+        <SelectTrigger data-testid="result-filter-style-trigger" aria-label="스타일 필터" aria-describedby="result-filter-style-help" className="h-10 text-sm w-36">
           <SelectValue placeholder="스타일" />
         </SelectTrigger>
+        <p id="result-filter-style-help" data-testid="result-filter-style-help" className="sr-only">
+          산출물 스타일로 결과를 좁힙니다.
+        </p>
         <SelectContent>
           <SelectItem value="all" className="text-sm">전체</SelectItem>
           {STYLE_OPTIONS.map((s) => (

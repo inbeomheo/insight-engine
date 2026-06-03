@@ -270,6 +270,12 @@
     "expect": "결과 툴바는 region 라벨, live 결과 요약, 필터 그룹 라벨을 제공한다"
   },
   {
+    "id": "result-filter-accessible-controls",
+    "name": "결과 필터 접근 가능한 컨트롤",
+    "url": "http://localhost:3000",
+    "expect": "결과 검색과 스타일 필터는 라벨, 도움말 연결, 필터 결과 요약 갱신을 제공한다"
+  },
+  {
     "id": "studio-empty-state-guidance",
     "name": "스튜디오 빈 상태 안내",
     "url": "http://localhost:3000",

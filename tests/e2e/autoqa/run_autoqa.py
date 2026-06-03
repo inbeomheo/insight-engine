@@ -883,6 +883,46 @@ def run_result_toolbar_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_result_filter_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[result-filter-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[result-filter-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id]").first.wait_for(state="visible", timeout=60_000)
+        search = page.locator("[data-testid='result-filter-search']")
+        search_help = page.locator("[data-testid='result-filter-search-help']")
+        style_trigger = page.locator("[data-testid='result-filter-style-trigger']")
+        style_help = page.locator("[data-testid='result-filter-style-help']")
+        summary = page.locator("[data-testid='studio-result-toolbar-summary']")
+        initial_ok = (
+            search.get_attribute("type", timeout=5_000) == "search"
+            and search.get_attribute("aria-label", timeout=5_000) == "결과 검색"
+            and search.get_attribute("aria-describedby", timeout=5_000) == "result-filter-search-help"
+            and search_help.get_attribute("id", timeout=5_000) == "result-filter-search-help"
+            and "제목과 본문" in search_help.inner_text(timeout=5_000)
+            and style_trigger.get_attribute("aria-label", timeout=5_000) == "스타일 필터"
+            and style_trigger.get_attribute("aria-describedby", timeout=5_000) == "result-filter-style-help"
+            and style_help.get_attribute("id", timeout=5_000) == "result-filter-style-help"
+            and "산출물 스타일" in style_help.inner_text(timeout=5_000)
+        )
+        search.fill("no matching result query", timeout=10_000)
+        filtered_ok = wait_until(lambda: "필터 결과 0개" in summary.inner_text(timeout=1_000), 5_000, page)
+        ok = initial_ok and filtered_ok
+        report.record(
+            "result-filter-accessible-controls",
+            ok,
+            "result search and style filter labels/help are accessible and filtering updates summary" if ok else f"initial={initial_ok}; filtered={filtered_ok}",
+        )
+    except Exception as exc:
+        report.record("result-filter-accessible-controls", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -3243,6 +3283,7 @@ def main() -> int:
         run_mobile_studio_suite(browser, report)
         run_new_analysis_filter_reset_suite(browser, report)
         run_result_toolbar_accessibility_suite(browser, report)
+        run_result_filter_accessibility_suite(browser, report)
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
         run_empty_workbench_accessibility_suite(browser, report)
