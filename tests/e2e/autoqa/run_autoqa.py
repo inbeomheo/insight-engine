@@ -1950,20 +1950,35 @@ def run_output_blueprint_detail_accessibility_suite(browser, report: QaReport) -
         page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
         page.locator("#url-input").wait_for(state="visible", timeout=60_000)
         group = page.locator("[data-testid='blueprint-detail-level']")
+        brief = page.locator("[data-testid='blueprint-detail-brief']")
         standard = page.locator("[data-testid='blueprint-detail-standard']")
         deep = page.locator("[data-testid='blueprint-detail-deep']")
         initial_ok = (
-            group.get_attribute("role") == "group"
+            group.get_attribute("role") == "radiogroup"
             and group.get_attribute("aria-label") == "상세도"
-            and standard.get_attribute("aria-pressed") == "true"
-            and deep.get_attribute("aria-pressed") == "false"
+            and standard.get_attribute("role") == "radio"
+            and standard.get_attribute("aria-checked") == "true"
+            and deep.get_attribute("aria-checked") == "false"
         )
-        deep.click(timeout=10_000)
-        changed_ok = deep.get_attribute("aria-pressed") == "true" and standard.get_attribute("aria-pressed") == "false"
+        standard.focus(timeout=10_000)
+        page.keyboard.press("ArrowLeft")
+        brief_ok = wait_until(
+            lambda: brief.get_attribute("aria-checked", timeout=1_000) == "true"
+            and brief.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        page.keyboard.press("End")
+        deep_ok = wait_until(
+            lambda: deep.get_attribute("aria-checked", timeout=1_000) == "true"
+            and deep.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
         report.record(
             "output-blueprint-detail-accessible",
-            initial_ok and changed_ok,
-            "detail group and pressed state update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+            initial_ok and brief_ok and deep_ok,
+            "detail radiogroup, radio state, and keyboard navigation update selection" if initial_ok and brief_ok and deep_ok else f"initial={initial_ok}; brief={brief_ok}; deep={deep_ok}",
         )
     except Exception as exc:
         report.record("output-blueprint-detail-accessible", False, repr(exc))

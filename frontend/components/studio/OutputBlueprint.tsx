@@ -13,6 +13,7 @@ const DETAIL_OPTIONS = [
   { value: 'standard', label: '표준', desc: '균형 잡힌 결과' },
   { value: 'deep', label: '심층', desc: '맥락과 근거 강화' },
 ] as const;
+type DetailLevel = (typeof DETAIL_OPTIONS)[number]['value'];
 
 type OutputBlueprintSourceMode = 'url' | 'text' | 'file' | 'voice';
 
@@ -106,6 +107,21 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           : (currentIndex + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + enabledModes.length) % enabledModes.length;
     selectMode(enabledModes[nextIndex].id);
   };
+  const selectDetail = (value: DetailLevel) => {
+    setDetailLevel(value);
+    requestAnimationFrame(() => document.getElementById(`blueprint-detail-${value}`)?.focus());
+  };
+  const handleDetailKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? DETAIL_OPTIONS.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + DETAIL_OPTIONS.length) % DETAIL_OPTIONS.length;
+    selectDetail(DETAIL_OPTIONS[nextIndex].value);
+  };
 
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
@@ -191,20 +207,24 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           </div>
         </div>
 
-        <div data-testid="blueprint-detail-level" role="group" aria-label="상세도" className="rounded-2xl bg-slate-50 p-3">
+        <div data-testid="blueprint-detail-level" role="radiogroup" aria-label="상세도" className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500"><SlidersHorizontal className="h-3.5 w-3.5" />상세도</p>
           <div className="grid grid-cols-3 gap-1.5">
-            {DETAIL_OPTIONS.map((option) => (
+            {DETAIL_OPTIONS.map((option, index) => (
               <button
                 key={option.value}
+                id={`blueprint-detail-${option.value}`}
                 type="button"
                 data-testid={`blueprint-detail-${option.value}`}
-                aria-pressed={detailLevel === option.value}
+                role="radio"
+                aria-checked={detailLevel === option.value}
+                tabIndex={detailLevel === option.value ? 0 : -1}
                 className={cn(
-                  'rounded-xl border px-2 py-2 text-left text-[11px] transition',
+                  'rounded-xl border px-2 py-2 text-left text-[11px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
                   detailLevel === option.value ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-500 hover:border-indigo-200',
                 )}
-                onClick={() => setDetailLevel(option.value)}
+                onClick={() => selectDetail(option.value)}
+                onKeyDown={(event) => handleDetailKeyDown(event, index)}
                 title={option.desc}
               >
                 {option.label}
