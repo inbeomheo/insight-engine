@@ -956,6 +956,53 @@ def run_generate_dock_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_empty_workbench_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[empty-workbench-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[empty-workbench-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        empty = page.locator("[data-testid='studio-empty-state']")
+        title = page.locator("[data-testid='studio-empty-state-title']")
+        steps = page.locator("[data-testid='studio-empty-state-steps']")
+        action = page.locator("[data-testid='studio-empty-state-focus-source']")
+        initial_ok = (
+            empty.get_attribute("role", timeout=5_000) == "region"
+            and empty.get_attribute("aria-labelledby", timeout=5_000) == "studio-empty-state-title"
+            and title.get_attribute("id", timeout=5_000) == "studio-empty-state-title"
+            and "아직 결과가 없습니다" in title.inner_text(timeout=5_000)
+            and steps.get_attribute("role", timeout=5_000) == "list"
+            and steps.get_attribute("aria-label", timeout=5_000) == "진행 단계"
+            and page.locator("[data-testid^='studio-empty-state-step-']").count() == 4
+            and page.locator("[data-testid='studio-empty-state-step-0']").get_attribute("role", timeout=5_000) == "listitem"
+            and page.locator("[data-testid='studio-empty-state-step-0']").get_attribute("aria-label", timeout=5_000).startswith("1. 소스 입력")
+            and action.get_attribute("aria-label", timeout=5_000) == "소스 입력으로 이동"
+        )
+        action.click(timeout=10_000)
+        focus_ok = wait_until(lambda: page.locator("#url-input").evaluate("el => document.activeElement === el"), 3_000, page)
+        ok = initial_ok and focus_ok
+        report.record(
+            "studio-empty-state-accessible",
+            ok,
+            "empty workbench region, step list, and focus action are accessible" if ok else f"initial={initial_ok}; focus={focus_ok}",
+        )
+    except Exception as exc:
+        report.record("studio-empty-state-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
@@ -3158,6 +3205,7 @@ def main() -> int:
         run_new_analysis_filter_reset_suite(browser, report)
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
+        run_empty_workbench_accessibility_suite(browser, report)
 
         browser.close()
 

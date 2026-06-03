@@ -270,6 +270,12 @@
     "expect": "결과가 없을 때 소스 입력, 산출물 설계, Generate Dock, Workbench 흐름을 안내한다"
   },
   {
+    "id": "studio-empty-state-accessible",
+    "name": "스튜디오 빈 상태 접근성",
+    "url": "http://localhost:3000",
+    "expect": "빈 Workbench 안내는 region, 단계 list, 소스 입력 포커스 액션을 제공한다"
+  },
+  {
     "id": "result-workbench-copy-readable",
     "name": "Result Workbench 카피",
     "url": "http://localhost:3000",
