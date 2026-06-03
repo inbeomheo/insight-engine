@@ -1523,6 +1523,8 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         url_tab = page.get_by_role("tab", name=re.compile(r"URL"))
         text_tab = page.get_by_role("tab", name=re.compile(r"텍스트"))
         url_selected = url_tab.get_attribute("aria-selected") == "true"
+        url_tabindex = url_tab.get_attribute("tabindex") == "0"
+        text_tabindex_initial = text_tab.get_attribute("tabindex") == "-1"
         url_panel = page.locator("#source-panel-url")
         url_panel_linked = (
             url_panel.count() > 0
@@ -1535,6 +1537,8 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         page.keyboard.press("ArrowRight")
         text_panel = page.locator("#source-panel-text")
         text_selected = text_tab.get_attribute("aria-selected") == "true"
+        text_tabindex_after_key = text_tab.get_attribute("tabindex") == "0"
+        url_tabindex_after_key = url_tab.get_attribute("tabindex") == "-1"
         text_focused = text_tab.evaluate("el => document.activeElement === el")
         text_panel_linked = (
             text_panel.count() > 0
@@ -1543,14 +1547,36 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
             and text_panel.get_attribute("aria-labelledby") == (text_tab.get_attribute("id") or "")
             and text_tab.get_attribute("aria-controls") == "source-panel-text"
         )
-        ok = tablist_visible and url_selected and url_panel_linked and text_selected and text_focused and text_panel_linked
+        file_tab = page.get_by_role("tab", name=re.compile(r"파일"))
+        file_tab.click(timeout=10_000)
+        file_focused = file_tab.evaluate("el => document.activeElement === el")
+        file_selected = file_tab.get_attribute("aria-selected") == "true"
+        file_tabindex = file_tab.get_attribute("tabindex") == "0"
+        text_tabindex_after_click = text_tab.get_attribute("tabindex") == "-1"
+
+        ok = (
+            tablist_visible
+            and url_selected
+            and url_tabindex
+            and text_tabindex_initial
+            and url_panel_linked
+            and text_selected
+            and text_tabindex_after_key
+            and url_tabindex_after_key
+            and text_focused
+            and text_panel_linked
+            and file_selected
+            and file_focused
+            and file_tabindex
+            and text_tabindex_after_click
+        )
         report.record(
             "source-composer-tabs-accessible",
             ok,
             (
-                "tablist, keyboard navigation, and tabpanels linked"
+                "tablist, roving tabindex, keyboard/click focus, and tabpanels linked"
                 if ok
-                else f"tablist={tablist_visible}; url_selected={url_selected}; url_panel={url_panel_linked}; text_selected={text_selected}; text_focused={text_focused}; text_panel={text_panel_linked}"
+                else f"tablist={tablist_visible}; url_selected={url_selected}; url_tabindex={url_tabindex}; text_initial={text_tabindex_initial}; url_panel={url_panel_linked}; text_selected={text_selected}; text_tabindex={text_tabindex_after_key}; url_after={url_tabindex_after_key}; text_focused={text_focused}; text_panel={text_panel_linked}; file_selected={file_selected}; file_focused={file_focused}; file_tabindex={file_tabindex}; text_after_click={text_tabindex_after_click}"
             ),
         )
     except Exception as exc:

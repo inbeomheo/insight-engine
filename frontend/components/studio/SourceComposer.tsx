@@ -118,11 +118,12 @@ export default function SourceComposer(props: SourceComposerProps) {
                 role="tab"
                 aria-selected={selected}
                 aria-controls={panelId}
+                tabIndex={selected ? 0 : -1}
                 data-testid={item.testId}
-                onClick={() => setTab(item.id)}
+                onClick={() => selectTab(item.id)}
                 onKeyDown={(event) => handleTabKeyDown(event, index)}
                 className={cn(
-                  'flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5',
+                  'flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
                   selected ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500',
                 )}
               >
