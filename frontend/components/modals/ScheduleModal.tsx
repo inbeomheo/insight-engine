@@ -131,6 +131,12 @@ export default function ScheduleModal({
   }
 
   const validationMessage = getValidationMessage();
+  const wordpressSiteInvalid = validationMessage === 'WordPress 사이트 URL을 입력해주세요.';
+  const wordpressUsernameInvalid = validationMessage === 'WordPress 사용자명을 입력해주세요.';
+  const wordpressPasswordInvalid = validationMessage === 'WordPress Application Password를 입력해주세요.';
+  const naverWebhookInvalid = validationMessage === '네이버 발행 웹훅 URL은 필수입니다.';
+  const scheduleTimeInvalid = validationMessage === '예약 시간은 미래 시간이어야 합니다.';
+  const validationDescribedBy = validationMessage ? 'schedule-validation-message' : undefined;
 
   async function handleSubmit() {
     if (!selectedPlugin || !scheduledAt || validationMessage) return;
@@ -200,6 +206,9 @@ export default function ScheduleModal({
             <p className="text-xs font-semibold text-muted-foreground">WordPress 연결 설정</p>
             <input
               data-testid="schedule-option-wordpress-site-url"
+              aria-label="WordPress 사이트 URL"
+              aria-invalid={wordpressSiteInvalid}
+              aria-describedby={wordpressSiteInvalid ? validationDescribedBy : undefined}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="https://example.com"
               value={wordpressOptions.site_url}
@@ -210,6 +219,9 @@ export default function ScheduleModal({
             />
             <input
               data-testid="schedule-option-wordpress-username"
+              aria-label="WordPress 사용자명"
+              aria-invalid={wordpressUsernameInvalid}
+              aria-describedby={wordpressUsernameInvalid ? validationDescribedBy : undefined}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="사용자명"
               value={wordpressOptions.username}
@@ -221,6 +233,9 @@ export default function ScheduleModal({
             <input
               data-testid="schedule-option-wordpress-app-password"
               type="password"
+              aria-label="WordPress Application Password"
+              aria-invalid={wordpressPasswordInvalid}
+              aria-describedby={wordpressPasswordInvalid ? validationDescribedBy : undefined}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="Application Password"
               value={wordpressOptions.app_password}
@@ -251,6 +266,9 @@ export default function ScheduleModal({
             <p className="text-xs font-semibold text-muted-foreground">네이버 블로그 연결 설정</p>
             <input
               data-testid="schedule-option-naver-webhook-url"
+              aria-label="네이버 발행 웹훅 URL"
+              aria-invalid={naverWebhookInvalid}
+              aria-describedby={naverWebhookInvalid ? validationDescribedBy : undefined}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="네이버 발행 웹훅 URL"
               value={naverOptions.webhook_url}
@@ -300,6 +318,9 @@ export default function ScheduleModal({
           </label>
           <input
             type="datetime-local"
+            aria-label="예약 시간"
+            aria-invalid={scheduleTimeInvalid}
+            aria-describedby={scheduleTimeInvalid ? validationDescribedBy : undefined}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={scheduledAt}
             onChange={(e) => {
@@ -311,7 +332,10 @@ export default function ScheduleModal({
 
         {validationMessage && (
           <p
+            id="schedule-validation-message"
             data-testid="schedule-validation-message"
+            role="alert"
+            aria-live="assertive"
             className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
           >
             {validationMessage}
@@ -321,6 +345,8 @@ export default function ScheduleModal({
         {submitError && (
           <p
             data-testid="schedule-submit-error"
+            role="alert"
+            aria-live="assertive"
             className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
           >
             {submitError}

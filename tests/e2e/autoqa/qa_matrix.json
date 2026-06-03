@@ -486,6 +486,12 @@
     "expect": "필수 연결값이 비어 있으면 예약 API를 호출하지 않고 사용자가 보완할 항목을 보여준다"
   },
   {
+    "id": "menu-schedule-validation-accessible",
+    "name": "예약 필수값 오류 접근성",
+    "url": "http://localhost:3000",
+    "expect": "예약 필수 연결값 오류는 alert/live 메시지로 노출되고 잘못된 입력의 aria-invalid/aria-describedby와 연결된다"
+  },
+  {
     "id": "menu-schedule-future-time",
     "name": "예약 미래 시간 검증",
     "url": "http://localhost:3000",

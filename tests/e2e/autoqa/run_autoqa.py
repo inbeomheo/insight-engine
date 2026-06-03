@@ -1487,13 +1487,24 @@ def run_guided_tour_focus_trap_suite(browser, report: QaReport) -> None:
         page.locator("#url-input").wait_for(state="visible", timeout=60_000)
         trigger = page.locator("[data-testid='header-help-trigger']")
         panel = page.locator("[data-testid='help-panel']")
-        trigger.click(timeout=10_000)
-        opened = wait_until(lambda: panel.count() == 1 and panel.is_visible(), 5_000, page)
+        opened = False
+        for attempt in range(3):
+            if attempt > 0:
+                page.reload(wait_until="domcontentloaded", timeout=60_000)
+                page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+                trigger = page.locator("[data-testid='header-help-trigger']")
+                panel = page.locator("[data-testid='help-panel']")
+            page.keyboard.press("Escape")
+            trigger.scroll_into_view_if_needed(timeout=10_000)
+            trigger.click(timeout=10_000, force=True)
+            opened = wait_until(lambda: panel.count() == 1 and panel.is_visible(), 5_000, page)
+            if opened:
+                break
+            page.evaluate("document.querySelector('[data-testid=\"header-help-trigger\"]')?.click()")
+            opened = wait_until(lambda: panel.count() == 1 and panel.is_visible(), 5_000, page)
+            if opened:
+                break
         if not opened:
-            if trigger.get_attribute("aria-expanded", timeout=1_000) == "true":
-                page.keyboard.press("Escape")
-                wait_until(lambda: panel.count() == 0 or not panel.is_visible(), 3_000, page)
-            trigger.click(timeout=10_000)
             panel.wait_for(state="visible", timeout=10_000)
         start = page.locator("[data-testid='help-start-tour']")
         start.wait_for(state="visible", timeout=10_000)
@@ -2997,14 +3008,31 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         no_call = len(calls["schedule"]) == before
         text = dialog.inner_text(timeout=1_000) if dialog.is_visible(timeout=1_000) else ""
         has_hint = "네이버 발행 웹훅 URL" in text and ("필수" in text or "입력" in text)
+        naver_webhook = dialog.locator("[data-testid='schedule-option-naver-webhook-url']")
+        validation = dialog.locator("[data-testid='schedule-validation-message']")
+        describedby = naver_webhook.get_attribute("aria-describedby", timeout=2_000) if naver_webhook.count() else ""
+        validation_accessible = (
+            validation.count() == 1
+            and validation.get_attribute("role", timeout=2_000) == "alert"
+            and validation.get_attribute("aria-live", timeout=2_000) == "assertive"
+            and naver_webhook.get_attribute("aria-invalid", timeout=2_000) == "true"
+            and describedby
+            and "schedule-validation-message" in describedby
+        )
         report.record(
             "menu-schedule-required-options",
             no_call and has_hint and disabled,
             f"disabled={disabled}; calls_before={before}; calls_after={len(calls['schedule'])}; text={text[:300]}",
         )
+        report.record(
+            "menu-schedule-validation-accessible",
+            no_call and has_hint and validation_accessible,
+            "schedule required validation is announced and linked to the invalid field" if no_call and has_hint and validation_accessible else f"no_call={no_call}; has_hint={has_hint}; validation_accessible={validation_accessible}; invalid={naver_webhook.get_attribute('aria-invalid') if naver_webhook.count() else None}; describedby={describedby!r}",
+        )
         close_dialogs(page)
     except Exception as exc:
         report.record("menu-schedule-required-options", False, repr(exc))
+        report.record("menu-schedule-validation-accessible", False, repr(exc))
         close_dialogs(page)
 
     try:
