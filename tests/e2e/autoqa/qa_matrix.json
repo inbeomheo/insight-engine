@@ -201,7 +201,7 @@
     "id": "output-blueprint-style-accessible",
     "name": "Output Blueprint 스타일 선택 상태",
     "url": "http://localhost:3000",
-    "expect": "산출물 스타일 선택은 그룹 라벨과 aria-pressed 상태를 제공하고 선택 변경을 반영한다"
+    "expect": "산출물 스타일 선택은 radiogroup 라벨, radio 선택 상태, 방향키/End 키보드 전환을 제공한다"
   },
   {
     "id": "output-blueprint-mode-accessible",

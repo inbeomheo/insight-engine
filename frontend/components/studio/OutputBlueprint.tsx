@@ -1,5 +1,6 @@
 'use client';
 
+import type { KeyboardEvent } from 'react';
 import { Bot, Combine, Cpu, Globe, Layers, MessageSquare, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
@@ -65,6 +66,21 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
   const handleLengthChange = (value: string) => {
     setModifiers({ length: value as 'short' | 'medium' | 'long' });
   };
+  const selectStyle = (styleId: string) => {
+    setSelectedStyle(styleId);
+    requestAnimationFrame(() => document.getElementById(`blueprint-style-${styleId}`)?.focus());
+  };
+  const handleStyleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? STYLE_OPTIONS.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + STYLE_OPTIONS.length) % STYLE_OPTIONS.length;
+    selectStyle(STYLE_OPTIONS[nextIndex].id);
+  };
 
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
@@ -79,16 +95,20 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
         </div>
       </div>
 
-      <div data-testid="blueprint-style-options" role="group" aria-label="산출물 스타일" className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {STYLE_OPTIONS.map((style) => (
+      <div data-testid="blueprint-style-options" role="radiogroup" aria-label="산출물 스타일" className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {STYLE_OPTIONS.map((style, index) => (
           <button
             key={style.id}
+            id={`blueprint-style-${style.id}`}
             type="button"
             data-testid={`blueprint-style-${style.id}`}
-            aria-pressed={selectedStyle === style.id}
-            onClick={() => setSelectedStyle(style.id)}
+            role="radio"
+            aria-checked={selectedStyle === style.id}
+            tabIndex={selectedStyle === style.id ? 0 : -1}
+            onClick={() => selectStyle(style.id)}
+            onKeyDown={(event) => handleStyleKeyDown(event, index)}
             className={cn(
-              'rounded-2xl border p-3 text-left transition',
+              'rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
               selectedStyle === style.id
                 ? 'border-indigo-500 bg-indigo-50 text-indigo-950 shadow-sm'
                 : 'border-slate-200 bg-slate-50/60 hover:border-indigo-200 hover:bg-white',

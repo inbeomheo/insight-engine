@@ -1832,19 +1832,34 @@ def run_output_blueprint_style_accessibility_suite(browser, report: QaReport) ->
         group = page.locator("[data-testid='blueprint-style-options']")
         blog = page.locator("[data-testid='blueprint-style-blog_seo']")
         summary = page.locator("[data-testid='blueprint-style-summary']")
+        course = page.locator("[data-testid='blueprint-style-course']")
         initial_ok = (
             group.count() > 0
-            and group.get_attribute("role") == "group"
+            and group.get_attribute("role") == "radiogroup"
             and group.get_attribute("aria-label") == "산출물 스타일"
-            and blog.get_attribute("aria-pressed") == "true"
-            and summary.get_attribute("aria-pressed") == "false"
+            and blog.get_attribute("role") == "radio"
+            and blog.get_attribute("aria-checked") == "true"
+            and summary.get_attribute("aria-checked") == "false"
         )
-        summary.click(timeout=10_000)
-        changed_ok = summary.get_attribute("aria-pressed") == "true" and blog.get_attribute("aria-pressed") == "false"
+        blog.focus(timeout=10_000)
+        page.keyboard.press("ArrowRight")
+        next_ok = wait_until(
+            lambda: summary.get_attribute("aria-checked", timeout=1_000) == "true"
+            and summary.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        page.keyboard.press("End")
+        end_ok = wait_until(
+            lambda: course.get_attribute("aria-checked", timeout=1_000) == "true"
+            and course.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
         report.record(
             "output-blueprint-style-accessible",
-            initial_ok and changed_ok,
-            "style group and pressed state update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+            initial_ok and next_ok and end_ok,
+            "style radiogroup, radio state, and keyboard navigation update selection" if initial_ok and next_ok and end_ok else f"initial={initial_ok}; next={next_ok}; end={end_ok}",
         )
     except Exception as exc:
         report.record("output-blueprint-style-accessible", False, repr(exc))
