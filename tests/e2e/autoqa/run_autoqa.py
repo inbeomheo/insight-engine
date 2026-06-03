@@ -2916,6 +2916,10 @@ def main() -> int:
                 5_000,
                 page,
             )
+            settings_close_label_ok = (
+                settings_dialog.get_by_role("button", name="닫기").count() > 0
+                and settings_dialog.get_by_role("button", name="Close").count() == 0
+            )
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())
@@ -2927,8 +2931,8 @@ def main() -> int:
             settings_focus_returned = settings_trigger.count() == 1 and settings_trigger.evaluate("el => document.activeElement === el")
             report.record(
                 "header-settings-trigger-accessible",
-                settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned,
-                "header settings trigger exposes dialog state, stateful labels, and returns focus after close" if settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned else f"initial={settings_trigger_initial}; open={settings_dialog_open}; closed={settings_dialog_closed}; focus_returned={settings_focus_returned}",
+                settings_trigger_initial and settings_dialog_open and settings_close_label_ok and settings_dialog_closed and settings_focus_returned,
+                "header settings trigger exposes dialog state, Korean close label, stateful labels, and returns focus after close" if settings_trigger_initial and settings_dialog_open and settings_close_label_ok and settings_dialog_closed and settings_focus_returned else f"initial={settings_trigger_initial}; open={settings_dialog_open}; close_label={settings_close_label_ok}; closed={settings_dialog_closed}; focus_returned={settings_focus_returned}",
             )
             sidebar_trigger = page.locator("header button").first
             sidebar = page.locator("#app-sidebar")
