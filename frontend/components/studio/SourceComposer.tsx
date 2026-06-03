@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { ArrowUp, FileAudio, FileText, Link2, Mic, Type, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -80,6 +80,23 @@ export default function SourceComposer(props: SourceComposerProps) {
     event.target.value = '';
   }
 
+  function selectTab(nextTab: SourceComposerMode) {
+    setTab(nextTab);
+    requestAnimationFrame(() => document.getElementById(`source-tab-${nextTab}`)?.focus());
+  }
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? tabs.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    selectTab(tabs[nextIndex].id);
+  }
+
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -88,7 +105,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           <h2 className="mt-1 text-lg font-semibold text-slate-950">분석할 소스를 준비하세요</h2>
         </div>
         <div data-testid="source-tabs" role="tablist" aria-label="소스 종류" className="grid grid-cols-4 rounded-full bg-slate-100 p-1 text-xs font-medium">
-          {tabs.map((item) => {
+          {tabs.map((item, index) => {
             const Icon = item.icon;
             const selected = tab === item.id;
             const tabId = `source-tab-${item.id}`;
@@ -103,6 +120,7 @@ export default function SourceComposer(props: SourceComposerProps) {
                 aria-controls={panelId}
                 data-testid={item.testId}
                 onClick={() => setTab(item.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, index)}
                 className={cn(
                   'flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5',
                   selected ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500',

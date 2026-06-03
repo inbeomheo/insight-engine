@@ -1272,9 +1272,11 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
             and url_tab.get_attribute("aria-controls") == "source-panel-url"
         )
 
-        text_tab.click(timeout=10_000)
+        url_tab.focus(timeout=10_000)
+        page.keyboard.press("ArrowRight")
         text_panel = page.locator("#source-panel-text")
         text_selected = text_tab.get_attribute("aria-selected") == "true"
+        text_focused = text_tab.evaluate("el => document.activeElement === el")
         text_panel_linked = (
             text_panel.count() > 0
             and text_panel.is_visible(timeout=5_000)
@@ -1282,14 +1284,14 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
             and text_panel.get_attribute("aria-labelledby") == (text_tab.get_attribute("id") or "")
             and text_tab.get_attribute("aria-controls") == "source-panel-text"
         )
-        ok = tablist_visible and url_selected and url_panel_linked and text_selected and text_panel_linked
+        ok = tablist_visible and url_selected and url_panel_linked and text_selected and text_focused and text_panel_linked
         report.record(
             "source-composer-tabs-accessible",
             ok,
             (
-                "tablist and tabpanels linked"
+                "tablist, keyboard navigation, and tabpanels linked"
                 if ok
-                else f"tablist={tablist_visible}; url_selected={url_selected}; url_panel={url_panel_linked}; text_selected={text_selected}; text_panel={text_panel_linked}"
+                else f"tablist={tablist_visible}; url_selected={url_selected}; url_panel={url_panel_linked}; text_selected={text_selected}; text_focused={text_focused}; text_panel={text_panel_linked}"
             ),
         )
     except Exception as exc:

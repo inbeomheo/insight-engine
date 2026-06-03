@@ -153,7 +153,7 @@
     "id": "source-composer-tabs-accessible",
     "name": "Source Composer 접근 가능한 탭",
     "url": "http://localhost:3000",
-    "expect": "URL/텍스트/파일/음성 소스 전환은 tablist, tab, tabpanel과 aria 연결을 제공한다"
+    "expect": "URL/텍스트/파일/음성 소스 전환은 tablist, tab, tabpanel, aria 연결과 키보드 방향키 전환을 제공한다"
   },
   {
     "id": "non-url-hides-fusion-progress",
