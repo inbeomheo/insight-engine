@@ -342,6 +342,12 @@
     "expect": "URL이 비어 있고 소스가 없을 때 입력창 화살표는 아무 동작도 하지 않는 활성 버튼처럼 보이지 않는다"
   },
   {
+    "id": "new-analysis-resets-source-draft",
+    "name": "새 분석 소스 초기화",
+    "url": "http://localhost:3000",
+    "expect": "새 분석은 활성 결과뿐 아니라 텍스트/파일/음성/URL 입력 초안도 비운다"
+  },
+  {
     "id": "youtube-url-validation",
     "name": "YouTube URL 입력 검증",
     "input": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

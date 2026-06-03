@@ -1745,6 +1745,36 @@ def main() -> int:
                     else f"disabled={empty_url_disabled}; aria={empty_url_label!r}"
                 ),
             )
+            page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+            page.locator("[data-testid='text-source-panel'] textarea").fill(
+                "New analysis reset QA text. This source is long enough to make the Generate Dock active."
+            )
+            page.wait_for_timeout(300)
+            before_reset_summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=10_000)
+            page.get_by_role("button", name="새 분석").click(timeout=10_000)
+            url_visible_after_reset = wait_until(
+                lambda: page.locator("#url-input").count() > 0 and page.locator("#url-input").first.is_visible(),
+                3_000,
+                page,
+            )
+            after_reset_summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=10_000)
+            reset_button = page.locator("#url-input").locator("xpath=following-sibling::button").nth(1) if url_visible_after_reset else None
+            reset_button_disabled = bool(reset_button and reset_button.is_disabled(timeout=2_000))
+            report.record(
+                "new-analysis-resets-source-draft",
+                "텍스트 소스" in before_reset_summary
+                and url_visible_after_reset
+                and "URL 소스 대기" in after_reset_summary
+                and reset_button_disabled,
+                (
+                    screenshot(page, "new-analysis-resets-source-draft.png")
+                    if "텍스트 소스" in before_reset_summary
+                    and url_visible_after_reset
+                    and "URL 소스 대기" in after_reset_summary
+                    and reset_button_disabled
+                    else f"before={before_reset_summary!r}; after={after_reset_summary!r}; url_visible={url_visible_after_reset}; disabled={reset_button_disabled}"
+                ),
+            )
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")
             report.write()

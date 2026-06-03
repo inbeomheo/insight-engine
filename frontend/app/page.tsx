@@ -45,6 +45,14 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import type { Report, ViewMode } from '@/lib/types';
 
+const EMPTY_SOURCE_DRAFT: SourceComposerSnapshot = {
+  mode: 'url',
+  text: '',
+  textValid: false,
+  file: null,
+  audioFile: null,
+};
+
 export default function Home() {
   const hydrateSettings = useSettingsStore((s) => s.hydrate);
   const hydrateResults = useResultStore((s) => s.hydrate);
@@ -63,16 +71,11 @@ export default function Home() {
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
 
   const generationMode = useSettingsStore((s) => s.generationMode);
-  const { urls, addUrl, addUrls, removeUrl } = useUrls();
+  const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
   const { isLoading, error, generateFromText, generateFromFile, generateFromAudio, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
-  const [sourceDraft, setSourceDraft] = useState<SourceComposerSnapshot>({
-    mode: 'url',
-    text: '',
-    textValid: false,
-    file: null,
-    audioFile: null,
-  });
+  const [sourceDraft, setSourceDraft] = useState<SourceComposerSnapshot>(EMPTY_SOURCE_DRAFT);
+  const [sourceComposerResetKey, setSourceComposerResetKey] = useState(0);
 
   // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
   const { t } = useTranslation();
@@ -225,6 +228,17 @@ export default function Home() {
     }
   }, [hydrateSettings, hydrateResults, setOnboardingOpen]);
 
+  useEffect(() => {
+    function handleNewAnalysisReset() {
+      clearUrls();
+      setSourceDraft(EMPTY_SOURCE_DRAFT);
+      setSourceComposerResetKey((key) => key + 1);
+    }
+
+    window.addEventListener('insight-engine-new-analysis', handleNewAnalysisReset);
+    return () => window.removeEventListener('insight-engine-new-analysis', handleNewAnalysisReset);
+  }, [clearUrls]);
+
   // 생성 시작 (1개면 단일, 여러 개면 배치)
   const handleGenerate = useCallback(async () => {
     if (urls.length === 0) return;
@@ -325,6 +339,7 @@ export default function Home() {
               <>
                 <div className="relative">
                   <SourceComposer
+                    key={sourceComposerResetKey}
                     urls={urls}
                     onAddUrl={addUrl}
                     onAddUrls={addUrls}

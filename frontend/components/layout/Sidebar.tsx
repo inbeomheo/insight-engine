@@ -127,13 +127,15 @@ export default function Sidebar() {
 
   const handleNewAnalysis = useCallback(() => {
     setActiveReportId(null);
+    setActiveView('main');
+    window.dispatchEvent(new CustomEvent('insight-engine-new-analysis'));
 
     const urlInput = document.getElementById('url-input');
     urlInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => urlInput?.focus(), 300);
 
     if (isMobile) setSidebarOpen(false);
-  }, [setActiveReportId, isMobile, setSidebarOpen]);
+  }, [setActiveReportId, setActiveView, isMobile, setSidebarOpen]);
 
   const filtered = useMemo(() => {
     if (!debouncedSearch) return reports;
