@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useRef, useEffect, useState, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
@@ -42,6 +42,13 @@ export default function SettingsPopover() {
 
   const ref = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const closePopover = useCallback(() => {
+    setSettingsPopoverOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("[data-testid='settings-popover-trigger']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, [setSettingsPopoverOpen]);
 
   // 외부 클릭 감지
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function SettingsPopover() {
     if (!settingsPopoverOpen) return;
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setSettingsPopoverOpen(false);
+        closePopover();
       }
     }
     // 약간의 딜레이로 열기 클릭 이벤트와 겹치지 않게
@@ -65,7 +72,7 @@ export default function SettingsPopover() {
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClick);
     };
-  }, [settingsPopoverOpen, setSettingsPopoverOpen]);
+  }, [settingsPopoverOpen, closePopover]);
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -73,13 +80,13 @@ export default function SettingsPopover() {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        setSettingsPopoverOpen(false);
+        closePopover();
       }
     }
     // capture 단계에서 먼저 잡기 (다른 컴포넌트가 가로채지 못하게)
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [settingsPopoverOpen, setSettingsPopoverOpen]);
+  }, [settingsPopoverOpen, closePopover]);
 
   if (!settingsPopoverOpen) return null;
 
@@ -177,7 +184,7 @@ export default function SettingsPopover() {
           data-testid="settings-popover-close"
           aria-label="생성 설정 닫기"
           className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1"
-          onClick={() => setSettingsPopoverOpen(false)}
+          onClick={closePopover}
         >
           닫기
         </button>

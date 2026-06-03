@@ -135,6 +135,7 @@ const UrlInput = memo(function UrlInput({
           aria-invalid={Boolean(error)}
         />
         <Button
+          data-testid="settings-popover-trigger"
           variant="ghost"
           size="icon"
           className="h-8 w-8 shrink-0 text-muted-foreground/50 hover:text-foreground hover:bg-accent"

@@ -533,7 +533,7 @@
   {
     "id": "settings-popover-dialog-accessible",
     "name": "설정 팝오버 Dialog 접근성",
-    "expect": "설정 팝오버는 제목 연결, 설명 연결, 닫기 버튼, 초기 포커스, 닫기 동작을 제공한다"
+    "expect": "설정 팝오버는 제목 연결, 설명 연결, 닫기 버튼, 초기 포커스, 닫기 동작, 트리거 포커스 복귀를 제공한다"
   },
   {
     "id": "settings-open",

@@ -3304,16 +3304,18 @@ def main() -> int:
                 web_switch_ok,
                 "settings web search switch help/status and keyboard toggle update" if web_switch_ok else f"initial={web_initial_ok}; toggled={web_toggled_ok}; describedby={describedby!r}",
             )
+            settings_trigger = page.locator("[data-testid='settings-popover-trigger']").first
             if close_button.count() > 0:
                 close_button.click(timeout=10_000)
             else:
                 page.keyboard.press("Escape")
             dialog_closed_ok = wait_until(lambda: dialog.count() == 0 or not dialog.is_visible(), 5_000, page)
-            dialog_a11y_ok = bool(dialog_a11y_initial_ok and dialog_closed_ok)
+            focus_returned_ok = wait_until(lambda: settings_trigger.evaluate("el => document.activeElement === el"), 5_000, page)
+            dialog_a11y_ok = bool(dialog_a11y_initial_ok and dialog_closed_ok and focus_returned_ok)
             report.record(
                 "settings-popover-dialog-accessible",
                 dialog_a11y_ok,
-                "settings dialog title, description, close focus, and close action are wired" if dialog_a11y_ok else f"initial={dialog_a11y_initial_ok}; closed={dialog_closed_ok}; labelledby={labelledby!r}; describedby={describedby!r}",
+                "settings dialog title, description, close focus, close action, and trigger focus return are wired" if dialog_a11y_ok else f"initial={dialog_a11y_initial_ok}; closed={dialog_closed_ok}; focus_returned={focus_returned_ok}; labelledby={labelledby!r}; describedby={describedby!r}",
             )
         except Exception as exc:
             report.record("settings-open", False, repr(exc))
