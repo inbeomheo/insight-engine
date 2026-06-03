@@ -16,8 +16,10 @@ interface HeaderProps {
 const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel, rightPanelOpen = false }: HeaderProps) {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const activeModal = useUIStore((s) => s.activeModal);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
   const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), [setSettingsModalOpen]);
+  const settingsOpen = activeModal === 'settings';
   const statusLabel = isLoading ? '생성 중' : sourceCount > 0 ? '생성 준비' : '소스 대기';
 
   return (
@@ -72,9 +74,13 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
         <Button
           variant="ghost"
           size="icon"
+          data-testid="header-settings-trigger"
           className="h-9 w-9 hover:bg-accent"
           onClick={handleOpenSettings}
           aria-label="설정 열기"
+          aria-haspopup="dialog"
+          aria-controls="settings-dialog"
+          aria-expanded={settingsOpen}
         >
           <Settings className="h-[18px] w-[18px]" />
         </Button>

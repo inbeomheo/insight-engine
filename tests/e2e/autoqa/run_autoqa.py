@@ -2886,6 +2886,37 @@ def main() -> int:
                 and page.locator("[data-testid='header-status-badge']").count() > 0
             )
             report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
+            settings_trigger = page.locator("[data-testid='header-settings-trigger']").first
+            settings_trigger_initial = (
+                settings_trigger.count() == 1
+                and settings_trigger.get_attribute("aria-haspopup", timeout=5_000) == "dialog"
+                and settings_trigger.get_attribute("aria-controls", timeout=5_000) == "settings-dialog"
+                and settings_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            )
+            if settings_trigger.count() == 1:
+                settings_trigger.click(timeout=10_000)
+            settings_dialog = page.locator("#settings-dialog")
+            settings_dialog_open = wait_until(
+                lambda: settings_dialog.count() == 1
+                and settings_dialog.is_visible()
+                and settings_dialog.get_attribute("role", timeout=1_000) == "dialog"
+                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "true",
+                5_000,
+                page,
+            )
+            page.keyboard.press("Escape")
+            settings_dialog_closed = wait_until(
+                lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())
+                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "false",
+                5_000,
+                page,
+            )
+            settings_focus_returned = settings_trigger.count() == 1 and settings_trigger.evaluate("el => document.activeElement === el")
+            report.record(
+                "header-settings-trigger-accessible",
+                settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned,
+                "header settings trigger exposes dialog state and returns focus after close" if settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned else f"initial={settings_trigger_initial}; open={settings_dialog_open}; closed={settings_dialog_closed}; focus_returned={settings_focus_returned}",
+            )
             sidebar_trigger = page.locator("header button").first
             sidebar = page.locator("#app-sidebar")
             sidebar_initial = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "true"

@@ -136,16 +136,25 @@ export default function SettingsModal() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
+  const closeSettingsModal = useCallback(() => {
+    setSettingsModalOpen(false);
+    setResetConfirmOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("[data-testid='header-settings-trigger']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, [setSettingsModalOpen]);
+
   return (
     <>
     <Dialog
       open={settingsModalOpen}
       onOpenChange={(open) => {
-        setSettingsModalOpen(open);
-        if (!open) setResetConfirmOpen(false);
+        if (open) setSettingsModalOpen(true);
+        else closeSettingsModal();
       }}
     >
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent id="settings-dialog" className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
