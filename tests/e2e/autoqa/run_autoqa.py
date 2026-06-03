@@ -904,6 +904,58 @@ def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_generate_dock_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[dock-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[dock-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        dock = page.locator("[data-testid='generate-dock']")
+        status = page.locator("[data-testid='generate-dock-status']")
+        summary = page.locator("[data-testid='generate-dock-summary']")
+        button = page.locator("[data-testid='generate-dock-button']")
+        initial_ok = (
+            dock.get_attribute("role", timeout=5_000) == "region"
+            and dock.get_attribute("aria-label", timeout=5_000) == "생성 실행"
+            and status.get_attribute("id", timeout=5_000) == "generate-dock-status"
+            and summary.get_attribute("id", timeout=5_000) == "generate-dock-summary"
+            and button.get_attribute("aria-describedby", timeout=5_000) == "generate-dock-status generate-dock-summary"
+            and button.get_attribute("aria-label", timeout=5_000) == button.inner_text(timeout=5_000)
+            and button.is_disabled(timeout=5_000)
+        )
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 1개" in summary.inner_text(timeout=1_000), 10_000, page)
+        changed_ok = (
+            "생성 준비 완료" in status.inner_text(timeout=5_000)
+            and "URL 소스" in summary.inner_text(timeout=5_000)
+            and "소스 1개" in summary.inner_text(timeout=5_000)
+            and not button.is_disabled(timeout=5_000)
+            and button.get_attribute("aria-label", timeout=5_000) == button.inner_text(timeout=5_000)
+        )
+        ok = initial_ok and changed_ok
+        report.record(
+            "generate-dock-accessible-action",
+            ok,
+            "dock region, live status, summary, and action button are linked" if ok else f"initial={initial_ok}; changed={changed_ok}",
+        )
+    except Exception as exc:
+        report.record("generate-dock-accessible-action", False, repr(exc))
+    finally:
+        context.close()
+
+
 
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
@@ -1678,12 +1730,26 @@ def run_output_blueprint_advanced_accessibility_suite(browser, report: QaReport)
             and deep_comments.get_attribute("aria-pressed") == "true"
             and agent_mode.get_attribute("aria-pressed") == "false"
         )
-        web_search.click(timeout=10_000)
-        web_research.click(timeout=10_000)
-        deep_comments.click(timeout=10_000)
-        agent_mode.click(timeout=10_000)
+        page.wait_for_load_state("networkidle", timeout=10_000)
+
+        def click_until_pressed(locator, expected: str) -> bool:
+            locator.scroll_into_view_if_needed(timeout=10_000)
+            for _ in range(3):
+                if locator.get_attribute("aria-pressed", timeout=1_000) == expected:
+                    return True
+                locator.click(timeout=10_000)
+                wait_until(lambda: locator.get_attribute("aria-pressed", timeout=1_000) == expected, 2_000, page)
+            return locator.get_attribute("aria-pressed", timeout=1_000) == expected
+
+        toggled = (
+            click_until_pressed(web_search, "true")
+            and click_until_pressed(web_research, "false")
+            and click_until_pressed(deep_comments, "false")
+            and click_until_pressed(agent_mode, "true")
+        )
         changed_ok = (
-            web_search.get_attribute("aria-pressed") == "true"
+            toggled
+            and web_search.get_attribute("aria-pressed") == "true"
             and web_research.get_attribute("aria-pressed") == "false"
             and deep_comments.get_attribute("aria-pressed") == "false"
             and agent_mode.get_attribute("aria-pressed") == "true"
@@ -2992,6 +3058,7 @@ def main() -> int:
         run_mobile_studio_suite(browser, report)
         run_new_analysis_filter_reset_suite(browser, report)
         run_generate_dock_minimums_suite(browser, report)
+        run_generate_dock_accessibility_suite(browser, report)
 
         browser.close()
 

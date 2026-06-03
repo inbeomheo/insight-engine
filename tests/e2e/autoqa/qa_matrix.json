@@ -78,6 +78,12 @@
     "expect": "URL 소스가 2개 미만이면 Output Blueprint의 통합/퓨전 선택을 비활성화하고 Dock은 개별 생성으로 유지한다"
   },
   {
+    "id": "generate-dock-accessible-action",
+    "name": "Generate Dock 접근 가능한 실행 영역",
+    "url": "http://localhost:3000",
+    "expect": "Generate Dock은 실행 영역 라벨, live 상태, 요약, 버튼 설명 연결을 제공한다"
+  },
+  {
     "id": "output-blueprint-advanced",
     "name": "Output Blueprint 고급 컨트롤",
     "url": "http://localhost:3000",

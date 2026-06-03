@@ -31,6 +31,8 @@ export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기
   return (
     <section
       data-testid="generate-dock"
+      role="region"
+      aria-label="생성 실행"
       aria-busy={isLoading}
       className={cn(
         'rounded-[24px] border border-indigo-100 bg-white/90 p-3 backdrop-blur-xl',
@@ -41,12 +43,12 @@ export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p data-testid="generate-dock-status" role="status" aria-live="polite" className="text-xs font-semibold text-indigo-700">{statusLabel}</p>
-          <p data-testid="generate-dock-summary" className="text-sm text-slate-500">
+          <p id="generate-dock-status" data-testid="generate-dock-status" role="status" aria-live="polite" className="text-xs font-semibold text-indigo-700">{statusLabel}</p>
+          <p id="generate-dock-summary" data-testid="generate-dock-summary" className="text-sm text-slate-500">
             {sourceLabel} · 소스 {sourceCount}개 · 모드 {modeLabel}
           </p>
         </div>
-        <Button data-testid="generate-dock-button" disabled={disabled} onClick={handler} className="h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 text-sm font-semibold shadow-md shadow-indigo-200 hover:opacity-95">
+        <Button data-testid="generate-dock-button" aria-label={buttonLabel} aria-describedby="generate-dock-status generate-dock-summary" disabled={disabled} onClick={handler} className="h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 text-sm font-semibold shadow-md shadow-indigo-200 hover:opacity-95">
           {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Icon className="mr-2 h-4 w-4" />}{buttonLabel}
         </Button>
       </div>
