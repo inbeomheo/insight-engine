@@ -2910,6 +2910,24 @@ def main() -> int:
             )
             if sidebar_collapsed:
                 sidebar_trigger.click(timeout=10_000)
+            sidebar_reopened = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
+            new_analysis = page.get_by_role("button", name="새 분석")
+            new_analysis.focus(timeout=10_000)
+            sidebar_focus_inside = new_analysis.evaluate("el => document.activeElement === el")
+            page.keyboard.press("Escape")
+            sidebar_escape_collapsed = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            sidebar_escape_hidden = (
+                sidebar.get_attribute("aria-hidden", timeout=5_000) == "true"
+                and sidebar.evaluate("el => el.inert === true")
+            )
+            sidebar_focus_returned = sidebar_trigger.evaluate("el => document.activeElement === el")
+            report.record(
+                "sidebar-escape-close-accessible",
+                sidebar_reopened and sidebar_focus_inside and sidebar_escape_collapsed and sidebar_escape_hidden and sidebar_focus_returned,
+                "sidebar closes with Escape, hides navigation, and returns focus to trigger" if sidebar_reopened and sidebar_focus_inside and sidebar_escape_collapsed and sidebar_escape_hidden and sidebar_focus_returned else f"reopened={sidebar_reopened}; focus_inside={sidebar_focus_inside}; collapsed={sidebar_escape_collapsed}; hidden={sidebar_escape_hidden}; focus_returned={sidebar_focus_returned}",
+            )
+            if sidebar_escape_collapsed:
+                sidebar_trigger.click(timeout=10_000)
             expected_copy = ["요약", "튜토리얼", "앱 아이디어", "뉴스레터", "짧게", "보통", "길게", "대화체", "설명체", "한국어", "아직 결과가 없습니다"]
             missing_copy = [label for label in expected_copy if page.get_by_text(label, exact=True).count() == 0]
             report.record(

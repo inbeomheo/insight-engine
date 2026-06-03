@@ -102,6 +102,12 @@
     "expect": "헤더 메뉴 버튼은 사이드바 제어 대상, 열림/닫힘 상태, 상태별 라벨을 제공하고 닫힌 사이드바는 aria-hidden/inert로 보조기술과 탭 포커스에서 빠진다"
   },
   {
+    "id": "sidebar-escape-close-accessible",
+    "name": "사이드바 Escape 닫기 접근성",
+    "url": "http://localhost:3000",
+    "expect": "사이드바 내부 포커스에서 Escape를 누르면 사이드바가 닫히고 보조기술/탭 포커스에서 빠지며 트리거로 포커스가 복귀한다"
+  },
+  {
     "id": "mobile-right-panel-drawer",
     "name": "모바일 작업 패널 Drawer",
     "url": "http://localhost:3000",

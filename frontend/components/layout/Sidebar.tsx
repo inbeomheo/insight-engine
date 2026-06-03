@@ -82,6 +82,14 @@ export default function Sidebar() {
   const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
 
+  const closeSidebarFromKeyboard = useCallback(() => {
+    setSidebarOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("button[aria-controls='app-sidebar']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, [setSidebarOpen]);
+
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile, setSidebarOpen]);
@@ -181,6 +189,9 @@ export default function Sidebar() {
         id="app-sidebar"
         aria-hidden={!sidebarOpen}
         inert={!sidebarOpen ? true : undefined}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') closeSidebarFromKeyboard();
+        }}
         className={cn(
           'w-[280px] border-r border-white/70 bg-white/75 backdrop-blur-xl dark:bg-zinc-900 flex flex-col h-full shrink-0 z-50',
           'transition-all duration-200 ease-out',
