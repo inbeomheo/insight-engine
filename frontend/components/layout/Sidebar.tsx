@@ -5,6 +5,7 @@ import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays, Eraser } from 'luc
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUIStore } from '@/stores/uiStore';
 import { useResultStore } from '@/stores/resultStore';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -76,6 +77,7 @@ export default function Sidebar() {
   const isMobile = useIsMobile();
   const isClient = useIsClient();
   const [search, setSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
 
@@ -104,10 +106,17 @@ export default function Sidebar() {
     if (isMobile) setSidebarOpen(false);
   }, [setActiveReportId, isMobile, setSidebarOpen]);
 
-  const handleDelete = useCallback((id: string) => {
-    removeReport(id);
-    if (useUIStore.getState().activeReportId === id) setActiveReportId(null);
-  }, [removeReport, setActiveReportId]);
+  const requestDelete = useCallback((id: string) => {
+    const target = useResultStore.getState().reports.find((r) => r.id === id);
+    setDeleteTarget({ id, title: target?.title || '선택한 결과' });
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    removeReport(deleteTarget.id);
+    if (useUIStore.getState().activeReportId === deleteTarget.id) setActiveReportId(null);
+    setDeleteTarget(null);
+  }, [deleteTarget, removeReport, setActiveReportId]);
 
   const handleNewAnalysis = useCallback(() => {
     setActiveReportId(null);
@@ -214,7 +223,7 @@ export default function Sidebar() {
                       report={r}
                       isActive={activeReportId === r.id}
                       onClick={handleHistoryClick}
-                      onDelete={handleDelete}
+                      onDelete={requestDelete}
                     />
                   ))}
                 </div>
@@ -260,6 +269,28 @@ export default function Sidebar() {
           </p>
         </div>
       </aside>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              결과 삭제
+            </DialogTitle>
+            <DialogDescription>
+              ‘{deleteTarget?.title || '선택한 결과'}’ 히스토리를 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmDelete}>
+              삭제하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

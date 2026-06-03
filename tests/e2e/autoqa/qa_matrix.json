@@ -344,6 +344,11 @@
     "expect": "히스토리 빈 상태 또는 목록이 보인다"
   },
   {
+    "id": "history-delete-confirmation",
+    "name": "히스토리 삭제 확인",
+    "expect": "사이드바 히스토리 개별 삭제는 즉시 삭제하지 않고 확인 모달에서 취소/확정을 구분한다"
+  },
+  {
     "id": "export-buttons",
     "name": "내보내기 버튼",
     "expect": "생성 후 내보내기 액션이 보인다"

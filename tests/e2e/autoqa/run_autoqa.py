@@ -1846,6 +1846,47 @@ def main() -> int:
         except Exception as exc:
             report.record("export-buttons", False, repr(exc))
 
+        try:
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(200)
+            if page.locator("aside[role='navigation']").count() == 0 or not page.locator("aside[role='navigation']").is_visible():
+                page.locator("header button").first.click(timeout=5_000, force=True)
+                page.locator("aside[role='navigation']").wait_for(state="visible", timeout=10_000)
+            sidebar = page.locator("aside[role='navigation']")
+            before_cards = page.locator("[data-report-id]").count()
+            delete_button = sidebar.locator("button[aria-label*='삭제']").first
+            delete_button.click(timeout=10_000)
+            dialog = page.locator("[role='dialog']", has_text="결과 삭제").last
+            try:
+                dialog.wait_for(state="visible", timeout=1_000)
+                dialog_visible = True
+            except Exception:
+                dialog_visible = False
+            not_removed_before_confirm = page.locator("[data-report-id]").count() == before_cards
+            still_visible_after_cancel = False
+            removed_after_confirm = False
+            if dialog_visible:
+                dialog.locator("button", has_text="취소").click(timeout=5_000)
+                page.wait_for_timeout(300)
+                still_visible_after_cancel = page.locator("[data-report-id]").count() == before_cards
+                delete_button = sidebar.locator("button[aria-label*='삭제']").first
+                delete_button.click(timeout=10_000)
+                dialog = page.locator("[role='dialog']", has_text="결과 삭제").last
+                dialog.wait_for(state="visible", timeout=5_000)
+                dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
+                removed_after_confirm = wait_until(lambda: page.locator("[data-report-id]").count() < before_cards, 5_000, page)
+            report.record(
+                "history-delete-confirmation",
+                dialog_visible and not_removed_before_confirm and still_visible_after_cancel and removed_after_confirm,
+                (
+                    f"dialog_visible={dialog_visible}; before_cards={before_cards}; "
+                    f"not_removed_before_confirm={not_removed_before_confirm}; "
+                    f"still_visible_after_cancel={still_visible_after_cancel}; removed_after_confirm={removed_after_confirm}"
+                ),
+            )
+        except Exception as exc:
+            report.record("history-delete-confirmation", False, repr(exc))
+
         run_seeded_menu_action_suite(browser, report)
         run_notebooklm_auth_notice_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
