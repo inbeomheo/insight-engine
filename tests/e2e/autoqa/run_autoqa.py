@@ -2887,18 +2887,24 @@ def main() -> int:
             )
             report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
             sidebar_trigger = page.locator("header button").first
-            sidebar = page.get_by_role("navigation", name="사이드바 내비게이션")
+            sidebar = page.locator("#app-sidebar")
             sidebar_initial = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
             sidebar_linked = (
                 sidebar_trigger.get_attribute("aria-controls", timeout=5_000) == "app-sidebar"
                 and sidebar.get_attribute("id", timeout=5_000) == "app-sidebar"
+                and sidebar.get_attribute("role", timeout=5_000) == "navigation"
+                and sidebar.get_attribute("aria-label", timeout=5_000) == "사이드바 내비게이션"
             )
             sidebar_trigger.click(timeout=10_000)
             sidebar_collapsed = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            sidebar_hidden = (
+                sidebar.get_attribute("aria-hidden", timeout=5_000) == "true"
+                and sidebar.evaluate("el => el.inert === true")
+            )
             report.record(
                 "sidebar-trigger-accessible",
-                sidebar_initial and sidebar_linked and sidebar_collapsed,
-                "sidebar trigger exposes controls and expanded state" if sidebar_initial and sidebar_linked and sidebar_collapsed else f"initial={sidebar_initial}; linked={sidebar_linked}; collapsed={sidebar_collapsed}",
+                sidebar_initial and sidebar_linked and sidebar_collapsed and sidebar_hidden,
+                "sidebar trigger exposes controls/expanded state and hides collapsed navigation" if sidebar_initial and sidebar_linked and sidebar_collapsed and sidebar_hidden else f"initial={sidebar_initial}; linked={sidebar_linked}; collapsed={sidebar_collapsed}; hidden={sidebar_hidden}",
             )
             if sidebar_collapsed:
                 sidebar_trigger.click(timeout=10_000)

@@ -179,6 +179,8 @@ export default function Sidebar() {
 
       <aside
         id="app-sidebar"
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen ? true : undefined}
         className={cn(
           'w-[280px] border-r border-white/70 bg-white/75 backdrop-blur-xl dark:bg-zinc-900 flex flex-col h-full shrink-0 z-50',
           'transition-all duration-200 ease-out',
