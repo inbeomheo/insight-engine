@@ -41,6 +41,7 @@ export function getModifierSummary(modifiers: { length?: string; writing_style?:
 
 export function getGenerateLabel(sourceCount: number, mode: string): string {
   if (sourceCount <= 0) return '소스를 추가하면 생성할 수 있습니다';
+  if ((mode === 'combined' || mode === 'fusion') && sourceCount < 2) return '2개 이상 소스가 필요합니다';
   if (mode === 'combined') return `${sourceCount}개 소스 통합 콘텐츠 생성`;
   if (mode === 'fusion') return `${sourceCount}개 소스 퓨전 분석 시작`;
   if (sourceCount === 1) return '1개 소스로 콘텐츠 생성';

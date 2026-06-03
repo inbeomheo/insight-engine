@@ -844,6 +844,49 @@ def run_new_analysis_filter_reset_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[dock-minimums] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[dock-minimums] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 1개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+
+        states: dict[str, dict[str, Any]] = {}
+        for label in ["통합", "퓨전"]:
+            page.get_by_text(label, exact=True).click(timeout=10_000)
+            button = page.locator("[data-testid='generate-dock-button']")
+            states[label] = {
+                "disabled": button.is_disabled(timeout=5_000),
+                "text": button.inner_text(timeout=5_000),
+            }
+
+        ok = all(state["disabled"] and "2개 이상" in state["text"] for state in states.values())
+        report.record(
+            "generate-dock-url-mode-minimums",
+            ok,
+            screenshot(page, "generate-dock-url-mode-minimums.png") if ok else str(states),
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "generate-dock-url-mode-minimums-fail.png")
+        report.record("generate-dock-url-mode-minimums", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2123,6 +2166,7 @@ def main() -> int:
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
         run_new_analysis_filter_reset_suite(browser, report)
+        run_generate_dock_minimums_suite(browser, report)
 
         browser.close()
 

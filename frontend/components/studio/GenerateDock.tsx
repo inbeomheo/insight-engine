@@ -16,7 +16,8 @@ interface GenerateDockProps {
 }
 
 export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기', mode, isLoading, onGenerate, onGenerateMerged, onGenerateFusion }: GenerateDockProps) {
-  const disabled = sourceCount <= 0 || isLoading;
+  const requiredSources = mode === 'combined' || mode === 'fusion' ? 2 : 1;
+  const disabled = sourceCount < requiredSources || isLoading;
   const sticky = sourceCount > 0 || isLoading;
   const Icon = mode === 'fusion' ? Combine : mode === 'combined' ? Layers : Sparkles;
   const handler = mode === 'fusion' ? onGenerateFusion : mode === 'combined' ? onGenerateMerged : onGenerate;

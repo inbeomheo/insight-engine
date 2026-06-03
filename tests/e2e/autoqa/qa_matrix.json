@@ -48,6 +48,12 @@
     "expect": "텍스트/파일/음성처럼 현재 선택한 소스 종류가 Generate Dock 요약에 표시된다"
   },
   {
+    "id": "generate-dock-url-mode-minimums",
+    "name": "통합/퓨전 URL 최소 개수 안내",
+    "url": "http://localhost:3000",
+    "expect": "URL 1개만 있을 때 통합/퓨전 모드는 활성 버튼처럼 보이지 않고 2개 이상이 필요하다고 안내한다"
+  },
+  {
     "id": "output-blueprint-advanced",
     "name": "Output Blueprint 고급 컨트롤",
     "url": "http://localhost:3000",
