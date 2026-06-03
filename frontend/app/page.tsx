@@ -158,7 +158,12 @@ export default function Home() {
   const mobileRightPanelCloseRef = useRef<HTMLButtonElement | null>(null);
 
   // HelpPanel + GuidedTour 핸들러 — 안정 참조
+  const handleToggleHelp = useCallback(() => setHelpOpen((open) => !open), []);
   const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
+  const handleStartTour = useCallback(() => {
+    setHelpOpen(false);
+    setTourActive(true);
+  }, []);
   const handleCloseTour = useCallback(() => setTourActive(false), []);
   const handleOpenMobileRightPanel = useCallback(() => setMobileRightPanelOpen(true), []);
   const handleCloseMobileRightPanel = useCallback(() => {
@@ -331,7 +336,7 @@ export default function Home() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         sidebar={<Sidebar />}
-        header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} rightPanelOpen={mobileRightPanelOpen} />}
+        header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} rightPanelOpen={mobileRightPanelOpen} onOpenHelp={handleToggleHelp} helpOpen={helpOpen} />}
         rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} generationMode={studioGenerationMode} />}
         main={(
           <>
@@ -495,7 +500,7 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
-      <HelpPanel open={helpOpen} onClose={handleCloseHelp} />
+      <HelpPanel open={helpOpen} onClose={handleCloseHelp} onStartTour={handleStartTour} />
       <GuidedTour forceStart={tourActive} onClose={handleCloseTour} />
       <ScheduleModal
         open={!!scheduleTarget}

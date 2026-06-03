@@ -15,9 +15,9 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   { target: '#url-input', titleKey: 'tour.step1Title', descKey: 'tour.step1Desc', placement: 'bottom' },
-  { target: '[data-tour="style-selector"]', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc', placement: 'bottom' },
-  { target: '[data-tour="generate-btn"]', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc', placement: 'top' },
-  { target: '[data-tour="result-area"]', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc', placement: 'top' },
+  { target: '[data-testid="blueprint-style-options"]', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc', placement: 'bottom' },
+  { target: '[data-testid="generate-dock"]', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc', placement: 'top' },
+  { target: '#main-content', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc', placement: 'top' },
 ];
 
 const STORAGE_KEY = 'ie_tour_done';
@@ -91,6 +91,8 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
 
   const current = TOUR_STEPS[step];
   const isLast = step === TOUR_STEPS.length - 1;
+  const titleId = `guided-tour-title-${step}`;
+  const descId = `guided-tour-desc-${step}`;
 
   return (
     <>
@@ -99,30 +101,33 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
 
       {/* 툴팁 */}
       <div
+        data-testid="guided-tour-dialog"
         className={cn(
           'fixed z-[61] w-72 bg-white rounded-xl shadow-xl border border-border/60 p-4 animate-fade-in',
           current.placement === 'top' && '-translate-y-full'
         )}
         style={{ top: pos.top, left: pos.left, transform: `translateX(-50%) ${current.placement === 'top' ? 'translateY(-100%)' : ''}` }}
         role="dialog"
-        aria-label={t(current.titleKey)}
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
       >
-        <button onClick={handleClose} className="absolute top-2 right-2 text-muted-foreground/50 hover:text-foreground" aria-label={t('common.close')}>
+        <button data-testid="guided-tour-close" onClick={handleClose} className="absolute top-2 right-2 text-muted-foreground/50 hover:text-foreground" aria-label="가이드 투어 닫기">
           <X className="h-4 w-4" />
         </button>
 
-        <h3 className="font-semibold text-sm mb-1">{t(current.titleKey)}</h3>
-        <p className="text-xs text-muted-foreground mb-3">{t(current.descKey)}</p>
+        <h3 id={titleId} className="font-semibold text-sm mb-1">{t(current.titleKey)}</h3>
+        <p id={descId} className="text-xs text-muted-foreground mb-3">{t(current.descKey)}</p>
 
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground/50">
             {step + 1} / {TOUR_STEPS.length}
           </span>
           <div className="flex gap-1.5">
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleClose}>
+            <Button data-testid="guided-tour-skip" variant="ghost" size="sm" className="h-7 text-xs" onClick={handleClose}>
               {t('common.skip')}
             </Button>
-            <Button size="sm" className="h-7 text-xs gradient-primary" onClick={handleNext}>
+            <Button data-testid="guided-tour-next" size="sm" className="h-7 text-xs gradient-primary" onClick={handleNext}>
               {isLast ? t('common.done') : t('common.next')}
             </Button>
           </div>

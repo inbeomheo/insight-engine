@@ -1166,6 +1166,74 @@ def run_empty_workbench_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_help_tour_entrypoint_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        localStorage.removeItem('ie_tour_done');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[help-tour-entrypoint] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[help-tour-entrypoint] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+
+        trigger = page.locator("[data-testid='header-help-trigger']")
+        initial_ok = (
+            trigger.count() == 1
+            and trigger.get_attribute("aria-label", timeout=5_000) == "도움말 열기"
+            and trigger.get_attribute("aria-haspopup", timeout=5_000) == "dialog"
+            and trigger.get_attribute("aria-controls", timeout=5_000) == "help-panel"
+            and trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+        )
+        trigger.click(timeout=10_000)
+
+        panel = page.locator("[data-testid='help-panel']")
+        start = page.locator("[data-testid='help-start-tour']")
+        header_open_ok = wait_until(
+            lambda: trigger.get_attribute("aria-label", timeout=1_000) == "도움말 닫기"
+            and trigger.get_attribute("aria-expanded", timeout=1_000) == "true",
+            5_000,
+            page,
+        )
+        panel_ok = (
+            panel.is_visible(timeout=5_000)
+            and panel.get_attribute("id", timeout=5_000) == "help-panel"
+            and panel.get_attribute("role", timeout=5_000) == "dialog"
+            and panel.get_attribute("aria-modal", timeout=5_000) == "true"
+            and panel.get_attribute("aria-labelledby", timeout=5_000) == "help-panel-title"
+            and header_open_ok
+            and start.get_attribute("aria-label", timeout=5_000) == "가이드 투어 시작"
+        )
+        start.click(timeout=10_000)
+
+        tour = page.locator("[data-testid='guided-tour-dialog']")
+        tour_ok = (
+            tour.is_visible(timeout=5_000)
+            and tour.get_attribute("role", timeout=5_000) == "dialog"
+            and tour.get_attribute("aria-modal", timeout=5_000) == "true"
+            and page.locator("[data-testid='help-panel']").count() == 0
+            and "URL 입력" in tour.inner_text(timeout=5_000)
+        )
+        ok = initial_ok and panel_ok and tour_ok
+        report.record(
+            "help-tour-entrypoint",
+            ok,
+            screenshot(page, "help-tour-entrypoint.png") if ok else f"initial={initial_ok}; panel={panel_ok}; tour={tour_ok}",
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "help-tour-entrypoint-fail.png")
+        report.record("help-tour-entrypoint", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
 
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
@@ -3651,6 +3719,7 @@ def main() -> int:
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
         run_empty_workbench_accessibility_suite(browser, report)
+        run_help_tour_entrypoint_suite(browser, report)
 
         browser.close()
 

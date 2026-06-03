@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 interface HelpPanelProps {
   open: boolean;
   onClose: () => void;
+  onStartTour: () => void;
 }
 
 interface FaqItemProps {
@@ -37,7 +38,7 @@ function FaqItem({ question, answer }: FaqItemProps) {
   );
 }
 
-export default function HelpPanel({ open, onClose }: HelpPanelProps) {
+export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
   const { t } = useTranslation();
 
   if (!open) return null;
@@ -45,24 +46,27 @@ export default function HelpPanel({ open, onClose }: HelpPanelProps) {
   return (
     <>
       {/* 오버레이 */}
-      <div className="fixed inset-0 bg-black/10 z-40" onClick={onClose} />
+      <button type="button" className="fixed inset-0 z-40 bg-black/10" aria-label="도움말 닫기" onClick={onClose} />
 
       {/* 패널 */}
       <aside
+        id="help-panel"
+        data-testid="help-panel"
         className={cn(
           'fixed right-0 top-0 h-full w-80 sm:w-96 bg-white border-l border-border/60 z-50',
           'shadow-xl animate-slide-in-right'
         )}
-        role="complementary"
-        aria-label={t('help.title')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-panel-title"
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
-          <h2 className="font-semibold text-base flex items-center gap-2">
+          <h2 id="help-panel-title" className="font-semibold text-base flex items-center gap-2">
             <HelpCircle className="h-4.5 w-4.5 text-primary" />
             {t('help.title')}
           </h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label={t('common.close')}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="도움말 닫기">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -78,6 +82,16 @@ export default function HelpPanel({ open, onClose }: HelpPanelProps) {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {t('help.gettingStartedDesc')}
               </p>
+              <Button
+                type="button"
+                data-testid="help-start-tour"
+                aria-label="가이드 투어 시작"
+                size="sm"
+                className="mt-3 rounded-xl"
+                onClick={onStartTour}
+              >
+                가이드 투어 시작
+              </Button>
             </section>
 
             {/* 지원 소스 */}

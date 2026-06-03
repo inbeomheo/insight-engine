@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback } from 'react';
-import { Menu, PanelRight, Settings, Sparkles } from 'lucide-react';
+import { HelpCircle, Menu, PanelRight, Settings, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -11,9 +11,11 @@ interface HeaderProps {
   sourceCount?: number;
   onOpenRightPanel?: () => void;
   rightPanelOpen?: boolean;
+  onOpenHelp?: () => void;
+  helpOpen?: boolean;
 }
 
-const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel, rightPanelOpen = false }: HeaderProps) {
+const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel, rightPanelOpen = false, onOpenHelp, helpOpen = false }: HeaderProps) {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const activeModal = useUIStore((s) => s.activeModal);
@@ -70,6 +72,20 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
         >
           <PanelRight className="h-[18px] w-[18px]" />
           <span className="hidden sm:inline">작업</span>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-testid="header-help-trigger"
+          className="h-9 w-9 hover:bg-accent"
+          onClick={onOpenHelp}
+          aria-label={helpOpen ? '도움말 닫기' : '도움말 열기'}
+          aria-haspopup="dialog"
+          aria-controls="help-panel"
+          aria-expanded={helpOpen}
+        >
+          <HelpCircle className="h-[18px] w-[18px]" />
         </Button>
         <Button
           variant="ghost"
