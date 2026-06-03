@@ -2059,39 +2059,41 @@ def run_output_blueprint_advanced_accessibility_suite(browser, report: QaReport)
         initial_ok = (
             group.get_attribute("role") == "group"
             and group.get_attribute("aria-label") == "고급 옵션"
-            and web_search.get_attribute("aria-pressed") == "false"
-            and web_research.get_attribute("aria-pressed") == "true"
-            and deep_comments.get_attribute("aria-pressed") == "true"
-            and agent_mode.get_attribute("aria-pressed") == "false"
+            and web_search.get_attribute("role") == "switch"
+            and web_search.get_attribute("aria-checked") == "false"
+            and web_research.get_attribute("aria-checked") == "true"
+            and deep_comments.get_attribute("aria-checked") == "true"
+            and agent_mode.get_attribute("aria-checked") == "false"
         )
         page.wait_for_load_state("networkidle", timeout=10_000)
 
-        def click_until_pressed(locator, expected: str) -> bool:
+        def toggle_until_checked(locator, expected: str, key: str) -> bool:
             locator.scroll_into_view_if_needed(timeout=10_000)
             for _ in range(3):
-                if locator.get_attribute("aria-pressed", timeout=1_000) == expected:
+                if locator.get_attribute("aria-checked", timeout=1_000) == expected:
                     return True
-                locator.click(timeout=10_000)
-                wait_until(lambda: locator.get_attribute("aria-pressed", timeout=1_000) == expected, 2_000, page)
-            return locator.get_attribute("aria-pressed", timeout=1_000) == expected
+                locator.focus(timeout=10_000)
+                page.keyboard.press(key)
+                wait_until(lambda: locator.get_attribute("aria-checked", timeout=1_000) == expected, 2_000, page)
+            return locator.get_attribute("aria-checked", timeout=1_000) == expected
 
         toggled = (
-            click_until_pressed(web_search, "true")
-            and click_until_pressed(web_research, "false")
-            and click_until_pressed(deep_comments, "false")
-            and click_until_pressed(agent_mode, "true")
+            toggle_until_checked(web_search, "true", "Space")
+            and toggle_until_checked(web_research, "false", "Enter")
+            and toggle_until_checked(deep_comments, "false", "Space")
+            and toggle_until_checked(agent_mode, "true", "Enter")
         )
         changed_ok = (
             toggled
-            and web_search.get_attribute("aria-pressed") == "true"
-            and web_research.get_attribute("aria-pressed") == "false"
-            and deep_comments.get_attribute("aria-pressed") == "false"
-            and agent_mode.get_attribute("aria-pressed") == "true"
+            and web_search.get_attribute("aria-checked") == "true"
+            and web_research.get_attribute("aria-checked") == "false"
+            and deep_comments.get_attribute("aria-checked") == "false"
+            and agent_mode.get_attribute("aria-checked") == "true"
         )
         report.record(
             "output-blueprint-advanced-accessible",
             initial_ok and changed_ok,
-            "advanced option group and pressed states update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+            "advanced option group, switch states, and keyboard toggles update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
         )
     except Exception as exc:
         report.record("output-blueprint-advanced-accessible", False, repr(exc))

@@ -225,7 +225,7 @@
     "id": "output-blueprint-advanced-accessible",
     "name": "Output Blueprint 고급 옵션 토글",
     "url": "http://localhost:3000",
-    "expect": "고급 옵션 토글은 그룹 라벨과 aria-pressed 상태를 제공하고 선택 변경을 반영한다"
+    "expect": "고급 옵션 토글은 그룹 라벨, switch 역할, aria-checked 상태, Space/Enter 키보드 전환을 제공한다"
   },
   {
     "id": "non-url-hides-fusion-progress",
