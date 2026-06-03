@@ -12,6 +12,12 @@
     "expect": "스튜디오 shell과 composer가 보인다"
   },
   {
+    "id": "onboarding-provider-accessible",
+    "name": "온보딩 프로바이더 선택 접근성",
+    "url": "http://localhost:3000",
+    "expect": "첫 실행 온보딩의 AI 프로바이더 선택지는 radiogroup/radio와 선택 상태를 보조기술에 노출한다"
+  },
+  {
     "id": "studio-copy-polish",
     "name": "스튜디오 핵심 카피",
     "url": "http://localhost:3000",

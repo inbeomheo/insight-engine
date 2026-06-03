@@ -31,7 +31,7 @@ export default function OnboardingModal() {
 
   return (
     <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
-      <DialogContent className="max-w-sm p-8">
+      <DialogContent aria-modal="true" className="max-w-sm p-8">
         <VisuallyHidden>
           <DialogTitle>{t('onboarding.title')}</DialogTitle>
           <DialogDescription>{t('onboarding.description')}</DialogDescription>
@@ -49,12 +49,16 @@ export default function OnboardingModal() {
         </div>
 
         {providerIds.length > 0 ? (
-          <div className="space-y-2 mb-4">
+          <div data-testid="onboarding-provider-options" role="radiogroup" aria-label="AI 프로바이더" className="space-y-2 mb-4">
             {providerIds.map((id) => (
               <button
                 key={id}
+                type="button"
+                data-testid={`onboarding-provider-${id}`}
                 onClick={() => selectProvider(id)}
                 aria-label={`${id} 프로바이더 선택`}
+                role="radio"
+                aria-checked={selectedProvider === id}
                 className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                   selectedProvider === id
                     ? 'border-primary bg-indigo-50/50 shadow-sm'
@@ -79,7 +83,7 @@ export default function OnboardingModal() {
           </p>
         )}
 
-        <Button className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
+        <Button data-testid="onboarding-start" className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
           <Check className="h-4 w-4 mr-2" />
           {t('onboarding.start')}
         </Button>

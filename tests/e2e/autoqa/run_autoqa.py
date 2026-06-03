@@ -884,6 +884,55 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_onboarding_provider_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.removeItem('insight-engine-onboarding-done');
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[onboarding-provider-accessible] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[onboarding-provider-accessible] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        dialog = page.locator("[role='dialog']", has_text="환영합니다").last
+        dialog.wait_for(state="visible", timeout=60_000)
+        group = dialog.locator("[data-testid='onboarding-provider-options']")
+        selected = dialog.locator("[data-testid='onboarding-provider-chatmock']")
+        start = dialog.get_by_role("button", name="시작하기")
+        radio_count = group.locator("[role='radio']").count() if group.count() else 0
+        ok = (
+            dialog.get_attribute("aria-modal", timeout=5_000) == "true"
+            and group.count() == 1
+            and group.get_attribute("role", timeout=5_000) == "radiogroup"
+            and group.get_attribute("aria-label", timeout=5_000) == "AI 프로바이더"
+            and radio_count >= 1
+            and selected.count() == 1
+            and selected.get_attribute("role", timeout=5_000) == "radio"
+            and selected.get_attribute("aria-checked", timeout=5_000) == "true"
+            and start.count() == 1
+        )
+        report.record(
+            "onboarding-provider-accessible",
+            ok,
+            (
+                "onboarding provider choices expose radiogroup/radio selected state"
+                if ok
+                else f"group={group.count()}; role={group.get_attribute('role') if group.count() else None}; label={group.get_attribute('aria-label') if group.count() else None}; radios={radio_count}; selected={selected.count()}; selected_role={selected.get_attribute('role') if selected.count() else None}; selected_checked={selected.get_attribute('aria-checked') if selected.count() else None}; start={start.count()}"
+            ),
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "onboarding-provider-accessible-fail.png")
+        report.record("onboarding-provider-accessible", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_new_analysis_filter_reset_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     seed_menu_context(context)
@@ -1436,7 +1485,16 @@ def run_guided_tour_focus_trap_suite(browser, report: QaReport) -> None:
     try:
         page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
         page.locator("#url-input").wait_for(state="visible", timeout=60_000)
-        page.locator("[data-testid='header-help-trigger']").click(timeout=10_000)
+        trigger = page.locator("[data-testid='header-help-trigger']")
+        panel = page.locator("[data-testid='help-panel']")
+        trigger.click(timeout=10_000)
+        opened = wait_until(lambda: panel.count() == 1 and panel.is_visible(), 5_000, page)
+        if not opened:
+            if trigger.get_attribute("aria-expanded", timeout=1_000) == "true":
+                page.keyboard.press("Escape")
+                wait_until(lambda: panel.count() == 0 or not panel.is_visible(), 3_000, page)
+            trigger.click(timeout=10_000)
+            panel.wait_for(state="visible", timeout=10_000)
         start = page.locator("[data-testid='help-start-tour']")
         start.wait_for(state="visible", timeout=10_000)
         start.click(timeout=10_000)
@@ -1455,7 +1513,7 @@ def run_guided_tour_focus_trap_suite(browser, report: QaReport) -> None:
             page.wait_for_timeout(50)
             forward_sequence.append(bool(active_inside()))
         forward_trap_ok = all(forward_sequence)
-        trigger_focused = page.locator("[data-testid='header-help-trigger']").evaluate("el => document.activeElement === el")
+        trigger_focused = trigger.evaluate("el => document.activeElement === el")
         ok = backward_wrap_ok and forward_trap_ok and not trigger_focused
         report.record(
             "guided-tour-focus-trap",
@@ -3177,6 +3235,7 @@ def main() -> int:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+        run_onboarding_provider_accessibility_suite(browser, report)
         context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
         context.add_init_script(
             """
@@ -3960,6 +4019,8 @@ def main() -> int:
             )
         except Exception as exc:
             report.record("history-delete-confirmation", False, repr(exc))
+
+        context.close()
 
         run_seeded_menu_action_suite(browser, report)
         run_history_clear_suite(browser, report)
