@@ -1380,6 +1380,57 @@ def run_guided_tour_accessible_close_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_guided_tour_focus_trap_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        localStorage.removeItem('ie_tour_done');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[guided-tour-focus-trap] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[guided-tour-focus-trap] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='header-help-trigger']").click(timeout=10_000)
+        start = page.locator("[data-testid='help-start-tour']")
+        start.wait_for(state="visible", timeout=10_000)
+        start.click(timeout=10_000)
+
+        tour = page.locator("[data-testid='guided-tour-dialog']")
+        close_button = page.locator("[data-testid='guided-tour-close']")
+        tour.wait_for(state="visible", timeout=10_000)
+        wait_until(lambda: close_button.evaluate("el => document.activeElement === el"), 5_000, page)
+
+        active_inside = lambda: tour.evaluate("tour => tour.contains(document.activeElement)")
+        page.keyboard.press("Shift+Tab")
+        backward_wrap_ok = wait_until(active_inside, 3_000, page)
+        forward_sequence: list[bool] = []
+        for _ in range(8):
+            page.keyboard.press("Tab")
+            page.wait_for_timeout(50)
+            forward_sequence.append(bool(active_inside()))
+        forward_trap_ok = all(forward_sequence)
+        trigger_focused = page.locator("[data-testid='header-help-trigger']").evaluate("el => document.activeElement === el")
+        ok = backward_wrap_ok and forward_trap_ok and not trigger_focused
+        report.record(
+            "guided-tour-focus-trap",
+            ok,
+            "guided tour Tab and Shift+Tab focus stays inside dialog" if ok else f"backward={backward_wrap_ok}; forward={forward_sequence}; trigger_focused={trigger_focused}",
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "guided-tour-focus-trap-fail.png")
+        report.record("guided-tour-focus-trap", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     pending_routes: list[Any] = []
@@ -3880,6 +3931,7 @@ def main() -> int:
         run_help_panel_accessible_close_suite(browser, report)
         run_help_panel_focus_trap_suite(browser, report)
         run_guided_tour_accessible_close_suite(browser, report)
+        run_guided_tour_focus_trap_suite(browser, report)
 
         browser.close()
 

@@ -32,6 +32,7 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const { t } = useTranslation();
 
@@ -95,7 +96,33 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') handleClose();
+    if (event.key === 'Escape') {
+      handleClose();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.tabIndex >= 0);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   };
 
   if (!visible || !TOUR_STEPS[step]) return null;
@@ -112,6 +139,7 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
 
       {/* 툴팁 */}
       <div
+        ref={dialogRef}
         data-testid="guided-tour-dialog"
         className={cn(
           'fixed z-[61] w-72 bg-white rounded-xl shadow-xl border border-border/60 p-4 animate-fade-in',
