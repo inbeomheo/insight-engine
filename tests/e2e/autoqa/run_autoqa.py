@@ -952,6 +952,17 @@ def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
             ok,
             screenshot(page, "non-url-hides-fusion-progress.png") if ok else f"request_seen={request_seen}; progress_visible={progress_visible}",
         )
+        dock = page.locator("[data-testid='generate-dock']")
+        dock_button = page.locator("[data-testid='generate-dock-button']")
+        dock_text = dock.inner_text(timeout=5_000)
+        button_text = dock_button.inner_text(timeout=5_000)
+        dock_busy = dock.get_attribute("aria-busy") == "true"
+        loading_copy_ok = request_seen and dock_busy and "생성 중" in dock_text and "생성 중" in button_text
+        report.record(
+            "generate-dock-loading-copy",
+            loading_copy_ok,
+            screenshot(page, "generate-dock-loading-copy.png") if loading_copy_ok else f"busy={dock_busy}; dock={dock_text!r}; button={button_text!r}",
+        )
     except Exception as exc:
         fail_png = screenshot(page, "non-url-hides-fusion-progress-fail.png")
         report.record("non-url-hides-fusion-progress", False, f"{repr(exc)}; screenshot={fail_png}")

@@ -54,6 +54,12 @@
     "expect": "Generate Dock은 소스 없음/준비 완료 상태를 Ready 문구 하나가 아니라 한국어 상태 문구로 구분한다"
   },
   {
+    "id": "generate-dock-loading-copy",
+    "name": "Generate Dock 로딩 문구",
+    "url": "http://localhost:3000",
+    "expect": "생성 중에는 Dock 버튼도 생성 중 문구와 aria-busy 상태를 보여준다"
+  },
+  {
     "id": "result-workbench-empty-controls",
     "name": "결과 없음 Workbench 컨트롤 정리",
     "url": "http://localhost:3000",
