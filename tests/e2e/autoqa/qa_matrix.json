@@ -120,6 +120,12 @@
     "expect": "직접 텍스트 생성도 상세도, 웹 보강, 에이전트 설정을 /generate 요청에 포함한다"
   },
   {
+    "id": "non-url-hides-fusion-progress",
+    "name": "비-URL 생성 중 퓨전 진행 숨김",
+    "url": "http://localhost:3000",
+    "expect": "텍스트/파일/음성 생성은 저장된 URL 모드가 퓨전이어도 퓨전 분석 진행 UI를 보여주지 않는다"
+  },
+  {
     "id": "batch-advanced-request-options",
     "name": "개별 배치 생성 고급 옵션 요청 반영",
     "url": "http://localhost:3000",

@@ -904,6 +904,79 @@ def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+
+def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
+    captured: list[dict[str, Any]] = []
+    pending_routes: list[Any] = []
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def hold_generate(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        captured.append(data if isinstance(data, dict) else {})
+        pending_routes.append(route)
+
+    context.route("**/generate", hold_generate)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[non-url-fusion-progress] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[non-url-fusion-progress] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=wr4nCMUy1dk")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+        page.get_by_role("button", name=re.compile(r"^퓨전$")).click(timeout=10_000)
+        page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+        page.locator("[data-testid='text-source-panel'] textarea").fill(
+            "Fusion progress should not be shown for direct text generation even when URL fusion mode was selected before switching sources."
+        )
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+        request_seen = wait_until(lambda: len(pending_routes) > 0, 10_000, page)
+        progress = page.get_by_text("퓨전 분석 진행 중", exact=False)
+        progress_visible = progress.count() > 0 and progress.first.is_visible(timeout=1_000)
+        ok = request_seen and not progress_visible
+        report.record(
+            "non-url-hides-fusion-progress",
+            ok,
+            screenshot(page, "non-url-hides-fusion-progress.png") if ok else f"request_seen={request_seen}; progress_visible={progress_visible}",
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "non-url-hides-fusion-progress-fail.png")
+        report.record("non-url-hides-fusion-progress", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        for route in pending_routes:
+            try:
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({
+                        "title": "QA direct text",
+                        "content": "# QA direct text",
+                        "html": "<h1>QA direct text</h1>",
+                        "usage": {"total_tokens": 1},
+                        "elapsed_time": 0.1,
+                        "transcript_source": "direct_input",
+                        "prompt": "qa",
+                        "cached": False,
+                        "comment_summary_included": False,
+                    }, ensure_ascii=False),
+                )
+            except Exception:
+                pass
+        context.close()
+
 def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2217,6 +2290,7 @@ def main() -> int:
         run_history_clear_suite(browser, report)
         run_no_native_confirm_suite(report)
         run_notebooklm_auth_notice_suite(browser, report)
+        run_non_url_fusion_progress_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)

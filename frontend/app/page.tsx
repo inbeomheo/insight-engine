@@ -376,7 +376,7 @@ export default function Home() {
                 />
 
                 <div className="space-y-4">
-                  {isLoading && generationMode === 'fusion' && <FusionProgress isLoading={isLoading} isFusion={true} />}
+                  {isLoading && studioGenerationMode === 'fusion' && <FusionProgress isLoading={isLoading} isFusion={true} />}
                   {isLoading && <LoadingSkeleton />}
 
                   {deferredFiltered.slice(0, visibleCount).map((r) => (
