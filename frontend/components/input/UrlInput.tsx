@@ -39,7 +39,6 @@ const UrlInput = memo(function UrlInput({
   onRemoveUrl,
   onReorderUrl,
   onToggleSettings,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isLoading,
   onGenerate,
 }: UrlInputProps) {
@@ -53,6 +52,12 @@ const UrlInput = memo(function UrlInput({
   // 입력 중 URL 소스 타입 감지 (trim 1회만 수행)
   const trimmedInput = input.trim();
   const inputSourceType = trimmedInput ? detectSourceType(trimmedInput) : null;
+  const canSubmitOrGenerate = Boolean(trimmedInput || urls.length > 0) && !isLoading;
+  const submitLabel = trimmedInput
+    ? 'URL 추가'
+    : urls.length > 0
+      ? '생성 시작'
+      : 'URL을 입력하면 추가할 수 있습니다';
   const inputIsWiki = trimmedInput ? isWikipediaUrl(trimmedInput) : false;
   const InputIcon = inputIsWiki
     ? BookOpen
@@ -140,7 +145,9 @@ const UrlInput = memo(function UrlInput({
           size="icon"
           className="h-8 w-8 shrink-0 rounded-xl gradient-primary hover:opacity-90 transition-opacity"
           onClick={input.trim() ? handleSubmit : onGenerate}
-          aria-label={input.trim() ? 'URL 추가' : '생성 시작'}
+          disabled={!canSubmitOrGenerate}
+          aria-label={submitLabel}
+          title={submitLabel}
         >
           <ArrowUp className="h-4 w-4 text-white" />
         </Button>

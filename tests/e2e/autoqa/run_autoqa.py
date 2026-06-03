@@ -1731,6 +1731,20 @@ def main() -> int:
                 not missing_controls,
                 screenshot(page, "output-blueprint-advanced.png") if not missing_controls else f"missing={missing_controls}",
             )
+            page.locator("[data-testid='source-tab-url']").click(timeout=10_000)
+            page.locator("#url-input").wait_for(state="visible", timeout=10_000)
+            empty_url_submit = page.locator("#url-input").locator("xpath=following-sibling::button").nth(1)
+            empty_url_disabled = empty_url_submit.is_disabled(timeout=5_000)
+            empty_url_label = empty_url_submit.get_attribute("aria-label") or ""
+            report.record(
+                "url-empty-submit-disabled",
+                empty_url_disabled and "URL" in empty_url_label,
+                (
+                    screenshot(page, "url-empty-submit-disabled.png")
+                    if empty_url_disabled and "URL" in empty_url_label
+                    else f"disabled={empty_url_disabled}; aria={empty_url_label!r}"
+                ),
+            )
         except Exception as exc:
             report.record("home-load", False, f"{type(exc).__name__}: {exc}")
             report.write()
