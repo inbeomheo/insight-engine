@@ -87,18 +87,25 @@ export default function SourceComposer(props: SourceComposerProps) {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Source Composer</p>
           <h2 className="mt-1 text-lg font-semibold text-slate-950">분석할 소스를 준비하세요</h2>
         </div>
-        <div className="grid grid-cols-4 rounded-full bg-slate-100 p-1 text-xs font-medium">
+        <div data-testid="source-tabs" role="tablist" aria-label="소스 종류" className="grid grid-cols-4 rounded-full bg-slate-100 p-1 text-xs font-medium">
           {tabs.map((item) => {
             const Icon = item.icon;
+            const selected = tab === item.id;
+            const tabId = `source-tab-${item.id}`;
+            const panelId = `source-panel-${item.id}`;
             return (
               <button
                 key={item.id}
                 type="button"
+                id={tabId}
+                role="tab"
+                aria-selected={selected}
+                aria-controls={panelId}
                 data-testid={item.testId}
                 onClick={() => setTab(item.id)}
                 className={cn(
                   'flex items-center justify-center gap-1.5 rounded-full px-3 py-1.5',
-                  tab === item.id ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500',
+                  selected ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500',
                 )}
               >
                 <Icon className="h-3.5 w-3.5" /> {item.label}
@@ -109,20 +116,22 @@ export default function SourceComposer(props: SourceComposerProps) {
       </div>
 
       {tab === 'url' && (
-        <UrlInput
-          urls={props.urls}
-          onAddUrl={props.onAddUrl}
-          onAddUrls={props.onAddUrls}
-          onRemoveUrl={props.onRemoveUrl}
-          onReorderUrl={props.onReorderUrl}
-          onToggleSettings={props.onToggleSettings}
-          isLoading={props.isLoading}
-          onGenerate={props.onGenerateUrl}
-        />
+        <div id="source-panel-url" role="tabpanel" aria-labelledby="source-tab-url">
+          <UrlInput
+            urls={props.urls}
+            onAddUrl={props.onAddUrl}
+            onAddUrls={props.onAddUrls}
+            onRemoveUrl={props.onRemoveUrl}
+            onReorderUrl={props.onReorderUrl}
+            onToggleSettings={props.onToggleSettings}
+            isLoading={props.isLoading}
+            onGenerate={props.onGenerateUrl}
+          />
+        </div>
       )}
 
       {tab === 'text' && (
-        <div data-testid="text-source-panel">
+        <div id="source-panel-text" role="tabpanel" aria-labelledby="source-tab-text" data-testid="text-source-panel">
           <InputWrapper focused={focused} className="px-4 py-3">
             <div className="flex items-start gap-2">
               <Type className="mt-2 h-4 w-4 shrink-0 text-slate-400" />
@@ -158,7 +167,7 @@ export default function SourceComposer(props: SourceComposerProps) {
       )}
 
       {tab === 'file' && (
-        <div data-testid="file-source-panel" className="space-y-3">
+        <div id="source-panel-file" role="tabpanel" aria-labelledby="source-tab-file" data-testid="file-source-panel" className="space-y-3">
           <FileUpload file={file} onFileSelect={setFile} disabled={props.isLoading} />
           <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
             <span>PDF/DOCX를 업로드하면 문서 내용을 분석해 콘텐츠를 만듭니다.</span>
@@ -170,7 +179,7 @@ export default function SourceComposer(props: SourceComposerProps) {
       )}
 
       {tab === 'voice' && (
-        <div data-testid="voice-source-panel" className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+        <div id="source-panel-voice" role="tabpanel" aria-labelledby="source-tab-voice" data-testid="voice-source-panel" className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-900">녹음하거나 오디오 파일 업로드</p>

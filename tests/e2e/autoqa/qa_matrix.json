@@ -150,6 +150,12 @@
     "expect": "페이지에 여러 URL을 드롭해도 URL 소스는 최대 10개로 제한된다"
   },
   {
+    "id": "source-composer-tabs-accessible",
+    "name": "Source Composer 접근 가능한 탭",
+    "url": "http://localhost:3000",
+    "expect": "URL/텍스트/파일/음성 소스 전환은 tablist, tab, tabpanel과 aria 연결을 제공한다"
+  },
+  {
     "id": "non-url-hides-fusion-progress",
     "name": "비-URL 생성 중 퓨전 진행 숨김",
     "url": "http://localhost:3000",

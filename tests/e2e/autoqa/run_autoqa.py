@@ -1242,6 +1242,62 @@ def run_drop_bulk_url_limit_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[source-tabs-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[source-tabs-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+
+        tablist_visible = page.get_by_role("tablist", name="소스 종류").is_visible(timeout=5_000)
+        url_tab = page.get_by_role("tab", name=re.compile(r"URL"))
+        text_tab = page.get_by_role("tab", name=re.compile(r"텍스트"))
+        url_selected = url_tab.get_attribute("aria-selected") == "true"
+        url_panel = page.locator("#source-panel-url")
+        url_panel_linked = (
+            url_panel.count() > 0
+            and url_panel.get_attribute("role") == "tabpanel"
+            and url_panel.get_attribute("aria-labelledby") == (url_tab.get_attribute("id") or "")
+            and url_tab.get_attribute("aria-controls") == "source-panel-url"
+        )
+
+        text_tab.click(timeout=10_000)
+        text_panel = page.locator("#source-panel-text")
+        text_selected = text_tab.get_attribute("aria-selected") == "true"
+        text_panel_linked = (
+            text_panel.count() > 0
+            and text_panel.is_visible(timeout=5_000)
+            and text_panel.get_attribute("role") == "tabpanel"
+            and text_panel.get_attribute("aria-labelledby") == (text_tab.get_attribute("id") or "")
+            and text_tab.get_attribute("aria-controls") == "source-panel-text"
+        )
+        ok = tablist_visible and url_selected and url_panel_linked and text_selected and text_panel_linked
+        report.record(
+            "source-composer-tabs-accessible",
+            ok,
+            (
+                "tablist and tabpanels linked"
+                if ok
+                else f"tablist={tablist_visible}; url_selected={url_selected}; url_panel={url_panel_linked}; text_selected={text_selected}; text_panel={text_panel_linked}"
+            ),
+        )
+    except Exception as exc:
+        report.record("source-composer-tabs-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2520,6 +2576,7 @@ def main() -> int:
         run_single_url_failure_retains_source_suite(browser, report)
         run_url_chip_reorder_suite(browser, report)
         run_drop_bulk_url_limit_suite(browser, report)
+        run_source_composer_accessibility_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
