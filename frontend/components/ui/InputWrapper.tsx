@@ -10,11 +10,14 @@ import { cn } from '@/lib/utils';
 interface InputWrapperProps {
   focused: boolean;
   error?: string;
+  errorId?: string;
+  errorTestId?: string;
+  errorRole?: 'alert' | 'status';
   className?: string;
   children: React.ReactNode;
 }
 
-export default function InputWrapper({ focused, error, className, children }: InputWrapperProps) {
+export default function InputWrapper({ focused, error, errorId, errorTestId, errorRole, className, children }: InputWrapperProps) {
   return (
     <div className="w-full">
       <div
@@ -29,7 +32,7 @@ export default function InputWrapper({ focused, error, className, children }: In
         {children}
       </div>
       {error && (
-        <p className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
+        <p id={errorId} data-testid={errorTestId} role={errorRole} className="text-xs text-destructive mt-2 px-2 animate-fade-in">{error}</p>
       )}
     </div>
   );

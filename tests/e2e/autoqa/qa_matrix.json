@@ -162,6 +162,12 @@
     "expect": "URL/텍스트/파일/음성 소스 전환은 tablist, tab, tabpanel, aria 연결과 키보드 방향키 전환을 제공한다"
   },
   {
+    "id": "url-input-accessible-state",
+    "name": "URL 입력 접근 가능한 상태",
+    "url": "http://localhost:3000",
+    "expect": "URL 입력은 도움말, 오류, aria-invalid 상태를 스크린리더에 연결한다"
+  },
+  {
     "id": "source-text-input-accessible",
     "name": "Source Composer 텍스트 입력 상태",
     "url": "http://localhost:3000",

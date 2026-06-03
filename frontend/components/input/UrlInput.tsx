@@ -116,7 +116,7 @@ const UrlInput = memo(function UrlInput({
   return (
     <div className="w-full">
       {/* 입력 바 — InputWrapper로 포커스/에러 스타일 통일 */}
-      <InputWrapper focused={focused} error={error} className="flex items-center gap-1.5 px-4 py-2.5">
+      <InputWrapper focused={focused} error={error} errorId="url-input-error" errorTestId="url-input-error" errorRole="alert" className="flex items-center gap-1.5 px-4 py-2.5">
         <InputIcon className={`h-4 w-4 shrink-0 transition-colors duration-150 ${inputIconClass}`} />
         <input
           ref={inputRef}
@@ -131,6 +131,8 @@ const UrlInput = memo(function UrlInput({
           placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv, Podcast)"
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
           aria-label="URL 입력"
+          aria-describedby={error ? 'url-input-error' : 'url-input-help'}
+          aria-invalid={Boolean(error)}
         />
         <Button
           variant="ghost"
@@ -142,6 +144,7 @@ const UrlInput = memo(function UrlInput({
           <SlidersHorizontal className="h-4 w-4" />
         </Button>
         <Button
+          data-testid="url-input-submit"
           size="icon"
           className="h-8 w-8 shrink-0 rounded-xl gradient-primary hover:opacity-90 transition-opacity"
           onClick={input.trim() ? handleSubmit : onGenerate}
@@ -155,7 +158,7 @@ const UrlInput = memo(function UrlInput({
 
       {/* 힌트 (에러는 InputWrapper가 표시) */}
       {!error && (
-        <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
+        <p id="url-input-help" data-testid="url-input-help" className="text-[11px] text-muted-foreground/40 mt-2 px-2">
           YouTube · 웹페이지 · RSS · arXiv · Podcast · 최대 10개
         </p>
       )}

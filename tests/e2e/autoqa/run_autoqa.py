@@ -1352,6 +1352,57 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_url_input_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[url-input-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[url-input-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        input_box = page.locator("#url-input")
+        input_box.wait_for(state="visible", timeout=60_000)
+        hint = page.locator("[data-testid='url-input-help']")
+        submit = page.locator("[data-testid='url-input-submit']")
+        initial_ok = (
+            input_box.get_attribute("aria-label", timeout=5_000) == "URL 입력"
+            and input_box.get_attribute("aria-describedby", timeout=5_000) == "url-input-help"
+            and input_box.get_attribute("aria-invalid", timeout=5_000) == "false"
+            and hint.get_attribute("id", timeout=5_000) == "url-input-help"
+            and "최대 10개" in hint.inner_text(timeout=5_000)
+            and submit.get_attribute("aria-label", timeout=5_000) == "URL을 입력하면 추가할 수 있습니다"
+            and submit.is_disabled(timeout=5_000)
+        )
+        input_box.fill("not-a-url", timeout=10_000)
+        submit.click(timeout=10_000)
+        error = page.locator("[data-testid='url-input-error']")
+        error_ok = (
+            input_box.get_attribute("aria-invalid", timeout=5_000) == "true"
+            and input_box.get_attribute("aria-describedby", timeout=5_000) == "url-input-error"
+            and error.get_attribute("id", timeout=5_000) == "url-input-error"
+            and error.get_attribute("role", timeout=5_000) == "alert"
+            and "유효한 URL" in error.inner_text(timeout=5_000)
+        )
+        ok = initial_ok and error_ok
+        report.record(
+            "url-input-accessible-state",
+            ok,
+            "url input help, invalid state, and error alert are linked" if ok else f"initial={initial_ok}; error={error_ok}",
+        )
+    except Exception as exc:
+        report.record("url-input-accessible-state", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_source_text_input_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -3044,6 +3095,7 @@ def main() -> int:
         run_url_chip_reorder_suite(browser, report)
         run_drop_bulk_url_limit_suite(browser, report)
         run_source_composer_accessibility_suite(browser, report)
+        run_url_input_accessibility_suite(browser, report)
         run_source_text_input_accessibility_suite(browser, report)
         run_source_file_input_accessibility_suite(browser, report)
         run_source_voice_input_accessibility_suite(browser, report)
