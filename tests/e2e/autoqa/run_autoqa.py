@@ -3174,6 +3174,19 @@ def main() -> int:
                 fits and scrolls,
                 f"metrics={metrics}" if fits and scrolls else f"clipped_or_unscrollable={metrics}",
             )
+            title = dialog.locator("[data-testid='settings-popover-title']")
+            close_button = dialog.locator("[data-testid='settings-popover-close']")
+            labelledby = dialog.get_attribute("aria-labelledby", timeout=2_000) or ""
+            describedby = dialog.get_attribute("aria-describedby", timeout=2_000) or ""
+            dialog_a11y_initial_ok = (
+                labelledby
+                and title.count() == 1
+                and title.get_attribute("id", timeout=2_000) == labelledby
+                and "settings-popover-desc" in describedby
+                and close_button.count() == 1
+                and close_button.get_attribute("aria-label", timeout=2_000) == "생성 설정 닫기"
+                and close_button.evaluate("el => document.activeElement === el")
+            )
 
             style_group = dialog.locator("[data-testid='settings-style-options']")
             blog_style = dialog.locator("[data-testid='settings-style-blog_seo']")
@@ -3291,14 +3304,24 @@ def main() -> int:
                 web_switch_ok,
                 "settings web search switch help/status and keyboard toggle update" if web_switch_ok else f"initial={web_initial_ok}; toggled={web_toggled_ok}; describedby={describedby!r}",
             )
-            page.keyboard.press("Escape")
-            page.wait_for_timeout(300)
+            if close_button.count() > 0:
+                close_button.click(timeout=10_000)
+            else:
+                page.keyboard.press("Escape")
+            dialog_closed_ok = wait_until(lambda: dialog.count() == 0 or not dialog.is_visible(), 5_000, page)
+            dialog_a11y_ok = bool(dialog_a11y_initial_ok and dialog_closed_ok)
+            report.record(
+                "settings-popover-dialog-accessible",
+                dialog_a11y_ok,
+                "settings dialog title, description, close focus, and close action are wired" if dialog_a11y_ok else f"initial={dialog_a11y_initial_ok}; closed={dialog_closed_ok}; labelledby={labelledby!r}; describedby={describedby!r}",
+            )
         except Exception as exc:
             report.record("settings-open", False, repr(exc))
             report.record("provider-chatmock", False, repr(exc))
             report.record("style-selection", False, repr(exc))
             report.record("settings-modifier-accessible", False, repr(exc))
             report.record("settings-web-search-switch-accessible", False, repr(exc))
+            report.record("settings-popover-dialog-accessible", False, repr(exc))
 
         try:
             page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")

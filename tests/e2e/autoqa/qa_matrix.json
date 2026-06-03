@@ -531,6 +531,11 @@
     "expect": "설정 팝오버 웹 검색 보강은 switch 상태, 도움말/상태 연결, Space 키보드 전환을 제공한다"
   },
   {
+    "id": "settings-popover-dialog-accessible",
+    "name": "설정 팝오버 Dialog 접근성",
+    "expect": "설정 팝오버는 제목 연결, 설명 연결, 닫기 버튼, 초기 포커스, 닫기 동작을 제공한다"
+  },
+  {
     "id": "settings-open",
     "name": "설정 열기",
     "expect": "설정 패널이 보인다"

@@ -41,8 +41,15 @@ export default function SettingsPopover() {
   } = useSettingsStore();
 
   const ref = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // 외부 클릭 감지
+  useEffect(() => {
+    if (!settingsPopoverOpen) return;
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [settingsPopoverOpen]);
+
   useEffect(() => {
     if (!settingsPopoverOpen) return;
     function handleClick(e: MouseEvent) {
@@ -153,10 +160,28 @@ export default function SettingsPopover() {
     <div
       ref={ref}
       role="dialog"
-      aria-label="생성 설정"
+      aria-labelledby="settings-popover-title"
       aria-describedby="settings-popover-desc"
       className="fixed left-1/2 top-20 z-40 max-h-[calc(100vh-6rem)] w-[420px] max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-5 shadow-lg space-y-5"
     >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="settings-popover-title" data-testid="settings-popover-title" className="text-base font-semibold text-foreground">
+            생성 설정
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">모델과 출력 옵션을 조정합니다.</p>
+        </div>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          data-testid="settings-popover-close"
+          aria-label="생성 설정 닫기"
+          className="rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1"
+          onClick={() => setSettingsPopoverOpen(false)}
+        >
+          닫기
+        </button>
+      </div>
       <p id="settings-popover-desc" className="sr-only">AI 모델, 스타일, 길이, 문체, 언어 등 콘텐츠 생성 옵션을 설정합니다.</p>
       {/* AI 모델 */}
       <div>
