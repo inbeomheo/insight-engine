@@ -10,7 +10,7 @@ import type { ScheduledPost } from '@/lib/types';
 
 interface ContentCalendarProps {
   schedules: ScheduledPost[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => boolean | void | Promise<boolean | void>;
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -111,6 +111,8 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ScheduledPost | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -139,10 +141,23 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
     setSelectedDate(null);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleteTarget) return;
-    onDelete(deleteTarget.id);
-    setDeleteTarget(null);
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      const ok = await onDelete(deleteTarget.id);
+      if (ok === false) {
+        setDeleteError('예약 삭제 실패 · 다시 시도해주세요.');
+        return;
+      }
+      setDeleteError('');
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError('예약 삭제 실패 · 다시 시도해주세요.');
+    } finally {
+      setDeleteBusy(false);
+    }
   }
 
   return (
@@ -288,7 +303,10 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
                         className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
                         data-testid="calendar-delete-schedule"
                         aria-label={`${post.title} 예약 삭제`}
-                        onClick={() => setDeleteTarget(post)}
+                        onClick={() => {
+                          setDeleteError('');
+                          setDeleteTarget(post);
+                        }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -300,7 +318,15 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           </CardContent>
         </Card>
       )}
-      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>예약 삭제</DialogTitle>
@@ -308,12 +334,24 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
               {deleteTarget ? `‘${deleteTarget.title}’ 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
             </DialogDescription>
           </DialogHeader>
+          {deleteError && (
+            <p data-testid="calendar-delete-error" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {deleteError}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+            <Button
+              variant="ghost"
+              disabled={deleteBusy}
+              onClick={() => {
+                setDeleteError('');
+                setDeleteTarget(null);
+              }}
+            >
               취소
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              삭제하기
+            <Button variant="destructive" disabled={deleteBusy} onClick={confirmDelete}>
+              {deleteBusy ? '삭제 중...' : '삭제하기'}
             </Button>
           </DialogFooter>
         </DialogContent>

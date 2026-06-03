@@ -47,11 +47,14 @@ export function useSchedule(enabled = true) {
 
   const removeSchedule = useCallback(async (postId: string) => {
     try {
-      await deleteSchedule(postId);
+      const res = await deleteSchedule(postId);
+      if (!res.success) throw new Error('delete failed');
       setSchedules((prev) => prev.filter((s) => s.id !== postId));
       toast.success('예약이 삭제되었습니다');
+      return true;
     } catch {
       toast.error('예약 삭제 실패');
+      return false;
     }
   }, []);
 

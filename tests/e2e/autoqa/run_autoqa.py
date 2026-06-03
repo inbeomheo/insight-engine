@@ -531,6 +531,9 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
 
     def handle_calendar_delete(route) -> None:
         calendar_delete_calls.append(route.request.url)
+        if "qa-calendar-naver" in route.request.url:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": False}))
+            return
         route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True}))
 
     context.route("**/api/schedule/*", handle_calendar_delete)
@@ -691,9 +694,27 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 wordpress_summary_ok and secret_ok,
                 screenshot(page, "calendar-wordpress-safe-options.png") if wordpress_summary_ok and secret_ok else calendar_text[:500],
             )
+            fail_before_deletes = len(calendar_delete_calls)
+            page.locator("button[aria-label='캘린더 네이버 예약 예약 삭제']").click(timeout=10_000)
+            fail_dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
+            fail_dialog.wait_for(state="visible", timeout=5_000)
+            fail_dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
+            failure_called = wait_until(lambda: len(calendar_delete_calls) > fail_before_deletes, 5_000, page)
+            page.wait_for_timeout(500)
+            failure_dialog_stays_open = fail_dialog.is_visible(timeout=1_000)
+            failure_text = fail_dialog.inner_text(timeout=5_000) if failure_dialog_stays_open else ""
+            failure_hint_ok = "삭제 실패" in failure_text or "다시 시도" in failure_text
+            report.record(
+                "calendar-delete-failure-stays-open",
+                failure_called and failure_dialog_stays_open and failure_hint_ok,
+                f"called={failure_called}; stays_open={failure_dialog_stays_open}; text={failure_text[:300]}",
+            )
+            if failure_dialog_stays_open:
+                fail_dialog.locator("button", has_text="취소").click(timeout=5_000)
+                page.wait_for_timeout(300)
             before_deletes = len(calendar_delete_calls)
             calendar = page.locator("[data-testid='content-calendar']")
-            calendar.locator("button").last.click(timeout=10_000)
+            page.locator("button[aria-label='캘린더 WordPress 예약 예약 삭제']").click(timeout=10_000)
             dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
             try:
                 dialog.wait_for(state="visible", timeout=1_000)
@@ -710,7 +731,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             )
             deleted_after_confirm = False
             if still_visible_after_cancel:
-                calendar.locator("button").last.click(timeout=10_000)
+                page.locator("button[aria-label='캘린더 WordPress 예약 예약 삭제']").click(timeout=10_000)
                 dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
                 dialog.wait_for(state="visible", timeout=5_000)
                 dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
@@ -728,6 +749,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             report.record("calendar-plugin-labels", False, repr(exc))
             report.record("calendar-naver-safe-options", False, repr(exc))
             report.record("calendar-wordpress-safe-options", False, repr(exc))
+            report.record("calendar-delete-failure-stays-open", False, repr(exc))
             report.record("calendar-delete-confirmation", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "right-panel-fail.png")

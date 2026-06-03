@@ -270,6 +270,12 @@
     "expect": "캘린더 예약 삭제는 즉시 API를 호출하지 않고 확인 모달에서 취소/확정을 구분한다"
   },
   {
+    "id": "calendar-delete-failure-stays-open",
+    "name": "캘린더 예약 삭제 실패 안내",
+    "url": "http://localhost:3000",
+    "expect": "예약 삭제 API가 실패하면 확인 모달을 닫지 않고 재시도 가능한 실패 안내를 보여준다"
+  },
+  {
     "id": "menu-schedule-naver-defaults",
     "name": "네이버 예약 기본값",
     "url": "http://localhost:3000",
