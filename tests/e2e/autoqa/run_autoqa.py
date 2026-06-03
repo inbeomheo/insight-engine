@@ -865,20 +865,37 @@ def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
         page.locator("#url-input").press("Enter")
         wait_until(lambda: "소스 1개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
 
-        states: dict[str, dict[str, Any]] = {}
-        for label in ["통합", "퓨전"]:
-            page.get_by_text(label, exact=True).click(timeout=10_000)
-            button = page.locator("[data-testid='generate-dock-button']")
-            states[label] = {
-                "disabled": button.is_disabled(timeout=5_000),
-                "text": button.inner_text(timeout=5_000),
-            }
+        combined_mode = page.locator("[data-testid='blueprint-mode-combined']")
+        fusion_mode = page.locator("[data-testid='blueprint-mode-fusion']")
+        individual_mode = page.locator("[data-testid='blueprint-mode-individual']")
+        mode_hint = page.locator("[data-testid='blueprint-mode-hint']")
+        dock_summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=5_000)
+        dock_button = page.locator("[data-testid='generate-dock-button']")
+        hint_text = mode_hint.inner_text(timeout=5_000) if mode_hint.count() > 0 else ""
+        state = {
+            "combined_disabled": combined_mode.is_disabled(timeout=5_000),
+            "fusion_disabled": fusion_mode.is_disabled(timeout=5_000),
+            "individual_pressed": individual_mode.get_attribute("aria-pressed", timeout=5_000) == "true",
+            "hint": hint_text,
+            "dock_summary": dock_summary,
+            "dock_disabled": dock_button.is_disabled(timeout=5_000),
+            "dock_text": dock_button.inner_text(timeout=5_000),
+        }
 
-        ok = all(state["disabled"] and "2개 이상" in state["text"] for state in states.values())
+        ok = (
+            state["combined_disabled"]
+            and state["fusion_disabled"]
+            and state["individual_pressed"]
+            and "URL 소스 2개 이상" in hint_text
+            and "통합/퓨전" in hint_text
+            and "모드 개별 생성" in dock_summary
+            and not state["dock_disabled"]
+            and "1개 소스로" in state["dock_text"]
+        )
         report.record(
             "generate-dock-url-mode-minimums",
             ok,
-            screenshot(page, "generate-dock-url-mode-minimums.png") if ok else str(states),
+            screenshot(page, "generate-dock-url-mode-minimums.png") if ok else str(state),
         )
     except Exception as exc:
         fail_png = screenshot(page, "generate-dock-url-mode-minimums-fail.png")
@@ -1791,6 +1808,11 @@ def main() -> int:
                 not missing_status_labels and not raw_status_labels,
                 screenshot(page, "studio-status-labels.png") if not missing_status_labels and not raw_status_labels else f"missing={missing_status_labels}; raw={raw_status_labels}",
             )
+            page.locator("#url-input").fill("https://www.youtube.com/watch?v=aaaaaaaaaaa")
+            page.locator("#url-input").press("Enter")
+            page.locator("#url-input").fill("https://www.youtube.com/watch?v=bbbbbbbbbbb")
+            page.locator("#url-input").press("Enter")
+            wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
             page.get_by_role("button", name=re.compile(r"^통합$")).click(timeout=10_000)
             page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
             page.locator("[data-testid='text-source-panel'] textarea").fill(
@@ -1834,6 +1856,9 @@ def main() -> int:
                     else f"hint={mode_hint_text!r}; individual={individual_pressed}; combined_disabled={combined_disabled}; fusion_disabled={fusion_disabled}"
                 ),
             )
+            page.evaluate("window.dispatchEvent(new Event('insight-engine-new-analysis'))")
+            page.locator("#url-input").wait_for(state="visible", timeout=10_000)
+            page.wait_for_timeout(300)
             advanced_controls = [
                 "blueprint-web-search",
                 "blueprint-web-research",

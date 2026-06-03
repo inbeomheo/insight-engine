@@ -297,7 +297,7 @@ export default function Home() {
         : sourceDraft.mode === 'file'
           ? (sourceDraft.file ? `파일 소스 · ${sourceDraft.file.name}` : '파일 소스 대기')
           : (sourceDraft.audioFile ? `음성 소스 · ${sourceDraft.audioFile.name}` : '음성 소스 대기');
-  const studioGenerationMode = sourceDraft.mode === 'url' ? generationMode : 'individual';
+  const studioGenerationMode = sourceDraft.mode === 'url' && urls.length >= 2 ? generationMode : 'individual';
 
   return (
     <>
@@ -355,7 +355,7 @@ export default function Home() {
                   <SettingsPopover />
                 </div>
 
-                <OutputBlueprint sourceMode={sourceDraft.mode} />
+                <OutputBlueprint sourceMode={sourceDraft.mode} sourceCount={studioSourceCount} />
 
                 {error && (
                   <div

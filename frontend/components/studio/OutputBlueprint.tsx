@@ -16,6 +16,7 @@ type OutputBlueprintSourceMode = 'url' | 'text' | 'file' | 'voice';
 
 interface OutputBlueprintProps {
   sourceMode: OutputBlueprintSourceMode;
+  sourceCount: number;
 }
 
 const SOURCE_MODE_LABELS: Record<OutputBlueprintSourceMode, string> = {
@@ -29,7 +30,7 @@ function optionLabel<T extends { value: string; label: string }>(items: T[], val
   return items.find((item) => item.value === value)?.label ?? value;
 }
 
-export default function OutputBlueprint({ sourceMode }: OutputBlueprintProps) {
+export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBlueprintProps) {
   const selectedProvider = useSettingsStore((s) => s.selectedProvider);
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
@@ -54,8 +55,13 @@ export default function OutputBlueprint({ sourceMode }: OutputBlueprintProps) {
   const writingStyleValue = modifiers.writing_style ?? 'conversational';
   const languageValue = modifiers.language ?? 'ko';
   const isUrlSource = sourceMode === 'url';
-  const visibleGenerationMode = isUrlSource ? generationMode : 'individual';
+  const isMultiSourceModeAvailable = isUrlSource && sourceCount >= 2;
+  const multiSourceModeDisabled = !isMultiSourceModeAvailable;
+  const visibleGenerationMode = isMultiSourceModeAvailable ? generationMode : 'individual';
   const sourceModeLabel = SOURCE_MODE_LABELS[sourceMode];
+  const modeHint = isUrlSource
+    ? (sourceCount < 2 ? 'URL 소스 2개 이상을 추가하면 통합/퓨전을 사용할 수 있습니다. 현재는 개별 생성으로 실행됩니다.' : null)
+    : `${sourceModeLabel} 소스는 개별 생성으로 실행됩니다. 통합/퓨전은 URL 소스 2개 이상에서 사용할 수 있습니다.`;
 
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
@@ -94,12 +100,12 @@ export default function OutputBlueprint({ sourceMode }: OutputBlueprintProps) {
           <p className="mb-2 text-xs font-semibold text-slate-500">제작 모드</p>
           <div className="flex flex-wrap gap-2">
             <Button data-testid="blueprint-mode-individual" aria-pressed={visibleGenerationMode === 'individual'} type="button" size="sm" variant={visibleGenerationMode === 'individual' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('individual')}><Sparkles className="h-3.5 w-3.5" />개별</Button>
-            <Button data-testid="blueprint-mode-combined" aria-pressed={visibleGenerationMode === 'combined'} aria-describedby={!isUrlSource ? 'blueprint-mode-hint' : undefined} disabled={!isUrlSource} type="button" size="sm" variant={visibleGenerationMode === 'combined' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('combined')}><Layers className="h-3.5 w-3.5" />통합</Button>
-            <Button data-testid="blueprint-mode-fusion" aria-pressed={visibleGenerationMode === 'fusion'} aria-describedby={!isUrlSource ? 'blueprint-mode-hint' : undefined} disabled={!isUrlSource} type="button" size="sm" variant={visibleGenerationMode === 'fusion' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('fusion')}><Combine className="h-3.5 w-3.5" />퓨전</Button>
+            <Button data-testid="blueprint-mode-combined" aria-pressed={visibleGenerationMode === 'combined'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'combined' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('combined')}><Layers className="h-3.5 w-3.5" />통합</Button>
+            <Button data-testid="blueprint-mode-fusion" aria-pressed={visibleGenerationMode === 'fusion'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'fusion' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('fusion')}><Combine className="h-3.5 w-3.5" />퓨전</Button>
           </div>
-          {!isUrlSource && (
+          {modeHint && (
             <p id="blueprint-mode-hint" data-testid="blueprint-mode-hint" className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] leading-relaxed text-indigo-700">
-              {sourceModeLabel} 소스는 개별 생성으로 실행됩니다. 통합/퓨전은 URL 소스 2개 이상에서 사용할 수 있습니다.
+              {modeHint}
             </p>
           )}
         </div>

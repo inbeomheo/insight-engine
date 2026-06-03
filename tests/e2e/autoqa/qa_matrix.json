@@ -63,7 +63,7 @@
     "id": "generate-dock-url-mode-minimums",
     "name": "통합/퓨전 URL 최소 개수 안내",
     "url": "http://localhost:3000",
-    "expect": "URL 1개만 있을 때 통합/퓨전 모드는 활성 버튼처럼 보이지 않고 2개 이상이 필요하다고 안내한다"
+    "expect": "URL 소스가 2개 미만이면 Output Blueprint의 통합/퓨전 선택을 비활성화하고 Dock은 개별 생성으로 유지한다"
   },
   {
     "id": "output-blueprint-advanced",
