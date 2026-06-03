@@ -3207,12 +3207,65 @@ def main() -> int:
                 style_ok,
                 "settings style radiogroup and keyboard navigation update selection" if style_ok else f"initial={initial_style_ok}; summary={summary_style_ok}; course={course_style_ok}",
             )
+
+            length_group = dialog.locator("[data-testid='settings-length-options']")
+            length_medium = dialog.locator("[data-testid='settings-length-medium']")
+            length_long = dialog.locator("[data-testid='settings-length-long']")
+            tone_group = dialog.locator("[data-testid='settings-tone-options']")
+            tone_conversational = dialog.locator("[data-testid='settings-tone-conversational']")
+            tone_expert = dialog.locator("[data-testid='settings-tone-expert']")
+            language_group = dialog.locator("[data-testid='settings-language-options']")
+            language_ko = dialog.locator("[data-testid='settings-language-ko']")
+            language_en = dialog.locator("[data-testid='settings-language-en']")
+            modifier_initial_ok = (
+                length_group.get_attribute("role", timeout=5_000) == "radiogroup"
+                and length_group.get_attribute("aria-label", timeout=5_000) == "길이"
+                and length_medium.get_attribute("role", timeout=5_000) == "radio"
+                and length_medium.get_attribute("aria-checked", timeout=5_000) == "true"
+                and tone_group.get_attribute("role", timeout=5_000) == "radiogroup"
+                and tone_group.get_attribute("aria-label", timeout=5_000) == "문체"
+                and tone_conversational.get_attribute("aria-checked", timeout=5_000) == "true"
+                and language_group.get_attribute("role", timeout=5_000) == "radiogroup"
+                and language_group.get_attribute("aria-label", timeout=5_000) == "출력 언어"
+                and language_ko.get_attribute("aria-checked", timeout=5_000) == "true"
+            )
+            length_medium.focus(timeout=10_000)
+            page.keyboard.press("ArrowRight")
+            length_ok = wait_until(
+                lambda: length_long.get_attribute("aria-checked", timeout=1_000) == "true"
+                and length_long.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            tone_conversational.focus(timeout=10_000)
+            page.keyboard.press("End")
+            tone_ok = wait_until(
+                lambda: tone_expert.get_attribute("aria-checked", timeout=1_000) == "true"
+                and tone_expert.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            language_ko.focus(timeout=10_000)
+            page.keyboard.press("ArrowRight")
+            language_ok = wait_until(
+                lambda: language_en.get_attribute("aria-checked", timeout=1_000) == "true"
+                and language_en.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            modifiers_ok = modifier_initial_ok and length_ok and tone_ok and language_ok
+            report.record(
+                "settings-modifier-accessible",
+                modifiers_ok,
+                "settings modifier radiogroups and keyboard navigation update selection" if modifiers_ok else f"initial={modifier_initial_ok}; length={length_ok}; tone={tone_ok}; language={language_ok}",
+            )
             page.keyboard.press("Escape")
             page.wait_for_timeout(300)
         except Exception as exc:
             report.record("settings-open", False, repr(exc))
             report.record("provider-chatmock", False, repr(exc))
             report.record("style-selection", False, repr(exc))
+            report.record("settings-modifier-accessible", False, repr(exc))
 
         try:
             page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")

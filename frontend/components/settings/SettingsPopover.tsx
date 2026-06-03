@@ -84,6 +84,10 @@ export default function SettingsPopover() {
     ...STYLE_OPTIONS,
     ...customStyles.map((c) => ({ id: c.id, label: c.name, emoji: c.icon || '✨' })),
   ];
+  type LengthValue = (typeof LENGTH_OPTIONS)[number]['value'];
+  type WritingStyleValue = (typeof WRITING_STYLE_OPTIONS)[number]['value'];
+  type LanguageValue = (typeof LANGUAGE_OPTIONS)[number]['value'];
+
   const selectStyle = (styleId: string) => {
     setSelectedStyle(styleId);
     requestAnimationFrame(() => document.getElementById(`settings-style-${styleId}`)?.focus());
@@ -98,6 +102,51 @@ export default function SettingsPopover() {
           ? allStyles.length - 1
           : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + allStyles.length) % allStyles.length;
     selectStyle(allStyles[nextIndex].id);
+  };
+  const selectLength = (value: LengthValue) => {
+    setModifiers({ length: value });
+    requestAnimationFrame(() => document.getElementById(`settings-length-${value}`)?.focus());
+  };
+  const handleLengthKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? LENGTH_OPTIONS.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + LENGTH_OPTIONS.length) % LENGTH_OPTIONS.length;
+    selectLength(LENGTH_OPTIONS[nextIndex].value);
+  };
+  const selectWritingStyle = (value: WritingStyleValue) => {
+    setModifiers({ writing_style: value });
+    requestAnimationFrame(() => document.getElementById(`settings-tone-${value}`)?.focus());
+  };
+  const handleWritingStyleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? WRITING_STYLE_OPTIONS.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + WRITING_STYLE_OPTIONS.length) % WRITING_STYLE_OPTIONS.length;
+    selectWritingStyle(WRITING_STYLE_OPTIONS[nextIndex].value);
+  };
+  const selectLanguage = (value: LanguageValue) => {
+    setModifiers({ language: value });
+    requestAnimationFrame(() => document.getElementById(`settings-language-${value}`)?.focus());
+  };
+  const handleLanguageKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? LANGUAGE_OPTIONS.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + LANGUAGE_OPTIONS.length) % LANGUAGE_OPTIONS.length;
+    selectLanguage(LANGUAGE_OPTIONS[nextIndex].value);
   };
 
   return (
@@ -179,13 +228,18 @@ export default function SettingsPopover() {
       {/* 길이 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">길이</label>
-        <div className="flex gap-2">
-          {LENGTH_OPTIONS.map((o) => (
+        <div data-testid="settings-length-options" role="radiogroup" aria-label="길이" className="flex gap-2">
+          {LENGTH_OPTIONS.map((o, index) => (
             <button
               key={o.value}
-              onClick={() => setModifiers({ length: o.value })}
+              id={`settings-length-${o.value}`}
+              data-testid={`settings-length-${o.value}`}
+              onClick={() => selectLength(o.value)}
+              onKeyDown={(event) => handleLengthKeyDown(event, index)}
               aria-label={`${o.label} 길이 선택`}
-              aria-pressed={modifiers.length === o.value}
+              role="radio"
+              aria-checked={modifiers.length === o.value}
+              tabIndex={modifiers.length === o.value ? 0 : -1}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 modifiers.length === o.value
@@ -203,13 +257,18 @@ export default function SettingsPopover() {
       {/* 문체 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">문체</label>
-        <div className="flex gap-2">
-          {WRITING_STYLE_OPTIONS.map((o) => (
+        <div data-testid="settings-tone-options" role="radiogroup" aria-label="문체" className="flex gap-2">
+          {WRITING_STYLE_OPTIONS.map((o, index) => (
             <button
               key={o.value}
-              onClick={() => setModifiers({ writing_style: o.value })}
+              id={`settings-tone-${o.value}`}
+              data-testid={`settings-tone-${o.value}`}
+              onClick={() => selectWritingStyle(o.value)}
+              onKeyDown={(event) => handleWritingStyleKeyDown(event, index)}
               aria-label={`${o.label} 문체 선택`}
-              aria-pressed={modifiers.writing_style === o.value}
+              role="radio"
+              aria-checked={modifiers.writing_style === o.value}
+              tabIndex={modifiers.writing_style === o.value ? 0 : -1}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 modifiers.writing_style === o.value
@@ -226,13 +285,18 @@ export default function SettingsPopover() {
       {/* 출력 언어 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">출력 언어</label>
-        <div className="flex gap-2">
-          {LANGUAGE_OPTIONS.map((o) => (
+        <div data-testid="settings-language-options" role="radiogroup" aria-label="출력 언어" className="flex gap-2">
+          {LANGUAGE_OPTIONS.map((o, index) => (
             <button
               key={o.value}
-              onClick={() => setModifiers({ language: o.value })}
+              id={`settings-language-${o.value}`}
+              data-testid={`settings-language-${o.value}`}
+              onClick={() => selectLanguage(o.value)}
+              onKeyDown={(event) => handleLanguageKeyDown(event, index)}
               aria-label={`${o.label} 언어 선택`}
-              aria-pressed={(modifiers.language ?? 'ko') === o.value}
+              role="radio"
+              aria-checked={(modifiers.language ?? 'ko') === o.value}
+              tabIndex={(modifiers.language ?? 'ko') === o.value ? 0 : -1}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 (modifiers.language ?? 'ko') === o.value
