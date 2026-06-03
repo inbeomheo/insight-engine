@@ -108,6 +108,10 @@ export default function ScheduleModal({
     return {};
   }
 
+  function clearSubmitError() {
+    if (submitError) setSubmitError('');
+  }
+
   function getValidationMessage() {
     if (isWordPress) {
       if (!wordpressOptions.site_url.trim()) return 'WordPress 사이트 URL을 입력해주세요.';
@@ -177,7 +181,10 @@ export default function ScheduleModal({
             <select
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               value={selectedPlugin}
-              onChange={(e) => setSelectedPlugin(e.target.value)}
+              onChange={(e) => {
+                clearSubmitError();
+                setSelectedPlugin(e.target.value);
+              }}
             >
               {plugins.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -196,14 +203,20 @@ export default function ScheduleModal({
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="https://example.com"
               value={wordpressOptions.site_url}
-              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, site_url: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setWordpressOptions((prev) => ({ ...prev, site_url: e.target.value }));
+              }}
             />
             <input
               data-testid="schedule-option-wordpress-username"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="사용자명"
               value={wordpressOptions.username}
-              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, username: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setWordpressOptions((prev) => ({ ...prev, username: e.target.value }));
+              }}
             />
             <input
               data-testid="schedule-option-wordpress-app-password"
@@ -211,13 +224,19 @@ export default function ScheduleModal({
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="Application Password"
               value={wordpressOptions.app_password}
-              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, app_password: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setWordpressOptions((prev) => ({ ...prev, app_password: e.target.value }));
+              }}
             />
             <select
               data-testid="schedule-option-wordpress-status"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               value={wordpressOptions.status}
-              onChange={(e) => setWordpressOptions((prev) => ({ ...prev, status: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setWordpressOptions((prev) => ({ ...prev, status: e.target.value }));
+              }}
             >
               <option value="draft">임시글</option>
               <option value="publish">즉시 공개</option>
@@ -235,28 +254,40 @@ export default function ScheduleModal({
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="네이버 발행 웹훅 URL"
               value={naverOptions.webhook_url}
-              onChange={(e) => setNaverOptions((prev) => ({ ...prev, webhook_url: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setNaverOptions((prev) => ({ ...prev, webhook_url: e.target.value }));
+              }}
             />
             <input
               data-testid="schedule-option-naver-blog-id"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="블로그 ID"
               value={naverOptions.blog_id}
-              onChange={(e) => setNaverOptions((prev) => ({ ...prev, blog_id: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setNaverOptions((prev) => ({ ...prev, blog_id: e.target.value }));
+              }}
             />
             <input
               data-testid="schedule-option-naver-category"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="카테고리"
               value={naverOptions.category}
-              onChange={(e) => setNaverOptions((prev) => ({ ...prev, category: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setNaverOptions((prev) => ({ ...prev, category: e.target.value }));
+              }}
             />
             <input
               data-testid="schedule-option-naver-tags"
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               placeholder="태그, 쉼표로 구분"
               value={naverOptions.tags}
-              onChange={(e) => setNaverOptions((prev) => ({ ...prev, tags: e.target.value }))}
+              onChange={(e) => {
+                clearSubmitError();
+                setNaverOptions((prev) => ({ ...prev, tags: e.target.value }));
+              }}
             />
           </div>
         )}
@@ -271,7 +302,10 @@ export default function ScheduleModal({
             type="datetime-local"
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
+            onChange={(e) => {
+              clearSubmitError();
+              setScheduledAt(e.target.value);
+            }}
           />
         </div>
 

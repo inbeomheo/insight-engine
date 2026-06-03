@@ -300,6 +300,12 @@
     "expect": "예약 등록 API가 실패하면 모달을 닫지 않고 재시도 가능한 실패 안내를 보여준다"
   },
   {
+    "id": "menu-schedule-error-clears-on-edit",
+    "name": "예약 실패 안내 자동 해제",
+    "url": "http://localhost:3000",
+    "expect": "예약 등록 실패 후 사용자가 연결값을 수정하면 오래된 실패 안내가 사라진다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",

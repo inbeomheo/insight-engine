@@ -1419,9 +1419,19 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
             called and stays_open and has_hint,
             f"called={called}; stays_open={stays_open}; text={text[:300]}",
         )
+        dialog.locator("[data-testid='schedule-option-naver-category']").fill("AI 자동화")
+        page.wait_for_timeout(300)
+        edited_text = dialog.inner_text(timeout=5_000) if dialog.is_visible(timeout=1_000) else ""
+        cleared = "예약 등록 실패" not in edited_text and "다시 시도" not in edited_text
+        report.record(
+            "menu-schedule-error-clears-on-edit",
+            called and has_hint and cleared,
+            f"cleared={cleared}; text={edited_text[:300]}",
+        )
         close_dialogs(page)
     except Exception as exc:
         report.record("menu-schedule-failure-stays-open", False, repr(exc))
+        report.record("menu-schedule-error-clears-on-edit", False, repr(exc))
         close_dialogs(page)
 
     try:
