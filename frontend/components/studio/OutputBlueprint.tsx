@@ -62,6 +62,9 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
   const modeHint = isUrlSource
     ? (sourceCount < 2 ? 'URL 소스 2개 이상을 추가하면 통합/퓨전을 사용할 수 있습니다. 현재는 개별 생성으로 실행됩니다.' : null)
     : `${sourceModeLabel} 소스는 개별 생성으로 실행됩니다. 통합/퓨전은 URL 소스 2개 이상에서 사용할 수 있습니다.`;
+  const handleLengthChange = (value: string) => {
+    setModifiers({ length: value as 'short' | 'medium' | 'long' });
+  };
 
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
@@ -112,12 +115,12 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           )}
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-3">
+        <div data-testid="blueprint-modifier-controls" role="group" aria-label="길이 · 톤 · 언어" className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 text-xs font-semibold text-slate-500">길이 · 톤 · 언어</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <select className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={lengthValue} onChange={(e) => setModifiers({ length: e.target.value as 'short' | 'medium' | 'long' })}>{LENGTH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-            <select className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={writingStyleValue} onChange={(e) => setModifiers({ writing_style: e.target.value as typeof writingStyleValue })}>{WRITING_STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-            <select className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={languageValue} onChange={(e) => setModifiers({ language: e.target.value as 'ko' | 'en' | 'ja' })}>{LANGUAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <select data-testid="blueprint-length-select" aria-label="길이" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={lengthValue} onInput={(event) => handleLengthChange(event.currentTarget.value)} onChange={(event) => handleLengthChange(event.currentTarget.value)}>{LENGTH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <select data-testid="blueprint-tone-select" aria-label="톤" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={writingStyleValue} onChange={(e) => setModifiers({ writing_style: e.target.value as typeof writingStyleValue })}>{WRITING_STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <select data-testid="blueprint-language-select" aria-label="언어" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={languageValue} onChange={(e) => setModifiers({ language: e.target.value as 'ko' | 'en' | 'ja' })}>{LANGUAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
           </div>
         </div>
 

@@ -1379,6 +1379,54 @@ def run_output_blueprint_detail_accessibility_suite(browser, report: QaReport) -
         context.close()
 
 
+def run_output_blueprint_modifier_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[blueprint-modifier-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[blueprint-modifier-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        group = page.locator("[data-testid='blueprint-modifier-controls']")
+        length = page.locator("[data-testid='blueprint-length-select']")
+        tone = page.locator("[data-testid='blueprint-tone-select']")
+        language = page.locator("[data-testid='blueprint-language-select']")
+        initial_ok = (
+            group.get_attribute("role") == "group"
+            and group.get_attribute("aria-label") == "길이 · 톤 · 언어"
+            and length.get_attribute("aria-label") == "길이"
+            and tone.get_attribute("aria-label") == "톤"
+            and language.get_attribute("aria-label") == "언어"
+            and length.input_value() == "medium"
+            and tone.input_value() == "conversational"
+            and language.input_value() == "ko"
+        )
+        length.focus(timeout=10_000)
+        page.keyboard.press("ArrowDown")
+        wait_until(lambda: length.input_value() == "long", 5_000, page)
+        tone.select_option("expert", timeout=10_000)
+        language.select_option("en", timeout=10_000)
+        changed_ok = length.input_value() == "long" and tone.input_value() == "expert" and language.input_value() == "en"
+        report.record(
+            "output-blueprint-modifier-accessible",
+            initial_ok and changed_ok,
+            "modifier group, labels, and values update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+        )
+    except Exception as exc:
+        report.record("output-blueprint-modifier-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2660,6 +2708,7 @@ def main() -> int:
         run_source_composer_accessibility_suite(browser, report)
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)
+        run_output_blueprint_modifier_accessibility_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
