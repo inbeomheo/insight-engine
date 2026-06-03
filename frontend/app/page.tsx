@@ -170,7 +170,13 @@ export default function Home() {
     setHelpOpen(false);
     setTourActive(true);
   }, []);
-  const handleCloseTour = useCallback(() => setTourActive(false), []);
+  const handleCloseTour = useCallback(() => {
+    setTourActive(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("[data-testid='header-help-trigger']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, []);
   const handleOpenMobileRightPanel = useCallback(() => setMobileRightPanelOpen(true), []);
   const handleCloseMobileRightPanel = useCallback(() => {
     setMobileRightPanelOpen(false);

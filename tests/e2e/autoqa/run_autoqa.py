@@ -1332,6 +1332,54 @@ def run_help_panel_focus_trap_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_guided_tour_accessible_close_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        localStorage.removeItem('ie_tour_done');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[guided-tour-close] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[guided-tour-close] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        trigger = page.locator("[data-testid='header-help-trigger']")
+        trigger.click(timeout=10_000)
+        start = page.locator("[data-testid='help-start-tour']")
+        start.wait_for(state="visible", timeout=10_000)
+        start.click(timeout=10_000)
+
+        tour = page.locator("[data-testid='guided-tour-dialog']")
+        close_button = page.locator("[data-testid='guided-tour-close']")
+        tour.wait_for(state="visible", timeout=10_000)
+        focus_initial_ok = wait_until(
+            lambda: close_button.count() == 1 and close_button.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        page.keyboard.press("Escape")
+        closed_ok = wait_until(lambda: tour.count() == 0 or not tour.is_visible(), 5_000, page)
+        focus_returned_ok = wait_until(lambda: trigger.evaluate("el => document.activeElement === el"), 5_000, page)
+        ok = focus_initial_ok and closed_ok and focus_returned_ok
+        report.record(
+            "guided-tour-accessible-close",
+            ok,
+            "guided tour initial focus, Escape close, and help trigger focus return are wired" if ok else f"focus_initial={focus_initial_ok}; closed={closed_ok}; focus_returned={focus_returned_ok}",
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "guided-tour-accessible-close-fail.png")
+        report.record("guided-tour-accessible-close", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     pending_routes: list[Any] = []
@@ -3831,6 +3879,7 @@ def main() -> int:
         run_help_tour_entrypoint_suite(browser, report)
         run_help_panel_accessible_close_suite(browser, report)
         run_help_panel_focus_trap_suite(browser, report)
+        run_guided_tour_accessible_close_suite(browser, report)
 
         browser.close()
 

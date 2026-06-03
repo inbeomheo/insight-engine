@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,7 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const { t } = useTranslation();
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -73,6 +74,12 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
     return () => window.removeEventListener('resize', updatePosition);
   }, [updatePosition]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [visible, step]);
+
   const handleNext = () => {
     if (step < TOUR_STEPS.length - 1) {
       setStep(step + 1);
@@ -85,6 +92,10 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
     setVisible(false);
     localStorage.setItem(STORAGE_KEY, 'true');
     onClose?.();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') handleClose();
   };
 
   if (!visible || !TOUR_STEPS[step]) return null;
@@ -111,8 +122,9 @@ export default function GuidedTour({ forceStart, onClose }: GuidedTourProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
+        onKeyDown={handleKeyDown}
       >
-        <button data-testid="guided-tour-close" onClick={handleClose} className="absolute top-2 right-2 text-muted-foreground/50 hover:text-foreground" aria-label="가이드 투어 닫기">
+        <button ref={closeButtonRef} data-testid="guided-tour-close" onClick={handleClose} className="absolute top-2 right-2 text-muted-foreground/50 hover:text-foreground" aria-label="가이드 투어 닫기">
           <X className="h-4 w-4" />
         </button>
 

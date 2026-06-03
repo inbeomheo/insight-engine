@@ -569,6 +569,11 @@
     "expect": "도움말 패널이 열려 있는 동안 Tab과 Shift+Tab 포커스는 패널 내부에 머문다"
   },
   {
+    "id": "guided-tour-accessible-close",
+    "name": "가이드 투어 닫기 접근성",
+    "expect": "가이드 투어는 초기 포커스, Escape 닫기, 도움말 트리거 포커스 복귀를 제공한다"
+  },
+  {
     "id": "settings-open",
     "name": "설정 열기",
     "expect": "설정 패널이 보인다"
