@@ -71,7 +71,7 @@ export default function Home() {
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
 
   const generationMode = useSettingsStore((s) => s.generationMode);
-  const { urls, addUrl, addUrls, removeUrl, clearUrls } = useUrls();
+  const { urls, addUrl, addUrls, removeUrl, clearUrls, reorderUrls } = useUrls();
   const { isLoading, error, generateFromText, generateFromFile, generateFromAudio, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
   const [sourceDraft, setSourceDraft] = useState<SourceComposerSnapshot>(EMPTY_SOURCE_DRAFT);
@@ -344,6 +344,7 @@ export default function Home() {
                     onAddUrl={addUrl}
                     onAddUrls={addUrls}
                     onRemoveUrl={removeUrl}
+                    onReorderUrl={reorderUrls}
                     onToggleSettings={handleToggleSettings}
                     isLoading={isLoading}
                     onGenerateUrl={handleGenerate}

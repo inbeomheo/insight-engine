@@ -1131,6 +1131,74 @@ def run_single_url_failure_retains_source_suite(browser, report: QaReport) -> No
         context.close()
 
 
+def run_url_chip_reorder_suite(browser, report: QaReport) -> None:
+    captured: list[dict[str, Any]] = []
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def batch(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        payload = data if isinstance(data, dict) else {}
+        captured.append(payload)
+        urls = payload.get("urls") if isinstance(payload.get("urls"), list) else []
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "success": True,
+                "results": [
+                    {"success": True, "url": url, "title": f"QA reordered {idx}", "content": "# QA reordered", "html": "<h1>QA reordered</h1>"}
+                    for idx, url in enumerate(urls)
+                ],
+                "total_processed": len(urls),
+                "successful": len(urls),
+                "failed": 0,
+            }, ensure_ascii=False),
+        )
+
+    context.route("**/generate-batch", batch)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[url-chip-reorder] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[url-chip-reorder] {exc}"))
+
+    try:
+        first = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        second = "https://www.youtube.com/watch?v=wr4nCMUy1dk"
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").fill(first)
+        page.locator("#url-input").press("Enter")
+        page.locator("#url-input").fill(second)
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: page.locator("[draggable='true']").count() >= 2, 10_000, page)
+
+        chips = page.locator("[draggable='true']")
+        chips.nth(1).drag_to(chips.nth(0), timeout=10_000)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+
+        sent = wait_until(lambda: len(captured) > 0, 10_000, page)
+        payload = captured[-1] if captured else {}
+        urls = payload.get("urls") if isinstance(payload.get("urls"), list) else []
+        ok = sent and urls[:2] == [second, first]
+        report.record(
+            "url-chip-drag-reorder",
+            ok,
+            f"urls={urls}" if ok else f"urls={urls}; expected={[second, first]}",
+        )
+    except Exception as exc:
+        report.record("url-chip-drag-reorder", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2385,6 +2453,7 @@ def main() -> int:
         run_non_url_fusion_progress_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
         run_single_url_failure_retains_source_suite(browser, report)
+        run_url_chip_reorder_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)

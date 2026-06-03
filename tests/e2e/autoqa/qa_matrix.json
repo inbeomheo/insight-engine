@@ -138,6 +138,12 @@
     "expect": "단일 URL 직접 생성이 실패하면 URL 소스가 지워지지 않고 재시도할 수 있다"
   },
   {
+    "id": "url-chip-drag-reorder",
+    "name": "URL 칩 드래그 정렬",
+    "url": "http://localhost:3000",
+    "expect": "URL 칩을 드래그해 바꾸면 생성 요청의 URL 순서도 바뀐다"
+  },
+  {
     "id": "non-url-hides-fusion-progress",
     "name": "비-URL 생성 중 퓨전 진행 숨김",
     "url": "http://localhost:3000",

@@ -28,6 +28,7 @@ interface SourceComposerProps {
   onAddUrl: (url: string) => string | null;
   onAddUrls: (urls: string[]) => { added: number; errors: string[] };
   onRemoveUrl: (url: string) => void;
+  onReorderUrl?: (from: number, to: number) => void;
   onToggleSettings: () => void;
   onGenerateUrl: () => void;
   onGenerateText: (text: string) => void | Promise<boolean>;
@@ -113,6 +114,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           onAddUrl={props.onAddUrl}
           onAddUrls={props.onAddUrls}
           onRemoveUrl={props.onRemoveUrl}
+          onReorderUrl={props.onReorderUrl}
           onToggleSettings={props.onToggleSettings}
           isLoading={props.isLoading}
           onGenerate={props.onGenerateUrl}
