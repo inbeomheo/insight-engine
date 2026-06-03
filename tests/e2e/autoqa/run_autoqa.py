@@ -1467,6 +1467,65 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     context.close()
 
 
+def run_history_clear_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    native_dialog_seen = False
+
+    def on_dialog(dialog) -> None:
+        nonlocal native_dialog_seen
+        native_dialog_seen = True
+        dialog.dismiss()
+
+    page.on("dialog", on_dialog)
+    page.on("console", lambda msg: report.console_errors.append(f"[history-clear] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[history-clear] {exc}"))
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        if page.locator("aside[role='navigation']").count() == 0 or not page.locator("aside[role='navigation']").is_visible():
+            page.locator("header button").first.click(timeout=5_000, force=True)
+            page.locator("aside[role='navigation']").wait_for(state="visible", timeout=10_000)
+        sidebar = page.locator("aside[role='navigation']")
+        clear_button = sidebar.locator("button", has_text="전체 삭제")
+        clear_button.wait_for(state="visible", timeout=10_000)
+        before_clear_visible = True
+        clear_button.click(timeout=10_000)
+        app_dialog = page.locator("[role='dialog']", has_text="전체 히스토리 삭제").last
+        try:
+            app_dialog.wait_for(state="visible", timeout=1_000)
+            app_dialog_visible = True
+        except Exception:
+            app_dialog_visible = False
+        not_removed_before_confirm = sidebar.locator("button", has_text="전체 삭제").count() > 0
+        still_visible_after_cancel = False
+        removed_after_confirm = False
+        if app_dialog_visible:
+            app_dialog.locator("button", has_text="취소").click(timeout=5_000)
+            page.wait_for_timeout(300)
+            still_visible_after_cancel = sidebar.locator("button", has_text="전체 삭제").count() > 0
+            clear_button = sidebar.locator("button", has_text="전체 삭제")
+            clear_button.wait_for(state="visible", timeout=10_000)
+            clear_button.click(timeout=10_000)
+            app_dialog = page.locator("[role='dialog']", has_text="전체 히스토리 삭제").last
+            app_dialog.wait_for(state="visible", timeout=5_000)
+            app_dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
+            removed_after_confirm = wait_until(lambda: sidebar.locator("button", has_text="전체 삭제").count() == 0, 5_000, page)
+        report.record(
+            "history-clear-confirmation",
+            before_clear_visible and (not native_dialog_seen) and app_dialog_visible and not_removed_before_confirm and still_visible_after_cancel and removed_after_confirm,
+            (
+                f"native_dialog_seen={native_dialog_seen}; app_dialog_visible={app_dialog_visible}; "
+                f"before_clear_visible={before_clear_visible}; not_removed_before_confirm={not_removed_before_confirm}; "
+                f"still_visible_after_cancel={still_visible_after_cancel}; removed_after_confirm={removed_after_confirm}"
+            ),
+        )
+    except Exception as exc:
+        report.record("history-clear-confirmation", False, repr(exc))
+    finally:
+        context.close()
+
+
 def main() -> int:
     report = QaReport()
 
@@ -1888,6 +1947,7 @@ def main() -> int:
             report.record("history-delete-confirmation", False, repr(exc))
 
         run_seeded_menu_action_suite(browser, report)
+        run_history_clear_suite(browser, report)
         run_notebooklm_auth_notice_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)

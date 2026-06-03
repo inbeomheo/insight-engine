@@ -78,6 +78,7 @@ export default function Sidebar() {
   const isClient = useIsClient();
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search, 200);
   const { t } = useTranslation();
 
@@ -117,6 +118,12 @@ export default function Sidebar() {
     if (useUIStore.getState().activeReportId === deleteTarget.id) setActiveReportId(null);
     setDeleteTarget(null);
   }, [deleteTarget, removeReport, setActiveReportId]);
+
+  const confirmClearAll = useCallback(() => {
+    clearReports();
+    setActiveReportId(null);
+    setClearConfirmOpen(false);
+  }, [clearReports, setActiveReportId]);
 
   const handleNewAnalysis = useCallback(() => {
     setActiveReportId(null);
@@ -249,12 +256,7 @@ export default function Sidebar() {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 h-9 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/5"
-              onClick={() => {
-                if (window.confirm('모든 히스토리를 삭제하시겠습니까?')) {
-                  clearReports();
-                  setActiveReportId(null);
-                }
-              }}
+              onClick={() => setClearConfirmOpen(true)}
             >
               <Eraser className="h-4 w-4" />
               전체 삭제 ({reports.length})
@@ -286,6 +288,28 @@ export default function Sidebar() {
               취소
             </Button>
             <Button type="button" variant="destructive" onClick={confirmDelete}>
+              삭제하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Eraser className="h-5 w-5" />
+              전체 히스토리 삭제
+            </DialogTitle>
+            <DialogDescription>
+              저장된 히스토리 {reports.length}개를 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setClearConfirmOpen(false)}>
+              취소
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmClearAll}>
               삭제하기
             </Button>
           </DialogFooter>
