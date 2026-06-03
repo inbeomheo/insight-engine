@@ -201,11 +201,11 @@ export default function SourceComposer(props: SourceComposerProps) {
       )}
 
       {tab === 'voice' && (
-        <div id="source-panel-voice" role="tabpanel" aria-labelledby="source-tab-voice" data-testid="voice-source-panel" className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
+        <div id="source-panel-voice" role="tabpanel" aria-labelledby="source-tab-voice" aria-describedby="voice-source-help" data-testid="voice-source-panel" className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-900">녹음하거나 오디오 파일 업로드</p>
-              <p className="mt-1 text-xs text-slate-500">회의·강의·팟캐스트 MP3/WAV/WEBM 파일을 분석합니다.</p>
+              <p id="voice-source-help" data-testid="voice-source-help" className="mt-1 text-xs text-slate-500">회의·강의·팟캐스트 MP3/WAV/WEBM 파일을 분석합니다.</p>
             </div>
             <VoiceRecorder onRecordingComplete={setAudioFile} disabled={props.isLoading} />
           </div>
@@ -216,6 +216,7 @@ export default function SourceComposer(props: SourceComposerProps) {
               오디오 파일 선택
               <input
                 data-testid="voice-file-input"
+                aria-label="오디오 파일 업로드"
                 type="file"
                 accept="audio/*,.mp3,.wav,.webm,.m4a"
                 className="sr-only"
@@ -224,10 +225,10 @@ export default function SourceComposer(props: SourceComposerProps) {
               />
             </label>
             {audioFile && (
-              <div className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
+              <div data-testid="voice-source-selected" role="status" aria-live="polite" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
                 <FileAudio className="h-3.5 w-3.5 text-indigo-600" />
                 <span className="max-w-[220px] truncate">{audioFile.name}</span>
-                <button type="button" className="text-slate-400 hover:text-red-500" onClick={() => setAudioFile(null)}>
+                <button data-testid="voice-source-remove" aria-label="오디오 파일 선택 제거" type="button" className="text-slate-400 hover:text-red-500" onClick={() => setAudioFile(null)}>
                   제거
                 </button>
               </div>
@@ -235,7 +236,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           </div>
 
           <div className="flex justify-end">
-            <Button size="sm" className="h-8 rounded-xl" onClick={submitAudio} disabled={!audioFile || props.isLoading}>
+            <Button data-testid="voice-source-generate" aria-label="음성 생성" size="sm" className="h-8 rounded-xl" onClick={submitAudio} disabled={!audioFile || props.isLoading}>
               음성 생성
             </Button>
           </div>
