@@ -267,9 +267,12 @@ export default function Home() {
 
   const handleFocusSourceComposer = useCallback(() => {
     const target = document.querySelector('#url-input');
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (target instanceof HTMLInputElement) {
-      setTimeout(() => target.focus(), 250);
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      requestAnimationFrame(() => target.focus({ preventScroll: true }));
+    } else {
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, []);
 

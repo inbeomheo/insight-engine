@@ -652,6 +652,12 @@
     "expect": "남은 메뉴 항목을 클릭하면 예상 UI/API/download side effect가 발생한다"
   },
   {
+    "id": "platform-rewrite-options-accessible",
+    "name": "플랫폼 변환 선택 접근성",
+    "url": "http://localhost:3000",
+    "expect": "플랫폼 변환 모달의 플랫폼 선택지는 radiogroup/radio 선택 상태를 노출하고 변환 결과 영역은 live region으로 안내된다"
+  },
+  {
     "id": "menu-delete-confirmation",
     "name": "결과 삭제 확인",
     "expect": "삭제 액션은 즉시 삭제하지 않고 확인 모달에서 취소/확정을 구분한다"

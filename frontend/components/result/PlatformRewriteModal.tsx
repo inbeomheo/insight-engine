@@ -76,10 +76,19 @@ export default function PlatformRewriteModal({ open, onOpenChange, content }: Pl
         </DialogHeader>
 
         {/* 플랫폼 선택 */}
-        <div className="grid grid-cols-2 gap-2">
+        <div
+          data-testid="platform-rewrite-options"
+          role="radiogroup"
+          aria-label="변환 플랫폼"
+          className="grid grid-cols-2 gap-2"
+        >
           {PLATFORMS.map((p) => (
             <Button
               key={p.id}
+              data-testid={`platform-rewrite-${p.id}`}
+              role="radio"
+              aria-checked={selectedPlatform === p.id}
+              aria-label={`${p.label} 변환`}
               variant={selectedPlatform === p.id ? 'default' : 'outline'}
               className="justify-start gap-2 h-auto py-3"
               onClick={() => handleRewrite(p.id)}
@@ -96,19 +105,32 @@ export default function PlatformRewriteModal({ open, onOpenChange, content }: Pl
 
         {/* 결과 영역 */}
         {loading && (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+          <div
+            data-testid="platform-rewrite-loading"
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-center py-8 text-sm text-muted-foreground"
+          >
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             변환 중...
           </div>
         )}
 
         {result && !loading && (
-          <div className="space-y-3 pt-2">
+          <div
+            data-testid="platform-rewrite-result"
+            role="region"
+            aria-live="polite"
+            aria-label="플랫폼 변환 결과"
+            className="space-y-3 pt-2"
+          >
             <div className="flex items-center justify-between">
               <Badge variant="outline" className="text-xs">
                 {charCount.toLocaleString()} / {maxChars.toLocaleString()}자
               </Badge>
               <Button
+                data-testid="platform-rewrite-copy"
+                aria-label="변환 결과 복사"
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs gap-1.5"

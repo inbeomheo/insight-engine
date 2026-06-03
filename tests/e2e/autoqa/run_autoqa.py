@@ -144,8 +144,11 @@ class QaReport:
 
 def screenshot(page, name: str) -> str:
     path = ARTIFACTS / name
-    page.screenshot(path=str(path), full_page=True, caret="initial")
-    return _rel(path)
+    try:
+        page.screenshot(path=str(path), full_page=True, caret="initial", timeout=10_000)
+        return _rel(path)
+    except Exception as exc:
+        return f"screenshot-unavailable:{name}:{type(exc).__name__}:{str(exc)[:300]}"
 
 
 def get_json(url: str, timeout: int = 15) -> Any:
@@ -552,6 +555,15 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
     context.route("**/api/schedule/*", handle_calendar_delete)
     context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": [seeded_schedule, seeded_naver_schedule]}, ensure_ascii=False)))
     seed_right_panel_context(context)
+    context.add_init_script(
+        """
+        window.__qaOpenedUrls = [];
+        window.open = (url, target, features) => {
+            window.__qaOpenedUrls.push({ url: String(url), target, features });
+            return null;
+        };
+        """
+    )
     page = context.new_page()
     page.on("console", lambda msg: report.console_errors.append(f"[right-panel] {msg.text}") if msg.type == "error" else None)
     page.on("pageerror", lambda exc: report.console_errors.append(f"[right-panel] {exc}"))
@@ -583,17 +595,33 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")
 
         try:
-            with page.expect_popup(timeout=8_000) as popup_info:
-                panel.locator("[data-testid='quick-action-nlm']").click(timeout=10_000)
-            popup = popup_info.value
-            popup.wait_for_load_state("domcontentloaded", timeout=10_000)
-            popup_url = popup.url
-            url_ok = "/api/notebooklm/view/rp-briefing" in popup_url
-            popup.close()
+            nlm_action = panel.locator("[data-testid='quick-action-nlm']")
+            href_ready = wait_until(
+                lambda: "/api/notebooklm/view/rp-briefing" in (nlm_action.get_attribute("href", timeout=1_000) or ""),
+                10_000,
+                page,
+            )
+            nlm_href = nlm_action.get_attribute("href", timeout=5_000)
+            nlm_action.click(timeout=10_000)
+            opened = wait_until(
+                lambda: len(page.evaluate("window.__qaOpenedUrls || []")) > 0,
+                10_000,
+                page,
+            )
+            opened_urls = page.evaluate("window.__qaOpenedUrls || []")
+            opened_url = opened_urls[-1]["url"] if opened_urls else ""
+            opened_target = opened_urls[-1].get("target") if opened_urls else None
+            url_ok = (
+                opened
+                and href_ready
+                and "/api/notebooklm/view/rp-briefing" in opened_url
+                and "/api/notebooklm/view/rp-briefing" in (nlm_href or "")
+                and opened_target == "_blank"
+            )
             report.record(
                 "right-panel-nlm-quick-view",
                 url_ok,
-                f"url={popup_url}" if url_ok else screenshot(page, "right-panel-nlm-quick-view-fail.png"),
+                f"url={opened_url}; href={nlm_href}" if url_ok else f"opened={opened_urls}; href={nlm_href}; screenshot={screenshot(page, 'right-panel-nlm-quick-view-fail.png')}",
             )
         except Exception as exc:
             report.record("right-panel-nlm-quick-view", False, repr(exc))
@@ -1292,6 +1320,8 @@ def run_help_tour_entrypoint_suite(browser, report: QaReport) -> None:
 
         panel = page.locator("[data-testid='help-panel']")
         start = page.locator("[data-testid='help-start-tour']")
+        panel.wait_for(state="visible", timeout=10_000)
+        start.wait_for(state="visible", timeout=10_000)
         header_open_ok = wait_until(
             lambda: trigger.get_attribute("aria-label", timeout=1_000) == "도움말 닫기"
             and trigger.get_attribute("aria-expanded", timeout=1_000) == "true",
@@ -2430,15 +2460,19 @@ def run_output_blueprint_modifier_accessibility_suite(browser, report: QaReport)
             and language.input_value() == "ko"
         )
         length.focus(timeout=10_000)
-        page.keyboard.press("ArrowDown")
-        wait_until(lambda: length.input_value() == "long", 5_000, page)
+        page.keyboard.press("End")
         tone.select_option("expert", timeout=10_000)
         language.select_option("en", timeout=10_000)
-        changed_ok = length.input_value() == "long" and tone.input_value() == "expert" and language.input_value() == "en"
+        changed_ok = wait_until(
+            lambda: length.input_value() == "long" and tone.input_value() == "expert" and language.input_value() == "en",
+            10_000,
+            page,
+        )
+        values = {"length": length.input_value(), "tone": tone.input_value(), "language": language.input_value()}
         report.record(
             "output-blueprint-modifier-accessible",
             initial_ok and changed_ok,
-            "modifier group, labels, and values update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+            "modifier group, labels, and values update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}; values={values}",
         )
     except Exception as exc:
         report.record("output-blueprint-modifier-accessible", False, repr(exc))
@@ -2477,8 +2511,6 @@ def run_output_blueprint_advanced_accessibility_suite(browser, report: QaReport)
             and deep_comments.get_attribute("aria-checked") == "true"
             and agent_mode.get_attribute("aria-checked") == "false"
         )
-        page.wait_for_load_state("networkidle", timeout=10_000)
-
         def toggle_until_checked(locator, expected: str, key: str) -> bool:
             locator.scroll_into_view_if_needed(timeout=10_000)
             for _ in range(3):
@@ -2832,14 +2864,47 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         click_menu_label(page, "플랫폼 변환")
         dialog = page.locator("[role='dialog']").last
         dialog.wait_for(state="visible", timeout=10_000)
-        dialog.get_by_text("Twitter / X").click(timeout=10_000)
+        options = dialog.locator("[data-testid='platform-rewrite-options']")
+        twitter = dialog.locator("[data-testid='platform-rewrite-twitter']")
+        options_initial_ok = (
+            options.count() == 1
+            and options.get_attribute("role", timeout=2_000) == "radiogroup"
+            and options.get_attribute("aria-label", timeout=2_000) == "변환 플랫폼"
+            and twitter.count() == 1
+            and twitter.get_attribute("role", timeout=2_000) == "radio"
+            and twitter.get_attribute("aria-checked", timeout=2_000) == "false"
+        )
+        if twitter.count() == 1:
+            twitter.click(timeout=10_000)
+        else:
+            dialog.get_by_text("Twitter / X").click(timeout=10_000)
         ok_call = wait_until(lambda: len(calls["rewrite"]) > before, 10_000, page)
         page.get_by_text("QA 메뉴 변환 결과").wait_for(state="visible", timeout=10_000)
+        result_region = dialog.locator("[data-testid='platform-rewrite-result']")
+        copy_button = dialog.locator("[data-testid='platform-rewrite-copy']")
+        options_result_ok = (
+            ok_call
+            and options_initial_ok
+            and twitter.count() == 1
+            and twitter.get_attribute("aria-checked", timeout=2_000) == "true"
+            and result_region.count() == 1
+            and result_region.get_attribute("role", timeout=2_000) == "region"
+            and result_region.get_attribute("aria-live", timeout=2_000) == "polite"
+            and result_region.get_attribute("aria-label", timeout=2_000) == "플랫폼 변환 결과"
+            and copy_button.count() == 1
+            and copy_button.get_attribute("aria-label", timeout=2_000) == "변환 결과 복사"
+        )
         platform_png = screenshot(page, "menu-platform-convert.png")
         record_action("플랫폼 변환", ok_call, platform_png if ok_call else "rewrite API not called")
+        report.record(
+            "platform-rewrite-options-accessible",
+            options_result_ok,
+            "platform rewrite choices and result region expose accessible state" if options_result_ok else f"initial={options_initial_ok}; ok_call={ok_call}; selected_checked={twitter.get_attribute('aria-checked') if twitter.count() else None}; result={result_region.count()}; copy_label={copy_button.get_attribute('aria-label') if copy_button.count() else None}",
+        )
         close_dialogs(page)
     except Exception as exc:
         record_action("플랫폼 변환", False, repr(exc))
+        report.record("platform-rewrite-options-accessible", False, repr(exc))
         close_dialogs(page)
 
     for label, expected_type in NOTEBOOK_MENU_TYPES.items():
@@ -3263,6 +3328,12 @@ def main() -> int:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+
+        def recycle_browser() -> None:
+            nonlocal browser
+            browser.close()
+            browser = p.chromium.launch(headless=True)
+
         run_onboarding_provider_accessibility_suite(browser, report)
         context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
         context.add_init_script(
@@ -4066,6 +4137,7 @@ def main() -> int:
         run_source_text_input_accessibility_suite(browser, report)
         run_source_file_input_accessibility_suite(browser, report)
         run_source_voice_input_accessibility_suite(browser, report)
+        recycle_browser()
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_mode_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)
@@ -4073,6 +4145,7 @@ def main() -> int:
         run_output_blueprint_advanced_accessibility_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
+        recycle_browser()
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
         run_new_analysis_filter_reset_suite(browser, report)
@@ -4082,6 +4155,7 @@ def main() -> int:
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
         run_empty_workbench_accessibility_suite(browser, report)
+        recycle_browser()
         run_help_tour_entrypoint_suite(browser, report)
         run_help_panel_accessible_close_suite(browser, report)
         run_help_panel_focus_trap_suite(browser, report)

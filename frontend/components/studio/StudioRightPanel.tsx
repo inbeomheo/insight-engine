@@ -267,23 +267,51 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
             const guide = QUICK_ACTION_GUIDE[action.id] ?? { description: '작업 영역으로 이동', target: 'Workbench' };
+            const actionHref = action.id === 'nlm' && firstCompletedNlm
+              ? apiUrl(`/api/notebooklm/view/${firstCompletedNlm.artifact.artifact_id}`)
+              : null;
+            const actionClassName = 'block rounded-2xl bg-slate-50 p-3 text-left text-xs text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700';
+            const actionContent = (
+              <>
+                <div className="pointer-events-none flex items-center justify-between gap-2">
+                  <Icon className="h-4 w-4 text-indigo-600" />
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{guide.target}</span>
+                </div>
+                <p className="pointer-events-none mt-2 font-semibold text-slate-800">{action.label}</p>
+                <p data-testid={`quick-action-${action.id}-desc`} className="pointer-events-none mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
+                  {guide.description}
+                </p>
+              </>
+            );
+            if (actionHref) {
+              return (
+                <a
+                  key={action.id}
+                  data-testid={`quick-action-${action.id}`}
+                  className={actionClassName}
+                  href={actionHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    window.open(actionHref, '_blank', 'noreferrer');
+                  }}
+                  aria-label={`${action.label} - ${guide.description}`}
+                >
+                  {actionContent}
+                </a>
+              );
+            }
             return (
               <button
                 key={action.id}
                 type="button"
                 data-testid={`quick-action-${action.id}`}
-                className="rounded-2xl bg-slate-50 p-3 text-left text-xs text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-700"
+                className={actionClassName}
                 onClick={() => handleQuickAction(action.id)}
                 aria-label={`${action.label} - ${guide.description}`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <Icon className="h-4 w-4 text-indigo-600" />
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{guide.target}</span>
-                </div>
-                <p className="mt-2 font-semibold text-slate-800">{action.label}</p>
-                <p data-testid={`quick-action-${action.id}-desc`} className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
-                  {guide.description}
-                </p>
+                {actionContent}
               </button>
             );
           })}
