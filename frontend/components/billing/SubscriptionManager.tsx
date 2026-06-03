@@ -4,6 +4,14 @@ import { memo, useEffect, useState } from 'react';
 import { CreditCard, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { apiUrl } from '@/lib/api';
 
@@ -18,6 +26,7 @@ interface SubscriptionInfo {
 export const SubscriptionManager = memo(function SubscriptionManager() {
   const [sub, setSub] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const fetchSub = () => {
     fetch(apiUrl('/api/subscription'))
@@ -29,7 +38,7 @@ export const SubscriptionManager = memo(function SubscriptionManager() {
   useEffect(fetchSub, []);
 
   const handleCancel = async () => {
-    if (!confirm('구독을 취소하시겠습니까? Free 플랜으로 전환됩니다.')) return;
+    setCancelConfirmOpen(false);
     setLoading(true);
     try {
       const res = await fetch(apiUrl('/api/subscription/cancel'), { method: 'POST' });
@@ -58,30 +67,54 @@ export const SubscriptionManager = memo(function SubscriptionManager() {
   const st = statusLabels[sub.status] ?? { label: sub.status, variant: 'secondary' as const };
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">구독 관리</h3>
+    <>
+      <div className="rounded-lg border p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">구독 관리</h3>
+          </div>
+          <Badge variant={st.variant}>{st.label}</Badge>
         </div>
-        <Badge variant={st.variant}>{st.label}</Badge>
-      </div>
 
-      <div className="text-sm text-muted-foreground">
-        <p>현재 플랜: <strong className="text-foreground">{sub.plan.toUpperCase()}</strong></p>
-        {sub.activated_at && (
-          <p>시작일: {new Date(sub.activated_at).toLocaleDateString('ko-KR')}</p>
+        <div className="text-sm text-muted-foreground">
+          <p>현재 플랜: <strong className="text-foreground">{sub.plan.toUpperCase()}</strong></p>
+          {sub.activated_at && (
+            <p>시작일: {new Date(sub.activated_at).toLocaleDateString('ko-KR')}</p>
+          )}
+        </div>
+
+        {sub.plan !== 'free' && sub.status === 'active' && (
+          <div className="flex items-center gap-2 pt-2">
+            <Button variant="destructive" size="sm" onClick={() => setCancelConfirmOpen(true)} disabled={loading}>
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {loading ? '처리 중...' : '구독 취소'}
+            </Button>
+          </div>
         )}
       </div>
 
-      {sub.plan !== 'free' && sub.status === 'active' && (
-        <div className="flex items-center gap-2 pt-2">
-          <Button variant="destructive" size="sm" onClick={handleCancel} disabled={loading}>
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            {loading ? '처리 중...' : '구독 취소'}
-          </Button>
-        </div>
-      )}
-    </div>
+      <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              구독 취소
+            </DialogTitle>
+            <DialogDescription>
+              구독을 취소하면 Free 플랜으로 전환됩니다. 계속할까요?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCancelConfirmOpen(false)}>
+              취소
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleCancel} disabled={loading}>
+              구독 취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 });

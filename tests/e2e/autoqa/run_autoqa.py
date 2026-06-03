@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import time
 import traceback
 from datetime import datetime, timezone
@@ -1526,6 +1527,27 @@ def run_history_clear_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_no_native_confirm_suite(report: QaReport) -> None:
+    pattern = re.compile(r"(?<![A-Za-z0-9_])(?:window\.)?confirm\s*\(")
+    offenders: list[str] = []
+    ignored_dirs = {"node_modules", ".next", "out", "dist", "build"}
+    for path in (ROOT / "frontend").rglob("*"):
+        if any(part in ignored_dirs for part in path.parts):
+            continue
+        if path.suffix not in {".ts", ".tsx"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if pattern.search(line):
+                rel = path.relative_to(ROOT).as_posix()
+                offenders.append(f"{rel}:{lineno}:{line.strip()[:120]}")
+    report.record(
+        "no-native-confirm-destructive",
+        not offenders,
+        "clean" if not offenders else " | ".join(offenders[:20]),
+    )
+
+
 def main() -> int:
     report = QaReport()
 
@@ -1948,6 +1970,7 @@ def main() -> int:
 
         run_seeded_menu_action_suite(browser, report)
         run_history_clear_suite(browser, report)
+        run_no_native_confirm_suite(report)
         run_notebooklm_auth_notice_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)

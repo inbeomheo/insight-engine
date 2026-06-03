@@ -354,6 +354,11 @@
     "expect": "사이드바 전체 삭제는 브라우저 confirm이 아니라 앱 확인 모달에서 취소/확정을 구분한다"
   },
   {
+    "id": "no-native-confirm-destructive",
+    "name": "브라우저 confirm 제거",
+    "expect": "삭제, 초기화, 취소 같은 위험 액션은 window.confirm/confirm 대신 앱 Dialog를 사용한다"
+  },
+  {
     "id": "export-buttons",
     "name": "내보내기 버튼",
     "expect": "생성 후 내보내기 액션이 보인다"

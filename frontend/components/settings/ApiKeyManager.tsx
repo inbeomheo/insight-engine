@@ -4,6 +4,14 @@ import { memo, useEffect, useState } from 'react';
 import { Key, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useApiCall } from '@/hooks/useApiCall';
 import { apiUrl } from '@/lib/api';
@@ -20,6 +28,7 @@ interface ApiKeyInfo {
 export const ApiKeyManager = memo(function ApiKeyManager() {
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
+  const [revokeTarget, setRevokeTarget] = useState<ApiKeyInfo | null>(null);
 
   const createCall = useApiCall<{ key?: string; error?: string }>();
   const revokeCall = useApiCall<void>();
@@ -55,12 +64,11 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
   };
 
   const handleRevoke = async (keyId: string) => {
-    if (!confirm('이 API 키를 비활성화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-
     await revokeCall.execute(async () => {
       const res = await fetch(apiUrl(`/api/keys/${keyId}`), { method: 'DELETE' });
       if (res.ok) {
         toast.success('API 키가 비활성화되었습니다.');
+        setRevokeTarget(null);
         fetchKeys();
       } else {
         toast.error('삭제에 실패했습니다.');
@@ -69,6 +77,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
   };
 
   return (
+    <>
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Key className="h-5 w-5 text-primary" />
@@ -112,7 +121,7 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleRevoke(k.key_id)}
+                onClick={() => setRevokeTarget(k)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -121,5 +130,32 @@ export const ApiKeyManager = memo(function ApiKeyManager() {
         </div>
       )}
     </div>
+    <Dialog open={Boolean(revokeTarget)} onOpenChange={(open) => !open && setRevokeTarget(null)}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            API 키 비활성화
+          </DialogTitle>
+          <DialogDescription>
+            “{revokeTarget?.name}” 키를 비활성화합니다. 이 작업은 되돌릴 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)}>
+            취소
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => revokeTarget && handleRevoke(revokeTarget.key_id)}
+            disabled={revokeCall.isLoading}
+          >
+            비활성화
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -68,6 +68,7 @@ export default function SettingsModal() {
   const [customInstructions, setCustomInstructions] = useState('');
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // 모달이 열릴 때 프로필 로드
   const loadProfile = useCallback(async () => {
@@ -118,7 +119,7 @@ export default function SettingsModal() {
   }
 
   async function handleResetMemory() {
-    if (!confirm('스타일 메모리를 초기화하시겠습니까? 학습된 선호도가 모두 삭제됩니다.')) return;
+    setResetConfirmOpen(false);
     try {
       await resetStyleMemory();
       toast.success('스타일 메모리가 초기화되었습니다.');
@@ -136,7 +137,14 @@ export default function SettingsModal() {
     .slice(0, 3);
 
   return (
-    <Dialog open={settingsModalOpen} onOpenChange={setSettingsModalOpen}>
+    <>
+    <Dialog
+      open={settingsModalOpen}
+      onOpenChange={(open) => {
+        setSettingsModalOpen(open);
+        if (!open) setResetConfirmOpen(false);
+      }}
+    >
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -274,7 +282,7 @@ export default function SettingsModal() {
               size="sm"
               variant="outline"
               className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={handleResetMemory}
+              onClick={() => setResetConfirmOpen(true)}
             >
               <RotateCcw className="h-3 w-3 mr-1" />
               초기화
@@ -299,5 +307,24 @@ export default function SettingsModal() {
         </div>
       </DialogContent>
     </Dialog>
+    <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">스타일 메모리 초기화</DialogTitle>
+          <DialogDescription>
+            학습된 선호도와 스타일 메모리를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setResetConfirmOpen(false)}>
+            취소
+          </Button>
+          <Button type="button" variant="destructive" onClick={handleResetMemory}>
+            초기화
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

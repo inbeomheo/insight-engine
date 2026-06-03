@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,7 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
   const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PromptTemplate | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   // 목록 불러오기
@@ -168,11 +170,12 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
     }
   }
 
-  async function handleDelete(t: PromptTemplate) {
-    if (!confirm(`"${t.name}" 템플릿을 삭제할까요?`)) return;
+  async function handleDelete() {
+    if (!deleteTarget) return;
     try {
-      await deleteTemplate(t.id);
+      await deleteTemplate(deleteTarget.id);
       toast.success('삭제되었습니다.');
+      setDeleteTarget(null);
       loadTemplates(page, search);
     } catch {
       toast.error('삭제에 실패했습니다.');
@@ -200,7 +203,11 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
   const totalPages = Math.ceil(total / perPage);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(v) => setTemplateGalleryOpen(v)}>
+    <>
+    <Dialog open={isOpen} onOpenChange={(v) => {
+      setTemplateGalleryOpen(v);
+      if (!v) setDeleteTarget(null);
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -290,7 +297,7 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => handleDelete(t)}
+                                onClick={() => setDeleteTarget(t)}
                                 title="삭제"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -444,5 +451,27 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
         )}
       </DialogContent>
     </Dialog>
+    <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            템플릿 삭제
+          </DialogTitle>
+          <DialogDescription>
+            “{deleteTarget?.name}” 템플릿을 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+            취소
+          </Button>
+          <Button type="button" variant="destructive" onClick={handleDelete}>
+            삭제하기
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

@@ -2,6 +2,15 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useListManager } from '@/hooks/useListManager';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { apiUrl } from '@/lib/api';
 
 interface UserMemory {
@@ -17,6 +26,7 @@ export default function MemoryManager() {
   const [memory, setMemory] = useState<UserMemory>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   // 리스트 관리 — useListManager로 add/remove 보일러플레이트 제거
   const topics = useListManager<string>();
@@ -77,7 +87,7 @@ export default function MemoryManager() {
   }, []);
 
   const clearMemory = useCallback(async () => {
-    if (!confirm('메모리를 전체 초기화하시겠습니까?')) return;
+    setClearConfirmOpen(false);
     try {
       const res = await fetch(apiUrl('/api/memory'), { method: 'DELETE' });
       if (res.ok) {
@@ -122,6 +132,7 @@ export default function MemoryManager() {
   }
 
   return (
+    <>
     <div className="space-y-5">
       {/* 선호 주제 */}
       <section className="space-y-2">
@@ -231,7 +242,7 @@ export default function MemoryManager() {
       {/* 초기화 */}
       <div className="pt-2 border-t">
         <button
-          onClick={clearMemory}
+          onClick={() => setClearConfirmOpen(true)}
           aria-label="메모리 전체 초기화"
           className="text-xs text-red-500 hover:text-red-700"
         >
@@ -239,5 +250,24 @@ export default function MemoryManager() {
         </button>
       </div>
     </div>
+    <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">메모리 초기화</DialogTitle>
+          <DialogDescription>
+            저장된 선호 주제, 피해야 할 주제, 지시사항을 모두 초기화합니다.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setClearConfirmOpen(false)}>
+            취소
+          </Button>
+          <Button type="button" variant="destructive" onClick={clearMemory}>
+            초기화
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
