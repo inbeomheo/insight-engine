@@ -2889,6 +2889,7 @@ def main() -> int:
             sidebar_trigger = page.locator("header button").first
             sidebar = page.locator("#app-sidebar")
             sidebar_initial = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
+            sidebar_open_label = sidebar_trigger.get_attribute("aria-label", timeout=5_000) == "메뉴 닫기"
             sidebar_linked = (
                 sidebar_trigger.get_attribute("aria-controls", timeout=5_000) == "app-sidebar"
                 and sidebar.get_attribute("id", timeout=5_000) == "app-sidebar"
@@ -2897,14 +2898,15 @@ def main() -> int:
             )
             sidebar_trigger.click(timeout=10_000)
             sidebar_collapsed = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            sidebar_closed_label = sidebar_trigger.get_attribute("aria-label", timeout=5_000) == "메뉴 열기"
             sidebar_hidden = (
                 sidebar.get_attribute("aria-hidden", timeout=5_000) == "true"
                 and sidebar.evaluate("el => el.inert === true")
             )
             report.record(
                 "sidebar-trigger-accessible",
-                sidebar_initial and sidebar_linked and sidebar_collapsed and sidebar_hidden,
-                "sidebar trigger exposes controls/expanded state and hides collapsed navigation" if sidebar_initial and sidebar_linked and sidebar_collapsed and sidebar_hidden else f"initial={sidebar_initial}; linked={sidebar_linked}; collapsed={sidebar_collapsed}; hidden={sidebar_hidden}",
+                sidebar_initial and sidebar_open_label and sidebar_linked and sidebar_collapsed and sidebar_closed_label and sidebar_hidden,
+                "sidebar trigger exposes controls, expanded state, stateful labels, and hides collapsed navigation" if sidebar_initial and sidebar_open_label and sidebar_linked and sidebar_collapsed and sidebar_closed_label and sidebar_hidden else f"initial={sidebar_initial}; open_label={sidebar_open_label}; linked={sidebar_linked}; collapsed={sidebar_collapsed}; closed_label={sidebar_closed_label}; hidden={sidebar_hidden}",
             )
             if sidebar_collapsed:
                 sidebar_trigger.click(timeout=10_000)

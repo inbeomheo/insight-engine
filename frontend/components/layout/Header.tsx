@@ -28,7 +28,7 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
           size="icon"
           className="h-9 w-9 hover:bg-accent"
           onClick={toggleSidebar}
-          aria-label="메뉴 열기"
+          aria-label={sidebarOpen ? '메뉴 닫기' : '메뉴 열기'}
           aria-controls="app-sidebar"
           aria-expanded={sidebarOpen}
         >

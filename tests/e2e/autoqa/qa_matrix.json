@@ -99,7 +99,7 @@
     "id": "sidebar-trigger-accessible",
     "name": "사이드바 트리거 접근성",
     "url": "http://localhost:3000",
-    "expect": "헤더 메뉴 버튼은 사이드바 제어 대상과 열림/닫힘 상태를 제공하고, 닫힌 사이드바는 aria-hidden/inert로 보조기술과 탭 포커스에서 빠진다"
+    "expect": "헤더 메뉴 버튼은 사이드바 제어 대상, 열림/닫힘 상태, 상태별 라벨을 제공하고 닫힌 사이드바는 aria-hidden/inert로 보조기술과 탭 포커스에서 빠진다"
   },
   {
     "id": "mobile-right-panel-drawer",
