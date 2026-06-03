@@ -3,6 +3,7 @@
 import { Combine, Layers, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getGenerateLabel, getGenerationModeLabel } from './studioConfig';
+import { cn } from '@/lib/utils';
 
 interface GenerateDockProps {
   sourceCount: number;
@@ -16,11 +17,20 @@ interface GenerateDockProps {
 
 export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기', mode, isLoading, onGenerate, onGenerateMerged, onGenerateFusion }: GenerateDockProps) {
   const disabled = sourceCount <= 0 || isLoading;
+  const sticky = sourceCount > 0 || isLoading;
   const Icon = mode === 'fusion' ? Combine : mode === 'combined' ? Layers : Sparkles;
   const handler = mode === 'fusion' ? onGenerateFusion : mode === 'combined' ? onGenerateMerged : onGenerate;
   const modeLabel = getGenerationModeLabel(mode);
   return (
-    <section className="sticky bottom-4 z-20 rounded-[24px] border border-indigo-100 bg-white/90 p-3 shadow-lg shadow-indigo-100/70 backdrop-blur-xl">
+    <section
+      data-testid="generate-dock"
+      className={cn(
+        'rounded-[24px] border border-indigo-100 bg-white/90 p-3 backdrop-blur-xl',
+        sticky
+          ? 'sticky bottom-4 z-20 shadow-lg shadow-indigo-100/70'
+          : 'relative z-0 shadow-sm shadow-slate-200/60',
+      )}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold text-indigo-700">Ready to Generate</p>

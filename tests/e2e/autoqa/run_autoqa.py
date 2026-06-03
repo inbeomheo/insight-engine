@@ -1627,6 +1627,28 @@ def main() -> int:
                 empty_visible and not empty_missing,
                 screenshot(page, "studio-empty-state-guidance.png") if empty_visible and not empty_missing else f"missing={empty_missing}; text={empty_text[:300]!r}",
             )
+            page.locator("main").evaluate("(el) => { el.scrollTop = 650; }")
+            page.wait_for_timeout(200)
+            empty_box = empty_state.bounding_box()
+            dock_box = page.locator("[data-testid='generate-dock-button']").locator("xpath=ancestor::section[1]").bounding_box()
+            overlaps = bool(
+                empty_box
+                and dock_box
+                and not (
+                    empty_box["y"] + empty_box["height"] <= dock_box["y"]
+                    or dock_box["y"] + dock_box["height"] <= empty_box["y"]
+                )
+            )
+            report.record(
+                "generate-dock-empty-state-clearance",
+                empty_visible and empty_box is not None and dock_box is not None and not overlaps,
+                (
+                    screenshot(page, "generate-dock-empty-state-clearance.png")
+                    if empty_visible and empty_box is not None and dock_box is not None and not overlaps
+                    else f"empty={empty_box}; dock={dock_box}; overlaps={overlaps}"
+                ),
+            )
+            page.locator("main").evaluate("(el) => { el.scrollTop = 0; }")
             readable_copy = [
                 "분석할 소스를 준비하세요",
                 "텍스트",

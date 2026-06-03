@@ -30,6 +30,12 @@
     "expect": "Generate Dock과 우측 패널이 raw 설정값 대신 사용자용 한국어 라벨을 보여준다"
   },
   {
+    "id": "generate-dock-empty-state-clearance",
+    "name": "Generate Dock 빈 상태 가림 방지",
+    "url": "http://localhost:3000",
+    "expect": "소스가 없을 때 Generate Dock이 빈 워크벤치 안내를 가리지 않는다"
+  },
+  {
     "id": "generate-dock-source-summary",
     "name": "Generate Dock 소스 종류 요약",
     "url": "http://localhost:3000",
