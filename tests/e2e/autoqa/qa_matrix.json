@@ -264,6 +264,12 @@
     "expect": "결과 영역이 결과 수, 필터, 보기 모드, 현재 표시 수를 스튜디오 톤으로 요약한다"
   },
   {
+    "id": "studio-result-toolbar-accessible",
+    "name": "스튜디오 결과 툴바 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과 툴바는 region 라벨, live 결과 요약, 필터 그룹 라벨을 제공한다"
+  },
+  {
     "id": "studio-empty-state-guidance",
     "name": "스튜디오 빈 상태 안내",
     "url": "http://localhost:3000",

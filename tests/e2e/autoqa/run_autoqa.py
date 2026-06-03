@@ -844,6 +844,45 @@ def run_new_analysis_filter_reset_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_result_toolbar_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[result-toolbar-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[result-toolbar-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id]").first.wait_for(state="visible", timeout=60_000)
+        toolbar = page.locator("[data-testid='studio-result-toolbar']")
+        title = page.locator("[data-testid='studio-result-toolbar-title']")
+        summary = page.locator("[data-testid='studio-result-toolbar-summary']")
+        filter_panel = page.locator("[data-testid='result-toolbar-filter-panel']")
+        empty_notice = page.locator("[data-testid='result-toolbar-empty-notice']")
+        ok = (
+            toolbar.get_attribute("role", timeout=5_000) == "region"
+            and toolbar.get_attribute("aria-labelledby", timeout=5_000) == "studio-result-toolbar-title"
+            and title.get_attribute("id", timeout=5_000) == "studio-result-toolbar-title"
+            and "생성 결과 관리" in title.inner_text(timeout=5_000)
+            and summary.get_attribute("id", timeout=5_000) == "studio-result-toolbar-summary"
+            and summary.get_attribute("role", timeout=5_000) == "status"
+            and summary.get_attribute("aria-live", timeout=5_000) == "polite"
+            and "전체 결과 1개" in summary.inner_text(timeout=5_000)
+            and filter_panel.get_attribute("role", timeout=5_000) == "group"
+            and filter_panel.get_attribute("aria-label", timeout=5_000) == "결과 필터"
+            and empty_notice.count() == 0
+        )
+        report.record(
+            "studio-result-toolbar-accessible",
+            ok,
+            "result toolbar region, live summary, and filter group are accessible" if ok else toolbar.inner_text(timeout=5_000)[:300],
+        )
+    except Exception as exc:
+        report.record("studio-result-toolbar-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -3203,6 +3242,7 @@ def main() -> int:
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
         run_new_analysis_filter_reset_suite(browser, report)
+        run_result_toolbar_accessibility_suite(browser, report)
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
         run_empty_workbench_accessibility_suite(browser, report)
