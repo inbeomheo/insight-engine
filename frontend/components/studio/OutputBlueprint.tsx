@@ -76,11 +76,13 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div data-testid="blueprint-style-options" role="group" aria-label="산출물 스타일" className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {STYLE_OPTIONS.map((style) => (
           <button
             key={style.id}
             type="button"
+            data-testid={`blueprint-style-${style.id}`}
+            aria-pressed={selectedStyle === style.id}
             onClick={() => setSelectedStyle(style.id)}
             className={cn(
               'rounded-2xl border p-3 text-left transition',
