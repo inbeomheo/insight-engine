@@ -31,6 +31,7 @@ export function useSchedule(enabled = true) {
       setIsLoading(true);
       try {
         const post = await createSchedule(data);
+        if ('success' in post && post.success === false) throw new Error('예약 등록 실패');
         setSchedules((prev) => [post, ...prev]);
         toast.success('예약이 등록되었습니다');
         return true;

@@ -15,7 +15,7 @@ interface ScheduleModalProps {
   title: string;
   content: string;
   html?: string;
-  onSchedule: (data: { target_plugin: string; scheduled_at: string; options?: ScheduleOptions }) => void;
+  onSchedule: (data: { target_plugin: string; scheduled_at: string; options?: ScheduleOptions }) => boolean | void | Promise<boolean | void>;
   isLoading?: boolean;
 }
 
@@ -36,6 +36,7 @@ export default function ScheduleModal({
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [validationNow, setValidationNow] = useState(() => Date.now());
+  const [submitError, setSubmitError] = useState('');
   const [wordpressOptions, setWordpressOptions] = useState({
     site_url: '',
     username: '',
@@ -72,6 +73,7 @@ export default function ScheduleModal({
   // 모달 열릴 때 기본값 초기화: 내일 오전 9시
   useEffect(() => {
     if (!open) return;
+    setSubmitError('');
     setValidationNow(Date.now());
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -126,15 +128,23 @@ export default function ScheduleModal({
 
   const validationMessage = getValidationMessage();
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!selectedPlugin || !scheduledAt || validationMessage) return;
     const isoDate = new Date(scheduledAt).toISOString();
     const options = buildPluginOptions();
-    onSchedule({
-      target_plugin: selectedPlugin,
-      scheduled_at: isoDate,
-      ...(Object.keys(options).length ? { options } : {}),
-    });
+    setSubmitError('');
+    try {
+      const ok = await onSchedule({
+        target_plugin: selectedPlugin,
+        scheduled_at: isoDate,
+        ...(Object.keys(options).length ? { options } : {}),
+      });
+      if (ok === false) {
+        setSubmitError('예약 등록 실패 · 연결값을 확인한 뒤 다시 시도해주세요.');
+      }
+    } catch {
+      setSubmitError('예약 등록 실패 · 연결값을 확인한 뒤 다시 시도해주세요.');
+    }
   }
 
   const canSubmit = Boolean(selectedPlugin && scheduledAt && !isLoading && !validationMessage);
@@ -271,6 +281,15 @@ export default function ScheduleModal({
             className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
           >
             {validationMessage}
+          </p>
+        )}
+
+        {submitError && (
+          <p
+            data-testid="schedule-submit-error"
+            className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+          >
+            {submitError}
           </p>
         )}
 

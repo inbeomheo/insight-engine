@@ -257,6 +257,10 @@ def install_menu_mocks(context, calls: dict[str, list[dict[str, Any]]]) -> None:
     def schedule(route) -> None:
         payload = request_payload(route)
         calls["schedule"].append(payload)
+        options = payload.get("options") or payload.get("plugin_options") or {}
+        if isinstance(options, dict) and options.get("category") == "QA_FAIL":
+            fulfill_json(route, {"success": False, "error": "schedule failed"})
+            return
         fulfill_json(
             route,
             {
@@ -1395,6 +1399,29 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         close_dialogs(page)
     except Exception as exc:
         report.record("menu-schedule-future-time", False, repr(exc))
+        close_dialogs(page)
+
+    try:
+        before = len(calls["schedule"])
+        click_menu_label(page, "예약 발행")
+        dialog = page.locator("[role='dialog']").last
+        dialog.wait_for(state="visible", timeout=10_000)
+        dialog.locator("select").first.select_option("naver_blog", timeout=10_000)
+        dialog.locator("[data-testid='schedule-option-naver-category']").fill("QA_FAIL")
+        dialog.locator("button", has_text="예약 등록").click(timeout=10_000)
+        called = wait_until(lambda: len(calls["schedule"]) > before, 5_000, page)
+        page.wait_for_timeout(500)
+        stays_open = dialog.is_visible(timeout=1_000)
+        text = dialog.inner_text(timeout=5_000) if stays_open else ""
+        has_hint = "예약 등록 실패" in text or "다시 시도" in text
+        report.record(
+            "menu-schedule-failure-stays-open",
+            called and stays_open and has_hint,
+            f"called={called}; stays_open={stays_open}; text={text[:300]}",
+        )
+        close_dialogs(page)
+    except Exception as exc:
+        report.record("menu-schedule-failure-stays-open", False, repr(exc))
         close_dialogs(page)
 
     try:

@@ -294,6 +294,12 @@
     "expect": "과거 시간이 선택되면 예약 API를 호출하지 않고 미래 시간을 요구한다"
   },
   {
+    "id": "menu-schedule-failure-stays-open",
+    "name": "예약 등록 실패 안내",
+    "url": "http://localhost:3000",
+    "expect": "예약 등록 API가 실패하면 모달을 닫지 않고 재시도 가능한 실패 안내를 보여준다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",

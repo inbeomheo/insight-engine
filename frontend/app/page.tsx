@@ -137,7 +137,7 @@ export default function Home() {
 
   const handleScheduleSubmit = useCallback(async (data: { target_plugin: string; scheduled_at: string; options?: Record<string, unknown> }) => {
     const target = scheduleTarget;
-    if (!target) return;
+    if (!target) return false;
     const ok = await addSchedule({
       title: target.title,
       content: target.content,
@@ -145,6 +145,7 @@ export default function Home() {
       ...data,
     });
     if (ok) setScheduleTarget(null);
+    return ok;
   }, [scheduleTarget, addSchedule]);
 
   // 도움말 패널 + 가이드 투어
