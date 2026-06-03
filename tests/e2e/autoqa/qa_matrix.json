@@ -99,7 +99,7 @@
     "id": "header-settings-trigger-accessible",
     "name": "헤더 설정 Dialog 트리거",
     "url": "http://localhost:3000",
-    "expect": "헤더 설정 버튼은 Dialog 제어 대상, 열림/닫힘 상태, Escape 닫기, 트리거 포커스 복귀를 제공한다"
+    "expect": "헤더 설정 버튼은 Dialog 제어 대상, 열림/닫힘 상태, 상태별 라벨, Escape 닫기, 트리거 포커스 복귀를 제공한다"
   },
   {
     "id": "sidebar-trigger-accessible",

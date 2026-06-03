@@ -2902,6 +2902,7 @@ def main() -> int:
                 and settings_trigger.get_attribute("aria-haspopup", timeout=5_000) == "dialog"
                 and settings_trigger.get_attribute("aria-controls", timeout=5_000) == "settings-dialog"
                 and settings_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+                and settings_trigger.get_attribute("aria-label", timeout=5_000) == "설정 열기"
             )
             if settings_trigger.count() == 1:
                 settings_trigger.click(timeout=10_000)
@@ -2910,14 +2911,16 @@ def main() -> int:
                 lambda: settings_dialog.count() == 1
                 and settings_dialog.is_visible()
                 and settings_dialog.get_attribute("role", timeout=1_000) == "dialog"
-                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "true",
+                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "true"
+                and settings_trigger.get_attribute("aria-label", timeout=1_000) == "설정 닫기",
                 5_000,
                 page,
             )
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())
-                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "false",
+                and settings_trigger.get_attribute("aria-expanded", timeout=1_000) == "false"
+                and settings_trigger.get_attribute("aria-label", timeout=1_000) == "설정 열기",
                 5_000,
                 page,
             )
@@ -2925,7 +2928,7 @@ def main() -> int:
             report.record(
                 "header-settings-trigger-accessible",
                 settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned,
-                "header settings trigger exposes dialog state and returns focus after close" if settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned else f"initial={settings_trigger_initial}; open={settings_dialog_open}; closed={settings_dialog_closed}; focus_returned={settings_focus_returned}",
+                "header settings trigger exposes dialog state, stateful labels, and returns focus after close" if settings_trigger_initial and settings_dialog_open and settings_dialog_closed and settings_focus_returned else f"initial={settings_trigger_initial}; open={settings_dialog_open}; closed={settings_dialog_closed}; focus_returned={settings_focus_returned}",
             )
             sidebar_trigger = page.locator("header button").first
             sidebar = page.locator("#app-sidebar")

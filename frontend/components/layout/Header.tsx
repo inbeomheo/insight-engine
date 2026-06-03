@@ -77,7 +77,7 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
           data-testid="header-settings-trigger"
           className="h-9 w-9 hover:bg-accent"
           onClick={handleOpenSettings}
-          aria-label="설정 열기"
+          aria-label={settingsOpen ? '설정 닫기' : '설정 열기'}
           aria-haspopup="dialog"
           aria-controls="settings-dialog"
           aria-expanded={settingsOpen}
