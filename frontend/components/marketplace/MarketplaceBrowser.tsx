@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Download, Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiUrl } from '@/lib/api';
 
 interface Template {
@@ -51,10 +52,10 @@ export default function MarketplaceBrowser() {
       const data = await res.json();
       if (data.prompt_text) {
         await navigator.clipboard.writeText(data.prompt_text);
-        alert('프롬프트가 클립보드에 복사되었습니다.');
+        toast.success('프롬프트가 클립보드에 복사되었습니다.');
       }
     } catch {
-      alert('다운로드에 실패했습니다.');
+      toast.error('다운로드에 실패했습니다.');
     }
   };
 

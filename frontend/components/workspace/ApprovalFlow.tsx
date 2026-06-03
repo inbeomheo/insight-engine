@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { ContentStatus, WorkspaceContent } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -104,7 +105,7 @@ function ContentCard({ content, userRole, onAction }: ContentCardProps) {
     const result = await postAction(content.id, action, body);
     setLoading(false);
     if (!result.ok) {
-      alert(result.error);
+      toast.error(result.error);
       return;
     }
     onAction();

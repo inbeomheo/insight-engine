@@ -443,6 +443,11 @@
     "expect": "삭제, 초기화, 취소 같은 위험 액션은 window.confirm/confirm 대신 앱 Dialog를 사용한다"
   },
   {
+    "id": "no-native-alerts",
+    "name": "브라우저 alert 제거",
+    "expect": "피드백과 실패 안내는 window.alert/alert 대신 앱 토스트나 인라인 상태를 사용한다"
+  },
+  {
     "id": "export-buttons",
     "name": "내보내기 버튼",
     "expect": "생성 후 내보내기 액션이 보인다"
