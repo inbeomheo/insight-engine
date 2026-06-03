@@ -923,6 +923,54 @@ def run_result_filter_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_view_mode_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[view-mode-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[view-mode-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id]").first.wait_for(state="visible", timeout=60_000)
+        group = page.locator("[data-testid='result-view-mode-selector']")
+        compact = page.locator("[data-testid='result-view-mode-compact']")
+        full = page.locator("[data-testid='result-view-mode-full']")
+        timeline = page.locator("[data-testid='result-view-mode-timeline']")
+        initial_ok = (
+            group.get_attribute("role", timeout=5_000) == "radiogroup"
+            and group.get_attribute("aria-label", timeout=5_000) == "뷰 모드 선택"
+            and compact.get_attribute("role", timeout=5_000) == "radio"
+            and full.get_attribute("aria-checked", timeout=5_000) == "true"
+            and timeline.get_attribute("aria-checked", timeout=5_000) == "false"
+        )
+        full.focus(timeout=10_000)
+        page.keyboard.press("ArrowRight")
+        timeline_ok = wait_until(
+            lambda: timeline.get_attribute("aria-checked", timeout=1_000) == "true"
+            and timeline.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        page.keyboard.press("Home")
+        compact_ok = wait_until(
+            lambda: compact.get_attribute("aria-checked", timeout=1_000) == "true"
+            and compact.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        ok = initial_ok and timeline_ok and compact_ok
+        report.record(
+            "result-view-mode-accessible",
+            ok,
+            "view mode radiogroup labels and keyboard navigation update selection" if ok else f"initial={initial_ok}; timeline={timeline_ok}; compact={compact_ok}",
+        )
+    except Exception as exc:
+        report.record("result-view-mode-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -3284,6 +3332,7 @@ def main() -> int:
         run_new_analysis_filter_reset_suite(browser, report)
         run_result_toolbar_accessibility_suite(browser, report)
         run_result_filter_accessibility_suite(browser, report)
+        run_view_mode_accessibility_suite(browser, report)
         run_generate_dock_minimums_suite(browser, report)
         run_generate_dock_accessibility_suite(browser, report)
         run_empty_workbench_accessibility_suite(browser, report)
