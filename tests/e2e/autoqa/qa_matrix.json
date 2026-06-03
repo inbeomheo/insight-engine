@@ -526,6 +526,11 @@
     "expect": "설정 팝오버 길이/문체/언어 컨트롤은 radiogroup, radio 상태, 방향키/Home/End 키보드 전환을 제공한다"
   },
   {
+    "id": "settings-web-search-switch-accessible",
+    "name": "설정 웹 보강 스위치",
+    "expect": "설정 팝오버 웹 검색 보강은 switch 상태, 도움말/상태 연결, Space 키보드 전환을 제공한다"
+  },
+  {
     "id": "settings-open",
     "name": "설정 열기",
     "expect": "설정 패널이 보인다"

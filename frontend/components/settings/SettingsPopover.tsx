@@ -333,12 +333,15 @@ export default function SettingsPopover() {
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">생성 옵션</label>
         <button
+          type="button"
+          data-testid="settings-web-search-switch"
           onClick={() => setEnableWebSearch(!enableWebSearch)}
           role="switch"
           aria-checked={enableWebSearch}
           aria-label="웹 검색 보강 토글"
+          aria-describedby="settings-web-search-help settings-web-search-status"
           className={cn(
-            'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm border transition-all',
+            'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1',
             enableWebSearch
               ? 'bg-primary/10 text-primary border-primary/40'
               : 'bg-background text-foreground border-border hover:border-primary/50'
@@ -355,11 +358,12 @@ export default function SettingsPopover() {
             )} />
           </span>
         </button>
-        {enableWebSearch && (
-          <p className="text-xs text-muted-foreground mt-1.5">
-            Tavily API로 웹 검색 결과를 AI 프롬프트에 주입합니다. TAVILY_API_KEY 설정 필요.
-          </p>
-        )}
+        <p id="settings-web-search-status" data-testid="settings-web-search-status" role="status" aria-live="polite" className="mt-1.5 text-xs font-medium text-muted-foreground">
+          웹 검색 보강 {enableWebSearch ? '켜짐' : '꺼짐'}
+        </p>
+        <p id="settings-web-search-help" data-testid="settings-web-search-help" className="text-xs text-muted-foreground">
+          Tavily API로 웹 검색 결과를 AI 프롬프트에 주입합니다. TAVILY_API_KEY 설정 필요.
+        </p>
       </div>
 
       {/* 웹훅 연동 */}

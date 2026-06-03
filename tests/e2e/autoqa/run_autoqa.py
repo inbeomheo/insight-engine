@@ -3259,6 +3259,38 @@ def main() -> int:
                 modifiers_ok,
                 "settings modifier radiogroups and keyboard navigation update selection" if modifiers_ok else f"initial={modifier_initial_ok}; length={length_ok}; tone={tone_ok}; language={language_ok}",
             )
+            web_switch = dialog.locator("[data-testid='settings-web-search-switch']")
+            web_status = dialog.locator("[data-testid='settings-web-search-status']")
+            web_help = dialog.locator("[data-testid='settings-web-search-help']")
+            describedby = web_switch.get_attribute("aria-describedby", timeout=2_000) if web_switch.count() > 0 else ""
+            web_initial_ok = (
+                web_switch.count() == 1
+                and web_switch.get_attribute("role", timeout=2_000) == "switch"
+                and web_switch.get_attribute("aria-checked", timeout=2_000) == "false"
+                and describedby
+                and "settings-web-search-help" in describedby
+                and "settings-web-search-status" in describedby
+                and web_help.count() == 1
+                and web_status.count() == 1
+                and "꺼짐" in web_status.inner_text(timeout=2_000)
+            )
+            if web_switch.count() > 0:
+                web_switch.focus(timeout=10_000)
+                page.keyboard.press("Space")
+            web_toggled_ok = wait_until(
+                lambda: web_switch.count() == 1
+                and web_switch.get_attribute("aria-checked", timeout=1_000) == "true"
+                and "켜짐" in web_status.inner_text(timeout=1_000)
+                and web_switch.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            web_switch_ok = web_initial_ok and web_toggled_ok
+            report.record(
+                "settings-web-search-switch-accessible",
+                web_switch_ok,
+                "settings web search switch help/status and keyboard toggle update" if web_switch_ok else f"initial={web_initial_ok}; toggled={web_toggled_ok}; describedby={describedby!r}",
+            )
             page.keyboard.press("Escape")
             page.wait_for_timeout(300)
         except Exception as exc:
@@ -3266,6 +3298,7 @@ def main() -> int:
             report.record("provider-chatmock", False, repr(exc))
             report.record("style-selection", False, repr(exc))
             report.record("settings-modifier-accessible", False, repr(exc))
+            report.record("settings-web-search-switch-accessible", False, repr(exc))
 
         try:
             page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
