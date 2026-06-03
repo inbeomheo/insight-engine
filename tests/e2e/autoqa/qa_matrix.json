@@ -168,6 +168,12 @@
     "expect": "URL 입력은 도움말, 오류, aria-invalid 상태를 스크린리더에 연결한다"
   },
   {
+    "id": "url-chip-list-accessible",
+    "name": "URL 칩 목록 접근 가능한 상태",
+    "url": "http://localhost:3000",
+    "expect": "추가된 URL 칩 목록은 list/listitem, 소스 라벨, 제거 액션 라벨을 제공한다"
+  },
+  {
     "id": "source-text-input-accessible",
     "name": "Source Composer 텍스트 입력 상태",
     "url": "http://localhost:3000",

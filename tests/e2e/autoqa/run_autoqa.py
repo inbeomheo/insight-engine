@@ -1403,6 +1403,52 @@ def run_url_input_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_url_chip_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[url-chip-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[url-chip-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        input_box = page.locator("#url-input")
+        input_box.wait_for(state="visible", timeout=60_000)
+        input_box.fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ", timeout=10_000)
+        input_box.press("Enter")
+        chip_list = page.locator("[data-testid='url-chip-list']")
+        chip = page.locator("[data-testid='url-chip-0']")
+        remove = page.locator("[data-testid='url-chip-remove-0']")
+        wait_until(lambda: chip.count() > 0, 10_000, page)
+        initial_ok = (
+            chip_list.get_attribute("role", timeout=5_000) == "list"
+            and chip_list.get_attribute("aria-label", timeout=5_000) == "추가된 URL 소스"
+            and chip_list.get_attribute("aria-live", timeout=5_000) == "polite"
+            and chip.get_attribute("role", timeout=5_000) == "listitem"
+            and chip.get_attribute("aria-label", timeout=5_000) == "YouTube dQw4w9WgXcQ"
+            and remove.get_attribute("aria-label", timeout=5_000) == "YouTube dQw4w9WgXcQ 제거"
+        )
+        remove.click(timeout=10_000)
+        removed_ok = wait_until(lambda: chip_list.count() == 0, 10_000, page)
+        ok = initial_ok and removed_ok
+        report.record(
+            "url-chip-list-accessible",
+            ok,
+            "url chip list, item label, and remove action are accessible" if ok else f"initial={initial_ok}; removed={removed_ok}",
+        )
+    except Exception as exc:
+        report.record("url-chip-list-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_source_text_input_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -3096,6 +3142,7 @@ def main() -> int:
         run_drop_bulk_url_limit_suite(browser, report)
         run_source_composer_accessibility_suite(browser, report)
         run_url_input_accessibility_suite(browser, report)
+        run_url_chip_accessibility_suite(browser, report)
         run_source_text_input_accessibility_suite(browser, report)
         run_source_file_input_accessibility_suite(browser, report)
         run_source_voice_input_accessibility_suite(browser, report)

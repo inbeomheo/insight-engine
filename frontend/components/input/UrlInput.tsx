@@ -165,7 +165,7 @@ const UrlInput = memo(function UrlInput({
 
       {/* URL 칩 (F5-10: 드래그 정렬 지원) */}
       {urls.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-3 animate-fade-in">
+        <div data-testid="url-chip-list" role="list" aria-label="추가된 URL 소스" aria-live="polite" className="flex flex-wrap gap-1.5 mt-3 animate-fade-in">
           {urls.map((url, urlIndex) => {
             const videoId = extractVideoId(url);
             const srcType = detectSourceType(url);
@@ -186,9 +186,13 @@ const UrlInput = memo(function UrlInput({
                 chipLabel = url.slice(0, 30);
               }
             }
+            const chipAriaLabel = `${srcLabel} ${chipLabel}`;
             return (
               <Badge
                 key={url}
+                data-testid={`url-chip-${urlIndex}`}
+                role="listitem"
+                aria-label={chipAriaLabel}
                 variant="secondary"
                 className={`gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent hover:shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing ${
                   dragOverIndex === urlIndex ? 'ring-2 ring-primary/30' : ''
@@ -216,9 +220,10 @@ const UrlInput = memo(function UrlInput({
                   {chipLabel}
                 </span>
                 <button
+                  data-testid={`url-chip-remove-${urlIndex}`}
                   onClick={() => onRemoveUrl(url)}
                   className="hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-all duration-200 hover:scale-110"
-                  aria-label={`${chipLabel} 제거`}
+                  aria-label={`${chipAriaLabel} 제거`}
                 >
                   <X className="h-3 w-3" />
                 </button>
