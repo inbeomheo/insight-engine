@@ -40,6 +40,7 @@ function FaqItem({ question, answer }: FaqItemProps) {
 
 export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
   const { t } = useTranslation();
+  const panelRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -49,7 +50,34 @@ export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps
   }, [open]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') onClose();
+    if (event.key === 'Escape') {
+      onClose();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.tabIndex >= 0);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !panel.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   };
 
   if (!open) return null;
@@ -61,6 +89,7 @@ export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps
 
       {/* 패널 */}
       <aside
+        ref={panelRef}
         id="help-panel"
         data-testid="help-panel"
         className={cn(

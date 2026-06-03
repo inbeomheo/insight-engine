@@ -163,8 +163,16 @@ def post_json(url: str, payload: dict[str, Any], timeout: int = 180) -> Any:
 
 def open_generation_settings(page) -> None:
     page.locator("#url-input").wait_for(state="visible", timeout=20_000)
-    page.get_by_label("생성 설정 열기").first.click(timeout=10_000)
-    page.locator("[role='dialog']").wait_for(state="visible", timeout=10_000)
+    dialog = page.locator("[role='dialog'][aria-labelledby='settings-popover-title']")
+    if dialog.count() > 0 and dialog.is_visible(timeout=1_000):
+        return
+    trigger = page.locator("[data-testid='settings-popover-trigger']").first
+    trigger.wait_for(state="visible", timeout=10_000)
+    trigger.click(timeout=10_000)
+    if wait_until(lambda: dialog.count() > 0 and dialog.is_visible(timeout=1_000), 5_000, page):
+        return
+    trigger.click(timeout=10_000)
+    dialog.wait_for(state="visible", timeout=10_000)
 
 
 def click_text_generate(page) -> None:
@@ -1278,6 +1286,52 @@ def run_help_panel_accessible_close_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_help_panel_focus_trap_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[help-panel-focus-trap] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[help-panel-focus-trap] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='header-help-trigger']").click(timeout=10_000)
+        panel = page.locator("[data-testid='help-panel']")
+        close_button = page.locator("[data-testid='help-panel-close']")
+        panel.wait_for(state="visible", timeout=10_000)
+        wait_until(lambda: close_button.evaluate("el => document.activeElement === el"), 5_000, page)
+
+        active_inside = lambda: panel.evaluate("panel => panel.contains(document.activeElement)")
+        page.keyboard.press("Shift+Tab")
+        backward_wrap_ok = wait_until(active_inside, 3_000, page)
+        forward_sequence: list[bool] = []
+        for _ in range(8):
+            page.keyboard.press("Tab")
+            page.wait_for_timeout(50)
+            forward_sequence.append(bool(active_inside()))
+        forward_trap_ok = all(forward_sequence)
+        trigger_focused = page.locator("[data-testid='header-help-trigger']").evaluate("el => document.activeElement === el")
+        ok = backward_wrap_ok and forward_trap_ok and not trigger_focused
+        report.record(
+            "help-panel-focus-trap",
+            ok,
+            "help panel Tab and Shift+Tab focus stays inside dialog" if ok else f"backward={backward_wrap_ok}; forward={forward_sequence}; trigger_focused={trigger_focused}",
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "help-panel-focus-trap-fail.png")
+        report.record("help-panel-focus-trap", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
 def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     pending_routes: list[Any] = []
@@ -1634,8 +1688,8 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         page.locator("#url-input").wait_for(state="visible", timeout=60_000)
 
         tablist_visible = page.get_by_role("tablist", name="소스 종류").is_visible(timeout=5_000)
-        url_tab = page.get_by_role("tab", name=re.compile(r"URL"))
-        text_tab = page.get_by_role("tab", name=re.compile(r"텍스트"))
+        url_tab = page.locator("[data-testid='source-tab-url']")
+        text_tab = page.locator("[data-testid='source-tab-text']")
         url_selected = url_tab.get_attribute("aria-selected") == "true"
         url_tabindex = url_tab.get_attribute("tabindex") == "0"
         text_tabindex_initial = text_tab.get_attribute("tabindex") == "-1"
@@ -1648,7 +1702,8 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         )
 
         url_tab.focus(timeout=10_000)
-        page.keyboard.press("ArrowRight")
+        wait_until(lambda: url_tab.evaluate("el => document.activeElement === el"), 3_000, page)
+        url_tab.press("ArrowRight", timeout=10_000)
         text_panel = page.locator("#source-panel-text")
         keyboard_switch_ok = wait_until(
             lambda: text_tab.get_attribute("aria-selected", timeout=1_000) == "true"
@@ -1671,7 +1726,7 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
             and text_panel.get_attribute("aria-labelledby") == (text_tab.get_attribute("id") or "")
             and text_tab.get_attribute("aria-controls") == "source-panel-text"
         )
-        file_tab = page.get_by_role("tab", name=re.compile(r"파일"))
+        file_tab = page.locator("[data-testid='source-tab-file']")
         file_tab.click(timeout=10_000)
         file_focused = file_tab.evaluate("el => document.activeElement === el")
         file_selected = file_tab.get_attribute("aria-selected") == "true"
@@ -3775,6 +3830,7 @@ def main() -> int:
         run_empty_workbench_accessibility_suite(browser, report)
         run_help_tour_entrypoint_suite(browser, report)
         run_help_panel_accessible_close_suite(browser, report)
+        run_help_panel_focus_trap_suite(browser, report)
 
         browser.close()
 
