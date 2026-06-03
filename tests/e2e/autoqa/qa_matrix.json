@@ -93,7 +93,7 @@
     "id": "header-status-summary",
     "name": "헤더 상태 요약",
     "url": "http://localhost:3000",
-    "expect": "헤더에 현재 모델과 작업 상태가 표시된다"
+    "expect": "헤더에 현재 모델과 작업 상태가 표시되고 모델 라벨과 live 상태가 보조기술에 노출된다"
   },
   {
     "id": "header-settings-trigger-accessible",

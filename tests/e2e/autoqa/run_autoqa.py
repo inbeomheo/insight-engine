@@ -2881,11 +2881,18 @@ def main() -> int:
             report.record("home-load", page.locator("#url-input").count() > 0, home_png)
             studio_visible = page.get_by_text("AI Content Studio").count() > 0 or page.get_by_text("Source Composer").count() > 0
             report.record("studio-layout", studio_visible, "studio hero/source composer visible" if studio_visible else screenshot(page, "studio-layout-fail.png"))
+            header_model = page.locator("[data-testid='header-model-badge']")
+            header_status = page.locator("[data-testid='header-status-badge']")
+            header_model_text = header_model.inner_text(timeout=5_000).replace("모델 ", "", 1).strip() if header_model.count() > 0 else ""
             header_ok = (
-                page.locator("[data-testid='header-model-badge']").count() > 0
-                and page.locator("[data-testid='header-status-badge']").count() > 0
+                header_model.count() > 0
+                and header_status.count() > 0
+                and header_model.get_attribute("aria-label", timeout=5_000) == f"선택 모델: {header_model_text}"
+                and header_status.get_attribute("role", timeout=5_000) == "status"
+                and header_status.get_attribute("aria-live", timeout=5_000) == "polite"
+                and header_status.get_attribute("aria-label", timeout=5_000) == "작업 상태: 소스 대기"
             )
-            report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
+            report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing or not exposed to assistive tech")
             settings_trigger = page.locator("[data-testid='header-settings-trigger']").first
             settings_trigger_initial = (
                 settings_trigger.count() == 1

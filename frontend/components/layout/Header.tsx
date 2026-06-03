@@ -47,10 +47,10 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
       </div>
 
       <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 md:flex">
-        <span data-testid="header-model-badge" className="max-w-[260px] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+        <span data-testid="header-model-badge" aria-label={`선택 모델: ${modelLabel}`} className="max-w-[260px] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
           모델 {modelLabel}
         </span>
-        <span data-testid="header-status-badge" className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+        <span data-testid="header-status-badge" role="status" aria-live="polite" aria-label={`작업 상태: ${statusLabel}`} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
           {statusLabel}
         </span>
       </div>
