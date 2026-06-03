@@ -91,12 +91,14 @@ function pluginOptionSummary(post: ScheduledPost) {
   const parts: string[] = [];
   const status = typeof options.status === 'string' ? options.status : '';
   const siteUrl = typeof options.site_url === 'string' ? options.site_url : '';
+  const username = typeof options.username === 'string' ? options.username : '';
   const blogId = typeof options.blog_id === 'string' ? options.blog_id : '';
   const category = typeof options.category === 'string' ? options.category : '';
   const tags = formatTagSummary(options.tags);
 
   if (status) parts.push(PUBLISH_STATUS_LABELS[status] ?? status);
   if (siteUrl) parts.push(siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+  if (username) parts.push(`작성자 ${username}`);
   if (blogId) parts.push(`블로그 ${blogId}`);
   if (category) parts.push(`카테고리 ${category}`);
   if (tags) parts.push(tags);

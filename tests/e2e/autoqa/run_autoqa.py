@@ -674,9 +674,20 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 naver_summary_ok and secret_ok,
                 screenshot(page, "calendar-naver-safe-options.png") if naver_summary_ok and secret_ok else calendar_text[:500],
             )
+            wordpress_summary_ok = (
+                "wp.example.com" in calendar_text
+                and "임시글" in calendar_text
+                and "작성자 qa-writer" in calendar_text
+            )
+            report.record(
+                "calendar-wordpress-safe-options",
+                wordpress_summary_ok and secret_ok,
+                screenshot(page, "calendar-wordpress-safe-options.png") if wordpress_summary_ok and secret_ok else calendar_text[:500],
+            )
         except Exception as exc:
             report.record("calendar-plugin-labels", False, repr(exc))
             report.record("calendar-naver-safe-options", False, repr(exc))
+            report.record("calendar-wordpress-safe-options", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")

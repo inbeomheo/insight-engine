@@ -258,6 +258,12 @@
     "expect": "네이버 예약은 블로그 ID, 카테고리, 태그를 읽기 좋게 표시하고 웹훅 URL은 숨긴다"
   },
   {
+    "id": "calendar-wordpress-safe-options",
+    "name": "캘린더 WordPress 안전 옵션",
+    "url": "http://localhost:3000",
+    "expect": "WordPress 예약은 사이트, 공개 상태, 작성자를 읽기 좋게 표시하고 Application Password는 숨긴다"
+  },
+  {
     "id": "menu-schedule-naver-defaults",
     "name": "네이버 예약 기본값",
     "url": "http://localhost:3000",
