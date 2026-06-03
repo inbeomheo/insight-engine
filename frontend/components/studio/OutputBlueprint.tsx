@@ -121,13 +121,15 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           </div>
         </div>
 
-        <div data-testid="blueprint-detail-level" className="rounded-2xl bg-slate-50 p-3">
+        <div data-testid="blueprint-detail-level" role="group" aria-label="상세도" className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500"><SlidersHorizontal className="h-3.5 w-3.5" />상세도</p>
           <div className="grid grid-cols-3 gap-1.5">
             {DETAIL_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
+                data-testid={`blueprint-detail-${option.value}`}
+                aria-pressed={detailLevel === option.value}
                 className={cn(
                   'rounded-xl border px-2 py-2 text-left text-[11px] transition',
                   detailLevel === option.value ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-500 hover:border-indigo-200',
