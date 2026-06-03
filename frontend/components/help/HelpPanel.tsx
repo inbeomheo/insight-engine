@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { X, BookOpen, Keyboard, HelpCircle, ChevronDown, ChevronRight, Globe, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -40,6 +40,17 @@ function FaqItem({ question, answer }: FaqItemProps) {
 
 export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
   const { t } = useTranslation();
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape') onClose();
+  };
 
   if (!open) return null;
 
@@ -59,6 +70,7 @@ export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-panel-title"
+        onKeyDown={handleKeyDown}
       >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40">
@@ -66,7 +78,15 @@ export default function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps
             <HelpCircle className="h-4.5 w-4.5 text-primary" />
             {t('help.title')}
           </h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose} aria-label="도움말 닫기">
+          <Button
+            ref={closeButtonRef}
+            data-testid="help-panel-close"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClose}
+            aria-label="도움말 닫기"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

@@ -159,7 +159,13 @@ export default function Home() {
 
   // HelpPanel + GuidedTour 핸들러 — 안정 참조
   const handleToggleHelp = useCallback(() => setHelpOpen((open) => !open), []);
-  const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
+  const handleCloseHelp = useCallback(() => {
+    setHelpOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("[data-testid='header-help-trigger']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, []);
   const handleStartTour = useCallback(() => {
     setHelpOpen(false);
     setTourActive(true);

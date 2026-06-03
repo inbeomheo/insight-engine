@@ -559,6 +559,11 @@
     "expect": "헤더 도움말 버튼은 접근 가능한 패널을 열고, 패널에서 가이드 투어를 시작할 수 있다"
   },
   {
+    "id": "help-panel-accessible-close",
+    "name": "도움말 패널 닫기 접근성",
+    "expect": "도움말 패널은 초기 포커스, Escape 닫기, 트리거 포커스 복귀를 제공한다"
+  },
+  {
     "id": "settings-open",
     "name": "설정 열기",
     "expect": "설정 패널이 보인다"
