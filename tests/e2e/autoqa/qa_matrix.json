@@ -96,6 +96,12 @@
     "expect": "헤더에 현재 모델과 작업 상태가 표시된다"
   },
   {
+    "id": "sidebar-trigger-accessible",
+    "name": "사이드바 트리거 접근성",
+    "url": "http://localhost:3000",
+    "expect": "헤더 메뉴 버튼은 사이드바 제어 대상과 열림/닫힘 상태를 aria-expanded/aria-controls로 제공한다"
+  },
+  {
     "id": "mobile-right-panel-drawer",
     "name": "모바일 작업 패널 Drawer",
     "url": "http://localhost:3000",

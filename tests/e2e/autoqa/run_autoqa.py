@@ -2886,6 +2886,22 @@ def main() -> int:
                 and page.locator("[data-testid='header-status-badge']").count() > 0
             )
             report.record("header-status-summary", header_ok, screenshot(page, "header-status-summary.png") if header_ok else "header model/status badges missing")
+            sidebar_trigger = page.locator("header button").first
+            sidebar = page.get_by_role("navigation", name="사이드바 내비게이션")
+            sidebar_initial = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
+            sidebar_linked = (
+                sidebar_trigger.get_attribute("aria-controls", timeout=5_000) == "app-sidebar"
+                and sidebar.get_attribute("id", timeout=5_000) == "app-sidebar"
+            )
+            sidebar_trigger.click(timeout=10_000)
+            sidebar_collapsed = sidebar_trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            report.record(
+                "sidebar-trigger-accessible",
+                sidebar_initial and sidebar_linked and sidebar_collapsed,
+                "sidebar trigger exposes controls and expanded state" if sidebar_initial and sidebar_linked and sidebar_collapsed else f"initial={sidebar_initial}; linked={sidebar_linked}; collapsed={sidebar_collapsed}",
+            )
+            if sidebar_collapsed:
+                sidebar_trigger.click(timeout=10_000)
             expected_copy = ["요약", "튜토리얼", "앱 아이디어", "뉴스레터", "짧게", "보통", "길게", "대화체", "설명체", "한국어", "아직 결과가 없습니다"]
             missing_copy = [label for label in expected_copy if page.get_by_text(label, exact=True).count() == 0]
             report.record(

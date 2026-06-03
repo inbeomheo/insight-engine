@@ -15,6 +15,7 @@ interface HeaderProps {
 
 const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel, rightPanelOpen = false }: HeaderProps) {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
   const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), [setSettingsModalOpen]);
   const statusLabel = isLoading ? '생성 중' : sourceCount > 0 ? '생성 준비' : '소스 대기';
@@ -28,6 +29,8 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
           className="h-9 w-9 hover:bg-accent"
           onClick={toggleSidebar}
           aria-label="메뉴 열기"
+          aria-controls="app-sidebar"
+          aria-expanded={sidebarOpen}
         >
           <Menu className="h-[18px] w-[18px]" />
         </Button>
