@@ -527,6 +527,13 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         "status": "pending",
         "created_at": today.isoformat(),
     }
+    calendar_delete_calls: list[str] = []
+
+    def handle_calendar_delete(route) -> None:
+        calendar_delete_calls.append(route.request.url)
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True}))
+
+    context.route("**/api/schedule/*", handle_calendar_delete)
     context.route("**/api/schedule", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"schedules": [seeded_schedule, seeded_naver_schedule]}, ensure_ascii=False)))
     seed_right_panel_context(context)
     page = context.new_page()
@@ -684,10 +691,44 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 wordpress_summary_ok and secret_ok,
                 screenshot(page, "calendar-wordpress-safe-options.png") if wordpress_summary_ok and secret_ok else calendar_text[:500],
             )
+            before_deletes = len(calendar_delete_calls)
+            calendar = page.locator("[data-testid='content-calendar']")
+            calendar.locator("button").last.click(timeout=10_000)
+            dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
+            try:
+                dialog.wait_for(state="visible", timeout=1_000)
+                dialog_visible = True
+            except Exception:
+                dialog_visible = False
+            not_deleted_before_confirm = len(calendar_delete_calls) == before_deletes
+            still_visible_before_confirm = "캘린더 WordPress 예약" in calendar.inner_text(timeout=5_000) or "캘린더 네이버 예약" in calendar.inner_text(timeout=5_000)
+            if dialog_visible:
+                dialog.locator("button", has_text="취소").click(timeout=5_000)
+                page.wait_for_timeout(300)
+            still_visible_after_cancel = len(calendar_delete_calls) == before_deletes and (
+                "캘린더 WordPress 예약" in calendar.inner_text(timeout=5_000) or "캘린더 네이버 예약" in calendar.inner_text(timeout=5_000)
+            )
+            deleted_after_confirm = False
+            if still_visible_after_cancel:
+                calendar.locator("button").last.click(timeout=10_000)
+                dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
+                dialog.wait_for(state="visible", timeout=5_000)
+                dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
+                deleted_after_confirm = wait_until(lambda: len(calendar_delete_calls) > before_deletes, 5_000, page)
+            report.record(
+                "calendar-delete-confirmation",
+                dialog_visible and not_deleted_before_confirm and still_visible_before_confirm and still_visible_after_cancel and deleted_after_confirm,
+                (
+                    f"dialog_visible={dialog_visible}; before={before_deletes}; after={len(calendar_delete_calls)}; "
+                    f"still_before={still_visible_before_confirm}; still_after_cancel={still_visible_after_cancel}; "
+                    f"deleted_after_confirm={deleted_after_confirm}"
+                ),
+            )
         except Exception as exc:
             report.record("calendar-plugin-labels", False, repr(exc))
             report.record("calendar-naver-safe-options", False, repr(exc))
             report.record("calendar-wordpress-safe-options", False, repr(exc))
+            report.record("calendar-delete-confirmation", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "right-panel-fail.png")
         report.record("right-panel-settings", False, f"{repr(exc)}; screenshot={fail_png}")

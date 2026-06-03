@@ -264,6 +264,12 @@
     "expect": "WordPress 예약은 사이트, 공개 상태, 작성자를 읽기 좋게 표시하고 Application Password는 숨긴다"
   },
   {
+    "id": "calendar-delete-confirmation",
+    "name": "캘린더 예약 삭제 확인",
+    "url": "http://localhost:3000",
+    "expect": "캘린더 예약 삭제는 즉시 API를 호출하지 않고 확인 모달에서 취소/확정을 구분한다"
+  },
+  {
     "id": "menu-schedule-naver-defaults",
     "name": "네이버 예약 기본값",
     "url": "http://localhost:3000",

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Trash2, ExternalLink, AlertCircle, CheckCirc
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ScheduledPost } from '@/lib/types';
 
 interface ContentCalendarProps {
@@ -109,6 +110,7 @@ function pluginOptionSummary(post: ScheduledPost) {
 export default function ContentCalendar({ schedules, onDelete }: ContentCalendarProps) {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ScheduledPost | null>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -135,6 +137,12 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
   function nextMonth() {
     setViewDate(new Date(year, month + 1, 1));
     setSelectedDate(null);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    onDelete(deleteTarget.id);
+    setDeleteTarget(null);
   }
 
   return (
@@ -278,7 +286,9 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
-                        onClick={() => onDelete(post.id)}
+                        data-testid="calendar-delete-schedule"
+                        aria-label={`${post.title} 예약 삭제`}
+                        onClick={() => setDeleteTarget(post)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -290,6 +300,24 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           </CardContent>
         </Card>
       )}
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>예약 삭제</DialogTitle>
+            <DialogDescription>
+              {deleteTarget ? `‘${deleteTarget.title}’ 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              삭제하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
