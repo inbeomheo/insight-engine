@@ -1662,6 +1662,22 @@ def main() -> int:
                     else f"notice={empty_notice_visible}; filter_label={filter_label_visible}; text={result_toolbar_text[:300]!r}"
                 ),
             )
+            panel = page.locator("[data-testid='studio-right-panel']").first
+            empty_action_texts: dict[str, str] = {}
+            for action_id in ["prompt", "nlm", "rewrite"]:
+                panel.locator(f"[data-testid='quick-action-{action_id}']").click(timeout=10_000)
+                notice = panel.locator("[data-testid='quick-action-export-status']")
+                text = notice.inner_text(timeout=2_000) if notice.count() > 0 else ""
+                empty_action_texts[action_id] = text
+            report.record(
+                "right-panel-empty-action-feedback",
+                all("먼저 결과를 생성하세요" in text for text in empty_action_texts.values()),
+                (
+                    screenshot(page, "right-panel-empty-action-feedback.png")
+                    if all("먼저 결과를 생성하세요" in text for text in empty_action_texts.values())
+                    else str(empty_action_texts)
+                ),
+            )
             readable_copy = [
                 "분석할 소스를 준비하세요",
                 "텍스트",
@@ -1730,8 +1746,16 @@ def main() -> int:
             source_path = ARTIFACTS / filename
             source_path.write_bytes(content)
             try:
-                page.locator(f"[data-testid='{tab_test_id}']").click(timeout=10_000)
-                page.locator(f"[data-testid='{panel_test_id}']").wait_for(state="visible", timeout=10_000)
+                tab = page.locator(f"[data-testid='{tab_test_id}']").first
+                panel_locator = page.locator(f"[data-testid='{panel_test_id}']")
+                tab.wait_for(state="visible", timeout=10_000)
+                tab.scroll_into_view_if_needed(timeout=10_000)
+                tab.click(timeout=10_000)
+                try:
+                    panel_locator.wait_for(state="visible", timeout=4_000)
+                except PlaywrightTimeoutError:
+                    tab.evaluate("(el) => el.click()")
+                    panel_locator.wait_for(state="visible", timeout=10_000)
                 file_input = page.locator(f"[data-testid='{panel_test_id}'] input[type='file']").first
                 file_input.set_input_files(str(source_path))
                 page.locator(f"[data-testid='{panel_test_id}']").get_by_text(filename).wait_for(state="visible", timeout=10_000)

@@ -148,6 +148,11 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
   }
 
   function handleQuickAction(id: string) {
+    const requireResult = (message: string) => {
+      setQuickNotice(`먼저 결과를 생성하세요 · ${message}`);
+      scrollTo('[data-testid="result-workbench"]');
+    };
+
     if (id === 'export') {
       handleExportAll();
       return;
@@ -164,12 +169,18 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       if (firstReport?.prompt) {
         setPromptModalOpen(true, firstReport.prompt);
         setActiveReportId(firstReport.id);
+      } else {
+        requireResult('프롬프트 확인은 생성 결과가 필요합니다');
       }
       return;
     }
     if (id === 'nlm') {
       if (firstCompletedNlm) {
         window.open(apiUrl(`/api/notebooklm/view/${firstCompletedNlm.artifact.artifact_id}`), '_blank');
+        return;
+      }
+      if (reports.length === 0) {
+        requireResult('NLM 산출물은 결과 생성 후 확인할 수 있습니다');
         return;
       }
       scrollTo('[data-testid="notebooklm-artifact"], [data-testid="result-workbench"]');
@@ -179,6 +190,8 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount 
       if (firstReport) {
         setActiveReportId(firstReport.id);
         window.dispatchEvent(new CustomEvent('insight-engine-open-rewrite', { detail: { reportId: firstReport.id } }));
+      } else {
+        requireResult('플랫폼 변환은 생성 결과가 필요합니다');
       }
       scrollTo('[data-testid="result-workbench"]');
       return;
