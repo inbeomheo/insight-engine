@@ -3175,15 +3175,38 @@ def main() -> int:
                 f"metrics={metrics}" if fits and scrolls else f"clipped_or_unscrollable={metrics}",
             )
 
-            style_buttons = page.locator("[role='dialog'] button[aria-pressed]")
-            style_count = style_buttons.count()
-            if style_count:
-                target = style_buttons.nth(min(1, style_count - 1))
-                target.click(timeout=5_000)
-                pressed = target.get_attribute("aria-pressed") == "true"
-                report.record("style-selection", pressed, f"style buttons={style_count}")
-            else:
-                report.record("style-selection", False, "no aria-pressed style buttons")
+            style_group = dialog.locator("[data-testid='settings-style-options']")
+            blog_style = dialog.locator("[data-testid='settings-style-blog_seo']")
+            summary_style = dialog.locator("[data-testid='settings-style-summary']")
+            course_style = dialog.locator("[data-testid='settings-style-course']")
+            initial_style_ok = (
+                style_group.get_attribute("role", timeout=5_000) == "radiogroup"
+                and style_group.get_attribute("aria-label", timeout=5_000) == "스타일"
+                and blog_style.get_attribute("role", timeout=5_000) == "radio"
+                and blog_style.get_attribute("aria-checked", timeout=5_000) == "true"
+                and summary_style.get_attribute("aria-checked", timeout=5_000) == "false"
+            )
+            blog_style.focus(timeout=10_000)
+            page.keyboard.press("ArrowRight")
+            summary_style_ok = wait_until(
+                lambda: summary_style.get_attribute("aria-checked", timeout=1_000) == "true"
+                and summary_style.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            page.keyboard.press("End")
+            course_style_ok = wait_until(
+                lambda: course_style.get_attribute("aria-checked", timeout=1_000) == "true"
+                and course_style.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            style_ok = initial_style_ok and summary_style_ok and course_style_ok
+            report.record(
+                "style-selection",
+                style_ok,
+                "settings style radiogroup and keyboard navigation update selection" if style_ok else f"initial={initial_style_ok}; summary={summary_style_ok}; course={course_style_ok}",
+            )
             page.keyboard.press("Escape")
             page.wait_for_timeout(300)
         except Exception as exc:

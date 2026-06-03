@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
@@ -84,6 +84,21 @@ export default function SettingsPopover() {
     ...STYLE_OPTIONS,
     ...customStyles.map((c) => ({ id: c.id, label: c.name, emoji: c.icon || '✨' })),
   ];
+  const selectStyle = (styleId: string) => {
+    setSelectedStyle(styleId);
+    requestAnimationFrame(() => document.getElementById(`settings-style-${styleId}`)?.focus());
+  };
+  const handleStyleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? allStyles.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + allStyles.length) % allStyles.length;
+    selectStyle(allStyles[nextIndex].id);
+  };
 
   return (
     <div
@@ -136,13 +151,18 @@ export default function SettingsPopover() {
       {/* 스타일 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">스타일</label>
-        <div className="flex flex-wrap gap-2">
-          {allStyles.map((s) => (
+        <div data-testid="settings-style-options" role="radiogroup" aria-label="스타일" className="flex flex-wrap gap-2">
+          {allStyles.map((s, index) => (
             <button
               key={s.id}
-              onClick={() => setSelectedStyle(s.id)}
+              id={`settings-style-${s.id}`}
+              data-testid={`settings-style-${s.id}`}
+              onClick={() => selectStyle(s.id)}
+              onKeyDown={(event) => handleStyleKeyDown(event, index)}
               aria-label={`${s.label} 스타일 선택`}
-              aria-pressed={selectedStyle === s.id}
+              role="radio"
+              aria-checked={selectedStyle === s.id}
+              tabIndex={selectedStyle === s.id ? 0 : -1}
               className={cn(
                 'px-3 py-1.5 rounded-full text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 selectedStyle === s.id

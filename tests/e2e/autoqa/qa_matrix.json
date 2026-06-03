@@ -518,7 +518,7 @@
   {
     "id": "style-selection",
     "name": "스타일 선택",
-    "expect": "스타일 컨트롤을 사용할 수 있다"
+    "expect": "설정 팝오버 스타일 컨트롤은 radiogroup, radio 상태, 방향키/End 키보드 전환을 제공한다"
   },
   {
     "id": "settings-open",
