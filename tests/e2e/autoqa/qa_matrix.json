@@ -348,6 +348,12 @@
     "expect": "새 분석은 활성 결과뿐 아니라 텍스트/파일/음성/URL 입력 초안도 비운다"
   },
   {
+    "id": "new-analysis-clears-result-filters",
+    "name": "새 분석 결과 필터 초기화",
+    "url": "http://localhost:3000",
+    "expect": "새 분석을 누르면 기존 검색/스타일 필터가 새 결과를 숨기지 않도록 초기화된다"
+  },
+  {
     "id": "youtube-url-validation",
     "name": "YouTube URL 입력 검증",
     "input": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

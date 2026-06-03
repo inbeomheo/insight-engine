@@ -163,7 +163,7 @@ def post_json(url: str, payload: dict[str, Any], timeout: int = 180) -> Any:
 
 def open_generation_settings(page) -> None:
     page.locator("#url-input").wait_for(state="visible", timeout=20_000)
-    page.locator("#url-input").locator("xpath=following-sibling::button[1]").click(timeout=10_000)
+    page.get_by_label("생성 설정 열기").first.click(timeout=10_000)
     page.locator("[role='dialog']").wait_for(state="visible", timeout=10_000)
 
 
@@ -798,6 +798,48 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
     except Exception as exc:
         fail_png = screenshot(page, "mobile-right-panel-drawer-fail.png")
         report.record("mobile-right-panel-drawer", False, f"{repr(exc)}; screenshot={fail_png}")
+    finally:
+        context.close()
+
+
+def run_new_analysis_filter_reset_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[new-analysis-filter] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[new-analysis-filter] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id]").first.wait_for(state="visible", timeout=60_000)
+        search = page.locator("[data-testid='studio-result-toolbar'] input[type='search']").first
+        search.fill("no matching result query")
+        filtered_to_zero = wait_until(
+            lambda: "필터 결과 0개" in page.locator("[data-testid='studio-result-toolbar']").inner_text(timeout=2_000),
+            5_000,
+            page,
+        )
+        page.get_by_role("button", name="새 분석").click(timeout=10_000)
+        cleared = wait_until(lambda: search.input_value(timeout=2_000) == "", 5_000, page)
+        visible_after_reset = wait_until(
+            lambda: page.locator("[data-report-id]").count() > 0
+            and page.locator("[data-report-id]").first.is_visible(),
+            5_000,
+            page,
+        )
+        toolbar_text = page.locator("[data-testid='studio-result-toolbar']").inner_text(timeout=5_000)
+        report.record(
+            "new-analysis-clears-result-filters",
+            filtered_to_zero and cleared and visible_after_reset and "필터 결과 1개" in toolbar_text,
+            (
+                screenshot(page, "new-analysis-clears-result-filters.png")
+                if filtered_to_zero and cleared and visible_after_reset and "필터 결과 1개" in toolbar_text
+                else f"filtered_to_zero={filtered_to_zero}; cleared={cleared}; visible={visible_after_reset}; toolbar={toolbar_text[:300]!r}; search={search.input_value(timeout=2_000)!r}"
+            ),
+        )
+    except Exception as exc:
+        fail_png = screenshot(page, "new-analysis-clears-result-filters-fail.png")
+        report.record("new-analysis-clears-result-filters", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
 
@@ -2080,6 +2122,7 @@ def main() -> int:
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
         run_mobile_studio_suite(browser, report)
+        run_new_analysis_filter_reset_suite(browser, report)
 
         browser.close()
 

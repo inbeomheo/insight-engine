@@ -128,6 +128,9 @@ export default function Sidebar() {
   const handleNewAnalysis = useCallback(() => {
     setActiveReportId(null);
     setActiveView('main');
+    const resultState = useResultStore.getState();
+    resultState.setSearchQuery('');
+    resultState.setStyleFilter('');
     window.dispatchEvent(new CustomEvent('insight-engine-new-analysis'));
 
     const urlInput = document.getElementById('url-input');
