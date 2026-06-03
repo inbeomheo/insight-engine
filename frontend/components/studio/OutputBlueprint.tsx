@@ -147,7 +147,7 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
         </div>
       </div>
 
-      <div data-testid="blueprint-advanced-panel" className="mt-3 rounded-2xl bg-slate-50 p-3">
+      <div data-testid="blueprint-advanced-panel" role="group" aria-label="고급 옵션" className="mt-3 rounded-2xl bg-slate-50 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-slate-500">고급 옵션</p>
           <p className="text-[11px] text-slate-400">
@@ -155,10 +155,10 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button data-testid="blueprint-web-search" type="button" size="sm" variant={enableWebSearch ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableWebSearch(!enableWebSearch)}><Search className="h-3.5 w-3.5" />웹 보강</Button>
-          <Button data-testid="blueprint-web-research" type="button" size="sm" variant={enableWebResearch ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableWebResearch(!enableWebResearch)}><Globe className="h-3.5 w-3.5" />웹 리서치</Button>
-          <Button data-testid="blueprint-deep-comments" type="button" size="sm" variant={enableDeepComments ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableDeepComments(!enableDeepComments)}><MessageSquare className="h-3.5 w-3.5" />댓글 심층 분석</Button>
-          <Button data-testid="blueprint-agent-mode" type="button" size="sm" variant={enableAgentMode ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableAgentMode(!enableAgentMode)}><Bot className="h-3.5 w-3.5" />에이전트</Button>
+          <Button data-testid="blueprint-web-search" aria-pressed={enableWebSearch} type="button" size="sm" variant={enableWebSearch ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableWebSearch(!enableWebSearch)}><Search className="h-3.5 w-3.5" />웹 보강</Button>
+          <Button data-testid="blueprint-web-research" aria-pressed={enableWebResearch} type="button" size="sm" variant={enableWebResearch ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableWebResearch(!enableWebResearch)}><Globe className="h-3.5 w-3.5" />웹 리서치</Button>
+          <Button data-testid="blueprint-deep-comments" aria-pressed={enableDeepComments} type="button" size="sm" variant={enableDeepComments ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableDeepComments(!enableDeepComments)}><MessageSquare className="h-3.5 w-3.5" />댓글 심층 분석</Button>
+          <Button data-testid="blueprint-agent-mode" aria-pressed={enableAgentMode} type="button" size="sm" variant={enableAgentMode ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setEnableAgentMode(!enableAgentMode)}><Bot className="h-3.5 w-3.5" />에이전트</Button>
         </div>
       </div>
     </section>

@@ -174,6 +174,12 @@
     "expect": "길이, 톤, 언어 선택은 그룹 라벨과 각 셀렉트 라벨을 제공하고 선택 변경을 반영한다"
   },
   {
+    "id": "output-blueprint-advanced-accessible",
+    "name": "Output Blueprint 고급 옵션 토글",
+    "url": "http://localhost:3000",
+    "expect": "고급 옵션 토글은 그룹 라벨과 aria-pressed 상태를 제공하고 선택 변경을 반영한다"
+  },
+  {
     "id": "non-url-hides-fusion-progress",
     "name": "비-URL 생성 중 퓨전 진행 숨김",
     "url": "http://localhost:3000",

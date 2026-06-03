@@ -1427,6 +1427,57 @@ def run_output_blueprint_modifier_accessibility_suite(browser, report: QaReport)
         context.close()
 
 
+def run_output_blueprint_advanced_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[blueprint-advanced-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[blueprint-advanced-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        group = page.locator("[data-testid='blueprint-advanced-panel']")
+        web_search = page.locator("[data-testid='blueprint-web-search']")
+        web_research = page.locator("[data-testid='blueprint-web-research']")
+        deep_comments = page.locator("[data-testid='blueprint-deep-comments']")
+        agent_mode = page.locator("[data-testid='blueprint-agent-mode']")
+        initial_ok = (
+            group.get_attribute("role") == "group"
+            and group.get_attribute("aria-label") == "고급 옵션"
+            and web_search.get_attribute("aria-pressed") == "false"
+            and web_research.get_attribute("aria-pressed") == "true"
+            and deep_comments.get_attribute("aria-pressed") == "true"
+            and agent_mode.get_attribute("aria-pressed") == "false"
+        )
+        web_search.click(timeout=10_000)
+        web_research.click(timeout=10_000)
+        deep_comments.click(timeout=10_000)
+        agent_mode.click(timeout=10_000)
+        changed_ok = (
+            web_search.get_attribute("aria-pressed") == "true"
+            and web_research.get_attribute("aria-pressed") == "false"
+            and deep_comments.get_attribute("aria-pressed") == "false"
+            and agent_mode.get_attribute("aria-pressed") == "true"
+        )
+        report.record(
+            "output-blueprint-advanced-accessible",
+            initial_ok and changed_ok,
+            "advanced option group and pressed states update" if initial_ok and changed_ok else f"initial={initial_ok}; changed={changed_ok}",
+        )
+    except Exception as exc:
+        report.record("output-blueprint-advanced-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2709,6 +2760,7 @@ def main() -> int:
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)
         run_output_blueprint_modifier_accessibility_suite(browser, report)
+        run_output_blueprint_advanced_accessibility_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
