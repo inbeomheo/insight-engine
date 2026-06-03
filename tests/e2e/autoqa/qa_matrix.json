@@ -36,6 +36,12 @@
     "expect": "텍스트/파일/음성 소스에서는 Output Blueprint의 URL 전용 모드가 아니라 실제 실행되는 개별 생성을 우측 패널에 보여준다"
   },
   {
+    "id": "blueprint-contextual-mode",
+    "name": "Output Blueprint 소스별 모드 안내",
+    "url": "http://localhost:3000",
+    "expect": "텍스트/파일/음성 소스에서는 통합/퓨전 선택을 비활성화하고 개별 생성으로 실행된다는 안내를 보여준다"
+  },
+  {
     "id": "generate-dock-empty-state-clearance",
     "name": "Generate Dock 빈 상태 가림 방지",
     "url": "http://localhost:3000",

@@ -1810,6 +1810,30 @@ def main() -> int:
                 effective_mode_ok,
                 screenshot(page, "right-panel-effective-mode.png") if effective_mode_ok else f"dock={dock_summary!r}; right={right_mode!r}",
             )
+            mode_hint = page.locator("[data-testid='blueprint-mode-hint']")
+            individual_mode = page.locator("[data-testid='blueprint-mode-individual']")
+            combined_mode = page.locator("[data-testid='blueprint-mode-combined']")
+            fusion_mode = page.locator("[data-testid='blueprint-mode-fusion']")
+            mode_hint_text = mode_hint.inner_text(timeout=2_000) if mode_hint.count() > 0 else ""
+            individual_pressed = individual_mode.get_attribute("aria-pressed", timeout=2_000) == "true" if individual_mode.count() > 0 else False
+            combined_disabled = combined_mode.is_disabled(timeout=2_000) if combined_mode.count() > 0 else False
+            fusion_disabled = fusion_mode.is_disabled(timeout=2_000) if fusion_mode.count() > 0 else False
+            contextual_mode_ok = (
+                "개별 생성" in mode_hint_text
+                and "통합/퓨전" in mode_hint_text
+                and individual_pressed
+                and combined_disabled
+                and fusion_disabled
+            )
+            report.record(
+                "blueprint-contextual-mode",
+                contextual_mode_ok,
+                (
+                    screenshot(page, "blueprint-contextual-mode.png")
+                    if contextual_mode_ok
+                    else f"hint={mode_hint_text!r}; individual={individual_pressed}; combined_disabled={combined_disabled}; fusion_disabled={fusion_disabled}"
+                ),
+            )
             advanced_controls = [
                 "blueprint-web-search",
                 "blueprint-web-research",

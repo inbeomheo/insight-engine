@@ -355,7 +355,7 @@ export default function Home() {
                   <SettingsPopover />
                 </div>
 
-                <OutputBlueprint />
+                <OutputBlueprint sourceMode={sourceDraft.mode} />
 
                 {error && (
                   <div
