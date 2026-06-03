@@ -43,10 +43,10 @@ export function useGenerate() {
   const { addReport, updateReport } = useResultStore();
 
   const generateSingle = useCallback(
-    async (url: string, useStreaming = false) => {
+    async (url: string, useStreaming = false): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
@@ -63,6 +63,7 @@ export function useGenerate() {
           addReport(tempReport);
 
           let content = '';
+          let streamSucceeded = false;
           const controller = new AbortController();
           abortRef.current = controller;
 
@@ -86,6 +87,7 @@ export function useGenerate() {
                   });
                 }
               } else if (event.type === 'done') {
+                streamSucceeded = true;
                 // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
                 rafRef.current = false;
                 updateReport(tempId, {
@@ -108,16 +110,19 @@ export function useGenerate() {
             },
             controller.signal
           );
+          return streamSucceeded;
         } else {
           // 비스트리밍 모드
           const res = await generate(req);
           const report = responseToReport(res, url, selectedStyle);
           addReport(report);
           setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+          return true;
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
         setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport, updateReport]
@@ -133,8 +138,7 @@ export function useGenerate() {
 
       // 단일 URL이면 일반 생성
       if (urls.length === 1) {
-        await generateSingle(urls[0], false);
-        return true;
+        return generateSingle(urls[0], false);
       }
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));

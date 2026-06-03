@@ -1058,6 +1058,79 @@ def run_direct_text_advanced_request_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_single_url_failure_retains_source_suite(browser, report: QaReport) -> None:
+    captured: dict[str, list[dict[str, Any]]] = {"direct": [], "batch": []}
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+
+    def direct(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        captured["direct"].append(data if isinstance(data, dict) else {})
+        route.fulfill(
+            status=500,
+            content_type="application/json",
+            body=json.dumps({"detail": "QA forced single URL failure"}, ensure_ascii=False),
+        )
+
+    def batch(route) -> None:
+        data = route.request.post_data_json
+        if callable(data):
+            data = data()
+        captured["batch"].append(data if isinstance(data, dict) else {})
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"success": True, "results": []}, ensure_ascii=False),
+        )
+
+    context.route("**/generate-batch", batch)
+    context.route("**/generate", direct)
+    page = context.new_page()
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[single-url-failure] {exc}"))
+
+    try:
+        url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").fill(url)
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 1개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+        page.locator("[data-testid='generate-dock-button']").click(timeout=10_000)
+
+        sent = wait_until(lambda: len(captured["direct"]) > 0, 10_000, page)
+        page.wait_for_timeout(500)
+        summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=10_000)
+        direct_payload = captured["direct"][-1] if captured["direct"] else {}
+        ok = (
+            sent
+            and len(captured["batch"]) == 0
+            and direct_payload.get("url") == url
+            and "소스 1개" in summary
+            and page.locator("[data-report-id]").count() == 0
+        )
+        report.record(
+            "single-url-failure-retains-source",
+            ok,
+            (
+                f"payload={direct_payload}; summary={summary!r}"
+                if ok
+                else f"direct={captured['direct']}; batch={captured['batch']}; summary={summary!r}; screenshot={screenshot(page, 'single-url-failure-retains-source.png')}"
+            ),
+        )
+    except Exception as exc:
+        report.record("single-url-failure-retains-source", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2311,6 +2384,7 @@ def main() -> int:
         run_notebooklm_auth_notice_suite(browser, report)
         run_non_url_fusion_progress_suite(browser, report)
         run_direct_text_advanced_request_suite(browser, report)
+        run_single_url_failure_retains_source_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
