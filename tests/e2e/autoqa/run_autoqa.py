@@ -790,6 +790,7 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
         page.locator("#url-input").wait_for(state="visible", timeout=60_000)
         trigger = page.locator("[data-testid='mobile-right-panel-trigger']")
         trigger.wait_for(state="visible", timeout=10_000)
+        trigger_initial_label = trigger.get_attribute("aria-label", timeout=5_000) == "작업 패널 열기"
         trigger.click(timeout=10_000)
         drawer = page.locator("[data-testid='mobile-right-panel']")
         drawer.wait_for(state="visible", timeout=10_000)
@@ -811,19 +812,21 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
                 and bool(labelledby)
                 and title.get_attribute("id", timeout=5_000) == labelledby
                 and trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
+                and trigger.get_attribute("aria-label", timeout=5_000) == "작업 패널 닫기"
             )
             page.keyboard.press("Escape")
             closed_ok = wait_until(lambda: drawer.count() == 0 or not drawer.is_visible(), 5_000, page)
             focus_returned = trigger.evaluate("el => document.activeElement === el")
             collapsed_ok = trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
-            a11y_ok = semantic_ok and initial_focus_ok and closed_ok and focus_returned and collapsed_ok
+            trigger_closed_label = trigger.get_attribute("aria-label", timeout=5_000) == "작업 패널 열기"
+            a11y_ok = trigger_initial_label and semantic_ok and initial_focus_ok and closed_ok and focus_returned and collapsed_ok and trigger_closed_label
             report.record(
                 "mobile-right-panel-accessible",
                 a11y_ok,
                 (
-                    "dialog semantics, focus management, and Escape close are wired"
+                    "dialog semantics, trigger state labels, focus management, and Escape close are wired"
                     if a11y_ok
-                    else f"semantic={semantic_ok}; initial_focus={initial_focus_ok}; closed={closed_ok}; focus_returned={focus_returned}; collapsed={collapsed_ok}"
+                    else f"initial_label={trigger_initial_label}; semantic={semantic_ok}; initial_focus={initial_focus_ok}; closed={closed_ok}; focus_returned={focus_returned}; collapsed={collapsed_ok}; closed_label={trigger_closed_label}"
                 ),
             )
         except Exception as exc:

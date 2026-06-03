@@ -63,7 +63,7 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
           data-testid="mobile-right-panel-trigger"
           className="h-9 gap-1.5 rounded-xl px-2 text-xs xl:hidden"
           onClick={onOpenRightPanel}
-          aria-label="작업 패널 열기"
+          aria-label={rightPanelOpen ? '작업 패널 닫기' : '작업 패널 열기'}
           aria-haspopup="dialog"
           aria-controls="mobile-right-panel"
           aria-expanded={rightPanelOpen}
