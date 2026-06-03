@@ -35,6 +35,7 @@ export default function ScheduleModal({
   const naverDefaults = useSettingsStore((s) => s.naverDefaults);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [validationNow, setValidationNow] = useState(() => Date.now());
   const [wordpressOptions, setWordpressOptions] = useState({
     site_url: '',
     username: '',
@@ -71,6 +72,7 @@ export default function ScheduleModal({
   // 모달 열릴 때 기본값 초기화: 내일 오전 9시
   useEffect(() => {
     if (!open) return;
+    setValidationNow(Date.now());
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
@@ -112,6 +114,12 @@ export default function ScheduleModal({
     }
     if (isNaver && !naverOptions.webhook_url.trim()) {
       return '네이버 발행 웹훅 URL은 필수입니다.';
+    }
+    if (scheduledAt) {
+      const scheduledTime = new Date(scheduledAt).getTime();
+      if (!Number.isFinite(scheduledTime) || scheduledTime <= validationNow) {
+        return '예약 시간은 미래 시간이어야 합니다.';
+      }
     }
     return '';
   }
