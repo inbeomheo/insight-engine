@@ -156,6 +156,12 @@
     "expect": "URL/텍스트/파일/음성 소스 전환은 tablist, tab, tabpanel, aria 연결과 키보드 방향키 전환을 제공한다"
   },
   {
+    "id": "source-text-input-accessible",
+    "name": "Source Composer 텍스트 입력 상태",
+    "url": "http://localhost:3000",
+    "expect": "텍스트 소스 입력은 명시 라벨, live 글자 수, 생성 버튼 상태를 제공한다"
+  },
+  {
     "id": "output-blueprint-style-accessible",
     "name": "Output Blueprint 스타일 선택 상태",
     "url": "http://localhost:3000",

@@ -154,6 +154,9 @@ export default function SourceComposer(props: SourceComposerProps) {
             <div className="flex items-start gap-2">
               <Type className="mt-2 h-4 w-4 shrink-0 text-slate-400" />
               <Textarea
+                data-testid="text-source-input"
+                aria-label="텍스트 소스"
+                aria-describedby="text-source-counter"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onFocus={() => setFocused(true)}
@@ -164,10 +167,11 @@ export default function SourceComposer(props: SourceComposerProps) {
               />
             </div>
             <div className="mt-2 flex items-center justify-between border-t border-slate-200/70 pt-2">
-              <span className={cn('text-[11px]', textValid ? 'text-slate-500' : 'text-amber-600')}>
+              <span id="text-source-counter" data-testid="text-source-counter" role="status" aria-live="polite" className={cn('text-[11px]', textValid ? 'text-slate-500' : 'text-amber-600')}>
                 {charCount}자{text.length > 0 && !textValid ? ` · 최소 ${MIN_TEXT_CHARS}자 필요` : ''}
               </span>
               <Button
+                data-testid="text-source-generate"
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-90"
                 onClick={submitText}

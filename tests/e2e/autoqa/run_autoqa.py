@@ -1300,6 +1300,51 @@ def run_source_composer_accessibility_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_source_text_input_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[source-text-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[source-text-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+        text_input = page.locator("[data-testid='text-source-input']")
+        counter = page.locator("[data-testid='text-source-counter']")
+        generate = page.locator("[data-testid='text-source-generate']")
+        initial_ok = (
+            text_input.get_attribute("aria-label", timeout=5_000) == "텍스트 소스"
+            and text_input.get_attribute("aria-describedby", timeout=5_000) == "text-source-counter"
+            and counter.get_attribute("id", timeout=5_000) == "text-source-counter"
+            and counter.get_attribute("role", timeout=5_000) == "status"
+            and counter.get_attribute("aria-live", timeout=5_000) == "polite"
+            and "0자" in counter.inner_text(timeout=5_000)
+            and generate.get_attribute("aria-label", timeout=5_000) == "텍스트 생성"
+            and generate.is_disabled(timeout=5_000)
+        )
+        text_input.fill("자동화 QA가 접근 가능한 텍스트 소스 입력을 검증합니다. 이 문장은 최소 글자 수를 충분히 넘깁니다.", timeout=10_000)
+        changed_ok = "최소" not in counter.inner_text(timeout=5_000) and not generate.is_disabled(timeout=5_000)
+        ok = initial_ok and changed_ok
+        report.record(
+            "source-text-input-accessible",
+            ok,
+            "text input label, live counter, and generate state update" if ok else f"initial={initial_ok}; changed={changed_ok}",
+        )
+    except Exception as exc:
+        report.record("source-text-input-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_output_blueprint_style_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -2822,6 +2867,7 @@ def main() -> int:
         run_url_chip_reorder_suite(browser, report)
         run_drop_bulk_url_limit_suite(browser, report)
         run_source_composer_accessibility_suite(browser, report)
+        run_source_text_input_accessibility_suite(browser, report)
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_mode_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)
