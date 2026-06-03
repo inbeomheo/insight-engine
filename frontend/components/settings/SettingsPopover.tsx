@@ -88,6 +88,38 @@ export default function SettingsPopover() {
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [settingsPopoverOpen, closePopover]);
 
+  const handleDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+
+    const dialog = ref.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter(
+      (element) =>
+        element.tabIndex >= 0 &&
+        element.getAttribute('aria-hidden') !== 'true' &&
+        (element.offsetWidth > 0 || element.offsetHeight > 0 || element.getClientRects().length > 0),
+    );
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, []);
+
   if (!settingsPopoverOpen) return null;
 
   const providerIds = Object.keys(providers);
@@ -167,8 +199,10 @@ export default function SettingsPopover() {
     <div
       ref={ref}
       role="dialog"
+      aria-modal="true"
       aria-labelledby="settings-popover-title"
       aria-describedby="settings-popover-desc"
+      onKeyDown={handleDialogKeyDown}
       className="fixed left-1/2 top-20 z-40 max-h-[calc(100vh-6rem)] w-[420px] max-w-[calc(100vw-2rem)] -translate-x-1/2 overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-5 shadow-lg space-y-5"
     >
       <div className="flex items-start justify-between gap-3">

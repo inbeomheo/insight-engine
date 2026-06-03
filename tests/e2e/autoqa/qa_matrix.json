@@ -560,6 +560,11 @@
     "expect": "설정 팝오버는 제목 연결, 설명 연결, 닫기 버튼, 초기 포커스, 닫기 동작, 트리거 포커스 복귀를 제공한다"
   },
   {
+    "id": "settings-popover-focus-trap",
+    "name": "설정 팝오버 포커스 트랩",
+    "expect": "설정 팝오버가 열려 있는 동안 Tab과 Shift+Tab 포커스는 Dialog 내부에 머문다"
+  },
+  {
     "id": "help-tour-entrypoint",
     "name": "도움말과 가이드 투어 진입점",
     "expect": "헤더 도움말 버튼은 접근 가능한 패널을 열고, 패널에서 가이드 투어를 시작할 수 있다"

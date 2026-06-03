@@ -3587,9 +3587,36 @@ def main() -> int:
                 and title.count() == 1
                 and title.get_attribute("id", timeout=2_000) == labelledby
                 and "settings-popover-desc" in describedby
+                and dialog.get_attribute("aria-modal", timeout=2_000) == "true"
                 and close_button.count() == 1
                 and close_button.get_attribute("aria-label", timeout=2_000) == "생성 설정 닫기"
                 and close_button.evaluate("el => document.activeElement === el")
+            )
+            active_inside_settings = lambda: dialog.evaluate("dialog => dialog.contains(document.activeElement)")
+            page.keyboard.press("Shift+Tab")
+            backward_wrap_ok = wait_until(active_inside_settings, 3_000, page)
+            focusable_count = dialog.evaluate(
+                """
+                dialog => {
+                    const focusable = Array.from(dialog.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+                        .filter((element) => element.tabIndex >= 0 && element.getAttribute('aria-hidden') !== 'true' && (element.offsetWidth > 0 || element.offsetHeight > 0 || element.getClientRects().length > 0));
+                    if (focusable.length > 0) focusable[focusable.length - 1].focus();
+                    return focusable.length;
+                }
+                """
+            )
+            page.keyboard.press("Tab")
+            forward_wrap_ok = wait_until(lambda: close_button.evaluate("el => document.activeElement === el"), 3_000, page)
+            trigger_focused_during_trap = page.locator("[data-testid='settings-popover-trigger']").first.evaluate("el => document.activeElement === el")
+            focus_trap_ok = backward_wrap_ok and forward_wrap_ok and focusable_count > 1 and not trigger_focused_during_trap
+            report.record(
+                "settings-popover-focus-trap",
+                focus_trap_ok,
+                (
+                    "settings dialog Tab and Shift+Tab focus stays inside dialog"
+                    if focus_trap_ok
+                    else f"backward={backward_wrap_ok}; forward={forward_wrap_ok}; focusable={focusable_count}; trigger_focused={trigger_focused_during_trap}"
+                ),
             )
 
             style_group = dialog.locator("[data-testid='settings-style-options']")
@@ -3728,6 +3755,7 @@ def main() -> int:
             report.record("settings-modifier-accessible", False, repr(exc))
             report.record("settings-web-search-switch-accessible", False, repr(exc))
             report.record("settings-popover-dialog-accessible", False, repr(exc))
+            report.record("settings-popover-focus-trap", False, repr(exc))
 
         try:
             page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
