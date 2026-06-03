@@ -156,6 +156,7 @@ export default function Home() {
   const [tourActive, setTourActive] = useState(false);
   const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
   const mobileRightPanelCloseRef = useRef<HTMLButtonElement | null>(null);
+  const mobileRightPanelSheetRef = useRef<HTMLElement | null>(null);
 
   // HelpPanel + GuidedTour 핸들러 — 안정 참조
   const handleToggleHelp = useCallback(() => setHelpOpen((open) => !open), []);
@@ -186,7 +187,34 @@ export default function Home() {
     });
   }, []);
   const handleMobileRightPanelKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') handleCloseMobileRightPanel();
+    if (event.key === 'Escape') {
+      handleCloseMobileRightPanel();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const sheet = mobileRightPanelSheetRef.current;
+    if (!sheet) return;
+    const focusable = Array.from(
+      sheet.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.tabIndex >= 0);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !sheet.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }, [handleCloseMobileRightPanel]);
 
   useEffect(() => {
@@ -480,8 +508,9 @@ export default function Home() {
             className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
             aria-label="작업 패널 닫기"
             onClick={handleCloseMobileRightPanel}
+            tabIndex={-1}
           />
-          <aside className="absolute right-0 top-0 h-full w-[min(360px,92vw)] border-l border-slate-200 bg-white shadow-2xl">
+          <aside ref={mobileRightPanelSheetRef} className="absolute right-0 top-0 h-full w-[min(360px,92vw)] border-l border-slate-200 bg-white shadow-2xl">
             <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
               <p id="mobile-right-panel-title" data-testid="mobile-right-panel-title" className="text-sm font-semibold text-slate-950">작업 패널</p>
               <Button

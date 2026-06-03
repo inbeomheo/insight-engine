@@ -822,6 +822,42 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
                 and trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
                 and trigger.get_attribute("aria-label", timeout=5_000) == "작업 패널 닫기"
             )
+            active_in_sheet = lambda: drawer.evaluate(
+                """
+                drawer => {
+                    const sheet = drawer.querySelector('aside');
+                    return !!sheet && sheet.contains(document.activeElement);
+                }
+                """
+            )
+            page.keyboard.press("Shift+Tab")
+            backward_wrap_ok = wait_until(lambda: bool(active_in_sheet()), 3_000, page)
+            focusable_count = drawer.evaluate(
+                """
+                drawer => {
+                    const sheet = drawer.querySelector('aside');
+                    if (!sheet) return 0;
+                    const focusable = Array.from(sheet.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+                        .filter((element) => element.tabIndex >= 0);
+                    if (focusable.length > 0) focusable[focusable.length - 1].focus();
+                    return focusable.length;
+                }
+                """
+            )
+            page.keyboard.press("Tab")
+            forward_wrap_ok = wait_until(lambda: close.evaluate("el => document.activeElement === el"), 3_000, page)
+            trigger_focused_during_trap = trigger.evaluate("el => document.activeElement === el")
+            focus_trap_ok = backward_wrap_ok and forward_wrap_ok and focusable_count > 1 and not trigger_focused_during_trap
+            report.record(
+                "mobile-right-panel-focus-trap",
+                focus_trap_ok,
+                (
+                    "mobile right panel Tab and Shift+Tab focus stays inside the sheet"
+                    if focus_trap_ok
+                    else f"backward={backward_wrap_ok}; forward={forward_wrap_ok}; focusable={focusable_count}; trigger_focused={trigger_focused_during_trap}"
+                ),
+            )
+            close.focus()
             page.keyboard.press("Escape")
             closed_ok = wait_until(lambda: drawer.count() == 0 or not drawer.is_visible(), 5_000, page)
             focus_returned = trigger.evaluate("el => document.activeElement === el")
@@ -839,9 +875,11 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
             )
         except Exception as exc:
             report.record("mobile-right-panel-accessible", False, repr(exc))
+            report.record("mobile-right-panel-focus-trap", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "mobile-right-panel-drawer-fail.png")
         report.record("mobile-right-panel-drawer", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("mobile-right-panel-focus-trap", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
 
