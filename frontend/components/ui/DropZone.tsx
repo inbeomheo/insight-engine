@@ -16,6 +16,10 @@ interface DropZoneProps {
   children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  testId?: string;
+  inputTestId?: string;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
 }
 
 export default function DropZone({
@@ -25,6 +29,10 @@ export default function DropZone({
   children,
   className,
   disabled,
+  testId,
+  inputTestId,
+  ariaLabel,
+  ariaDescribedBy,
 }: DropZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +78,10 @@ export default function DropZone({
 
   return (
     <div
+      data-testid={testId}
       role="button"
+      aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       tabIndex={0}
       className={cn(
         'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 transition-colors',
@@ -89,6 +100,7 @@ export default function DropZone({
       {children}
       <input
         ref={inputRef}
+        data-testid={inputTestId}
         type="file"
         accept={accept}
         className="hidden"

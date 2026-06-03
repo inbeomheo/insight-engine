@@ -1345,6 +1345,60 @@ def run_source_text_input_accessibility_suite(browser, report: QaReport) -> None
         context.close()
 
 
+def run_source_file_input_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[source-file-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[source-file-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='source-tab-file']").click(timeout=10_000)
+        dropzone = page.locator("[data-testid='file-source-dropzone']")
+        file_input = page.locator("[data-testid='file-source-input']")
+        help_text = page.locator("[data-testid='file-source-help']")
+        generate = page.locator("[data-testid='file-source-generate']")
+        initial_ok = (
+            dropzone.get_attribute("role", timeout=5_000) == "button"
+            and dropzone.get_attribute("aria-label", timeout=5_000) == "PDF/DOCX 파일 업로드"
+            and dropzone.get_attribute("aria-describedby", timeout=5_000) == "file-source-help"
+            and file_input.get_attribute("accept", timeout=5_000) == ".pdf,.docx"
+            and help_text.get_attribute("id", timeout=5_000) == "file-source-help"
+            and "최대 10MB" in help_text.inner_text(timeout=5_000)
+            and generate.get_attribute("aria-label", timeout=5_000) == "파일 생성"
+            and generate.is_disabled(timeout=5_000)
+        )
+        source_path = ARTIFACTS / "qa-upload.docx"
+        source_path.write_bytes(b"qa docx upload")
+        file_input.set_input_files(str(source_path))
+        selected = page.locator("[data-testid='file-source-selected']")
+        selected_ok = (
+            selected.get_attribute("role", timeout=5_000) == "status"
+            and selected.get_attribute("aria-live", timeout=5_000) == "polite"
+            and "qa-upload.docx" in selected.inner_text(timeout=10_000)
+            and not generate.is_disabled(timeout=5_000)
+        )
+        ok = initial_ok and selected_ok
+        report.record(
+            "source-file-input-accessible",
+            ok,
+            "file dropzone label, help, selected state, and generate state update" if ok else f"initial={initial_ok}; selected={selected_ok}",
+        )
+    except Exception as exc:
+        report.record("source-file-input-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_output_blueprint_style_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -2868,6 +2922,7 @@ def main() -> int:
         run_drop_bulk_url_limit_suite(browser, report)
         run_source_composer_accessibility_suite(browser, report)
         run_source_text_input_accessibility_suite(browser, report)
+        run_source_file_input_accessibility_suite(browser, report)
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_mode_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)

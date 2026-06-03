@@ -162,6 +162,12 @@
     "expect": "텍스트 소스 입력은 명시 라벨, live 글자 수, 생성 버튼 상태를 제공한다"
   },
   {
+    "id": "source-file-input-accessible",
+    "name": "Source Composer 파일 입력 상태",
+    "url": "http://localhost:3000",
+    "expect": "파일 소스 입력은 업로드 영역 라벨, 도움말, 선택 파일 상태, 생성 버튼 상태를 제공한다"
+  },
+  {
     "id": "output-blueprint-style-accessible",
     "name": "Output Blueprint 스타일 선택 상태",
     "url": "http://localhost:3000",

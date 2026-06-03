@@ -193,7 +193,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           <FileUpload file={file} onFileSelect={setFile} disabled={props.isLoading} />
           <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
             <span>PDF/DOCX를 업로드하면 문서 내용을 분석해 콘텐츠를 만듭니다.</span>
-            <Button size="sm" className="h-8 rounded-xl" onClick={submitFile} disabled={!file || props.isLoading}>
+            <Button data-testid="file-source-generate" aria-label="파일 생성" size="sm" className="h-8 rounded-xl" onClick={submitFile} disabled={!file || props.isLoading}>
               파일 생성
             </Button>
           </div>

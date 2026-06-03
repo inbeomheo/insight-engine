@@ -50,13 +50,15 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
 
   if (file) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+      <div data-testid="file-source-selected" role="status" aria-live="polite" className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
         <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
           <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
         </div>
         <Button
+          data-testid="file-source-remove"
+          aria-label="파일 선택 제거"
           variant="ghost"
           size="icon"
           className="h-7 w-7 shrink-0"
@@ -72,6 +74,10 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
   return (
     <div>
       <DropZone
+        testId="file-source-dropzone"
+        inputTestId="file-source-input"
+        ariaLabel="PDF/DOCX 파일 업로드"
+        ariaDescribedBy="file-source-help"
         onFiles={handleFiles}
         accept={ACCEPTED_TYPES}
         maxSizeMB={MAX_SIZE_MB}
@@ -81,7 +87,7 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
         <p className="text-sm text-muted-foreground">
           PDF, DOCX 파일을 드래그하거나 클릭하여 업로드
         </p>
-        <p className="text-xs text-muted-foreground/60">최대 {MAX_SIZE_MB}MB</p>
+        <p id="file-source-help" data-testid="file-source-help" className="text-xs text-muted-foreground/60">최대 {MAX_SIZE_MB}MB</p>
       </DropZone>
       {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
     </div>
