@@ -30,6 +30,12 @@
     "expect": "Generate Dock과 우측 패널이 raw 설정값 대신 사용자용 한국어 라벨을 보여준다"
   },
   {
+    "id": "right-panel-effective-mode",
+    "name": "우측 패널 실행 모드 표시",
+    "url": "http://localhost:3000",
+    "expect": "텍스트/파일/음성 소스에서는 Output Blueprint의 URL 전용 모드가 아니라 실제 실행되는 개별 생성을 우측 패널에 보여준다"
+  },
+  {
     "id": "generate-dock-empty-state-clearance",
     "name": "Generate Dock 빈 상태 가림 방지",
     "url": "http://localhost:3000",

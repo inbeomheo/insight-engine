@@ -318,7 +318,7 @@ export default function Home() {
         onDrop={handleDrop}
         sidebar={<Sidebar />}
         header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} />}
-        rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} />}
+        rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} generationMode={studioGenerationMode} />}
         main={(
           <>
             <a
@@ -457,7 +457,7 @@ export default function Home() {
               </Button>
             </div>
             <div className="h-[calc(100%-3.5rem)]">
-              <StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} />
+              <StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} generationMode={studioGenerationMode} />
             </div>
           </aside>
         </div>

@@ -14,6 +14,7 @@ interface StudioRightPanelProps {
   reports: Report[];
   sourceCount: number;
   schedulesCount: number;
+  generationMode: string;
 }
 
 const STATUS_META = {
@@ -93,12 +94,11 @@ function downloadMarkdown(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function StudioRightPanel({ reports, sourceCount, schedulesCount }: StudioRightPanelProps) {
+export default function StudioRightPanel({ reports, sourceCount, schedulesCount, generationMode }: StudioRightPanelProps) {
   const [quickNotice, setQuickNotice] = useState<string | null>(null);
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const selectedProvider = useSettingsStore((s) => s.selectedProvider);
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
-  const generationMode = useSettingsStore((s) => s.generationMode);
   const modifiers = useSettingsStore((s) => s.modifiers);
   const detailLevel = useSettingsStore((s) => s.detailLevel);
   const enableWebSearch = useSettingsStore((s) => s.enableWebSearch);

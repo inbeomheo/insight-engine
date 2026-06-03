@@ -1791,6 +1791,7 @@ def main() -> int:
                 not missing_status_labels and not raw_status_labels,
                 screenshot(page, "studio-status-labels.png") if not missing_status_labels and not raw_status_labels else f"missing={missing_status_labels}; raw={raw_status_labels}",
             )
+            page.get_by_role("button", name=re.compile(r"^통합$")).click(timeout=10_000)
             page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
             page.locator("[data-testid='text-source-panel'] textarea").fill(
                 "Generate Dock source summary QA text. This source is long enough to become a valid text input."
@@ -1801,6 +1802,13 @@ def main() -> int:
                 "generate-dock-source-summary",
                 "텍스트 소스" in dock_summary and "소스 1개" in dock_summary,
                 screenshot(page, "generate-dock-source-summary.png") if "텍스트 소스" in dock_summary and "소스 1개" in dock_summary else dock_summary,
+            )
+            right_mode = page.locator("[data-testid='right-panel-setting-mode']").inner_text(timeout=10_000)
+            effective_mode_ok = "개별 생성" in right_mode and "통합 생성" not in right_mode and "모드 개별 생성" in dock_summary
+            report.record(
+                "right-panel-effective-mode",
+                effective_mode_ok,
+                screenshot(page, "right-panel-effective-mode.png") if effective_mode_ok else f"dock={dock_summary!r}; right={right_mode!r}",
             )
             advanced_controls = [
                 "blueprint-web-search",
