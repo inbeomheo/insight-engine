@@ -36,6 +36,12 @@
     "expect": "소스가 없을 때 Generate Dock이 빈 워크벤치 안내를 가리지 않는다"
   },
   {
+    "id": "result-workbench-empty-controls",
+    "name": "결과 없음 Workbench 컨트롤 정리",
+    "url": "http://localhost:3000",
+    "expect": "결과가 없을 때 빈 필터 박스를 보이지 않고 필터/보기 모드가 결과 생성 후 표시된다고 안내한다"
+  },
+  {
     "id": "generate-dock-source-summary",
     "name": "Generate Dock 소스 종류 요약",
     "url": "http://localhost:3000",

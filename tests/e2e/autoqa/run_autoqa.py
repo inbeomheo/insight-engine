@@ -1649,6 +1649,19 @@ def main() -> int:
                 ),
             )
             page.locator("main").evaluate("(el) => { el.scrollTop = 0; }")
+            result_toolbar = page.locator("[data-testid='studio-result-toolbar']").first
+            result_toolbar_text = result_toolbar.inner_text(timeout=10_000)
+            empty_notice_visible = result_toolbar.locator("[data-testid='result-toolbar-empty-notice']").count() > 0
+            filter_label_visible = result_toolbar.get_by_text("필터", exact=True).count() > 0
+            report.record(
+                "result-workbench-empty-controls",
+                empty_notice_visible and not filter_label_visible and "필터와 보기 모드" in result_toolbar_text,
+                (
+                    screenshot(page, "result-workbench-empty-controls.png")
+                    if empty_notice_visible and not filter_label_visible and "필터와 보기 모드" in result_toolbar_text
+                    else f"notice={empty_notice_visible}; filter_label={filter_label_visible}; text={result_toolbar_text[:300]!r}"
+                ),
+            )
             readable_copy = [
                 "분석할 소스를 준비하세요",
                 "텍스트",

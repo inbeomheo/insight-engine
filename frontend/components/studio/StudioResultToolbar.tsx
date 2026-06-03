@@ -42,10 +42,19 @@ export default function StudioResultToolbar({
         )}
       </div>
 
-      <div className="rounded-2xl bg-slate-50 p-3">
-        <p className="mb-2 text-xs font-semibold text-slate-500">필터</p>
-        <FilterBar />
-      </div>
+      {totalCount > 0 ? (
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <p className="mb-2 text-xs font-semibold text-slate-500">필터</p>
+          <FilterBar />
+        </div>
+      ) : (
+        <div
+          data-testid="result-toolbar-empty-notice"
+          className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-500"
+        >
+          결과가 생기면 필터와 보기 모드가 표시됩니다.
+        </div>
+      )}
     </section>
   );
 }
