@@ -103,7 +103,7 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
       <div className="mt-5 grid gap-3 lg:grid-cols-3">
         <div className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 text-xs font-semibold text-slate-500">제작 모드</p>
-          <div className="flex flex-wrap gap-2">
+          <div data-testid="blueprint-mode-options" role="group" aria-label="제작 모드" className="flex flex-wrap gap-2">
             <Button data-testid="blueprint-mode-individual" aria-pressed={visibleGenerationMode === 'individual'} type="button" size="sm" variant={visibleGenerationMode === 'individual' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('individual')}><Sparkles className="h-3.5 w-3.5" />개별</Button>
             <Button data-testid="blueprint-mode-combined" aria-pressed={visibleGenerationMode === 'combined'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'combined' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('combined')}><Layers className="h-3.5 w-3.5" />통합</Button>
             <Button data-testid="blueprint-mode-fusion" aria-pressed={visibleGenerationMode === 'fusion'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'fusion' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('fusion')}><Combine className="h-3.5 w-3.5" />퓨전</Button>

@@ -1340,6 +1340,71 @@ def run_output_blueprint_style_accessibility_suite(browser, report: QaReport) ->
         context.close()
 
 
+def run_output_blueprint_mode_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[blueprint-mode-a11y] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[blueprint-mode-a11y] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 1개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+
+        group = page.locator("[data-testid='blueprint-mode-options']")
+        individual = page.locator("[data-testid='blueprint-mode-individual']")
+        combined = page.locator("[data-testid='blueprint-mode-combined']")
+        fusion = page.locator("[data-testid='blueprint-mode-fusion']")
+        initial_ok = (
+            group.get_attribute("role", timeout=5_000) == "group"
+            and group.get_attribute("aria-label", timeout=5_000) == "제작 모드"
+            and individual.get_attribute("aria-pressed", timeout=5_000) == "true"
+            and combined.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and fusion.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and combined.is_disabled(timeout=5_000)
+            and fusion.is_disabled(timeout=5_000)
+            and combined.get_attribute("aria-describedby", timeout=5_000) == "blueprint-mode-hint"
+            and fusion.get_attribute("aria-describedby", timeout=5_000) == "blueprint-mode-hint"
+        )
+
+        page.locator("#url-input").fill("https://www.youtube.com/watch?v=wr4nCMUy1dk")
+        page.locator("#url-input").press("Enter")
+        wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
+        wait_until(lambda: not combined.is_disabled(timeout=1_000) and not fusion.is_disabled(timeout=1_000), 10_000, page)
+        combined.click(timeout=10_000)
+        combined_ok = (
+            individual.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and combined.get_attribute("aria-pressed", timeout=5_000) == "true"
+            and fusion.get_attribute("aria-pressed", timeout=5_000) == "false"
+        )
+        fusion.click(timeout=10_000)
+        fusion_ok = (
+            individual.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and combined.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and fusion.get_attribute("aria-pressed", timeout=5_000) == "true"
+        )
+        ok = initial_ok and combined_ok and fusion_ok
+        report.record(
+            "output-blueprint-mode-accessible",
+            ok,
+            "mode group, disabled hints, and pressed states update" if ok else f"initial={initial_ok}; combined={combined_ok}; fusion={fusion_ok}",
+        )
+    except Exception as exc:
+        report.record("output-blueprint-mode-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_output_blueprint_detail_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -2758,6 +2823,7 @@ def main() -> int:
         run_drop_bulk_url_limit_suite(browser, report)
         run_source_composer_accessibility_suite(browser, report)
         run_output_blueprint_style_accessibility_suite(browser, report)
+        run_output_blueprint_mode_accessibility_suite(browser, report)
         run_output_blueprint_detail_accessibility_suite(browser, report)
         run_output_blueprint_modifier_accessibility_suite(browser, report)
         run_output_blueprint_advanced_accessibility_suite(browser, report)
