@@ -1035,7 +1035,7 @@ def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
         state = {
             "combined_disabled": combined_mode.is_disabled(timeout=5_000),
             "fusion_disabled": fusion_mode.is_disabled(timeout=5_000),
-            "individual_pressed": individual_mode.get_attribute("aria-pressed", timeout=5_000) == "true",
+            "individual_checked": individual_mode.get_attribute("aria-checked", timeout=5_000) == "true",
             "hint": hint_text,
             "dock_summary": dock_summary,
             "dock_disabled": dock_button.is_disabled(timeout=5_000),
@@ -1045,7 +1045,7 @@ def run_generate_dock_minimums_suite(browser, report: QaReport) -> None:
         ok = (
             state["combined_disabled"]
             and state["fusion_disabled"]
-            and state["individual_pressed"]
+            and state["individual_checked"]
             and "URL 소스 2개 이상" in hint_text
             and "통합/퓨전" in hint_text
             and "모드 개별 생성" in dock_summary
@@ -1196,7 +1196,7 @@ def run_non_url_fusion_progress_suite(browser, report: QaReport) -> None:
         page.locator("#url-input").fill("https://www.youtube.com/watch?v=wr4nCMUy1dk")
         page.locator("#url-input").press("Enter")
         wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
-        page.get_by_role("button", name=re.compile(r"^퓨전$")).click(timeout=10_000)
+        page.locator("[data-testid='blueprint-mode-fusion']").click(timeout=10_000)
         page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
         page.locator("[data-testid='text-source-panel'] textarea").fill(
             "Fusion progress should not be shown for direct text generation even when URL fusion mode was selected before switching sources."
@@ -1893,11 +1893,12 @@ def run_output_blueprint_mode_accessibility_suite(browser, report: QaReport) -> 
         combined = page.locator("[data-testid='blueprint-mode-combined']")
         fusion = page.locator("[data-testid='blueprint-mode-fusion']")
         initial_ok = (
-            group.get_attribute("role", timeout=5_000) == "group"
+            group.get_attribute("role", timeout=5_000) == "radiogroup"
             and group.get_attribute("aria-label", timeout=5_000) == "제작 모드"
-            and individual.get_attribute("aria-pressed", timeout=5_000) == "true"
-            and combined.get_attribute("aria-pressed", timeout=5_000) == "false"
-            and fusion.get_attribute("aria-pressed", timeout=5_000) == "false"
+            and individual.get_attribute("role", timeout=5_000) == "radio"
+            and individual.get_attribute("aria-checked", timeout=5_000) == "true"
+            and combined.get_attribute("aria-checked", timeout=5_000) == "false"
+            and fusion.get_attribute("aria-checked", timeout=5_000) == "false"
             and combined.is_disabled(timeout=5_000)
             and fusion.is_disabled(timeout=5_000)
             and combined.get_attribute("aria-describedby", timeout=5_000) == "blueprint-mode-hint"
@@ -1908,23 +1909,22 @@ def run_output_blueprint_mode_accessibility_suite(browser, report: QaReport) -> 
         page.locator("#url-input").press("Enter")
         wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
         wait_until(lambda: not combined.is_disabled(timeout=1_000) and not fusion.is_disabled(timeout=1_000), 10_000, page)
-        combined.click(timeout=10_000)
+        individual.focus(timeout=10_000)
+        page.keyboard.press("ArrowRight")
         combined_ok = (
-            individual.get_attribute("aria-pressed", timeout=5_000) == "false"
-            and combined.get_attribute("aria-pressed", timeout=5_000) == "true"
-            and fusion.get_attribute("aria-pressed", timeout=5_000) == "false"
+            combined.get_attribute("aria-checked", timeout=5_000) == "true"
+            and combined.evaluate("el => document.activeElement === el")
         )
-        fusion.click(timeout=10_000)
+        page.keyboard.press("End")
         fusion_ok = (
-            individual.get_attribute("aria-pressed", timeout=5_000) == "false"
-            and combined.get_attribute("aria-pressed", timeout=5_000) == "false"
-            and fusion.get_attribute("aria-pressed", timeout=5_000) == "true"
+            fusion.get_attribute("aria-checked", timeout=5_000) == "true"
+            and fusion.evaluate("el => document.activeElement === el")
         )
         ok = initial_ok and combined_ok and fusion_ok
         report.record(
             "output-blueprint-mode-accessible",
             ok,
-            "mode group, disabled hints, and pressed states update" if ok else f"initial={initial_ok}; combined={combined_ok}; fusion={fusion_ok}",
+            "mode radiogroup, disabled hints, and keyboard navigation update selection" if ok else f"initial={initial_ok}; combined={combined_ok}; fusion={fusion_ok}",
         )
     except Exception as exc:
         report.record("output-blueprint-mode-accessible", False, repr(exc))
@@ -2945,7 +2945,7 @@ def main() -> int:
             page.locator("#url-input").fill("https://www.youtube.com/watch?v=bbbbbbbbbbb")
             page.locator("#url-input").press("Enter")
             wait_until(lambda: "소스 2개" in page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=1_000), 10_000, page)
-            page.get_by_role("button", name=re.compile(r"^통합$")).click(timeout=10_000)
+            page.locator("[data-testid='blueprint-mode-combined']").click(timeout=10_000)
             page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
             page.locator("[data-testid='text-source-panel'] textarea").fill(
                 "Generate Dock source summary QA text. This source is long enough to become a valid text input."
@@ -2976,13 +2976,13 @@ def main() -> int:
             combined_mode = page.locator("[data-testid='blueprint-mode-combined']")
             fusion_mode = page.locator("[data-testid='blueprint-mode-fusion']")
             mode_hint_text = mode_hint.inner_text(timeout=2_000) if mode_hint.count() > 0 else ""
-            individual_pressed = individual_mode.get_attribute("aria-pressed", timeout=2_000) == "true" if individual_mode.count() > 0 else False
+            individual_checked = individual_mode.get_attribute("aria-checked", timeout=2_000) == "true" if individual_mode.count() > 0 else False
             combined_disabled = combined_mode.is_disabled(timeout=2_000) if combined_mode.count() > 0 else False
             fusion_disabled = fusion_mode.is_disabled(timeout=2_000) if fusion_mode.count() > 0 else False
             contextual_mode_ok = (
                 "개별 생성" in mode_hint_text
                 and "통합/퓨전" in mode_hint_text
-                and individual_pressed
+                and individual_checked
                 and combined_disabled
                 and fusion_disabled
             )
@@ -2992,7 +2992,7 @@ def main() -> int:
                 (
                     screenshot(page, "blueprint-contextual-mode.png")
                     if contextual_mode_ok
-                    else f"hint={mode_hint_text!r}; individual={individual_pressed}; combined_disabled={combined_disabled}; fusion_disabled={fusion_disabled}"
+                    else f"hint={mode_hint_text!r}; individual={individual_checked}; combined_disabled={combined_disabled}; fusion_disabled={fusion_disabled}"
                 ),
             )
             page.evaluate("window.dispatchEvent(new Event('insight-engine-new-analysis'))")

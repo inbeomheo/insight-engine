@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { cn } from '@/lib/utils';
+import type { GenerationMode } from '@/lib/types';
 
 const DETAIL_OPTIONS = [
   { value: 'brief', label: '간단', desc: '핵심만 빠르게' },
@@ -26,6 +27,12 @@ const SOURCE_MODE_LABELS: Record<OutputBlueprintSourceMode, string> = {
   file: '파일',
   voice: '음성',
 };
+
+const MODE_OPTIONS: Array<{ id: GenerationMode; label: string; icon: typeof Sparkles }> = [
+  { id: 'individual', label: '개별', icon: Sparkles },
+  { id: 'combined', label: '통합', icon: Layers },
+  { id: 'fusion', label: '퓨전', icon: Combine },
+];
 
 function optionLabel<T extends { value: string; label: string }>(items: T[], value: string) {
   return items.find((item) => item.value === value)?.label ?? value;
@@ -81,6 +88,24 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
           : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + STYLE_OPTIONS.length) % STYLE_OPTIONS.length;
     selectStyle(STYLE_OPTIONS[nextIndex].id);
   };
+  const selectMode = (mode: GenerationMode) => {
+    if (mode !== 'individual' && multiSourceModeDisabled) return;
+    setGenerationMode(mode);
+    requestAnimationFrame(() => document.getElementById(`blueprint-mode-${mode}`)?.focus());
+  };
+  const handleModeKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const enabledModes = multiSourceModeDisabled ? MODE_OPTIONS.slice(0, 1) : MODE_OPTIONS;
+    const currentIndex = Math.max(0, enabledModes.findIndex((option) => option.id === MODE_OPTIONS[index].id));
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? enabledModes.length - 1
+          : (currentIndex + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + enabledModes.length) % enabledModes.length;
+    selectMode(enabledModes[nextIndex].id);
+  };
 
   return (
     <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
@@ -123,10 +148,32 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
       <div className="mt-5 grid gap-3 lg:grid-cols-3">
         <div className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 text-xs font-semibold text-slate-500">제작 모드</p>
-          <div data-testid="blueprint-mode-options" role="group" aria-label="제작 모드" className="flex flex-wrap gap-2">
-            <Button data-testid="blueprint-mode-individual" aria-pressed={visibleGenerationMode === 'individual'} type="button" size="sm" variant={visibleGenerationMode === 'individual' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('individual')}><Sparkles className="h-3.5 w-3.5" />개별</Button>
-            <Button data-testid="blueprint-mode-combined" aria-pressed={visibleGenerationMode === 'combined'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'combined' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('combined')}><Layers className="h-3.5 w-3.5" />통합</Button>
-            <Button data-testid="blueprint-mode-fusion" aria-pressed={visibleGenerationMode === 'fusion'} aria-describedby={modeHint ? 'blueprint-mode-hint' : undefined} disabled={multiSourceModeDisabled} type="button" size="sm" variant={visibleGenerationMode === 'fusion' ? 'default' : 'outline'} className="gap-1.5 rounded-full" onClick={() => setGenerationMode('fusion')}><Combine className="h-3.5 w-3.5" />퓨전</Button>
+          <div data-testid="blueprint-mode-options" role="radiogroup" aria-label="제작 모드" className="flex flex-wrap gap-2">
+            {MODE_OPTIONS.map((option, index) => {
+              const Icon = option.icon;
+              const selected = visibleGenerationMode === option.id;
+              const disabled = option.id !== 'individual' && multiSourceModeDisabled;
+              return (
+                <Button
+                  key={option.id}
+                  id={`blueprint-mode-${option.id}`}
+                  data-testid={`blueprint-mode-${option.id}`}
+                  role="radio"
+                  aria-checked={selected}
+                  aria-describedby={disabled && modeHint ? 'blueprint-mode-hint' : undefined}
+                  disabled={disabled}
+                  tabIndex={selected ? 0 : -1}
+                  type="button"
+                  size="sm"
+                  variant={selected ? 'default' : 'outline'}
+                  className="gap-1.5 rounded-full focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                  onClick={() => selectMode(option.id)}
+                  onKeyDown={(event) => handleModeKeyDown(event, index)}
+                >
+                  <Icon className="h-3.5 w-3.5" />{option.label}
+                </Button>
+              );
+            })}
           </div>
           {modeHint && (
             <p id="blueprint-mode-hint" data-testid="blueprint-mode-hint" className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] leading-relaxed text-indigo-700">

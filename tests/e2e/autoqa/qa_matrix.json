@@ -207,7 +207,7 @@
     "id": "output-blueprint-mode-accessible",
     "name": "Output Blueprint 제작 모드 선택 상태",
     "url": "http://localhost:3000",
-    "expect": "제작 모드는 그룹 라벨, 비활성 안내, aria-pressed 상태를 제공하고 다중 URL에서 선택 변경을 반영한다"
+    "expect": "제작 모드는 radiogroup 라벨, radio 선택 상태, 비활성 안내, 방향키/End 키보드 전환을 제공한다"
   },
   {
     "id": "output-blueprint-detail-accessible",
