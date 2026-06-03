@@ -1823,6 +1823,7 @@ def main() -> int:
                     else f"empty={empty_box}; dock={dock_box}; overlaps={overlaps}"
                 ),
             )
+            empty_dock_text = page.locator("[data-testid='generate-dock']").inner_text(timeout=10_000)
             page.locator("main").evaluate("(el) => { el.scrollTop = 0; }")
             result_toolbar = page.locator("[data-testid='studio-result-toolbar']").first
             result_toolbar_text = result_toolbar.inner_text(timeout=10_000)
@@ -1897,6 +1898,13 @@ def main() -> int:
                 "generate-dock-source-summary",
                 "텍스트 소스" in dock_summary and "소스 1개" in dock_summary,
                 screenshot(page, "generate-dock-source-summary.png") if "텍스트 소스" in dock_summary and "소스 1개" in dock_summary else dock_summary,
+            )
+            ready_dock_text = page.locator("[data-testid='generate-dock']").inner_text(timeout=10_000)
+            state_copy_ok = "소스를 추가하세요" in empty_dock_text and "생성 준비 완료" in ready_dock_text and "Ready to Generate" not in empty_dock_text + ready_dock_text
+            report.record(
+                "generate-dock-state-copy",
+                state_copy_ok,
+                screenshot(page, "generate-dock-state-copy.png") if state_copy_ok else f"empty={empty_dock_text!r}; ready={ready_dock_text!r}",
             )
             right_mode = page.locator("[data-testid='right-panel-setting-mode']").inner_text(timeout=10_000)
             effective_mode_ok = "개별 생성" in right_mode and "통합 생성" not in right_mode and "모드 개별 생성" in dock_summary

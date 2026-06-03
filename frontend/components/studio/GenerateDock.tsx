@@ -22,6 +22,11 @@ export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기
   const Icon = mode === 'fusion' ? Combine : mode === 'combined' ? Layers : Sparkles;
   const handler = mode === 'fusion' ? onGenerateFusion : mode === 'combined' ? onGenerateMerged : onGenerate;
   const modeLabel = getGenerationModeLabel(mode);
+  const statusLabel = isLoading
+    ? '생성 중입니다'
+    : sourceCount < requiredSources
+      ? (requiredSources > 1 ? '소스를 더 추가하세요' : '소스를 추가하세요')
+      : '생성 준비 완료';
   return (
     <section
       data-testid="generate-dock"
@@ -34,7 +39,7 @@ export default function GenerateDock({ sourceCount, sourceLabel = '소스 대기
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold text-indigo-700">Ready to Generate</p>
+          <p data-testid="generate-dock-status" className="text-xs font-semibold text-indigo-700">{statusLabel}</p>
           <p data-testid="generate-dock-summary" className="text-sm text-slate-500">
             {sourceLabel} · 소스 {sourceCount}개 · 모드 {modeLabel}
           </p>
