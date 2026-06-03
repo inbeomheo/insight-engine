@@ -199,11 +199,9 @@ export default function Home() {
       const matches = text.match(urlPattern);
       if (!matches) return;
 
-      for (const url of matches) {
-        addUrl(url.trim());
-      }
+      addUrls(matches.map((url) => url.trim()));
     },
-    [addUrl],
+    [addUrls],
   );
 
   const handleFocusSourceComposer = useCallback(() => {

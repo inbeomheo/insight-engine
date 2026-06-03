@@ -1199,6 +1199,49 @@ def run_url_chip_reorder_suite(browser, report: QaReport) -> None:
         context.close()
 
 
+def run_drop_bulk_url_limit_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[drop-bulk-url-limit] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[drop-bulk-url-limit] {exc}"))
+
+    try:
+        urls = [f"https://example.com/source-{idx}" for idx in range(12)]
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.evaluate(
+            """(text) => {
+                const data = new DataTransfer();
+                data.setData('text/plain', text);
+                const target = document.querySelector('main') || document.body;
+                target.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: data }));
+                target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: data }));
+            }""",
+            "\n".join(urls),
+        )
+        wait_until(lambda: page.locator("[draggable='true']").count() >= 10, 10_000, page)
+        chip_count = page.locator("[draggable='true']").count()
+        summary = page.locator("[data-testid='generate-dock-summary']").inner_text(timeout=10_000)
+        ok = chip_count == 10 and "소스 10개" in summary
+        report.record(
+            "drop-bulk-url-limit",
+            ok,
+            f"chip_count={chip_count}; summary={summary!r}",
+        )
+    except Exception as exc:
+        report.record("drop-bulk-url-limit", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_batch_advanced_request_suite(browser, report: QaReport) -> None:
     captured: list[dict[str, Any]] = []
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
@@ -2476,6 +2519,7 @@ def main() -> int:
         run_direct_text_advanced_request_suite(browser, report)
         run_single_url_failure_retains_source_suite(browser, report)
         run_url_chip_reorder_suite(browser, report)
+        run_drop_bulk_url_limit_suite(browser, report)
         run_batch_advanced_request_suite(browser, report)
         run_url_mode_advanced_request_suite(browser, report)
         run_right_panel_suite(browser, report)
