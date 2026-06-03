@@ -1274,6 +1274,31 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
         close_dialogs(page)
 
     try:
+        before = len(calls["schedule"])
+        click_menu_label(page, "예약 발행")
+        dialog = page.locator("[role='dialog']").last
+        dialog.wait_for(state="visible", timeout=10_000)
+        dialog.locator("select").first.select_option("naver_blog", timeout=10_000)
+        dialog.locator("[data-testid='schedule-option-naver-webhook-url']").fill("")
+        submit = dialog.locator("button", has_text="예약 등록")
+        disabled = not submit.is_enabled()
+        if submit.is_enabled():
+            submit.click(timeout=10_000)
+        page.wait_for_timeout(400)
+        no_call = len(calls["schedule"]) == before
+        text = dialog.inner_text(timeout=1_000) if dialog.is_visible(timeout=1_000) else ""
+        has_hint = "네이버 발행 웹훅 URL" in text and ("필수" in text or "입력" in text)
+        report.record(
+            "menu-schedule-required-options",
+            no_call and has_hint and disabled,
+            f"disabled={disabled}; calls_before={before}; calls_after={len(calls['schedule'])}; text={text[:300]}",
+        )
+        close_dialogs(page)
+    except Exception as exc:
+        report.record("menu-schedule-required-options", False, repr(exc))
+        close_dialogs(page)
+
+    try:
         click_menu_label(page, "공유")
         copied = page.evaluate("navigator.clipboard.readText()")
         ok = title in copied and "youtube.com" in copied

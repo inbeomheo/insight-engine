@@ -104,8 +104,22 @@ export default function ScheduleModal({
     return {};
   }
 
+  function getValidationMessage() {
+    if (isWordPress) {
+      if (!wordpressOptions.site_url.trim()) return 'WordPress 사이트 URL을 입력해주세요.';
+      if (!wordpressOptions.username.trim()) return 'WordPress 사용자명을 입력해주세요.';
+      if (!wordpressOptions.app_password.trim()) return 'WordPress Application Password를 입력해주세요.';
+    }
+    if (isNaver && !naverOptions.webhook_url.trim()) {
+      return '네이버 발행 웹훅 URL은 필수입니다.';
+    }
+    return '';
+  }
+
+  const validationMessage = getValidationMessage();
+
   function handleSubmit() {
-    if (!selectedPlugin || !scheduledAt) return;
+    if (!selectedPlugin || !scheduledAt || validationMessage) return;
     const isoDate = new Date(scheduledAt).toISOString();
     const options = buildPluginOptions();
     onSchedule({
@@ -115,7 +129,7 @@ export default function ScheduleModal({
     });
   }
 
-  const canSubmit = selectedPlugin && scheduledAt && !isLoading;
+  const canSubmit = Boolean(selectedPlugin && scheduledAt && !isLoading && !validationMessage);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,6 +256,15 @@ export default function ScheduleModal({
             onChange={(e) => setScheduledAt(e.target.value)}
           />
         </div>
+
+        {validationMessage && (
+          <p
+            data-testid="schedule-validation-message"
+            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
+          >
+            {validationMessage}
+          </p>
+        )}
 
         {/* 제출 */}
         <div className="flex justify-end gap-2 pt-2">

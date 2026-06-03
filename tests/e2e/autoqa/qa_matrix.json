@@ -264,6 +264,12 @@
     "expect": "설정에 저장한 네이버 블로그 기본값이 예약 발행 모달에 채워지고 예약 payload로 전달된다"
   },
   {
+    "id": "menu-schedule-required-options",
+    "name": "예약 필수 연결값 검증",
+    "url": "http://localhost:3000",
+    "expect": "필수 연결값이 비어 있으면 예약 API를 호출하지 않고 사용자가 보완할 항목을 보여준다"
+  },
+  {
     "id": "right-panel-quick-actions",
     "name": "우측 패널 빠른 액션",
     "url": "http://localhost:3000",
