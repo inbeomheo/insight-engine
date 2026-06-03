@@ -1283,13 +1283,24 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
 
     try:
         click_menu_label(page, "삭제")
+        dialog = page.locator("[role='dialog']", has_text="결과 삭제").last
+        dialog.wait_for(state="visible", timeout=5_000)
+        not_removed_before_confirm = page.locator("[data-report-id='qa-menu-report']").count() == 1
+        dialog.locator("button", has_text="취소").click(timeout=5_000)
+        page.wait_for_timeout(300)
+        still_visible_after_cancel = page.locator("[data-report-id='qa-menu-report']").count() == 1
+        click_menu_label(page, "삭제")
+        dialog = page.locator("[role='dialog']", has_text="결과 삭제").last
+        dialog.wait_for(state="visible", timeout=5_000)
+        dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
+        page.locator("[data-report-id='qa-menu-report']").wait_for(state="detached", timeout=5_000)
         removed = page.locator("[data-report-id='qa-menu-report']").count() == 0
-        if not removed:
-            page.locator("[data-report-id='qa-menu-report']").wait_for(state="detached", timeout=5_000)
-            removed = True
-        record_action("삭제", removed, f"card_removed={removed}")
+        ok = not_removed_before_confirm and still_visible_after_cancel and removed
+        record_action("삭제", ok, f"not_removed_before_confirm={not_removed_before_confirm}; still_visible_after_cancel={still_visible_after_cancel}; card_removed={removed}")
+        report.record("menu-delete-confirmation", ok, f"card_removed={removed}")
     except Exception as exc:
         record_action("삭제", False, repr(exc))
+        report.record("menu-delete-confirmation", False, repr(exc))
 
     report.notes.append("Result-card action menu QA mocks NotebookLM, schedule, rewrite, event extraction, video QA, and binary export APIs to avoid external side effects.")
     context.close()

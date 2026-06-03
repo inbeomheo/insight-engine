@@ -17,6 +17,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
@@ -136,6 +144,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, readPreviewMode, notebookLmAuthNotice, exportNotice, focusedFromPanel, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
@@ -178,6 +187,16 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
   const { t } = useTranslation();
 
   const charCount = report.content.length;
+
+  const requestDelete = useCallback(() => {
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    removeReport(report.id);
+    setDeleteConfirmOpen(false);
+    toast.success('결과를 삭제했습니다.');
+  }, [removeReport, report.id]);
 
   async function copyText(text: string, field: string) {
     await navigator.clipboard.writeText(text);
@@ -558,6 +577,27 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
+    <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            결과 삭제
+          </DialogTitle>
+          <DialogDescription>
+            “{report.title}” 결과를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+            취소
+          </Button>
+          <Button type="button" variant="destructive" onClick={confirmDelete}>
+            삭제하기
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <Card className={`overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-sm shadow-slate-200/60 transition-all duration-200 hover:border-slate-300 hover:shadow-md ${focusedFromPanel ? 'ring-2 ring-indigo-400 shadow-indigo-100' : ''}`}>
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
@@ -999,7 +1039,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
           <section data-testid="workbench-section-manage" className={workbenchSectionClass}>
             <p className="mb-2 text-xs font-semibold text-slate-500">관리</p>
-            <Button data-testid="workbench-action-delete" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={() => removeReport(report.id)}>
+            <Button data-testid="workbench-action-delete" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={requestDelete}>
               <Trash2 className="h-3.5 w-3.5" />삭제
             </Button>
           </section>
@@ -1121,7 +1161,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => removeReport(report.id)}
+                onClick={requestDelete}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-2" />
                 {t('result.delete')}

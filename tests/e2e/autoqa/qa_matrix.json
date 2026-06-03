@@ -315,5 +315,10 @@
     "id": "menu-action-clicks",
     "name": "결과 카드 전체 액션 실행",
     "expect": "남은 메뉴 항목을 클릭하면 예상 UI/API/download side effect가 발생한다"
+  },
+  {
+    "id": "menu-delete-confirmation",
+    "name": "결과 삭제 확인",
+    "expect": "삭제 액션은 즉시 삭제하지 않고 확인 모달에서 취소/확정을 구분한다"
   }
 ]
