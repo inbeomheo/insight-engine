@@ -10,9 +10,10 @@ interface HeaderProps {
   isLoading?: boolean;
   sourceCount?: number;
   onOpenRightPanel?: () => void;
+  rightPanelOpen?: boolean;
 }
 
-const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel }: HeaderProps) {
+const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = false, sourceCount = 0, onOpenRightPanel, rightPanelOpen = false }: HeaderProps) {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
   const handleOpenSettings = useCallback(() => setSettingsModalOpen(true), [setSettingsModalOpen]);
@@ -58,6 +59,9 @@ const Header = memo(function Header({ modelLabel = '자동 선택', isLoading = 
           className="h-9 gap-1.5 rounded-xl px-2 text-xs xl:hidden"
           onClick={onOpenRightPanel}
           aria-label="작업 패널 열기"
+          aria-haspopup="dialog"
+          aria-controls="mobile-right-panel"
+          aria-expanded={rightPanelOpen}
         >
           <PanelRight className="h-[18px] w-[18px]" />
           <span className="hidden sm:inline">작업</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { Layers, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -155,12 +155,28 @@ export default function Home() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
   const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
+  const mobileRightPanelCloseRef = useRef<HTMLButtonElement | null>(null);
 
   // HelpPanel + GuidedTour 핸들러 — 안정 참조
   const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
   const handleCloseTour = useCallback(() => setTourActive(false), []);
   const handleOpenMobileRightPanel = useCallback(() => setMobileRightPanelOpen(true), []);
-  const handleCloseMobileRightPanel = useCallback(() => setMobileRightPanelOpen(false), []);
+  const handleCloseMobileRightPanel = useCallback(() => {
+    setMobileRightPanelOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector("[data-testid='mobile-right-panel-trigger']");
+      if (trigger instanceof HTMLButtonElement) trigger.focus();
+    });
+  }, []);
+  const handleMobileRightPanelKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') handleCloseMobileRightPanel();
+  }, [handleCloseMobileRightPanel]);
+
+  useEffect(() => {
+    if (!mobileRightPanelOpen) return;
+    const frame = requestAnimationFrame(() => mobileRightPanelCloseRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [mobileRightPanelOpen]);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -315,7 +331,7 @@ export default function Home() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         sidebar={<Sidebar />}
-        header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} />}
+        header={<Header modelLabel={modelLabel} isLoading={isLoading} sourceCount={studioSourceCount} onOpenRightPanel={handleOpenMobileRightPanel} rightPanelOpen={mobileRightPanelOpen} />}
         rightPanel={<StudioRightPanel reports={reports} sourceCount={studioSourceCount} schedulesCount={schedules.length} generationMode={studioGenerationMode} />}
         main={(
           <>
@@ -433,7 +449,15 @@ export default function Home() {
       />
 
       {mobileRightPanelOpen && (
-        <div data-testid="mobile-right-panel" className="fixed inset-0 z-[70] xl:hidden">
+        <div
+          id="mobile-right-panel"
+          data-testid="mobile-right-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mobile-right-panel-title"
+          className="fixed inset-0 z-[70] xl:hidden"
+          onKeyDown={handleMobileRightPanelKeyDown}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
@@ -442,12 +466,13 @@ export default function Home() {
           />
           <aside className="absolute right-0 top-0 h-full w-[min(360px,92vw)] border-l border-slate-200 bg-white shadow-2xl">
             <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
-              <p className="text-sm font-semibold text-slate-950">작업 패널</p>
+              <p id="mobile-right-panel-title" data-testid="mobile-right-panel-title" className="text-sm font-semibold text-slate-950">작업 패널</p>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 data-testid="mobile-right-panel-close"
+                ref={mobileRightPanelCloseRef}
                 className="h-8 w-8"
                 onClick={handleCloseMobileRightPanel}
                 aria-label="작업 패널 닫기"

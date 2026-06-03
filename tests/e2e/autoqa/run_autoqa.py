@@ -795,6 +795,39 @@ def run_mobile_studio_suite(browser, report: QaReport) -> None:
         drawer.wait_for(state="visible", timeout=10_000)
         ok = drawer.locator("[data-testid='studio-right-panel']").count() > 0
         report.record("mobile-right-panel-drawer", ok, screenshot(page, "mobile-right-panel-drawer.png") if ok else drawer.inner_text(timeout=5_000)[:500])
+
+        try:
+            close = page.locator("[data-testid='mobile-right-panel-close']")
+            title = page.locator("[data-testid='mobile-right-panel-title']")
+            labelledby = drawer.get_attribute("aria-labelledby", timeout=5_000)
+            initial_focus_ok = wait_until(
+                lambda: close.evaluate("el => document.activeElement === el"),
+                5_000,
+                page,
+            )
+            semantic_ok = (
+                drawer.get_attribute("role", timeout=5_000) == "dialog"
+                and drawer.get_attribute("aria-modal", timeout=5_000) == "true"
+                and bool(labelledby)
+                and title.get_attribute("id", timeout=5_000) == labelledby
+                and trigger.get_attribute("aria-expanded", timeout=5_000) == "true"
+            )
+            page.keyboard.press("Escape")
+            closed_ok = wait_until(lambda: drawer.count() == 0 or not drawer.is_visible(), 5_000, page)
+            focus_returned = trigger.evaluate("el => document.activeElement === el")
+            collapsed_ok = trigger.get_attribute("aria-expanded", timeout=5_000) == "false"
+            a11y_ok = semantic_ok and initial_focus_ok and closed_ok and focus_returned and collapsed_ok
+            report.record(
+                "mobile-right-panel-accessible",
+                a11y_ok,
+                (
+                    "dialog semantics, focus management, and Escape close are wired"
+                    if a11y_ok
+                    else f"semantic={semantic_ok}; initial_focus={initial_focus_ok}; closed={closed_ok}; focus_returned={focus_returned}; collapsed={collapsed_ok}"
+                ),
+            )
+        except Exception as exc:
+            report.record("mobile-right-panel-accessible", False, repr(exc))
     except Exception as exc:
         fail_png = screenshot(page, "mobile-right-panel-drawer-fail.png")
         report.record("mobile-right-panel-drawer", False, f"{repr(exc)}; screenshot={fail_png}")

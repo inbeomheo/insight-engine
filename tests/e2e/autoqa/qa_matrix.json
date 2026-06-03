@@ -102,6 +102,12 @@
     "expect": "모바일 헤더에서 Studio 작업 패널을 열 수 있다"
   },
   {
+    "id": "mobile-right-panel-accessible",
+    "name": "모바일 작업 패널 접근성",
+    "url": "http://localhost:3000",
+    "expect": "모바일 작업 패널은 dialog 라벨, 모달 상태, 초기 포커스, Escape 닫기, 트리거 포커스 복귀를 제공한다"
+  },
+  {
     "id": "source-file-generate",
     "name": "파일 소스 생성",
     "url": "http://localhost:3000",
