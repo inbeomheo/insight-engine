@@ -1218,10 +1218,26 @@ def run_onboarding_provider_accessibility_suite(browser, report: QaReport) -> No
                 else f"labels={labels_ok}; keyboard={keyboard_ok}; first_label={first_label!r}; first_tabindex={first_radio.get_attribute('tabindex') if radio_count else None}; radio_count={radio_count}"
             ),
         )
+        summary = dialog.locator("[data-testid='onboarding-provider-summary']")
+        start_describedby = start.get_attribute("aria-describedby", timeout=5_000) if start.count() else ""
+        summary_ok = (
+            summary.count() == 1
+            and summary.get_attribute("id", timeout=5_000) == "onboarding-provider-summary"
+            and summary.get_attribute("role", timeout=5_000) == "status"
+            and summary.get_attribute("aria-live", timeout=5_000) == "polite"
+            and start_describedby == "onboarding-provider-summary"
+            and "선택된 프로바이더" in summary.inner_text(timeout=5_000)
+        )
+        report.record(
+            "onboarding-start-provider-summary",
+            summary_ok,
+            "onboarding start button is described by selected provider status" if summary_ok else f"summary={summary.count()}; describedby={start_describedby!r}",
+        )
     except Exception as exc:
         fail_png = screenshot(page, "onboarding-provider-accessible-fail.png")
         report.record("onboarding-provider-accessible", False, f"{repr(exc)}; screenshot={fail_png}")
         report.record("onboarding-provider-keyboard-accessible", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("onboarding-start-provider-summary", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
 

@@ -17,6 +17,7 @@ export default function OnboardingModal() {
     useSettingsStore();
 
   const providerIds = Object.keys(providers);
+  const selectedProviderName = providers[selectedProvider]?.name ?? selectedProvider;
   const { t } = useTranslation();
 
   function handleStart() {
@@ -104,7 +105,11 @@ export default function OnboardingModal() {
           </p>
         )}
 
-        <Button data-testid="onboarding-start" className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
+        <p id="onboarding-provider-summary" data-testid="onboarding-provider-summary" role="status" aria-live="polite" className="mb-3 text-center text-xs text-muted-foreground">
+          선택된 프로바이더: {selectedProviderName || '없음'}
+        </p>
+
+        <Button data-testid="onboarding-start" aria-describedby="onboarding-provider-summary" className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
           <Check className="h-4 w-4 mr-2" />
           {t('onboarding.start')}
         </Button>
