@@ -435,7 +435,7 @@
     "id": "result-workbench-read-actions-accessible",
     "name": "Result Workbench 읽기 액션 접근성",
     "url": "http://localhost:3000",
-    "expect": "읽기 섹션의 리치 복사와 자막 토글은 설명, aria-label, pressed 상태를 제공한다"
+    "expect": "읽기 섹션 액션 그룹은 toolbar 라벨, 도움말 연결, 복사/자막 버튼별 aria-label과 pressed 상태를 제공한다"
   },
   {
     "id": "result-workbench-preview-actions",

@@ -888,11 +888,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           <section data-testid="workbench-section-read" role="region" aria-labelledby="workbench-section-read-title" className={workbenchSectionClass}>
             <p id="workbench-section-read-title" className="mb-2 text-xs font-semibold text-slate-500">읽기</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button data-testid="workbench-action-copy-title" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.title, 'title')}>
+            <p id="workbench-read-help" data-testid="workbench-read-help" className="sr-only">
+              제목과 본문을 복사하거나, 리치 복사로 HTML과 텍스트를 함께 복사하고, 자막/요약 보기를 전환합니다.
+            </p>
+            <div data-testid="workbench-read-actions" role="toolbar" aria-label="읽기 작업" aria-describedby="workbench-read-help" className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-copy-title" aria-label="제목 복사" aria-describedby="workbench-read-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 text-indigo-600" />제목 복사
               </Button>
-              <Button data-testid="workbench-action-copy-content" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.content, 'content')}>
+              <Button data-testid="workbench-action-copy-content" aria-label="본문 복사" aria-describedby="workbench-read-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.content, 'content')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />본문 복사
               </Button>
               <Button data-testid="workbench-action-copy-rich" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={copyRich} aria-label="리치 복사" aria-describedby="workbench-copy-rich-help">
@@ -910,6 +913,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                 onClick={() => setPanel('showTranscript', !showTranscript)}
                 disabled={!report.transcript_segments || report.transcript_segments.length === 0}
                 aria-label={showTranscript ? '요약 보기' : '자막 보기'}
+                aria-describedby="workbench-read-help"
                 aria-pressed={showTranscript}
               >
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />{showTranscript ? '요약 보기' : '자막 보기'}

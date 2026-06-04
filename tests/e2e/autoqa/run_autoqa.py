@@ -3772,17 +3772,33 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             "result card header icon actions expose labels, pressed/copy states, and helper text" if ok else f"initial={initial_ok}; transcript_toggled={transcript_toggled_ok}; copied={copied_ok}; transcript={transcript.count()}; rich={rich_copy.count()}",
         )
         workbench = card.locator("[data-testid='result-workbench']")
+        workbench_read_group = workbench.locator("[data-testid='workbench-read-actions']")
+        workbench_read_help = workbench.locator("[data-testid='workbench-read-help']")
+        workbench_copy_title = workbench.locator("[data-testid='workbench-action-copy-title']")
+        workbench_copy_content = workbench.locator("[data-testid='workbench-action-copy-content']")
         workbench_rich = workbench.locator("[data-testid='workbench-action-copy-rich']")
         workbench_rich_help = workbench.locator("[data-testid='workbench-copy-rich-help']")
         workbench_transcript = workbench.locator("[data-testid='workbench-action-toggle-transcript']")
         workbench_initial_ok = (
-            workbench_rich.count() == 1
+            workbench_read_group.count() == 1
+            and workbench_read_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and workbench_read_group.get_attribute("aria-label", timeout=2_000) == "읽기 작업"
+            and workbench_read_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-read-help"
+            and workbench_read_help.get_attribute("id", timeout=2_000) == "workbench-read-help"
+            and "제목" in workbench_read_help.inner_text(timeout=2_000)
+            and "자막" in workbench_read_help.inner_text(timeout=2_000)
+            and workbench_copy_title.get_attribute("aria-label", timeout=2_000) == "제목 복사"
+            and workbench_copy_title.get_attribute("aria-describedby", timeout=2_000) == "workbench-read-help"
+            and workbench_copy_content.get_attribute("aria-label", timeout=2_000) == "본문 복사"
+            and workbench_copy_content.get_attribute("aria-describedby", timeout=2_000) == "workbench-read-help"
+            and workbench_rich.count() == 1
             and workbench_rich.get_attribute("aria-label", timeout=2_000) == "리치 복사"
             and workbench_rich.get_attribute("aria-describedby", timeout=2_000) == "workbench-copy-rich-help"
             and workbench_rich_help.get_attribute("id", timeout=2_000) == "workbench-copy-rich-help"
             and "HTML과 텍스트" in workbench_rich_help.inner_text(timeout=2_000)
             and workbench_transcript.count() == 1
             and workbench_transcript.get_attribute("aria-label", timeout=2_000) == "요약 보기"
+            and workbench_transcript.get_attribute("aria-describedby", timeout=2_000) == "workbench-read-help"
             and workbench_transcript.get_attribute("aria-pressed", timeout=2_000) == "true"
         )
         if workbench_transcript.count() == 1:
@@ -3797,7 +3813,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         report.record(
             "result-workbench-read-actions-accessible",
             workbench_initial_ok and workbench_transcript_toggled_ok,
-            "workbench rich copy and transcript toggle expose helper text, labels, and pressed state" if workbench_initial_ok and workbench_transcript_toggled_ok else f"initial={workbench_initial_ok}; toggled={workbench_transcript_toggled_ok}; rich={workbench_rich.count()}; transcript={workbench_transcript.count()}",
+            "workbench read actions expose toolbar help, copy labels, rich help, and pressed state" if workbench_initial_ok and workbench_transcript_toggled_ok else f"initial={workbench_initial_ok}; toggled={workbench_transcript_toggled_ok}; group={workbench_read_group.count()}; rich={workbench_rich.count()}; transcript={workbench_transcript.count()}",
         )
         improve_group = workbench.locator("[data-testid='workbench-improve-actions']")
         improve_help = workbench.locator("[data-testid='workbench-improve-help']")
