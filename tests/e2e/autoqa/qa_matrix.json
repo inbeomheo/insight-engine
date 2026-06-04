@@ -432,6 +432,12 @@
     "expect": "우측 패널의 작업 요약, 현재 설정, 빠른 액션, NLM 산출물, 최근 결과, 예약 영역은 region/list/status/aria-label 구조로 읽힌다"
   },
   {
+    "id": "right-panel-workspace-metrics-accessible",
+    "name": "우측 패널 작업 지표 접근성",
+    "url": "http://localhost:3000",
+    "expect": "작업 요약의 소스, 결과, NLM 개수 카드는 list/listitem과 개수 aria-label로 읽힌다"
+  },
+  {
     "id": "no-hydration-console-errors",
     "name": "Hydration 콘솔 경고 없음",
     "url": "http://localhost:3000",

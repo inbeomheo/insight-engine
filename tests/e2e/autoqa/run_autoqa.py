@@ -621,6 +621,33 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             "right panel exposes labelled regions, live status, NLM/recent lists, and schedule label" if semantic_ok else f"missing={semantic_missing}; quick_role={quick_status.get_attribute('role') if quick_status.count() else None}; quick_label={quick_status.get_attribute('aria-label') if quick_status.count() else None}; nlm_list={nlm_list.get_attribute('role') if nlm_list.count() else None}; nlm_item={nlm_item.get_attribute('role') if nlm_item.count() else None}; recent_list={recent_list.get_attribute('role') if recent_list.count() else None}; recent_item={recent_item.get_attribute('role') if recent_item.count() else None}; schedule={schedule.get_attribute('aria-label') if schedule.count() else None}",
         )
 
+        workspace_metrics = panel.locator("[data-testid='right-panel-workspace-metrics']")
+        source_metric = panel.locator("[data-testid='right-panel-workspace-source-count']")
+        result_metric = panel.locator("[data-testid='right-panel-workspace-result-count']")
+        nlm_metric = panel.locator("[data-testid='right-panel-workspace-nlm-count']")
+        metric_nodes = [
+            (source_metric, "소스"),
+            (result_metric, "결과"),
+            (nlm_metric, "NLM"),
+        ]
+        workspace_metrics_ok = (
+            workspace_metrics.count() == 1
+            and workspace_metrics.get_attribute("role", timeout=2_000) == "list"
+            and workspace_metrics.get_attribute("aria-label", timeout=2_000) == "작업 요약 지표"
+            and all(
+                metric.count() == 1
+                and metric.get_attribute("role", timeout=2_000) == "listitem"
+                and (metric.get_attribute("aria-label", timeout=2_000) or "").startswith(f"{label} ")
+                and (metric.get_attribute("aria-label", timeout=2_000) or "").endswith("개")
+                for metric, label in metric_nodes
+            )
+        )
+        report.record(
+            "right-panel-workspace-metrics-accessible",
+            workspace_metrics_ok,
+            "workspace count cards expose list/listitem labels" if workspace_metrics_ok else f"metrics={workspace_metrics.count()}; role={workspace_metrics.get_attribute('role') if workspace_metrics.count() else None}; labels={[metric.get_attribute('aria-label') if metric.count() else None for metric, _ in metric_nodes]}",
+        )
+
         advanced_summary = panel.locator("[data-testid='right-panel-advanced-summary']")
         advanced_text = advanced_summary.inner_text(timeout=5_000) if advanced_summary.count() == 1 else ""
         advanced_required = ["상세도 표준", "웹 보강 꺼짐", "웹 리서치 켜짐", "댓글 켜짐", "에이전트 꺼짐"]

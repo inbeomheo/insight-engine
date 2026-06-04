@@ -207,10 +207,10 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
       <section data-testid="right-panel-workspace-section" role="region" aria-labelledby="right-panel-workspace-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Workspace</p>
         <h2 id="right-panel-workspace-title" className="mt-1 text-lg font-semibold text-slate-950">작업 요약</h2>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{sourceCount}</p><p className="text-slate-500">소스</p></div>
-          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{reports.length}</p><p className="text-slate-500">결과</p></div>
-          <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{nlmCount}</p><p className="text-slate-500">NLM</p></div>
+        <div data-testid="right-panel-workspace-metrics" role="list" aria-label="작업 요약 지표" className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+          <div data-testid="right-panel-workspace-source-count" role="listitem" aria-label={`소스 ${sourceCount}개`} className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{sourceCount}</p><p className="text-slate-500">소스</p></div>
+          <div data-testid="right-panel-workspace-result-count" role="listitem" aria-label={`결과 ${reports.length}개`} className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{reports.length}</p><p className="text-slate-500">결과</p></div>
+          <div data-testid="right-panel-workspace-nlm-count" role="listitem" aria-label={`NLM ${nlmCount}개`} className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{nlmCount}</p><p className="text-slate-500">NLM</p></div>
         </div>
       </section>
 
