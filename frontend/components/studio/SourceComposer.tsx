@@ -98,11 +98,16 @@ export default function SourceComposer(props: SourceComposerProps) {
   }
 
   return (
-    <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
+    <section
+      data-testid="source-composer"
+      role="region"
+      aria-labelledby="source-composer-title"
+      className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5"
+    >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Source Composer</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950">분석할 소스를 준비하세요</h2>
+          <h2 id="source-composer-title" className="mt-1 text-lg font-semibold text-slate-950">분석할 소스를 준비하세요</h2>
         </div>
         <div data-testid="source-tabs" role="tablist" aria-label="소스 종류" className="grid grid-cols-4 rounded-full bg-slate-100 p-1 text-xs font-medium">
           {tabs.map((item, index) => {

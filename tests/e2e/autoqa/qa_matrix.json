@@ -12,6 +12,12 @@
     "expect": "스튜디오 shell과 composer가 보인다"
   },
   {
+    "id": "studio-primary-regions-accessible",
+    "name": "스튜디오 핵심 영역 접근성",
+    "url": "http://localhost:3000",
+    "expect": "히어로, 소스 입력, 산출물 설계 영역이 region/aria-labelledby로 구분되어 첫 화면 작업 흐름이 명확히 읽힌다"
+  },
+  {
     "id": "onboarding-provider-accessible",
     "name": "온보딩 프로바이더 선택 접근성",
     "url": "http://localhost:3000",

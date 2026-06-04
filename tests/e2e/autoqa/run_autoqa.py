@@ -3461,6 +3461,26 @@ def main() -> int:
             report.record("home-load", page.locator("#url-input").count() > 0, home_png)
             studio_visible = page.get_by_text("AI Content Studio").count() > 0 or page.get_by_text("Source Composer").count() > 0
             report.record("studio-layout", studio_visible, "studio hero/source composer visible" if studio_visible else screenshot(page, "studio-layout-fail.png"))
+            primary_regions = [
+                ("studio-hero", "studio-hero-title"),
+                ("source-composer", "source-composer-title"),
+                ("output-blueprint", "output-blueprint-title"),
+            ]
+            primary_missing: list[str] = []
+            for test_id, title_id in primary_regions:
+                region = page.locator(f"[data-testid='{test_id}']")
+                if (
+                    region.count() != 1
+                    or region.get_attribute("role", timeout=2_000) != "region"
+                    or region.get_attribute("aria-labelledby", timeout=2_000) != title_id
+                    or page.locator(f"#{title_id}").count() != 1
+                ):
+                    primary_missing.append(test_id)
+            report.record(
+                "studio-primary-regions-accessible",
+                not primary_missing,
+                "hero, source composer, and output blueprint expose labelled regions" if not primary_missing else f"missing={primary_missing}",
+            )
             header_model = page.locator("[data-testid='header-model-badge']")
             header_status = page.locator("[data-testid='header-status-badge']")
             header_model_text = header_model.inner_text(timeout=5_000).replace("모델 ", "", 1).strip() if header_model.count() > 0 else ""

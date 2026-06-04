@@ -124,11 +124,16 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
   };
 
   return (
-    <section className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5">
+    <section
+      data-testid="output-blueprint"
+      role="region"
+      aria-labelledby="output-blueprint-title"
+      className="rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/60 sm:p-5"
+    >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Output Blueprint</p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950">무엇으로 만들지 정하세요</h2>
+          <h2 id="output-blueprint-title" className="mt-1 text-lg font-semibold text-slate-950">무엇으로 만들지 정하세요</h2>
         </div>
         <div data-testid="blueprint-model-summary" className="inline-flex max-w-full items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
           <Cpu className="h-3.5 w-3.5 text-indigo-600" />

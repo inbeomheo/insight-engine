@@ -10,12 +10,17 @@ interface StudioHeroProps {
 
 export default function StudioHero({ modelLabel, resultCount }: StudioHeroProps) {
   return (
-    <section className="overflow-hidden rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur-xl sm:p-7">
+    <section
+      data-testid="studio-hero"
+      role="region"
+      aria-labelledby="studio-hero-title"
+      className="overflow-hidden rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur-xl sm:p-7"
+    >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
           <Badge className="w-fit rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 hover:bg-indigo-50">AI Content Studio</Badge>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">소스에서 발행까지 한 번에</h1>
+            <h1 id="studio-hero-title" className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">소스에서 발행까지 한 번에</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">YouTube, 웹, 텍스트를 넣고 Blog+SEO, 요약, NLM 산출물, 예약 발행까지 하나의 작업실에서 처리합니다.</p>
           </div>
         </div>
