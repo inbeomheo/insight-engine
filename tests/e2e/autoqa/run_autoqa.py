@@ -940,6 +940,36 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             calendar_visible = True
         report.record("right-panel-quick-actions", calendar_visible, screenshot(page, "right-panel-calendar.png") if calendar_visible else "calendar not opened")
         try:
+            calendar = page.locator("[data-testid='content-calendar']")
+            calendar_title = calendar.locator("[data-testid='calendar-current-month']")
+            prev_button = calendar.locator("[data-testid='calendar-prev-month']")
+            next_button = calendar.locator("[data-testid='calendar-next-month']")
+            grid = calendar.locator("[data-testid='calendar-grid']")
+            nav_initial_ok = (
+                calendar.get_attribute("aria-labelledby", timeout=2_000) == "calendar-current-month"
+                and calendar_title.get_attribute("id", timeout=2_000) == "calendar-current-month"
+                and "년" in calendar_title.inner_text(timeout=2_000)
+                and "월" in calendar_title.inner_text(timeout=2_000)
+                and grid.get_attribute("role", timeout=2_000) == "grid"
+                and grid.get_attribute("aria-labelledby", timeout=2_000) == "calendar-current-month"
+                and prev_button.get_attribute("aria-label", timeout=2_000) == "이전 달 보기"
+                and prev_button.get_attribute("aria-controls", timeout=2_000) == "calendar-grid"
+                and next_button.get_attribute("aria-label", timeout=2_000) == "다음 달 보기"
+                and next_button.get_attribute("aria-controls", timeout=2_000) == "calendar-grid"
+            )
+            before_title = calendar_title.inner_text(timeout=2_000)
+            if next_button.count() == 1:
+                next_button.click(timeout=10_000)
+            next_ok = wait_until(lambda: calendar_title.inner_text(timeout=1_000) != before_title, 5_000, page)
+            after_next_title = calendar_title.inner_text(timeout=2_000) if calendar_title.count() else ""
+            if prev_button.count() == 1:
+                prev_button.click(timeout=10_000)
+            prev_ok = wait_until(lambda: calendar_title.inner_text(timeout=1_000) == before_title, 5_000, page)
+            report.record(
+                "calendar-navigation-accessible",
+                nav_initial_ok and next_ok and prev_ok,
+                "calendar navigation exposes labelled month controls and updates the labelled grid" if nav_initial_ok and next_ok and prev_ok else f"initial={nav_initial_ok}; next={next_ok}; prev={prev_ok}; before={before_title!r}; after_next={after_next_title!r}",
+            )
             page.locator(f"button[aria-label='{today_key} 날짜 선택']").click(timeout=10_000)
             calendar_text = page.locator("[data-testid='content-calendar']").inner_text(timeout=10_000)
             label_ok = "WordPress" in calendar_text and "네이버 블로그" in calendar_text and "wordpress" not in calendar_text and "naver_blog" not in calendar_text
@@ -1021,6 +1051,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 ),
             )
         except Exception as exc:
+            report.record("calendar-navigation-accessible", False, repr(exc))
             report.record("calendar-plugin-labels", False, repr(exc))
             report.record("calendar-naver-safe-options", False, repr(exc))
             report.record("calendar-wordpress-safe-options", False, repr(exc))

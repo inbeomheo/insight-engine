@@ -19,24 +19,20 @@ function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevDays = new Date(year, month, 0).getDate();
-
   const cells: Array<{ day: number; current: boolean; date: Date }> = [];
 
-  // 이전 달 날짜
   for (let i = firstDay - 1; i >= 0; i--) {
-    const d = prevDays - i;
-    cells.push({ day: d, current: false, date: new Date(year, month - 1, d) });
+    const day = prevDays - i;
+    cells.push({ day, current: false, date: new Date(year, month - 1, day) });
   }
 
-  // 현재 달 날짜
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, current: true, date: new Date(year, month, d) });
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ day, current: true, date: new Date(year, month, day) });
   }
 
-  // 다음 달 날짜 (6주 = 42칸 채우기)
   const remaining = 42 - cells.length;
-  for (let d = 1; d <= remaining; d++) {
-    cells.push({ day: d, current: false, date: new Date(year, month + 1, d) });
+  for (let day = 1; day <= remaining; day++) {
+    cells.push({ day, current: false, date: new Date(year, month + 1, day) });
   }
 
   return cells;
@@ -119,13 +115,12 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
   const cells = useMemo(() => getMonthDays(year, month), [year, month]);
   const todayKey = formatDateKey(new Date());
 
-  // 날짜별 예약 그룹핑
   const schedulesByDate = useMemo(() => {
     const map: Record<string, ScheduledPost[]> = {};
-    for (const s of schedules) {
-      const d = new Date(s.scheduled_at);
-      const key = formatDateKey(d);
-      (map[key] ??= []).push(s);
+    for (const schedule of schedules) {
+      const date = new Date(schedule.scheduled_at);
+      const key = formatDateKey(date);
+      (map[key] ??= []).push(schedule);
     }
     return map;
   }, [schedules]);
@@ -136,6 +131,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
     setViewDate(new Date(year, month - 1, 1));
     setSelectedDate(null);
   }
+
   function nextMonth() {
     setViewDate(new Date(year, month + 1, 1));
     setSelectedDate(null);
@@ -161,30 +157,27 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
   }
 
   return (
-    <div data-testid="content-calendar" className="space-y-4">
-      {/* 월 네비게이션 */}
+    <div data-testid="content-calendar" aria-labelledby="calendar-current-month" className="space-y-4">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={prevMonth}>
+        <Button data-testid="calendar-prev-month" aria-label="이전 달 보기" aria-controls="calendar-grid" variant="ghost" size="icon" onClick={prevMonth}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h3 className="text-lg font-semibold">
+        <h3 id="calendar-current-month" data-testid="calendar-current-month" aria-live="polite" className="text-lg font-semibold">
           {year}년 {month + 1}월
         </h3>
-        <Button variant="ghost" size="icon" onClick={nextMonth}>
+        <Button data-testid="calendar-next-month" aria-label="다음 달 보기" aria-controls="calendar-grid" variant="ghost" size="icon" onClick={nextMonth}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 gap-px text-center text-xs font-medium text-muted-foreground">
-        {DAYS.map((d) => (
-          <div key={d} className="py-2">{d}</div>
+      <div className="grid grid-cols-7 gap-px text-center text-xs font-medium text-muted-foreground" aria-hidden="true">
+        {DAYS.map((day) => (
+          <div key={day} className="py-2">{day}</div>
         ))}
       </div>
 
-      {/* 날짜 그리드 */}
-      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
-        {cells.map((cell, i) => {
+      <div id="calendar-grid" data-testid="calendar-grid" role="grid" aria-labelledby="calendar-current-month" className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+        {cells.map((cell, index) => {
           const key = formatDateKey(cell.date);
           const posts = schedulesByDate[key] || [];
           const isToday = key === todayKey;
@@ -192,9 +185,12 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
 
           return (
             <button
-              key={i}
+              key={`${key}-${index}`}
+              type="button"
+              role="gridcell"
               onClick={() => setSelectedDate(isSelected ? null : key)}
               aria-label={`${key} 날짜 선택`}
+              aria-selected={isSelected}
               className={[
                 'relative min-h-[72px] p-1.5 text-left bg-background transition-colors',
                 !cell.current && 'opacity-40',
@@ -214,18 +210,17 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
               >
                 {cell.day}
               </span>
-              {/* 예약 점/뱃지 */}
               {posts.length > 0 && (
-                <div className="flex flex-wrap gap-0.5 mt-1">
-                  {posts.slice(0, 3).map((p) => (
+                <div className="flex flex-wrap gap-0.5 mt-1" aria-hidden="true">
+                  {posts.slice(0, 3).map((post) => (
                     <span
-                      key={p.id}
+                      key={post.id}
                       className={[
                         'block w-1.5 h-1.5 rounded-full',
-                        p.status === 'pending' && 'bg-yellow-500',
-                        p.status === 'published' && 'bg-green-500',
-                        p.status === 'failed' && 'bg-red-500',
-                        p.status === 'cancelled' && 'bg-muted-foreground',
+                        post.status === 'pending' && 'bg-yellow-500',
+                        post.status === 'published' && 'bg-green-500',
+                        post.status === 'failed' && 'bg-red-500',
+                        post.status === 'cancelled' && 'bg-muted-foreground',
                       ]
                         .filter(Boolean)
                         .join(' ')}
@@ -241,7 +236,6 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
         })}
       </div>
 
-      {/* 선택된 날짜의 예약 목록 */}
       {selectedDate && (
         <Card>
           <CardHeader className="pb-3">
@@ -251,7 +245,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           </CardHeader>
           <CardContent className="space-y-2">
             {selectedPosts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">이 날짜에 예약이 없습니다</p>
+              <p className="text-sm text-muted-foreground">이 날짜에는 예약이 없습니다.</p>
             ) : (
               selectedPosts.map((post) => {
                 const style = STATUS_STYLE[post.status] || STATUS_STYLE.pending;
@@ -318,6 +312,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           </CardContent>
         </Card>
       )}
+
       <Dialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
@@ -331,7 +326,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           <DialogHeader>
             <DialogTitle>예약 삭제</DialogTitle>
             <DialogDescription>
-              {deleteTarget ? `‘${deleteTarget.title}’ 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
+              {deleteTarget ? `“${deleteTarget.title}” 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
             </DialogDescription>
           </DialogHeader>
           {deleteError && (

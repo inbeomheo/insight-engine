@@ -618,6 +618,12 @@
     "expect": "예약 캘린더가 내부 플러그인 ID 대신 사용자용 플랫폼명과 안전한 옵션 요약을 표시하고 비밀값은 노출하지 않는다"
   },
   {
+    "id": "calendar-navigation-accessible",
+    "name": "캘린더 월 이동 접근성",
+    "url": "http://localhost:3000",
+    "expect": "예약 캘린더의 이전/다음 달 버튼은 명확한 aria-label과 grid 연결을 제공하고 월 제목을 갱신한다"
+  },
+  {
     "id": "calendar-naver-safe-options",
     "name": "캘린더 네이버 안전 옵션",
     "url": "http://localhost:3000",
