@@ -580,6 +580,47 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         )
         report.record("right-panel-settings", settings_ok, screenshot(page, "right-panel-settings.png") if settings_ok else panel.inner_text(timeout=5_000)[:500])
 
+        semantic_regions = [
+            ("right-panel-workspace-section", "region", "right-panel-workspace-title"),
+            ("right-panel-settings-section", "region", "right-panel-settings-title"),
+            ("right-panel-actions-section", "region", "right-panel-actions-title"),
+            ("right-panel-nlm-artifacts", "region", "right-panel-nlm-title"),
+            ("right-panel-recent-section", "region", "right-panel-recent-title"),
+        ]
+        semantic_missing: list[str] = []
+        for test_id, role, labelledby in semantic_regions:
+            region = panel.locator(f"[data-testid='{test_id}']")
+            if (
+                region.count() != 1
+                or region.get_attribute("role", timeout=2_000) != role
+                or region.get_attribute("aria-labelledby", timeout=2_000) != labelledby
+                or page.locator(f"#{labelledby}").count() != 1
+            ):
+                semantic_missing.append(test_id)
+        quick_status = panel.locator("[data-testid='quick-action-workspace-status']")
+        notice = panel.locator("[data-testid='quick-action-export-status']")
+        nlm_list = panel.locator("[data-testid='right-panel-nlm-list']")
+        nlm_item = panel.locator("[data-testid='right-panel-nlm-artifact']").first
+        recent_list = panel.locator("[data-testid='right-panel-recent-list']")
+        recent_item = panel.locator("[data-testid='right-panel-recent-item']").first
+        schedule = panel.locator("[data-testid='right-panel-schedule-card']")
+        semantic_ok = (
+            not semantic_missing
+            and quick_status.get_attribute("role", timeout=2_000) == "status"
+            and (quick_status.get_attribute("aria-label", timeout=2_000) or "").startswith("\uacb0\uacfc")
+            and notice.count() == 0
+            and nlm_list.get_attribute("role", timeout=2_000) == "list"
+            and nlm_item.get_attribute("role", timeout=2_000) == "listitem"
+            and recent_list.get_attribute("role", timeout=2_000) == "list"
+            and recent_item.get_attribute("role", timeout=2_000) == "listitem"
+            and (schedule.get_attribute("aria-label", timeout=2_000) or "").startswith("\uc608\uc57d \uce98\ub9b0\ub354 \uc5f4\uae30")
+        )
+        report.record(
+            "right-panel-semantic-regions",
+            semantic_ok,
+            "right panel exposes labelled regions, live status, NLM/recent lists, and schedule label" if semantic_ok else f"missing={semantic_missing}; quick_role={quick_status.get_attribute('role') if quick_status.count() else None}; quick_label={quick_status.get_attribute('aria-label') if quick_status.count() else None}; nlm_list={nlm_list.get_attribute('role') if nlm_list.count() else None}; nlm_item={nlm_item.get_attribute('role') if nlm_item.count() else None}; recent_list={recent_list.get_attribute('role') if recent_list.count() else None}; recent_item={recent_item.get_attribute('role') if recent_item.count() else None}; schedule={schedule.get_attribute('aria-label') if schedule.count() else None}",
+        )
+
         advanced_summary = panel.locator("[data-testid='right-panel-advanced-summary']")
         advanced_text = advanced_summary.inner_text(timeout=5_000) if advanced_summary.count() == 1 else ""
         advanced_required = ["상세도 표준", "웹 보강 꺼짐", "웹 리서치 켜짐", "댓글 켜짐", "에이전트 꺼짐"]

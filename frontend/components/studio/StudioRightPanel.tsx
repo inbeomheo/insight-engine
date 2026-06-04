@@ -125,6 +125,9 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
     `에이전트 ${enableAgentMode ? '켜짐' : '꺼짐'}`,
   ].join(' · ');
 
+  const workspaceStatusLabel = `\uacb0\uacfc ${reports.length}\uac1c, \uc608\uc57d ${schedulesCount}\uac1c, NLM ${nlmCount}\uac1c`;
+  const scheduleLabel = `\uc608\uc57d \uce98\ub9b0\ub354 \uc5f4\uae30, \uc608\uc57d\ub41c \ubc1c\ud589 ${schedulesCount}\uac1c`;
+
   function scrollTo(selector: string) {
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -201,9 +204,9 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
 
   return (
     <div data-testid="studio-right-panel" className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section data-testid="right-panel-workspace-section" role="region" aria-labelledby="right-panel-workspace-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Workspace</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">작업 요약</h2>
+        <h2 id="right-panel-workspace-title" className="mt-1 text-lg font-semibold text-slate-950">작업 요약</h2>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
           <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{sourceCount}</p><p className="text-slate-500">소스</p></div>
           <div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-bold text-slate-950">{reports.length}</p><p className="text-slate-500">결과</p></div>
@@ -211,8 +214,8 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+      <section data-testid="right-panel-settings-section" role="region" aria-labelledby="right-panel-settings-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div id="right-panel-settings-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950">
           <Sparkles className="h-4 w-4 text-indigo-600" /> 현재 설정
         </div>
         <div className="mt-3 space-y-2 text-xs">
@@ -239,9 +242,9 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 빠른 액션</div>
-        <div data-testid="quick-action-workspace-status" className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
+      <section data-testid="right-panel-actions-section" role="region" aria-labelledby="right-panel-actions-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div id="right-panel-actions-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 빠른 액션</div>
+        <div data-testid="quick-action-workspace-status" role="status" aria-live="polite" aria-label={workspaceStatusLabel} className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
           <div className="rounded-2xl bg-emerald-50 px-2 py-2 text-emerald-700">
             <p className="text-sm font-bold">{reports.length}</p>
             <p>결과</p>
@@ -257,7 +260,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         </div>
         {quickNotice && (
           <div
-            data-testid="quick-action-export-status"
+            data-testid="quick-action-export-status" role="status" aria-live="polite"
             className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700"
           >
             {quickNotice}
@@ -318,16 +321,16 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         </div>
       </section>
 
-      <section data-testid="right-panel-nlm-artifacts" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 최근 NLM 산출물</div>
-        <div className="mt-3 space-y-2">
+      <section data-testid="right-panel-nlm-artifacts" role="region" aria-labelledby="right-panel-nlm-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div id="right-panel-nlm-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 최근 NLM 산출물</div>
+        <div data-testid="right-panel-nlm-list" role="list" className="mt-3 space-y-2">
           {nlmArtifacts.length === 0 ? (
             <p className="text-xs text-slate-500">아직 NLM 산출물이 없습니다.</p>
           ) : nlmArtifacts.map(({ artifact, report }) => {
             const status = artifactStatus(artifact);
             const StatusIcon = status.icon;
             return (
-              <div key={artifact.artifact_id} data-testid="right-panel-nlm-artifact" className="rounded-2xl bg-slate-50 p-3 text-xs">
+              <div key={artifact.artifact_id} data-testid="right-panel-nlm-artifact" role="listitem" className="rounded-2xl bg-slate-50 p-3 text-xs">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900">{NLM_LABELS[artifact.content_type] ?? artifact.content_type}</p>
@@ -343,6 +346,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
                     variant="ghost"
                     size="sm"
                     className="mt-2 h-7 gap-1 rounded-lg px-2 text-xs"
+                    aria-label={`${NLM_LABELS[artifact.content_type] ?? artifact.content_type} \ubcf4\uae30`}
                     onClick={() => window.open(apiUrl(`/api/notebooklm/view/${artifact.artifact_id}`), '_blank')}
                   >
                     보기 <ExternalLink className="h-3 w-3" />
@@ -354,12 +358,12 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> 최근 결과</div>
-        <div className="mt-3 space-y-2">
+      <section data-testid="right-panel-recent-section" role="region" aria-labelledby="right-panel-recent-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div id="right-panel-recent-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> 최근 결과</div>
+        <div data-testid="right-panel-recent-list" role="list" className="mt-3 space-y-2">
           {latest.length === 0 ? <p className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p> : latest.map((report) => (
+            <div key={report.id} data-testid="right-panel-recent-item" role="listitem">
             <button
-              key={report.id}
               type="button"
               data-testid="right-panel-recent-result"
               className="w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-indigo-50"
@@ -368,12 +372,13 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
               <p className="line-clamp-2 text-xs font-medium text-slate-800">{report.title}</p>
               <p className="mt-1 text-[11px] text-slate-500">{report.style}</p>
             </button>
+            </div>
           ))}
         </div>
       </section>
       <button
         type="button"
-        data-testid="right-panel-schedule-card"
+        data-testid="right-panel-schedule-card" aria-label={scheduleLabel}
         className="rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40"
         onClick={() => setActiveView('calendar')}
       >
