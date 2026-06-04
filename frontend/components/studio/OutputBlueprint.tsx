@@ -176,6 +176,7 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
                   data-testid={`blueprint-mode-${option.id}`}
                   role="radio"
                   aria-checked={selected}
+                  aria-disabled={disabled}
                   aria-describedby={disabled && modeHint ? 'blueprint-mode-hint' : undefined}
                   disabled={disabled}
                   tabIndex={selected ? 0 : -1}
@@ -192,7 +193,13 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
             })}
           </div>
           {modeHint && (
-            <p id="blueprint-mode-hint" data-testid="blueprint-mode-hint" className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] leading-relaxed text-indigo-700">
+            <p
+              id="blueprint-mode-hint"
+              data-testid="blueprint-mode-hint"
+              role="status"
+              aria-live="polite"
+              className="mt-2 rounded-xl bg-indigo-50 px-3 py-2 text-[11px] leading-relaxed text-indigo-700"
+            >
               {modeHint}
             </p>
           )}

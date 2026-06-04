@@ -3688,6 +3688,20 @@ def main() -> int:
                     else f"hint={mode_hint_text!r}; individual={individual_checked}; combined_disabled={combined_disabled}; fusion_disabled={fusion_disabled}"
                 ),
             )
+            mode_status_ok = (
+                mode_hint.count() == 1
+                and mode_hint.get_attribute("role", timeout=2_000) == "status"
+                and mode_hint.get_attribute("aria-live", timeout=2_000) == "polite"
+                and combined_mode.get_attribute("aria-disabled", timeout=2_000) == "true"
+                and fusion_mode.get_attribute("aria-disabled", timeout=2_000) == "true"
+                and combined_mode.get_attribute("aria-describedby", timeout=2_000) == "blueprint-mode-hint"
+                and fusion_mode.get_attribute("aria-describedby", timeout=2_000) == "blueprint-mode-hint"
+            )
+            report.record(
+                "blueprint-mode-accessible-status",
+                mode_status_ok,
+                "blueprint mode hint is a live status and disabled modes expose aria-disabled" if mode_status_ok else f"role={mode_hint.get_attribute('role') if mode_hint.count() else None}; live={mode_hint.get_attribute('aria-live') if mode_hint.count() else None}; combined_aria_disabled={combined_mode.get_attribute('aria-disabled') if combined_mode.count() else None}; fusion_aria_disabled={fusion_mode.get_attribute('aria-disabled') if fusion_mode.count() else None}",
+            )
             page.evaluate("window.dispatchEvent(new Event('insight-engine-new-analysis'))")
             page.locator("#url-input").wait_for(state="visible", timeout=10_000)
             page.wait_for_timeout(300)
