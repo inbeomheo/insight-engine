@@ -3830,6 +3830,36 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             preview_accessible_initial_ok and preview_markdown_ok,
             "preview toolbar controls the result body region and updates pressed state" if preview_accessible_initial_ok and preview_markdown_ok else f"initial={preview_accessible_initial_ok}; markdown={preview_markdown_ok}; controls={preview_controls_id!r}; group={preview_group.count()}",
         )
+        export_group = workbench.locator("[data-testid='workbench-export-actions']")
+        export_help = workbench.locator("[data-testid='workbench-export-help']")
+        export_labels = {
+            "workbench-action-export-html": "HTML 내보내기",
+            "workbench-action-export-docx": "DOCX 내보내기",
+            "workbench-action-export-md": "Markdown 내보내기",
+            "workbench-action-export-txt": "TXT 내보내기",
+            "workbench-action-export-zip": "ZIP 패키지 내보내기",
+            "workbench-action-print": "PDF 인쇄",
+        }
+        missing_export_labels = [
+            f"{test_id}:{label}"
+            for test_id, label in export_labels.items()
+            if workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-label", timeout=2_000) != label
+        ]
+        export_accessible_ok = (
+            export_group.count() == 1
+            and export_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and export_group.get_attribute("aria-label", timeout=2_000) == "내보내기 작업"
+            and export_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-export-help"
+            and export_help.get_attribute("id", timeout=2_000) == "workbench-export-help"
+            and "HTML" in export_help.inner_text(timeout=2_000)
+            and "PDF" in export_help.inner_text(timeout=2_000)
+            and not missing_export_labels
+        )
+        report.record(
+            "result-workbench-export-actions-accessible",
+            export_accessible_ok,
+            "export toolbar exposes shared help text and descriptive labels" if export_accessible_ok else f"group={export_group.count()}; missing={missing_export_labels}",
+        )
         collapse = card.locator("[data-testid='result-action-collapse-toggle']")
         controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
         content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
@@ -3862,6 +3892,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         report.record("result-card-header-actions-accessible", False, repr(exc))
         report.record("result-workbench-read-actions-accessible", False, repr(exc))
         report.record("result-workbench-preview-actions-accessible", False, repr(exc))
+        report.record("result-workbench-export-actions-accessible", False, repr(exc))
         report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()

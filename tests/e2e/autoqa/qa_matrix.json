@@ -450,6 +450,12 @@
     "expect": "미리보기 전환 버튼 그룹은 toolbar 라벨, aria-controls, pressed 상태로 현재 본문 영역과 연결된다"
   },
   {
+    "id": "result-workbench-export-actions-accessible",
+    "name": "Result Workbench 내보내기 액션 접근성",
+    "url": "http://localhost:3000",
+    "expect": "내보내기 버튼 그룹은 toolbar 라벨, 도움말 연결, 형식별 명확한 aria-label을 제공한다"
+  },
+  {
     "id": "result-workbench-export-status",
     "name": "Result Workbench 내보내기 실행 상태",
     "url": "http://localhost:3000",

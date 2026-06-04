@@ -1036,6 +1036,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
           <section data-testid="workbench-section-export" role="region" aria-labelledby="workbench-section-export-title" className={workbenchSectionClass}>
             <p id="workbench-section-export-title" className="mb-2 text-xs font-semibold text-slate-500">내보내기</p>
+            <p id="workbench-export-help" data-testid="workbench-export-help" className="sr-only">
+              현재 결과를 HTML, DOCX, Markdown, TXT, ZIP, PDF 형식으로 저장하거나 인쇄합니다.
+            </p>
             {exportNotice && (
               <div
                 data-testid="workbench-export-status"
@@ -1046,23 +1049,23 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                 {exportNotice}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Button data-testid="workbench-action-export-html" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportHtml}>
+            <div data-testid="workbench-export-actions" role="toolbar" aria-label="내보내기 작업" aria-describedby="workbench-export-help" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Button data-testid="workbench-action-export-html" aria-label="HTML 내보내기" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportHtml}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />HTML
               </Button>
-              <Button data-testid="workbench-action-export-docx" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportDocx}>
+              <Button data-testid="workbench-action-export-docx" aria-label="DOCX 내보내기" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExportDocx}>
                 <Download className="h-3.5 w-3.5 text-indigo-600" />DOCX
               </Button>
-              <Button data-testid="workbench-action-export-md" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('markdown')}>
+              <Button data-testid="workbench-action-export-md" aria-label="Markdown 내보내기" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('markdown')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />MD
               </Button>
-              <Button data-testid="workbench-action-export-txt" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('txt')}>
+              <Button data-testid="workbench-action-export-txt" aria-label="TXT 내보내기" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('txt')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />TXT
               </Button>
-              <Button data-testid="workbench-action-export-zip" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('zip')}>
+              <Button data-testid="workbench-action-export-zip" aria-label="ZIP 패키지 내보내기" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleExportFormat('zip')}>
                 <Download className="h-3.5 w-3.5 text-indigo-600" />ZIP
               </Button>
-              <Button data-testid="workbench-action-print" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handlePrint}>
+              <Button data-testid="workbench-action-print" aria-label="PDF 인쇄" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handlePrint}>
                 <Printer className="h-3.5 w-3.5 text-indigo-600" />PDF
               </Button>
             </div>
