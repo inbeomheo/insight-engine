@@ -89,7 +89,17 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
         </p>
         <p id="file-source-help" data-testid="file-source-help" className="text-xs text-muted-foreground/60">최대 {MAX_SIZE_MB}MB</p>
       </DropZone>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && (
+        <p
+          data-testid="file-source-error"
+          role="status"
+          aria-live="assertive"
+          aria-atomic="true"
+          className="mt-2 text-xs text-destructive"
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

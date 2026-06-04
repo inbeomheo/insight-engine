@@ -2234,6 +2234,23 @@ def run_source_file_input_accessibility_suite(browser, report: QaReport) -> None
             and generate.get_attribute("aria-label", timeout=5_000) == "파일 생성"
             and generate.is_disabled(timeout=5_000)
         )
+        invalid_path = ARTIFACTS / "qa-upload.txt"
+        invalid_path.write_bytes(b"qa invalid upload")
+        file_input.set_input_files(str(invalid_path))
+        error = page.locator("[data-testid='file-source-error']")
+        error.wait_for(state="visible", timeout=5_000)
+        error_text = error.inner_text(timeout=5_000)
+        error_ok = (
+            error.get_attribute("role", timeout=2_000) == "status"
+            and error.get_attribute("aria-live", timeout=2_000) == "assertive"
+            and "PDF \ub610\ub294 DOCX" in error_text
+            and generate.is_disabled(timeout=5_000)
+        )
+        report.record(
+            "source-file-error-accessible",
+            error_ok,
+            "invalid file error is announced and generate remains disabled" if error_ok else f"text={error_text!r}; role={error.get_attribute('role') if error.count() else None}; live={error.get_attribute('aria-live') if error.count() else None}; disabled={generate.is_disabled()}",
+        )
         source_path = ARTIFACTS / "qa-upload.docx"
         source_path.write_bytes(b"qa docx upload")
         file_input.set_input_files(str(source_path))

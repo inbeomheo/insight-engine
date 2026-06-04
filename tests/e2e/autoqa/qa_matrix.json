@@ -228,6 +228,12 @@
     "expect": "파일 소스 입력은 업로드 영역 라벨, 도움말, 선택 파일 상태, 생성 버튼 상태를 제공한다"
   },
   {
+    "id": "source-file-error-accessible",
+    "name": "파일 소스 업로드 오류 상태",
+    "url": "http://localhost:3000",
+    "expect": "지원하지 않는 파일을 선택하면 오류 문구가 status/live로 읽히고 생성 버튼은 비활성으로 유지된다"
+  },
+  {
     "id": "source-voice-input-accessible",
     "name": "Source Composer 음성 입력 상태",
     "url": "http://localhost:3000",
