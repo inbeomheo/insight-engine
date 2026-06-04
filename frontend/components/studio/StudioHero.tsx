@@ -24,9 +24,20 @@ export default function StudioHero({ modelLabel, resultCount }: StudioHeroProps)
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">YouTube, 웹, 텍스트를 넣고 Blog+SEO, 요약, NLM 산출물, 예약 발행까지 하나의 작업실에서 처리합니다.</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 lg:w-[520px]">
+        <div
+          data-testid="studio-steps"
+          role="list"
+          aria-label="스튜디오 작업 단계"
+          className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 lg:w-[520px]"
+        >
           {STUDIO_STEPS.map((step, index) => (
-            <div key={step.id} className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3">
+            <div
+              key={step.id}
+              data-testid="studio-step"
+              role="listitem"
+              aria-label={`${index + 1}. ${step.label}: ${step.description}`}
+              className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3"
+            >
               <div className="mb-2 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-bold text-white">{index + 1}</div>
               <p className="font-semibold text-slate-900">{step.label}</p>
               <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">{step.description}</p>

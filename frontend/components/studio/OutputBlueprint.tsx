@@ -74,6 +74,15 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
   const handleLengthChange = (value: string) => {
     setModifiers({ length: value as 'short' | 'medium' | 'long' });
   };
+  const handleLengthKeyDown = (event: KeyboardEvent<HTMLSelectElement>) => {
+    if (event.key === 'Home') {
+      event.preventDefault();
+      handleLengthChange('short');
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      handleLengthChange('long');
+    }
+  };
   const selectStyle = (styleId: string) => {
     setSelectedStyle(styleId);
     requestAnimationFrame(() => document.getElementById(`blueprint-style-${styleId}`)?.focus());
@@ -213,7 +222,7 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
         <div data-testid="blueprint-modifier-controls" role="group" aria-label="길이 · 톤 · 언어" className="rounded-2xl bg-slate-50 p-3">
           <p className="mb-2 text-xs font-semibold text-slate-500">길이 · 톤 · 언어</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <select data-testid="blueprint-length-select" aria-label="길이" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={lengthValue} onChange={(event) => handleLengthChange(event.currentTarget.value)}>{LENGTH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <select data-testid="blueprint-length-select" aria-label="길이" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={lengthValue} onChange={(event) => handleLengthChange(event.currentTarget.value)} onKeyDown={handleLengthKeyDown}>{LENGTH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             <select data-testid="blueprint-tone-select" aria-label="톤" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={writingStyleValue} onChange={(e) => setModifiers({ writing_style: e.target.value as typeof writingStyleValue })}>{WRITING_STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
             <select data-testid="blueprint-language-select" aria-label="언어" className="rounded-lg border border-slate-200 bg-white px-2 py-2" value={languageValue} onChange={(e) => setModifiers({ language: e.target.value as 'ko' | 'en' | 'ja' })}>{LANGUAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
           </div>

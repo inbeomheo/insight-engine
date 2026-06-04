@@ -18,6 +18,12 @@
     "expect": "히어로, 소스 입력, 산출물 설계 영역이 region/aria-labelledby로 구분되어 첫 화면 작업 흐름이 명확히 읽힌다"
   },
   {
+    "id": "studio-hero-workflow-list",
+    "name": "스튜디오 작업 단계 리스트",
+    "url": "http://localhost:3000",
+    "expect": "히어로의 소스 입력→산출물 설계→AI 생성→후처리 단계가 list/listitem으로 읽힌다"
+  },
+  {
     "id": "onboarding-provider-accessible",
     "name": "온보딩 프로바이더 선택 접근성",
     "url": "http://localhost:3000",

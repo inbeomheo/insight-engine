@@ -3481,6 +3481,27 @@ def main() -> int:
                 not primary_missing,
                 "hero, source composer, and output blueprint expose labelled regions" if not primary_missing else f"missing={primary_missing}",
             )
+            steps = page.locator("[data-testid='studio-steps']")
+            step_items = page.locator("[data-testid='studio-step']")
+            step_labels = [
+                "1. \uc18c\uc2a4 \uc785\ub825",
+                "2. \uc0b0\ucd9c\ubb3c \uc124\uacc4",
+                "3. AI \uc0dd\uc131",
+                "4. \ud6c4\ucc98\ub9ac",
+            ]
+            step_a11y_ok = (
+                steps.count() == 1
+                and steps.get_attribute("role", timeout=2_000) == "list"
+                and steps.get_attribute("aria-label", timeout=2_000) == "\uc2a4\ud29c\ub514\uc624 \uc791\uc5c5 \ub2e8\uacc4"
+                and step_items.count() == 4
+                and all(step_items.nth(index).get_attribute("role", timeout=2_000) == "listitem" for index in range(4))
+                and all((step_items.nth(index).get_attribute("aria-label", timeout=2_000) or "").startswith(label) for index, label in enumerate(step_labels))
+            )
+            report.record(
+                "studio-hero-workflow-list",
+                step_a11y_ok,
+                "studio hero workflow steps expose list/listitem semantics" if step_a11y_ok else f"steps={steps.count()}; role={steps.get_attribute('role') if steps.count() else None}; items={step_items.count()}",
+            )
             header_model = page.locator("[data-testid='header-model-badge']")
             header_status = page.locator("[data-testid='header-status-badge']")
             header_model_text = header_model.inner_text(timeout=5_000).replace("모델 ", "", 1).strip() if header_model.count() > 0 else ""
