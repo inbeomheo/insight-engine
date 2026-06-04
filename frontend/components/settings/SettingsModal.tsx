@@ -165,12 +165,16 @@ export default function SettingsModal() {
         <DialogHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-2 text-left">
-              <DialogTitle id="settings-dialog-title" data-testid="settings-dialog-title" className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary" />
-                {t('settings.title')}
+                <span id="settings-dialog-title" data-testid="settings-dialog-title">
+                  {t('settings.title')}
+                </span>
               </DialogTitle>
-              <DialogDescription id="settings-dialog-description" data-testid="settings-dialog-description">
-                {t('settings.aiServiceDescription')}
+              <DialogDescription>
+                <span id="settings-dialog-description" data-testid="settings-dialog-description">
+                  {t('settings.aiServiceDescription')}
+                </span>
               </DialogDescription>
             </div>
             <Button
@@ -459,11 +463,15 @@ export default function SettingsModal() {
         className="max-w-sm"
       >
         <DialogHeader>
-          <DialogTitle id="settings-style-memory-reset-title" data-testid="settings-style-memory-reset-title" className="text-destructive">
-            스타일 메모리 초기화
+          <DialogTitle className="text-destructive">
+            <span id="settings-style-memory-reset-title" data-testid="settings-style-memory-reset-title">
+              스타일 메모리 초기화
+            </span>
           </DialogTitle>
-          <DialogDescription id="settings-style-memory-reset-description" data-testid="settings-style-memory-reset-description">
-            학습된 선호도와 스타일 메모리를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          <DialogDescription>
+            <span id="settings-style-memory-reset-description" data-testid="settings-style-memory-reset-description">
+              학습된 선호도와 스타일 메모리를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            </span>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

@@ -4359,7 +4359,14 @@ def main() -> int:
         context.route("**/api/user/style-memory", handle_user_style_memory)
         context.route("**/api/user/style-memory/reset", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True})))
         page = context.new_page()
+        dialog_a11y_console_messages: list[str] = []
         page.on("console", lambda msg: report.console_errors.append(msg.text) if msg.type == "error" else None)
+        page.on(
+            "console",
+            lambda msg: dialog_a11y_console_messages.append(f"{msg.type}: {msg.text}")
+            if ("DialogContent" in msg.text or "Missing `Description`" in msg.text)
+            else None,
+        )
         page.on("pageerror", lambda exc: report.console_errors.append(str(exc)))
 
         try:
@@ -4748,6 +4755,14 @@ def main() -> int:
                 except Exception:
                     page.keyboard.press("Escape")
             report.record("settings-style-memory-reset-dialog-accessible", reset_dialog_ok, reset_dialog_detail)
+            dialog_console_clean = not dialog_a11y_console_messages
+            report.record(
+                "settings-dialog-console-clean",
+                dialog_console_clean,
+                "settings dialogs open without Radix title/description accessibility console warnings"
+                if dialog_console_clean
+                else " | ".join(dialog_a11y_console_messages[:6]),
+            )
             cache_section = settings_dialog.locator("[data-testid='settings-cache-section']")
             if cache_section.count() == 1:
                 cache_title = cache_section.locator("[data-testid='settings-cache-title']")

@@ -329,11 +329,15 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           className="max-w-sm"
         >
           <DialogHeader>
-            <DialogTitle id="calendar-delete-title" data-testid="calendar-delete-title">
-              예약 삭제
+            <DialogTitle>
+              <span id="calendar-delete-title" data-testid="calendar-delete-title">
+                예약 삭제
+              </span>
             </DialogTitle>
-            <DialogDescription id="calendar-delete-description" data-testid="calendar-delete-description">
-              {deleteTarget ? `“${deleteTarget.title}” 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
+            <DialogDescription>
+              <span id="calendar-delete-description" data-testid="calendar-delete-description">
+                {deleteTarget ? `“${deleteTarget.title}” 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
+              </span>
             </DialogDescription>
           </DialogHeader>
           {deleteError && (

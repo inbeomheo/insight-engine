@@ -588,12 +588,16 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
         className="max-w-sm"
       >
         <DialogHeader>
-          <DialogTitle id="result-delete-title" data-testid="result-delete-title" className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="h-5 w-5" />
-            결과 삭제
+            <span id="result-delete-title" data-testid="result-delete-title">
+              결과 삭제
+            </span>
           </DialogTitle>
-          <DialogDescription id="result-delete-description" data-testid="result-delete-description">
-            “{report.title}” 결과를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          <DialogDescription>
+            <span id="result-delete-description" data-testid="result-delete-description">
+              “{report.title}” 결과를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            </span>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
