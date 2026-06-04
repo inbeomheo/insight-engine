@@ -2409,6 +2409,27 @@ def run_source_file_input_accessibility_suite(browser, report: QaReport) -> None
             and generate.get_attribute("aria-label", timeout=5_000) == "파일 생성"
             and generate.is_disabled(timeout=5_000)
         )
+        oversize_path = ARTIFACTS / "qa-oversize.pdf"
+        oversize_path.write_bytes(b"0" * (10 * 1024 * 1024 + 1))
+        file_input.set_input_files(str(oversize_path))
+        size_error = page.locator("[data-testid='file-source-error']")
+        try:
+            size_error.wait_for(state="visible", timeout=5_000)
+            size_error_text = size_error.inner_text(timeout=5_000)
+            size_error_ok = (
+                size_error.get_attribute("role", timeout=2_000) == "status"
+                and size_error.get_attribute("aria-live", timeout=2_000) == "assertive"
+                and "10MB" in size_error_text
+                and generate.is_disabled(timeout=5_000)
+            )
+        except Exception as size_exc:
+            size_error_text = repr(size_exc)
+            size_error_ok = False
+        report.record(
+            "source-file-size-error-accessible",
+            size_error_ok,
+            "oversized file error is announced and generate remains disabled" if size_error_ok else f"text={size_error_text!r}; role={size_error.get_attribute('role') if size_error.count() else None}; live={size_error.get_attribute('aria-live') if size_error.count() else None}; disabled={generate.is_disabled()}",
+        )
         invalid_path = ARTIFACTS / "qa-upload.txt"
         invalid_path.write_bytes(b"qa invalid upload")
         file_input.set_input_files(str(invalid_path))

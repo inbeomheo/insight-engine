@@ -42,6 +42,11 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
     [onFileSelect],
   );
 
+  const handleReject = useCallback((message: string) => {
+    setError(message);
+    setTimeout(() => setError(''), 3000);
+  }, []);
+
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes}B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
@@ -79,6 +84,7 @@ export default function FileUpload({ file, onFileSelect, disabled }: FileUploadP
         ariaLabel="PDF/DOCX 파일 업로드"
         ariaDescribedBy="file-source-help"
         onFiles={handleFiles}
+        onReject={handleReject}
         accept={ACCEPTED_TYPES}
         maxSizeMB={MAX_SIZE_MB}
         disabled={disabled}

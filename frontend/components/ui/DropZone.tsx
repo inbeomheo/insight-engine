@@ -11,6 +11,7 @@ import { toast } from 'sonner';
  */
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
+  onReject?: (message: string) => void;
   accept?: string;     // e.g. '.pdf,.docx'
   maxSizeMB?: number;  // 기본 10
   children?: React.ReactNode;
@@ -24,6 +25,7 @@ interface DropZoneProps {
 
 export default function DropZone({
   onFiles,
+  onReject,
   accept,
   maxSizeMB = 10,
   children,
@@ -46,14 +48,16 @@ export default function DropZone({
       const valid: File[] = [];
       for (const f of files) {
         if (f.size > maxBytes) {
-          toast.error(`${f.name}: 파일 크기가 ${maxSizeMB}MB를 초과합니다.`);
+          const message = `${f.name}: 파일 크기가 ${maxSizeMB}MB를 초과합니다.`;
+          toast.error(message);
+          onReject?.(message);
         } else {
           valid.push(f);
         }
       }
       if (valid.length > 0) onFiles(valid);
     },
-    [maxBytes, maxSizeMB, onFiles],
+    [maxBytes, maxSizeMB, onFiles, onReject],
   );
 
   const handleDrop = useCallback(
