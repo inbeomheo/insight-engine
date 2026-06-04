@@ -144,6 +144,12 @@
     "expect": "헤더 설정 버튼은 Dialog 제어 대상, 열림/닫힘 상태, 상태별 라벨, 한국어 닫기 버튼, Escape 닫기, 트리거 포커스 복귀를 제공한다"
   },
   {
+    "id": "settings-ai-service-accessible",
+    "name": "설정 AI 서비스 선택 접근성",
+    "url": "http://localhost:3000",
+    "expect": "설정 모달의 AI 서비스 영역은 제목/설명을 aria로 연결하고 제공자/모델 선택 combobox를 명확한 라벨과 도움말로 제공한다"
+  },
+  {
     "id": "settings-snippet-library-accessible",
     "name": "설정 스니펫 라이브러리 접근성",
     "url": "http://localhost:3000",

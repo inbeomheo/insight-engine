@@ -4433,6 +4433,46 @@ def main() -> int:
                 settings_dialog.get_by_role("button", name="닫기").count() > 0
                 and settings_dialog.get_by_role("button", name="Close").count() == 0
             )
+            ai_service = settings_dialog.locator("[data-testid='settings-ai-service-section']")
+            if ai_service.count() == 1:
+                ai_title = ai_service.locator("[data-testid='settings-ai-service-title']")
+                ai_description = ai_service.locator("[data-testid='settings-ai-service-description']")
+                provider_select = ai_service.locator("[data-testid='settings-ai-provider-select']")
+                provider_help = ai_service.locator("[data-testid='settings-ai-provider-help']")
+                model_select = ai_service.locator("[data-testid='settings-ai-model-select']")
+                model_help = ai_service.locator("[data-testid='settings-ai-model-help']")
+                provider_describedby = provider_select.get_attribute("aria-describedby", timeout=1_000) if provider_select.count() else ""
+                model_describedby = model_select.get_attribute("aria-describedby", timeout=1_000) if model_select.count() else ""
+                ai_service_ok = (
+                    ai_service.get_attribute("role", timeout=1_000) == "region"
+                    and ai_service.get_attribute("aria-labelledby", timeout=1_000) == "settings-ai-service-title"
+                    and ai_service.get_attribute("aria-describedby", timeout=1_000) == "settings-ai-service-description"
+                    and ai_title.get_attribute("id", timeout=1_000) == "settings-ai-service-title"
+                    and ai_title.inner_text(timeout=1_000) == "AI 서비스"
+                    and ai_description.get_attribute("id", timeout=1_000) == "settings-ai-service-description"
+                    and "AI 제공자와 모델" in ai_description.inner_text(timeout=1_000)
+                    and provider_select.get_attribute("role", timeout=1_000) == "combobox"
+                    and provider_select.get_attribute("aria-label", timeout=1_000) == "AI 제공자 선택"
+                    and "settings-ai-service-description" in (provider_describedby or "")
+                    and "settings-ai-provider-help" in (provider_describedby or "")
+                    and provider_help.get_attribute("id", timeout=1_000) == "settings-ai-provider-help"
+                    and "ChatMock" in provider_select.inner_text(timeout=1_000)
+                    and model_select.get_attribute("role", timeout=1_000) == "combobox"
+                    and model_select.get_attribute("aria-label", timeout=1_000) == "AI 모델 선택"
+                    and "settings-ai-service-description" in (model_describedby or "")
+                    and "settings-ai-model-help" in (model_describedby or "")
+                    and model_help.get_attribute("id", timeout=1_000) == "settings-ai-model-help"
+                    and "GPT-5.5" in model_select.inner_text(timeout=1_000)
+                )
+                ai_service_detail = (
+                    "AI service section exposes labelled region and described provider/model comboboxes"
+                    if ai_service_ok
+                    else f"provider_describedby={provider_describedby!r}; model_describedby={model_describedby!r}"
+                )
+            else:
+                ai_service_ok = False
+                ai_service_detail = "AI service section missing stable accessibility hooks"
+            report.record("settings-ai-service-accessible", ai_service_ok, ai_service_detail)
             snippet_library = settings_dialog.locator("[data-testid='snippet-library']")
             if snippet_library.count() == 1:
                 snippet_title = snippet_library.locator("[data-testid='snippet-library-title']")

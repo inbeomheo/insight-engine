@@ -171,50 +171,85 @@ export default function SettingsModal() {
         </div>
 
         {/* AI 서비스 */}
-        <div className="space-y-3 pt-4 border-t">
-          <h3 className="text-sm font-semibold flex items-center gap-2">{t('settings.aiService')}</h3>
+        <section
+          data-testid="settings-ai-service-section"
+          role="region"
+          aria-labelledby="settings-ai-service-title"
+          aria-describedby="settings-ai-service-description"
+          className="space-y-3 pt-4 border-t"
+        >
+          <div className="space-y-1">
+            <h3 id="settings-ai-service-title" data-testid="settings-ai-service-title" className="text-sm font-semibold flex items-center gap-2">
+              {t('settings.aiService')}
+            </h3>
+            <p id="settings-ai-service-description" data-testid="settings-ai-service-description" className="text-xs text-muted-foreground">
+              AI 제공자와 모델을 선택해 콘텐츠 생성에 사용할 실행 환경을 설정합니다.
+            </p>
+          </div>
 
           {providerIds.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
+            <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
               {t('settings.noProviders')}
             </p>
           ) : (
-            <div className="space-y-2">
-              <Select
-                value={selectedProvider}
-                onValueChange={(v) => {
-                  setSelectedProvider(v);
-                  const first = providers[v]?.models[0];
-                  if (first) setSelectedModel(first.id);
-                }}
-              >
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder={t('settings.selectProvider')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {providerIds.map((id) => (
-                    <SelectItem key={id} value={id}>
-                      {providers[id].name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label id="settings-ai-provider-label" className="text-xs font-medium">AI 제공자</label>
+                <p id="settings-ai-provider-help" data-testid="settings-ai-provider-help" className="sr-only">
+                  사용할 AI API 제공자를 선택합니다.
+                </p>
+                <Select
+                  value={selectedProvider}
+                  onValueChange={(v) => {
+                    setSelectedProvider(v);
+                    const first = providers[v]?.models[0];
+                    if (first) setSelectedModel(first.id);
+                  }}
+                >
+                  <SelectTrigger
+                    data-testid="settings-ai-provider-select"
+                    aria-label="AI 제공자 선택"
+                    aria-describedby="settings-ai-service-description settings-ai-provider-help"
+                    className="w-full text-sm"
+                  >
+                    <SelectValue placeholder={t('settings.selectProvider')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providerIds.map((id) => (
+                      <SelectItem key={id} value={id}>
+                        {providers[id].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder={t('settings.selectModel')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentModels.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <label id="settings-ai-model-label" className="text-xs font-medium">AI 모델</label>
+                <p id="settings-ai-model-help" data-testid="settings-ai-model-help" className="sr-only">
+                  콘텐츠 생성에 사용할 모델을 선택합니다.
+                </p>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger
+                    data-testid="settings-ai-model-select"
+                    aria-label="AI 모델 선택"
+                    aria-describedby="settings-ai-service-description settings-ai-model-help"
+                    className="w-full text-sm"
+                  >
+                    <SelectValue placeholder={t('settings.selectModel')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
-        </div>
+        </section>
 
         {/* 스타일 메모리 */}
         <section
