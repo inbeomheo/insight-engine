@@ -510,6 +510,12 @@
     "expect": "우측 패널 최근 결과는 summary 같은 내부 스타일 id 대신 한국어 산출물 라벨과 열기 aria-label을 보여준다"
   },
   {
+    "id": "right-panel-recent-list-accessible",
+    "name": "우측 패널 최근 결과 목록 접근성",
+    "url": "http://localhost:3000",
+    "expect": "최근 결과 목록은 목록 라벨, 결과별 요약 aria-label, 메타데이터 aria-describedby로 읽힌다"
+  },
+  {
     "id": "right-panel-schedule-card",
     "name": "우측 패널 예약 카드 이동",
     "url": "http://localhost:3000",

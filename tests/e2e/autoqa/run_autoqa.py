@@ -802,8 +802,27 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 readable_style_ok,
                 screenshot(page, "right-panel-recent-style-readable.png") if readable_style_ok else f"text={recent_text!r}; aria={recent_label!r}",
             )
+            recent_list_label = recent_list.get_attribute("aria-label", timeout=2_000) if recent_list.count() else None
+            recent_item_label = recent_item.get_attribute("aria-label", timeout=2_000) if recent_item.count() else None
+            recent_meta = panel.locator("[data-testid='right-panel-recent-meta']").first
+            recent_meta_id = recent_meta.get_attribute("id", timeout=2_000) if recent_meta.count() else None
+            recent_button_desc = recent_button.get_attribute("aria-describedby", timeout=2_000)
+            recent_list_ok = (
+                recent_list_label == "최근 생성 결과"
+                and recent_item_label is not None
+                and "QA 전체 메뉴 테스트 리포트" in recent_item_label
+                and "요약" in recent_item_label
+                and recent_meta_id == "right-panel-recent-meta-0"
+                and recent_button_desc == recent_meta_id
+            )
+            report.record(
+                "right-panel-recent-list-accessible",
+                recent_list_ok,
+                "recent results expose list label, item summary, and described metadata" if recent_list_ok else f"list_label={recent_list_label}; item_label={recent_item_label}; meta_id={recent_meta_id}; describedby={recent_button_desc}",
+            )
         except Exception as exc:
             report.record("right-panel-recent-style-readable", False, repr(exc))
+            report.record("right-panel-recent-list-accessible", False, repr(exc))
 
         try:
             page.keyboard.press("Escape")
