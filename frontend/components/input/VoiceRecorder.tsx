@@ -110,6 +110,7 @@ export default function VoiceRecorder({ onRecordingComplete, disabled }: VoiceRe
           <Button
             data-testid="voice-record-button"
             aria-label="음성 녹음 시작"
+            aria-describedby={error ? 'voice-recording-error' : undefined}
             variant="outline"
             size="sm"
             className="gap-2"
@@ -121,7 +122,18 @@ export default function VoiceRecorder({ onRecordingComplete, disabled }: VoiceRe
           </Button>
         )}
       </div>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && (
+        <p
+          id="voice-recording-error"
+          data-testid="voice-recording-error"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          className="mt-2 text-xs text-destructive"
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

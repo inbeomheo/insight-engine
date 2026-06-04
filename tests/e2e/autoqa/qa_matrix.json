@@ -258,6 +258,12 @@
     "expect": "음성 소스 입력은 녹음/업로드 라벨, 도움말, 선택 파일 상태, 생성 버튼 상태를 제공한다"
   },
   {
+    "id": "voice-recording-error-accessible",
+    "name": "음성 녹음 오류 접근성",
+    "url": "http://localhost:3000",
+    "expect": "마이크 권한 거부 등 녹음 오류는 alert/live 영역으로 읽히고 녹음 버튼과 연결된다"
+  },
+  {
     "id": "source-generate-buttons-described",
     "name": "Source Composer 생성 버튼 안내 연결",
     "url": "http://localhost:3000",

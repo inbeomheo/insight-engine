@@ -2505,6 +2505,54 @@ def run_source_voice_input_accessibility_suite(browser, report: QaReport) -> Non
         context.close()
 
 
+def run_voice_recording_error_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        Object.defineProperty(navigator, 'mediaDevices', {
+          configurable: true,
+          value: {
+            getUserMedia: () => Promise.reject(new DOMException('QA permission denied', 'NotAllowedError')),
+          },
+        });
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[voice-record-error] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[voice-record-error] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+        page.locator("[data-testid='source-tab-voice']").click(timeout=10_000)
+        record = page.locator("[data-testid='voice-record-button']")
+        record.click(timeout=10_000)
+        error = page.locator("[data-testid='voice-recording-error']")
+        error.wait_for(state="visible", timeout=5_000)
+        error_text = error.inner_text(timeout=5_000)
+        ok = (
+            error.get_attribute("id", timeout=5_000) == "voice-recording-error"
+            and error.get_attribute("role", timeout=5_000) == "alert"
+            and error.get_attribute("aria-live", timeout=5_000) == "assertive"
+            and error.get_attribute("aria-atomic", timeout=5_000) == "true"
+            and record.get_attribute("aria-describedby", timeout=5_000) == "voice-recording-error"
+            and "마이크 접근이 거부" in error_text
+        )
+        report.record(
+            "voice-recording-error-accessible",
+            ok,
+            "microphone permission error is announced and linked to record button" if ok else f"text={error_text!r}; role={error.get_attribute('role') if error.count() else None}; describedby={record.get_attribute('aria-describedby') if record.count() else None}",
+        )
+    except Exception as exc:
+        report.record("voice-recording-error-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_source_generate_button_help_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -4613,6 +4661,7 @@ def main() -> int:
         run_source_text_input_accessibility_suite(browser, report)
         run_source_file_input_accessibility_suite(browser, report)
         run_source_voice_input_accessibility_suite(browser, report)
+        run_voice_recording_error_accessibility_suite(browser, report)
         run_source_generate_button_help_suite(browser, report)
         recycle_browser()
         run_output_blueprint_style_accessibility_suite(browser, report)
