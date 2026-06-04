@@ -420,6 +420,12 @@
     "expect": "우측 패널에 현재 모델/스타일/모드가 표시된다"
   },
   {
+    "id": "right-panel-settings-list-accessible",
+    "name": "우측 패널 현재 설정 목록 접근성",
+    "url": "http://localhost:3000",
+    "expect": "현재 설정의 모델, 스타일, 모드, 세부 옵션, 고급 옵션이 list/listitem과 항목별 aria-label로 읽힌다"
+  },
+  {
     "id": "right-panel-advanced-summary",
     "name": "우측 패널 고급 설정 요약",
     "url": "http://localhost:3000",

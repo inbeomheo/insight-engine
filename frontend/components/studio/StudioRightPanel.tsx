@@ -116,6 +116,8 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
   const firstReport = reports[0];
   const firstCompletedNlm = nlmArtifacts.find(({ artifact }) => artifact.status === 'completed');
   const modelLabel = selectedModel || selectedProvider || '자동 선택';
+  const selectedStyleLabel = getStyleLabel(selectedStyle);
+  const selectedModeLabel = getGenerationModeLabel(generationMode);
   const modifierSummary = getModifierSummary(modifiers);
   const advancedSummary = [
     `상세도 ${DETAIL_LABELS[detailLevel]}`,
@@ -218,25 +220,25 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         <div id="right-panel-settings-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950">
           <Sparkles className="h-4 w-4 text-indigo-600" /> 현재 설정
         </div>
-        <div className="mt-3 space-y-2 text-xs">
-          <div data-testid="right-panel-setting-model" className="rounded-2xl bg-slate-50 p-3">
+        <div data-testid="right-panel-settings-list" role="list" aria-label="현재 설정 요약" className="mt-3 space-y-2 text-xs">
+          <div data-testid="right-panel-setting-model" role="listitem" aria-label={`모델 ${modelLabel}`} className="rounded-2xl bg-slate-50 p-3">
             <p className="text-slate-500">모델</p>
             <p className="mt-1 truncate font-semibold text-slate-900">{modelLabel}</p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div data-testid="right-panel-setting-style" className="rounded-2xl bg-slate-50 p-3">
+          <div role="presentation" className="grid grid-cols-2 gap-2">
+            <div data-testid="right-panel-setting-style" role="listitem" aria-label={`스타일 ${selectedStyleLabel}`} className="rounded-2xl bg-slate-50 p-3">
               <p className="text-slate-500">스타일</p>
-              <p className="mt-1 font-semibold text-slate-900">{getStyleLabel(selectedStyle)}</p>
+              <p className="mt-1 font-semibold text-slate-900">{selectedStyleLabel}</p>
             </div>
-            <div data-testid="right-panel-setting-mode" className="rounded-2xl bg-slate-50 p-3">
+            <div data-testid="right-panel-setting-mode" role="listitem" aria-label={`모드 ${selectedModeLabel}`} className="rounded-2xl bg-slate-50 p-3">
               <p className="text-slate-500">모드</p>
-              <p className="mt-1 font-semibold text-slate-900">{getGenerationModeLabel(generationMode)}</p>
+              <p className="mt-1 font-semibold text-slate-900">{selectedModeLabel}</p>
             </div>
           </div>
-          <div data-testid="right-panel-modifier-summary" className="rounded-2xl bg-slate-50 p-3 text-slate-600">
+          <div data-testid="right-panel-modifier-summary" role="listitem" aria-label={`세부 옵션 ${modifierSummary}`} className="rounded-2xl bg-slate-50 p-3 text-slate-600">
             {modifierSummary}
           </div>
-          <div data-testid="right-panel-advanced-summary" className="rounded-2xl bg-slate-50 p-3 text-slate-600">
+          <div data-testid="right-panel-advanced-summary" role="listitem" aria-label={`고급 옵션 ${advancedSummary}`} className="rounded-2xl bg-slate-50 p-3 text-slate-600">
             {advancedSummary}
           </div>
         </div>

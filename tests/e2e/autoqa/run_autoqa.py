@@ -580,6 +580,31 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         )
         report.record("right-panel-settings", settings_ok, screenshot(page, "right-panel-settings.png") if settings_ok else panel.inner_text(timeout=5_000)[:500])
 
+        settings_list = panel.locator("[data-testid='right-panel-settings-list']")
+        settings_items = [
+            ("right-panel-setting-model", "모델"),
+            ("right-panel-setting-style", "스타일"),
+            ("right-panel-setting-mode", "모드"),
+            ("right-panel-modifier-summary", "세부 옵션"),
+            ("right-panel-advanced-summary", "고급 옵션"),
+        ]
+        settings_list_ok = (
+            settings_list.count() == 1
+            and settings_list.get_attribute("role", timeout=2_000) == "list"
+            and settings_list.get_attribute("aria-label", timeout=2_000) == "현재 설정 요약"
+            and all(
+                panel.locator(f"[data-testid='{test_id}']").count() == 1
+                and panel.locator(f"[data-testid='{test_id}']").get_attribute("role", timeout=2_000) == "listitem"
+                and (panel.locator(f"[data-testid='{test_id}']").get_attribute("aria-label", timeout=2_000) or "").startswith(label)
+                for test_id, label in settings_items
+            )
+        )
+        report.record(
+            "right-panel-settings-list-accessible",
+            settings_list_ok,
+            "current settings summary exposes a labelled list" if settings_list_ok else f"list={settings_list.count()}; role={settings_list.get_attribute('role') if settings_list.count() else None}; labels={[panel.locator(f'[data-testid={test_id!r}]').get_attribute('aria-label') if panel.locator(f'[data-testid={test_id!r}]').count() else None for test_id, _ in settings_items]}",
+        )
+
         semantic_regions = [
             ("right-panel-workspace-section", "region", "right-panel-workspace-title"),
             ("right-panel-settings-section", "region", "right-panel-settings-title"),
