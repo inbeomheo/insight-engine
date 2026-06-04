@@ -921,7 +921,10 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
             <div className="mt-3 border-t border-slate-200/70 pt-3">
               <p className="mb-2 text-[11px] font-semibold text-slate-400">미리보기 전환</p>
-              <div data-testid="workbench-preview-actions" role="toolbar" aria-label="미리보기 전환" className="grid gap-2 sm:grid-cols-2">
+              <p id="workbench-preview-help" data-testid="workbench-preview-help" className="sr-only">
+                본문, Markdown 원문, HTML 원문, 타임라인 보기로 현재 결과 본문 영역의 미리보기를 전환합니다.
+              </p>
+              <div data-testid="workbench-preview-actions" role="toolbar" aria-label="미리보기 전환" aria-describedby="workbench-preview-help" className="grid gap-2 sm:grid-cols-2">
                 <Button
                   data-testid="workbench-action-preview-rendered"
                   type="button"
@@ -931,6 +934,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   onClick={() => setPanel('readPreviewMode', 'rendered')}
                   aria-pressed={readPreviewMode === 'rendered'}
                   aria-controls={contentRegionId}
+                  aria-label="본문 미리보기"
+                  aria-describedby="workbench-preview-help"
                 >
                   <FileText className="h-3.5 w-3.5" />본문 보기
                 </Button>
@@ -943,6 +948,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   onClick={() => setPanel('readPreviewMode', 'markdown')}
                   aria-pressed={readPreviewMode === 'markdown'}
                   aria-controls={contentRegionId}
+                  aria-label="Markdown 원문 보기"
+                  aria-describedby="workbench-preview-help"
                 >
                   <Code className="h-3.5 w-3.5" />Markdown
                 </Button>
@@ -955,6 +962,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   onClick={() => setPanel('readPreviewMode', 'html')}
                   aria-pressed={readPreviewMode === 'html'}
                   aria-controls={contentRegionId}
+                  aria-label="HTML 원문 보기"
+                  aria-describedby="workbench-preview-help"
                 >
                   <Type className="h-3.5 w-3.5" />HTML
                 </Button>
@@ -967,6 +976,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   onClick={() => setPanel('readPreviewMode', 'timeline')}
                   aria-pressed={readPreviewMode === 'timeline'}
                   aria-controls={contentRegionId}
+                  aria-label="타임라인 보기"
+                  aria-describedby="workbench-preview-help"
                 >
                   <ListChecks className="h-3.5 w-3.5" />타임라인
                 </Button>

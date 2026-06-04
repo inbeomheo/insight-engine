@@ -447,7 +447,7 @@
     "id": "result-workbench-preview-actions-accessible",
     "name": "Result Workbench 미리보기 전환 접근성",
     "url": "http://localhost:3000",
-    "expect": "미리보기 전환 버튼 그룹은 toolbar 라벨, aria-controls, pressed 상태로 현재 본문 영역과 연결된다"
+    "expect": "미리보기 전환 버튼 그룹은 toolbar 라벨, 도움말 연결, 버튼별 aria-label, aria-controls, pressed 상태로 현재 본문 영역과 연결된다"
   },
   {
     "id": "result-workbench-improve-nlm-actions-accessible",

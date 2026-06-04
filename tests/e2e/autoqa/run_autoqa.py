@@ -3875,12 +3875,29 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         preview_markdown = workbench.locator("[data-testid='workbench-action-preview-markdown']")
         preview_html = workbench.locator("[data-testid='workbench-action-preview-html']")
         preview_timeline = workbench.locator("[data-testid='workbench-action-timeline']")
+        preview_help = workbench.locator("[data-testid='workbench-preview-help']")
         preview_controls_id = preview_rendered.get_attribute("aria-controls", timeout=2_000) if preview_rendered.count() else ""
         preview_region = page.locator(f"#{preview_controls_id}") if preview_controls_id else page.locator("#missing-preview-region")
+        preview_labels = {
+            "workbench-action-preview-rendered": "본문 미리보기",
+            "workbench-action-preview-markdown": "Markdown 원문 보기",
+            "workbench-action-preview-html": "HTML 원문 보기",
+            "workbench-action-timeline": "타임라인 보기",
+        }
+        missing_preview_labels = [
+            f"{test_id}:{label}"
+            for test_id, label in preview_labels.items()
+            if workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-label", timeout=2_000) != label
+            or workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-describedby", timeout=2_000) != "workbench-preview-help"
+        ]
         preview_accessible_initial_ok = (
             preview_group.count() == 1
             and preview_group.get_attribute("role", timeout=2_000) == "toolbar"
             and preview_group.get_attribute("aria-label", timeout=2_000) == "미리보기 전환"
+            and preview_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-preview-help"
+            and preview_help.get_attribute("id", timeout=2_000) == "workbench-preview-help"
+            and "Markdown" in preview_help.inner_text(timeout=2_000)
+            and "타임라인" in preview_help.inner_text(timeout=2_000)
             and bool(preview_controls_id)
             and preview_region.count() == 1
             and preview_region.get_attribute("role", timeout=2_000) == "region"
@@ -3888,6 +3905,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             and preview_markdown.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
             and preview_html.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
             and preview_timeline.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
+            and not missing_preview_labels
         )
         if preview_markdown.count() == 1:
             preview_markdown.click(timeout=10_000)
@@ -3899,7 +3917,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         report.record(
             "result-workbench-preview-actions-accessible",
             preview_accessible_initial_ok and preview_markdown_ok,
-            "preview toolbar controls the result body region and updates pressed state" if preview_accessible_initial_ok and preview_markdown_ok else f"initial={preview_accessible_initial_ok}; markdown={preview_markdown_ok}; controls={preview_controls_id!r}; group={preview_group.count()}",
+            "preview toolbar exposes help text, labels, controls, and pressed state" if preview_accessible_initial_ok and preview_markdown_ok else f"initial={preview_accessible_initial_ok}; markdown={preview_markdown_ok}; controls={preview_controls_id!r}; group={preview_group.count()}; missing={missing_preview_labels}",
         )
         export_group = workbench.locator("[data-testid='workbench-export-actions']")
         export_help = workbench.locator("[data-testid='workbench-export-help']")
