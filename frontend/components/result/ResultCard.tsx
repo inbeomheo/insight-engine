@@ -1128,13 +1128,16 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
         <div className="flex items-center gap-0.5">
           {/* 더보기 메뉴 */}
           <span className="mr-2 hidden text-xs font-medium text-slate-400 sm:inline">Workbench</span>
+          <span id="result-action-menu-help" data-testid="result-action-menu-help" className="sr-only">
+            복사, 개선, NotebookLM 생성, 내보내기, 예약, 공유, 삭제 작업을 여는 메뉴입니다.
+          </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴" aria-haspopup="menu">
+              <Button data-testid="result-action-menu-trigger" variant="ghost" size="icon" className="h-8 w-8" aria-label="결과 작업 메뉴 열기" aria-describedby="result-action-menu-help" aria-haspopup="menu">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent data-testid="result-action-menu" aria-label="결과 작업 메뉴" align="end" className="w-44">
               <DropdownMenuItem onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 mr-2" />
                 {t('result.copyTitle')}

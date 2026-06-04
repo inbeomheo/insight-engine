@@ -3771,6 +3771,35 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             ok,
             "result card header icon actions expose labels, pressed/copy states, and helper text" if ok else f"initial={initial_ok}; transcript_toggled={transcript_toggled_ok}; copied={copied_ok}; transcript={transcript.count()}; rich={rich_copy.count()}",
         )
+        menu_trigger = card.locator("[data-testid='result-action-menu-trigger']")
+        menu_help = card.locator("[data-testid='result-action-menu-help']")
+        menu_initial_ok = (
+            menu_trigger.count() == 1
+            and menu_trigger.get_attribute("aria-label", timeout=2_000) == "결과 작업 메뉴 열기"
+            and menu_trigger.get_attribute("aria-haspopup", timeout=2_000) == "menu"
+            and menu_trigger.get_attribute("aria-describedby", timeout=2_000) == "result-action-menu-help"
+            and menu_help.get_attribute("id", timeout=2_000) == "result-action-menu-help"
+            and "복사" in menu_help.inner_text(timeout=2_000)
+            and "내보내기" in menu_help.inner_text(timeout=2_000)
+        )
+        if menu_trigger.count() == 1:
+            menu_trigger.click(timeout=10_000)
+        action_menu = page.locator("[data-testid='result-action-menu']").last
+        menu_open_ok = wait_until(
+            lambda: action_menu.count() == 1
+            and action_menu.get_attribute("role", timeout=1_000) == "menu"
+            and action_menu.get_attribute("aria-label", timeout=1_000) == "결과 작업 메뉴"
+            and menu_trigger.get_attribute("aria-expanded", timeout=1_000) == "true",
+            5_000,
+            page,
+        )
+        page.keyboard.press("Escape")
+        menu_closed_ok = wait_until(lambda: action_menu.count() == 0 or not action_menu.is_visible(timeout=1_000), 5_000, page)
+        report.record(
+            "result-card-action-menu-trigger-accessible",
+            menu_initial_ok and menu_open_ok and menu_closed_ok,
+            "result action menu trigger exposes help text, expanded state, and labelled menu" if menu_initial_ok and menu_open_ok and menu_closed_ok else f"initial={menu_initial_ok}; open={menu_open_ok}; closed={menu_closed_ok}; trigger={menu_trigger.count()}; menu={action_menu.count()}",
+        )
         workbench = card.locator("[data-testid='result-workbench']")
         workbench_read_group = workbench.locator("[data-testid='workbench-read-actions']")
         workbench_read_help = workbench.locator("[data-testid='workbench-read-help']")
@@ -4007,6 +4036,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         )
     except Exception as exc:
         report.record("result-card-header-actions-accessible", False, repr(exc))
+        report.record("result-card-action-menu-trigger-accessible", False, repr(exc))
         report.record("result-workbench-read-actions-accessible", False, repr(exc))
         report.record("result-workbench-improve-nlm-actions-accessible", False, repr(exc))
         report.record("result-workbench-preview-actions-accessible", False, repr(exc))
