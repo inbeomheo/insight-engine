@@ -917,7 +917,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
             <div className="mt-3 border-t border-slate-200/70 pt-3">
               <p className="mb-2 text-[11px] font-semibold text-slate-400">미리보기 전환</p>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div data-testid="workbench-preview-actions" role="toolbar" aria-label="미리보기 전환" className="grid gap-2 sm:grid-cols-2">
                 <Button
                   data-testid="workbench-action-preview-rendered"
                   type="button"
@@ -926,6 +926,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   className={workbenchButtonClass}
                   onClick={() => setPanel('readPreviewMode', 'rendered')}
                   aria-pressed={readPreviewMode === 'rendered'}
+                  aria-controls={contentRegionId}
                 >
                   <FileText className="h-3.5 w-3.5" />본문 보기
                 </Button>
@@ -937,6 +938,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   className={workbenchButtonClass}
                   onClick={() => setPanel('readPreviewMode', 'markdown')}
                   aria-pressed={readPreviewMode === 'markdown'}
+                  aria-controls={contentRegionId}
                 >
                   <Code className="h-3.5 w-3.5" />Markdown
                 </Button>
@@ -948,6 +950,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   className={workbenchButtonClass}
                   onClick={() => setPanel('readPreviewMode', 'html')}
                   aria-pressed={readPreviewMode === 'html'}
+                  aria-controls={contentRegionId}
                 >
                   <Type className="h-3.5 w-3.5" />HTML
                 </Button>
@@ -959,6 +962,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                   className={workbenchButtonClass}
                   onClick={() => setPanel('readPreviewMode', 'timeline')}
                   aria-pressed={readPreviewMode === 'timeline'}
+                  aria-controls={contentRegionId}
                 >
                   <ListChecks className="h-3.5 w-3.5" />타임라인
                 </Button>

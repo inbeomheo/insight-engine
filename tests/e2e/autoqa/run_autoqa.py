@@ -3799,6 +3799,37 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             workbench_initial_ok and workbench_transcript_toggled_ok,
             "workbench rich copy and transcript toggle expose helper text, labels, and pressed state" if workbench_initial_ok and workbench_transcript_toggled_ok else f"initial={workbench_initial_ok}; toggled={workbench_transcript_toggled_ok}; rich={workbench_rich.count()}; transcript={workbench_transcript.count()}",
         )
+        preview_group = workbench.locator("[data-testid='workbench-preview-actions']")
+        preview_rendered = workbench.locator("[data-testid='workbench-action-preview-rendered']")
+        preview_markdown = workbench.locator("[data-testid='workbench-action-preview-markdown']")
+        preview_html = workbench.locator("[data-testid='workbench-action-preview-html']")
+        preview_timeline = workbench.locator("[data-testid='workbench-action-timeline']")
+        preview_controls_id = preview_rendered.get_attribute("aria-controls", timeout=2_000) if preview_rendered.count() else ""
+        preview_region = page.locator(f"#{preview_controls_id}") if preview_controls_id else page.locator("#missing-preview-region")
+        preview_accessible_initial_ok = (
+            preview_group.count() == 1
+            and preview_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and preview_group.get_attribute("aria-label", timeout=2_000) == "미리보기 전환"
+            and bool(preview_controls_id)
+            and preview_region.count() == 1
+            and preview_region.get_attribute("role", timeout=2_000) == "region"
+            and preview_rendered.get_attribute("aria-pressed", timeout=2_000) == "true"
+            and preview_markdown.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
+            and preview_html.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
+            and preview_timeline.get_attribute("aria-controls", timeout=2_000) == preview_controls_id
+        )
+        if preview_markdown.count() == 1:
+            preview_markdown.click(timeout=10_000)
+        preview_markdown_ok = wait_until(
+            lambda: preview_markdown.count() == 1 and preview_markdown.get_attribute("aria-pressed", timeout=1_000) == "true",
+            5_000,
+            page,
+        )
+        report.record(
+            "result-workbench-preview-actions-accessible",
+            preview_accessible_initial_ok and preview_markdown_ok,
+            "preview toolbar controls the result body region and updates pressed state" if preview_accessible_initial_ok and preview_markdown_ok else f"initial={preview_accessible_initial_ok}; markdown={preview_markdown_ok}; controls={preview_controls_id!r}; group={preview_group.count()}",
+        )
         collapse = card.locator("[data-testid='result-action-collapse-toggle']")
         controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
         content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
@@ -3830,6 +3861,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
     except Exception as exc:
         report.record("result-card-header-actions-accessible", False, repr(exc))
         report.record("result-workbench-read-actions-accessible", False, repr(exc))
+        report.record("result-workbench-preview-actions-accessible", False, repr(exc))
         report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()

@@ -444,6 +444,12 @@
     "expect": "읽기 섹션에서 Markdown/HTML 미리보기와 타임라인 전환을 바로 실행할 수 있다"
   },
   {
+    "id": "result-workbench-preview-actions-accessible",
+    "name": "Result Workbench 미리보기 전환 접근성",
+    "url": "http://localhost:3000",
+    "expect": "미리보기 전환 버튼 그룹은 toolbar 라벨, aria-controls, pressed 상태로 현재 본문 영역과 연결된다"
+  },
+  {
     "id": "result-workbench-export-status",
     "name": "Result Workbench 내보내기 실행 상태",
     "url": "http://localhost:3000",
