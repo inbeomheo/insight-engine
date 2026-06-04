@@ -165,10 +165,21 @@ export default function SettingsModal() {
         </DialogHeader>
 
         {/* 언어 설정 */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{t('language.label')}</h3>
+        <section
+          data-testid="settings-language-section"
+          role="region"
+          aria-labelledby="settings-language-title"
+          aria-describedby="settings-language-description"
+          className="space-y-2"
+        >
+          <div className="space-y-1">
+            <h3 id="settings-language-title" data-testid="settings-language-title" className="text-sm font-semibold">{t('language.label')}</h3>
+            <p id="settings-language-description" data-testid="settings-language-description" className="text-xs text-muted-foreground">
+              앱 인터페이스에 표시할 언어를 선택합니다.
+            </p>
+          </div>
           <LanguageSwitcher />
-        </div>
+        </section>
 
         {/* AI 서비스 */}
         <section

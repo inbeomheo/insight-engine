@@ -22,15 +22,23 @@ export default function LanguageSwitcher() {
   const { locale, setLocale, t } = useTranslation();
 
   return (
-    <div className="flex items-center gap-2">
-      <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+    <div data-testid="settings-language-control" className="flex items-center gap-2">
+      <Globe aria-hidden="true" className="h-4 w-4 text-muted-foreground shrink-0" />
+      <p id="settings-language-help" data-testid="settings-language-help" className="sr-only">
+        언어를 변경하면 앱 인터페이스 문구가 즉시 업데이트됩니다.
+      </p>
       <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-        <SelectTrigger className="text-sm h-9 w-[130px]">
+        <SelectTrigger
+          data-testid="settings-language-select"
+          aria-label="앱 언어 선택"
+          aria-describedby="settings-language-description settings-language-help"
+          className="text-sm h-9 w-[130px]"
+        >
           <SelectValue placeholder={t('language.label')} />
         </SelectTrigger>
         <SelectContent>
           {LOCALES.map(({ value, label, flag }) => (
-            <SelectItem key={value} value={value}>
+            <SelectItem key={value} value={value} data-testid={`settings-language-option-${value}`}>
               <span className="flex items-center gap-2">
                 <span>{flag}</span>
                 <span>{label}</span>

@@ -4433,6 +4433,38 @@ def main() -> int:
                 settings_dialog.get_by_role("button", name="닫기").count() > 0
                 and settings_dialog.get_by_role("button", name="Close").count() == 0
             )
+            language_section = settings_dialog.locator("[data-testid='settings-language-section']")
+            if language_section.count() == 1:
+                language_title = language_section.locator("[data-testid='settings-language-title']")
+                language_description = language_section.locator("[data-testid='settings-language-description']")
+                language_select = language_section.locator("[data-testid='settings-language-select']")
+                language_help = language_section.locator("[data-testid='settings-language-help']")
+                language_describedby = language_select.get_attribute("aria-describedby", timeout=1_000) if language_select.count() else ""
+                language_ok = (
+                    language_section.get_attribute("role", timeout=1_000) == "region"
+                    and language_section.get_attribute("aria-labelledby", timeout=1_000) == "settings-language-title"
+                    and language_section.get_attribute("aria-describedby", timeout=1_000) == "settings-language-description"
+                    and language_title.get_attribute("id", timeout=1_000) == "settings-language-title"
+                    and language_title.inner_text(timeout=1_000) == "언어"
+                    and language_description.get_attribute("id", timeout=1_000) == "settings-language-description"
+                    and "인터페이스" in language_description.inner_text(timeout=1_000)
+                    and language_select.get_attribute("role", timeout=1_000) == "combobox"
+                    and language_select.get_attribute("aria-label", timeout=1_000) == "앱 언어 선택"
+                    and language_select.get_attribute("aria-expanded", timeout=1_000) == "false"
+                    and "settings-language-description" in (language_describedby or "")
+                    and "settings-language-help" in (language_describedby or "")
+                    and language_help.get_attribute("id", timeout=1_000) == "settings-language-help"
+                    and "한국어" in language_select.inner_text(timeout=1_000)
+                )
+                language_detail = (
+                    "language settings expose labelled region and described language combobox"
+                    if language_ok
+                    else f"describedby={language_describedby!r}; selected={language_select.inner_text(timeout=1_000) if language_select.count() else None!r}"
+                )
+            else:
+                language_ok = False
+                language_detail = "language settings section missing stable accessibility hooks"
+            report.record("settings-language-accessible", language_ok, language_detail)
             ai_service = settings_dialog.locator("[data-testid='settings-ai-service-section']")
             if ai_service.count() == 1:
                 ai_title = ai_service.locator("[data-testid='settings-ai-service-title']")
