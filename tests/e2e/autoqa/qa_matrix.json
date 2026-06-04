@@ -354,6 +354,12 @@
     "expect": "생성 결과에 빠른 workbench 액션이 보인다"
   },
   {
+    "id": "result-context-menu-accessible",
+    "name": "결과 선택 텍스트 컨텍스트 메뉴 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과 본문 텍스트 선택 메뉴는 한국어 menu 라벨, menuitem 포커스, Escape 닫기를 제공한다"
+  },
+  {
     "id": "studio-result-toolbar",
     "name": "스튜디오 결과 툴바",
     "url": "http://localhost:3000",

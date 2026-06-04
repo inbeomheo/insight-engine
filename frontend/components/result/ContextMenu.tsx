@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Copy, FileCode, RefreshCw, Languages, ListCollapse } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -59,6 +59,14 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
     };
   }, [containerRef, handleContextMenu, handleClose]);
 
+  useEffect(() => {
+    if (!menu.visible) return;
+    const frame = requestAnimationFrame(() => {
+      menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [menu.visible]);
+
   const handleCopyText = () => {
     navigator.clipboard.writeText(menu.selectedText);
     toast.success(t('result.copied'));
@@ -89,16 +97,35 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
     handleClose();
   };
 
+  const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      handleClose();
+      return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || items.length === 0) return;
+    event.preventDefault();
+    const currentIndex = Math.max(0, items.indexOf(document.activeElement as HTMLButtonElement));
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? items.length - 1
+          : (currentIndex + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[nextIndex]?.focus();
+  };
+
   if (!menu.visible) return null;
 
   const items = [
-    { icon: Copy, label: t('contextMenu.copyText'), onClick: handleCopyText },
-    { icon: FileCode, label: t('contextMenu.copyHtml'), onClick: handleCopyHtml },
+    { id: 'copy-text', icon: Copy, label: t('contextMenu.copyText'), onClick: handleCopyText },
+    { id: 'copy-html', icon: FileCode, label: t('contextMenu.copyHtml'), onClick: handleCopyHtml },
     ...(onInlineEdit
       ? [
-          { icon: RefreshCw, label: t('contextMenu.rewriteSelection'), onClick: () => handleAction('rewrite') },
-          { icon: Languages, label: t('contextMenu.translateSelection'), onClick: () => handleAction('translate') },
-          { icon: ListCollapse, label: t('contextMenu.summarizeSelection'), onClick: () => handleAction('summarize') },
+          { id: 'rewrite', icon: RefreshCw, label: t('contextMenu.rewriteSelection'), onClick: () => handleAction('rewrite') },
+          { id: 'translate', icon: Languages, label: t('contextMenu.translateSelection'), onClick: () => handleAction('translate') },
+          { id: 'summarize', icon: ListCollapse, label: t('contextMenu.summarizeSelection'), onClick: () => handleAction('summarize') },
         ]
       : []),
   ];
@@ -106,19 +133,23 @@ export default function ContextMenu({ containerRef, onInlineEdit }: ContextMenuP
   return (
     <div
       ref={menuRef}
+      data-testid="result-context-menu"
       className={cn(
         'fixed z-[70] min-w-[180px] py-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-border/60',
         'animate-fade-in'
       )}
       style={{ top: menu.y, left: menu.x }}
       role="menu"
-      aria-label="Context menu"
+      aria-label="선택 텍스트 작업 메뉴"
+      onKeyDown={handleMenuKeyDown}
     >
       {items.map((item) => {
         const Icon = item.icon;
         return (
           <button
             key={item.label}
+            type="button"
+            data-testid={`context-menu-item-${item.id}`}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:bg-muted/50 transition-colors text-left"
             onClick={item.onClick}
             role="menuitem"

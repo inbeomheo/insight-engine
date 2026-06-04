@@ -3653,6 +3653,77 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
     context.close()
 
 
+def run_result_context_menu_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1100}, accept_downloads=True)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[result-context-menu] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[result-context-menu] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("[data-report-id='qa-menu-report']").wait_for(state="visible", timeout=60_000)
+        preview = page.locator("[data-testid='result-rendered-preview']").first
+        preview.wait_for(state="visible", timeout=20_000)
+        selected = preview.evaluate(
+            """
+            el => {
+              const walker = document.createTreeWalker(
+                el,
+                NodeFilter.SHOW_TEXT,
+                { acceptNode: node => node.textContent && node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
+              );
+              const node = walker.nextNode();
+              if (!node || !node.textContent) return false;
+              const range = document.createRange();
+              range.setStart(node, 0);
+              range.setEnd(node, Math.min(12, node.textContent.length));
+              const selection = window.getSelection();
+              selection.removeAllRanges();
+              selection.addRange(range);
+              const rect = el.getBoundingClientRect();
+              el.dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                clientX: rect.left + 24,
+                clientY: rect.top + 24,
+              }));
+              return true;
+            }
+            """
+        )
+        menu = page.locator("[data-testid='result-context-menu']")
+        try:
+            menu.wait_for(state="visible", timeout=5_000)
+            first_item = menu.locator("[data-testid='context-menu-item-copy-text']")
+            first_focus_ok = wait_until(lambda: first_item.evaluate("el => document.activeElement === el"), 3_000, page)
+            menu_ok = (
+                selected
+                and menu.get_attribute("role", timeout=2_000) == "menu"
+                and menu.get_attribute("aria-label", timeout=2_000) == "선택 텍스트 작업 메뉴"
+                and first_item.get_attribute("role", timeout=2_000) == "menuitem"
+                and first_focus_ok
+            )
+            page.keyboard.press("Escape")
+            closed_ok = wait_until(lambda: menu.count() == 0 or not menu.is_visible(), 3_000, page)
+            menu_exc_text = ""
+        except Exception as menu_exc:
+            menu_ok = False
+            closed_ok = False
+            first_focus_ok = False
+            menu_exc_text = repr(menu_exc)
+        ok = menu_ok and closed_ok
+        report.record(
+            "result-context-menu-accessible",
+            ok,
+            "selected-text context menu exposes labelled menu, focused menuitem, and Escape close" if ok else f"selected={selected}; menu_ok={menu_ok}; focus={first_focus_ok}; closed={closed_ok}; error={menu_exc_text}",
+        )
+    except Exception as exc:
+        report.record("result-context-menu-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_history_clear_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     seed_menu_context(context)
@@ -4714,6 +4785,7 @@ def main() -> int:
         context.close()
 
         run_seeded_menu_action_suite(browser, report)
+        run_result_context_menu_accessibility_suite(browser, report)
         run_history_clear_suite(browser, report)
         run_no_native_confirm_suite(report)
         run_no_native_alert_suite(report)

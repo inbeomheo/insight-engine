@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useState, useMemo, useCallback, useReducer } from 'react';
+import { memo, useEffect, useState, useMemo, useCallback, useReducer, useRef } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -40,6 +40,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { exportDocx, exportFormat, exportHtml, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
+import ContextMenu from './ContextMenu';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
@@ -186,6 +187,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const { t } = useTranslation();
 
+  const contentSelectionRef = useRef<HTMLDivElement>(null);
   const charCount = report.content.length;
 
   const requestDelete = useCallback(() => {
@@ -753,7 +755,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
       {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
       {hasExpanded && (
-      <CardContent className="px-6 pb-5 pt-4 border-t border-border/50" style={{ display: collapsed ? 'none' : undefined }}>
+      <>
+      <CardContent
+        ref={contentSelectionRef}
+        data-testid="result-content-selection-area"
+        className="px-6 pb-5 pt-4 border-t border-border/50"
+        style={{ display: collapsed ? 'none' : undefined }}
+      >
           {readPreviewBody}
 
           {/* NotebookLM 섹션 */}
@@ -843,6 +851,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           )}
         </CardContent>
+        <ContextMenu containerRef={contentSelectionRef} />
+      </>
       )}
 
       {/* 푸터 */}
