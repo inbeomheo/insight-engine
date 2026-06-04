@@ -600,6 +600,12 @@
     "expect": "각 빠른 액션이 어떤 작업 영역으로 이동하는지 짧은 설명과 대상 상태를 보여준다"
   },
   {
+    "id": "right-panel-action-descriptions-accessible",
+    "name": "우측 패널 빠른 액션 설명 접근성",
+    "url": "http://localhost:3000",
+    "expect": "빠른 액션은 list/listitem 구조와 버튼별 aria-describedby로 설명 문구와 연결된다"
+  },
+  {
     "id": "right-panel-empty-action-feedback",
     "name": "우측 빠른 액션 빈 상태 안내",
     "url": "http://localhost:3000",

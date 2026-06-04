@@ -268,10 +268,11 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
             {quickNotice}
           </div>
         )}
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div data-testid="quick-action-list" role="list" aria-label="빠른 액션 목록" className="mt-3 grid grid-cols-2 gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
             const guide = QUICK_ACTION_GUIDE[action.id] ?? { description: '작업 영역으로 이동', target: 'Workbench' };
+            const descId = `quick-action-${action.id}-desc`;
             const actionHref = action.id === 'nlm' && firstCompletedNlm
               ? apiUrl(`/api/notebooklm/view/${firstCompletedNlm.artifact.artifact_id}`)
               : null;
@@ -283,41 +284,45 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
                   <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{guide.target}</span>
                 </div>
                 <p className="pointer-events-none mt-2 font-semibold text-slate-800">{action.label}</p>
-                <p data-testid={`quick-action-${action.id}-desc`} className="pointer-events-none mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
+                <p id={descId} data-testid={`quick-action-${action.id}-desc`} className="pointer-events-none mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">
                   {guide.description}
                 </p>
               </>
             );
             if (actionHref) {
               return (
-                <a
-                  key={action.id}
-                  data-testid={`quick-action-${action.id}`}
-                  className={actionClassName}
-                  href={actionHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    window.open(actionHref, '_blank', 'noreferrer');
-                  }}
-                  aria-label={`${action.label} - ${guide.description}`}
-                >
-                  {actionContent}
-                </a>
+                <div key={action.id} data-testid={`quick-action-${action.id}-item`} role="listitem">
+                  <a
+                    data-testid={`quick-action-${action.id}`}
+                    className={actionClassName}
+                    href={actionHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      window.open(actionHref, '_blank', 'noreferrer');
+                    }}
+                    aria-label={`${action.label} - ${guide.description}`}
+                    aria-describedby={descId}
+                  >
+                    {actionContent}
+                  </a>
+                </div>
               );
             }
             return (
-              <button
-                key={action.id}
-                type="button"
-                data-testid={`quick-action-${action.id}`}
-                className={actionClassName}
-                onClick={() => handleQuickAction(action.id)}
-                aria-label={`${action.label} - ${guide.description}`}
-              >
-                {actionContent}
-              </button>
+              <div key={action.id} data-testid={`quick-action-${action.id}-item`} role="listitem">
+                <button
+                  type="button"
+                  data-testid={`quick-action-${action.id}`}
+                  className={actionClassName}
+                  onClick={() => handleQuickAction(action.id)}
+                  aria-label={`${action.label} - ${guide.description}`}
+                  aria-describedby={descId}
+                >
+                  {actionContent}
+                </button>
+              </div>
             );
           })}
         </div>

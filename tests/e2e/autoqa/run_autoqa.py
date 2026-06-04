@@ -753,6 +753,33 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             not missing_guidance and not status_missing,
             screenshot(page, "right-panel-action-guidance.png") if not missing_guidance and not status_missing else f"missing={missing_guidance}; status_missing={status_missing}",
         )
+        action_list = panel.locator("[data-testid='quick-action-list']")
+        action_desc_failures: list[str] = []
+        for action_id in guided_action_ids:
+            action = panel.locator(f"[data-testid='quick-action-{action_id}']")
+            item = panel.locator(f"[data-testid='quick-action-{action_id}-item']")
+            desc = panel.locator(f"[data-testid='quick-action-{action_id}-desc']")
+            expected_desc = f"quick-action-{action_id}-desc"
+            if (
+                action.count() != 1
+                or item.count() != 1
+                or item.get_attribute("role", timeout=2_000) != "listitem"
+                or desc.count() != 1
+                or desc.get_attribute("id", timeout=2_000) != expected_desc
+                or action.get_attribute("aria-describedby", timeout=2_000) != expected_desc
+            ):
+                action_desc_failures.append(action_id)
+        action_desc_ok = (
+            action_list.count() == 1
+            and action_list.get_attribute("role", timeout=2_000) == "list"
+            and action_list.get_attribute("aria-label", timeout=2_000) == "빠른 액션 목록"
+            and not action_desc_failures
+        )
+        report.record(
+            "right-panel-action-descriptions-accessible",
+            action_desc_ok,
+            "quick actions expose list semantics and described-by guidance" if action_desc_ok else f"list_role={action_list.get_attribute('role') if action_list.count() else None}; failures={action_desc_failures}",
+        )
 
         try:
             with page.expect_download(timeout=8_000) as download_info:
