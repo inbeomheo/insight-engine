@@ -866,6 +866,32 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             report.record("right-panel-recent-result-focus", False, repr(exc))
 
         try:
+            schedule_label = schedule.get_attribute("aria-label", timeout=2_000) if schedule.count() else None
+            schedule_title = panel.locator("[data-testid='right-panel-schedule-title']")
+            schedule_desc = panel.locator("[data-testid='right-panel-schedule-desc']")
+            schedule_target = panel.locator("[data-testid='right-panel-schedule-target']")
+            schedule_describedby = schedule.get_attribute("aria-describedby", timeout=2_000) if schedule.count() else None
+            schedule_title_id = schedule_title.get_attribute("id", timeout=2_000) if schedule_title.count() else None
+            schedule_desc_id = schedule_desc.get_attribute("id", timeout=2_000) if schedule_desc.count() else None
+            schedule_target_id = schedule_target.get_attribute("id", timeout=2_000) if schedule_target.count() else None
+            schedule_desc_text = schedule_desc.inner_text(timeout=2_000) if schedule_desc.count() else ""
+            schedule_target_text = schedule_target.inner_text(timeout=2_000) if schedule_target.count() else ""
+            schedule_a11y_ok = (
+                schedule.count() == 1
+                and schedule_label is not None
+                and schedule_label.startswith("예약 캘린더 열기")
+                and schedule_describedby == "right-panel-schedule-desc right-panel-schedule-target"
+                and schedule_title_id == "right-panel-schedule-title"
+                and schedule_desc_id == "right-panel-schedule-desc"
+                and schedule_target_id == "right-panel-schedule-target"
+                and "예약된 발행" in schedule_desc_text
+                and "캘린더로 이동" in schedule_target_text
+            )
+            report.record(
+                "right-panel-schedule-card-accessible",
+                schedule_a11y_ok,
+                "schedule card exposes label and described-by details" if schedule_a11y_ok else f"label={schedule_label}; describedby={schedule_describedby}; title={schedule_title_id}; desc={schedule_desc_id}; target={schedule_target_id}",
+            )
             panel.locator("[data-testid='right-panel-schedule-card']").click(timeout=10_000)
             schedule_card_calendar_visible = page.locator("[data-testid='content-calendar']").count() > 0
             if not schedule_card_calendar_visible:
@@ -877,6 +903,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
                 screenshot(page, "right-panel-schedule-card.png") if schedule_card_calendar_visible else "calendar not opened",
             )
         except Exception as exc:
+            report.record("right-panel-schedule-card-accessible", False, repr(exc))
             report.record("right-panel-schedule-card", False, repr(exc))
 
         page.locator("[data-testid='quick-action-schedule']").click(timeout=10_000)
@@ -2658,10 +2685,11 @@ def run_output_blueprint_modifier_accessibility_suite(browser, report: QaReport)
         )
         length.focus(timeout=10_000)
         page.keyboard.press("End")
+        length_changed_ok = wait_until(lambda: length.input_value() == "long", 5_000, page)
         tone.select_option("expert", timeout=10_000)
         language.select_option("en", timeout=10_000)
         changed_ok = wait_until(
-            lambda: length.input_value() == "long" and tone.input_value() == "expert" and language.input_value() == "en",
+            lambda: length_changed_ok and length.input_value() == "long" and tone.input_value() == "expert" and language.input_value() == "en",
             10_000,
             page,
         )

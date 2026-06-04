@@ -516,6 +516,12 @@
     "expect": "최근 결과 목록은 목록 라벨, 결과별 요약 aria-label, 메타데이터 aria-describedby로 읽힌다"
   },
   {
+    "id": "right-panel-schedule-card-accessible",
+    "name": "우측 패널 예약 카드 접근성",
+    "url": "http://localhost:3000",
+    "expect": "예약 카드는 명확한 aria-label과 예약 개수·이동 안내 aria-describedby를 제공한다"
+  },
+  {
     "id": "right-panel-schedule-card",
     "name": "우측 패널 예약 카드 이동",
     "url": "http://localhost:3000",

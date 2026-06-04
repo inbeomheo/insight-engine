@@ -392,13 +392,15 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
       </section>
       <button
         type="button"
-        data-testid="right-panel-schedule-card" aria-label={scheduleLabel}
+        data-testid="right-panel-schedule-card"
+        aria-label={scheduleLabel}
+        aria-describedby="right-panel-schedule-desc right-panel-schedule-target"
         className="rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40"
         onClick={() => setActiveView('calendar')}
       >
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-950"><CalendarDays className="h-4 w-4 text-indigo-600" /> 예약</div>
-        <p className="mt-2 text-xs text-slate-500">예약된 발행 {schedulesCount}개</p>
-        <p className="mt-2 text-[11px] font-medium text-indigo-600">캘린더로 이동</p>
+        <div id="right-panel-schedule-title" data-testid="right-panel-schedule-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><CalendarDays aria-hidden="true" className="h-4 w-4 text-indigo-600" /> 예약</div>
+        <p id="right-panel-schedule-desc" data-testid="right-panel-schedule-desc" className="mt-2 text-xs text-slate-500">예약된 발행 {schedulesCount}개</p>
+        <p id="right-panel-schedule-target" data-testid="right-panel-schedule-target" className="mt-2 text-[11px] font-medium text-indigo-600">캘린더로 이동</p>
       </button>
     </div>
   );
