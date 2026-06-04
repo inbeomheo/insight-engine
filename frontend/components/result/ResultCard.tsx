@@ -847,17 +847,22 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
       {/* 푸터 */}
       {/* Studio Workbench */}
-      <div className="border-t border-slate-200/70 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 px-6 py-4" data-testid="result-workbench">
+      <div
+        className="border-t border-slate-200/70 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 px-6 py-4"
+        data-testid="result-workbench"
+        role="region"
+        aria-labelledby="result-workbench-title"
+      >
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Result Workbench</p>
+            <p id="result-workbench-title" className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">Result Workbench</p>
             <p className="text-sm text-slate-500">메뉴 없이 복사, 변환, NLM 산출물, 내보내기, 예약까지 바로 처리합니다.</p>
           </div>
           <span className="text-xs text-slate-400">{(report.notebooklm?.artifacts?.length ?? 0)} NLM · {charCount.toLocaleString()}자</span>
         </div>
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          <section data-testid="workbench-section-read" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">읽기</p>
+          <section data-testid="workbench-section-read" role="region" aria-labelledby="workbench-section-read-title" className={workbenchSectionClass}>
+            <p id="workbench-section-read-title" className="mb-2 text-xs font-semibold text-slate-500">읽기</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button data-testid="workbench-action-copy-title" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 text-indigo-600" />제목 복사
@@ -931,8 +936,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           </section>
 
-          <section data-testid="workbench-section-improve" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">개선</p>
+          <section data-testid="workbench-section-improve" role="region" aria-labelledby="workbench-section-improve-title" className={workbenchSectionClass}>
+            <p id="workbench-section-improve-title" className="mb-2 text-xs font-semibold text-slate-500">개선</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button data-testid="workbench-action-prompt" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPromptModalOpen(true, report.prompt)}>
                 <Code className="h-3.5 w-3.5 text-indigo-600" />프롬프트
@@ -949,11 +954,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           </section>
 
-          <section data-testid="workbench-section-nlm" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">NLM 산출물</p>
+          <section data-testid="workbench-section-nlm" role="region" aria-labelledby="workbench-section-nlm-title" className={workbenchSectionClass}>
+            <p id="workbench-section-nlm-title" className="mb-2 text-xs font-semibold text-slate-500">NLM 산출물</p>
             {notebookLmAuthNotice && (
               <div
                 data-testid="workbench-nlm-auth-notice"
+                role="status"
+                aria-live="polite"
                 className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800"
               >
                 <div className="flex items-start gap-2">
@@ -993,11 +1000,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           </section>
 
-          <section data-testid="workbench-section-export" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">내보내기</p>
+          <section data-testid="workbench-section-export" role="region" aria-labelledby="workbench-section-export-title" className={workbenchSectionClass}>
+            <p id="workbench-section-export-title" className="mb-2 text-xs font-semibold text-slate-500">내보내기</p>
             {exportNotice && (
               <div
                 data-testid="workbench-export-status"
+                role="status"
+                aria-live="polite"
                 className="mb-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700"
               >
                 {exportNotice}
@@ -1025,8 +1034,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           </section>
 
-          <section data-testid="workbench-section-publish" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">배포</p>
+          <section data-testid="workbench-section-publish" role="region" aria-labelledby="workbench-section-publish-title" className={workbenchSectionClass}>
+            <p id="workbench-section-publish-title" className="mb-2 text-xs font-semibold text-slate-500">배포</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button data-testid="workbench-action-schedule" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => onSchedule(report)}>
                 <Calendar className="h-3.5 w-3.5 text-indigo-600" />예약
@@ -1037,8 +1046,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             </div>
           </section>
 
-          <section data-testid="workbench-section-manage" className={workbenchSectionClass}>
-            <p className="mb-2 text-xs font-semibold text-slate-500">관리</p>
+          <section data-testid="workbench-section-manage" role="region" aria-labelledby="workbench-section-manage-title" className={workbenchSectionClass}>
+            <p id="workbench-section-manage-title" className="mb-2 text-xs font-semibold text-slate-500">관리</p>
             <Button data-testid="workbench-action-delete" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={requestDelete}>
               <Trash2 className="h-3.5 w-3.5" />삭제
             </Button>

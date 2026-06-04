@@ -342,6 +342,12 @@
     "expect": "읽기, 개선, NLM, 내보내기, 배포, 관리 섹션이 결과 카드에서 바로 보인다"
   },
   {
+    "id": "result-workbench-semantic-regions",
+    "name": "결과 Workbench 의미 구조",
+    "url": "http://localhost:3000",
+    "expect": "결과 Workbench의 읽기, 개선, NLM, 내보내기, 배포, 관리 섹션은 region/aria-labelledby로 읽히고 상태 메시지는 live status로 전달된다"
+  },
+  {
     "id": "result-workbench-read-actions",
     "name": "Result Workbench 읽기 액션",
     "url": "http://localhost:3000",

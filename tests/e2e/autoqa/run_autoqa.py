@@ -4080,6 +4080,42 @@ def main() -> int:
                 workbench_visible and not missing_sections,
                 screenshot(page, "result-workbench-sections.png") if workbench_visible and not missing_sections else f"missing={missing_sections}",
             )
+            semantic_section_ids = [
+                "read",
+                "improve",
+                "nlm",
+                "export",
+                "publish",
+                "manage",
+            ]
+            semantic_missing: list[str] = []
+            for section_id in semantic_section_ids:
+                section = workbench.locator(f"[data-testid='workbench-section-{section_id}']")
+                labelledby = f"workbench-section-{section_id}-title"
+                if (
+                    section.count() != 1
+                    or section.get_attribute("role", timeout=2_000) != "region"
+                    or section.get_attribute("aria-labelledby", timeout=2_000) != labelledby
+                    or workbench.locator(f"#{labelledby}").count() != 1
+                ):
+                    semantic_missing.append(section_id)
+            workbench_region_ok = (
+                workbench.get_attribute("role", timeout=2_000) == "region"
+                and workbench.get_attribute("aria-labelledby", timeout=2_000) == "result-workbench-title"
+                and workbench.locator("#result-workbench-title").count() == 1
+            )
+            export_status = workbench.locator("[data-testid='workbench-export-status']")
+            auth_notice = workbench.locator("[data-testid='workbench-nlm-auth-notice']")
+            status_semantics_ok = (
+                export_status.count() == 0
+                and (auth_notice.count() == 0 or auth_notice.get_attribute("role", timeout=2_000) == "status")
+            )
+            semantic_ok = workbench_visible and workbench_region_ok and not semantic_missing and status_semantics_ok
+            report.record(
+                "result-workbench-semantic-regions",
+                semantic_ok,
+                "workbench and action groups expose labelled regions and live statuses" if semantic_ok else f"workbench_region={workbench_region_ok}; missing={semantic_missing}; status={status_semantics_ok}",
+            )
             read_action_ids = [
                 "workbench-action-copy-title",
                 "workbench-action-copy-content",
