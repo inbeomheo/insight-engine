@@ -4358,6 +4358,13 @@ def main() -> int:
 
         context.route("**/api/user/style-memory", handle_user_style_memory)
         context.route("**/api/user/style-memory/reset", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True})))
+        cache_delete_calls: list[str] = []
+
+        def handle_cache_delete(route) -> None:
+            cache_delete_calls.append(route.request.method)
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True}))
+
+        context.route("**/api/cache", handle_cache_delete)
         page = context.new_page()
         dialog_a11y_console_messages: list[str] = []
         page.on("console", lambda msg: report.console_errors.append(msg.text) if msg.type == "error" else None)
@@ -4790,6 +4797,48 @@ def main() -> int:
                 cache_ok = False
                 cache_detail = "cache management section missing stable accessibility hooks"
             report.record("settings-cache-management-accessible", cache_ok, cache_detail)
+            try:
+                cache_before = len(cache_delete_calls)
+                cache_clear = settings_dialog.locator("[data-testid='settings-cache-clear']")
+                cache_clear.click(timeout=5_000)
+                cache_dialog = page.locator("[data-testid='settings-cache-clear-dialog']").last
+                cache_dialog.wait_for(state="visible", timeout=1_000)
+                cache_title = cache_dialog.locator("[data-testid='settings-cache-clear-title']")
+                cache_description = cache_dialog.locator("[data-testid='settings-cache-clear-description']")
+                cache_cancel = cache_dialog.locator("[data-testid='settings-cache-clear-cancel']")
+                cache_confirm = cache_dialog.locator("[data-testid='settings-cache-clear-confirm']")
+                cache_dialog_a11y_ok = (
+                    cache_dialog.get_attribute("aria-labelledby", timeout=1_000) == "settings-cache-clear-title"
+                    and cache_dialog.get_attribute("aria-describedby", timeout=1_000) == "settings-cache-clear-description"
+                    and cache_title.get_attribute("id", timeout=1_000) == "settings-cache-clear-title"
+                    and cache_title.inner_text(timeout=1_000) == "전체 캐시 삭제"
+                    and cache_description.get_attribute("id", timeout=1_000) == "settings-cache-clear-description"
+                    and "자막/댓글 캐시" in cache_description.inner_text(timeout=1_000)
+                    and "되돌릴 수 없습니다" in cache_description.inner_text(timeout=1_000)
+                    and cache_cancel.get_attribute("aria-label", timeout=1_000) == "캐시 삭제 취소"
+                    and cache_confirm.get_attribute("aria-label", timeout=1_000) == "자막/댓글 캐시 영구 삭제"
+                )
+                not_called_before_confirm = len(cache_delete_calls) == cache_before
+                if cache_cancel.count() == 1:
+                    cache_cancel.click(timeout=5_000)
+                cancel_closed = wait_until(lambda: cache_dialog.count() == 0 or not cache_dialog.is_visible(), 5_000, page)
+                not_called_after_cancel = len(cache_delete_calls) == cache_before
+                if cancel_closed:
+                    cache_clear.click(timeout=5_000)
+                    cache_dialog = page.locator("[data-testid='settings-cache-clear-dialog']").last
+                    cache_dialog.wait_for(state="visible", timeout=5_000)
+                    cache_dialog.locator("[data-testid='settings-cache-clear-confirm']").click(timeout=5_000)
+                called_after_confirm = wait_until(lambda: len(cache_delete_calls) == cache_before + 1, 5_000, page)
+                cache_confirm_ok = cache_dialog_a11y_ok and not_called_before_confirm and cancel_closed and not_called_after_cancel and called_after_confirm
+                cache_confirm_detail = (
+                    "cache clear requires a labelled confirmation dialog before DELETE"
+                    if cache_confirm_ok
+                    else f"a11y={cache_dialog_a11y_ok}; before={not_called_before_confirm}; cancel_closed={cancel_closed}; after_cancel={not_called_after_cancel}; called={called_after_confirm}; calls={cache_delete_calls}"
+                )
+            except Exception as cache_exc:
+                cache_confirm_ok = False
+                cache_confirm_detail = repr(cache_exc)
+            report.record("settings-cache-clear-confirmation", cache_confirm_ok, cache_confirm_detail)
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())

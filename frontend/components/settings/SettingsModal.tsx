@@ -70,6 +70,7 @@ export default function SettingsModal() {
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [cacheConfirmOpen, setCacheConfirmOpen] = useState(false);
 
   // 모달이 열릴 때 프로필 로드
   const loadProfile = useCallback(async () => {
@@ -92,6 +93,7 @@ export default function SettingsModal() {
     try {
       await clearCache();
       toast.success(t('settings.cacheCleared'));
+      setCacheConfirmOpen(false);
     } catch {
       toast.error(t('settings.cacheClearFailed'));
     }
@@ -140,6 +142,7 @@ export default function SettingsModal() {
   const closeSettingsModal = useCallback(() => {
     setSettingsModalOpen(false);
     setResetConfirmOpen(false);
+    setCacheConfirmOpen(false);
     requestAnimationFrame(() => {
       const trigger = document.querySelector("[data-testid='header-settings-trigger']");
       if (trigger instanceof HTMLButtonElement) trigger.focus();
@@ -447,12 +450,53 @@ export default function SettingsModal() {
             aria-describedby="settings-cache-description"
             variant="outline"
             className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={handleClearCache}
+            onClick={() => setCacheConfirmOpen(true)}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             {t('settings.clearCache')}
           </Button>
         </section>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={cacheConfirmOpen} onOpenChange={setCacheConfirmOpen}>
+      <DialogContent
+        data-testid="settings-cache-clear-dialog"
+        aria-labelledby="settings-cache-clear-title"
+        aria-describedby="settings-cache-clear-description"
+        className="max-w-sm"
+      >
+        <DialogHeader>
+          <DialogTitle className="text-destructive">
+            <span id="settings-cache-clear-title" data-testid="settings-cache-clear-title">
+              전체 캐시 삭제
+            </span>
+          </DialogTitle>
+          <DialogDescription>
+            <span id="settings-cache-clear-description" data-testid="settings-cache-clear-description">
+              저장된 자막/댓글 캐시를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            data-testid="settings-cache-clear-cancel"
+            aria-label="캐시 삭제 취소"
+            type="button"
+            variant="outline"
+            onClick={() => setCacheConfirmOpen(false)}
+          >
+            취소
+          </Button>
+          <Button
+            data-testid="settings-cache-clear-confirm"
+            aria-label="자막/댓글 캐시 영구 삭제"
+            type="button"
+            variant="destructive"
+            onClick={handleClearCache}
+          >
+            삭제하기
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
     <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
