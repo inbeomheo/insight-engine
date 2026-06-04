@@ -348,18 +348,37 @@ export default function SettingsModal() {
       </DialogContent>
     </Dialog>
     <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
-      <DialogContent className="max-w-sm">
+      <DialogContent
+        data-testid="settings-style-memory-reset-dialog"
+        aria-labelledby="settings-style-memory-reset-title"
+        aria-describedby="settings-style-memory-reset-description"
+        className="max-w-sm"
+      >
         <DialogHeader>
-          <DialogTitle className="text-destructive">스타일 메모리 초기화</DialogTitle>
-          <DialogDescription>
+          <DialogTitle id="settings-style-memory-reset-title" data-testid="settings-style-memory-reset-title" className="text-destructive">
+            스타일 메모리 초기화
+          </DialogTitle>
+          <DialogDescription id="settings-style-memory-reset-description" data-testid="settings-style-memory-reset-description">
             학습된 선호도와 스타일 메모리를 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setResetConfirmOpen(false)}>
+          <Button
+            data-testid="settings-style-memory-reset-cancel"
+            aria-label="스타일 메모리 초기화 취소"
+            type="button"
+            variant="outline"
+            onClick={() => setResetConfirmOpen(false)}
+          >
             취소
           </Button>
-          <Button type="button" variant="destructive" onClick={handleResetMemory}>
+          <Button
+            data-testid="settings-style-memory-reset-confirm"
+            aria-label="스타일 메모리 영구 초기화"
+            type="button"
+            variant="destructive"
+            onClick={handleResetMemory}
+          >
             초기화
           </Button>
         </DialogFooter>

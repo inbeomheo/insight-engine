@@ -4554,6 +4554,45 @@ def main() -> int:
                 style_memory_ok = False
                 style_memory_detail = "style memory section missing stable accessibility hooks"
             report.record("settings-style-memory-accessible", style_memory_ok, style_memory_detail)
+            try:
+                reset_trigger = settings_dialog.locator("[data-testid='settings-style-memory-reset']")
+                if reset_trigger.count() == 1:
+                    reset_trigger.click(timeout=5_000)
+                reset_dialog = page.locator("[data-testid='settings-style-memory-reset-dialog']").last
+                reset_dialog.wait_for(state="visible", timeout=1_000)
+                reset_title = reset_dialog.locator("[data-testid='settings-style-memory-reset-title']")
+                reset_description = reset_dialog.locator("[data-testid='settings-style-memory-reset-description']")
+                reset_cancel = reset_dialog.locator("[data-testid='settings-style-memory-reset-cancel']")
+                reset_confirm = reset_dialog.locator("[data-testid='settings-style-memory-reset-confirm']")
+                reset_dialog_ok = (
+                    reset_dialog.get_attribute("aria-labelledby", timeout=1_000) == "settings-style-memory-reset-title"
+                    and reset_dialog.get_attribute("aria-describedby", timeout=1_000) == "settings-style-memory-reset-description"
+                    and reset_title.get_attribute("id", timeout=1_000) == "settings-style-memory-reset-title"
+                    and reset_title.inner_text(timeout=1_000) == "스타일 메모리 초기화"
+                    and reset_description.get_attribute("id", timeout=1_000) == "settings-style-memory-reset-description"
+                    and "되돌릴 수 없습니다" in reset_description.inner_text(timeout=1_000)
+                    and reset_cancel.get_attribute("aria-label", timeout=1_000) == "스타일 메모리 초기화 취소"
+                    and reset_confirm.get_attribute("aria-label", timeout=1_000) == "스타일 메모리 영구 초기화"
+                    and reset_cancel.inner_text(timeout=1_000).strip() == "취소"
+                    and reset_confirm.inner_text(timeout=1_000).strip() == "초기화"
+                )
+                reset_dialog_detail = (
+                    "style memory reset confirmation exposes title, irreversible description, and explicit cancel/confirm labels"
+                    if reset_dialog_ok
+                    else "style memory reset dialog labels are incomplete"
+                )
+                if reset_cancel.count() == 1:
+                    reset_cancel.click(timeout=5_000)
+            except Exception as reset_exc:
+                reset_dialog_ok = False
+                reset_dialog_detail = repr(reset_exc)
+                try:
+                    fallback_dialog = page.locator("[role='dialog']", has_text="스타일 메모리 초기화").last
+                    if fallback_dialog.count() > 0 and fallback_dialog.is_visible(timeout=500):
+                        fallback_dialog.locator("button", has_text="취소").click(timeout=2_000)
+                except Exception:
+                    page.keyboard.press("Escape")
+            report.record("settings-style-memory-reset-dialog-accessible", reset_dialog_ok, reset_dialog_detail)
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())
