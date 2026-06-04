@@ -360,6 +360,12 @@
     "expect": "결과 본문 텍스트 선택 메뉴는 한국어 menu 라벨, menuitem 포커스, Escape 닫기를 제공한다"
   },
   {
+    "id": "result-card-header-actions-accessible",
+    "name": "결과 카드 상단 액션 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과 카드 상단 자막 토글과 서식 복사 아이콘 버튼은 명확한 aria-label, 상태, 설명을 제공한다"
+  },
+  {
     "id": "studio-result-toolbar",
     "name": "스튜디오 결과 툴바",
     "url": "http://localhost:3000",

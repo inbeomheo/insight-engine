@@ -670,9 +670,12 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    data-testid="result-action-transcript-toggle"
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
+                    aria-label={showTranscript ? '요약 보기' : '자막 보기'}
+                    aria-pressed={showTranscript}
                     onClick={() => setPanel('showTranscript', !showTranscript)}
                   >
                     <FileText className="h-3.5 w-3.5" />
@@ -684,9 +687,12 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  data-testid="result-action-rich-copy"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
+                  aria-label={copiedField === 'rich' ? '서식 유지 복사 완료' : '서식 유지 복사'}
+                  aria-describedby="result-action-rich-copy-help"
                   onClick={copyRich}
                 >
                   {copiedField === 'rich' ? (
@@ -698,6 +704,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
               </TooltipTrigger>
               <TooltipContent>{t('result.richCopy')}</TooltipContent>
             </Tooltip>
+            <span id="result-action-rich-copy-help" data-testid="result-action-rich-copy-help" className="sr-only">
+              HTML과 텍스트 형식을 함께 클립보드에 복사합니다.
+            </span>
             <Button
               variant="ghost"
               size="icon"

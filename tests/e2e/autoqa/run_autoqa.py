@@ -3724,6 +3724,59 @@ def run_result_context_menu_accessibility_suite(browser, report: QaReport) -> No
         context.close()
 
 
+def run_result_card_header_actions_accessibility_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1100}, accept_downloads=True)
+    context.grant_permissions(["clipboard-read", "clipboard-write"], origin=FRONTEND_URL)
+    seed_menu_context(context)
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[result-header-actions] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[result-header-actions] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        card = page.locator("[data-report-id='qa-menu-report']").first
+        card.wait_for(state="visible", timeout=60_000)
+        transcript = card.locator("[data-testid='result-action-transcript-toggle']")
+        rich_copy = card.locator("[data-testid='result-action-rich-copy']")
+        help_text = card.locator("[data-testid='result-action-rich-copy-help']")
+        initial_ok = (
+            transcript.count() == 1
+            and transcript.get_attribute("aria-label", timeout=2_000) == "자막 보기"
+            and transcript.get_attribute("aria-pressed", timeout=2_000) == "false"
+            and rich_copy.count() == 1
+            and rich_copy.get_attribute("aria-label", timeout=2_000) == "서식 유지 복사"
+            and rich_copy.get_attribute("aria-describedby", timeout=2_000) == "result-action-rich-copy-help"
+            and help_text.get_attribute("id", timeout=2_000) == "result-action-rich-copy-help"
+            and "HTML과 텍스트" in help_text.inner_text(timeout=2_000)
+        )
+        if transcript.count() == 1:
+            transcript.click(timeout=10_000)
+        transcript_toggled_ok = wait_until(
+            lambda: transcript.count() == 1
+            and transcript.get_attribute("aria-label", timeout=1_000) == "요약 보기"
+            and transcript.get_attribute("aria-pressed", timeout=1_000) == "true",
+            5_000,
+            page,
+        )
+        if rich_copy.count() == 1:
+            rich_copy.click(timeout=10_000)
+        copied_ok = wait_until(
+            lambda: rich_copy.count() == 1 and rich_copy.get_attribute("aria-label", timeout=1_000) == "서식 유지 복사 완료",
+            5_000,
+            page,
+        )
+        ok = initial_ok and transcript_toggled_ok and copied_ok
+        report.record(
+            "result-card-header-actions-accessible",
+            ok,
+            "result card header icon actions expose labels, pressed/copy states, and helper text" if ok else f"initial={initial_ok}; transcript_toggled={transcript_toggled_ok}; copied={copied_ok}; transcript={transcript.count()}; rich={rich_copy.count()}",
+        )
+    except Exception as exc:
+        report.record("result-card-header-actions-accessible", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_history_clear_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     seed_menu_context(context)
@@ -4786,6 +4839,7 @@ def main() -> int:
 
         run_seeded_menu_action_suite(browser, report)
         run_result_context_menu_accessibility_suite(browser, report)
+        run_result_card_header_actions_accessibility_suite(browser, report)
         run_history_clear_suite(browser, report)
         run_no_native_confirm_suite(report)
         run_no_native_alert_suite(report)
