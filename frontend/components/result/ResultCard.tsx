@@ -972,17 +972,20 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
           <section data-testid="workbench-section-improve" role="region" aria-labelledby="workbench-section-improve-title" className={workbenchSectionClass}>
             <p id="workbench-section-improve-title" className="mb-2 text-xs font-semibold text-slate-500">개선</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button data-testid="workbench-action-prompt" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPromptModalOpen(true, report.prompt)}>
+            <p id="workbench-improve-help" data-testid="workbench-improve-help" className="sr-only">
+              프롬프트 확인, 플랫폼 변환, 이벤트 추출, 영상 Q&A를 통해 현재 결과를 개선합니다.
+            </p>
+            <div data-testid="workbench-improve-actions" role="toolbar" aria-label="개선 작업" aria-describedby="workbench-improve-help" className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-prompt" aria-label="생성 프롬프트 보기" aria-describedby="workbench-improve-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPromptModalOpen(true, report.prompt)}>
                 <Code className="h-3.5 w-3.5 text-indigo-600" />프롬프트
               </Button>
-              <Button data-testid="workbench-action-rewrite" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('rewriteOpen', true)}>
+              <Button data-testid="workbench-action-rewrite" aria-label="플랫폼 변환 패널 열기" aria-describedby="workbench-improve-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('rewriteOpen', true)}>
                 <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />플랫폼 변환
               </Button>
-              <Button data-testid="workbench-action-events" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExtractEvents} disabled={eventLoading || !(report.url || report.transcript)}>
+              <Button data-testid="workbench-action-events" aria-label="영상 이벤트 추출" aria-describedby="workbench-improve-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleExtractEvents} disabled={eventLoading || !(report.url || report.transcript)}>
                 <ListChecks className="h-3.5 w-3.5 text-indigo-600" />{eventLoading ? '추출 중...' : '이벤트'}
               </Button>
-              <Button data-testid="workbench-action-video-qa" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('chatOpen', true)} disabled={!report.url}>
+              <Button data-testid="workbench-action-video-qa" aria-label="영상 Q&A 열기" aria-describedby="workbench-improve-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => setPanel('chatOpen', true)} disabled={!report.url}>
                 <Bot className="h-3.5 w-3.5 text-indigo-600" />영상 Q&A
               </Button>
             </div>
@@ -1006,29 +1009,32 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                 </div>
               </div>
             )}
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              <Button data-testid="workbench-action-nlm-video" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('video')}>
+            <p id="workbench-nlm-help" data-testid="workbench-nlm-help" className="sr-only">
+              NotebookLM용 비디오, 인포그래픽, 슬라이드, 마인드맵, 퀴즈, 플래시카드, 브리핑, 스터디 가이드를 생성합니다.
+            </p>
+            <div data-testid="workbench-nlm-actions" role="toolbar" aria-label="NotebookLM 산출물 생성" aria-describedby="workbench-nlm-help" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <Button data-testid="workbench-action-nlm-video" aria-label="NotebookLM 비디오 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('video')}>
                 <Layers className="h-3.5 w-3.5 text-indigo-600" />비디오
               </Button>
-              <Button data-testid="workbench-action-nlm-infographic" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('infographic')}>
+              <Button data-testid="workbench-action-nlm-infographic" aria-label="NotebookLM 인포그래픽 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('infographic')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />인포그래픽
               </Button>
-              <Button data-testid="workbench-action-nlm-slide-deck" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('slide_deck')}>
+              <Button data-testid="workbench-action-nlm-slide-deck" aria-label="NotebookLM 슬라이드 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('slide_deck')}>
                 <Layers className="h-3.5 w-3.5 text-indigo-600" />슬라이드
               </Button>
-              <Button data-testid="workbench-action-nlm-mindmap" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('mindmap')}>
+              <Button data-testid="workbench-action-nlm-mindmap" aria-label="NotebookLM 마인드맵 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('mindmap')}>
                 <Brain className="h-3.5 w-3.5 text-indigo-600" />마인드맵
               </Button>
-              <Button data-testid="workbench-action-nlm-quiz" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('quiz')}>
+              <Button data-testid="workbench-action-nlm-quiz" aria-label="NotebookLM 퀴즈 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('quiz')}>
                 <ListChecks className="h-3.5 w-3.5 text-indigo-600" />퀴즈
               </Button>
-              <Button data-testid="workbench-action-nlm-flashcards" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('flashcards')}>
+              <Button data-testid="workbench-action-nlm-flashcards" aria-label="NotebookLM 플래시카드 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('flashcards')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />플래시카드
               </Button>
-              <Button data-testid="workbench-action-nlm-briefing" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('briefing')}>
+              <Button data-testid="workbench-action-nlm-briefing" aria-label="NotebookLM 브리핑 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('briefing')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />브리핑
               </Button>
-              <Button data-testid="workbench-action-nlm-study-guide" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('study_guide')}>
+              <Button data-testid="workbench-action-nlm-study-guide" aria-label="NotebookLM 스터디 가이드 생성" aria-describedby="workbench-nlm-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => handleNotebookLm('study_guide')}>
                 <Brain className="h-3.5 w-3.5 text-indigo-600" />NLM 가이드
               </Button>
             </div>

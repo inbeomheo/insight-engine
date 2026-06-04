@@ -3799,6 +3799,61 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             workbench_initial_ok and workbench_transcript_toggled_ok,
             "workbench rich copy and transcript toggle expose helper text, labels, and pressed state" if workbench_initial_ok and workbench_transcript_toggled_ok else f"initial={workbench_initial_ok}; toggled={workbench_transcript_toggled_ok}; rich={workbench_rich.count()}; transcript={workbench_transcript.count()}",
         )
+        improve_group = workbench.locator("[data-testid='workbench-improve-actions']")
+        improve_help = workbench.locator("[data-testid='workbench-improve-help']")
+        nlm_group = workbench.locator("[data-testid='workbench-nlm-actions']")
+        nlm_help = workbench.locator("[data-testid='workbench-nlm-help']")
+        improve_labels = {
+            "workbench-action-prompt": "생성 프롬프트 보기",
+            "workbench-action-rewrite": "플랫폼 변환 패널 열기",
+            "workbench-action-events": "영상 이벤트 추출",
+            "workbench-action-video-qa": "영상 Q&A 열기",
+        }
+        nlm_labels = {
+            "workbench-action-nlm-video": "NotebookLM 비디오 생성",
+            "workbench-action-nlm-infographic": "NotebookLM 인포그래픽 생성",
+            "workbench-action-nlm-slide-deck": "NotebookLM 슬라이드 생성",
+            "workbench-action-nlm-mindmap": "NotebookLM 마인드맵 생성",
+            "workbench-action-nlm-quiz": "NotebookLM 퀴즈 생성",
+            "workbench-action-nlm-flashcards": "NotebookLM 플래시카드 생성",
+            "workbench-action-nlm-briefing": "NotebookLM 브리핑 생성",
+            "workbench-action-nlm-study-guide": "NotebookLM 스터디 가이드 생성",
+        }
+        missing_improve_labels = [
+            f"{test_id}:{label}"
+            for test_id, label in improve_labels.items()
+            if workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-label", timeout=2_000) != label
+            or workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-describedby", timeout=2_000) != "workbench-improve-help"
+        ]
+        missing_nlm_labels = [
+            f"{test_id}:{label}"
+            for test_id, label in nlm_labels.items()
+            if workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-label", timeout=2_000) != label
+            or workbench.locator(f"[data-testid='{test_id}']").get_attribute("aria-describedby", timeout=2_000) != "workbench-nlm-help"
+        ]
+        improve_nlm_ok = (
+            improve_group.count() == 1
+            and improve_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and improve_group.get_attribute("aria-label", timeout=2_000) == "개선 작업"
+            and improve_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-improve-help"
+            and improve_help.get_attribute("id", timeout=2_000) == "workbench-improve-help"
+            and "프롬프트" in improve_help.inner_text(timeout=2_000)
+            and "영상 Q&A" in improve_help.inner_text(timeout=2_000)
+            and nlm_group.count() == 1
+            and nlm_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and nlm_group.get_attribute("aria-label", timeout=2_000) == "NotebookLM 산출물 생성"
+            and nlm_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-nlm-help"
+            and nlm_help.get_attribute("id", timeout=2_000) == "workbench-nlm-help"
+            and "NotebookLM" in nlm_help.inner_text(timeout=2_000)
+            and "스터디 가이드" in nlm_help.inner_text(timeout=2_000)
+            and not missing_improve_labels
+            and not missing_nlm_labels
+        )
+        report.record(
+            "result-workbench-improve-nlm-actions-accessible",
+            improve_nlm_ok,
+            "improve and NotebookLM action groups expose help text and descriptive labels" if improve_nlm_ok else f"improve_group={improve_group.count()}; nlm_group={nlm_group.count()}; improve_missing={missing_improve_labels}; nlm_missing={missing_nlm_labels}",
+        )
         preview_group = workbench.locator("[data-testid='workbench-preview-actions']")
         preview_rendered = workbench.locator("[data-testid='workbench-action-preview-rendered']")
         preview_markdown = workbench.locator("[data-testid='workbench-action-preview-markdown']")
@@ -3919,6 +3974,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
     except Exception as exc:
         report.record("result-card-header-actions-accessible", False, repr(exc))
         report.record("result-workbench-read-actions-accessible", False, repr(exc))
+        report.record("result-workbench-improve-nlm-actions-accessible", False, repr(exc))
         report.record("result-workbench-preview-actions-accessible", False, repr(exc))
         report.record("result-workbench-export-actions-accessible", False, repr(exc))
         report.record("result-workbench-publish-manage-actions-accessible", False, repr(exc))

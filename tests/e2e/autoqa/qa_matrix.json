@@ -450,6 +450,12 @@
     "expect": "미리보기 전환 버튼 그룹은 toolbar 라벨, aria-controls, pressed 상태로 현재 본문 영역과 연결된다"
   },
   {
+    "id": "result-workbench-improve-nlm-actions-accessible",
+    "name": "Result Workbench 개선/NLM 액션 접근성",
+    "url": "http://localhost:3000",
+    "expect": "개선과 NotebookLM 산출물 생성 액션은 그룹 라벨, 도움말 연결, 버튼별 명확한 aria-label을 제공한다"
+  },
+  {
     "id": "result-workbench-export-actions-accessible",
     "name": "Result Workbench 내보내기 액션 접근성",
     "url": "http://localhost:3000",
