@@ -420,6 +420,12 @@
     "expect": "Markdown 산출물의 HTML 저장 버튼은 백엔드가 MD attachment를 보내도 .html 파일로 저장한다"
   },
   {
+    "id": "notebooklm-artifact-panel-accessible",
+    "name": "NotebookLM 산출물 패널 접근성",
+    "url": "http://localhost:3000",
+    "expect": "NotebookLM 산출물 패널은 region/list/listitem/status와 보기·저장 액션의 명확한 aria-label을 제공한다"
+  },
+  {
     "id": "right-panel-export-all",
     "name": "우측 패널 전체 내보내기",
     "url": "http://localhost:3000",

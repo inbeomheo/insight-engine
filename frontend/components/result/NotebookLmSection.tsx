@@ -1,11 +1,25 @@
 'use client';
 
-import { Loader2, Download, ExternalLink, Music, Video, Image, FileText, Brain, HelpCircle, BookOpen, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  AlertTriangle,
+  BookOpen,
+  Brain,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  FileText,
+  HelpCircle,
+  Image,
+  Loader2,
+  Music,
+  Video,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 import type { NotebookLmArtifact } from '@/lib/types';
 
-const TYPE_META: Record<string, { label: string; icon: typeof Music; downloadLabel?: string }> = {
+const TYPE_META: Record<string, { label: string; icon: LucideIcon; downloadLabel?: string }> = {
   audio: { label: '팟캐스트', icon: Music, downloadLabel: 'MP3' },
   video: { label: '비디오', icon: Video, downloadLabel: 'MP4' },
   infographic: { label: '인포그래픽', icon: Image, downloadLabel: 'MD' },
@@ -78,32 +92,48 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
   const completed = artifacts.filter((a) => a.status === 'completed').length;
   const running = artifacts.filter((a) => a.status === 'in_progress').length;
   const failed = artifacts.filter((a) => a.status === 'failed').length;
+  const statusText = `완료 ${completed}개, 진행 ${running}개, 실패 ${failed}개`;
 
   return (
-    <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3">
+    <section
+      data-testid="notebooklm-artifacts-panel"
+      role="region"
+      aria-label="NotebookLM 산출물"
+      className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3"
+    >
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">NotebookLM Artifacts</p>
-          <p className="text-xs text-indigo-900/60">브라우저 보기는 화면에서 읽기용으로 열고, HTML 저장은 Markdown 산출물을 웹 문서로 저장합니다. PDF/MP3/MP4는 원본 형식 그대로 받습니다.</p>
+          <p className="text-xs text-indigo-900/60">브라우저 보기는 별도 화면에서 읽기 전용으로 열고, HTML 저장은 Markdown 산출물을 웹 문서로 저장합니다. PDF/MP3/MP4는 원본 형식 그대로 받습니다.</p>
         </div>
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
+        <div
+          data-testid="notebooklm-artifact-status"
+          role="status"
+          aria-live="polite"
+          aria-label={statusText}
+          className="flex flex-wrap gap-1.5 text-[11px]"
+        >
           <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-emerald-700"><CheckCircle2 className="h-3 w-3" />완료 {completed}</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-indigo-700"><Loader2 className="h-3 w-3" />진행 {running}</span>
           {failed > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-red-700"><AlertTriangle className="h-3 w-3" />실패 {failed}</span>}
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div data-testid="notebooklm-artifact-list" role="list" className="flex flex-wrap gap-2">
         {artifacts.map((a) => {
           const meta = TYPE_META[a.content_type] ?? { label: a.content_type, icon: FileText };
           const Icon = meta.icon;
           const isMarkdownArtifact = (meta.downloadLabel ?? 'MD') === 'MD';
-          const downloadLabel = isMarkdownArtifact
-            ? 'HTML 저장'
-            : `원본 ${meta.downloadLabel ?? '파일'} 저장`;
+          const downloadLabel = isMarkdownArtifact ? 'HTML 저장' : `원본 ${meta.downloadLabel ?? '파일'} 저장`;
 
           if (a.status === 'in_progress') {
             return (
-              <div key={a.artifact_id} className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-white/80 px-3 py-2 text-xs text-indigo-800 shadow-sm">
+              <div
+                key={a.artifact_id}
+                data-testid="notebooklm-artifact"
+                role="listitem"
+                aria-label={`${meta.label} 생성 진행 중`}
+                className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-white/80 px-3 py-2 text-xs text-indigo-800 shadow-sm"
+              >
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 <span>{meta.label} 생성 중...</span>
               </div>
@@ -112,30 +142,42 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
 
           if (a.status === 'failed') {
             return (
-              <div key={a.artifact_id} className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <div
+                key={a.artifact_id}
+                data-testid="notebooklm-artifact"
+                role="listitem"
+                aria-label={`${meta.label} 생성 실패`}
+                className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700"
+              >
                 <Icon className="h-3.5 w-3.5" />
                 <span>{meta.label} 실패</span>
               </div>
             );
           }
 
-          // completed
           if (a.content_type === 'audio') {
             return (
-              <div key={a.artifact_id} className="w-full">
-                <div className="flex items-center gap-2 mb-1">
+              <div
+                key={a.artifact_id}
+                data-testid="notebooklm-artifact"
+                role="listitem"
+                aria-label={`${meta.label} 완료`}
+                className="w-full rounded-xl border border-indigo-100 bg-white/90 p-2 shadow-sm"
+              >
+                <div className="mb-1 flex items-center gap-2">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium">{meta.label}</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 ml-auto"
+                    className="ml-auto h-6 w-6"
+                    aria-label={`${meta.label} ${downloadLabel}`}
                     onClick={() => window.open(apiUrl(`/api/notebooklm/download/${a.artifact_id}`), '_blank')}
                   >
                     <Download className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <audio controls className="w-full h-8" preload="none">
+                <audio controls className="h-8 w-full" preload="none">
                   <source src={apiUrl(`/api/notebooklm/download/${a.artifact_id}`)} />
                 </audio>
               </div>
@@ -146,6 +188,8 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
             <div
               key={a.artifact_id}
               data-testid="notebooklm-artifact"
+              role="listitem"
+              aria-label={`${meta.label} 완료`}
               className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-white/90 px-2 py-1.5 text-xs shadow-sm"
             >
               <Icon className="h-3.5 w-3.5 text-indigo-700" />
@@ -155,6 +199,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
                 variant="ghost"
                 size="sm"
                 data-testid="notebooklm-view-artifact"
+                aria-label={`${meta.label} 브라우저 보기`}
                 className="h-6 gap-1 rounded-lg px-2 text-xs"
                 onClick={() => window.open(apiUrl(`/api/notebooklm/view/${a.artifact_id}`), '_blank')}
               >
@@ -166,6 +211,7 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
                 variant="ghost"
                 size="sm"
                 data-testid="notebooklm-download-artifact"
+                aria-label={`${meta.label} ${downloadLabel}`}
                 className="h-6 gap-1 rounded-lg px-2 text-xs text-muted-foreground"
                 onClick={() => {
                   if (isMarkdownArtifact) {
@@ -182,6 +228,6 @@ export function NotebookLmSection({ artifacts }: NotebookLmSectionProps) {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

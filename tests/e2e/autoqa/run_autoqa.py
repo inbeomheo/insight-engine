@@ -2809,6 +2809,35 @@ def run_seeded_menu_action_suite(browser, report: QaReport) -> None:
             )
         except Exception as exc:
             report.record("notebooklm-html-download-extension", False, repr(exc))
+        try:
+            panel = page.locator("[data-testid='notebooklm-artifacts-panel']").first
+            artifact_list = page.locator("[data-testid='notebooklm-artifact-list']").first
+            artifact = page.locator("[data-testid='notebooklm-artifact']").first
+            status = page.locator("[data-testid='notebooklm-artifact-status']").first
+            view = page.locator("[data-testid='notebooklm-view-artifact']").first
+            download_button = page.locator("[data-testid='notebooklm-download-artifact']").first
+            panel_a11y_ok = (
+                panel.count() == 1
+                and panel.get_attribute("role", timeout=2_000) == "region"
+                and panel.get_attribute("aria-label", timeout=2_000) == "NotebookLM \uc0b0\ucd9c\ubb3c"
+                and artifact_list.count() == 1
+                and artifact_list.get_attribute("role", timeout=2_000) == "list"
+                and artifact.count() >= 1
+                and artifact.get_attribute("role", timeout=2_000) == "listitem"
+                and (artifact.get_attribute("aria-label", timeout=2_000) or "").startswith("\uc2a4\ud130\ub514 \uac00\uc774\ub4dc")
+                and status.count() == 1
+                and status.get_attribute("role", timeout=2_000) == "status"
+                and status.get_attribute("aria-live", timeout=2_000) == "polite"
+                and view.get_attribute("aria-label", timeout=2_000) == "\uc2a4\ud130\ub514 \uac00\uc774\ub4dc \ube0c\ub77c\uc6b0\uc800 \ubcf4\uae30"
+                and download_button.get_attribute("aria-label", timeout=2_000) == "\uc2a4\ud130\ub514 \uac00\uc774\ub4dc HTML \uc800\uc7a5"
+            )
+            report.record(
+                "notebooklm-artifact-panel-accessible",
+                panel_a11y_ok,
+                "NotebookLM artifact panel exposes region, list, status, and action labels" if panel_a11y_ok else f"panel={panel.count()}; list={artifact_list.count()}; artifact_role={artifact.get_attribute('role') if artifact.count() else None}; status={status.count()}; view={view.get_attribute('aria-label') if view.count() else None}; download={download_button.get_attribute('aria-label') if download_button.count() else None}",
+            )
+        except Exception as exc:
+            report.record("notebooklm-artifact-panel-accessible", False, repr(exc))
         menu = open_action_menu(page)
         visible_labels = [line.strip() for line in menu.inner_text(timeout=5_000).splitlines() if line.strip()]
         missing = [label for label in MENU_EXPECTED_LABELS if label not in visible_labels]
