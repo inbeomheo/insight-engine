@@ -1,5 +1,6 @@
 'use client';
 
+import { type KeyboardEvent } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,24 @@ export default function OnboardingModal() {
     if (first) setSelectedModel(first.id);
   }
 
+  function focusProvider(id: string) {
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-testid='onboarding-provider-${id}']`)?.focus());
+  }
+
+  function handleProviderKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? providerIds.length - 1
+          : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + providerIds.length) % providerIds.length;
+    const nextId = providerIds[nextIndex];
+    selectProvider(nextId);
+    focusProvider(nextId);
+  }
+
   return (
     <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
       <DialogContent aria-modal="true" className="max-w-sm p-8">
@@ -50,15 +69,17 @@ export default function OnboardingModal() {
 
         {providerIds.length > 0 ? (
           <div data-testid="onboarding-provider-options" role="radiogroup" aria-label="AI 프로바이더" className="space-y-2 mb-4">
-            {providerIds.map((id) => (
+            {providerIds.map((id, index) => (
               <button
                 key={id}
                 type="button"
                 data-testid={`onboarding-provider-${id}`}
                 onClick={() => selectProvider(id)}
-                aria-label={`${id} 프로바이더 선택`}
+                onKeyDown={(event) => handleProviderKeyDown(event, index)}
+                aria-label={`${providers[id].name} 프로바이더 선택`}
                 role="radio"
                 aria-checked={selectedProvider === id}
+                tabIndex={selectedProvider === id ? 0 : -1}
                 className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                   selectedProvider === id
                     ? 'border-primary bg-indigo-50/50 shadow-sm'

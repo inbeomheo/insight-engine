@@ -1188,9 +1188,40 @@ def run_onboarding_provider_accessibility_suite(browser, report: QaReport) -> No
                 else f"group={group.count()}; role={group.get_attribute('role') if group.count() else None}; label={group.get_attribute('aria-label') if group.count() else None}; radios={radio_count}; selected={selected.count()}; selected_role={selected.get_attribute('role') if selected.count() else None}; selected_checked={selected.get_attribute('aria-checked') if selected.count() else None}; start={start.count()}"
             ),
         )
+        radios = group.locator("[role='radio']")
+        first_radio = radios.nth(0)
+        first_label = first_radio.get_attribute("aria-label", timeout=5_000) if radio_count > 0 else ""
+        first_radio.focus(timeout=10_000)
+        page.keyboard.press("ArrowRight")
+        expected_index = 1 if radio_count > 1 else 0
+        expected_radio = radios.nth(expected_index)
+        keyboard_ok = wait_until(
+            lambda: expected_radio.get_attribute("aria-checked", timeout=1_000) == "true"
+            and expected_radio.get_attribute("tabindex", timeout=1_000) == "0"
+            and expected_radio.evaluate("el => document.activeElement === el"),
+            5_000,
+            page,
+        )
+        labels_ok = (
+            group.get_attribute("aria-label", timeout=5_000) == "AI 프로바이더"
+            and bool(first_label)
+            and "프로바이더 선택" in first_label
+            and "?" not in first_label
+            and first_radio.get_attribute("tabindex", timeout=5_000) in ("0", "-1")
+        )
+        report.record(
+            "onboarding-provider-keyboard-accessible",
+            labels_ok and keyboard_ok,
+            (
+                "onboarding provider radios expose readable labels, roving tabindex, and arrow-key selection"
+                if labels_ok and keyboard_ok
+                else f"labels={labels_ok}; keyboard={keyboard_ok}; first_label={first_label!r}; first_tabindex={first_radio.get_attribute('tabindex') if radio_count else None}; radio_count={radio_count}"
+            ),
+        )
     except Exception as exc:
         fail_png = screenshot(page, "onboarding-provider-accessible-fail.png")
         report.record("onboarding-provider-accessible", False, f"{repr(exc)}; screenshot={fail_png}")
+        report.record("onboarding-provider-keyboard-accessible", False, f"{repr(exc)}; screenshot={fail_png}")
     finally:
         context.close()
 
