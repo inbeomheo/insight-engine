@@ -456,6 +456,12 @@
     "expect": "우측 패널이 최근 NotebookLM 산출물 상태를 요약한다"
   },
   {
+    "id": "right-panel-nlm-status-accessible",
+    "name": "우측 패널 NLM 상태 접근성",
+    "url": "http://localhost:3000",
+    "expect": "최근 NLM 산출물 목록은 목록 라벨, 산출물별 요약 aria-label, 상태 live badge로 읽힌다"
+  },
+  {
     "id": "right-panel-nlm-quick-view",
     "name": "우측 패널 NLM 바로 보기",
     "url": "http://localhost:3000",

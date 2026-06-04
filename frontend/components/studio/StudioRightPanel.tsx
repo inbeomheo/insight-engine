@@ -325,21 +325,22 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
 
       <section data-testid="right-panel-nlm-artifacts" role="region" aria-labelledby="right-panel-nlm-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div id="right-panel-nlm-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 최근 NLM 산출물</div>
-        <div data-testid="right-panel-nlm-list" role="list" className="mt-3 space-y-2">
+        <div data-testid="right-panel-nlm-list" role="list" aria-label="최근 NotebookLM 산출물" className="mt-3 space-y-2">
           {nlmArtifacts.length === 0 ? (
             <p className="text-xs text-slate-500">아직 NLM 산출물이 없습니다.</p>
           ) : nlmArtifacts.map(({ artifact, report }) => {
             const status = artifactStatus(artifact);
             const StatusIcon = status.icon;
+            const artifactLabel = NLM_LABELS[artifact.content_type] ?? artifact.content_type;
             return (
-              <div key={artifact.artifact_id} data-testid="right-panel-nlm-artifact" role="listitem" className="rounded-2xl bg-slate-50 p-3 text-xs">
+              <div key={artifact.artifact_id} data-testid="right-panel-nlm-artifact" role="listitem" aria-label={`${artifactLabel} · ${report.title} · 상태 ${status.label}`} className="rounded-2xl bg-slate-50 p-3 text-xs">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900">{NLM_LABELS[artifact.content_type] ?? artifact.content_type}</p>
+                    <p className="font-semibold text-slate-900">{artifactLabel}</p>
                     <p className="mt-1 truncate text-[11px] text-slate-500">{report.title}</p>
                   </div>
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] ${status.className}`}>
-                    <StatusIcon className="h-3 w-3" />{status.label}
+                  <span data-testid="right-panel-nlm-artifact-status" role="status" aria-live="polite" aria-label={`상태 ${status.label}`} className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] ${status.className}`}>
+                    <StatusIcon aria-hidden="true" className="h-3 w-3" />{status.label}
                   </span>
                 </div>
                 {artifact.status === 'completed' && (
@@ -348,7 +349,7 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
                     variant="ghost"
                     size="sm"
                     className="mt-2 h-7 gap-1 rounded-lg px-2 text-xs"
-                    aria-label={`${NLM_LABELS[artifact.content_type] ?? artifact.content_type} \ubcf4\uae30`}
+                    aria-label={`${artifactLabel} \ubcf4\uae30`}
                     onClick={() => window.open(apiUrl(`/api/notebooklm/view/${artifact.artifact_id}`), '_blank')}
                   >
                     보기 <ExternalLink className="h-3 w-3" />

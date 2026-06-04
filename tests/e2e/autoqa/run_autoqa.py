@@ -684,8 +684,31 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
         )
 
         nlm_ok = wait_until(lambda: panel.locator("[data-testid='right-panel-nlm-artifact']").count() >= 3, 10_000, page)
-        nlm_count = panel.locator("[data-testid='right-panel-nlm-artifact']").count()
+        nlm_items = panel.locator("[data-testid='right-panel-nlm-artifact']")
+        nlm_count = nlm_items.count()
         report.record("right-panel-nlm", nlm_ok, f"nlm_count={nlm_count}")
+        nlm_statuses = panel.locator("[data-testid='right-panel-nlm-artifact-status']")
+        nlm_item_labels = [
+            nlm_items.nth(index).get_attribute("aria-label", timeout=2_000) if nlm_count > index else None
+            for index in range(3)
+        ]
+        nlm_status_labels = [
+            nlm_statuses.nth(index).get_attribute("aria-label", timeout=2_000) if nlm_statuses.count() > index else None
+            for index in range(3)
+        ]
+        nlm_status_ok = (
+            nlm_list.get_attribute("aria-label", timeout=2_000) == "최근 NotebookLM 산출물"
+            and nlm_count >= 3
+            and nlm_statuses.count() >= 3
+            and all(label and "상태" in label for label in nlm_item_labels)
+            and all(nlm_statuses.nth(index).get_attribute("role", timeout=2_000) == "status" for index in range(3))
+            and all(label and label.startswith("상태 ") for label in nlm_status_labels)
+        )
+        report.record(
+            "right-panel-nlm-status-accessible",
+            nlm_status_ok,
+            "NLM artifacts expose list label, item summaries, and live status badges" if nlm_status_ok else f"list_label={nlm_list.get_attribute('aria-label') if nlm_list.count() else None}; item_labels={nlm_item_labels}; status_labels={nlm_status_labels}; status_count={nlm_statuses.count()}",
+        )
 
         try:
             nlm_action = panel.locator("[data-testid='quick-action-nlm']")
