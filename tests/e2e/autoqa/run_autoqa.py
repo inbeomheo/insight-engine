@@ -3860,6 +3860,34 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             export_accessible_ok,
             "export toolbar exposes shared help text and descriptive labels" if export_accessible_ok else f"group={export_group.count()}; missing={missing_export_labels}",
         )
+        publish_group = workbench.locator("[data-testid='workbench-publish-actions']")
+        publish_help = workbench.locator("[data-testid='workbench-publish-help']")
+        manage_help = workbench.locator("[data-testid='workbench-manage-help']")
+        schedule_action = workbench.locator("[data-testid='workbench-action-schedule']")
+        share_action = workbench.locator("[data-testid='workbench-action-share']")
+        delete_action = workbench.locator("[data-testid='workbench-action-delete']")
+        publish_manage_ok = (
+            publish_group.count() == 1
+            and publish_group.get_attribute("role", timeout=2_000) == "toolbar"
+            and publish_group.get_attribute("aria-label", timeout=2_000) == "배포 작업"
+            and publish_group.get_attribute("aria-describedby", timeout=2_000) == "workbench-publish-help"
+            and publish_help.get_attribute("id", timeout=2_000) == "workbench-publish-help"
+            and "예약" in publish_help.inner_text(timeout=2_000)
+            and "공유" in publish_help.inner_text(timeout=2_000)
+            and schedule_action.get_attribute("aria-label", timeout=2_000) == "게시 예약 열기"
+            and schedule_action.get_attribute("aria-describedby", timeout=2_000) == "workbench-publish-help"
+            and share_action.get_attribute("aria-label", timeout=2_000) == "공유 문구 복사"
+            and share_action.get_attribute("aria-describedby", timeout=2_000) == "workbench-publish-help"
+            and manage_help.get_attribute("id", timeout=2_000) == "workbench-manage-help"
+            and "확인" in manage_help.inner_text(timeout=2_000)
+            and delete_action.get_attribute("aria-label", timeout=2_000) == "결과 삭제 확인 열기"
+            and delete_action.get_attribute("aria-describedby", timeout=2_000) == "workbench-manage-help"
+        )
+        report.record(
+            "result-workbench-publish-manage-actions-accessible",
+            publish_manage_ok,
+            "publish toolbar and destructive action expose help text and descriptive labels" if publish_manage_ok else f"publish_group={publish_group.count()}; publish_help={publish_help.count()}; manage_help={manage_help.count()}",
+        )
         collapse = card.locator("[data-testid='result-action-collapse-toggle']")
         controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
         content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
@@ -3893,6 +3921,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         report.record("result-workbench-read-actions-accessible", False, repr(exc))
         report.record("result-workbench-preview-actions-accessible", False, repr(exc))
         report.record("result-workbench-export-actions-accessible", False, repr(exc))
+        report.record("result-workbench-publish-manage-actions-accessible", False, repr(exc))
         report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()

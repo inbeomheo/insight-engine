@@ -1073,11 +1073,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
           <section data-testid="workbench-section-publish" role="region" aria-labelledby="workbench-section-publish-title" className={workbenchSectionClass}>
             <p id="workbench-section-publish-title" className="mb-2 text-xs font-semibold text-slate-500">배포</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button data-testid="workbench-action-schedule" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => onSchedule(report)}>
+            <p id="workbench-publish-help" data-testid="workbench-publish-help" className="sr-only">
+              예약은 게시 일정을 열고, 공유는 제목과 요약 링크를 클립보드에 복사합니다.
+            </p>
+            <div data-testid="workbench-publish-actions" role="toolbar" aria-label="배포 작업" aria-describedby="workbench-publish-help" className="grid gap-2 sm:grid-cols-2">
+              <Button data-testid="workbench-action-schedule" aria-label="게시 예약 열기" aria-describedby="workbench-publish-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => onSchedule(report)}>
                 <Calendar className="h-3.5 w-3.5 text-indigo-600" />예약
               </Button>
-              <Button data-testid="workbench-action-share" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleShare}>
+              <Button data-testid="workbench-action-share" aria-label="공유 문구 복사" aria-describedby="workbench-publish-help" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={handleShare}>
                 <Share2 className="h-3.5 w-3.5 text-indigo-600" />공유
               </Button>
             </div>
@@ -1085,7 +1088,10 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
 
           <section data-testid="workbench-section-manage" role="region" aria-labelledby="workbench-section-manage-title" className={workbenchSectionClass}>
             <p id="workbench-section-manage-title" className="mb-2 text-xs font-semibold text-slate-500">관리</p>
-            <Button data-testid="workbench-action-delete" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={requestDelete}>
+            <p id="workbench-manage-help" data-testid="workbench-manage-help" className="sr-only">
+              삭제는 결과를 제거하기 전에 확인 대화상자를 먼저 엽니다.
+            </p>
+            <Button data-testid="workbench-action-delete" aria-label="결과 삭제 확인 열기" aria-describedby="workbench-manage-help" type="button" variant="outline" size="sm" className={`${workbenchButtonClass} w-full text-red-600 hover:text-red-700`} onClick={requestDelete}>
               <Trash2 className="h-3.5 w-3.5" />삭제
             </Button>
           </section>

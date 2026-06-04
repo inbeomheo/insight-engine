@@ -462,6 +462,12 @@
     "expect": "Workbench 내보내기 버튼을 실행하면 다운로드와 함께 섹션 안에 완료 상태가 남는다"
   },
   {
+    "id": "result-workbench-publish-manage-actions-accessible",
+    "name": "Result Workbench 배포/관리 액션 접근성",
+    "url": "http://localhost:3000",
+    "expect": "예약/공유/삭제 액션은 그룹 라벨, 도움말 연결, 명확한 aria-label로 의도와 위험도를 설명한다"
+  },
+  {
     "id": "result-workbench-nlm-all",
     "name": "Result Workbench 전체 NLM 산출물",
     "url": "http://localhost:3000",
