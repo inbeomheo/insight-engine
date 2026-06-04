@@ -162,6 +162,12 @@
     "expect": "스타일 메모리 초기화 확인 다이얼로그는 제목/설명을 aria로 연결하고 취소/영구 초기화 버튼을 명확히 라벨링한다"
   },
   {
+    "id": "settings-cache-management-accessible",
+    "name": "설정 캐시 관리 접근성",
+    "url": "http://localhost:3000",
+    "expect": "설정 모달의 캐시 관리는 영역 제목/설명을 aria로 연결하고 전체 캐시 삭제 버튼을 명확한 파괴적 액션 라벨로 제공한다"
+  },
+  {
     "id": "sidebar-trigger-accessible",
     "name": "사이드바 트리거 접근성",
     "url": "http://localhost:3000",

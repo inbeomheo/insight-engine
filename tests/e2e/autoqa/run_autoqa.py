@@ -4593,6 +4593,33 @@ def main() -> int:
                 except Exception:
                     page.keyboard.press("Escape")
             report.record("settings-style-memory-reset-dialog-accessible", reset_dialog_ok, reset_dialog_detail)
+            cache_section = settings_dialog.locator("[data-testid='settings-cache-section']")
+            if cache_section.count() == 1:
+                cache_title = cache_section.locator("[data-testid='settings-cache-title']")
+                cache_description = cache_section.locator("[data-testid='settings-cache-description']")
+                cache_clear = cache_section.locator("[data-testid='settings-cache-clear']")
+                cache_clear_describedby = cache_clear.get_attribute("aria-describedby", timeout=1_000) if cache_clear.count() else ""
+                cache_ok = (
+                    cache_section.get_attribute("role", timeout=1_000) == "region"
+                    and cache_section.get_attribute("aria-labelledby", timeout=1_000) == "settings-cache-title"
+                    and cache_section.get_attribute("aria-describedby", timeout=1_000) == "settings-cache-description"
+                    and cache_title.get_attribute("id", timeout=1_000) == "settings-cache-title"
+                    and cache_title.inner_text(timeout=1_000) == "캐시 관리"
+                    and cache_description.get_attribute("id", timeout=1_000) == "settings-cache-description"
+                    and "자막/댓글 캐시" in cache_description.inner_text(timeout=1_000)
+                    and cache_clear.get_attribute("aria-label", timeout=1_000) == "저장된 자막/댓글 캐시 전체 삭제"
+                    and cache_clear_describedby == "settings-cache-description"
+                    and cache_clear.inner_text(timeout=1_000).strip() == "전체 캐시 삭제"
+                )
+                cache_detail = (
+                    "cache management section exposes region, description, and explicit destructive action label"
+                    if cache_ok
+                    else f"title={cache_title.inner_text(timeout=1_000) if cache_title.count() else None!r}; describedby={cache_clear_describedby!r}"
+                )
+            else:
+                cache_ok = False
+                cache_detail = "cache management section missing stable accessibility hooks"
+            report.record("settings-cache-management-accessible", cache_ok, cache_detail)
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())

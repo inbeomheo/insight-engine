@@ -331,12 +331,21 @@ export default function SettingsModal() {
         <SnippetLibrary />
 
         {/* 캐시 관리 */}
-        <div className="pt-4 border-t space-y-2">
-          <h3 className="text-sm font-semibold">{t('settings.cacheManagement')}</h3>
-          <p className="text-xs text-muted-foreground">
+        <section
+          data-testid="settings-cache-section"
+          role="region"
+          aria-labelledby="settings-cache-title"
+          aria-describedby="settings-cache-description"
+          className="pt-4 border-t space-y-2"
+        >
+          <h3 id="settings-cache-title" data-testid="settings-cache-title" className="text-sm font-semibold">{t('settings.cacheManagement')}</h3>
+          <p id="settings-cache-description" data-testid="settings-cache-description" className="text-xs text-muted-foreground">
             {t('settings.cacheDescription')}
           </p>
           <Button
+            data-testid="settings-cache-clear"
+            aria-label="저장된 자막/댓글 캐시 전체 삭제"
+            aria-describedby="settings-cache-description"
             variant="outline"
             className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
             onClick={handleClearCache}
@@ -344,7 +353,7 @@ export default function SettingsModal() {
             <Trash2 className="h-4 w-4 mr-2" />
             {t('settings.clearCache')}
           </Button>
-        </div>
+        </section>
       </DialogContent>
     </Dialog>
     <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
