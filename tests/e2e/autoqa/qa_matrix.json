@@ -642,6 +642,12 @@
     "expect": "캘린더 예약 삭제는 즉시 API를 호출하지 않고 확인 모달에서 취소/확정을 구분한다"
   },
   {
+    "id": "calendar-delete-dialog-accessible",
+    "name": "캘린더 예약 삭제 다이얼로그 접근성",
+    "url": "http://localhost:3000",
+    "expect": "예약 삭제 다이얼로그는 제목과 설명을 aria로 연결하고 취소/영구 삭제 버튼을 명확한 라벨로 제공한다"
+  },
+  {
     "id": "calendar-delete-failure-stays-open",
     "name": "캘린더 예약 삭제 실패 안내",
     "url": "http://localhost:3000",

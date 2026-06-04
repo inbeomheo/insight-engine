@@ -1003,6 +1003,37 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             page.locator("button[aria-label='캘린더 네이버 예약 예약 삭제']").click(timeout=10_000)
             fail_dialog = page.locator("[role='dialog']", has_text="예약 삭제").last
             fail_dialog.wait_for(state="visible", timeout=5_000)
+            try:
+                delete_dialog = page.locator("[data-testid='calendar-delete-dialog']").last
+                delete_dialog.wait_for(state="visible", timeout=1_000)
+                delete_title = delete_dialog.locator("[data-testid='calendar-delete-title']")
+                delete_description = delete_dialog.locator("[data-testid='calendar-delete-description']")
+                delete_cancel = delete_dialog.locator("[data-testid='calendar-delete-cancel']")
+                delete_confirm = delete_dialog.locator("[data-testid='calendar-delete-confirm']")
+                title_text = delete_title.inner_text(timeout=1_000)
+                description_text = delete_description.inner_text(timeout=1_000)
+                dialog_a11y_ok = (
+                    delete_dialog.get_attribute("aria-labelledby", timeout=1_000) == "calendar-delete-title"
+                    and delete_dialog.get_attribute("aria-describedby", timeout=1_000) == "calendar-delete-description"
+                    and delete_title.get_attribute("id", timeout=1_000) == "calendar-delete-title"
+                    and delete_description.get_attribute("id", timeout=1_000) == "calendar-delete-description"
+                    and title_text == "예약 삭제"
+                    and "캘린더 네이버 예약" in description_text
+                    and "되돌릴 수 없습니다" in description_text
+                    and delete_cancel.get_attribute("aria-label", timeout=1_000) == "예약 삭제 취소"
+                    and delete_confirm.get_attribute("aria-label", timeout=1_000) == "예약 영구 삭제"
+                    and delete_cancel.inner_text(timeout=1_000).strip() == "취소"
+                    and delete_confirm.inner_text(timeout=1_000).strip() == "삭제하기"
+                )
+                dialog_a11y_detail = (
+                    "delete dialog exposes labelled title, description, and explicit cancel/confirm actions"
+                    if dialog_a11y_ok
+                    else f"title={title_text!r}; description={description_text!r}; dialog_attrs=({delete_dialog.get_attribute('aria-labelledby', timeout=1_000)!r}, {delete_dialog.get_attribute('aria-describedby', timeout=1_000)!r})"
+                )
+            except Exception as a11y_exc:
+                dialog_a11y_ok = False
+                dialog_a11y_detail = repr(a11y_exc)
+            report.record("calendar-delete-dialog-accessible", dialog_a11y_ok, dialog_a11y_detail)
             fail_dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
             failure_called = wait_until(lambda: len(calendar_delete_calls) > fail_before_deletes, 5_000, page)
             page.wait_for_timeout(500)
@@ -1055,6 +1086,7 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             report.record("calendar-plugin-labels", False, repr(exc))
             report.record("calendar-naver-safe-options", False, repr(exc))
             report.record("calendar-wordpress-safe-options", False, repr(exc))
+            report.record("calendar-delete-dialog-accessible", False, repr(exc))
             report.record("calendar-delete-failure-stays-open", False, repr(exc))
             report.record("calendar-delete-confirmation", False, repr(exc))
     except Exception as exc:

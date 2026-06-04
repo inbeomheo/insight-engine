@@ -322,10 +322,17 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           }
         }}
       >
-        <DialogContent className="max-w-sm">
+        <DialogContent
+          data-testid="calendar-delete-dialog"
+          aria-labelledby="calendar-delete-title"
+          aria-describedby="calendar-delete-description"
+          className="max-w-sm"
+        >
           <DialogHeader>
-            <DialogTitle>예약 삭제</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="calendar-delete-title" data-testid="calendar-delete-title">
+              예약 삭제
+            </DialogTitle>
+            <DialogDescription id="calendar-delete-description" data-testid="calendar-delete-description">
               {deleteTarget ? `“${deleteTarget.title}” 예약을 삭제할까요? 이 작업은 되돌릴 수 없습니다.` : '예약을 삭제할까요?'}
             </DialogDescription>
           </DialogHeader>
@@ -336,6 +343,8 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
           )}
           <DialogFooter>
             <Button
+              data-testid="calendar-delete-cancel"
+              aria-label="예약 삭제 취소"
               variant="ghost"
               disabled={deleteBusy}
               onClick={() => {
@@ -345,7 +354,7 @@ export default function ContentCalendar({ schedules, onDelete }: ContentCalendar
             >
               취소
             </Button>
-            <Button variant="destructive" disabled={deleteBusy} onClick={confirmDelete}>
+            <Button data-testid="calendar-delete-confirm" aria-label="예약 영구 삭제" variant="destructive" disabled={deleteBusy} onClick={confirmDelete}>
               {deleteBusy ? '삭제 중...' : '삭제하기'}
             </Button>
           </DialogFooter>
