@@ -895,9 +895,12 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
               <Button data-testid="workbench-action-copy-content" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={() => copyText(report.content, 'content')}>
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />본문 복사
               </Button>
-              <Button data-testid="workbench-action-copy-rich" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={copyRich}>
+              <Button data-testid="workbench-action-copy-rich" type="button" variant="outline" size="sm" className={workbenchButtonClass} onClick={copyRich} aria-label="리치 복사" aria-describedby="workbench-copy-rich-help">
                 <Type className="h-3.5 w-3.5 text-indigo-600" />리치 복사
               </Button>
+              <span id="workbench-copy-rich-help" data-testid="workbench-copy-rich-help" className="sr-only">
+                HTML과 텍스트 형식을 함께 클립보드에 복사합니다.
+              </span>
               <Button
                 data-testid="workbench-action-toggle-transcript"
                 type="button"
@@ -906,6 +909,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
                 className={workbenchButtonClass}
                 onClick={() => setPanel('showTranscript', !showTranscript)}
                 disabled={!report.transcript_segments || report.transcript_segments.length === 0}
+                aria-label={showTranscript ? '요약 보기' : '자막 보기'}
+                aria-pressed={showTranscript}
               >
                 <FileText className="h-3.5 w-3.5 text-indigo-600" />{showTranscript ? '요약 보기' : '자막 보기'}
               </Button>

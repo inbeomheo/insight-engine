@@ -3771,6 +3771,34 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             ok,
             "result card header icon actions expose labels, pressed/copy states, and helper text" if ok else f"initial={initial_ok}; transcript_toggled={transcript_toggled_ok}; copied={copied_ok}; transcript={transcript.count()}; rich={rich_copy.count()}",
         )
+        workbench = card.locator("[data-testid='result-workbench']")
+        workbench_rich = workbench.locator("[data-testid='workbench-action-copy-rich']")
+        workbench_rich_help = workbench.locator("[data-testid='workbench-copy-rich-help']")
+        workbench_transcript = workbench.locator("[data-testid='workbench-action-toggle-transcript']")
+        workbench_initial_ok = (
+            workbench_rich.count() == 1
+            and workbench_rich.get_attribute("aria-label", timeout=2_000) == "리치 복사"
+            and workbench_rich.get_attribute("aria-describedby", timeout=2_000) == "workbench-copy-rich-help"
+            and workbench_rich_help.get_attribute("id", timeout=2_000) == "workbench-copy-rich-help"
+            and "HTML과 텍스트" in workbench_rich_help.inner_text(timeout=2_000)
+            and workbench_transcript.count() == 1
+            and workbench_transcript.get_attribute("aria-label", timeout=2_000) == "요약 보기"
+            and workbench_transcript.get_attribute("aria-pressed", timeout=2_000) == "true"
+        )
+        if workbench_transcript.count() == 1:
+            workbench_transcript.click(timeout=10_000)
+        workbench_transcript_toggled_ok = wait_until(
+            lambda: workbench_transcript.count() == 1
+            and workbench_transcript.get_attribute("aria-label", timeout=1_000) == "자막 보기"
+            and workbench_transcript.get_attribute("aria-pressed", timeout=1_000) == "false",
+            5_000,
+            page,
+        )
+        report.record(
+            "result-workbench-read-actions-accessible",
+            workbench_initial_ok and workbench_transcript_toggled_ok,
+            "workbench rich copy and transcript toggle expose helper text, labels, and pressed state" if workbench_initial_ok and workbench_transcript_toggled_ok else f"initial={workbench_initial_ok}; toggled={workbench_transcript_toggled_ok}; rich={workbench_rich.count()}; transcript={workbench_transcript.count()}",
+        )
         collapse = card.locator("[data-testid='result-action-collapse-toggle']")
         controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
         content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
@@ -3801,6 +3829,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         )
     except Exception as exc:
         report.record("result-card-header-actions-accessible", False, repr(exc))
+        report.record("result-workbench-read-actions-accessible", False, repr(exc))
         report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()
