@@ -713,6 +713,24 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             report.record("right-panel-rewrite-action", False, repr(exc))
 
         try:
+            recent_button = panel.locator("[data-testid='right-panel-recent-result']").first
+            recent_text = recent_button.inner_text(timeout=5_000)
+            recent_label = recent_button.get_attribute("aria-label", timeout=2_000) or ""
+            readable_style_ok = (
+                "\uc694\uc57d" in recent_text
+                and "summary" not in recent_text
+                and "\uc694\uc57d" in recent_label
+                and "\uacb0\uacfc \uc5f4\uae30" in recent_label
+            )
+            report.record(
+                "right-panel-recent-style-readable",
+                readable_style_ok,
+                screenshot(page, "right-panel-recent-style-readable.png") if readable_style_ok else f"text={recent_text!r}; aria={recent_label!r}",
+            )
+        except Exception as exc:
+            report.record("right-panel-recent-style-readable", False, repr(exc))
+
+        try:
             page.keyboard.press("Escape")
             panel.locator("[data-testid='right-panel-recent-result']").first.click(timeout=10_000)
             target = page.locator("[data-report-id='qa-menu-report']")
