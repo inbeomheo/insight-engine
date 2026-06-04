@@ -366,6 +366,12 @@
     "expect": "결과 카드 상단 자막 토글과 서식 복사 아이콘 버튼은 명확한 aria-label, 상태, 설명을 제공한다"
   },
   {
+    "id": "result-card-collapse-accessible",
+    "name": "결과 카드 접기 컨트롤 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과 카드 접기/펼치기 버튼은 aria-controls로 본문 영역과 연결되고 expanded 상태를 갱신한다"
+  },
+  {
     "id": "studio-result-toolbar",
     "name": "스튜디오 결과 툴바",
     "url": "http://localhost:3000",

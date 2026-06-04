@@ -188,6 +188,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
   const { t } = useTranslation();
 
   const contentSelectionRef = useRef<HTMLDivElement>(null);
+  const contentRegionId = `result-content-${report.id.replace(/[^A-Za-z0-9_-]/g, '-')}`;
   const charCount = report.content.length;
 
   const requestDelete = useCallback(() => {
@@ -708,11 +709,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
               HTML과 텍스트 형식을 함께 클립보드에 복사합니다.
             </span>
             <Button
+              data-testid="result-action-collapse-toggle"
               variant="ghost"
               size="icon"
               className="h-8 w-8"
               aria-label={collapsed ? '카드 펼치기' : '카드 접기'}
               aria-expanded={!collapsed}
+              aria-controls={contentRegionId}
               onClick={() => {
                 if (collapsed) {
                   dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
@@ -766,8 +769,11 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
       {hasExpanded && (
       <>
       <CardContent
+        id={contentRegionId}
         ref={contentSelectionRef}
         data-testid="result-content-selection-area"
+        role="region"
+        aria-label={`${report.title} 본문`}
         className="px-6 pb-5 pt-4 border-t border-border/50"
         style={{ display: collapsed ? 'none' : undefined }}
       >

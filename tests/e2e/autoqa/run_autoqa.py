@@ -3771,8 +3771,37 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             ok,
             "result card header icon actions expose labels, pressed/copy states, and helper text" if ok else f"initial={initial_ok}; transcript_toggled={transcript_toggled_ok}; copied={copied_ok}; transcript={transcript.count()}; rich={rich_copy.count()}",
         )
+        collapse = card.locator("[data-testid='result-action-collapse-toggle']")
+        controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
+        content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
+        collapse_initial_ok = (
+            collapse.count() == 1
+            and collapse.get_attribute("aria-label", timeout=2_000) == "카드 접기"
+            and collapse.get_attribute("aria-expanded", timeout=2_000) == "true"
+            and bool(controls_id)
+            and content_region.count() == 1
+            and content_region.get_attribute("role", timeout=2_000) == "region"
+            and "본문" in (content_region.get_attribute("aria-label", timeout=2_000) or "")
+        )
+        if collapse.count() == 1:
+            collapse.click(timeout=10_000)
+        collapse_toggled_ok = wait_until(
+            lambda: collapse.count() == 1
+            and collapse.get_attribute("aria-label", timeout=1_000) == "카드 펼치기"
+            and collapse.get_attribute("aria-expanded", timeout=1_000) == "false"
+            and content_region.count() == 1
+            and not content_region.is_visible(timeout=1_000),
+            5_000,
+            page,
+        )
+        report.record(
+            "result-card-collapse-accessible",
+            collapse_initial_ok and collapse_toggled_ok,
+            "collapse button controls the labelled result body region and updates expanded state" if collapse_initial_ok and collapse_toggled_ok else f"initial={collapse_initial_ok}; toggled={collapse_toggled_ok}; controls={controls_id!r}; collapse={collapse.count()}; region={content_region.count()}",
+        )
     except Exception as exc:
         report.record("result-card-header-actions-accessible", False, repr(exc))
+        report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()
 
