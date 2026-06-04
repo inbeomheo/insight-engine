@@ -247,15 +247,15 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
       <section data-testid="right-panel-actions-section" role="region" aria-labelledby="right-panel-actions-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div id="right-panel-actions-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 빠른 액션</div>
         <div data-testid="quick-action-workspace-status" role="status" aria-live="polite" aria-label={workspaceStatusLabel} className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px]">
-          <div className="rounded-2xl bg-emerald-50 px-2 py-2 text-emerald-700">
+          <div data-testid="quick-action-status-result" role="group" aria-label={`결과 ${reports.length}개`} className="rounded-2xl bg-emerald-50 px-2 py-2 text-emerald-700">
             <p className="text-sm font-bold">{reports.length}</p>
             <p>결과</p>
           </div>
-          <div className="rounded-2xl bg-indigo-50 px-2 py-2 text-indigo-700">
+          <div data-testid="quick-action-status-schedule" role="group" aria-label={`예약 ${schedulesCount}개`} className="rounded-2xl bg-indigo-50 px-2 py-2 text-indigo-700">
             <p className="text-sm font-bold">{schedulesCount}</p>
             <p>예약</p>
           </div>
-          <div className="rounded-2xl bg-violet-50 px-2 py-2 text-violet-700">
+          <div data-testid="quick-action-status-nlm" role="group" aria-label={`NLM ${nlmCount}개`} className="rounded-2xl bg-violet-50 px-2 py-2 text-violet-700">
             <p className="text-sm font-bold">{nlmCount}</p>
             <p>NLM</p>
           </div>

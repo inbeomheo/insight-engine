@@ -606,6 +606,12 @@
     "expect": "각 빠른 액션이 어떤 작업 영역으로 이동하는지 짧은 설명과 대상 상태를 보여준다"
   },
   {
+    "id": "right-panel-action-status-metrics-accessible",
+    "name": "우측 패널 빠른 액션 상태 지표 접근성",
+    "url": "http://localhost:3000",
+    "expect": "빠른 액션 상태 영역의 결과, 예약, NLM 개수 지표는 항목별 aria-label로 읽힌다"
+  },
+  {
     "id": "right-panel-action-descriptions-accessible",
     "name": "우측 패널 빠른 액션 설명 접근성",
     "url": "http://localhost:3000",

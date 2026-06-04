@@ -753,6 +753,33 @@ def run_right_panel_suite(browser, report: QaReport) -> None:
             not missing_guidance and not status_missing,
             screenshot(page, "right-panel-action-guidance.png") if not missing_guidance and not status_missing else f"missing={missing_guidance}; status_missing={status_missing}",
         )
+        status_metrics = [
+            ("quick-action-status-result", "결과"),
+            ("quick-action-status-schedule", "예약"),
+            ("quick-action-status-nlm", "NLM"),
+        ]
+        status_metric_failures: list[str] = []
+        for test_id, label in status_metrics:
+            metric = panel.locator(f"[data-testid='{test_id}']")
+            metric_label = metric.get_attribute("aria-label", timeout=2_000) if metric.count() else None
+            if (
+                metric.count() != 1
+                or metric.get_attribute("role", timeout=2_000) != "group"
+                or metric_label is None
+                or not metric_label.startswith(f"{label} ")
+                or not metric_label.endswith("개")
+            ):
+                status_metric_failures.append(f"{test_id}:{metric_label}")
+        status_metrics_ok = (
+            quick_status.get_attribute("role", timeout=2_000) == "status"
+            and quick_status.get_attribute("aria-live", timeout=2_000) == "polite"
+            and not status_metric_failures
+        )
+        report.record(
+            "right-panel-action-status-metrics-accessible",
+            status_metrics_ok,
+            "quick action status metrics expose labelled count groups" if status_metrics_ok else f"failures={status_metric_failures}",
+        )
         action_list = panel.locator("[data-testid='quick-action-list']")
         action_desc_failures: list[str] = []
         for action_id in guided_action_ids:
