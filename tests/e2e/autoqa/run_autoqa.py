@@ -4328,6 +4328,36 @@ def main() -> int:
 
         context.route("**/api/user/snippets", handle_user_snippets)
         context.route("**/api/user/snippets/*", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True})))
+
+        def handle_user_style_memory(route) -> None:
+            if route.request.method == "GET":
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(
+                        {
+                            "profile": {
+                                "preferred_styles": [
+                                    {"style_id": "summary", "count": 4},
+                                    {"style_id": "tutorial", "count": 2},
+                                ],
+                                "preferred_length": "long",
+                                "preferred_writing_style": "expert",
+                                "tone_keywords": [],
+                                "avoid_keywords": ["과장"],
+                                "custom_instructions": "",
+                                "style_memory_enabled": True,
+                                "generation_count": 7,
+                            }
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                return
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True}))
+
+        context.route("**/api/user/style-memory", handle_user_style_memory)
+        context.route("**/api/user/style-memory/reset", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True})))
         page = context.new_page()
         page.on("console", lambda msg: report.console_errors.append(msg.text) if msg.type == "error" else None)
         page.on("pageerror", lambda exc: report.console_errors.append(str(exc)))
@@ -4644,6 +4674,41 @@ def main() -> int:
                 style_memory_ok = False
                 style_memory_detail = "style memory section missing stable accessibility hooks"
             report.record("settings-style-memory-accessible", style_memory_ok, style_memory_detail)
+            try:
+                learned_summary = style_memory.locator("[data-testid='settings-style-memory-learned']")
+                learned_summary.wait_for(state="visible", timeout=1_000)
+                learned_title = learned_summary.locator("[data-testid='settings-style-memory-learned-title']")
+                learned_description = learned_summary.locator("[data-testid='settings-style-memory-learned-description']")
+                learned_list = learned_summary.locator("[data-testid='settings-style-memory-learned-list']")
+                learned_style = learned_summary.locator("[data-testid='settings-style-memory-learned-style']")
+                learned_length = learned_summary.locator("[data-testid='settings-style-memory-learned-length']")
+                learned_tone = learned_summary.locator("[data-testid='settings-style-memory-learned-tone']")
+                learned_ok = (
+                    learned_summary.get_attribute("role", timeout=1_000) == "region"
+                    and learned_summary.get_attribute("aria-labelledby", timeout=1_000) == "settings-style-memory-learned-title"
+                    and learned_summary.get_attribute("aria-describedby", timeout=1_000) == "settings-style-memory-learned-description"
+                    and learned_title.get_attribute("id", timeout=1_000) == "settings-style-memory-learned-title"
+                    and learned_title.inner_text(timeout=1_000) == "학습된 선호도 (7회 생성)"
+                    and learned_description.get_attribute("id", timeout=1_000) == "settings-style-memory-learned-description"
+                    and "최근 생성 패턴" in learned_description.inner_text(timeout=1_000)
+                    and learned_list.get_attribute("role", timeout=1_000) == "list"
+                    and learned_list.get_attribute("aria-label", timeout=1_000) == "학습된 스타일 메모리 요약"
+                    and learned_style.get_attribute("role", timeout=1_000) == "listitem"
+                    and learned_style.get_attribute("aria-label", timeout=1_000) == "자주 사용한 스타일: 요약 4회, 튜토리얼 2회"
+                    and learned_length.get_attribute("role", timeout=1_000) == "listitem"
+                    and learned_length.get_attribute("aria-label", timeout=1_000) == "선호 길이: 길게"
+                    and learned_tone.get_attribute("role", timeout=1_000) == "listitem"
+                    and learned_tone.get_attribute("aria-label", timeout=1_000) == "선호 문체: 전문가체"
+                )
+                learned_detail = (
+                    "learned style preferences expose a labelled summary region and list items"
+                    if learned_ok
+                    else learned_summary.inner_text(timeout=1_000)[:300]
+                )
+            except Exception as learned_exc:
+                learned_ok = False
+                learned_detail = repr(learned_exc)
+            report.record("settings-style-memory-learned-accessible", learned_ok, learned_detail)
             try:
                 reset_trigger = settings_dialog.locator("[data-testid='settings-style-memory-reset']")
                 if reset_trigger.count() == 1:

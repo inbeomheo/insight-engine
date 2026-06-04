@@ -322,16 +322,43 @@ export default function SettingsModal() {
 
           {/* 학습된 선호도 */}
           {profile && profile.generation_count > 0 && (
-            <div className="rounded-md bg-muted/50 p-3 space-y-1 text-xs">
-              <p className="font-medium text-muted-foreground mb-2">학습된 선호도 ({profile.generation_count}회 생성)</p>
-              {topStyles.length > 0 && (
-                <p>
-                  자주 사용: {topStyles.map((s) => STYLE_LABELS[s.style_id] || s.style_id).join(', ')}
+            <section
+              data-testid="settings-style-memory-learned"
+              role="region"
+              aria-labelledby="settings-style-memory-learned-title"
+              aria-describedby="settings-style-memory-learned-description"
+              className="rounded-md bg-muted/50 p-3 space-y-2 text-xs"
+            >
+              <p id="settings-style-memory-learned-title" data-testid="settings-style-memory-learned-title" className="font-medium text-muted-foreground">
+                학습된 선호도 ({profile.generation_count}회 생성)
+              </p>
+              <p id="settings-style-memory-learned-description" data-testid="settings-style-memory-learned-description" className="sr-only">
+                최근 생성 패턴을 바탕으로 자주 사용한 스타일, 선호 길이, 선호 문체를 요약합니다.
+              </p>
+              <div data-testid="settings-style-memory-learned-list" role="list" aria-label="학습된 스타일 메모리 요약" className="space-y-1">
+                <p
+                  data-testid="settings-style-memory-learned-style"
+                  role="listitem"
+                  aria-label={`자주 사용한 스타일: ${topStyles.length > 0 ? topStyles.map((s) => `${STYLE_LABELS[s.style_id] || s.style_id} ${s.count}회`).join(', ') : '없음'}`}
+                >
+                  자주 사용: {topStyles.length > 0 ? topStyles.map((s) => `${STYLE_LABELS[s.style_id] || s.style_id} ${s.count}회`).join(', ') : '없음'}
                 </p>
-              )}
-              <p>선호 길이: {LENGTH_LABELS[profile.preferred_length] || profile.preferred_length}</p>
-              <p>선호 문체: {WRITING_STYLE_LABELS[profile.preferred_writing_style] || profile.preferred_writing_style}</p>
-            </div>
+                <p
+                  data-testid="settings-style-memory-learned-length"
+                  role="listitem"
+                  aria-label={`선호 길이: ${LENGTH_LABELS[profile.preferred_length] || profile.preferred_length}`}
+                >
+                  선호 길이: {LENGTH_LABELS[profile.preferred_length] || profile.preferred_length}
+                </p>
+                <p
+                  data-testid="settings-style-memory-learned-tone"
+                  role="listitem"
+                  aria-label={`선호 문체: ${WRITING_STYLE_LABELS[profile.preferred_writing_style] || profile.preferred_writing_style}`}
+                >
+                  선호 문체: {WRITING_STYLE_LABELS[profile.preferred_writing_style] || profile.preferred_writing_style}
+                </p>
+              </div>
+            </section>
           )}
 
           {/* 피하고 싶은 표현 */}
