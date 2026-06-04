@@ -2505,6 +2505,71 @@ def run_source_voice_input_accessibility_suite(browser, report: QaReport) -> Non
         context.close()
 
 
+def run_source_generate_button_help_suite(browser, report: QaReport) -> None:
+    context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+    context.add_init_script(
+        """
+        localStorage.setItem('insight-engine-onboarding-done', JSON.stringify(true));
+        localStorage.setItem('insight-engine-selected-provider', JSON.stringify('chatmock'));
+        localStorage.setItem('insight-engine-selected-model', JSON.stringify('chatmock/gpt-5.5'));
+        localStorage.removeItem('insight-engine-reports');
+        """
+    )
+    page = context.new_page()
+    page.on("console", lambda msg: report.console_errors.append(f"[source-generate-help] {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: report.console_errors.append(f"[source-generate-help] {exc}"))
+
+    try:
+        page.goto(FRONTEND_URL, wait_until="domcontentloaded", timeout=60_000)
+        page.locator("#url-input").wait_for(state="visible", timeout=60_000)
+
+        page.locator("[data-testid='source-tab-text']").click(timeout=10_000)
+        text_button = page.locator("[data-testid='text-source-generate']")
+        text_help = page.locator("[data-testid='text-source-generate-help']")
+        text_initial_ok = (
+            text_button.get_attribute("aria-describedby", timeout=5_000) == "text-source-counter text-source-generate-help"
+            and text_help.get_attribute("id", timeout=5_000) == "text-source-generate-help"
+            and "최소 50자" in text_help.inner_text(timeout=5_000)
+            and text_button.is_disabled(timeout=5_000)
+        )
+        page.locator("[data-testid='text-source-input']").fill("텍스트 생성 버튼 안내 연결을 검증합니다. 이 문장은 최소 글자 수를 충분히 넘기도록 작성한 자동화 QA 입력입니다.", timeout=10_000)
+        text_active_ok = (
+            text_button.get_attribute("aria-describedby", timeout=5_000) == "text-source-counter text-source-generate-help"
+            and not text_button.is_disabled(timeout=5_000)
+        )
+
+        page.locator("[data-testid='source-tab-file']").click(timeout=10_000)
+        file_button = page.locator("[data-testid='file-source-generate']")
+        file_help = page.locator("[data-testid='file-source-generate-help']")
+        file_ok = (
+            file_button.get_attribute("aria-describedby", timeout=5_000) == "file-source-generate-help"
+            and file_help.get_attribute("id", timeout=5_000) == "file-source-generate-help"
+            and "파일 선택 후" in file_help.inner_text(timeout=5_000)
+            and file_button.is_disabled(timeout=5_000)
+        )
+
+        page.locator("[data-testid='source-tab-voice']").click(timeout=10_000)
+        voice_button = page.locator("[data-testid='voice-source-generate']")
+        voice_help = page.locator("[data-testid='voice-source-help']")
+        voice_ok = (
+            voice_button.get_attribute("aria-describedby", timeout=5_000) == "voice-source-help"
+            and voice_help.get_attribute("id", timeout=5_000) == "voice-source-help"
+            and "오디오 파일" in voice_help.inner_text(timeout=5_000)
+            and voice_button.is_disabled(timeout=5_000)
+        )
+
+        ok = text_initial_ok and text_active_ok and file_ok and voice_ok
+        report.record(
+            "source-generate-buttons-described",
+            ok,
+            "source generate buttons are described by input requirements and next-action help" if ok else f"text_initial={text_initial_ok}; text_active={text_active_ok}; file={file_ok}; voice={voice_ok}",
+        )
+    except Exception as exc:
+        report.record("source-generate-buttons-described", False, repr(exc))
+    finally:
+        context.close()
+
+
 def run_output_blueprint_style_accessibility_suite(browser, report: QaReport) -> None:
     context = browser.new_context(viewport={"width": 1440, "height": 1000}, accept_downloads=True)
     context.add_init_script(
@@ -4548,6 +4613,7 @@ def main() -> int:
         run_source_text_input_accessibility_suite(browser, report)
         run_source_file_input_accessibility_suite(browser, report)
         run_source_voice_input_accessibility_suite(browser, report)
+        run_source_generate_button_help_suite(browser, report)
         recycle_browser()
         run_output_blueprint_style_accessibility_suite(browser, report)
         run_output_blueprint_mode_accessibility_suite(browser, report)

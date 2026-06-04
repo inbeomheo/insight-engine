@@ -183,13 +183,14 @@ export default function SourceComposer(props: SourceComposerProps) {
                 onClick={submitText}
                 disabled={!textValid || props.isLoading}
                 aria-label="텍스트 생성"
+                aria-describedby="text-source-counter text-source-generate-help"
               >
                 <ArrowUp className="h-4 w-4 text-white" />
               </Button>
             </div>
           </InputWrapper>
-          <p className="mt-2 px-2 text-[11px] text-slate-400">
-            텍스트 소스는 URL 없이도 바로 Generate Dock으로 생성됩니다.
+          <p id="text-source-generate-help" data-testid="text-source-generate-help" className="mt-2 px-2 text-[11px] text-slate-400">
+            최소 50자 이상 입력하면 URL 없이도 Generate Dock 또는 화살표 버튼으로 생성됩니다.
           </p>
         </div>
       )}
@@ -198,8 +199,8 @@ export default function SourceComposer(props: SourceComposerProps) {
         <div id="source-panel-file" role="tabpanel" aria-labelledby="source-tab-file" data-testid="file-source-panel" className="space-y-3">
           <FileUpload file={file} onFileSelect={setFile} disabled={props.isLoading} />
           <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            <span>PDF/DOCX를 업로드하면 문서 내용을 분석해 콘텐츠를 만듭니다.</span>
-            <Button data-testid="file-source-generate" aria-label="파일 생성" size="sm" className="h-8 rounded-xl" onClick={submitFile} disabled={!file || props.isLoading}>
+            <span id="file-source-generate-help" data-testid="file-source-generate-help">PDF/DOCX 파일 선택 후 문서 내용을 분석해 콘텐츠를 만듭니다.</span>
+            <Button data-testid="file-source-generate" aria-label="파일 생성" aria-describedby="file-source-generate-help" size="sm" className="h-8 rounded-xl" onClick={submitFile} disabled={!file || props.isLoading}>
               파일 생성
             </Button>
           </div>
@@ -211,7 +212,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-900">녹음하거나 오디오 파일 업로드</p>
-              <p id="voice-source-help" data-testid="voice-source-help" className="mt-1 text-xs text-slate-500">회의·강의·팟캐스트 MP3/WAV/WEBM 파일을 분석합니다.</p>
+              <p id="voice-source-help" data-testid="voice-source-help" className="mt-1 text-xs text-slate-500">오디오 파일을 선택하거나 녹음하면 회의·강의·팟캐스트 MP3/WAV/WEBM 파일을 분석합니다.</p>
             </div>
             <VoiceRecorder onRecordingComplete={setAudioFile} disabled={props.isLoading} />
           </div>
@@ -242,7 +243,7 @@ export default function SourceComposer(props: SourceComposerProps) {
           </div>
 
           <div className="flex justify-end">
-            <Button data-testid="voice-source-generate" aria-label="음성 생성" size="sm" className="h-8 rounded-xl" onClick={submitAudio} disabled={!audioFile || props.isLoading}>
+            <Button data-testid="voice-source-generate" aria-label="음성 생성" aria-describedby="voice-source-help" size="sm" className="h-8 rounded-xl" onClick={submitAudio} disabled={!audioFile || props.isLoading}>
               음성 생성
             </Button>
           </div>
