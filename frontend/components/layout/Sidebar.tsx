@@ -54,6 +54,7 @@ const HistoryItem = memo(function HistoryItem({
         </div>
       </div>
       <Button
+        data-testid="sidebar-history-delete"
         variant="ghost"
         size="icon"
         className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity"
@@ -273,6 +274,8 @@ export default function Sidebar() {
           </Button>
           {isClient && reports.length > 0 && (
             <Button
+              data-testid="sidebar-history-clear"
+              aria-label={`히스토리 ${reports.length}개 전체 삭제 확인 열기`}
               variant="ghost"
               className="w-full justify-start gap-2 h-9 text-xs text-destructive/60 hover:text-destructive hover:bg-destructive/5"
               onClick={() => setClearConfirmOpen(true)}
@@ -292,21 +295,42 @@ export default function Sidebar() {
       </aside>
 
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent
+          data-testid="sidebar-history-delete-dialog"
+          aria-labelledby="sidebar-history-delete-title"
+          aria-describedby="sidebar-history-delete-description"
+          className="max-w-sm"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
-              결과 삭제
+              <span id="sidebar-history-delete-title" data-testid="sidebar-history-delete-title">
+                결과 삭제
+              </span>
             </DialogTitle>
             <DialogDescription>
-              ‘{deleteTarget?.title || '선택한 결과'}’ 히스토리를 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+              <span id="sidebar-history-delete-description" data-testid="sidebar-history-delete-description">
+                ‘{deleteTarget?.title || '선택한 결과'}’ 히스토리를 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+              </span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button
+              data-testid="sidebar-history-delete-cancel"
+              aria-label="히스토리 삭제 취소"
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+            >
               취소
             </Button>
-            <Button type="button" variant="destructive" onClick={confirmDelete}>
+            <Button
+              data-testid="sidebar-history-delete-confirm"
+              aria-label="히스토리 영구 삭제"
+              type="button"
+              variant="destructive"
+              onClick={confirmDelete}
+            >
               삭제하기
             </Button>
           </DialogFooter>
@@ -314,21 +338,42 @@ export default function Sidebar() {
       </Dialog>
 
       <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent
+          data-testid="sidebar-history-clear-dialog"
+          aria-labelledby="sidebar-history-clear-title"
+          aria-describedby="sidebar-history-clear-description"
+          className="max-w-sm"
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Eraser className="h-5 w-5" />
-              전체 히스토리 삭제
+              <span id="sidebar-history-clear-title" data-testid="sidebar-history-clear-title">
+                전체 히스토리 삭제
+              </span>
             </DialogTitle>
             <DialogDescription>
-              저장된 히스토리 {reports.length}개를 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+              <span id="sidebar-history-clear-description" data-testid="sidebar-history-clear-description">
+                저장된 히스토리 {reports.length}개를 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.
+              </span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setClearConfirmOpen(false)}>
+            <Button
+              data-testid="sidebar-history-clear-cancel"
+              aria-label="히스토리 전체 삭제 취소"
+              type="button"
+              variant="outline"
+              onClick={() => setClearConfirmOpen(false)}
+            >
               취소
             </Button>
-            <Button type="button" variant="destructive" onClick={confirmClearAll}>
+            <Button
+              data-testid="sidebar-history-clear-confirm"
+              aria-label="히스토리 전체 영구 삭제"
+              type="button"
+              variant="destructive"
+              onClick={confirmClearAll}
+            >
               삭제하기
             </Button>
           </DialogFooter>

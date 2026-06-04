@@ -880,9 +880,19 @@
     "expect": "사이드바 히스토리 개별 삭제는 즉시 삭제하지 않고 확인 모달에서 취소/확정을 구분한다"
   },
   {
+    "id": "history-delete-dialog-accessible",
+    "name": "히스토리 삭제 확인 모달 접근성",
+    "expect": "사이드바 히스토리 개별 삭제 확인 모달은 안정적인 제목/설명 id와 명확한 취소/영구 삭제 라벨을 제공한다"
+  },
+  {
     "id": "history-clear-confirmation",
     "name": "히스토리 전체 삭제 확인",
     "expect": "사이드바 전체 삭제는 브라우저 confirm이 아니라 앱 확인 모달에서 취소/확정을 구분한다"
+  },
+  {
+    "id": "history-clear-dialog-accessible",
+    "name": "히스토리 전체 삭제 확인 모달 접근성",
+    "expect": "사이드바 전체 히스토리 삭제 확인 모달은 안정적인 제목/설명 id와 명확한 취소/영구 삭제 라벨을 제공한다"
   },
   {
     "id": "no-native-confirm-destructive",

@@ -4184,6 +4184,22 @@ def run_history_clear_suite(browser, report: QaReport) -> None:
         still_visible_after_cancel = False
         removed_after_confirm = False
         if app_dialog_visible:
+            clear_title = app_dialog.locator("[data-testid='sidebar-history-clear-title']")
+            clear_description = app_dialog.locator("[data-testid='sidebar-history-clear-description']")
+            clear_cancel = app_dialog.locator("[data-testid='sidebar-history-clear-cancel']")
+            clear_confirm = app_dialog.locator("[data-testid='sidebar-history-clear-confirm']")
+            clear_dialog_accessible = (
+                app_dialog.get_attribute("data-testid", timeout=1_000) == "sidebar-history-clear-dialog"
+                and app_dialog.get_attribute("aria-labelledby", timeout=1_000) == "sidebar-history-clear-title"
+                and app_dialog.get_attribute("aria-describedby", timeout=1_000) == "sidebar-history-clear-description"
+                and clear_title.get_attribute("id", timeout=1_000) == "sidebar-history-clear-title"
+                and clear_title.inner_text(timeout=1_000) == "전체 히스토리 삭제"
+                and clear_description.get_attribute("id", timeout=1_000) == "sidebar-history-clear-description"
+                and "저장된 히스토리" in clear_description.inner_text(timeout=1_000)
+                and "되돌릴 수 없습니다" in clear_description.inner_text(timeout=1_000)
+                and clear_cancel.get_attribute("aria-label", timeout=1_000) == "히스토리 전체 삭제 취소"
+                and clear_confirm.get_attribute("aria-label", timeout=1_000) == "히스토리 전체 영구 삭제"
+            )
             app_dialog.locator("button", has_text="취소").click(timeout=5_000)
             page.wait_for_timeout(300)
             still_visible_after_cancel = sidebar.locator("button", has_text="전체 삭제").count() > 0
@@ -4194,6 +4210,15 @@ def run_history_clear_suite(browser, report: QaReport) -> None:
             app_dialog.wait_for(state="visible", timeout=5_000)
             app_dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
             removed_after_confirm = wait_until(lambda: sidebar.locator("button", has_text="전체 삭제").count() == 0, 5_000, page)
+        else:
+            clear_dialog_accessible = False
+        report.record(
+            "history-clear-dialog-accessible",
+            clear_dialog_accessible,
+            "history clear dialog exposes stable title/description ids and explicit cancel/confirm labels"
+            if clear_dialog_accessible
+            else f"dialog_visible={app_dialog_visible}",
+        )
         report.record(
             "history-clear-confirmation",
             before_clear_visible and (not native_dialog_seen) and app_dialog_visible and not_removed_before_confirm and still_visible_after_cancel and removed_after_confirm,
@@ -5618,6 +5643,22 @@ def main() -> int:
             still_visible_after_cancel = False
             removed_after_confirm = False
             if dialog_visible:
+                delete_title = dialog.locator("[data-testid='sidebar-history-delete-title']")
+                delete_description = dialog.locator("[data-testid='sidebar-history-delete-description']")
+                delete_cancel = dialog.locator("[data-testid='sidebar-history-delete-cancel']")
+                delete_confirm = dialog.locator("[data-testid='sidebar-history-delete-confirm']")
+                delete_dialog_accessible = (
+                    dialog.get_attribute("data-testid", timeout=1_000) == "sidebar-history-delete-dialog"
+                    and dialog.get_attribute("aria-labelledby", timeout=1_000) == "sidebar-history-delete-title"
+                    and dialog.get_attribute("aria-describedby", timeout=1_000) == "sidebar-history-delete-description"
+                    and delete_title.get_attribute("id", timeout=1_000) == "sidebar-history-delete-title"
+                    and delete_title.inner_text(timeout=1_000) == "결과 삭제"
+                    and delete_description.get_attribute("id", timeout=1_000) == "sidebar-history-delete-description"
+                    and "히스토리" in delete_description.inner_text(timeout=1_000)
+                    and "되돌릴 수 없습니다" in delete_description.inner_text(timeout=1_000)
+                    and delete_cancel.get_attribute("aria-label", timeout=1_000) == "히스토리 삭제 취소"
+                    and delete_confirm.get_attribute("aria-label", timeout=1_000) == "히스토리 영구 삭제"
+                )
                 dialog.locator("button", has_text="취소").click(timeout=5_000)
                 page.wait_for_timeout(300)
                 still_visible_after_cancel = page.locator("[data-report-id]").count() == before_cards
@@ -5627,6 +5668,15 @@ def main() -> int:
                 dialog.wait_for(state="visible", timeout=5_000)
                 dialog.locator("button", has_text="삭제하기").click(timeout=5_000)
                 removed_after_confirm = wait_until(lambda: page.locator("[data-report-id]").count() < before_cards, 5_000, page)
+            else:
+                delete_dialog_accessible = False
+            report.record(
+                "history-delete-dialog-accessible",
+                delete_dialog_accessible,
+                "history delete dialog exposes stable title/description ids and explicit cancel/confirm labels"
+                if delete_dialog_accessible
+                else f"dialog_visible={dialog_visible}",
+            )
             report.record(
                 "history-delete-confirmation",
                 dialog_visible and not_removed_before_confirm and still_visible_after_cancel and removed_after_confirm,
