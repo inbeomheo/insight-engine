@@ -3502,6 +3502,22 @@ def main() -> int:
                 step_a11y_ok,
                 "studio hero workflow steps expose list/listitem semantics" if step_a11y_ok else f"steps={steps.count()}; role={steps.get_attribute('role') if steps.count() else None}; items={step_items.count()}",
             )
+            hero_status = page.locator("[data-testid='studio-hero-status']")
+            hero_model = page.locator("[data-testid='studio-hero-model']")
+            hero_results = page.locator("[data-testid='studio-hero-results']")
+            hero_status_ok = (
+                hero_status.count() == 1
+                and hero_status.get_attribute("role", timeout=2_000) == "status"
+                and hero_status.get_attribute("aria-live", timeout=2_000) == "polite"
+                and (hero_status.get_attribute("aria-label", timeout=2_000) or "").startswith("\uc2a4\ud29c\ub514\uc624 \uc0c1\ud0dc")
+                and hero_model.get_attribute("aria-label", timeout=2_000) == "\uc120\ud0dd \ubaa8\ub378: chatmock/gpt-5.5"
+                and hero_results.get_attribute("aria-label", timeout=2_000) == "\uc0dd\uc131 \uacb0\uacfc: 0\uac1c"
+            )
+            report.record(
+                "studio-hero-status-summary",
+                hero_status_ok,
+                "hero model/result status is exposed as a polite live summary" if hero_status_ok else f"status={hero_status.count()}; role={hero_status.get_attribute('role') if hero_status.count() else None}; model={hero_model.get_attribute('aria-label') if hero_model.count() else None}; results={hero_results.get_attribute('aria-label') if hero_results.count() else None}",
+            )
             header_model = page.locator("[data-testid='header-model-badge']")
             header_status = page.locator("[data-testid='header-status-badge']")
             header_model_text = header_model.inner_text(timeout=5_000).replace("모델 ", "", 1).strip() if header_model.count() > 0 else ""

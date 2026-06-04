@@ -9,6 +9,9 @@ interface StudioHeroProps {
 }
 
 export default function StudioHero({ modelLabel, resultCount }: StudioHeroProps) {
+  const resolvedModelLabel = modelLabel || '자동 선택';
+  const statusLabel = `스튜디오 상태: 선택 모델 ${resolvedModelLabel}, 생성 결과 ${resultCount}개`;
+
   return (
     <section
       data-testid="studio-hero"
@@ -45,9 +48,19 @@ export default function StudioHero({ modelLabel, resultCount }: StudioHeroProps)
           ))}
         </div>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500">
-        <span className="rounded-full bg-slate-100 px-3 py-1">모델: {modelLabel || '자동 선택'}</span>
-        <span className="rounded-full bg-slate-100 px-3 py-1">생성 결과: {resultCount}개</span>
+      <div
+        data-testid="studio-hero-status"
+        role="status"
+        aria-live="polite"
+        aria-label={statusLabel}
+        className="mt-5 flex flex-wrap gap-2 text-xs text-slate-500"
+      >
+        <span data-testid="studio-hero-model" aria-label={`선택 모델: ${resolvedModelLabel}`} className="rounded-full bg-slate-100 px-3 py-1">
+          모델: {resolvedModelLabel}
+        </span>
+        <span data-testid="studio-hero-results" aria-label={`생성 결과: ${resultCount}개`} className="rounded-full bg-slate-100 px-3 py-1">
+          생성 결과: {resultCount}개
+        </span>
       </div>
     </section>
   );

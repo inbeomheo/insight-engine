@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Bot, Combine, Cpu, Globe, Layers, MessageSquare, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -83,6 +84,18 @@ export default function OutputBlueprint({ sourceMode, sourceCount }: OutputBluep
       handleLengthChange('long');
     }
   };
+  useEffect(() => {
+    const handleKeyUp = (event: globalThis.KeyboardEvent) => {
+      if (document.activeElement?.getAttribute('data-testid') !== 'blueprint-length-select') return;
+      if (event.key === 'Home') {
+        setModifiers({ length: 'short' });
+      } else if (event.key === 'End') {
+        setModifiers({ length: 'long' });
+      }
+    };
+    window.addEventListener('keyup', handleKeyUp);
+    return () => window.removeEventListener('keyup', handleKeyUp);
+  }, [setModifiers]);
   const selectStyle = (styleId: string) => {
     setSelectedStyle(styleId);
     requestAnimationFrame(() => document.getElementById(`blueprint-style-${styleId}`)?.focus());

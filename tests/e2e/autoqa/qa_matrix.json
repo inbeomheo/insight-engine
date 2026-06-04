@@ -24,6 +24,12 @@
     "expect": "히어로의 소스 입력→산출물 설계→AI 생성→후처리 단계가 list/listitem으로 읽힌다"
   },
   {
+    "id": "studio-hero-status-summary",
+    "name": "스튜디오 히어로 상태 요약",
+    "url": "http://localhost:3000",
+    "expect": "히어로의 선택 모델과 생성 결과 수가 live status로 읽히고 각 배지가 명확한 aria-label을 갖는다"
+  },
+  {
     "id": "onboarding-provider-accessible",
     "name": "온보딩 프로바이더 선택 접근성",
     "url": "http://localhost:3000",
