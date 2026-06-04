@@ -4006,6 +4006,45 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
             publish_manage_ok,
             "publish toolbar and destructive action expose help text and descriptive labels" if publish_manage_ok else f"publish_group={publish_group.count()}; publish_help={publish_help.count()}; manage_help={manage_help.count()}",
         )
+        if delete_action.count() == 1:
+            delete_action.click(timeout=10_000)
+        delete_dialog = page.locator("[data-testid='result-delete-dialog']").last
+        fallback_delete_dialog = page.locator("[role='dialog']", has_text="결과 삭제").last
+        delete_dialog_visible = wait_until(
+            lambda: delete_dialog.count() == 1 and delete_dialog.is_visible(timeout=1_000),
+            3_000,
+            page,
+        )
+        delete_title = delete_dialog.locator("[data-testid='result-delete-title']")
+        delete_desc = delete_dialog.locator("[data-testid='result-delete-description']")
+        delete_cancel = delete_dialog.locator("[data-testid='result-delete-cancel']")
+        delete_confirm = delete_dialog.locator("[data-testid='result-delete-confirm']")
+        delete_dialog_ok = (
+            delete_dialog_visible
+            and delete_dialog.get_attribute("role", timeout=2_000) == "dialog"
+            and delete_dialog.get_attribute("aria-labelledby", timeout=2_000) == "result-delete-title"
+            and delete_dialog.get_attribute("aria-describedby", timeout=2_000) == "result-delete-description"
+            and delete_title.get_attribute("id", timeout=2_000) == "result-delete-title"
+            and delete_desc.get_attribute("id", timeout=2_000) == "result-delete-description"
+            and "되돌릴 수 없습니다" in delete_desc.inner_text(timeout=2_000)
+            and delete_cancel.get_attribute("aria-label", timeout=2_000) == "결과 삭제 취소"
+            and delete_confirm.get_attribute("aria-label", timeout=2_000) == "결과 영구 삭제"
+        )
+        if delete_dialog_visible and delete_cancel.count() == 1:
+            delete_cancel.click(timeout=5_000)
+        elif fallback_delete_dialog.count() == 1:
+            page.keyboard.press("Escape")
+        delete_closed_ok = wait_until(
+            lambda: (delete_dialog.count() == 0 or not delete_dialog.is_visible(timeout=1_000))
+            and (fallback_delete_dialog.count() == 0 or not fallback_delete_dialog.is_visible(timeout=1_000)),
+            5_000,
+            page,
+        )
+        report.record(
+            "result-delete-dialog-accessible",
+            delete_dialog_ok and delete_closed_ok,
+            "delete confirmation dialog exposes title, description, labelled buttons, and cancel close" if delete_dialog_ok and delete_closed_ok else f"dialog={delete_dialog_ok}; closed={delete_closed_ok}",
+        )
         collapse = card.locator("[data-testid='result-action-collapse-toggle']")
         controls_id = collapse.get_attribute("aria-controls", timeout=2_000) if collapse.count() else ""
         content_region = page.locator(f"#{controls_id}") if controls_id else page.locator("#missing-result-content-region")
@@ -4042,6 +4081,7 @@ def run_result_card_header_actions_accessibility_suite(browser, report: QaReport
         report.record("result-workbench-preview-actions-accessible", False, repr(exc))
         report.record("result-workbench-export-actions-accessible", False, repr(exc))
         report.record("result-workbench-publish-manage-actions-accessible", False, repr(exc))
+        report.record("result-delete-dialog-accessible", False, repr(exc))
         report.record("result-card-collapse-accessible", False, repr(exc))
     finally:
         context.close()

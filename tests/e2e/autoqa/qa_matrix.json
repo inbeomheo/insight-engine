@@ -847,5 +847,11 @@
     "id": "menu-delete-confirmation",
     "name": "결과 삭제 확인",
     "expect": "삭제 액션은 즉시 삭제하지 않고 확인 모달에서 취소/확정을 구분한다"
+  },
+  {
+    "id": "result-delete-dialog-accessible",
+    "name": "결과 삭제 확인 Dialog 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과 삭제 확인 Dialog는 제목/설명 연결, 위험 안내, 취소/영구 삭제 버튼 라벨을 제공한다"
   }
 ]

@@ -581,21 +581,26 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, v
       content={report.content}
     />
     <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-      <DialogContent className="max-w-sm">
+      <DialogContent
+        data-testid="result-delete-dialog"
+        aria-labelledby="result-delete-title"
+        aria-describedby="result-delete-description"
+        className="max-w-sm"
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle id="result-delete-title" data-testid="result-delete-title" className="flex items-center gap-2 text-destructive">
             <Trash2 className="h-5 w-5" />
             결과 삭제
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="result-delete-description" data-testid="result-delete-description">
             “{report.title}” 결과를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+          <Button data-testid="result-delete-cancel" aria-label="결과 삭제 취소" type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
             취소
           </Button>
-          <Button type="button" variant="destructive" onClick={confirmDelete}>
+          <Button data-testid="result-delete-confirm" aria-label="결과 영구 삭제" type="button" variant="destructive" onClick={confirmDelete}>
             삭제하기
           </Button>
         </DialogFooter>
