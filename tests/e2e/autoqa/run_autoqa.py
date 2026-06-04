@@ -4489,6 +4489,71 @@ def main() -> int:
                 snippet_ok = False
                 snippet_detail = "snippet library section missing from settings dialog"
             report.record("settings-snippet-library-accessible", snippet_ok, snippet_detail)
+            style_memory = settings_dialog.locator("[data-testid='settings-style-memory-section']")
+            if style_memory.count() == 1:
+                memory_title = style_memory.locator("[data-testid='settings-style-memory-title']")
+                memory_desc = style_memory.locator("[data-testid='settings-style-memory-description']")
+                memory_switch = style_memory.locator("[data-testid='settings-style-memory-switch']")
+                memory_status = style_memory.locator("[data-testid='settings-style-memory-status']")
+                avoid_input = style_memory.locator("[data-testid='settings-style-memory-avoid-input']")
+                avoid_help = style_memory.locator("[data-testid='settings-style-memory-avoid-help']")
+                custom_input = style_memory.locator("[data-testid='settings-style-memory-custom-input']")
+                custom_count = style_memory.locator("[data-testid='settings-style-memory-custom-count']")
+                save_button = style_memory.locator("[data-testid='settings-style-memory-save']")
+                reset_button = style_memory.locator("[data-testid='settings-style-memory-reset']")
+                switch_describedby = memory_switch.get_attribute("aria-describedby", timeout=1_000) if memory_switch.count() else ""
+                avoid_describedby = avoid_input.get_attribute("aria-describedby", timeout=1_000) if avoid_input.count() else ""
+                custom_describedby = custom_input.get_attribute("aria-describedby", timeout=1_000) if custom_input.count() else ""
+                style_memory_initial_ok = (
+                    style_memory.get_attribute("role", timeout=1_000) == "region"
+                    and style_memory.get_attribute("aria-labelledby", timeout=1_000) == "settings-style-memory-title"
+                    and style_memory.get_attribute("aria-describedby", timeout=1_000) == "settings-style-memory-description"
+                    and memory_title.get_attribute("id", timeout=1_000) == "settings-style-memory-title"
+                    and memory_title.inner_text(timeout=1_000) == "스타일 메모리"
+                    and memory_desc.get_attribute("id", timeout=1_000) == "settings-style-memory-description"
+                    and "개인 선호도" in memory_desc.inner_text(timeout=1_000)
+                    and memory_switch.get_attribute("role", timeout=1_000) == "switch"
+                    and memory_switch.get_attribute("aria-label", timeout=1_000) == "스타일 메모리 활성화"
+                    and memory_switch.get_attribute("aria-checked", timeout=1_000) == "true"
+                    and "settings-style-memory-description" in (switch_describedby or "")
+                    and "settings-style-memory-status" in (switch_describedby or "")
+                    and memory_status.get_attribute("id", timeout=1_000) == "settings-style-memory-status"
+                    and memory_status.get_attribute("role", timeout=1_000) == "status"
+                    and "켜짐" in memory_status.inner_text(timeout=1_000)
+                    and avoid_input.get_attribute("aria-labelledby", timeout=1_000) == "settings-style-memory-avoid-label"
+                    and avoid_input.get_attribute("aria-label", timeout=1_000) == "피하고 싶은 표현"
+                    and avoid_help.get_attribute("id", timeout=1_000) == "settings-style-memory-avoid-help"
+                    and "최대 20개" in avoid_help.inner_text(timeout=1_000)
+                    and "settings-style-memory-avoid-help" in (avoid_describedby or "")
+                    and custom_input.get_attribute("aria-labelledby", timeout=1_000) == "settings-style-memory-custom-label"
+                    and custom_input.get_attribute("aria-label", timeout=1_000) == "커스텀 지시사항"
+                    and custom_count.get_attribute("id", timeout=1_000) == "settings-style-memory-custom-count"
+                    and custom_count.get_attribute("aria-live", timeout=1_000) == "polite"
+                    and "settings-style-memory-custom-count" in (custom_describedby or "")
+                    and save_button.get_attribute("aria-label", timeout=1_000) == "스타일 메모리 저장"
+                    and reset_button.get_attribute("aria-label", timeout=1_000) == "스타일 메모리 초기화 확인 열기"
+                )
+                if memory_switch.count() == 1:
+                    memory_switch.focus(timeout=5_000)
+                    page.keyboard.press("Space")
+                style_memory_toggle_ok = wait_until(
+                    lambda: memory_switch.count() == 1
+                    and memory_switch.get_attribute("aria-checked", timeout=1_000) == "false"
+                    and "꺼짐" in memory_status.inner_text(timeout=1_000)
+                    and memory_switch.evaluate("el => document.activeElement === el"),
+                    5_000,
+                    page,
+                )
+                style_memory_ok = style_memory_initial_ok and style_memory_toggle_ok
+                style_memory_detail = (
+                    "style memory section exposes region, switch status, labelled inputs, and explicit save/reset actions"
+                    if style_memory_ok
+                    else f"initial={style_memory_initial_ok}; toggle={style_memory_toggle_ok}; switch_describedby={switch_describedby!r}; avoid_describedby={avoid_describedby!r}; custom_describedby={custom_describedby!r}"
+                )
+            else:
+                style_memory_ok = False
+                style_memory_detail = "style memory section missing stable accessibility hooks"
+            report.record("settings-style-memory-accessible", style_memory_ok, style_memory_detail)
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())

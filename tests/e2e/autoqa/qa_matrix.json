@@ -150,6 +150,12 @@
     "expect": "설정 모달은 자주 쓰는 문구 스니펫을 보여주고 목록 액션과 추가 폼을 명확한 aria 라벨로 제공한다"
   },
   {
+    "id": "settings-style-memory-accessible",
+    "name": "설정 스타일 메모리 접근성",
+    "url": "http://localhost:3000",
+    "expect": "설정 모달의 스타일 메모리는 설명이 연결된 switch, 입력 라벨, 문자 수 상태, 저장/초기화 액션 라벨을 제공한다"
+  },
+  {
     "id": "sidebar-trigger-accessible",
     "name": "사이드바 트리거 접근성",
     "url": "http://localhost:3000",

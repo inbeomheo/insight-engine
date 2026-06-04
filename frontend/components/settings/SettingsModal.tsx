@@ -217,16 +217,27 @@ export default function SettingsModal() {
         </div>
 
         {/* 스타일 메모리 */}
-        <div className="pt-4 border-t space-y-3">
+        <section
+          data-testid="settings-style-memory-section"
+          role="region"
+          aria-labelledby="settings-style-memory-title"
+          aria-describedby="settings-style-memory-description"
+          className="pt-4 border-t space-y-3"
+        >
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
+            <h3 id="settings-style-memory-title" data-testid="settings-style-memory-title" className="text-sm font-semibold flex items-center gap-2">
               <Brain className="h-4 w-4 text-primary" />
               스타일 메모리
             </h3>
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-xs text-muted-foreground">활성화</span>
               <input
+                data-testid="settings-style-memory-switch"
                 type="checkbox"
+                role="switch"
+                aria-label="스타일 메모리 활성화"
+                aria-checked={memoryEnabled}
+                aria-describedby="settings-style-memory-description settings-style-memory-status"
                 checked={memoryEnabled}
                 onChange={(e) => setMemoryEnabled(e.target.checked)}
                 className="w-4 h-4 accent-primary"
@@ -234,8 +245,11 @@ export default function SettingsModal() {
             </label>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p id="settings-style-memory-description" data-testid="settings-style-memory-description" className="text-xs text-muted-foreground">
             생성 패턴을 학습하여 AI 프롬프트에 개인 선호도를 자동 반영합니다.
+          </p>
+          <p id="settings-style-memory-status" data-testid="settings-style-memory-status" role="status" aria-live="polite" className="text-[10px] font-medium text-muted-foreground">
+            스타일 메모리 {memoryEnabled ? '켜짐' : '꺼짐'}
           </p>
 
           {/* 학습된 선호도 */}
@@ -254,21 +268,31 @@ export default function SettingsModal() {
 
           {/* 피하고 싶은 표현 */}
           <div className="space-y-1">
-            <label className="text-xs font-medium">피하고 싶은 표현</label>
+            <label id="settings-style-memory-avoid-label" htmlFor="settings-style-memory-avoid-input" className="text-xs font-medium">피하고 싶은 표현</label>
             <input
+              id="settings-style-memory-avoid-input"
+              data-testid="settings-style-memory-avoid-input"
               type="text"
+              aria-label="피하고 싶은 표현"
+              aria-labelledby="settings-style-memory-avoid-label"
+              aria-describedby="settings-style-memory-avoid-help"
               value={avoidInput}
               onChange={(e) => setAvoidInput(e.target.value)}
               placeholder="예: 혁신적, 획기적, 놀라운 (쉼표로 구분)"
               className="w-full text-xs rounded-md border px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            <p className="text-[10px] text-muted-foreground">최대 20개, 각 20자 이내</p>
+            <p id="settings-style-memory-avoid-help" data-testid="settings-style-memory-avoid-help" className="text-[10px] text-muted-foreground">최대 20개, 각 20자 이내</p>
           </div>
 
           {/* 커스텀 지시사항 */}
           <div className="space-y-1">
-            <label className="text-xs font-medium">커스텀 지시사항</label>
+            <label id="settings-style-memory-custom-label" htmlFor="settings-style-memory-custom-input" className="text-xs font-medium">커스텀 지시사항</label>
             <textarea
+              id="settings-style-memory-custom-input"
+              data-testid="settings-style-memory-custom-input"
+              aria-label="커스텀 지시사항"
+              aria-labelledby="settings-style-memory-custom-label"
+              aria-describedby="settings-style-memory-custom-count"
               value={customInstructions}
               onChange={(e) => setCustomInstructions(e.target.value)}
               placeholder="예: 항상 결론 먼저 작성, 소제목 3개 이상 사용"
@@ -276,11 +300,13 @@ export default function SettingsModal() {
               maxLength={500}
               className="w-full text-xs rounded-md border px-3 py-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            <p className="text-[10px] text-muted-foreground text-right">{customInstructions.length}/500</p>
+            <p id="settings-style-memory-custom-count" data-testid="settings-style-memory-custom-count" aria-live="polite" className="text-[10px] text-muted-foreground text-right">{customInstructions.length}/500</p>
           </div>
 
           <div className="flex gap-2">
             <Button
+              data-testid="settings-style-memory-save"
+              aria-label="스타일 메모리 저장"
               size="sm"
               className="flex-1 text-xs"
               onClick={handleSaveMemory}
@@ -289,6 +315,8 @@ export default function SettingsModal() {
               {isSaving ? '저장 중...' : '저장'}
             </Button>
             <Button
+              data-testid="settings-style-memory-reset"
+              aria-label="스타일 메모리 초기화 확인 열기"
               size="sm"
               variant="outline"
               className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
@@ -298,7 +326,7 @@ export default function SettingsModal() {
               초기화
             </Button>
           </div>
-        </div>
+        </section>
 
         <SnippetLibrary />
 
