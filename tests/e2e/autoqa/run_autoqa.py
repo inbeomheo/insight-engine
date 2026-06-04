@@ -4433,6 +4433,24 @@ def main() -> int:
                 settings_dialog.get_by_role("button", name="닫기").count() > 0
                 and settings_dialog.get_by_role("button", name="Close").count() == 0
             )
+            settings_title = settings_dialog.locator("[data-testid='settings-dialog-title']")
+            settings_description = settings_dialog.locator("[data-testid='settings-dialog-description']")
+            settings_close = settings_dialog.locator("[data-testid='settings-dialog-close']")
+            settings_dialog_a11y_ok = (
+                settings_dialog.get_attribute("aria-labelledby", timeout=1_000) == "settings-dialog-title"
+                and settings_dialog.get_attribute("aria-describedby", timeout=1_000) == "settings-dialog-description"
+                and settings_title.get_attribute("id", timeout=1_000) == "settings-dialog-title"
+                and settings_title.inner_text(timeout=1_000) == "설정"
+                and settings_description.get_attribute("id", timeout=1_000) == "settings-dialog-description"
+                and "AI 서비스와 캐시" in settings_description.inner_text(timeout=1_000)
+                and settings_close.get_attribute("aria-label", timeout=1_000) == "설정 닫기"
+                and settings_close.inner_text(timeout=1_000).strip() == "닫기"
+            )
+            report.record(
+                "settings-modal-dialog-accessible",
+                settings_dialog_a11y_ok,
+                "settings modal exposes stable title/description ids and explicit close action" if settings_dialog_a11y_ok else f"labelledby={settings_dialog.get_attribute('aria-labelledby') if settings_dialog.count() else None!r}; describedby={settings_dialog.get_attribute('aria-describedby') if settings_dialog.count() else None!r}",
+            )
             language_section = settings_dialog.locator("[data-testid='settings-language-section']")
             if language_section.count() == 1:
                 language_title = language_section.locator("[data-testid='settings-language-title']")

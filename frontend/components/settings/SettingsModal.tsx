@@ -155,13 +155,35 @@ export default function SettingsModal() {
         else closeSettingsModal();
       }}
     >
-      <DialogContent id="settings-dialog" className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        id="settings-dialog"
+        aria-labelledby="settings-dialog-title"
+        aria-describedby="settings-dialog-description"
+        showCloseButton={false}
+        className="max-w-md max-h-[85vh] overflow-y-auto"
+      >
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            {t('settings.title')}
-          </DialogTitle>
-          <DialogDescription>{t('settings.aiServiceDescription')}</DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2 text-left">
+              <DialogTitle id="settings-dialog-title" data-testid="settings-dialog-title" className="flex items-center gap-2">
+                <Bot className="h-5 w-5 text-primary" />
+                {t('settings.title')}
+              </DialogTitle>
+              <DialogDescription id="settings-dialog-description" data-testid="settings-dialog-description">
+                {t('settings.aiServiceDescription')}
+              </DialogDescription>
+            </div>
+            <Button
+              data-testid="settings-dialog-close"
+              aria-label="설정 닫기"
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={closeSettingsModal}
+            >
+              닫기
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* 언어 설정 */}

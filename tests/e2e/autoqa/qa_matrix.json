@@ -144,6 +144,12 @@
     "expect": "헤더 설정 버튼은 Dialog 제어 대상, 열림/닫힘 상태, 상태별 라벨, 한국어 닫기 버튼, Escape 닫기, 트리거 포커스 복귀를 제공한다"
   },
   {
+    "id": "settings-modal-dialog-accessible",
+    "name": "설정 모달 Dialog 접근성",
+    "url": "http://localhost:3000",
+    "expect": "설정 모달은 Dialog 제목/설명을 안정적인 aria id로 연결하고 설정 닫기 액션을 명확히 라벨링한다"
+  },
+  {
     "id": "settings-language-accessible",
     "name": "설정 언어 선택 접근성",
     "url": "http://localhost:3000",
