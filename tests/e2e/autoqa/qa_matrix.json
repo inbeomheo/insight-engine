@@ -144,6 +144,12 @@
     "expect": "헤더 설정 버튼은 Dialog 제어 대상, 열림/닫힘 상태, 상태별 라벨, 한국어 닫기 버튼, Escape 닫기, 트리거 포커스 복귀를 제공한다"
   },
   {
+    "id": "settings-snippet-library-accessible",
+    "name": "설정 스니펫 라이브러리 접근성",
+    "url": "http://localhost:3000",
+    "expect": "설정 모달은 자주 쓰는 문구 스니펫을 보여주고 목록 액션과 추가 폼을 명확한 aria 라벨로 제공한다"
+  },
+  {
     "id": "sidebar-trigger-accessible",
     "name": "사이드바 트리거 접근성",
     "url": "http://localhost:3000",

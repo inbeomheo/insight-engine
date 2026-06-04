@@ -4303,6 +4303,31 @@ def main() -> int:
             localStorage.removeItem('insight-engine-reports');
             """
         )
+
+        def handle_user_snippets(route) -> None:
+            if route.request.method == "GET":
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(
+                        {
+                            "snippets": [
+                                {
+                                    "id": "snippet-qa",
+                                    "category": "general",
+                                    "label": "QA 요약 스니펫",
+                                    "content": "핵심 요약과 다음 액션을 한 문단으로 정리",
+                                }
+                            ]
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                return
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True}))
+
+        context.route("**/api/user/snippets", handle_user_snippets)
+        context.route("**/api/user/snippets/*", lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True})))
         page = context.new_page()
         page.on("console", lambda msg: report.console_errors.append(msg.text) if msg.type == "error" else None)
         page.on("pageerror", lambda exc: report.console_errors.append(str(exc)))
@@ -4408,6 +4433,62 @@ def main() -> int:
                 settings_dialog.get_by_role("button", name="닫기").count() > 0
                 and settings_dialog.get_by_role("button", name="Close").count() == 0
             )
+            snippet_library = settings_dialog.locator("[data-testid='snippet-library']")
+            if snippet_library.count() == 1:
+                snippet_title = snippet_library.locator("[data-testid='snippet-library-title']")
+                snippet_desc = snippet_library.locator("[data-testid='snippet-library-description']")
+                snippet_add = snippet_library.locator("[data-testid='snippet-add-toggle']")
+                snippet_list = snippet_library.locator("[data-testid='snippet-list']")
+                snippet_item = snippet_library.locator("[data-testid='snippet-item']").first
+                snippet_help = snippet_library.locator("[data-testid='snippet-actions-help']").first
+                snippet_copy = snippet_library.locator("[data-testid='snippet-copy-action']").first
+                snippet_delete = snippet_library.locator("[data-testid='snippet-delete-action']").first
+                snippet_item.wait_for(state="visible", timeout=5_000)
+                snippet_initial_ok = (
+                    snippet_library.get_attribute("role", timeout=1_000) == "region"
+                    and snippet_library.get_attribute("aria-labelledby", timeout=1_000) == "snippet-library-title"
+                    and snippet_library.get_attribute("aria-describedby", timeout=1_000) == "snippet-library-description"
+                    and snippet_title.get_attribute("id", timeout=1_000) == "snippet-library-title"
+                    and snippet_title.inner_text(timeout=1_000) == "스니펫 라이브러리"
+                    and "자주 쓰는 문구" in snippet_desc.inner_text(timeout=1_000)
+                    and snippet_add.get_attribute("aria-expanded", timeout=1_000) == "false"
+                    and snippet_add.get_attribute("aria-controls", timeout=1_000) == "snippet-form"
+                    and snippet_add.get_attribute("aria-label", timeout=1_000) == "스니펫 추가 폼 열기"
+                    and snippet_list.get_attribute("role", timeout=1_000) == "list"
+                    and snippet_list.get_attribute("aria-label", timeout=1_000) == "저장된 스니펫"
+                    and snippet_item.get_attribute("role", timeout=1_000) == "listitem"
+                    and "QA 요약 스니펫" in (snippet_item.get_attribute("aria-label", timeout=1_000) or "")
+                    and snippet_help.get_attribute("id", timeout=1_000) == "snippet-actions-help-snippet-qa"
+                    and snippet_copy.get_attribute("aria-describedby", timeout=1_000) == "snippet-actions-help-snippet-qa"
+                    and snippet_delete.get_attribute("aria-describedby", timeout=1_000) == "snippet-actions-help-snippet-qa"
+                    and snippet_copy.get_attribute("aria-label", timeout=1_000) == "QA 요약 스니펫 스니펫 복사"
+                    and snippet_delete.get_attribute("aria-label", timeout=1_000) == "QA 요약 스니펫 스니펫 삭제"
+                )
+                if snippet_add.count() == 1:
+                    snippet_add.click(timeout=5_000)
+                snippet_form = snippet_library.locator("[data-testid='snippet-form']")
+                snippet_form_ok = wait_until(
+                    lambda: snippet_form.count() == 1
+                    and snippet_form.is_visible()
+                    and snippet_add.get_attribute("aria-expanded", timeout=1_000) == "true"
+                    and snippet_add.get_attribute("aria-label", timeout=1_000) == "스니펫 추가 폼 닫기"
+                    and snippet_form.get_attribute("role", timeout=1_000) == "form"
+                    and snippet_form.get_attribute("aria-labelledby", timeout=1_000) == "snippet-form-title"
+                    and snippet_form.locator("[data-testid='snippet-title-input']").get_attribute("aria-label", timeout=1_000) == "스니펫 제목"
+                    and snippet_form.locator("[data-testid='snippet-content-input']").get_attribute("aria-label", timeout=1_000) == "스니펫 내용",
+                    5_000,
+                    page,
+                )
+                snippet_ok = snippet_initial_ok and snippet_form_ok
+                snippet_detail = (
+                    "snippet library is wired into settings with labelled region, list actions, and add form"
+                    if snippet_ok
+                    else f"initial={snippet_initial_ok}; form={snippet_form_ok}"
+                )
+            else:
+                snippet_ok = False
+                snippet_detail = "snippet library section missing from settings dialog"
+            report.record("settings-snippet-library-accessible", snippet_ok, snippet_detail)
             page.keyboard.press("Escape")
             settings_dialog_closed = wait_until(
                 lambda: (settings_dialog.count() == 0 or not settings_dialog.is_visible())

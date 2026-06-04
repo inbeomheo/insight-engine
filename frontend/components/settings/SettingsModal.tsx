@@ -17,6 +17,7 @@ import { Trash2, Bot, Brain, RotateCcw } from 'lucide-react';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
 import { toast } from 'sonner';
 import LanguageSwitcher from './LanguageSwitcher';
+import SnippetLibrary from './SnippetLibrary';
 
 const STYLE_LABELS: Record<string, string> = {
   blog_seo: '블로그+SEO',
@@ -298,6 +299,8 @@ export default function SettingsModal() {
             </Button>
           </div>
         </div>
+
+        <SnippetLibrary />
 
         {/* 캐시 관리 */}
         <div className="pt-4 border-t space-y-2">
