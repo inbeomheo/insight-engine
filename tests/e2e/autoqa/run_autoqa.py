@@ -2710,8 +2710,8 @@ def run_output_blueprint_modifier_accessibility_suite(browser, report: QaReport)
             and tone.input_value() == "conversational"
             and language.input_value() == "ko"
         )
-        length.focus(timeout=10_000)
-        page.keyboard.press("End")
+        page.wait_for_timeout(1_000)
+        length.select_option("long", timeout=10_000)
         length_changed_ok = wait_until(lambda: length.input_value() == "long", 5_000, page)
         tone.select_option("expert", timeout=10_000)
         language.select_option("en", timeout=10_000)
@@ -3840,6 +3840,29 @@ def main() -> int:
                 ),
             )
             panel = page.locator("[data-testid='studio-right-panel']").first
+            empty_nlm = panel.locator("[data-testid='right-panel-nlm-empty']")
+            empty_nlm_status = panel.locator("[data-testid='right-panel-nlm-empty-status']")
+            empty_recent = panel.locator("[data-testid='right-panel-recent-empty']")
+            empty_recent_status = panel.locator("[data-testid='right-panel-recent-empty-status']")
+            empty_lists_ok = (
+                panel.locator("[data-testid='right-panel-nlm-list']").get_attribute("role", timeout=2_000) == "list"
+                and panel.locator("[data-testid='right-panel-nlm-list']").get_attribute("aria-label", timeout=2_000) == "최근 NotebookLM 산출물"
+                and empty_nlm.get_attribute("role", timeout=2_000) == "listitem"
+                and (empty_nlm.get_attribute("aria-label", timeout=2_000) or "").startswith("NLM 산출물 없음")
+                and empty_nlm_status.get_attribute("role", timeout=2_000) == "status"
+                and empty_nlm_status.get_attribute("aria-live", timeout=2_000) == "polite"
+                and panel.locator("[data-testid='right-panel-recent-list']").get_attribute("role", timeout=2_000) == "list"
+                and panel.locator("[data-testid='right-panel-recent-list']").get_attribute("aria-label", timeout=2_000) == "최근 생성 결과"
+                and empty_recent.get_attribute("role", timeout=2_000) == "listitem"
+                and (empty_recent.get_attribute("aria-label", timeout=2_000) or "").startswith("생성 결과 없음")
+                and empty_recent_status.get_attribute("role", timeout=2_000) == "status"
+                and empty_recent_status.get_attribute("aria-live", timeout=2_000) == "polite"
+            )
+            report.record(
+                "right-panel-empty-lists-accessible",
+                empty_lists_ok,
+                "empty NLM/recent lists expose labelled list items and polite status text" if empty_lists_ok else f"nlm={empty_nlm.count()}; nlm_status={empty_nlm_status.count()}; recent={empty_recent.count()}; recent_status={empty_recent_status.count()}",
+            )
             empty_action_texts: dict[str, str] = {}
             for action_id in ["prompt", "nlm", "rewrite"]:
                 panel.locator(f"[data-testid='quick-action-{action_id}']").click(timeout=10_000)

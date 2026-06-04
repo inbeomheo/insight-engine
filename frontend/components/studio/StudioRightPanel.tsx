@@ -332,7 +332,9 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
         <div id="right-panel-nlm-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><Sparkles className="h-4 w-4 text-indigo-600" /> 최근 NLM 산출물</div>
         <div data-testid="right-panel-nlm-list" role="list" aria-label="최근 NotebookLM 산출물" className="mt-3 space-y-2">
           {nlmArtifacts.length === 0 ? (
-            <p className="text-xs text-slate-500">아직 NLM 산출물이 없습니다.</p>
+            <div data-testid="right-panel-nlm-empty" role="listitem" aria-label="NLM 산출물 없음">
+              <p data-testid="right-panel-nlm-empty-status" role="status" aria-live="polite" className="text-xs text-slate-500">아직 NLM 산출물이 없습니다.</p>
+            </div>
           ) : nlmArtifacts.map(({ artifact, report }) => {
             const status = artifactStatus(artifact);
             const StatusIcon = status.icon;
@@ -369,7 +371,11 @@ export default function StudioRightPanel({ reports, sourceCount, schedulesCount,
       <section data-testid="right-panel-recent-section" role="region" aria-labelledby="right-panel-recent-title" className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div id="right-panel-recent-title" className="flex items-center gap-2 text-sm font-semibold text-slate-950"><FileText className="h-4 w-4 text-indigo-600" /> 최근 결과</div>
         <div data-testid="right-panel-recent-list" role="list" aria-label="최근 생성 결과" className="mt-3 space-y-2">
-          {latest.length === 0 ? <p className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p> : latest.map((report, index) => {
+          {latest.length === 0 ? (
+            <div data-testid="right-panel-recent-empty" role="listitem" aria-label="생성 결과 없음">
+              <p data-testid="right-panel-recent-empty-status" role="status" aria-live="polite" className="text-xs text-slate-500">아직 생성된 결과가 없습니다.</p>
+            </div>
+          ) : latest.map((report, index) => {
             const styleLabel = getStyleLabel(report.style);
             const metaId = `right-panel-recent-meta-${index}`;
             return (

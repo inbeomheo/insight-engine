@@ -618,6 +618,12 @@
     "expect": "빠른 액션은 list/listitem 구조와 버튼별 aria-describedby로 설명 문구와 연결된다"
   },
   {
+    "id": "right-panel-empty-lists-accessible",
+    "name": "우측 패널 빈 목록 접근성",
+    "url": "http://localhost:3000",
+    "expect": "결과가 없을 때 NLM과 최근 결과 목록은 listitem과 polite status로 빈 상태를 읽힌다"
+  },
+  {
     "id": "right-panel-empty-action-feedback",
     "name": "우측 빠른 액션 빈 상태 안내",
     "url": "http://localhost:3000",
