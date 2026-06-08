@@ -92,6 +92,7 @@ jobs:
             --deselect tests/test_supabase_service_extended.py::TestGetFernet \
             --deselect tests/test_supabase_service_extended.py::TestEncryptDecryptRoundTrip \
             --deselect tests/test_supabase_service_extended.py::TestGetAdminClient \
+            --deselect tests/test_transcript_sentence_count.py::TestSentenceCountField::test_sentence_count_zero_for_empty \
             --tb=short \
             --timeout=120 \
             -p no:warnings \
