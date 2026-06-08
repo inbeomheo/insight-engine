@@ -34,6 +34,10 @@ jobs:
       SUPABASE_ENABLED: "false"
       REDIS_URL: redis://localhost:6379/0
       FLASK_ENV: testing
+      # 테스트는 Flask-Limiter 레이트리밋 대상이 아니어야 한다. Redis가 있는
+      # CI에선 한도 상태가 테스트 간 공유되어 순서 의존적 429가 발생하므로 끈다.
+      # (usage 데코레이터 기반 429 테스트는 별개로 영향받지 않음)
+      RATE_LIMIT_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4
