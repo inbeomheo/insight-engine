@@ -124,19 +124,21 @@ class TestConsumeQuotaAtomic:
         with pytest.raises(QuotaExceeded):
             repo.consume_quota_atomic(AccountId(value="user-3"))
 
-    def test_rpc_exception_falls_back_to_unlimited(
+    def test_rpc_exception_propagates_fail_closed(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
+        # Supabase 활성(운영) 상태에서 RPC가 실패하면 무제한을 허용하지 않고
+        # 예외를 전파한다(fail-closed). 무제한 fallback은 쿼터/과금 우회가 되므로.
         repo, _ = self._make_repo_with_mock_client(
             None, raise_exc=RuntimeError("network down")
         )
         with caplog.at_level(
-            logging.WARNING,
+            logging.ERROR,
             logger="src.contexts.identity.infrastructure.supabase_account_repository",
         ):
-            result = repo.consume_quota_atomic(AccountId(value="user-4"))
-        assert result == _UNLIMITED_DEV_QUOTA
-        # warning 로그가 남아야 함
+            with pytest.raises(RuntimeError):
+                repo.consume_quota_atomic(AccountId(value="user-4"))
+        # fail-closed 추적 로그가 남아야 함
         assert any(
             "consume_quota_atomic RPC 실패" in r.message for r in caplog.records
         )

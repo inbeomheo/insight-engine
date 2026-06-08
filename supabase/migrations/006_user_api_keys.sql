@@ -38,8 +38,12 @@ CREATE TABLE IF NOT EXISTS ie_user_api_keys (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
+    -- 한 행은 IE 발급 토큰(key_hash) 또는 BYO 키(encrypted_key) 중 정확히
+    -- 하나에만 속해야 한다 (XOR). 둘 다 채워진 모호한 행을 차단해
+    -- 두 코드 경로(ApiKeyService / 키 보관소)가 행을 오인하지 않도록 한다.
     CONSTRAINT ie_user_api_keys_row_kind CHECK (
-        key_hash IS NOT NULL OR encrypted_key IS NOT NULL
+        (key_hash IS NOT NULL AND encrypted_key IS NULL)
+        OR (key_hash IS NULL AND encrypted_key IS NOT NULL)
     )
 );
 
@@ -74,8 +78,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ie_user_api_keys_provider
     ON ie_user_api_keys(user_id, provider, label)
     WHERE provider IS NOT NULL;
 
--- updated_at 트리거 (schema.sql의 update_updated_at 함수에 의존)
--- 운영에 schema.sql이 먼저 적용되어야 함 (update_updated_at 함수 존재).
+-- updated_at 트리거.
+-- 마이그레이션을 단독 적용(schema.sql 미적용)하는 환경에서도 동작하도록
+-- update_updated_at 함수를 CREATE OR REPLACE로 자체 정의한다.
+-- schema.sql의 정의와 동일하므로 어느 순서로 적용해도 충돌이 없다.
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DROP TRIGGER IF EXISTS ie_user_api_keys_updated_at ON ie_user_api_keys;
 CREATE TRIGGER ie_user_api_keys_updated_at
     BEFORE UPDATE ON ie_user_api_keys

@@ -9,8 +9,9 @@ IE 자체 발급 API 키 (`ie_xxx`) 의 해시 기반 CRUD/검증.
   컬럼 (provider, label, encrypted_key) 사용.
 
 두 시스템은 같은 `ie_user_api_keys` 테이블을 사용하지만 컬럼이 분리되어 있고,
-각 행은 CHECK 제약 (`key_hash IS NOT NULL OR encrypted_key IS NOT NULL`) 으로
-한 도메인에만 속한다. 이전 best-effort 위임(`_vault_store_safe` 등)은
+각 행은 XOR CHECK 제약(`key_hash` 또는 `encrypted_key` 중 정확히 하나만 non-null)
+으로 한 도메인에만 속한다. 조회/취소 시에도 `key_hash IS NOT NULL` 판별자로
+발급 토큰 행만 다룬다. 이전 best-effort 위임(`_vault_store_safe` 등)은
 도메인 불일치로 제거됨 — 외부 시그니처/동작은 100% 유지.
 
 저장소:
@@ -125,9 +126,14 @@ class ApiKeyService:
             if is_supabase_enabled():
                 try:
                     client = get_supabase()
+                    # key_hash IS NOT NULL — 발급 토큰 행만 조회한다.
+                    # BYO 키 행(encrypted_key)이 같은 테이블에 공존하므로,
+                    # 도메인 판별자 없이 조회하면 BYO 키가 깨진 발급 토큰처럼 노출된다.
                     result = client.table('ie_user_api_keys').select(
                         'id, name, key_prefix, usage_count, created_at, last_used_at, is_active'
-                    ).eq('user_id', user_id).eq('is_active', True).execute()
+                    ).eq('user_id', user_id).eq('is_active', True).not_.is_(
+                        'key_hash', 'null'
+                    ).execute()
                     return [
                         {
                             'key_id': k['id'],
@@ -167,8 +173,11 @@ class ApiKeyService:
             if is_supabase_enabled():
                 try:
                     client = get_supabase()
+                    # key_hash IS NOT NULL 조건으로 발급 토큰 행만 비활성화 —
+                    # 같은 테이블의 BYO 키 행이 실수로 취소되지 않도록 보호한다.
                     client.table('ie_user_api_keys').update({'is_active': False}) \
-                        .eq('id', key_id).eq('user_id', user_id).execute()
+                        .eq('id', key_id).eq('user_id', user_id) \
+                        .not_.is_('key_hash', 'null').execute()
                     return True
                 except Exception as e:
                     logger.error(f"API 키 삭제 실패: {e}")

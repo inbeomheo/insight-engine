@@ -760,6 +760,43 @@ class TestChannelMonitorRoutes(_Base):
         self.assertEqual(resp.status_code, 400)
 
 
+@patch('routes.auth_routes.is_supabase_enabled', return_value=True)
+class TestChannelMonitorBehavior(_Base):
+    """Supabase 활성 시 등록/삭제 결과(None/bool)에 따른 상태 코드 검증.
+
+    PR #20 Codex 지적: 등록 실패(None)/삭제 실패(False)를 성공으로 위장하지
+    않고 명시적 4xx로 응답해야 한다.
+    """
+
+    @patch('routes.auth.channel_monitoring._register_monitor', return_value=None)
+    def test_create_returns_400_when_registration_fails(self, _reg, _enabled):
+        # 도메인 검증 실패 등으로 None 반환 → 201이 아닌 400
+        resp = self.client.post('/api/channel-monitors',
+                                json={'channel_id': 'ch1', 'interval_minutes': 1},
+                                headers=_H)
+        self.assertEqual(resp.status_code, 400)
+
+    @patch('routes.auth.channel_monitoring._register_monitor',
+           return_value={'id': 'm1', 'channel_id': 'ch1'})
+    def test_create_returns_201_on_success(self, _reg, _enabled):
+        resp = self.client.post('/api/channel-monitors',
+                                json={'channel_id': 'ch1'},
+                                headers=_H)
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.get_json().get('id'), 'm1')
+
+    @patch('routes.auth.channel_monitoring._delete_monitor', return_value=False)
+    def test_delete_returns_404_when_not_removed(self, _del, _enabled):
+        # 실제로 삭제되지 않았는데 성공 응답하면 거짓 양성 → 404
+        resp = self.client.delete('/api/channel-monitors/m1', headers=_H)
+        self.assertEqual(resp.status_code, 404)
+
+    @patch('routes.auth.channel_monitoring._delete_monitor', return_value=True)
+    def test_delete_returns_success_when_removed(self, _del, _enabled):
+        resp = self.client.delete('/api/channel-monitors/m1', headers=_H)
+        self.assertEqual(resp.status_code, 200)
+
+
 # ── 대시보드 ──────────────────────────────────────────────
 
 

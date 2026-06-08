@@ -484,8 +484,10 @@ class SupabaseAccountRepository(IAccountRepository):
 
         - `{"success": true, "new_count": N}` → N 반환
         - `{"success": false, "reason": "no_usage_left"}` → `QuotaExceeded`
-        - 그 외 예외/실패 → `_UNLIMITED_DEV_QUOTA` 반환 + warning 로그
-          (개발 모드/장애 시 사용자가 막히지 않도록 fallback, 운영 추적은 로그로)
+        - Supabase 비활성(개발 모드, client is None) → `_UNLIMITED_DEV_QUOTA` 반환
+        - 그 외 인프라 예외(RPC/네트워크 실패) → 예외 전파(fail-closed).
+          운영 장애 시 무제한 사용 허용(쿼터/과금 우회)을 막기 위함.
+          호출자가 안전 폴백(check_can_use/get_usage, 실패 시 can_use=False)으로 처리.
 
         주의: `amount > 1` 차감은 RPC가 지원하지 않으므로 반복 호출이 필요하다.
         본 메서드는 단일 차감(`amount=1`) 기준으로 동작하며,
@@ -494,7 +496,8 @@ class SupabaseAccountRepository(IAccountRepository):
         TODO(Phase 7 — Publishing 트랜잭션):
             - 차감과 콘텐츠 생성을 원자적으로 묶기 위해 `IUsageGateway.refund`
               구현 + Saga 패턴 도입.
-            - `_UNLIMITED_DEV_QUOTA` fallback은 그때 제거 (장애 시 503 응답).
+            - 남은 `_UNLIMITED_DEV_QUOTA`는 개발 모드(client is None) 전용이며,
+              운영 인프라 장애는 이미 fail-closed(예외 전파)로 처리된다.
         """
         client = self._get_client()
         if client is None:
@@ -528,16 +531,22 @@ class SupabaseAccountRepository(IAccountRepository):
         except QuotaExceeded:
             raise
         except Exception as exc:
-            # 인프라 실패 시 기본 허용 — 운영 가시성을 위해 warning 로그 (with stack)
-            # 한도 초과는 위에서 명시적 QuotaExceeded로 raise 되므로 여기 도달하지 않음.
-            logger.warning(
-                "consume_quota_atomic RPC 실패 — _UNLIMITED_DEV_QUOTA fallback "
+            # 인프라 실패(RPC/네트워크/권한)는 예외를 전파한다 (fail-closed).
+            # 여기 도달했다는 것은 client is not None — 즉 Supabase가 활성화된
+            # 운영 환경이라는 의미다. 이때 _UNLIMITED_DEV_QUOTA를 반환하면 장애 시
+            # 비관리자 사용자에게 무제한 사용을 허용해 쿼터/과금이 우회된다(보안 결함).
+            # 호출자(UsageService.try_consume_atomic/decrement)가 이 예외를
+            # check_can_use/get_usage 폴백으로 처리하며, get_usage는 조회 실패 시
+            # can_use=False(차단)를 반환하므로 안전하게 닫힌다.
+            # (Supabase 비활성 개발 모드는 상단 `client is None` 분기에서 처리됨)
+            logger.error(
+                "consume_quota_atomic RPC 실패 — 예외 전파(fail-closed) "
                 "(account_id=%s, error=%s)",
                 account_id,
                 exc,
                 exc_info=True,
             )
-            return _UNLIMITED_DEV_QUOTA
+            raise
 
 
 __all__ = [

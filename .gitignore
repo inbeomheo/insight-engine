@@ -47,7 +47,9 @@ mockup-*.html
 CODE_REVIEW.html
 
 # Runtime data (사용자 데이터, DB, 로그)
-data/
+# 루트 한정(/data/) — 앵커 없이 'data/'로 두면 소스 패키지 services/data/까지
+# 무시되어 신규 .py가 커밋에서 조용히 누락된다 (PR #20 facade 누락의 근본 원인).
+/data/
 *.sqlite3
 *.jsonl
 publish_queue.json

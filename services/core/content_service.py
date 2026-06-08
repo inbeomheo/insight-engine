@@ -4,6 +4,17 @@ YouTube 콘텐츠 서비스
 
 자막 폴백 4단계 구현은 services/transcript/fallbacks/ 패키지에 분리되어 있다.
 공통 헬퍼/상수는 services/transcript/_shared.py 참조.
+
+[모킹/monkeypatch 안내]
+폴백 구현이 fallbacks/ 와 _shared.py 로 분리된 이후, 본 모듈에 재노출된
+헬퍼 별칭(`_create_http_session`, `_get_proxy_config`, `_is_safe_caption_url`,
+`_download_caption_from_url` 등)을 patch해도 폴백 내부 호출에는 영향을 주지
+못한다. 동작을 제어하려면 정식(canonical) 위치를 patch할 것:
+  - HTTP 세션/프록시: `services.transcript._shared.create_http_session`,
+    `services.transcript._shared.get_proxy_config`
+  - 자막 URL 검증/다운로드: `services.transcript.fallbacks.watch_page.*`
+  - Supadata 호출: `services.transcript.fallbacks.supadata.*`
+(`requests.get`은 공유 모듈 싱글톤이므로 어느 모듈 경로로 patch해도 전역 적용됨.)
 """
 from __future__ import annotations
 
