@@ -67,6 +67,28 @@ class TestUsageService(unittest.TestCase):
 
         self.assertFalse(can_use)
 
+    @patch('services.usage.usage_service.is_supabase_enabled', return_value=True)
+    @patch('services.usage.usage_service.is_admin', return_value=False)
+    @patch('services.usage.usage_service._get_account_repository')
+    def test_try_consume_atomic_infra_error_fails_closed(
+        self, mock_repo_factory, mock_admin, mock_enabled
+    ):
+        """RPC 인프라 장애 시 차단(fail-closed) — 차감 없는 무과금 생성 방지.
+
+        예외를 check_can_use로 폴백하면 can_use=True가 나올 수 있으므로,
+        인프라 오류에서는 (False, can_use=False)를 반환해야 한다 (PR #22).
+        """
+        from services.usage.usage_service import UsageService
+
+        mock_repo = MagicMock()
+        mock_repo.consume_quota_atomic.side_effect = RuntimeError('rpc down')
+        mock_repo_factory.return_value = mock_repo
+
+        can_use, usage = UsageService.try_consume_atomic('user-x')
+
+        self.assertFalse(can_use)
+        self.assertFalse(usage['can_use'])
+
 
 class TestUsageDecorator(unittest.TestCase):
     """사용량 데코레이터 테스트"""

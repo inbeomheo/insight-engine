@@ -50,6 +50,9 @@ CODE_REVIEW.html
 # 루트 한정(/data/) — 앵커 없이 'data/'로 두면 소스 패키지 services/data/까지
 # 무시되어 신규 .py가 커밋에서 조용히 누락된다 (PR #20 facade 누락의 근본 원인).
 /data/
+# ApiKeyService 로컬 폴백 파일 — 비Supabase 개발 모드에서 소스 트리에 생성되는
+# 런타임 키 데이터(해시/prefix). 패키지는 추적하되 이 파일만 좁게 무시한다.
+services/data/user_api_keys.json
 *.sqlite3
 *.jsonl
 publish_queue.json

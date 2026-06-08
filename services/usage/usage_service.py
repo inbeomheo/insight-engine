@@ -173,9 +173,16 @@ class UsageService:
             except Exception:  # pragma: no cover
                 pass
 
-            # 그 외 예외는 기존 폴백 — 안전장치 (check_can_use)
-            logger.error(f"사용량 RPC 호출 실패: {exc}, 폴백 사용")
-            return UsageService.check_can_use(user_id)
+            # 그 외(인프라/RPC 장애)는 fail-closed로 '차단'을 반환한다.
+            # check_can_use로 폴백하면 차감 없이 can_use=True가 나올 수 있어
+            # 장애 동안 무과금 생성이 허용된다(쿼터/과금 우회). 원자적 차감이
+            # 불가능한 상태이므로 안전하게 거부한다.
+            logger.error(f"사용량 RPC 인프라 오류 — 차단(fail-closed): {exc}")
+            return False, {
+                'usage_count': 0,
+                'can_use': False,
+                'max_usage': MAX_USAGE_COUNT,
+            }
 
     @staticmethod
     def get_current(user_id: str) -> dict:

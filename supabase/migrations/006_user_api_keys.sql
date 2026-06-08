@@ -74,9 +74,11 @@ CREATE INDEX IF NOT EXISTS idx_ie_user_api_keys_hash
 CREATE INDEX IF NOT EXISTS idx_ie_user_api_keys_user
     ON ie_user_api_keys(user_id, is_active);
 
+-- 비부분(non-partial) 유니크 — BYO 키 upsert의 on_conflict='user_id,provider,label'가
+-- 인덱스를 추론하려면 부분 인덱스(WHERE ...)가 아니어야 한다. IE 토큰 행은
+-- provider/label이 NULL이고 유니크에서 NULL끼리는 서로 구별되므로 다중 허용된다.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ie_user_api_keys_provider
-    ON ie_user_api_keys(user_id, provider, label)
-    WHERE provider IS NOT NULL;
+    ON ie_user_api_keys(user_id, provider, label);
 
 -- updated_at 트리거.
 -- 마이그레이션을 단독 적용(schema.sql 미적용)하는 환경에서도 동작하도록
