@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useResultStore } from '@/stores/resultStore';
@@ -22,8 +23,19 @@ export function useGenerate() {
   });
   const abortRef = useRef<AbortController | null>(null);
   const rafRef = useRef(false);
-  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore();
-  const { addReport, updateReport } = useResultStore();
+  // 셀렉터 구독 — 스토어의 무관한 변경(테마, 사이드바 등)에 의한 리렌더 방지
+  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore(
+    useShallow((s) => ({
+      selectedModel: s.selectedModel,
+      selectedStyle: s.selectedStyle,
+      modifiers: s.modifiers,
+      enableWebSearch: s.enableWebSearch,
+      enableAgentMode: s.enableAgentMode,
+      detailLevel: s.detailLevel,
+    }))
+  );
+  const addReport = useResultStore((s) => s.addReport);
+  const updateReport = useResultStore((s) => s.updateReport);
 
   const generateSingle = useCallback(
     async (url: string, useStreaming = false) => {
