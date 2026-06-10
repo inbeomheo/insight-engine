@@ -10,9 +10,16 @@
 
 ## 백로그
 
-- [ ] CI 브랜치 불일치 수정 — .github/workflows/ci.yml이 main/develop 트리거인데 기본 브랜치는 master라
-  CI가 한 번도 돌지 않음. 루프의 환경 피드백이 죽어 있는 상태.
-  - 완료 기준: branches에 master 반영 후 PR에서 backend-test/frontend-test 잡이 실제로 실행됨
+- [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
+  푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
+  (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
+  - 적용법: `gh auth refresh -h github.com -s workflow` (브라우저 인증) →
+    `git apply plans/ci-workflow-fix.patch` → 커밋 → 푸시
+- [ ] [사람] duckduckgo_search가 requirements.txt에 미선언 — web_research_service.py:7이 톱레벨
+  import라 새 환경에선 퓨전/웹리서치/경쟁분석 기능이 깨짐. 의존성 추가 여부 결정 필요
+  (추가 시 ci-workflow-fix.patch의 테스트 격리 4건도 해제)
+- [ ] [사람] ci.yml의 docker-build/deploy/커버리지 잡이 `refs/heads/main` 게이트 — master로
+  바꾸면 푸시마다 Docker Hub 푸시 + Railway 프로덕션 배포가 켜지므로 운영 결정 필요
 - [ ] [사람] 데드 엔드포인트 잔여 335건 — 삭제 안전 판정 완료, 제품 결정 대기
   (plans/dead-code-audit-2026-06-10.md 참조)
 
