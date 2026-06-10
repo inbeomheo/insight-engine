@@ -176,6 +176,23 @@ def _save_cache(video_id: str, cache_type: str, data: Any) -> None:
         pass  # 캐시 저장 실패는 무시
 
 
+def get_cached_transcript(video_id: str) -> Optional[dict]:
+    """video_id의 자막 파일 캐시를 반환한다 (없으면 None).
+
+    AI 캐시 히트 시 YouTube 재추출 없이 자막을 응답에 채우기 위한 공개 헬퍼.
+    구버전(str) 캐시는 dict 형태로 정규화하고, 잘못된 video_id는 None 처리한다.
+    """
+    try:
+        cached = _load_cache(video_id, 'transcript')
+    except ValueError:
+        return None
+    if cached is None:
+        return None
+    if isinstance(cached, dict) and 'text' in cached:
+        return cached
+    return {'text': cached, 'source': 'cache'}
+
+
 def clear_cache(video_id: Optional[str] = None) -> int:
     """캐시를 삭제합니다. video_id가 None이면 전체 삭제."""
     # video_id가 지정된 경우 형식 검증 (Path Traversal 방지) — 캐시 디렉토리 존재 여부와 무관하게 입력 검증 선행
@@ -334,26 +351,30 @@ def _run_parallel_fallbacks(video_id: str, overall_start: float) -> Optional[dic
 
     _log_info(f"Starting parallel fallback (watch_page + yt-dlp + NLM) for video_id={video_id}")
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {
-            executor.submit(_try_watch_page_fallback, video_id): 'watch_page',
-            executor.submit(_try_ytdlp_fallback, video_id): 'ytdlp',
-            executor.submit(_try_nlm_fallback, video_id): 'nlm',
-        }
+    # with 블록을 쓰지 않는 이유: 첫 성공 시 느린 폴백(yt-dlp 수십 초)의 완료를
+    # 기다리지 않고 즉시 반환하기 위해 shutdown(wait=False)로 직접 정리한다
+    executor = ThreadPoolExecutor(max_workers=3)
+    futures = {
+        executor.submit(_try_watch_page_fallback, video_id): 'watch_page',
+        executor.submit(_try_ytdlp_fallback, video_id): 'ytdlp',
+        executor.submit(_try_nlm_fallback, video_id): 'nlm',
+    }
 
+    try:
         for future in as_completed(futures, timeout=90):
             try:
                 res = future.result()
                 if res is not None:
                     source_name, text, quality, is_auto = res
                     _log_info(f"Parallel fallback succeeded: {source_name} for video_id={video_id}")
-                    for f in futures:
-                        f.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
                     return _build_transcript_result(
                         text, source_name, quality, is_auto, overall_start, video_id,
                     )
             except Exception as e:
                 _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
     return None
 
@@ -429,13 +450,16 @@ def get_transcript(video_id: str) -> TranscriptResult:
             fetched = _fetch_transcript_with_api(ytt_api, video_id)
             if fetched:
                 break
-            time.sleep(0.5 * (2 ** attempt))
+            # 마지막 시도 후에는 폴백으로 바로 넘어간다 (불필요한 대기 제거)
+            if attempt < MAX_RETRY_ATTEMPTS - 1:
+                time.sleep(0.5 * (2 ** attempt))
 
         if fetched:
             text = _extract_text_from_transcript(fetched)
             if text:
                 segments = _extract_segments_from_transcript(fetched)
-                is_auto = _detect_auto_caption(ytt_api, video_id)
+                # fetch 결과에 이미 포함된 메타데이터 사용 (list() 추가 왕복 제거)
+                is_auto = getattr(fetched, 'is_generated', False)
                 return _build_transcript_result(
                     text, 'api', 0.95 if not is_auto else 0.85, is_auto,
                     overall_start, video_id, segments=segments,

@@ -82,9 +82,9 @@ def _validate_token(token: str) -> dict:
 def _populate_auth_account() -> None:
     """`g.user_id` → UserAccount Aggregate 조회 후 `g.auth` 채움.
 
-    `require_auth` 검증 성공 후 호출. Repository 조회 실패는 graceful degradation
-    (경고 로그 + `g.auth = None` 유지). UserAccount Aggregate가 필요 없는 라우트에는
-    영향 없음.
+    Repository 조회 실패는 graceful degradation (경고 로그 + `g.auth = None` 유지).
+    조회는 Supabase 왕복 5~6회를 유발하므로 요청마다 eager 실행하지 않고,
+    `get_auth_account()`가 실제 필요 시점에 호출한다.
     """
     user_id = g.get('user_id')
     if not user_id:
@@ -102,6 +102,17 @@ def _populate_auth_account() -> None:
         )
 
 
+def get_auth_account():
+    """UserAccount Aggregate를 지연 조회해 반환한다 (요청 스코프 메모이즈).
+
+    `require_auth`가 매 요청 eager 조회하던 것을 실제 사용 시점으로 미룬
+    접근자. 첫 호출 시 `_populate_auth_account()`로 채우고 이후엔 g.auth 재사용.
+    """
+    if g.get('auth') is None and g.get('user_id'):
+        _populate_auth_account()
+    return g.get('auth')
+
+
 def inject_auth_context() -> None:
     """Flask `before_request` 미들웨어 — `g.auth` 슬롯 초기화.
 
@@ -116,7 +127,7 @@ def require_auth(f: Callable) -> Callable:
 
     Supabase가 비활성화된 개발 환경에서는 `g.user_id = None`으로 진입 허용.
     활성 환경에서는 Bearer 토큰 누락 시 401, 검증 실패 시 401.
-    검증 통과 시 `g.auth`에 UserAccount Aggregate 주입.
+    UserAccount Aggregate가 필요한 라우트는 `get_auth_account()`로 지연 조회.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -136,7 +147,8 @@ def require_auth(f: Callable) -> Callable:
                 {'error': result['error'], 'code': result['code']}
             ), 401
 
-        _populate_auth_account()
+        # g.auth는 get_auth_account()로 지연 조회 (eager 조회 시 요청당
+        # Supabase 왕복 5~6회가 낭비됐음 — 현재 g.auth 소비 라우트 없음)
         return f(*args, **kwargs)
     return decorated
 
@@ -144,6 +156,7 @@ def require_auth(f: Callable) -> Callable:
 __all__ = [
     "require_auth",
     "inject_auth_context",
+    "get_auth_account",
     "_extract_bearer_token",
     "_validate_token",
     "_populate_auth_account",

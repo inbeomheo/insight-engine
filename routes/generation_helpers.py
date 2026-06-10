@@ -20,12 +20,13 @@ _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 # ==================== 소스별 핸들러 ====================
 
 def _get_style_prompt(style, custom_prompt=None):
-    """스타일에 맞는 프롬프트를 반환합니다."""
+    """스타일에 맞는 프롬프트(베이스 규칙 포함)를 반환합니다."""
     if custom_prompt and str(custom_prompt).strip():
         return str(custom_prompt).strip()[:2000]
     from flask import current_app
+    from prompts import compose_style_prompt
     style_prompts = current_app.config.get('STYLE_PROMPTS', {})
-    return style_prompts.get(style, '')
+    return compose_style_prompt(style, style_prompts.get(style, ''))
 
 
 def _get_style_label(style_id: str) -> str:
@@ -429,9 +430,13 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
     })
 
 
-def _handle_cache_hit(cache_key, force, youtube_title,
-                       raw_transcript, transcript_source, start_time):
-    """캐시 히트 체크. 히트 시 Response 반환, 아니면 None."""
+def _handle_cache_hit(cache_key, force, video_id, url, start_time):
+    """캐시 히트 체크. 히트 시 Response 반환, 아니면 None.
+
+    자막/제목 추출 전에 호출된다 — 히트 시 YouTube 왕복(제목 API + 자막
+    추출)을 전부 생략한다. 제목은 캐시 페이로드(신규 저장분)에서, 자막은
+    video_id 기반 파일 캐시에서 가져오고, 둘 다 없으면 그때만 조회한다.
+    """
     if force:
         return None
 
@@ -440,9 +445,18 @@ def _handle_cache_hit(cache_key, force, youtube_title,
         return None
 
     g.skip_usage_decrement = True
-    now = time.time()
-    elapsed_time = round(now - start_time, 2)
-    _cached_at = cached.pop('_cached_at', None)
+    elapsed_time = round(time.time() - start_time, 2)
+    cached.pop('_cached_at', None)
+
+    transcript_cache = content_service.get_cached_transcript(video_id) or {}
+    raw_transcript = transcript_cache.get('text', '')
+    transcript_source = transcript_cache.get('source', 'cache')
+
+    youtube_title = cached.pop('youtube_title', None)
+    if not youtube_title:
+        # 구버전 캐시 엔트리 폴백 (신규 저장분은 페이로드에 제목 포함)
+        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+
     return jsonify({
         **cached,
         'id': str(uuid.uuid4()),
@@ -541,11 +555,18 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
     return result, used_prompt, comment_result
 
 
+def _run_chapter_split(app, raw_transcript, model, transcript_segments):
+    """스레드에서 챕터 분할 LLM 호출을 실행합니다 (메인 생성과 병렬)."""
+    from services.transcript.chapter_service import split_chapters
+    with app.app_context():
+        return split_chapters(raw_transcript, model, transcript_segments)
+
+
 def _save_and_respond(result, used_prompt, comment_result, cache_key,
                        video_id, params, url, youtube_title,
                        raw_transcript, transcript_source, comments, start_time,
                        quality_score=None, agent_meta=None,
-                       transcript_segments=None):
+                       transcript_segments=None, chapter_future=None):
     """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
     import threading
 
@@ -564,6 +585,8 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         'html': result.get('html', ''),
         'comment_summary_included': bool(comments and comment_result),
         'prompt': used_prompt,
+        # 캐시 히트 시 YouTube 제목 API 재호출을 피하기 위해 함께 저장
+        'youtube_title': youtube_title,
     }
     _history_data = {
         'id': report_id,
@@ -672,13 +695,17 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
             pass  # 스타일 메모리 업데이트 실패는 응답에 영향 없음
 
     # 챕터 분할 (타임스탬프 세그먼트가 있을 때만)
+    # chapter_future가 있으면 메인 생성과 병렬로 이미 실행 중 — 결과만 수거
     chapters = []
     total_duration_seconds = 0
     if transcript_segments:
         try:
             from services.transcript.chapter_service import split_chapters, get_total_duration
-            chapters = split_chapters(raw_transcript, model, transcript_segments)
             total_duration_seconds = get_total_duration(transcript_segments)
+            if chapter_future is not None:
+                chapters = chapter_future.result(timeout=120)
+            else:
+                chapters = split_chapters(raw_transcript, model, transcript_segments)
         except Exception as ch_err:
             current_app.logger.warning(f"챕터 분할 실패 (무시): {ch_err}")
 

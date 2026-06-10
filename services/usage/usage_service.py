@@ -40,6 +40,27 @@ def _get_account_repository():
     return SupabaseAccountRepository()
 
 
+def _is_admin_cached(user_id: str) -> bool:
+    """is_admin 결과를 요청 스코프(flask.g)에 메모이즈한다.
+
+    check_can_use → decrement 흐름에서 동일 요청에 ie_admins를 2~3회
+    조회하던 것을 1회로 줄인다. 요청 컨텍스트 밖에서는 그대로 조회.
+    """
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            cache = getattr(g, '_is_admin_cache', None)
+            if cache is None:
+                cache = {}
+                g._is_admin_cache = cache
+            if user_id not in cache:
+                cache[user_id] = is_admin(user_id)
+            return cache[user_id]
+    except Exception:
+        pass
+    return is_admin(user_id)
+
+
 class UsageService:
     """사용량 관리 서비스 클래스"""
 
@@ -58,8 +79,8 @@ class UsageService:
             logger.info(f"Supabase 비활성 또는 user_id 없음, ADMIN_USAGE 반환")
             return True, ADMIN_USAGE
 
-        # 관리자는 무제한
-        admin_status = is_admin(user_id)
+        # 관리자는 무제한 (요청 스코프 캐시로 중복 조회 방지)
+        admin_status = _is_admin_cached(user_id)
         logger.info(f"check_can_use: user_id={user_id[:8]}..., is_admin={admin_status}")
         if admin_status:
             logger.info(f"관리자 사용: {user_id[:8]}..., ADMIN_USAGE 반환")
@@ -92,7 +113,7 @@ class UsageService:
         if not is_supabase_enabled() or not user_id:
             return ADMIN_USAGE
 
-        if is_admin(user_id):
+        if _is_admin_cached(user_id):
             return ADMIN_USAGE
 
         # Identity BC 게이트웨이로 차감 (원자적).
@@ -144,7 +165,7 @@ class UsageService:
         if not is_supabase_enabled() or not user_id:
             return True, ADMIN_USAGE
 
-        if is_admin(user_id):
+        if _is_admin_cached(user_id):
             return True, ADMIN_USAGE
 
         # Identity BC 게이트웨이로 위임. QuotaExceeded는 한도 초과 응답으로 변환.
@@ -191,7 +212,7 @@ class UsageService:
         if not is_supabase_enabled() or not user_id:
             return ADMIN_USAGE
 
-        if is_admin(user_id):
+        if _is_admin_cached(user_id):
             return ADMIN_USAGE
 
         return get_usage(user_id)
@@ -209,7 +230,7 @@ class UsageService:
         """
         if not is_supabase_enabled() or not user_id:
             return False
-        return is_admin(user_id)
+        return _is_admin_cached(user_id)
 
 
 # 싱글톤 인스턴스
