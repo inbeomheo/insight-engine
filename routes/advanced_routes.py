@@ -513,6 +513,8 @@ def generate_multilang():
         sp = style_prompts_dict.get(style, '')
         if not sp:
             return jsonify({'error': f'유효하지 않은 스타일: {style}'}), 400
+        from prompts import compose_style_prompt
+        sp = compose_style_prompt(style, sp)
 
         app = current_app._get_current_object()
         results = {}

@@ -153,8 +153,8 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
         transcripts, all_comments, model, enable_web_research, enable_deep_comments,
     )
 
-    # Phase 3: 융합 & 생성
-    style_prompt = build_full_prompt(style_id, modifiers)
+    # Phase 3: 융합 & 생성 (모디파이어는 create_content가 [추가 지시사항]으로 1회 주입)
+    style_prompt = build_full_prompt(style_id)
     fusion_context = build_fusion_context(video_summaries, comment_analysis, web_sources)
     combined_prompt = f'{FUSION_PROMPT}\n\n{style_prompt}'
 

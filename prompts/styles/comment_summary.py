@@ -32,10 +32,6 @@ COMMENT_SUMMARY_PROMPT = '''
 
 ### 논쟁 포인트
 - (의견이 갈리는 주제가 있다면 정리. 없으면 이 섹션 생략)
-
----
-
-## 이제 작성을 시작하세요
 '''
 
 __all__ = ['COMMENT_SUMMARY_PROMPT']

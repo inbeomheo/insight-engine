@@ -19,7 +19,10 @@ _SEO_TAG_RE = re.compile(r'(?:\*\*태그\*\*|#태그|태그\s*[:：])\s*(.+?)(?:
 _SEO_HASHTAG_RE = re.compile(r'#([\w가-힣]+)')
 
 # ── GEO 메타 정규식 ───────────────────────────────────────
-_GEO_FACTS_RE = re.compile(r'[-•✓]\s*✓?\s*(.+?)(?:\n|$)')
+# 주요 팩트: '### 주요 팩트' 섹션의 '- ✓ 사실' 불릿만 수집.
+# 줄 시작 앵커(^, MULTILINE) + ✓ 마커 필수 → '---' 구분선, 표 구분자(|---|),
+# 'Call-to-Action'의 단어 중간 하이픈을 잘못 수집하던 버그 방지.
+_GEO_FACTS_RE = re.compile(r'^\s*[-•]?\s*✓\s*(.+)$', re.MULTILINE)
 _GEO_STRUCT_RE = re.compile(r'###\s*구조화\s*데이터\s*\n((?:\|.+\|\n?)+)')
 _GEO_ENTITY_RE = re.compile(r'###\s*엔티티\s*태그\s*\n(.+?)(?:\n\n|\n---|\n###|$)', re.DOTALL)
 _GEO_BACKTICK_RE = re.compile(r'`([^`]+)`')

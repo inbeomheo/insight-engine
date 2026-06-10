@@ -5,7 +5,6 @@ LiteLLM을 사용한 다중 AI 프로바이더 지원
 import functools
 import html as html_lib
 import os
-import re
 import time
 markdown = None  # 지연 로딩 (cold start 최적화)
 import threading
@@ -41,9 +40,6 @@ GLM_RETRY_COUNT = 5
 GLM_RETRY_DELAY = 10  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
-
-# 사전 컴파일된 정규식 패턴 (호출마다 재컴파일 방지)
-_KEYWORDS_RE = re.compile(r'<!--\s*KEYWORDS:\s*(.+?)\s*-->')
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -103,19 +99,19 @@ def format_transcript_with_timestamps(segments: list) -> str:
 
 
 def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=None, web_context=None, style_memory_context=None, detail_level=None, memory_context=None):
-    """프롬프트를 구성합니다."""
-    # 현재 한국 시간 추가
-    current_time = _get_korean_datetime()
-    time_context = f"[현재 시간: {current_time} (한국 표준시)]"
+    """프롬프트를 구성합니다.
 
-    # 타임스탬프 세그먼트가 있으면 타임코드 형식으로 자막 교체
+    배치 순서: 지시(스타일) → 입력(자막/컨텍스트) → 가변 지시(모디파이어/시간).
+    정적인 스타일 프롬프트를 맨 앞에 두면 프로바이더 프리픽스 캐싱(Gemini
+    implicit caching 등)이 동작해 반복 호출 비용/지연이 줄어든다.
+    """
+    # 타임스탬프 세그먼트가 있으면 타임코드 자막 섹션 추가
     if segments:
         timestamp_text = format_transcript_with_timestamps(segments)
         if timestamp_text:
-            # 기존 content에서 자막 부분을 타임코드 버전으로 대체
             content = content + f"\n\n[타임스탬프 자막]\n{timestamp_text}"
 
-    prompt = f"{time_context}\n\n{content}\n\n{style_prompt}" if style_prompt else f"{time_context}\n\n{content}"
+    prompt = f"{style_prompt}\n\n{content}" if style_prompt else content
 
     # 개인 스타일 메모리 컨텍스트 주입 (RAG/웹 앞에 삽입)
     if style_memory_context:
@@ -136,8 +132,9 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
     style_modifiers = current_app.config.get('STYLE_MODIFIERS', {})
     modifier_instructions = _build_modifier_instructions(modifiers, style_modifiers)
 
-    if modifier_instructions:
-        prompt += "\n\n[추가 지시사항]\n" + "\n".join(modifier_instructions)
+    # 가변 컨텍스트(시간)는 캐싱을 깨지 않도록 프롬프트 끝에 배치
+    modifier_instructions.append(f"[현재 시간: {_get_korean_datetime()} (한국 표준시)]")
+    prompt += "\n\n[추가 지시사항]\n" + "\n".join(modifier_instructions)
 
     # 상세도 프리셋 suffix 추가
     if detail_level:
@@ -148,22 +145,6 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
             prompt += f"\n\n[상세도 지시]\n{suffix}"
 
     return prompt
-
-
-def _extract_keywords(content):
-    """마크다운에서 <!-- KEYWORDS: ... --> 주석을 파싱하여 키워드 추출 후 본문에서 제거합니다.
-
-    Returns:
-        tuple: (cleaned_content, keywords_list)
-    """
-    match = _KEYWORDS_RE.search(content)
-    if not match:
-        return content, []
-
-    raw = match.group(1)
-    keywords = [kw.strip()[:20] for kw in raw.split(',') if kw.strip()][:10]
-    cleaned = _KEYWORDS_RE.sub('', content).strip()
-    return cleaned, keywords
 
 
 def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False, detail_level=None):
@@ -463,11 +444,8 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
     Yields:
         str: 토큰 텍스트 또는 None(종료)
     """
-    prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level)
-    is_glm = model.startswith("zhipuai/")
-
-    # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield
-    if is_glm:
+    # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield (프롬프트는 create_content가 빌드)
+    if model.startswith("zhipuai/"):
         result = create_content(content, model, style_prompt, modifiers=modifiers, style_id=style_id, detail_level=detail_level)
         full_text = f"# {result.get('title', '')}\n\n{result.get('content', '')}"
         yield full_text
@@ -475,6 +453,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
         return
 
     try:
+        prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True, detail_level=detail_level)
         response = _get_completion()(**completion_kwargs)
 
