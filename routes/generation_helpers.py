@@ -451,6 +451,16 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time):
     transcript_cache = content_service.get_cached_transcript(video_id) or {}
     raw_transcript = transcript_cache.get('text', '')
     transcript_source = transcript_cache.get('source', 'cache')
+    if not raw_transcript:
+        # 자막 파일 캐시가 AI 캐시(TTL 30일)보다 먼저 정리된 경우 재추출 폴백
+        # — 캐시 응답에도 transcript 페이로드는 항상 포함돼야 한다
+        try:
+            fetched = content_service.get_transcript(video_id)
+            if fetched and not fetched.get('error'):
+                raw_transcript = fetched.get('text', '')
+                transcript_source = fetched.get('source', 'cache')
+        except Exception:
+            pass  # 자막 재추출 실패가 캐시 응답 자체를 막지 않도록
 
     youtube_title = cached.pop('youtube_title', None)
     if not youtube_title:

@@ -324,8 +324,10 @@ def generate():
 
         # 챕터 분할 LLM 호출을 메인 생성과 병렬로 시작
         # (입력이 자막뿐이라 독립적 — 기존엔 메인 생성 후 직렬 호출로 응답 지연)
+        # 단, GLM은 _glm_lock으로 직렬화되어 챕터 호출이 락을 선점하면
+        # 사용자에게 보이는 메인 생성이 뒤로 밀리므로 병렬 경로에서 제외
         chapter_future = None
-        if transcript_segments:
+        if transcript_segments and not str(params['model']).startswith('zhipuai/'):
             from routes.generation_helpers import _run_chapter_split
             _chapter_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             chapter_future = _chapter_executor.submit(
