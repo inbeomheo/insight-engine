@@ -284,6 +284,19 @@ def generate():
         if not video_id:
             return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
 
+        # 캐시 체크 — 자막/제목 추출 전에 선조회 (히트 시 YouTube I/O 전부 생략)
+        from services.core.cache_service import AICacheService
+        force = (request.get_json(silent=True) or {}).get('force', False)
+        modifiers = params['modifiers'] or {}
+        cache_key = AICacheService.make_key(
+            video_id, params['style'], params['model'],
+            modifiers.get('length', 'medium'),
+            modifiers.get('writing_style', 'conversational')
+        )
+        cache_resp = _handle_cache_hit(cache_key, force, video_id, url, start_time)
+        if cache_resp:
+            return cache_resp
+
         # 제목 조회와 자막/댓글 추출을 병렬 실행 (700-1500ms 절감)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             title_future = executor.submit(content_service.get_content_title, url)
@@ -305,25 +318,23 @@ def generate():
         if bypass_resp:
             return bypass_resp
 
-        # 캐시 체크
-        from services.core.cache_service import AICacheService
-        force = (request.get_json(silent=True) or {}).get('force', False)
-        modifiers = params['modifiers'] or {}
-        cache_key = AICacheService.make_key(
-            video_id, params['style'], params['model'],
-            modifiers.get('length', 'medium'),
-            modifiers.get('writing_style', 'conversational')
-        )
-        cache_resp = _handle_cache_hit(
-            cache_key, force, youtube_title,
-            raw_transcript, transcript_source, start_time
-        )
-        if cache_resp:
-            return cache_resp
-
         # 에이전트 모드 여부 확인
         request_data_all = request.get_json(silent=True) or {}
         agent_mode = bool(request_data_all.get('agent_mode', False))
+
+        # 챕터 분할 LLM 호출을 메인 생성과 병렬로 시작
+        # (입력이 자막뿐이라 독립적 — 기존엔 메인 생성 후 직렬 호출로 응답 지연)
+        # 단, GLM은 _glm_lock으로 직렬화되어 챕터 호출이 락을 선점하면
+        # 사용자에게 보이는 메인 생성이 뒤로 밀리므로 병렬 경로에서 제외
+        chapter_future = None
+        if transcript_segments and not str(params['model']).startswith('zhipuai/'):
+            from routes.generation_helpers import _run_chapter_split
+            _chapter_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            chapter_future = _chapter_executor.submit(
+                _run_chapter_split, current_app._get_current_object(),
+                raw_transcript, params['model'], transcript_segments,
+            )
+            _chapter_executor.shutdown(wait=False)
 
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
         agent_meta = None
@@ -418,6 +429,7 @@ def generate():
             quality_score=quality_score,
             agent_meta=agent_meta,
             transcript_segments=transcript_segments,
+            chapter_future=chapter_future,
         )
 
     except ValueError as e:

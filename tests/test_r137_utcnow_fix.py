@@ -38,14 +38,28 @@ class TestNoUtcnowUsage(unittest.TestCase):
         self.assertEqual(violations, [], f"datetime.utcnow() 사용 발견: {violations}")
 
     def test_integration_routes_uses_timezone_utc(self):
-        """integration_routes.py가 timezone.utc를 사용하는지 확인"""
+        """통합 라우트가 timezone.utc를 사용하는지 확인
+
+        integration_routes.py는 shim으로 축소되고 실제 라우트는
+        routes/integrations/ 서브패키지로 분리됨 → 서브패키지 전체를 검사.
+        """
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        filepath = os.path.join(root, 'routes', 'integration_routes.py')
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        self.assertIn('timezone.utc', content)
-        self.assertIn('datetime.now(timezone.utc)', content)
-        self.assertNotIn('datetime.utcnow()', content)
+        pkg_dir = os.path.join(root, 'routes', 'integrations')
+        combined = ''
+        for fname in sorted(os.listdir(pkg_dir)):
+            if not fname.endswith('.py'):
+                continue
+            with open(os.path.join(pkg_dir, fname), 'r', encoding='utf-8') as f:
+                content = f.read()
+            combined += content
+            # deprecated utcnow()는 어느 파일에도 없어야 함
+            self.assertNotIn(
+                'datetime.utcnow()', content,
+                f"routes/integrations/{fname}에 deprecated datetime.utcnow() 발견",
+            )
+        # timezone-aware 시각 생성이 실제로 사용되는지 확인
+        self.assertIn('timezone.utc', combined)
+        self.assertIn('datetime.now(timezone.utc)', combined)
 
 
 if __name__ == '__main__':

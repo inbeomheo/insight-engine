@@ -1,6 +1,8 @@
 // Insight Engine — Service Worker (캐시 전략: Network-first + 오프라인 폴백)
-const CACHE_NAME = 'ie-cache-v1';
+// v2: 동일 출처만 캐싱 + 엔트리 수 상한(LRU 정리) + 캐시 버전 분리
+const CACHE_NAME = 'ie-cache-v2';
 const OFFLINE_URL = '/';
+const MAX_ENTRIES = 100;
 
 // 정적 자산 캐싱
 const PRECACHE_URLS = [
@@ -25,6 +27,18 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 캐시 엔트리 수 상한 유지 (오래된 것부터 삭제)
+async function putWithLimit(request, response) {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response);
+  const keys = await cache.keys();
+  if (keys.length > MAX_ENTRIES) {
+    await Promise.all(
+      keys.slice(0, keys.length - MAX_ENTRIES).map((k) => cache.delete(k))
+    );
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   // http/https 외의 scheme (chrome-extension 등)은 무시
   if (!event.request.url.startsWith('http')) return;
@@ -40,10 +54,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // 성공 응답 캐싱
-        if (response.ok) {
+        // 동일 출처 성공 응답만 캐싱 (CDN 등 외부 리소스는 브라우저 캐시에 위임)
+        if (response.ok && new URL(event.request.url).origin === self.location.origin) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          event.waitUntil(putWithLimit(event.request, clone));
         }
         return response;
       })

@@ -3,15 +3,33 @@
 
 APScheduler로 매분 예약된 포스트를 확인하고 MCP 플러그인으로 발행합니다.
 채널 모니터링은 30분 간격으로 신규 업로드를 감지합니다.
+
+apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스타트업의
+약 31%를 차지하므로, 스케줄러 인스턴스는 PEP 562 __getattr__로 지연 생성한다.
+(외부에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
 """
-from apscheduler.schedulers.background import BackgroundScheduler
+import os
 
 from services.core.logging_config import get_logger
-import logging
 
 logger = get_logger('scheduler_worker')
 
-scheduler = BackgroundScheduler()
+_scheduler = None
+
+
+def _get_scheduler():
+    """BackgroundScheduler를 최초 접근 시점에 생성한다."""
+    global _scheduler
+    if _scheduler is None:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        _scheduler = BackgroundScheduler()
+    return _scheduler
+
+
+def __getattr__(name):
+    if name == 'scheduler':
+        return _get_scheduler()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def check_and_publish():
@@ -106,6 +124,14 @@ def _check_rss_subscriptions():
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     try:
+        # 테스트/스크립트 등에서 스케줄러 기동을 끌 수 있는 게이트
+        if os.getenv('SCHEDULER_ENABLED', 'true').lower() not in ('true', '1', 'yes'):
+            logger.info("SCHEDULER_ENABLED=false — 스케줄러 기동 생략")
+            return
+
+        # 모듈 자기참조로 접근해야 테스트의 scheduler patch와 지연 생성이 모두 동작한다
+        import services.data.scheduler_worker as _self
+        scheduler = _self.scheduler
         if scheduler.running:
             return
 
@@ -157,6 +183,11 @@ def start_scheduler(app):
 def stop_scheduler():
     """스케줄러 종료"""
     try:
+        # 생성된 적이 없으면 종료할 것도 없다 (불필요한 지연 생성 방지)
+        import services.data.scheduler_worker as _self
+        if _self._scheduler is None and 'scheduler' not in _self.__dict__:
+            return
+        scheduler = _self.scheduler
         if scheduler.running:
             scheduler.shutdown(wait=False)
             logger.info("예약 발행 스케줄러 종료됨")

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useMemo, useCallback, useReducer } from 'react';
+import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
@@ -145,6 +145,16 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const { t } = useTranslation();
 
+  // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
+  const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
+  useEffect(() => {
+    const ids = pollIdsRef.current;
+    return () => {
+      ids.forEach((id) => clearInterval(id));
+      ids.clear();
+    };
+  }, []);
+
   const charCount = report.content.length;
 
   async function copyText(text: string, field: string) {
@@ -257,12 +267,22 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       updateReport(report.id, { notebooklm: { artifacts: [...existing, artifact] } });
       toast.success(`NotebookLM ${contentType} 생성 시작`);
 
-      // 폴링
+      // 폴링 (최대 5분 — 멈춘 artifact가 영원히 폴링하지 않도록 상한)
+      let attempts = 0;
+      const MAX_POLL_ATTEMPTS = 60;
+      const stopPoll = (id: ReturnType<typeof setInterval>) => {
+        clearInterval(id);
+        pollIdsRef.current.delete(id);
+      };
       const poll = setInterval(async () => {
         try {
+          if (++attempts > MAX_POLL_ATTEMPTS) {
+            stopPoll(poll);
+            return;
+          }
           const status = await notebookLmStatus(res.artifact_id);
           if (status.status === 'completed' || status.status === 'failed') {
-            clearInterval(poll);
+            stopPoll(poll);
             // 새로 추가된 artifact도 반영
             const all = [...existing, { ...artifact, status: status.status as 'completed' | 'failed' }];
             updateReport(report.id, { notebooklm: { artifacts: all } });
@@ -270,9 +290,10 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             else toast.error(`NotebookLM ${contentType} 생성 실패`);
           }
         } catch {
-          clearInterval(poll);
+          stopPoll(poll);
         }
       }, 5000);
+      pollIdsRef.current.add(poll);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'NotebookLM 생성에 실패했습니다.');
     }

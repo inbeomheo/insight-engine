@@ -99,28 +99,29 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/rag/` | RAG: ChromaDB 벡터 스토어, 텍스트 청킹, 컨텍스트 빌더 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
 | 설정 | `config.py` | 토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens, RAG 설정 |
-| 프롬프트 | `prompts/` | 프롬프트 시스템 v3.4 + GEO/Shorts/Course/Citation 스타일 |
+| 프롬프트 | `prompts/` | 프롬프트 시스템 v4.0 + GEO/Shorts/Course/Citation 스타일 |
 
-### 프롬프트 구조
+### 프롬프트 구조 (v4.0)
 
 ```
 ┌─────────────────────────────────────────┐
-│ BASE_PROMPT (prompts/base.py)           │
-│ ├─ 역할, 입력, 핵심 원칙                │
-│ ├─ 작성 순서 (Chain-of-Thought)        │
-│ ├─ 금지 표현, 댓글 활용 규칙            │
+│ BASE_PROMPT (prompts/base.py)           │  ← compose_style_prompt()로 결합
+│ ├─ 입력 섹션 규칙(자막/댓글/타임코드)   │
+│ ├─ 정확성·금지 표현·출력 규칙 (1회만)   │
 ├─────────────────────────────────────────┤
 │ STYLE_PROMPT (prompts/styles/*.py)      │
-│ ├─ 스타일 목표, 작성 가이드, 출력 형식  │
-│ └─ Few-shot 예시 + Output Priming       │
+│ └─ 스타일 목표, 고유 가이드, 출력 형식  │
 ├─────────────────────────────────────────┤
-│ MODIFIER_TEXT (선택적)                  │
-├─────────────────────────────────────────┤
-│ SELF_CHECK + FORBIDDEN_REMINDER         │
+│ [추가 지시사항] (ai_service가 주입)     │
+│ └─ 길이/문체/언어 모디파이어 + 현재시간 │
 └─────────────────────────────────────────┘
 ```
 
-- `build_full_prompt(style_id, modifiers)`: 최종 프롬프트 조합 함수
+- `compose_style_prompt(style_id, style_prompt)`: 메인 생성 경로의 BASE+STYLE 결합 (`_get_style_prompt`/pipeline/agent가 사용). 변환계 프롬프트(`TRANSFORM_STYLE_IDS`: comment_summary, mindmap, chapter_split)는 BASE를 붙이지 않음
+- `build_full_prompt(style_id, modifiers=None)`: BASE+STYLE(+모디파이어) 일괄 조합 (fusion 등). `create_content`에 modifiers를 따로 넘기는 경로에서는 이중 주입 방지를 위해 modifiers 생략
+- 모디파이어 텍스트의 단일 소스는 `prompts/modifiers.py` (`config.STYLE_MODIFIERS`는 재export)
+- 프롬프트는 지시(스타일)→입력(자막)→가변 지시 순서로 배치 — 프로바이더 프리픽스 캐싱 유지를 위해 가변 내용([현재 시간] 등)은 끝에 둠
+- 파서 계약: blog_seo 메타 테이블 행(`**메타 설명**`/`**타겟 키워드**`/`**추천 URL**`)·FAQ(`**Q.**`/`A.`)·해시태그(`**태그**: #태그`), geo_seo의 한 줄 정의/구조화 데이터 표/엔티티 태그/`- ✓` 팩트/CTA_PRIMARY·SECONDARY는 `services/core/ai_metadata.py` 정규식과 1:1 — 프롬프트 출력 형식 수정 시 반드시 함께 확인
 - `prompts/styles/comment_summary.py`: 병렬 댓글 요약 전용 프롬프트 (UI 비노출)
 
 ### 서비스 도메인 구조 (`services/`)
@@ -153,60 +154,16 @@ services/
 
 **import 패턴**: `from services.core import ai_service` 또는 `from services.core.ai_service import create_content`
 
-### Frontend Module Communication (EventBus)
+### Frontend (Next.js — `frontend/`)
 
-모듈 간 통신은 `static/js/core/EventBus.js`의 Pub/Sub 패턴 사용:
+> 구 바닐라 JS 프론트엔드(`templates/`, `static/`)는 Next.js 전환 시 제거됨. 프론트엔드 작업은 전부 `frontend/`에서 한다.
 
-```javascript
-EventBus.emit(EVENTS.GENERATION_COMPLETE, { title, content });
-EventBus.on(EVENTS.GENERATION_COMPLETE, (data) => this.displayReport(data));
-```
-
-주요 이벤트: `GENERATION_COMPLETE`, `STYLE_CHANGED`, `URL_ADDED`, `AUTH_STATE_CHANGED`
-
-### Frontend Key Modules (`static/js/modules/`)
-
-| 모듈 | 역할 |
-|-----|-----|
-| `ContentGenerator.js` | `/generate` API 호출, 재시도 로직 (지수 백오프) |
-| `UrlManager.js` | URL 입력/삭제/드래그 정렬 |
-| `ProviderManager.js` | AI 프로바이더/모델 선택 (`#provider`, `#model`) |
-| `StyleManager.js` | 스타일 카드 선택 |
-| `ThemeManager.js` | 테마 전환 (Dark/Light/Minimal), `localStorage: 'insight-engine-theme'` |
-| `AuthManager.js` | 인증 상태 관리, 사이드바/헤더 UI 업데이트 |
-| `report/` | ReportManager 분할 모듈 (CardHtmlBuilder, CardEventHandler, ReportFormatter) |
-
-### 결과 카드 기능 (`report/`)
-
-**카드 헤더 버튼**: 제목 복사, 전체 복사, 서식 복사 (Rich Copy: text/html + text/plain), 접기/펼치기
-
-**카드 메타 칩**: 토큰 수, 처리 시간, 글자수, 단어수, 댓글 요약 포함/미포함
-
-**더보기 메뉴 (⋯)**: 프롬프트 보기, 마인드맵, HTML 내보내기 (인라인 CSS 포함 독립 HTML), DOCX 내보내기 (python-docx), PDF 인쇄 (브라우저 네이티브), 다시 생성 (URL 재입력), 공유 (제목+미리보기+URL 클립보드 복사)
-
-**필터 바** (`#card-filter-bar`): 검색 (300ms 디바운스, `<mark>` 하이라이트) + 스타일 드롭다운 필터 (AND 조건)
-
-### 테마 시스템
-
-3가지 테마: Dark (기본, `#1A1612`), Light (`#F9FAFB`), Minimal (`#FFFFFF`)
-
-**핵심 규칙:**
-- CSS 변수는 `base/_tokens.css`에서만 정의 (`:root`, `[data-theme="light"]`, `[data-theme="minimal"]`)
-- `tailwind.css`에 `:root` 색상 정의 **없어야 함** (충돌 방지)
-- `tailwind.config.js`는 `_tokens.css` 변수를 참조 (`'bg-primary': 'var(--background-dark)'`)
-- 색상 하드코딩 금지 → 반드시 `var(--변수명)` 사용
-
-**CSS 빌드 파이프라인:**
-- 엔트리포인트: `static/css/main.css` → 18개 모듈 `@import`
-- 출력: `static/css/dist/main.css` (PostCSS + minify)
-- `dist/`는 `.gitignore`에 포함 → 커밋 불필요
-
-**CSS 수정 워크플로우:**
-1. CSS 파일 수정
-2. `npm run build:css:prod` 실행 (필수)
-3. 브라우저 새로고침 (캐시 무시: Ctrl+Shift+R)
-
-> **주의**: 새 CSS 파일 추가 시 반드시 `static/css/main.css`에 `@import` 추가. 누락 시 빌드에 포함되지 않음 (과거 `features/result-section.css` 누락 버그 경험).
+- **스택**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + shadcn/zustand/react-query
+- **상태**: `frontend/stores/` (zustand — settingsStore, resultStore, uiStore). 구독은 셀렉터(`useStore((s) => s.field)`) 또는 `useShallow` 사용 — 스토어 전체 구독 금지 (불필요 리렌더)
+- **API 래퍼**: `frontend/lib/api.ts` — Flask 백엔드 호출
+- **결과 카드**: `frontend/components/result/ResultCard.tsx` + 서브컴포넌트 (무거운 것은 `dynamic()` 로드)
+- **테마**: next-themes + Tailwind v4 (`frontend/app/globals.css`). 폰트(Pretendard CDN)는 비동기 로드 — `layout.tsx`에 동기 `<link rel="stylesheet">` 추가 금지 (렌더 블로킹)
+- **PWA**: `frontend/public/sw.js` — 동일 출처 GET만 캐싱, MAX_ENTRIES 상한. 캐시 전략 변경 시 `CACHE_NAME` 버전 올릴 것
 
 ### Usage Decorators
 
@@ -225,13 +182,13 @@ def generate_batch(): ...
 - 성공: `{"title": "...", "content": "...", "html": "...", "usage": {...}, "comment_summary_included": true/false}`
 - 실패: `{"error": "메시지"}` (에러 접두사: `[인증 실패]`, `[사용량 초과]`, `[타임아웃]` 등)
 
-### 스타일 시스템 (v3.4)
+### 스타일 시스템 (v4.0)
 
 UI에 표시되는 14개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`, `course`
 
 내부 전용: `comment_summary` (병렬 댓글 요약용), `cited_summary` (타임스탬프 인용 모드, `enable_citations=true` 시), `chapter_split` (챕터 분할 전용), `mindmap` (마인드맵 변환)
 
-> **주의**: `prompts/__init__.py`의 `get_available_styles()`는 초기 5개만 반환. 실제 전체 스타일은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict 참조.
+전체 스타일 목록은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict가 단일 소스. `middleware/request_validator.py`의 `VALID_STYLES`와 `config.py`의 `STYLE_OPTIONS`/`STYLE_TEMPERATURE`도 함께 갱신할 것.
 
 ### 추가 기능
 
@@ -379,7 +336,7 @@ Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 �
 
 **필수**: AI Provider API 키 최소 하나 (`GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `ZHIPUAI_API_KEY` 등). API 키가 설정된 프로바이더만 UI에 표시.
 
-**선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_URL` + `SUPABASE_ANON_KEY` (클라우드 저장), `YT_HTTP_PROXY` / `YT_HTTPS_PROXY` (차단 우회)
+**선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_URL` + `SUPABASE_ANON_KEY` (클라우드 저장), `YT_HTTP_PROXY` / `YT_HTTPS_PROXY` (차단 우회), `SCHEDULER_ENABLED=false` (APScheduler 기동 끄기 — 테스트/스크립트용, 기본 true)
 
 ## Supabase 설정
 
@@ -402,15 +359,8 @@ SELECT decrement_usage_safe('user-uuid');
 
 ## Security
 
-- XSS 방지: `UIManager.sanitizeHtml()`에서 DOMPurify 사용 → HTML 콘텐츠 렌더링 시 반드시 호출
-- 마크다운 테이블 폴백: `UIManager.convertMarkdownTables()` - 백엔드 변환 실패 시 프론트엔드에서 `|` 테이블을 HTML `<table>`로 변환
+- XSS 방지: HTML 콘텐츠 렌더링 시 DOMPurify로 sanitize (`frontend/components/result/ResultCard.tsx` 등)
 - 에러 응답 시 내부 정보(traceback, DB 연결 정보 등) 노출 차단: `_handle_error_response()`에서 필터링
-
-## 히스토리 로딩
-
-- `main.js`에서 `_historyLoaded` 플래그 + `_currentUserId` 비교로 중복 로드 방지
-- `ReportManager._displayHistoryCard()`에서 `data-report-id`로 중복 카드 방지
-- 초기화 순서: `onAuthChange` 콜백 설정 → `authManager.init()` → 히스토리 로드
 
 ### autoresearch 정리 (2026-03-18)
 

@@ -174,10 +174,6 @@ def create_app(test_config=None):
     from routes.graphql_routes import graphql_bp
     app.register_blueprint(graphql_bp)
 
-    # Phase 6: 분석 & 인사이트 라우트 (F6-01 ~ F6-25)
-    from routes.analytics_routes import analytics_bp
-    app.register_blueprint(analytics_bp)
-
     # NotebookLM 연동 라우트
     from routes.notebooklm_routes import notebooklm_bp
     app.register_blueprint(notebooklm_bp)

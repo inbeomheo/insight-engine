@@ -305,7 +305,7 @@ class TestHandleCacheHit(unittest.TestCase):
 
     def test_force_skips_cache(self):
         from routes.generation_helpers import _handle_cache_hit
-        result = _handle_cache_hit('key', True, 'T', 'raw', 'api', 0)
+        result = _handle_cache_hit('key', True, 'vid123', 'https://youtu.be/vid123', 0)
         self.assertIsNone(result)
 
     @patch('routes.generation_helpers.get_usage_for_response', return_value={})
@@ -314,7 +314,7 @@ class TestHandleCacheHit(unittest.TestCase):
         app = create_app()
         with app.test_request_context():
             from routes.generation_helpers import _handle_cache_hit
-            result = _handle_cache_hit('nonexistent_key', False, 'T', 'raw', 'api', 0)
+            result = _handle_cache_hit('nonexistent_key', False, 'vid123', 'https://youtu.be/vid123', 0)
             self.assertIsNone(result)
 
     @patch('routes.generation_helpers.get_usage_for_response', return_value={})
@@ -325,13 +325,14 @@ class TestHandleCacheHit(unittest.TestCase):
             from flask import g, current_app
             g.user_id = None
             g.skip_usage_decrement = False
-            # 캐시에 데이터 넣기
+            # 캐시에 데이터 넣기 (신규 형식: youtube_title 포함 → 제목 API 재호출 없음)
             current_app.ai_cache.put(
                 'test_cache_key', 'vid123', 'blog_seo', 'gemini', 'medium', 'conversational',
-                {'title': 'T', 'content': 'C', 'html': '<p>C</p>', '_cached_at': 0}
+                {'title': 'T', 'content': 'C', 'html': '<p>C</p>', '_cached_at': 0,
+                 'youtube_title': '캐시된 제목'}
             )
             from routes.generation_helpers import _handle_cache_hit
-            result = _handle_cache_hit('test_cache_key', False, 'T', 'raw', 'api', 0)
+            result = _handle_cache_hit('test_cache_key', False, 'vid123', 'https://youtu.be/vid123', 0)
             # 캐시에 데이터가 있으면 응답 반환
             # 캐시 키 계산 방식이 다를 수 있으므로 None 도 허용
             # 이 테스트는 _handle_cache_hit의 분기 커버리지를 위함

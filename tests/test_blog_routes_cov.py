@@ -4,7 +4,7 @@
 템플릿, Video QA, TTS, 이벤트 추출, 자막 워크스페이스, 캡처 엔드포인트 커버.
 """
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app import create_app
 
@@ -175,9 +175,11 @@ class TestGenerateRoute(_Base):
         self.assertIn(resp.status_code, [200, 400, 500])
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.generation_helpers._handle_direct_text')
+    @patch('routes.blog_routes._handle_direct_text')
     def test_generate_direct_text(self, mock_direct, _):
         """직접 텍스트 입력 모드."""
+        # generate()는 blog_routes 네임스페이스에 바인딩된 _handle_direct_text를 호출하므로
+        # generation_helpers가 아닌 routes.blog_routes를 patch해야 mock이 적용됨
         # _handle_direct_text는 Flask Response를 반환해야 함
         # 앱 컨텍스트 내에서 호출되므로 side_effect로 처리
         def fake_handle(*args, **kwargs):
@@ -512,39 +514,6 @@ class TestTranscriptRoute(_Base):
         mock_get.return_value = {'text': '', 'source': 'api'}
         resp = self.client.get('/api/transcript/dQw4w9WgXcQ')
         self.assertEqual(resp.status_code, 422)
-
-
-# ── 음성 캡처 ──────────────────────────────────────
-
-
-class TestCaptureRoutes(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_capture_speech_missing_text(self, _):
-        resp = self.client.post('/api/capture/speech', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.content.handsfree_capture_service.capture_speech')
-    def test_capture_speech_success(self, mock_capture, _):
-        result = MagicMock()
-        result.text = '정돈된 텍스트'
-        result.word_count = 2
-        result.sentence_count = 1
-        result.original_length = 10
-        mock_capture.return_value = result
-        resp = self.client.post('/api/capture/speech',
-                                json={'text': '음성 입력'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.get_json()['text'], '정돈된 텍스트')
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_capture_merge_missing_texts(self, _):
-        resp = self.client.post('/api/capture/merge',
-                                json={'texts': []},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
 
 
 if __name__ == '__main__':

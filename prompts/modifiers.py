@@ -1,64 +1,26 @@
 """
-모디파이어 시스템 v3.1
+모디파이어 시스템 v4.0
 3개 카테고리: 길이(length), 문체(writing_style), 언어(language)
+
+v4 변경점: config.STYLE_MODIFIERS와 이중화돼 있던 텍스트를 이 파일 하나로 통합.
+(config.py가 이 MODIFIERS를 그대로 재export한다)
 """
 
 from typing import Dict, Optional
 
-# 모디파이어 정의
+# 모디파이어 정의 — 각 항목은 프롬프트에 그대로 주입되는 지시문
 MODIFIERS: Dict[str, Dict[str, str]] = {
     'length': {
-        'short': '''
-## 분량: 짧게
-- 총 분량: 500~800자
-- 핵심만 간결하게
-- 부가 설명 최소화
-''',
-        'medium': '''
-## 분량: 보통
-- 총 분량: 1000~1500자
-- 핵심 + 적절한 부연 설명
-- 각 포인트에 예시 포함
-''',
-        'long': '''
-## 분량: 길게
-- 총 분량: 2000~3000자
-- 상세하고 풍부한 설명
-- 다양한 예시와 맥락 제공
-'''
+        'short': '총 분량은 약 500~800자. 핵심만 간결하게 쓰고, 출력 형식의 선택적 섹션은 과감히 생략하세요.',
+        'medium': '총 분량은 약 1000~1500자. 핵심에 적절한 부연 설명을 더해 작성하세요.',
+        'long': '총 분량은 약 2000~3000자. 예시와 맥락을 풍부하게 포함해 상세히 작성하세요.'
     },
-
     'writing_style': {
-        'conversational': '''
-## 문체: 대화체
-- ~요, ~해요 체 사용
-- 독자에게 말을 거는 듯한 톤
-- "여러분", "우리" 같은 포용적 표현 OK
-- 친근하면서도 정보 전달은 명확하게
-''',
-        'explanatory': '''
-## 문체: 설명체
-- ~입니다, ~합니다 체 사용
-- 객관적이고 중립적인 어조
-- 감정적 표현 자제
-- 정보 전달에 집중
-''',
-        'casual': '''
-## 문체: 캐주얼
-- ~야, ~해 체 사용 (반말)
-- 친구에게 얘기하듯 편하게
-- 가벼운 표현과 비유 활용
-- 너무 격식 차리지 않기
-''',
-        'expert': '''
-## 문체: 전문가
-- 업계 용어 자연스럽게 사용
-- 깊이 있는 분석과 인사이트 제공
-- 전문가 동료에게 설명하는 톤
-- 기초 설명은 생략해도 OK
-'''
+        'conversational': '대화체(~요, ~해요)로 독자에게 말을 거는 듯 친근하게 작성하세요.',
+        'explanatory': '설명체(~입니다, ~합니다)로 객관적이고 중립적으로 작성하세요.',
+        'casual': '캐주얼체(~야, ~해)로 친구에게 얘기하듯 편하게 작성하세요.',
+        'expert': '전문가 톤으로 업계 용어를 자연스럽게 사용하고, 기초 설명은 생략하며 깊이 있게 작성하세요.'
     },
-
     'language': {
         'ko': '결과는 반드시 한국어로 작성해주세요.',
         'en': 'You MUST write the entire result in English.',
@@ -104,8 +66,7 @@ MODIFIER_OPTIONS = {
 
 
 def build_modifier_text(modifiers: Dict[str, str]) -> str:
-    """
-    선택된 모디파이어들을 텍스트로 조합합니다.
+    """선택된 모디파이어들을 텍스트로 조합합니다.
 
     Args:
         modifiers: {'length': 'medium', 'writing_style': 'conversational'}
@@ -123,11 +84,10 @@ def build_modifier_text(modifiers: Dict[str, str]) -> str:
 
 
 def get_modifier_text(category: str, value: str) -> Optional[str]:
-    """
-    특정 모디파이어의 텍스트를 반환합니다.
+    """특정 모디파이어의 텍스트를 반환합니다.
 
     Args:
-        category: 모디파이어 카테고리 (length, writing_style)
+        category: 모디파이어 카테고리 (length, writing_style, language)
         value: 모디파이어 값 (short, conversational 등)
 
     Returns:

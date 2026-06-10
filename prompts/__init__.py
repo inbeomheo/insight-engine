@@ -1,15 +1,16 @@
 """
-프롬프트 시스템 v3.0
-- 5개 핵심 스타일: blog_seo, summary, tutorial, qna, app_ideas
-- 2개 모디파이어: length, writing_style
-- 레거시 호환성 완전 제거
+프롬프트 시스템 v4.0
+- 베이스 규칙(base.py) + 스타일(styles/) + 모디파이어(modifiers.py) 3계층
+- 메인 생성 경로는 compose_style_prompt()로 베이스+스타일을 결합하고,
+  모디파이어는 ai_service가 [추가 지시사항]으로 1회 주입한다
+- build_full_prompt()는 베이스+스타일(+모디파이어)을 한 번에 조합하는 헬퍼 (fusion 등)
 
 사용법:
-    from prompts import build_full_prompt
-    prompt = build_full_prompt('blog_seo', {'length': 'medium', 'writing_style': 'conversational'})
+    from prompts import compose_style_prompt, STYLE_PROMPTS
+    prompt = compose_style_prompt('blog_seo', STYLE_PROMPTS['blog_seo'])
 """
 
-from .base import BASE_PROMPT, FORBIDDEN_EXPRESSIONS, build_prompt
+from .base import BASE_PROMPT, FORBIDDEN_EXPRESSIONS, build_prompt, compose_style_prompt
 from .modifiers import (
     MODIFIERS,
     DEFAULT_MODIFIERS,
@@ -19,74 +20,30 @@ from .modifiers import (
 )
 from .styles import (
     STYLE_PROMPTS,
+    TRANSFORM_STYLE_IDS,
     get_style_prompt,
-    BLOG_SEO_PROMPT,
-    SUMMARY_PROMPT,
-    TUTORIAL_PROMPT,
-    QNA_PROMPT,
-    APP_IDEAS_PROMPT,
 )
 
 
 def build_full_prompt(style: str, modifiers: dict = None) -> str:
-    """
-    베이스 프롬프트 + 스타일 + 모디파이어를 조합하여 최종 프롬프트 생성
+    """베이스 프롬프트 + 스타일 + (선택) 모디파이어를 조합하여 최종 프롬프트 생성
 
     Args:
-        style: 스타일 이름 (blog_seo, summary, tutorial, qna, app_ideas)
-        modifiers: 모디파이어 딕셔너리
-                   {'length': 'medium', 'writing_style': 'conversational'}
-                   지정하지 않은 항목은 기본값 사용
+        style: 스타일 이름 (blog_seo, summary, tutorial 등)
+        modifiers: 모디파이어 딕셔너리. ai_service.create_content에 modifiers를
+                   함께 넘기는 경로에서는 이중 주입을 피하기 위해 생략할 것.
 
     Returns:
         조합된 최종 프롬프트
-
-    Example:
-        >>> prompt = build_full_prompt('blog_seo', {'length': 'long', 'writing_style': 'expert'})
     """
-    # 스타일 프롬프트 가져오기
-    style_prompt = STYLE_PROMPTS.get(style, BLOG_SEO_PROMPT)
-
-    # 모디파이어 기본값 적용
-    final_modifiers = DEFAULT_MODIFIERS.copy()
-    if modifiers:
-        final_modifiers.update(modifiers)
-
-    # 최종 프롬프트 조합
-    return build_prompt(style_prompt, final_modifiers)
-
-
-def get_available_styles() -> dict:
-    """
-    사용 가능한 스타일 목록 반환
-
-    Returns:
-        {style_id: description} 형태의 딕셔너리
-    """
-    return {
-        'blog_seo': '🔍 블로그+SEO',
-        'summary': '⚡ 요약',
-        'tutorial': '📚 튜토리얼',
-        'qna': '❓ Q&A',
-        'app_ideas': '💡 앱 아이디어',
-    }
-
-
-def get_modifier_info() -> dict:
-    """
-    모디파이어 정보 반환 (UI 구성용)
-
-    Returns:
-        MODIFIER_OPTIONS 딕셔너리
-    """
-    return MODIFIER_OPTIONS
+    style_prompt = STYLE_PROMPTS.get(style, STYLE_PROMPTS['blog_seo'])
+    return build_prompt(style_prompt, modifiers)
 
 
 __all__ = [
     # 메인 API
     'build_full_prompt',
-    'get_available_styles',
-    'get_modifier_info',
+    'compose_style_prompt',
 
     # 베이스
     'BASE_PROMPT',
@@ -102,10 +59,6 @@ __all__ = [
 
     # 스타일 프롬프트
     'STYLE_PROMPTS',
+    'TRANSFORM_STYLE_IDS',
     'get_style_prompt',
-    'BLOG_SEO_PROMPT',
-    'SUMMARY_PROMPT',
-    'TUTORIAL_PROMPT',
-    'QNA_PROMPT',
-    'APP_IDEAS_PROMPT',
 ]

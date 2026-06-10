@@ -36,8 +36,8 @@ class WriterAgent(BaseAgent):
             f"참고 자료:\n{plan.get('source_text', '없음')}\n\n"
             "마크다운 형식으로 작성하세요."
         )
-        from prompts import STYLE_PROMPTS
-        style_prompt = STYLE_PROMPTS.get(self.style_id, "")
+        from prompts import STYLE_PROMPTS, compose_style_prompt
+        style_prompt = compose_style_prompt(self.style_id, STYLE_PROMPTS.get(self.style_id, ""))
         result = ai_service.create_content(
             content=prompt, model=self.model,
             style_prompt=style_prompt, style_id=self.style_id

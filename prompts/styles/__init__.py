@@ -1,8 +1,9 @@
 """
-스타일 패키지 v3.4
-13개 스타일: blog_seo, summary, tutorial, qna, app_ideas, yozm_it, brunch_essay, naver_popular,
-             sns_post, newsletter, show_notes, course, cited_summary
-+ 댓글 요약 전용 프롬프트 (UI 비노출)
+스타일 패키지 v4.0
+UI 노출 14개 스타일 + 내부 전용(comment_summary, mindmap, cited_summary)
+
+콘텐츠 스타일은 베이스 규칙(prompts.base.BASE_PROMPT)과 결합되어 사용되고,
+변환계 프롬프트(TRANSFORM_STYLE_IDS)는 결합 없이 단독 사용된다.
 """
 import functools
 
@@ -45,6 +46,10 @@ STYLE_PROMPTS = {
     'mindmap': MINDMAP_PROMPT,
 }
 
+# 변환계 프롬프트 — 글쓰기 베이스 규칙(BASE_PROMPT)을 결합하지 않는 스타일
+# (댓글 요약/마인드맵/챕터 분할은 콘텐츠 작성이 아니라 입력 변환 작업이므로)
+TRANSFORM_STYLE_IDS = frozenset({'comment_summary', 'mindmap', 'chapter_split'})
+
 
 @functools.lru_cache(maxsize=32)
 def get_style_prompt(style: str) -> str:
@@ -62,6 +67,7 @@ def get_style_prompt(style: str) -> str:
 
 __all__ = [
     'STYLE_PROMPTS',
+    'TRANSFORM_STYLE_IDS',
     'get_style_prompt',
     'BLOG_SEO_PROMPT',
     'SUMMARY_PROMPT',

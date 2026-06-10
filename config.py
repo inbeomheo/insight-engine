@@ -16,10 +16,10 @@ import time
 # prompts 패키지에서 가져오기
 from prompts import (
     STYLE_PROMPTS,
+    MODIFIERS,
     MODIFIER_OPTIONS,
     DEFAULT_MODIFIERS,
     build_full_prompt,
-    get_available_styles,
 )
 
 # === API Keys ===
@@ -154,6 +154,8 @@ STYLE_TEMPERATURE: Dict[str, float] = {
     'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7, 'shorts_script': 0.7,
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.35,
+    # 엄격한 출력 형식이 필요한 변환계 — 창의성보다 형식 준수 우선
+    'mindmap': 0.3, 'cited_summary': 0.4, 'chapter_split': 0.3,
 }
 
 # 길이별 max_tokens (한국어 2~3토큰/자 + 마크다운 오버헤드 ~40% 감안)
@@ -356,24 +358,8 @@ STYLE_DESCRIPTIONS: Dict[str, str] = {
     'course': 'AI 학습 코스 형식의 교육 콘텐츠를 작성합니다',
 }
 
-STYLE_MODIFIERS: Dict[str, Dict[str, str]] = {
-    'length': {
-        'short': '총 분량은 약 500~800자로 핵심만 간결하게 작성하세요.',
-        'medium': '총 분량은 약 1000~1500자로 적절히 작성하세요.',
-        'long': '총 분량은 약 2000~3000자로 상세하고 풍부하게 작성하세요.'
-    },
-    'writing_style': {
-        'conversational': '대화체(~요, ~해요)로 친근하게 작성하세요.',
-        'explanatory': '설명체(~입니다, ~합니다)로 객관적으로 작성하세요.',
-        'casual': '캐주얼체(~야, ~해)로 편하게 작성하세요.',
-        'expert': '전문가 톤으로 업계 용어를 사용해 깊이 있게 작성하세요.'
-    },
-    'language': {
-        'ko': '결과는 반드시 한국어로 작성해주세요.',
-        'en': 'You MUST write the entire result in English.',
-        'ja': '結果は必ず日本語で書いてください。'
-    }
-}
+# 모디파이어 지시문 — prompts/modifiers.py가 단일 소스 (v4에서 이중화 제거)
+STYLE_MODIFIERS: Dict[str, Dict[str, str]] = MODIFIERS
 
 
 @functools.lru_cache(maxsize=128)

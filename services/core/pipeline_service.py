@@ -143,7 +143,7 @@ def _step_extract_transcript(ctx: dict) -> dict:
 def _step_generate_content(ctx: dict) -> dict:
     """AI 콘텐츠를 생성합니다. (ai_service 래핑)"""
     from services.core import ai_service
-    from prompts import STYLE_PROMPTS
+    from prompts import STYLE_PROMPTS, compose_style_prompt
 
     content = ctx.get("truncated_content", "")
     model = ctx.get("model", "")
@@ -151,11 +151,11 @@ def _step_generate_content(ctx: dict) -> dict:
     modifiers = ctx.get("modifiers")
     custom_prompt = ctx.get("custom_prompt")
 
-    # 스타일 프롬프트 결정
+    # 스타일 프롬프트 결정 (베이스 규칙 포함)
     if custom_prompt and custom_prompt.strip():
         style_prompt = custom_prompt.strip()[:2000]
     else:
-        style_prompt = STYLE_PROMPTS.get(style, "")
+        style_prompt = compose_style_prompt(style, STYLE_PROMPTS.get(style, ""))
 
     result, prompt = ai_service.create_content(
         content, model,

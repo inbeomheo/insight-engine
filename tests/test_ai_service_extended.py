@@ -31,32 +31,6 @@ class TestFormatTranscriptWithTimestamps(unittest.TestCase):
             self.assertEqual(result, "")
 
 
-class TestExtractKeywords(unittest.TestCase):
-    """_extract_keywords 테스트"""
-
-    def test_with_keywords_comment(self):
-        from services.core.ai_service import _extract_keywords
-        content = "본문 내용\n<!-- KEYWORDS: AI, 머신러닝, 딥러닝 -->\n더 많은 내용"
-        cleaned, keywords = _extract_keywords(content)
-        self.assertNotIn('KEYWORDS', cleaned)
-        self.assertIn('AI', keywords)
-        self.assertIn('머신러닝', keywords)
-
-    def test_without_keywords(self):
-        from services.core.ai_service import _extract_keywords
-        content = "키워드 없는 본문"
-        cleaned, keywords = _extract_keywords(content)
-        self.assertEqual(cleaned, content)
-        self.assertEqual(keywords, [])
-
-    def test_keywords_limit(self):
-        from services.core.ai_service import _extract_keywords
-        many_kw = ', '.join([f'kw{i}' for i in range(20)])
-        content = f"<!-- KEYWORDS: {many_kw} -->"
-        _, keywords = _extract_keywords(content)
-        self.assertLessEqual(len(keywords), 10)
-
-
 class TestBuildCompletionKwargs(unittest.TestCase):
     """_build_completion_kwargs 테스트"""
 
@@ -194,6 +168,46 @@ class TestExtractGeoMetadata(unittest.TestCase):
         result = extract_geo_metadata(content)
         self.assertIsNotNone(result)
         self.assertIn('key_facts', result)
+        self.assertEqual(result['key_facts'], ['팩트 하나', '팩트 둘'])
+
+    def test_key_facts_ignores_dividers_and_hyphens(self):
+        """구분선(---), 표 구분자, 단어 중간 하이픈은 key_facts에 수집되지 않는다."""
+        from services.core.ai_service import extract_geo_metadata
+        content = (
+            "### 주요 팩트\n"
+            "- ✓ RAG는 3단계 구조다\n"
+            "- ✓ 정확도 15~25% 향상\n"
+            "\n"
+            "---\n"
+            "\n"
+            "### 구조화 데이터\n"
+            "| 항목 | 내용 |\n"
+            "|------|------|\n"
+            "| **핵심 개념** | RAG |\n"
+            "\n"
+            "### CTA (Call-to-Action)\n"
+            "**CTA_PRIMARY**: 문서 보기\n"
+        )
+        result = extract_geo_metadata(content)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['key_facts'], ['RAG는 3단계 구조다', '정확도 15~25% 향상'])
+        # 쓰레기 항목이 섞이지 않았는지 명시적으로 확인
+        for fact in result['key_facts']:
+            self.assertNotIn('--', fact)
+            self.assertNotIn('to-Action', fact)
+
+    def test_key_facts_without_checkmark_not_collected(self):
+        """✓ 마커 없는 일반 불릿은 주요 팩트로 수집되지 않는다 (다른 섹션 불릿 오수집 방지)."""
+        from services.core.ai_service import extract_geo_metadata
+        content = (
+            "### 주요 특징\n"
+            "- 일반 불릿 항목\n"
+            "- 또 다른 불릿\n"
+        )
+        result = extract_geo_metadata(content)
+        # key_facts가 없거나(전체 None), 있어도 일반 불릿은 포함하지 않음
+        if result is not None:
+            self.assertNotIn('key_facts', result)
 
     def test_entity_tags(self):
         from services.core.ai_service import extract_geo_metadata
