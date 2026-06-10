@@ -175,9 +175,11 @@ class TestGenerateRoute(_Base):
         self.assertIn(resp.status_code, [200, 400, 500])
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.generation_helpers._handle_direct_text')
+    @patch('routes.blog_routes._handle_direct_text')
     def test_generate_direct_text(self, mock_direct, _):
         """직접 텍스트 입력 모드."""
+        # generate()는 blog_routes 네임스페이스에 바인딩된 _handle_direct_text를 호출하므로
+        # generation_helpers가 아닌 routes.blog_routes를 patch해야 mock이 적용됨
         # _handle_direct_text는 Flask Response를 반환해야 함
         # 앱 컨텍스트 내에서 호출되므로 side_effect로 처리
         def fake_handle(*args, **kwargs):

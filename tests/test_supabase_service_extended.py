@@ -4,12 +4,16 @@ from unittest.mock import patch, MagicMock
 
 
 class TestGetFernet(unittest.TestCase):
-    """_get_fernet 테스트"""
+    """_get_fernet 테스트
+
+    Issue #17 소PR A: 구현 + 싱글톤 상태(_fernet_instance 등)가
+    src.shared.infrastructure.supabase_client로 이전됨 (기존 모듈은 re-export shim).
+    """
 
     def test_no_secret_raises(self):
         from services.data.supabase_service import _get_fernet
         from services.exceptions import ConfigurationError
-        import services.data.supabase_service as mod
+        import src.shared.infrastructure.supabase_client as mod
         old = mod._fernet_instance
         mod._fernet_instance = None
         try:
@@ -22,7 +26,7 @@ class TestGetFernet(unittest.TestCase):
     def test_with_secret_creates_fernet(self):
         from services.data.supabase_service import _get_fernet
         from cryptography.fernet import Fernet
-        import services.data.supabase_service as mod
+        import src.shared.infrastructure.supabase_client as mod
         old = mod._fernet_instance
         mod._fernet_instance = None
         try:
@@ -38,7 +42,8 @@ class TestEncryptDecryptRoundTrip(unittest.TestCase):
 
     def test_roundtrip(self):
         from services.data.supabase_service import encrypt_api_key, decrypt_api_key
-        import services.data.supabase_service as mod
+        # Issue #17 소PR A: 싱글톤 상태는 src.shared.infrastructure.supabase_client에 있음
+        import src.shared.infrastructure.supabase_client as mod
         # 강제로 암호화 활성화
         old_enc = mod._encryption_enabled
         old_fernet = mod._fernet_instance
@@ -56,7 +61,8 @@ class TestEncryptDecryptRoundTrip(unittest.TestCase):
 
     def test_decrypt_invalid_token(self):
         from services.data.supabase_service import decrypt_api_key
-        import services.data.supabase_service as mod
+        # Issue #17 소PR A: 싱글톤 상태는 src.shared.infrastructure.supabase_client에 있음
+        import src.shared.infrastructure.supabase_client as mod
         old_enc = mod._encryption_enabled
         old_fernet = mod._fernet_instance
         mod._encryption_enabled = None
@@ -463,7 +469,8 @@ class TestGetAdminClient(unittest.TestCase):
 
     def test_no_service_role_key(self):
         from services.data.supabase_service import _get_admin_client
-        import services.data.supabase_service as mod
+        # Issue #17 소PR A: 싱글톤 상태는 src.shared.infrastructure.supabase_client에 있음
+        import src.shared.infrastructure.supabase_client as mod
         old = mod._supabase_admin
         mod._supabase_admin = None
         try:

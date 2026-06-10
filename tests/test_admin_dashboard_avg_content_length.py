@@ -54,7 +54,8 @@ class TestAdminDashboardAvgContentLength(unittest.TestCase):
     def test_route_exists(self):
         """admin_dashboard 라우트에 avg_content_length 코드가 존재하는지 정적 검증"""
         import inspect
-        from routes.auth_routes import admin_dashboard
+        # admin_dashboard는 routes/auth_routes.py에서 routes/auth/channel_monitoring.py로 분리됨
+        from routes.auth.channel_monitoring import admin_dashboard
         source = inspect.getsource(admin_dashboard)
         self.assertIn('avg_content_length', source)
 

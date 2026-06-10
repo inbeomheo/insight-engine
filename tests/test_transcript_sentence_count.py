@@ -8,8 +8,10 @@ from unittest.mock import patch, MagicMock
 class TestSentenceCountField(unittest.TestCase):
     """sentence_count 필드가 sentences 리스트 길이와 일치하는지 검증"""
 
+    # /api/transcript 라우트가 routes/blog/transcript_workspace.py로 분리됨
+    # → 해당 모듈 네임스페이스의 content_service를 patch해야 mock이 적용됨
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.blog_routes.content_service')
+    @patch('routes.blog.transcript_workspace.content_service')
     def test_sentence_count_matches_sentences_length(self, mock_cs, mock_sb):
         """정상 자막 → sentence_count == len(sentences)"""
         mock_cs.get_transcript.return_value = {
@@ -29,7 +31,7 @@ class TestSentenceCountField(unittest.TestCase):
                 self.assertEqual(data['sentence_count'], len(data['sentences']))
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.blog_routes.content_service')
+    @patch('routes.blog.transcript_workspace.content_service')
     def test_sentence_count_zero_for_empty(self, mock_cs, mock_sb):
         """빈 자막 → 422 에러"""
         mock_cs.get_transcript.return_value = {

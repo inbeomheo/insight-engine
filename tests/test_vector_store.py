@@ -6,11 +6,13 @@ from unittest.mock import patch, MagicMock
 class TestVectorStore(unittest.TestCase):
     """VectorStore: ChromaDB 래퍼 CRUD"""
 
-    @patch('services.rag.vector_store.chromadb')
+    # vector_store는 이제 chromadb를 직접 import하지 않고
+    # chroma_client_factory.get_chroma_client (지연 로딩 싱글톤)를 사용함 → patch 대상 변경
+    @patch('services.rag.vector_store.get_chroma_client')
     @patch('services.rag.vector_store.os.makedirs')
-    def _make_store(self, mock_makedirs, mock_chromadb):
+    def _make_store(self, mock_makedirs, mock_get_client):
         mock_client = MagicMock()
-        mock_chromadb.PersistentClient.return_value = mock_client
+        mock_get_client.return_value = mock_client
         from services.rag.vector_store import VectorStore
         store = VectorStore(db_path='/tmp/test_chroma')
         return store, mock_client

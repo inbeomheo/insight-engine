@@ -76,9 +76,10 @@ class TestDashboardBusiestHourRoute(unittest.TestCase):
     """라우트 레벨: busiest_hour 필드 존재 확인 (Supabase 비활성 시)"""
 
     def test_route_code_contains_busiest_hour(self):
-        """auth_routes.py에 busiest_hour 키가 응답에 포함되는지 코드 검증"""
+        """admin_dashboard 라우트에 busiest_hour 키가 응답에 포함되는지 코드 검증"""
         import inspect
-        from routes.auth_routes import admin_dashboard
+        # admin_dashboard는 routes/auth_routes.py에서 routes/auth/channel_monitoring.py로 분리됨
+        from routes.auth.channel_monitoring import admin_dashboard
         source = inspect.getsource(admin_dashboard)
         self.assertIn('busiest_hour', source)
 
