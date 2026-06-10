@@ -280,80 +280,6 @@ class TestCacheRoutes(_BaseTestCase):
         self.assertEqual(resp.status_code, 200)
 
 
-# ── 스타일 추천 / 생성 ──────────────────────────────────────
-
-
-class TestStyleRoutes(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_recommend_style_missing_url(self, _):
-        resp = self.client.post('/api/recommend-style', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.content_service.is_youtube_url', return_value=False)
-    def test_recommend_style_invalid_url(self, mock_yt, _):
-        resp = self.client.post('/api/recommend-style',
-                                json={'url': 'https://example.com'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.ai_service.create_content')
-    @patch('services.core.content_service.get_content_title', return_value='테스트 영상')
-    @patch('services.core.content_service.get_video_id', return_value='v123')
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    def test_recommend_style_success(self, *mocks):
-        mocks[0]  # is_youtube_url
-        # ai_service.create_content mock
-        mocks[3].return_value = {
-            'content': '{"style": "blog_seo", "reason": "적합", "modifiers": {"length": "medium"}}'
-        }
-        resp = self.client.post('/api/recommend-style',
-                                json={'url': 'https://youtube.com/watch?v=v123'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data['style'], 'blog_seo')
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.ai_service.create_content')
-    @patch('services.core.content_service.get_content_title', return_value='테스트')
-    @patch('services.core.content_service.get_video_id', return_value='v123')
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    def test_recommend_style_json_parse_fail(self, *mocks):
-        """AI가 JSON이 아닌 응답을 주면 기본값 반환."""
-        mocks[3].return_value = {'content': '추천 스타일은 blog_seo입니다.'}
-        resp = self.client.post('/api/recommend-style',
-                                json={'url': 'https://youtube.com/watch?v=v123'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data['style'], 'detailed')  # 기본값
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_generate_style_missing_url(self, _):
-        resp = self.client.post('/api/generate-style', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.ai_service.create_content')
-    @patch('services.core.content_service.get_transcript', return_value={'text': '자막 내용', 'error': None})
-    @patch('services.core.content_service.get_content_title', return_value='테스트 영상')
-    @patch('services.core.content_service.get_video_id', return_value='v456')
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    def test_generate_style_success(self, *mocks):
-        mocks[4].return_value = {
-            'content': '{"styleName": "기술 분석", "stylePrompt": "기술 분석용 프롬프트", "description": "적합"}'
-        }
-        resp = self.client.post('/api/generate-style',
-                                json={'url': 'https://youtube.com/watch?v=v456'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data['styleName'], '기술 분석')
-
-
 # ── 웹훅 테스트 ──────────────────────────────────────
 
 
@@ -551,7 +477,7 @@ class TestFeedback(_BaseTestCase):
 
 
 class TestAnalysisEndpoints(_BaseTestCase):
-    """분석 엔드포인트 (약 100개)를 일괄 테스트.
+    """분석 엔드포인트를 일괄 테스트.
 
     모두 동일한 패턴: POST + content → service → jsonify.
     빈 content 400 + 정상 호출 200 테스트.
@@ -561,34 +487,7 @@ class TestAnalysisEndpoints(_BaseTestCase):
     # 'content' 필드를 사용하는 엔드포인트
     _CONTENT_ENDPOINTS = [
         '/api/fact-check', '/api/seo-optimize', '/api/plagiarism-check',
-        '/api/sentiment-flow', '/api/grade-content',
-        '/api/analyze-sentiment', '/api/benchmark-readability',
-        '/api/reading-time', '/api/analyze-transitions',
-        '/api/emotional-tone', '/api/engagement-score',
-        '/api/sentence-variety', '/api/check-redundancy',
-        '/api/detect-passive', '/api/extract-acronyms',
-        '/api/analyze-speakability', '/api/detect-subheading-gaps',
-        '/api/check-heading-parallelism', '/api/detect-section-drift',
-        '/api/check-pronoun-clarity', '/api/analyze-example-coverage',
-        '/api/check-qa-closure', '/api/detect-adverb-overuse',
-        '/api/detect-clause-overload', '/api/analyze-statistics-coverage',
-        '/api/find-simple-alternatives', '/api/check-acronym-expansion',
-        '/api/detect-actionability-gaps', '/api/check-thesis-frontload',
-        '/api/detect-list-table-opportunities',
-        '/api/analyze-question-density', '/api/audit-whitespace-formatting',
-        '/api/analyze-bullet-density', '/api/check-code-block-quality',
-        '/api/check-paragraph-opening-variety', '/api/check-tone-consistency',
-        '/api/detect-linking-verb-overuse', '/api/validate-instruction-sequence',
-        '/api/score-content-depth', '/api/analyze-conclusion-strength',
-        '/api/check-parenthetical-overuse',
-        '/api/detect-anaphora-repetition',
-        '/api/analyze-connector-variety',
-        '/api/check-content-freshness', '/api/check-article-format',
-        '/api/map-emotional-arc', '/api/analyze-sentence-rhythm',
-        '/api/detect-keyword-stuffing',
-        '/api/analyze-sentence-ending-variety',
-        '/api/analyze-passive-ratio', '/api/analyze-avg-words-per-sentence',
-        '/api/analyze-emoji-usage', '/api/check-acronym-consistency',
+        '/api/sentiment-flow',
     ]
     # 'text' 필드를 사용하는 엔드포인트
     _TEXT_ENDPOINTS = ['/api/readability']
@@ -610,7 +509,7 @@ class TestAnalysisEndpoints(_BaseTestCase):
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_no_body_returns_400(self, _):
         """본문 없이 요청 시 400."""
-        for path in self._CONTENT_ENDPOINTS[:10]:  # 대표 10개만
+        for path in self._CONTENT_ENDPOINTS:
             with self.subTest(path=path):
                 resp = self.client.post(path, json={}, headers=_H)
                 self.assertEqual(resp.status_code, 400,
@@ -625,53 +524,6 @@ class TestAnalysisEndpoints(_BaseTestCase):
             ('/api/plagiarism-check', 'services.quality.plagiarism_service.check_plagiarism', 'content'),
             ('/api/readability', 'services.analysis.readability_service.analyze_readability', 'text'),
             ('/api/sentiment-flow', 'services.analysis.nlp_analysis_service.analyze_sentiment_flow', 'content'),
-            ('/api/grade-content', 'services.quality.content_grader_service.grade_content', 'content'),
-            ('/api/analyze-sentiment', 'services.analysis.sentiment_analyzer_service.analyze_sentiment', 'content'),
-            ('/api/check-redundancy', 'services.analysis.redundancy_checker_service.check_redundancy', 'content'),
-            ('/api/detect-passive', 'services.analysis.passive_voice_service.detect_passive', 'content'),
-            ('/api/extract-acronyms', 'services.analysis.acronym_extractor_service.extract_acronyms', 'content'),
-            ('/api/detect-fillers', 'services.analysis.filler_detector_service.detect_fillers', 'content'),
-            ('/api/check-consistency', 'services.quality.consistency_checker_service.check_consistency', 'content'),
-            ('/api/analyze-speakability', 'services.analysis.speakability_service.analyze_speakability', 'content'),
-            ('/api/detect-subheading-gaps', 'services.analysis.subheading_gap_service.detect_subheading_gaps', 'content'),
-            ('/api/check-heading-parallelism', 'services.analysis.heading_parallelism_service.check_heading_parallelism', 'content'),
-            ('/api/detect-section-drift', 'services.quality.section_drift_service.detect_section_drift', 'content'),
-            ('/api/check-pronoun-clarity', 'services.analysis.pronoun_clarity_service.check_pronoun_clarity', 'content'),
-            ('/api/analyze-example-coverage', 'services.analysis.example_coverage_service.analyze_example_coverage', 'content'),
-            ('/api/check-qa-closure', 'services.quality.qa_closure_service.check_qa_closure', 'content'),
-            ('/api/detect-adverb-overuse', 'services.analysis.adverb_overuse_service.detect_adverb_overuse', 'content'),
-            ('/api/detect-clause-overload', 'services.analysis.clause_overload_service.detect_clause_overload', 'content'),
-            ('/api/analyze-statistics-coverage', 'services.analysis.statistics_coverage_service.analyze_statistics_coverage', 'content'),
-            ('/api/find-simple-alternatives', 'services.analysis.simple_alternative_service.find_simple_alternatives', 'content'),
-            ('/api/check-acronym-expansion', 'services.analysis.acronym_expansion_service.check_acronym_expansion', 'content'),
-            ('/api/detect-actionability-gaps', 'services.analysis.actionability_gap_service.detect_actionability_gaps', 'content'),
-            ('/api/check-thesis-frontload', 'services.analysis.thesis_frontload_service.check_thesis_frontload', 'content'),
-            ('/api/detect-list-table-opportunities', 'services.analysis.list_table_opportunity_service.detect_list_table_opportunities', 'content'),
-            ('/api/analyze-question-density', 'services.analysis.question_density_service.analyze_question_density', 'content'),
-            ('/api/audit-whitespace-formatting', 'services.analysis.whitespace_formatting_service.audit_whitespace_formatting', 'content'),
-            ('/api/analyze-bullet-density', 'services.analysis.bullet_point_density_service.analyze_bullet_density', 'content'),
-            ('/api/check-code-block-quality', 'services.analysis.code_block_quality_service.check_code_block_quality', 'content'),
-            ('/api/check-paragraph-opening-variety', 'services.analysis.paragraph_opening_variety_service.check_paragraph_opening_variety', 'content'),
-            ('/api/check-tone-consistency', 'services.analysis.tone_consistency_service.check_tone_consistency', 'content'),
-            ('/api/detect-linking-verb-overuse', 'services.analysis.linking_verb_overuse_service.detect_linking_verb_overuse', 'content'),
-            ('/api/validate-instruction-sequence', 'services.analysis.instruction_sequence_service.validate_instruction_sequence', 'content'),
-            ('/api/score-content-depth', 'services.analysis.content_depth_scorer_service.score_content_depth', 'content'),
-            ('/api/analyze-conclusion-strength', 'services.analysis.conclusion_strength_service.analyze_conclusion_strength', 'content'),
-            ('/api/check-parenthetical-overuse', 'services.analysis.parenthetical_overuse_service.check_parenthetical_overuse', 'content'),
-            ('/api/detect-anaphora-repetition', 'services.analysis.anaphora_repetition_service.detect_anaphora_repetition', 'content'),
-            ('/api/analyze-connector-variety', 'services.analysis.sentence_analysis_service.analyze_connector_variety', 'content'),
-            ('/api/check-content-freshness', 'services.seo.content_freshness_indicator_service.check_content_freshness', 'content'),
-            ('/api/check-article-format', 'services.content.article_format_template_service.check_article_format', 'content'),
-            ('/api/map-emotional-arc', 'services.analysis.emotional_arc_mapper_service.map_emotional_arc', 'content'),
-            ('/api/analyze-sentence-rhythm', 'services.analysis.sentence_analysis_service.analyze_sentence_rhythm', 'content'),
-            ('/api/analyze-sentence-ending-variety', 'services.analysis.sentence_analysis_service.analyze_sentence_ending_variety', 'content'),
-            ('/api/sentence-variety', 'services.analysis.sentence_analysis_service.analyze_variety', 'content'),
-            ('/api/reading-time', 'services.analysis.reading_time_service.estimate_reading_time', 'content'),
-            ('/api/analyze-transitions', 'services.analysis.transition_analyzer_service.analyze_transitions', 'content'),
-            ('/api/emotional-tone', 'services.analysis.emotional_tone_service.map_emotional_tone', 'content'),
-            ('/api/engagement-score', 'services.seo.engagement_scorer_service.score_engagement', 'content'),
-            ('/api/benchmark-readability', 'services.analysis.readability_benchmark_service.benchmark_readability', 'content'),
-            ('/api/analyze-jargon', 'services.analysis.jargon_analyzer_service.analyze_jargon_coverage', 'content'),
         ]
         for path, service_path, field_name in simple_services:
             with self.subTest(path=path):

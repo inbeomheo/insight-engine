@@ -72,12 +72,6 @@ def api_clear_cache():
 # 분리된 utility 서브 라우트 — 부수효과 import (blog_bp에 라우트 등록)
 # - routes/utility/operations.py: 헬스/heartbeat/providers/ollama
 # - routes/utility/feedback_quality.py: 캐시/피드백/팩트체크/SEO
-# - routes/utility/generation.py: AI 스타일 추천/생성
 # - routes/utility/external.py: 웹훅/재생목록/추천소스/RSS
-# - routes/utility/content_evaluation.py: 콘텐츠 평가 (등급/헤드라인 등)
-# - routes/utility/text_structure.py: 문장/단락/연결어/구조 분석
-# - routes/utility/text_quality.py: 표현 품질 (군더더기/어휘/톤)
-# - routes/utility/seo_aeo.py: SEO/AEO/EEAT/구조화 데이터
-# - routes/utility/content_meta.py: 메타데이터/페르소나/투명성/위험
 # ============================================================
 from routes import utility as _utility_subroutes  # noqa: E402,F401

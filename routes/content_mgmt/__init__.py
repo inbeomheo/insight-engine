@@ -4,9 +4,7 @@
 
 서브모듈:
 - backup_io: F8-22 백업/복원 + F8-23 데이터 가져오기/내보내기
-- trash_pin: F8-24 휴지통 + F8-25 콘텐츠 핀
 """
 from routes.content_mgmt import (  # noqa: F401 — 부수효과 import
     backup_io,
-    trash_pin,
 )
