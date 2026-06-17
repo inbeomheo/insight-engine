@@ -1,0 +1,134 @@
+/* =====================================================================
+   INSIGHT ENGINE — "SIGNAL" THEME
+   Drop-in replacement for the :root (and .dark) token blocks in
+   frontend/app/globals.css
+
+   HOW TO APPLY
+   1. Replace the existing `:root { ... }` block in globals.css with the
+      `:root` block below. Keep your @theme inline, @layer base, and the
+      rest of the file as-is — only the token VALUES change.
+   2. Replace the `.dark { ... }` block with the `.dark` block below.
+   3. Tighten one value: --radius goes from 0.625rem to 0.2rem (Signal is
+      a low-radius, hairline-border system — see notes at bottom).
+   4. Fonts are unchanged: Pretendard + JetBrains Mono are already wired.
+      Signal just uses JetBrains Mono MORE (all metadata / numbers / labels).
+
+   The repo stores tokens as hex (not HSL), so these are literal hex
+   swaps — nothing else in your shadcn setup needs to change.
+   ===================================================================== */
+
+:root {
+  /* Signal: sharper corners than the old indigo theme */
+  --radius: 0.2rem;
+
+  /* --- Surfaces --- */
+  --background: #FAF8F4;          /* Paper — warm off-white (was #ffffff) */
+  --foreground: #17150F;          /* Ink — near-black warm (was #111827) */
+  --card: #ffffff;                /* Cards stay pure white on paper bg */
+  --card-foreground: #17150F;
+  --popover: #ffffff;
+  --popover-foreground: #17150F;
+
+  /* --- Brand / action --- */
+  --primary: #EA4E20;             /* Signal vermilion (was #4F46E5) */
+  --primary-foreground: #ffffff;
+
+  /* --- Neutrals --- */
+  --secondary: #F1EEE7;           /* Wash — warm neutral fill */
+  --secondary-foreground: #17150F;
+  --muted: #F1EEE7;
+  --muted-foreground: #6E6A60;    /* ~rgba(23,21,15,0.55) flattened */
+  --accent: #FBE9E3;              /* Faint vermilion tint for accent surfaces */
+  --accent-foreground: #EA4E20;
+
+  --destructive: #E5484D;
+
+  /* --- Lines & focus --- */
+  --border: #E5E0D7;              /* Hairline on paper (was #E5E7EB) */
+  --input: #DAD4C9;
+  --ring: rgba(234, 78, 32, 0.35);
+
+  /* --- Charts (source-type / data palette) --- */
+  --chart-1: #EA4E20;            /* vermilion */
+  --chart-2: #1FA672;            /* green */
+  --chart-3: #F59E0B;            /* amber */
+  --chart-4: #7C5CFF;            /* violet (arXiv) */
+  --chart-5: #2D7FF9;            /* blue (web) */
+
+  /* --- Sidebar --- */
+  --sidebar: #F1EEE7;            /* Wash panel (was #F8FAFC) */
+  --sidebar-foreground: #17150F;
+  --sidebar-primary: #17150F;    /* "새 분석" button is INK, not vermilion */
+  --sidebar-primary-foreground: #FAF8F4;
+  --sidebar-accent: #FAF8F4;     /* active history row background */
+  --sidebar-accent-foreground: #17150F;
+  --sidebar-border: #E5E0D7;
+  --sidebar-ring: rgba(234, 78, 32, 0.35);
+
+  /* --- Fonts (unchanged) --- */
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Optional Signal dark mode: ink canvas, paper text, vermilion stays the action color.
+   Only override the variables that should differ in dark; merge into your existing .dark. */
+.dark {
+  --background: #17150F;
+  --foreground: #FAF8F4;
+  --card: #1F1C15;
+  --card-foreground: #FAF8F4;
+  --popover: #1F1C15;
+  --popover-foreground: #FAF8F4;
+  --primary: #EA4E20;
+  --primary-foreground: #ffffff;
+  --secondary: #262219;
+  --secondary-foreground: #FAF8F4;
+  --muted: #262219;
+  --muted-foreground: rgba(250, 248, 244, 0.55);
+  --accent: #2E2418;
+  --accent-foreground: #EA4E20;
+  --border: rgba(250, 248, 244, 0.10);
+  --input: rgba(250, 248, 244, 0.14);
+  --ring: rgba(234, 78, 32, 0.45);
+
+  --sidebar: #1F1C15;
+  --sidebar-foreground: #FAF8F4;
+  --sidebar-primary: #EA4E20;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262219;
+  --sidebar-accent-foreground: #FAF8F4;
+  --sidebar-border: rgba(250, 248, 244, 0.10);
+  --sidebar-ring: rgba(234, 78, 32, 0.45);
+}
+
+/* =====================================================================
+   SIGNAL ADJUSTMENTS TO EXISTING UTILITY CSS (in globals.css)
+   These are the only non-token edits Signal asks for. Apply by hand.
+   ---------------------------------------------------------------------
+   1. GRADIENTS — Signal has no gradients. Replace .gradient-primary
+      usages with a flat fill, and drop .glass blur on primary surfaces:
+
+        .gradient-primary { background: #EA4E20; }      // flat, not linear-gradient
+        .gradient-subtle  { background: #FAF8F4; }      // flat paper
+
+   2. SHADOWS → HAIRLINES. Signal prefers 1px borders over soft shadows.
+      Where shadcn cards use shadow-sm, prefer `border border-border`.
+      The ONE intentional shadow is the "hard offset" on primary CTAs and
+      the hero URL input:
+
+        box-shadow: 3px 3px 0 rgba(23,21,15,0.18);   // primary buttons
+        box-shadow: 4px 4px 0 rgba(23,21,15,0.10);   // hero URL input
+
+   3. .prose blockquote — change the accent bar to vermilion:
+        @apply border-l-[3px] border-[#EA4E20] pl-5 my-5 ... ;
+
+   4. SCROLLBAR thumb color → warm neutral:
+        ::-webkit-scrollbar-thumb { background: #E5E0D7; }
+
+   5. SOURCE-TYPE DOT/BADGE COLORS (use as inline or a tiny map, not tokens):
+        YouTube  #FF0033
+        arXiv    #7C5CFF
+        RSS      #F59E0B
+        Web      #2D7FF9
+        Podcast  #1FA672
+   ===================================================================== */

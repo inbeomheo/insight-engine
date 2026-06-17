@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::selection { background: #EA4E20; color: #fff; }
+</style>
+</helmet>
+
+<div style="width: max-content; min-width: 100%; min-height: 100vh; box-sizing: border-box; padding: 56px; background: #e7e5df; font-family: 'Pretendard', sans-serif;">
+
+  <!-- ===== PRESENTATION HEADER ===== -->
+  <div style="max-width: 1180px; margin-bottom: 12px;">
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #EA4E20; font-weight: 600; margin-bottom: 18px;">Insight Engine · 리디자인 제안</div>
+    <h1 style="font-size: 44px; line-height: 1.08; letter-spacing: -0.02em; font-weight: 700; color: #17150F; margin: 0 0 18px; max-width: 760px;">제너릭한 인디고를 버리고,<br>편집 디자인의 <span style="color:#EA4E20;">'시그널'</span> 시스템으로.</h1>
+    <p style="font-size: 16px; line-height: 1.65; color: rgba(23,21,15,0.62); margin: 0; max-width: 620px;">현재 앱은 shadcn 기본 인디고에 머물러 있습니다. 같은 정보 구조와 한국어 흐름은 유지하되, 따뜻한 종이색·잉크 블랙·단 하나의 강렬한 버밀리온, 그리고 모노스페이스 메타데이터로 '엔진'다운 대비와 여백을 만듭니다. 아래는 시스템과 핵심 화면들입니다.</p>
+  </div>
+
+  <!-- ===== DESIGN SYSTEM STRIP ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 44px 0 16px;">01 — 디자인 시스템</div>
+  <div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 8px;">
+
+    <!-- Palette -->
+    <div style="flex: none; width: 380px; background: #fff; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 28px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.4); margin-bottom:18px;">Palette</div>
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 14px;">
+        <div>
+          <div style="height:64px; border-radius:2px; background:#FAF8F4; border:1px solid rgba(23,21,15,0.1);"></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#17150F; margin-top:8px;">#FAF8F4</div>
+          <div style="font-size:11px; color:rgba(23,21,15,0.5);">Paper</div>
+        </div>
+        <div>
+          <div style="height:64px; border-radius:2px; background:#17150F;"></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#17150F; margin-top:8px;">#17150F</div>
+          <div style="font-size:11px; color:rgba(23,21,15,0.5);">Ink</div>
+        </div>
+        <div>
+          <div style="height:64px; border-radius:2px; background:#EA4E20;"></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#17150F; margin-top:8px;">#EA4E20</div>
+          <div style="font-size:11px; color:rgba(23,21,15,0.5);">Signal</div>
+        </div>
+        <div>
+          <div style="height:64px; border-radius:2px; background:#F1EEE7; border:1px solid rgba(23,21,15,0.06);"></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#17150F; margin-top:8px;">#F1EEE7</div>
+          <div style="font-size:11px; color:rgba(23,21,15,0.5);">Wash</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:18px; padding-top:18px; border-top:1px solid rgba(23,21,15,0.08);">
+        <div style="flex:1; text-align:center;"><div style="width:18px;height:18px;border-radius:50%;background:#FF0033;margin:0 auto 6px;"></div><div style="font-size:9px;color:rgba(23,21,15,0.45);">YouTube</div></div>
+        <div style="flex:1; text-align:center;"><div style="width:18px;height:18px;border-radius:50%;background:#7C5CFF;margin:0 auto 6px;"></div><div style="font-size:9px;color:rgba(23,21,15,0.45);">arXiv</div></div>
+        <div style="flex:1; text-align:center;"><div style="width:18px;height:18px;border-radius:50%;background:#F59E0B;margin:0 auto 6px;"></div><div style="font-size:9px;color:rgba(23,21,15,0.45);">RSS</div></div>
+        <div style="flex:1; text-align:center;"><div style="width:18px;height:18px;border-radius:50%;background:#2D7FF9;margin:0 auto 6px;"></div><div style="font-size:9px;color:rgba(23,21,15,0.45);">Web</div></div>
+        <div style="flex:1; text-align:center;"><div style="width:18px;height:18px;border-radius:50%;background:#1FA672;margin:0 auto 6px;"></div><div style="font-size:9px;color:rgba(23,21,15,0.45);">Podcast</div></div>
+      </div>
+    </div>
+
+    <!-- Type -->
+    <div style="flex: none; width: 440px; background: #fff; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 28px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.4); margin-bottom:18px;">Typeface</div>
+      <div style="font-size:40px; font-weight:700; letter-spacing:-0.02em; color:#17150F; line-height:1.1;">영상 한 편을<br>14가지 콘텐츠로.</div>
+      <div style="font-size:13px; color:rgba(23,21,15,0.55); margin-top:6px;">Pretendard · 700 / 600 / 500 / 400</div>
+      <div style="margin-top:20px; padding-top:18px; border-top:1px solid rgba(23,21,15,0.08);">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:0.04em; color:#17150F;">00:14:32 · GEMINI-3.1 · 1,840 TOKENS</div>
+        <div style="font-size:13px; color:rgba(23,21,15,0.55); margin-top:6px;">JetBrains Mono — 메타데이터·라벨·수치 전용</div>
+      </div>
+    </div>
+
+    <!-- Principles -->
+    <div style="flex: none; width: 312px; background: #17150F; border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 28px; color:#FAF8F4;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; margin-bottom:18px;">Principles</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div><div style="font-size:15px; font-weight:600;">대비로 위계를 만든다</div><div style="font-size:12px; color:rgba(250,248,244,0.5); margin-top:3px; line-height:1.5;">그림자 대신 잉크, 라운드 대신 헤어라인.</div></div>
+        <div><div style="font-size:15px; font-weight:600;">색은 단 하나, 강하게</div><div style="font-size:12px; color:rgba(250,248,244,0.5); margin-top:3px; line-height:1.5;">버밀리온은 '지금 행동'에만 쓴다.</div></div>
+        <div><div style="font-size:15px; font-weight:600;">숫자는 모노스페이스로</div><div style="font-size:12px; color:rgba(250,248,244,0.5); margin-top:3px; line-height:1.5;">시간·토큰·횟수는 엔진의 언어.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 02 MAIN GENERATION FLOW ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 52px 0 16px;">02 — 메인 생성 흐름 · 3가지 방향</div>
+
+  <div style="display: flex; gap: 40px; align-items: flex-start;">
+
+    <!-- ========== VARIATION A — Editorial Command ========== -->
+    <div style="flex: none; width: 1180px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.06em; color:rgba(23,21,15,0.55); margin-bottom:12px;"><span style="color:#EA4E20; font-weight:600;">A.</span> 에디토리얼 커맨드 — 큰 타이포 + 모노 라벨, 14스타일 그리드</div>
+      <div data-screen-label="Main · Variation A" style="width:1180px; height:760px; background:#FAF8F4; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex;">
+
+        <!-- Sidebar -->
+        <div style="width:236px; flex:none; background:#F1EEE7; border-right:1px solid rgba(23,21,15,0.09); display:flex; flex-direction:column;">
+          <div style="padding:20px 18px 14px; display:flex; align-items:center; gap:9px;">
+            <div style="width:26px; height:26px; background:#17150F; border-radius:3px; display:flex; align-items:center; justify-content:center;"><div style="width:9px;height:9px;background:#EA4E20;border-radius:50%;"></div></div>
+            <div style="font-weight:700; font-size:15px; letter-spacing:-0.01em; color:#17150F;">Insight Engine</div>
+          </div>
+          <div style="padding:6px 14px 14px;">
+            <button style="width:100%; height:42px; background:#17150F; color:#FAF8F4; border:none; border-radius:3px; font-family:inherit; font-size:13.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+              <span style="font-size:17px; line-height:0;">+</span> 새 분석
+            </button>
+          </div>
+          <div style="padding:0 14px 10px;">
+            <div style="height:34px; background:#FAF8F4; border:1px solid rgba(23,21,15,0.1); border-radius:3px; display:flex; align-items:center; padding:0 10px; gap:7px;">
+              <div style="width:13px;height:13px;border:1.5px solid rgba(23,21,15,0.3);border-radius:50%;"></div>
+              <span style="font-size:12px; color:rgba(23,21,15,0.4);">히스토리 검색</span>
+            </div>
+          </div>
+          <div style="padding:8px 18px 6px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.38);">오늘</div>
+          <div style="flex:1; overflow:hidden; padding:0 10px;">
+            <div style="padding:10px 9px; border-radius:4px; background:#FAF8F4; border:1px solid rgba(23,21,15,0.08); margin-bottom:5px;">
+              <div style="display:flex; gap:7px; align-items:flex-start;"><div style="width:7px;height:7px;border-radius:50%;background:#FF0033;margin-top:5px;flex:none;"></div><div style="font-size:12px; font-weight:500; color:#17150F; line-height:1.35;">AI 에이전트 시대의 생산성 전략</div></div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4); margin-top:5px; padding-left:14px;">14:32 · 블로그+SEO</div>
+            </div>
+            <div style="padding:10px 9px; border-radius:4px; margin-bottom:5px;">
+              <div style="display:flex; gap:7px; align-items:flex-start;"><div style="width:7px;height:7px;border-radius:50%;background:#7C5CFF;margin-top:5px;flex:none;"></div><div style="font-size:12px; font-weight:500; color:rgba(23,21,15,0.78); line-height:1.35;">Transformer 논문 핵심 요약</div></div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4); margin-top:5px; padding-left:14px;">11:08 · 요약</div>
+            </div>
+            <div style="padding:10px 9px; border-radius:4px;">
+              <div style="display:flex; gap:7px; align-items:flex-start;"><div style="width:7px;height:7px;border-radius:50%;background:#1FA672;margin-top:5px;flex:none;"></div><div style="font-size:12px; font-weight:500; color:rgba(23,21,15,0.78); line-height:1.35;">스타트업 팟캐스트 쇼노트</div></div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4); margin-top:5px; padding-left:14px;">09:40 · 쇼노트</div>
+            </div>
+          </div>
+          <div style="padding:12px 16px; border-top:1px solid rgba(23,21,15,0.08); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.1em; color:rgba(23,21,15,0.3);">POWERED BY LITELLM</div>
+        </div>
+
+        <!-- Main -->
+        <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+          <!-- header -->
+          <div style="height:54px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; justify-content:space-between; padding:0 24px;">
+            <div style="display:flex; gap:22px; font-size:13px;">
+              <span style="font-weight:600; color:#17150F; border-bottom:2px solid #EA4E20; padding-bottom:17px;">생성</span>
+              <span style="color:rgba(23,21,15,0.45); padding-bottom:17px;">라이브러리</span>
+              <span style="color:rgba(23,21,15,0.45); padding-bottom:17px;">대시보드</span>
+              <span style="color:rgba(23,21,15,0.45); padding-bottom:17px;">캘린더</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.5);">크레딧 <span style="color:#17150F; font-weight:600;">847</span></div>
+              <div style="width:30px; height:30px; border-radius:50%; background:#17150F; color:#FAF8F4; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">허</div>
+            </div>
+          </div>
+
+          <!-- canvas -->
+          <div style="flex:1; padding:52px 56px; overflow:hidden;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:14px;">새 분석 · STEP 01</div>
+            <h2 style="font-size:38px; font-weight:700; letter-spacing:-0.022em; color:#17150F; margin:0 0 30px; line-height:1.1;">어떤 영상을<br>콘텐츠로 만들까요?</h2>
+
+            <!-- URL bar -->
+            <div style="display:flex; align-items:center; gap:12px; background:#fff; border:1.5px solid #17150F; border-radius:4px; padding:6px 6px 6px 18px; max-width:720px; box-shadow:4px 4px 0 rgba(23,21,15,0.1);">
+              <div style="width:9px;height:9px;border-radius:50%;background:#FF0033;flex:none;"></div>
+              <input disabled placeholder="YouTube · 웹페이지 · RSS · arXiv · Podcast URL 붙여넣기" style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:14.5px; color:#17150F;">
+              <button style="height:40px; padding:0 14px; background:#F1EEE7; color:rgba(23,21,15,0.6); border:none; border-radius:3px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; letter-spacing:0.04em; cursor:pointer;">설정</button>
+              <button style="height:40px; width:46px; background:#EA4E20; color:#fff; border:none; border-radius:3px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;">↑</button>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(23,21,15,0.4); margin-top:10px; letter-spacing:0.03em;">최대 10개 · 붙여넣기로 일괄 추가 · 드래그앤드롭 지원</div>
+
+            <!-- style grid -->
+            <div style="margin-top:38px;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+                <div style="font-size:14px; font-weight:600; color:#17150F;">출력 스타일 <span style="color:rgba(23,21,15,0.4); font-weight:400;">14</span></div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#EA4E20; font-weight:600;">멀티스타일 — 3개 선택됨</div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; max-width:860px;">
+                <div style="padding:13px 10px; background:#17150F; color:#FAF8F4; border-radius:3px; font-size:12px; font-weight:600; text-align:center;">블로그+SEO</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">요약</div>
+                <div style="padding:13px 10px; background:#17150F; color:#FAF8F4; border-radius:3px; font-size:12px; font-weight:600; text-align:center;">튜토리얼</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">Q&amp;A</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">앱 아이디어</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">요즘IT</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">브런치</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">네이버 인기글</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">SNS</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">뉴스레터</div>
+                <div style="padding:13px 10px; background:#17150F; color:#FAF8F4; border-radius:3px; font-size:12px; font-weight:600; text-align:center;">쇼노트</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">Shorts</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">GEO</div>
+                <div style="padding:13px 10px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; font-size:12px; color:rgba(23,21,15,0.7); text-align:center;">AI 코스</div>
+              </div>
+            </div>
+
+            <!-- generate -->
+            <div style="display:flex; align-items:center; gap:14px; margin-top:34px;">
+              <button style="height:50px; padding:0 30px; background:#EA4E20; color:#fff; border:none; border-radius:3px; font-family:inherit; font-size:15px; font-weight:600; display:flex; align-items:center; gap:9px; cursor:pointer; box-shadow:3px 3px 0 rgba(23,21,15,0.18);">콘텐츠 생성 <span style="font-family:'JetBrains Mono',monospace; font-size:12px; opacity:0.8;">×3</span></button>
+              <div style="display:flex; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                <span style="padding:9px 12px; border:1px solid rgba(23,21,15,0.16); border-radius:3px; color:rgba(23,21,15,0.55);">개별</span>
+                <span style="padding:9px 12px; border:1px solid rgba(23,21,15,0.16); border-radius:3px; color:rgba(23,21,15,0.55);">통합</span>
+                <span style="padding:9px 12px; border:1px solid rgba(23,21,15,0.16); border-radius:3px; color:rgba(23,21,15,0.55);">퓨전</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== VARIATION B — Spotlight Canvas ========== -->
+    <div style="flex: none; width: 1180px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.06em; color:rgba(23,21,15,0.55); margin-bottom:12px;"><span style="color:#EA4E20; font-weight:600;">B.</span> 스포트라이트 캔버스 — 극단적 여백, 단일 입력에 집중, 스타일은 가로 스크롤</div>
+      <div data-screen-label="Main · Variation B" style="width:1180px; height:760px; background:#17150F; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column; position:relative;">
+        <!-- top bar -->
+        <div style="height:56px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 30px; border-bottom:1px solid rgba(250,248,244,0.08);">
+          <div style="display:flex; align-items:center; gap:9px;">
+            <div style="width:24px; height:24px; background:#EA4E20; border-radius:3px; display:flex; align-items:center; justify-content:center;"><div style="width:8px;height:8px;background:#17150F;border-radius:50%;"></div></div>
+            <div style="font-weight:700; font-size:14px; color:#FAF8F4;">Insight Engine</div>
+          </div>
+          <div style="display:flex; gap:24px; font-size:12.5px; color:rgba(250,248,244,0.45);">
+            <span style="color:#FAF8F4; font-weight:600;">생성</span><span>라이브러리</span><span>대시보드</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(250,248,244,0.5);">847 크레딧</div>
+        </div>
+        <!-- centered stage -->
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 40px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:22px;">URL 하나 · 콘텐츠 14가지</div>
+          <h2 style="font-size:52px; font-weight:700; letter-spacing:-0.03em; color:#FAF8F4; margin:0 0 40px; text-align:center; line-height:1.05;">무엇을 분석할까요?</h2>
+          <!-- big input -->
+          <div style="width:660px; max-width:100%; background:rgba(250,248,244,0.04); border:1.5px solid rgba(250,248,244,0.18); border-radius:5px; padding:8px 8px 8px 22px; display:flex; align-items:center; gap:14px;">
+            <div style="width:9px;height:9px;border-radius:50%;background:#EA4E20;flex:none; box-shadow:0 0 12px #EA4E20;"></div>
+            <input disabled placeholder="YouTube 영상 URL을 붙여넣으세요" style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:16px; color:#FAF8F4;">
+            <button style="height:46px; padding:0 24px; background:#EA4E20; color:#fff; border:none; border-radius:4px; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;">생성 <span style="font-size:17px;">↑</span></button>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(250,248,244,0.35); margin-top:14px; letter-spacing:0.04em;">웹페이지 · RSS · arXiv · Podcast 도 지원 · 최대 10개 일괄</div>
+          <!-- style pills horizontal -->
+          <div style="display:flex; gap:9px; margin-top:46px; max-width:840px; flex-wrap:wrap; justify-content:center;">
+            <span style="padding:9px 16px; background:#EA4E20; color:#fff; border-radius:100px; font-size:12.5px; font-weight:600;">블로그+SEO</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">요약</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">튜토리얼</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">Q&amp;A</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">뉴스레터</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">쇼노트</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">Shorts</span>
+            <span style="padding:9px 16px; background:rgba(250,248,244,0.06); color:rgba(250,248,244,0.7); border:1px solid rgba(250,248,244,0.14); border-radius:100px; font-size:12.5px;">GEO</span>
+            <span style="padding:9px 16px; background:transparent; color:rgba(250,248,244,0.4); border:1px dashed rgba(250,248,244,0.2); border-radius:100px; font-size:12.5px;">+6 더보기</span>
+          </div>
+        </div>
+        <!-- bottom recent strip -->
+        <div style="flex:none; padding:16px 30px; border-top:1px solid rgba(250,248,244,0.08); display:flex; align-items:center; gap:18px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(250,248,244,0.35);">최근</span>
+          <div style="display:flex; gap:8px; align-items:center; font-size:12px; color:rgba(250,248,244,0.55);"><div style="width:6px;height:6px;border-radius:50%;background:#FF0033;"></div>AI 에이전트 생산성 전략</div>
+          <div style="display:flex; gap:8px; align-items:center; font-size:12px; color:rgba(250,248,244,0.55);"><div style="width:6px;height:6px;border-radius:50%;background:#7C5CFF;"></div>Transformer 핵심 요약</div>
+          <div style="display:flex; gap:8px; align-items:center; font-size:12px; color:rgba(250,248,244,0.55);"><div style="width:6px;height:6px;border-radius:50%;background:#1FA672;"></div>스타트업 쇼노트</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== VARIATION C — Split Workspace ========== -->
+    <div style="flex: none; width: 1180px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.06em; color:rgba(23,21,15,0.55); margin-bottom:12px;"><span style="color:#EA4E20; font-weight:600;">C.</span> 스플릿 워크스페이스 — 좌측 컨트롤 · 우측 실시간 생성 미리보기</div>
+      <div data-screen-label="Main · Variation C" style="width:1180px; height:760px; background:#FAF8F4; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex;">
+        <!-- left controls -->
+        <div style="width:440px; flex:none; border-right:1px solid rgba(23,21,15,0.1); display:flex; flex-direction:column;">
+          <div style="height:54px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; padding:0 24px; gap:9px;">
+            <div style="width:24px; height:24px; background:#17150F; border-radius:3px; display:flex; align-items:center; justify-content:center;"><div style="width:8px;height:8px;background:#EA4E20;border-radius:50%;"></div></div>
+            <div style="font-weight:700; font-size:14px; color:#17150F;">Insight Engine</div>
+          </div>
+          <div style="flex:1; padding:28px 24px; overflow:hidden;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:10px;">01 — 소스</div>
+            <!-- url chips -->
+            <div style="background:#fff; border:1.5px solid #17150F; border-radius:4px; padding:5px 5px 5px 14px; display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#FF0033;flex:none;"></div>
+              <input disabled placeholder="URL 붙여넣기" style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:13.5px; color:#17150F;">
+              <button style="height:34px; width:36px; background:#EA4E20; color:#fff; border:none; border-radius:3px; font-size:15px; cursor:pointer;">↑</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:26px;">
+              <div style="display:flex; align-items:center; gap:9px; background:#F1EEE7; border-radius:3px; padding:9px 12px;"><div style="width:6px;height:6px;border-radius:50%;background:#FF0033;"></div><span style="font-size:12px; color:#17150F; flex:1; font-weight:500;">dQw4w9WgXcQ</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">YouTube</span><span style="color:rgba(23,21,15,0.35); font-size:13px;">×</span></div>
+              <div style="display:flex; align-items:center; gap:9px; background:#F1EEE7; border-radius:3px; padding:9px 12px;"><div style="width:6px;height:6px;border-radius:50%;background:#2D7FF9;"></div><span style="font-size:12px; color:#17150F; flex:1; font-weight:500;">openai.com/research</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">Web</span><span style="color:rgba(23,21,15,0.35); font-size:13px;">×</span></div>
+            </div>
+
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:12px;">02 — 스타일</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:26px;">
+              <span style="padding:7px 12px; background:#17150F; color:#FAF8F4; border-radius:3px; font-size:11.5px; font-weight:600;">블로그+SEO</span>
+              <span style="padding:7px 12px; background:#fff; border:1px solid rgba(23,21,15,0.14); color:rgba(23,21,15,0.7); border-radius:3px; font-size:11.5px;">요약</span>
+              <span style="padding:7px 12px; background:#fff; border:1px solid rgba(23,21,15,0.14); color:rgba(23,21,15,0.7); border-radius:3px; font-size:11.5px;">뉴스레터</span>
+              <span style="padding:7px 12px; background:#fff; border:1px solid rgba(23,21,15,0.14); color:rgba(23,21,15,0.35); border-radius:3px; font-size:11.5px;">+11</span>
+            </div>
+
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:12px;">03 — 옵션</div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px;"><span style="font-size:12.5px; color:#17150F;">생성 모드</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#EA4E20; font-weight:600;">퓨전</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px;"><span style="font-size:12.5px; color:#17150F;">언어 · 모델</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.55);">한국어 · GEMINI</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px;"><span style="font-size:12.5px; color:#17150F;">에이전트 모드</span><span style="width:34px; height:19px; background:#EA4E20; border-radius:100px; position:relative;"><span style="position:absolute; right:2px; top:2px; width:15px; height:15px; background:#fff; border-radius:50%;"></span></span></div>
+            </div>
+          </div>
+          <div style="flex:none; padding:18px 24px; border-top:1px solid rgba(23,21,15,0.09);">
+            <button style="width:100%; height:50px; background:#EA4E20; color:#fff; border:none; border-radius:3px; font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; box-shadow:3px 3px 0 rgba(23,21,15,0.18);">퓨전 분석 시작 · 2개 소스</button>
+          </div>
+        </div>
+        <!-- right preview -->
+        <div style="flex:1; background:#F1EEE7; display:flex; flex-direction:column; min-width:0;">
+          <div style="height:54px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; justify-content:space-between; padding:0 28px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(23,21,15,0.5); font-weight:600;">실시간 미리보기</span>
+            <span style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#EA4E20;"><span style="width:7px;height:7px;border-radius:50%;background:#EA4E20;"></span>자막 추출 중 · 38%</span>
+          </div>
+          <div style="flex:1; padding:34px 40px; overflow:hidden;">
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.06); padding:32px; height:100%; box-sizing:border-box;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px;"><div style="width:7px;height:7px;border-radius:50%;background:#FF0033;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(23,21,15,0.5);">블로그+SEO · 퓨전 · 한국어</span></div>
+              <div style="height:30px; width:72%; background:#F1EEE7; border-radius:3px; margin-bottom:20px;"></div>
+              <div style="height:13px; width:100%; background:#F1EEE7; border-radius:3px; margin-bottom:9px;"></div>
+              <div style="height:13px; width:94%; background:#F1EEE7; border-radius:3px; margin-bottom:9px;"></div>
+              <div style="height:13px; width:88%; background:#EA4E20; opacity:0.15; border-radius:3px; margin-bottom:9px;"></div>
+              <div style="height:13px; width:96%; background:#F1EEE7; border-radius:3px; margin-bottom:26px;"></div>
+              <div style="height:18px; width:40%; background:#F1EEE7; border-radius:3px; margin-bottom:14px;"></div>
+              <div style="height:13px; width:91%; background:#F1EEE7; border-radius:3px; margin-bottom:9px;"></div>
+              <div style="height:13px; width:97%; background:#F1EEE7; border-radius:3px; margin-bottom:9px;"></div>
+              <div style="height:13px; width:60%; background:#F1EEE7; border-radius:3px;"></div>
+              <div style="margin-top:28px; display:flex; gap:8px;">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.45); padding:5px 10px; background:#F1EEE7; border-radius:3px;">[00:14] 인용</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.45); padding:5px 10px; background:#F1EEE7; border-radius:3px;">[02:31] 인용</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 03 RESULTS / CONTENT EDITOR ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 52px 0 16px;">03 — 결과 · 콘텐츠 에디터</div>
+  <div style="display:flex; gap:40px; align-items:flex-start;">
+    <div style="flex:none; width:1180px;">
+      <div data-screen-label="Editor" style="width:1180px; height:780px; background:#FAF8F4; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column;">
+        <!-- top toolbar -->
+        <div style="height:56px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; justify-content:space-between; padding:0 26px;">
+          <div style="display:flex; align-items:center; gap:13px;">
+            <span style="font-size:14px; color:rgba(23,21,15,0.4);">←</span>
+            <div style="width:7px;height:7px;border-radius:50%;background:#FF0033;"></div>
+            <span style="font-size:14px; font-weight:600; color:#17150F;">AI 에이전트 시대의 생산성 전략</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#fff; background:#17150F; padding:3px 8px; border-radius:3px;">블로그+SEO</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#1FA672; padding:6px 11px; background:rgba(31,166,114,0.1); border-radius:3px;"><span style="width:6px;height:6px;border-radius:50%;background:#1FA672;"></span>QA 통과</span>
+            <div style="width:1px; height:20px; background:rgba(23,21,15,0.12);"></div>
+            <button style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.6); padding:7px 11px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; cursor:pointer;">DOCX</button>
+            <button style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.6); padding:7px 11px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; cursor:pointer;">MD</button>
+            <button style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.6); padding:7px 11px; background:#fff; border:1px solid rgba(23,21,15,0.14); border-radius:3px; cursor:pointer;">PDF</button>
+            <button style="font-size:13px; font-weight:600; color:#fff; padding:8px 16px; background:#EA4E20; border:none; border-radius:3px; cursor:pointer;">발행</button>
+          </div>
+        </div>
+        <div style="flex:1; display:flex; min-height:0;">
+          <!-- document -->
+          <div style="flex:1; overflow:hidden; padding:46px 60px; position:relative;">
+            <div style="max-width:680px; margin:0 auto;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.04em; color:rgba(23,21,15,0.45); margin-bottom:18px;">14:32 · GEMINI-3.1-FLASH · 1,840 TOKENS · 한국어</div>
+              <h1 style="font-size:34px; font-weight:700; letter-spacing:-0.02em; color:#17150F; margin:0 0 22px; line-height:1.15;">AI 에이전트 시대, 개인 생산성은 어떻게 재편되는가</h1>
+              <p style="font-size:15.5px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 18px;">자율 에이전트가 일상 업무에 들어오면서, 생산성의 정의 자체가 바뀌고 있다. 단순 자동화를 넘어 의사결정의 위임이 일어나는 지점에서 새로운 작업 흐름이 만들어진다.</p>
+              <!-- selection + inline AI edit -->
+              <p style="font-size:15.5px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 18px; position:relative;">핵심은 <span style="background:rgba(234,78,32,0.16); box-shadow:0 0 0 1px rgba(234,78,32,0.4); border-radius:2px; padding:1px 2px;">반복 가능한 판단을 에이전트에게 넘기고, 사람은 맥락과 검증에 집중하는 구조</span>다. 이 전환은 도구가 아니라 습관의 문제다.</p>
+              <div style="position:absolute; left:60px; top:300px; background:#17150F; border-radius:4px; padding:6px; display:flex; gap:4px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+                <span style="font-size:11.5px; color:#FAF8F4; padding:6px 10px; border-radius:3px; background:rgba(250,248,244,0.08);">축약</span>
+                <span style="font-size:11.5px; color:#FAF8F4; padding:6px 10px; border-radius:3px;">확장</span>
+                <span style="font-size:11.5px; color:#FAF8F4; padding:6px 10px; border-radius:3px;">톤 변경</span>
+                <span style="font-size:11.5px; color:#FAF8F4; padding:6px 10px; border-radius:3px;">번역</span>
+                <span style="font-size:11.5px; color:#EA4E20; font-weight:600; padding:6px 10px; border-radius:3px;">✦ AI 편집</span>
+              </div>
+              <h2 style="font-size:21px; font-weight:600; letter-spacing:-0.01em; color:#17150F; margin:34px 0 14px;">1. 위임의 경제학</h2>
+              <p style="font-size:15.5px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 18px;">에이전트에게 맡길 수 있는 일과 그렇지 않은 일을 가르는 기준은 명확하다. <a style="color:#EA4E20; text-decoration:underline; text-underline-offset:2px;">결과의 검증 가능성</a>이다.</p>
+              <blockquote style="border-left:3px solid #EA4E20; padding:4px 0 4px 18px; margin:22px 0; color:rgba(23,21,15,0.62); font-size:15px;">"가장 큰 변화는 도구의 성능이 아니라, 무엇을 직접 하지 않을지 결정하는 능력에서 온다."</blockquote>
+            </div>
+          </div>
+          <!-- right rail -->
+          <div style="width:312px; flex:none; border-left:1px solid rgba(23,21,15,0.09); background:#F1EEE7; overflow:hidden; padding:24px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.42); margin-bottom:12px;">소스</div>
+            <div style="background:#fff; border-radius:4px; padding:12px; display:flex; gap:11px; align-items:center; margin-bottom:24px;">
+              <div style="width:64px; height:40px; background:repeating-linear-gradient(45deg,#e7e3da,#e7e3da 6px,#f1eee7 6px,#f1eee7 12px); border-radius:3px; flex:none; display:flex; align-items:center; justify-content:center;"><div style="width:0;height:0;border-left:9px solid #FF0033; border-top:6px solid transparent; border-bottom:6px solid transparent;"></div></div>
+              <div style="min-width:0;"><div style="font-size:12px; font-weight:500; color:#17150F; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">The Future of AI Agents</div><div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.45); margin-top:3px;">18:24 · dQw4w9WgXcQ</div></div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.42); margin-bottom:12px;">플랫폼 리라이트</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:24px;">
+              <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px; padding:10px; text-align:center; font-size:12px; color:#17150F;">Twitter</div>
+              <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px; padding:10px; text-align:center; font-size:12px; color:#17150F;">LinkedIn</div>
+              <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px; padding:10px; text-align:center; font-size:12px; color:#17150F;">Instagram</div>
+              <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:3px; padding:10px; text-align:center; font-size:12px; color:#17150F;">Threads</div>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.42); margin-bottom:12px;">발행</div>
+            <div style="display:flex; flex-direction:column; gap:7px;">
+              <div style="display:flex; align-items:center; gap:9px; background:#fff; border-radius:3px; padding:11px 12px;"><div style="width:8px;height:8px;border-radius:2px;background:#1FA672;"></div><span style="font-size:12.5px; color:#17150F; flex:1;">네이버 블로그</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">MCP</span></div>
+              <div style="display:flex; align-items:center; gap:9px; background:#fff; border-radius:3px; padding:11px 12px;"><div style="width:8px;height:8px;border-radius:2px;background:#2D7FF9;"></div><span style="font-size:12.5px; color:#17150F; flex:1;">WordPress</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">MCP</span></div>
+              <div style="display:flex; align-items:center; gap:9px; background:#fff; border-radius:3px; padding:11px 12px;"><span style="font-size:13px;">🗓</span><span style="font-size:12.5px; color:#17150F; flex:1;">예약 발행</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">캘린더</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 04 OPERATIONS / ANALYTICS DASHBOARD ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 52px 0 16px;">04 — 운영 · 분석 대시보드</div>
+  <div style="display:flex; gap:40px; align-items:flex-start;">
+    <div style="flex:none; width:1180px;">
+      <div data-screen-label="Dashboard" style="width:1180px; height:740px; background:#FAF8F4; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:56px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; justify-content:space-between; padding:0 30px;">
+          <div style="display:flex; gap:24px; font-size:13px;">
+            <span style="color:rgba(23,21,15,0.45);">생성</span><span style="color:rgba(23,21,15,0.45);">라이브러리</span>
+            <span style="font-weight:600; color:#17150F; border-bottom:2px solid #EA4E20; padding-bottom:18px;">대시보드</span>
+            <span style="color:rgba(23,21,15,0.45);">캘린더</span>
+          </div>
+          <div style="display:flex; gap:6px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+            <span style="padding:6px 11px; background:#17150F; color:#FAF8F4; border-radius:3px;">7일</span>
+            <span style="padding:6px 11px; color:rgba(23,21,15,0.5);">30일</span>
+            <span style="padding:6px 11px; color:rgba(23,21,15,0.5);">전체</span>
+          </div>
+        </div>
+        <div style="flex:1; overflow:hidden; padding:30px;">
+          <!-- KPI -->
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:22px;">
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(23,21,15,0.42);">생성된 콘텐츠</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:#17150F; margin-top:6px; letter-spacing:-0.02em;">1,284</div>
+              <div style="font-size:11.5px; color:#1FA672; margin-top:4px;">▲ 18% · 지난주 대비</div>
+            </div>
+            <div style="background:#17150F; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(250,248,244,0.5);">토큰 사용</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:#FAF8F4; margin-top:6px; letter-spacing:-0.02em;">2.4<span style="font-size:20px; color:#EA4E20;">M</span></div>
+              <div style="font-size:11.5px; color:rgba(250,248,244,0.5); margin-top:4px;">$38.20 예상 비용</div>
+            </div>
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(23,21,15,0.42);">발행 완료</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:#17150F; margin-top:6px; letter-spacing:-0.02em;">347</div>
+              <div style="font-size:11.5px; color:rgba(23,21,15,0.5); margin-top:4px;">대기 큐 12 · 예약 8</div>
+            </div>
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(23,21,15,0.42);">QA 통과율</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; color:#17150F; margin-top:6px; letter-spacing:-0.02em;">96<span style="font-size:20px; color:rgba(23,21,15,0.4);">%</span></div>
+              <div style="font-size:11.5px; color:#EA4E20; margin-top:4px;">금칙어 4 · 중복 1 차단</div>
+            </div>
+          </div>
+          <!-- chart + provider -->
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:22px;">
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px;"><span style="font-size:13px; font-weight:600; color:#17150F;">일별 생성량</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">최근 7일</span></div>
+              <div style="display:flex; align-items:flex-end; gap:14px; height:130px;">
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:52%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">월</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:68%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">화</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:44%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">수</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:88%; background:#EA4E20; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#EA4E20; font-weight:600;">목</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:74%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">금</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:60%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">토</span></div>
+                <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:8px;"><div style="width:100%; height:38%; background:#F1EEE7; border-radius:2px;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(23,21,15,0.4);">일</span></div>
+              </div>
+            </div>
+            <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:22px;">
+              <div style="font-size:13px; font-weight:600; color:#17150F; margin-bottom:18px;">프로바이더 분포</div>
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">Gemini</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">58%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:58%; height:100%; background:#EA4E20; border-radius:3px;"></div></div></div>
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">DeepSeek</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">22%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:22%; height:100%; background:#17150F; border-radius:3px;"></div></div></div>
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">GLM-4.7</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">13%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:13%; height:100%; background:#17150F; border-radius:3px;"></div></div></div>
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">OpenRouter</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">7%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:7%; height:100%; background:#17150F; border-radius:3px;"></div></div></div>
+              </div>
+            </div>
+          </div>
+          <!-- publish queue table -->
+          <div style="background:#fff; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05); padding:0; overflow:hidden;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid rgba(23,21,15,0.07);"><span style="font-size:13px; font-weight:600; color:#17150F;">발행 큐</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#EA4E20;">재시도 정책 · 3회 지수 백오프</span></div>
+            <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(23,21,15,0.05); font-size:12.5px;"><div style="width:6px;height:6px;border-radius:50%;background:#1FA672; margin-right:12px;"></div><span style="flex:1; color:#17150F;">AI 에이전트 생산성 전략 → 네이버 블로그</span><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(23,21,15,0.45); width:90px;">14:32:08</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#1FA672; width:64px; text-align:right;">완료</span></div>
+            <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(23,21,15,0.05); font-size:12.5px;"><div style="width:6px;height:6px;border-radius:50%;background:#F59E0B; margin-right:12px;"></div><span style="flex:1; color:#17150F;">Transformer 요약 → WordPress</span><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(23,21,15,0.45); width:90px;">14:29:51</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#F59E0B; width:64px; text-align:right;">재시도 2</span></div>
+            <div style="display:flex; align-items:center; padding:13px 22px; font-size:12.5px;"><div style="width:6px;height:6px;border-radius:50%;background:rgba(23,21,15,0.3); margin-right:12px;"></div><span style="flex:1; color:#17150F;">스타트업 쇼노트 → 예약 (내일 09:00)</span><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:rgba(23,21,15,0.45); width:90px;">—</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4); width:64px; text-align:right;">대기</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 05 LIBRARY ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 52px 0 16px;">05 — 라이브러리</div>
+  <div style="display:flex; gap:40px; align-items:flex-start;">
+    <div style="flex:none; width:1180px;">
+      <div data-screen-label="Library" style="width:1180px; height:740px; background:#FAF8F4; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex; flex-direction:column;">
+        <div style="height:56px; flex:none; border-bottom:1px solid rgba(23,21,15,0.09); display:flex; align-items:center; justify-content:space-between; padding:0 30px;">
+          <div style="display:flex; gap:24px; font-size:13px;">
+            <span style="color:rgba(23,21,15,0.45);">생성</span>
+            <span style="font-weight:600; color:#17150F; border-bottom:2px solid #EA4E20; padding-bottom:18px;">라이브러리</span>
+            <span style="color:rgba(23,21,15,0.45);">대시보드</span><span style="color:rgba(23,21,15,0.45);">캘린더</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="height:34px; width:200px; background:#fff; border:1px solid rgba(23,21,15,0.12); border-radius:3px; display:flex; align-items:center; padding:0 11px; gap:8px;"><div style="width:12px;height:12px;border:1.5px solid rgba(23,21,15,0.3);border-radius:50%;"></div><span style="font-size:12px; color:rgba(23,21,15,0.4);">콘텐츠 검색</span></div>
+          </div>
+        </div>
+        <!-- filter bar -->
+        <div style="flex:none; padding:16px 30px; border-bottom:1px solid rgba(23,21,15,0.07); display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:7px; flex-wrap:wrap;">
+            <span style="padding:6px 13px; background:#17150F; color:#FAF8F4; border-radius:100px; font-size:12px; font-weight:600;">전체 248</span>
+            <span style="padding:6px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">블로그+SEO 86</span>
+            <span style="padding:6px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">요약 54</span>
+            <span style="padding:6px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">뉴스레터 31</span>
+            <span style="padding:6px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">쇼노트 22</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#EA4E20; font-weight:600;">3개 선택 · 일괄</span>
+            <div style="display:flex; gap:4px; font-family:'JetBrains Mono',monospace; font-size:11px;"><span style="padding:6px 9px; background:#17150F; color:#FAF8F4; border-radius:3px;">⊞</span><span style="padding:6px 9px; color:rgba(23,21,15,0.45);">☰</span></div>
+          </div>
+        </div>
+        <!-- grid -->
+        <div style="flex:1; overflow:hidden; padding:24px 30px;">
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+            <!-- card -->
+            <div style="background:#fff; border:1.5px solid #EA4E20; border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05); position:relative;">
+              <div style="position:absolute; top:14px; right:14px; width:16px; height:16px; border-radius:3px; background:#EA4E20; display:flex; align-items:center; justify-content:center; color:#fff; font-size:10px;">✓</div>
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#FF0033;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">블로그+SEO</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">AI 에이전트 시대, 개인 생산성은 어떻게 재편되는가</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">14:32 · 1,840T · 발행됨</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#7C5CFF;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">요약</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">Attention Is All You Need 핵심 요약</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">11:08 · 620T · 초안</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#1FA672;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">쇼노트</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">스타트업 파운더 인터뷰 쇼노트</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">09:40 · 980T · 예약됨</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#2D7FF9;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">뉴스레터</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">이번 주 AI 업계 동향 다이제스트</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">08:15 · 1,210T · 발행됨</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#FF0033;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">Shorts</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">60초 클립 5개 · 생산성 해킹</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">어제 · 540T · 초안</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">GEO</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">AI 검색 최적화 가이드 · 엔티티 태깅</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">어제 · 1,640T · 발행됨</div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><div style="width:7px;height:7px;border-radius:50%;background:#7C5CFF;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">튜토리얼</span></div>
+              <div style="font-size:14px; font-weight:600; color:#17150F; line-height:1.35; margin-bottom:10px; height:56px; overflow:hidden;">LangGraph로 멀티에이전트 구축하기</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">2일 전 · 2,310T · 초안</div>
+            </div>
+            <div style="background:#F1EEE7; border:1px dashed rgba(23,21,15,0.2); border-radius:4px; padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:rgba(23,21,15,0.4);">
+              <div style="font-size:22px;">+</div><div style="font-size:12px;">새 분석 시작</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 06 ONBOARDING / FIRST-RUN ===== -->
+  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(23,21,15,0.45); font-weight: 600; margin: 52px 0 16px;">06 — 온보딩 · 첫 실행</div>
+  <div style="display:flex; gap:40px; align-items:flex-start;">
+    <div style="flex:none; width:1180px;">
+      <div data-screen-label="Onboarding" style="width:1180px; height:740px; background:#17150F; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; display:flex; position:relative;">
+        <!-- left brand panel -->
+        <div style="width:46%; flex:none; padding:60px 56px; display:flex; flex-direction:column; justify-content:space-between; border-right:1px solid rgba(250,248,244,0.08);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:30px; height:30px; background:#EA4E20; border-radius:4px; display:flex; align-items:center; justify-content:center;"><div style="width:10px;height:10px;background:#17150F;border-radius:50%;"></div></div>
+            <div style="font-weight:700; font-size:17px; color:#FAF8F4;">Insight Engine</div>
+          </div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:20px;">시작하기</div>
+            <h2 style="font-size:46px; font-weight:700; letter-spacing:-0.03em; color:#FAF8F4; margin:0 0 22px; line-height:1.08;">영상 한 편,<br>콘텐츠 14가지.</h2>
+            <p style="font-size:15px; line-height:1.7; color:rgba(250,248,244,0.55); margin:0; max-width:380px;">YouTube URL 하나로 블로그·요약·뉴스레터·쇼노트까지. 5개 AI 프로바이더와 다국어 출력을 1분 안에 설정하세요.</p>
+          </div>
+          <div style="display:flex; gap:28px;">
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#FAF8F4;">14</div><div style="font-size:11px; color:rgba(250,248,244,0.4);">출력 스타일</div></div>
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#FAF8F4;">5</div><div style="font-size:11px; color:rgba(250,248,244,0.4);">AI 프로바이더</div></div>
+            <div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#FAF8F4;">3</div><div style="font-size:11px; color:rgba(250,248,244,0.4);">출력 언어</div></div>
+          </div>
+        </div>
+        <!-- right setup panel -->
+        <div style="flex:1; background:#FAF8F4; padding:56px; display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:34px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#EA4E20; font-weight:700;">01</span>
+            <div style="flex:1; height:2px; background:#EA4E20;"></div>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(23,21,15,0.3);">02</span>
+            <div style="flex:1; height:2px; background:rgba(23,21,15,0.12);"></div>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(23,21,15,0.3);">03</span>
+          </div>
+          <h3 style="font-size:24px; font-weight:700; letter-spacing:-0.01em; color:#17150F; margin:0 0 8px;">AI 프로바이더를 연결하세요</h3>
+          <p style="font-size:13.5px; color:rgba(23,21,15,0.55); margin:0 0 28px; line-height:1.6;">최소 하나의 API 키만 있으면 시작할 수 있어요. 설정된 프로바이더만 화면에 표시됩니다.</p>
+
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="background:#fff; border:1.5px solid #17150F; border-radius:4px; padding:14px 16px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:9px;"><div style="width:9px;height:9px;border-radius:50%;background:#EA4E20;"></div><span style="font-size:13.5px; font-weight:600; color:#17150F;">Google Gemini</span><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#fff; background:#17150F; padding:2px 7px; border-radius:3px;">권장</span></div><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#1FA672;">● 연결됨</span></div>
+              <div style="height:38px; background:#F1EEE7; border-radius:3px; display:flex; align-items:center; padding:0 12px;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(23,21,15,0.5);">AIza••••••••••••••••••••3kF9</span></div>
+            </div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.12); border-radius:4px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;"><div style="width:9px;height:9px;border-radius:50%;background:rgba(23,21,15,0.25);"></div><span style="font-size:13.5px; color:rgba(23,21,15,0.7);">DeepSeek</span></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.4);">API 키 입력 +</span></div>
+            <div style="background:#fff; border:1px solid rgba(23,21,15,0.12); border-radius:4px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;"><div style="width:9px;height:9px;border-radius:50%;background:rgba(23,21,15,0.25);"></div><span style="font-size:13.5px; color:rgba(23,21,15,0.7);">Ollama <span style="color:rgba(23,21,15,0.4); font-size:11px;">· 로컬, 키 불필요</span></span></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.4);">연결 +</span></div>
+          </div>
+
+          <div style="margin-top:auto; display:flex; align-items:center; justify-content:space-between; padding-top:28px;">
+            <span style="font-size:13px; color:rgba(23,21,15,0.45); cursor:pointer;">나중에 설정</span>
+            <button style="height:48px; padding:0 30px; background:#EA4E20; color:#fff; border:none; border-radius:3px; font-family:inherit; font-size:14.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:9px; box-shadow:3px 3px 0 rgba(23,21,15,0.18);">다음 · 언어 선택 <span style="font-size:16px;">→</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
