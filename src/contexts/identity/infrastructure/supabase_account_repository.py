@@ -484,8 +484,12 @@ class SupabaseAccountRepository(IAccountRepository):
 
         - `{"success": true, "new_count": N}` → N 반환
         - `{"success": false, "reason": "no_usage_left"}` → `QuotaExceeded`
-        - 그 외 예외/실패 → `_UNLIMITED_DEV_QUOTA` 반환 + warning 로그
-          (개발 모드/장애 시 사용자가 막히지 않도록 fallback, 운영 추적은 로그로)
+        - 그 외 예외/실패(인프라 장애) → **차감을 생략하고** 현재(미차감) 잔여 횟수를
+          읽기 전용으로 조회해 반환 + warning 로그. 읽기마저 실패하면 최후의 폴백으로
+          `_UNLIMITED_DEV_QUOTA`로 허용한다.
+          (제품 결정: "허용 + 차감 생략" — 장애 중 사용자를 막지 않되 차감도 하지
+          않는다. 운영 추적은 warning 로그로. 가용성 우선, 장애 창 동안의 무제한
+          허용 리스크는 감수.)
 
         주의: `amount > 1` 차감은 RPC가 지원하지 않으므로 반복 호출이 필요하다.
         본 메서드는 단일 차감(`amount=1`) 기준으로 동작하며,
@@ -494,7 +498,6 @@ class SupabaseAccountRepository(IAccountRepository):
         TODO(Phase 7 — Publishing 트랜잭션):
             - 차감과 콘텐츠 생성을 원자적으로 묶기 위해 `IUsageGateway.refund`
               구현 + Saga 패턴 도입.
-            - `_UNLIMITED_DEV_QUOTA` fallback은 그때 제거 (장애 시 503 응답).
         """
         client = self._get_client()
         if client is None:
@@ -528,16 +531,50 @@ class SupabaseAccountRepository(IAccountRepository):
         except QuotaExceeded:
             raise
         except Exception as exc:
-            # 인프라 실패 시 기본 허용 — 운영 가시성을 위해 warning 로그 (with stack)
+            # 정책(허용 + 차감 생략): 인프라 장애로 원자적 차감 RPC가 실패해도 사용자를
+            # 막지 않는다. 다만 가짜 잔여 횟수(_UNLIMITED_DEV_QUOTA)를 "남은 횟수"인 양
+            # 보고하지 않도록, 읽기 전용으로 현재(미차감) 잔여 횟수를 조회해 반환한다.
             # 한도 초과는 위에서 명시적 QuotaExceeded로 raise 되므로 여기 도달하지 않음.
             logger.warning(
-                "consume_quota_atomic RPC 실패 — _UNLIMITED_DEV_QUOTA fallback "
+                "consume_quota_atomic RPC 실패 — 차감을 생략하고 현재 잔여 횟수를 반환 "
                 "(account_id=%s, error=%s)",
                 account_id,
                 exc,
                 exc_info=True,
             )
+            remaining = self._read_remaining_quota(client, account_id)
+            if remaining is not None:
+                return remaining
+            # 읽기마저 실패 — 최후의 폴백으로 허용(_UNLIMITED_DEV_QUOTA), 추적 로그.
+            logger.warning(
+                "consume_quota_atomic 잔여 횟수 읽기 실패 — 허용 폴백 (account_id=%s)",
+                account_id,
+            )
             return _UNLIMITED_DEV_QUOTA
+
+    def _read_remaining_quota(
+        self, client: Any, account_id: AccountId
+    ) -> Optional[int]:
+        """ie_usage에서 현재 잔여 횟수(usage_count)를 읽어 반환한다 (차감하지 않음).
+
+        장애 폴백 경로에서 '차감 생략' 정책을 충실히 구현하기 위한 읽기 전용 조회다.
+        원자적 차감 RPC가 실패했을 때 사용자의 실제(미차감) 잔여 횟수를 그대로
+        보고하는 데 쓰며, 읽기 자체가 실패하거나 행이 없으면 None을 반환한다.
+        """
+        try:
+            res = (
+                client.table("ie_usage")
+                .select("usage_count")
+                .eq("user_id", str(account_id))
+                .limit(1)
+                .execute()
+            )
+            rows = getattr(res, "data", None) or []
+            if rows:
+                return int(rows[0].get("usage_count", 0))
+            return None
+        except Exception:
+            return None
 
 
 __all__ = [

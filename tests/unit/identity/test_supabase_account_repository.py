@@ -86,9 +86,13 @@ class TestSupabaseDisabled:
 
 class TestConsumeQuotaAtomic:
     def _make_repo_with_mock_client(
-        self, rpc_data: object | None, raise_exc: Exception | None = None
+        self,
+        rpc_data: object | None,
+        raise_exc: Exception | None = None,
+        read_data: object | None = None,
+        read_raises: Exception | None = None,
     ) -> tuple[SupabaseAccountRepository, MagicMock]:
-        """Supabase 활성 + RPC 응답을 제어할 수 있는 fixture."""
+        """Supabase 활성 + RPC/읽기 폴백 응답을 제어할 수 있는 fixture."""
         mock_client = MagicMock()
         rpc_response = MagicMock()
         rpc_response.data = rpc_data
@@ -96,6 +100,23 @@ class TestConsumeQuotaAtomic:
             mock_client.rpc.side_effect = raise_exc
         else:
             mock_client.rpc.return_value.execute.return_value = rpc_response
+
+        # _read_remaining_quota의 읽기 체인:
+        # table(...).select(...).eq(...).limit(...).execute()
+        read_exec = (
+            mock_client.table.return_value
+            .select.return_value
+            .eq.return_value
+            .limit.return_value
+            .execute
+        )
+        if read_raises is not None:
+            read_exec.side_effect = read_raises
+        else:
+            read_response = MagicMock()
+            read_response.data = read_data
+            read_exec.return_value = read_response
+
         repo = SupabaseAccountRepository()
         # _get_client을 직접 패치 (lazy import 우회)
         repo._get_client = MagicMock(return_value=mock_client)  # type: ignore[method-assign]
@@ -124,21 +145,45 @@ class TestConsumeQuotaAtomic:
         with pytest.raises(QuotaExceeded):
             repo.consume_quota_atomic(AccountId(value="user-3"))
 
-    def test_rpc_exception_falls_back_to_unlimited(
+    def test_rpc_exception_returns_undecremented_remaining(
         self, caplog: pytest.LogCaptureFixture
     ) -> None:
-        repo, _ = self._make_repo_with_mock_client(
-            None, raise_exc=RuntimeError("network down")
+        # 정책(허용 + 차감 생략): RPC 장애 시 차감하지 않고 현재 잔여 횟수를 그대로 반환.
+        repo, client = self._make_repo_with_mock_client(
+            None,
+            raise_exc=RuntimeError("network down"),
+            read_data=[{"usage_count": 7}],
         )
         with caplog.at_level(
             logging.WARNING,
             logger="src.contexts.identity.infrastructure.supabase_account_repository",
         ):
             result = repo.consume_quota_atomic(AccountId(value="user-4"))
-        assert result == _UNLIMITED_DEV_QUOTA
-        # warning 로그가 남아야 함
+        # 가짜 999가 아니라 실제(미차감) 잔여 횟수 7을 반환해야 함
+        assert result == 7
+        # 차감 생략 정책 warning 로그가 남아야 함
         assert any(
-            "consume_quota_atomic RPC 실패" in r.message for r in caplog.records
+            "차감을 생략" in r.message for r in caplog.records
+        )
+
+    def test_rpc_exception_read_also_fails_falls_back_to_unlimited(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # RPC + 읽기 모두 실패 → 최후의 폴백으로 허용(_UNLIMITED_DEV_QUOTA).
+        repo, _ = self._make_repo_with_mock_client(
+            None,
+            raise_exc=RuntimeError("network down"),
+            read_raises=RuntimeError("read down"),
+        )
+        with caplog.at_level(
+            logging.WARNING,
+            logger="src.contexts.identity.infrastructure.supabase_account_repository",
+        ):
+            result = repo.consume_quota_atomic(AccountId(value="user-5"))
+        assert result == _UNLIMITED_DEV_QUOTA
+        # 읽기 실패 폴백 warning 로그가 남아야 함
+        assert any(
+            "잔여 횟수 읽기 실패" in r.message for r in caplog.records
         )
 
 
