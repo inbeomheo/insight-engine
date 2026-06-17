@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::selection { background: #EA4E20; color: #fff; }
+  input::placeholder { color: rgba(23,21,15,0.4); }
+  .scr::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+  .pulse { animation: shimmer 1.4s ease-in-out infinite; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; background:#e7e5df; font-family:'Pretendard',sans-serif; display:flex; flex-direction:column; align-items:center; padding:28px 0 32px; box-sizing:border-box;">
+
+  <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(23,21,15,0.45); font-weight:600; margin-bottom:22px;">Insight Engine · 모바일 · A 시그널</div>
+
+  <!-- ===== DEVICE ===== -->
+  <div style="width:402px; height:872px; background:#0c0b08; border-radius:58px; padding:13px; box-shadow:0 30px 80px rgba(23,21,15,0.32), inset 0 0 0 2px rgba(255,255,255,0.06); flex:none;">
+    <div style="width:100%; height:100%; background:#FAF8F4; border-radius:46px; overflow:hidden; position:relative; display:flex; flex-direction:column;">
+
+      <!-- status bar -->
+      <div style="height:52px; flex:none; display:flex; align-items:flex-end; justify-content:space-between; padding:0 30px 8px; position:relative; z-index:5;">
+        <span style="font-family:'Pretendard',sans-serif; font-size:15px; font-weight:600; color:#17150F; letter-spacing:0.02em;">9:41</span>
+        <div style="display:flex; align-items:center; gap:7px;">
+          <!-- signal -->
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="#17150F"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2.5" width="3" height="9.5" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5"/></svg>
+          <!-- wifi -->
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#17150F" stroke-width="1.6"><path d="M1 4.2C4.8 1.1 11.2 1.1 15 4.2M3.4 6.8c2.6-2.1 6.6-2.1 9.2 0M5.8 9.3c1.3-1 3.1-1 4.4 0"/><circle cx="8" cy="11" r="0.8" fill="#17150F" stroke="none"/></svg>
+          <!-- battery -->
+          <div style="display:flex; align-items:center; gap:2px;"><div style="width:23px; height:12px; border:1.4px solid rgba(23,21,15,0.4); border-radius:3px; padding:1.5px;"><div style="width:72%; height:100%; background:#17150F; border-radius:1px;"></div></div><div style="width:1.6px; height:4px; background:rgba(23,21,15,0.4); border-radius:1px;"></div></div>
+        </div>
+      </div>
+      <!-- dynamic island -->
+      <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:118px; height:33px; background:#0c0b08; border-radius:20px; z-index:6;"></div>
+
+      <!-- ============ SCREEN CONTENT ============ -->
+
+      <!-- ---- GENERATE: INPUT ---- -->
+      <sc-if value="{{ showInput }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div style="flex:none; padding:8px 22px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:8px;"><div style="width:24px; height:24px; background:#17150F; border-radius:3px; display:flex; align-items:center; justify-content:center;"><div style="width:8px;height:8px;background:#EA4E20;border-radius:50%;"></div></div><span style="font-weight:700; font-size:15px; color:#17150F;">Insight Engine</span></div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.5);">847</div>
+          </div>
+          <div class="scr" style="flex:1; overflow-y:auto; padding:8px 22px 16px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:10px;">새 분석 · STEP 01</div>
+            <h2 style="font-size:30px; font-weight:700; letter-spacing:-0.022em; color:#17150F; margin:0 0 22px; line-height:1.12;">어떤 영상을<br>콘텐츠로?</h2>
+
+            <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1.5px solid #17150F; border-radius:4px; padding:5px 5px 5px 14px; box-shadow:3px 3px 0 rgba(23,21,15,0.1);">
+              <div style="width:8px;height:8px;border-radius:50%;background:#FF0033;flex:none;"></div>
+              <input value="{{ urlText }}" onInput="{{ onUrlInput }}" onKeyDown="{{ onUrlKey }}" placeholder="URL 붙여넣기" style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14px; color:#17150F;">
+              <button onClick="{{ addUrl }}" style="height:38px; width:42px; flex:none; background:#EA4E20; color:#fff; border:none; border-radius:3px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:17px;">↑</button>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4); margin-top:8px;">YouTube · 웹 · RSS · arXiv · Podcast</div>
+
+            <sc-if value="{{ hasUrls }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px;">
+                <sc-for list="{{ urls }}" as="u" hint-placeholder-count="1">
+                  <div style="display:flex; align-items:center; gap:9px; background:#F1EEE7; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:10px 12px;">
+                    <div style="{{ u.dotStyle }}"></div>
+                    <span style="font-size:13px; color:#17150F; font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ u.id }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.45);">{{ u.type }}</span>
+                    <span onClick="{{ u.remove }}" style="width:22px; height:22px; border-radius:50%; background:rgba(23,21,15,0.08); color:rgba(23,21,15,0.5); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; flex:none;">×</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin:26px 0 12px;">
+              <div style="font-size:13.5px; font-weight:600; color:#17150F;">출력 스타일 <span style="color:rgba(23,21,15,0.4); font-weight:400;">14</span></div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#EA4E20; font-weight:600;">{{ selectedShort }}</div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <sc-for list="{{ styleCards }}" as="st" hint-placeholder-count="14">
+                <div onClick="{{ st.toggle }}" style="{{ st.pillStyle }}">{{ st.name }}</div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:13.5px; font-weight:600; color:#17150F; margin:26px 0 12px;">생성 모드</div>
+            <div style="display:flex; background:#F1EEE7; border-radius:5px; padding:4px; gap:4px;">
+              <sc-for list="{{ modeSeg }}" as="m" hint-placeholder-count="3">
+                <div onClick="{{ m.set }}" style="{{ m.style }}">{{ m.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- sticky CTA -->
+          <div style="flex:none; padding:12px 22px; border-top:1px solid rgba(23,21,15,0.08); background:#FAF8F4;">
+            <button onClick="{{ startGen }}" style="{{ genBtnStyle }}">콘텐츠 생성 <span style="font-family:'JetBrains Mono',monospace; font-size:12px; opacity:0.85;">{{ genBtnCount }}</span></button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---- RUNNING ---- -->
+      <sc-if value="{{ showRunning }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0; padding:18px 26px 24px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:#EA4E20; font-weight:600; margin-bottom:10px;">생성 중 · STEP 02</div>
+          <h2 style="font-size:26px; font-weight:700; letter-spacing:-0.02em; color:#17150F; margin:0 0 6px; line-height:1.12;">엔진이 분석하고 있어요</h2>
+          <div style="font-size:12.5px; color:rgba(23,21,15,0.55); margin-bottom:30px;">{{ runningSub }}</div>
+
+          <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:8px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:62px; font-weight:700; color:#17150F; line-height:0.85; letter-spacing:-0.02em;">{{ progress }}</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:600; color:#EA4E20; margin-bottom:6px;">%</div>
+          </div>
+          <div style="height:6px; background:#F1EEE7; border-radius:100px; margin-bottom:28px; overflow:hidden;"><div style="{{ progressBarStyle }}"></div></div>
+
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <sc-for list="{{ stages }}" as="stg" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 15px; border-radius:5px; background:{{ stg.bg }};">
+                <div style="{{ stg.dotStyle }}">{{ stg.dotIcon }}</div>
+                <span style="{{ stg.labelStyle }}">{{ stg.name }}</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:{{ stg.metaColor }}; margin-left:auto;">{{ stg.meta }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:auto; display:flex; align-items:center; gap:9px; padding-top:20px;">
+            <div class="pulse" style="width:7px;height:7px;border-radius:50%;background:#EA4E20;"></div>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.5);">{{ activeStyle }} · {{ modeLabel }} 생성 중…</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---- EDITOR ---- -->
+      <sc-if value="{{ showEditor }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div style="flex:none; padding:6px 18px 12px; display:flex; align-items:center; gap:11px; border-bottom:1px solid rgba(23,21,15,0.08);">
+            <span onClick="{{ newAnalysis }}" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:18px; color:rgba(23,21,15,0.55); cursor:pointer;">←</span>
+            <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:600; color:#17150F; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ docTitle }}</div><div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45); margin-top:1px;">{{ activeStyle }} · QA 통과</div></div>
+            <button style="font-size:13px; font-weight:600; color:#fff; padding:9px 16px; background:#EA4E20; border:none; border-radius:3px; cursor:pointer; flex:none;">발행</button>
+          </div>
+          <div class="scr" style="flex:1; overflow-y:auto; padding:24px 24px 28px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.04em; color:rgba(23,21,15,0.45); margin-bottom:14px;">{{ docMeta }}</div>
+            <h1 style="font-size:25px; font-weight:700; letter-spacing:-0.02em; color:#17150F; margin:0 0 18px; line-height:1.22;">AI 에이전트 시대, 개인 생산성은 어떻게 재편되는가</h1>
+            <p style="font-size:15px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 16px;">자율 에이전트가 일상 업무에 들어오면서, 생산성의 정의 자체가 바뀌고 있다. 단순 자동화를 넘어 의사결정의 위임이 일어나는 지점에서 새로운 작업 흐름이 만들어진다.</p>
+            <p style="font-size:15px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 16px;">핵심은 <span style="background:rgba(234,78,32,0.16); box-shadow:0 0 0 1px rgba(234,78,32,0.4); border-radius:2px; padding:1px 2px;">반복 가능한 판단을 에이전트에게 넘기고, 사람은 맥락과 검증에 집중하는 구조</span>다.</p>
+            <h2 style="font-size:18px; font-weight:600; letter-spacing:-0.01em; color:#17150F; margin:28px 0 12px;">1. 위임의 경제학</h2>
+            <p style="font-size:15px; line-height:1.75; color:rgba(23,21,15,0.82); margin:0 0 16px;">에이전트에게 맡길 수 있는 일과 그렇지 않은 일을 가르는 기준은 명확하다. <span style="color:#EA4E20; text-decoration:underline; text-underline-offset:2px;">결과의 검증 가능성</span>이다.</p>
+            <blockquote style="border-left:3px solid #EA4E20; padding:4px 0 4px 16px; margin:20px 0; color:rgba(23,21,15,0.62); font-size:14.5px; line-height:1.6;">"가장 큰 변화는 도구의 성능이 아니라, 무엇을 직접 하지 않을지 결정하는 능력에서 온다."</blockquote>
+
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.42); margin:28px 0 12px;">다른 스타일로 재생성</div>
+            <div class="scr" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin:0 -24px; padding-left:24px; padding-right:24px;">
+              <sc-for list="{{ otherStyles }}" as="o" hint-placeholder-count="3">
+                <div onClick="{{ o.open }}" style="flex:none; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid rgba(23,21,15,0.12); border-radius:100px; padding:9px 15px; cursor:pointer;"><span style="font-size:12.5px; color:#17150F;">{{ o.name }}</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#EA4E20;">→</span></div>
+              </sc-for>
+            </div>
+
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(23,21,15,0.42); margin:24px 0 12px;">발행</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:13px 14px;"><div style="width:8px;height:8px;border-radius:2px;background:#1FA672;"></div><span style="font-size:13.5px; color:#17150F; flex:1;">네이버 블로그</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">MCP</span></div>
+              <div style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:4px; padding:13px 14px;"><div style="width:8px;height:8px;border-radius:2px;background:#2D7FF9;"></div><span style="font-size:13.5px; color:#17150F; flex:1;">WordPress</span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(23,21,15,0.4);">MCP</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---- LIBRARY ---- -->
+      <sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div style="flex:none; padding:8px 22px 12px;">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;"><h2 style="font-size:24px; font-weight:700; letter-spacing:-0.02em; color:#17150F; margin:0;">라이브러리</h2><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(23,21,15,0.45);">248</span></div>
+            <div class="scr" style="display:flex; gap:7px; overflow-x:auto; margin:0 -22px; padding:0 22px 2px;">
+              <span style="flex:none; padding:7px 13px; background:#17150F; color:#FAF8F4; border-radius:100px; font-size:12px; font-weight:600;">전체 248</span>
+              <span style="flex:none; padding:7px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">블로그+SEO 86</span>
+              <span style="flex:none; padding:7px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">요약 54</span>
+              <span style="flex:none; padding:7px 13px; background:#fff; border:1px solid rgba(23,21,15,0.12); color:rgba(23,21,15,0.65); border-radius:100px; font-size:12px;">쇼노트 22</span>
+            </div>
+          </div>
+          <div class="scr" style="flex:1; overflow-y:auto; padding:8px 22px 20px;">
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ libraryCards }}" as="c" hint-placeholder-count="7">
+                <div onClick="{{ c.open }}" style="background:#fff; border:1px solid rgba(23,21,15,0.1); border-radius:5px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04); cursor:pointer;">
+                  <div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;"><div style="{{ c.dotStyle }}"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.45);">{{ c.style }}</span></div>
+                  <div style="font-size:15px; font-weight:600; color:#17150F; line-height:1.4; margin-bottom:9px;">{{ c.title }}</div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">{{ c.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ---- DASHBOARD ---- -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div style="flex:none; padding:8px 22px 4px;"><h2 style="font-size:24px; font-weight:700; letter-spacing:-0.02em; color:#17150F; margin:0;">대시보드</h2></div>
+          <div class="scr" style="flex:1; overflow-y:auto; padding:14px 22px 20px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+              <div style="background:#fff; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:16px;"><div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(23,21,15,0.42);">생성된 콘텐츠</div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#17150F; margin-top:5px;">1,284</div><div style="font-size:10.5px; color:#1FA672; margin-top:2px;">▲ 18%</div></div>
+              <div style="background:#17150F; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:16px;"><div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(250,248,244,0.5);">토큰 사용</div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#FAF8F4; margin-top:5px;">2.4<span style="font-size:16px; color:#EA4E20;">M</span></div><div style="font-size:10.5px; color:rgba(250,248,244,0.5); margin-top:2px;">$38.20</div></div>
+              <div style="background:#fff; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:16px;"><div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(23,21,15,0.42);">발행 완료</div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#17150F; margin-top:5px;">347</div><div style="font-size:10.5px; color:rgba(23,21,15,0.5); margin-top:2px;">대기 12</div></div>
+              <div style="background:#fff; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:16px;"><div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(23,21,15,0.42);">QA 통과율</div><div style="font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:#17150F; margin-top:5px;">96<span style="font-size:16px; color:rgba(23,21,15,0.4);">%</span></div><div style="font-size:10.5px; color:#EA4E20; margin-top:2px;">차단 5</div></div>
+            </div>
+            <div style="background:#fff; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:18px; margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px;"><span style="font-size:13px; font-weight:600; color:#17150F;">일별 생성량</span><span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:rgba(23,21,15,0.4);">최근 7일</span></div>
+              <div style="display:flex; align-items:flex-end; gap:9px; height:110px;">
+                <sc-for list="{{ chartBars }}" as="b" hint-placeholder-count="7">
+                  <div style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:7px;"><div style="{{ b.barStyle }}"></div><span style="font-family:'JetBrains Mono',monospace; font-size:9px; color:{{ b.labelColor }};">{{ b.day }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#fff; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:18px;">
+              <div style="font-size:13px; font-weight:600; color:#17150F; margin-bottom:16px;">프로바이더 분포</div>
+              <div style="display:flex; flex-direction:column; gap:13px;">
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">Gemini</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">58%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:58%; height:100%; background:#EA4E20; border-radius:3px;"></div></div></div>
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">DeepSeek</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">22%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:22%; height:100%; background:#17150F; border-radius:3px;"></div></div></div>
+                <div><div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;"><span style="color:#17150F;">GLM-4.7</span><span style="font-family:'JetBrains Mono',monospace; color:rgba(23,21,15,0.5);">13%</span></div><div style="height:6px; background:#F1EEE7; border-radius:3px;"><div style="width:13%; height:100%; background:#17150F; border-radius:3px;"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ BOTTOM TAB BAR ============ -->
+      <div style="flex:none; height:78px; border-top:1px solid rgba(23,21,15,0.09); background:rgba(250,248,244,0.94); display:flex; padding:8px 16px 22px;">
+        <div onClick="{{ goGenerate }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; color:{{ navGenColor }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          <span style="font-size:10px; font-weight:600;">생성</span>
+        </div>
+        <div onClick="{{ goLibrary }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; color:{{ navLibColor }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/></svg>
+          <span style="font-size:10px; font-weight:600;">라이브러리</span>
+        </div>
+        <div onClick="{{ goDashboard }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; color:{{ navDashColor }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="10"/></svg>
+          <span style="font-size:10px; font-weight:600;">대시보드</span>
+        </div>
+      </div>
+
+      <!-- home indicator -->
+      <div style="position:absolute; bottom:8px; left:50%; transform:translateX(-50%); width:134px; height:5px; background:#17150F; border-radius:100px; opacity:0.85; z-index:7;"></div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'generate',
+    genStep: 'input',
+    urlText: '',
+    urls: [{ id: 'dQw4w9WgXcQ', type: 'YouTube', color: '#FF0033' }],
+    styles: [
+      { name: '블로그+SEO', on: true }, { name: '요약', on: false }, { name: '튜토리얼', on: true },
+      { name: 'Q&A', on: false }, { name: '앱 아이디어', on: false }, { name: '요즘IT', on: false },
+      { name: '브런치', on: false }, { name: '네이버 인기글', on: false }, { name: 'SNS', on: false },
+      { name: '뉴스레터', on: false }, { name: '쇼노트', on: true }, { name: 'Shorts', on: false },
+      { name: 'GEO', on: false }, { name: 'AI 코스', on: false }
+    ],
+    mode: 'individual',
+    progress: 0,
+    activeStyle: '블로그+SEO',
+  };
+
+  stageDefs = [
+    { name: '소스 수집', meta: '자막 추출' },
+    { name: '핵심 분석', meta: '청크 & 임베딩' },
+    { name: '콘텐츠 생성', meta: '스타일별 초안' },
+    { name: 'QA 검수', meta: '금칙어·중복' },
+  ];
+
+  componentWillUnmount() { if (this._t) clearInterval(this._t); }
+
+  typeOf(t) {
+    const s = t.toLowerCase();
+    if (s.includes('youtu')) return { type: 'YouTube', color: '#FF0033' };
+    if (s.includes('arxiv')) return { type: 'arXiv', color: '#7C5CFF' };
+    if (s.includes('rss') || s.includes('feed')) return { type: 'RSS', color: '#F59E0B' };
+    if (s.includes('podcast') || s.includes('.mp3')) return { type: 'Podcast', color: '#1FA672' };
+    return { type: 'Web', color: '#2D7FF9' };
+  }
+  shortId(t) {
+    const m = t.match(/[?&]v=([\w-]{6,})/) || t.match(/youtu\.be\/([\w-]{6,})/);
+    if (m) return m[1];
+    return t.replace(/^https?:\/\//, '').replace(/^www\./, '').slice(0, 22) || t;
+  }
+
+  addUrl = () => {
+    const t = this.state.urlText.trim();
+    if (!t) return;
+    const meta = this.typeOf(t);
+    this.setState(s => ({ urls: [...s.urls, { id: this.shortId(t), type: meta.type, color: meta.color }], urlText: '' }));
+  };
+  onUrlInput = (e) => this.setState({ urlText: e.target.value });
+  onUrlKey = (e) => { if (e.key === 'Enter') this.addUrl(); };
+  removeUrl = (i) => this.setState(s => ({ urls: s.urls.filter((_, idx) => idx !== i) }));
+  toggleStyle = (i) => this.setState(s => ({ styles: s.styles.map((x, idx) => idx === i ? { ...x, on: !x.on } : x) }));
+  setMode = (m) => this.setState({ mode: m });
+
+  startGen = () => {
+    const sel = this.state.styles.filter(x => x.on);
+    if (this.state.urls.length === 0 || sel.length === 0) return;
+    if (this._t) clearInterval(this._t);
+    this.setState({ genStep: 'running', progress: 0, activeStyle: sel[0].name });
+    this._t = setInterval(() => {
+      this.setState(s => {
+        const p = s.progress + 2;
+        if (p >= 100) { clearInterval(this._t); this._t = null; return { progress: 100, genStep: 'done' }; }
+        return { progress: p };
+      });
+    }, 55);
+  };
+
+  newAnalysis = () => { if (this._t) clearInterval(this._t); this.setState({ tab: 'generate', genStep: 'input', progress: 0 }); };
+  goGenerate = () => this.setState({ tab: 'generate' });
+  goLibrary = () => this.setState({ tab: 'library' });
+  goDashboard = () => this.setState({ tab: 'dashboard' });
+  openEditor = (style) => { if (this._t) clearInterval(this._t); this.setState({ tab: 'generate', genStep: 'done', progress: 100, activeStyle: style }); };
+
+  renderVals() {
+    const s = this.state;
+    const sel = s.styles.filter(x => x.on);
+    const modeLabel = { individual: '개별', merged: '통합', fusion: '퓨전' }[s.mode];
+
+    const pillOn = 'padding:9px 15px; background:#17150F; color:#FAF8F4; border-radius:100px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid #17150F;';
+    const pillOff = 'padding:9px 15px; background:#fff; color:rgba(23,21,15,0.7); border:1px solid rgba(23,21,15,0.14); border-radius:100px; font-size:13px; cursor:pointer;';
+    const styleCards = s.styles.map((x, i) => ({ name: x.name, pillStyle: x.on ? pillOn : pillOff, toggle: () => this.toggleStyle(i) }));
+
+    const segOn = 'flex:1; text-align:center; padding:10px 0; background:#fff; color:#17150F; border-radius:3px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.06);';
+    const segOff = 'flex:1; text-align:center; padding:10px 0; color:rgba(23,21,15,0.5); border-radius:3px; font-size:13px; cursor:pointer;';
+    const modeSeg = [{ k: 'individual', label: '개별' }, { k: 'merged', label: '통합' }, { k: 'fusion', label: '퓨전' }]
+      .map(m => ({ label: m.label, style: s.mode === m.k ? segOn : segOff, set: () => this.setMode(m.k) }));
+
+    const activeStage = Math.min(3, Math.floor(s.progress / 25));
+    const stages = this.stageDefs.map((st, i) => {
+      let dotStyle, dotIcon = '', labelStyle, metaColor, meta = st.meta, bg = 'transparent';
+      if (i < activeStage) {
+        dotStyle = 'width:22px;height:22px;border-radius:50%;background:#1FA672;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex:none;';
+        dotIcon = '✓'; labelStyle = 'font-size:14px;color:#17150F;font-weight:500;'; metaColor = '#1FA672'; meta = '완료';
+      } else if (i === activeStage) {
+        dotStyle = 'width:22px;height:22px;border-radius:50%;background:#EA4E20;flex:none;box-shadow:0 0 0 4px rgba(234,78,32,0.15);';
+        labelStyle = 'font-size:14px;color:#17150F;font-weight:600;'; metaColor = '#EA4E20'; bg = 'rgba(234,78,32,0.05)';
+      } else {
+        dotStyle = 'width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(23,21,15,0.18);flex:none;';
+        labelStyle = 'font-size:14px;color:rgba(23,21,15,0.4);'; metaColor = 'rgba(23,21,15,0.35)';
+      }
+      return { name: st.name, meta, dotStyle, dotIcon, labelStyle, metaColor, bg };
+    });
+
+    const days = [['월', 52], ['화', 68], ['수', 44], ['목', 88], ['금', 74], ['토', 60], ['일', 38]];
+    const chartBars = days.map(([day, h], i) => ({
+      day, labelColor: i === 3 ? '#EA4E20' : 'rgba(23,21,15,0.4)',
+      barStyle: 'width:100%; height:' + h + '%; background:' + (i === 3 ? '#EA4E20' : '#F1EEE7') + '; border-radius:2px;'
+    }));
+
+    const lib = [
+      { style: '블로그+SEO', color: '#FF0033', title: 'AI 에이전트 시대, 개인 생산성은 어떻게 재편되는가', meta: '14:32 · 1,840T · 발행됨' },
+      { style: '요약', color: '#7C5CFF', title: 'Attention Is All You Need 핵심 요약', meta: '11:08 · 620T · 초안' },
+      { style: '쇼노트', color: '#1FA672', title: '스타트업 파운더 인터뷰 쇼노트', meta: '09:40 · 980T · 예약됨' },
+      { style: '뉴스레터', color: '#2D7FF9', title: '이번 주 AI 업계 동향 다이제스트', meta: '08:15 · 1,210T · 발행됨' },
+      { style: 'Shorts', color: '#FF0033', title: '60초 클립 5개 · 생산성 해킹', meta: '어제 · 540T · 초안' },
+      { style: 'GEO', color: '#F59E0B', title: 'AI 검색 최적화 가이드 · 엔티티 태깅', meta: '어제 · 1,640T · 발행됨' },
+      { style: '튜토리얼', color: '#7C5CFF', title: 'LangGraph로 멀티에이전트 구축하기', meta: '2일 전 · 2,310T · 초안' },
+    ];
+    const libraryCards = lib.map(c => ({ ...c, dotStyle: 'width:7px;height:7px;border-radius:50%;background:' + c.color + ';', open: () => this.openEditor(c.style) }));
+
+    const otherStyles = s.styles.filter(x => x.name !== s.activeStyle).slice(0, 4).map(x => ({ name: x.name, open: () => this.openEditor(x.name) }));
+
+    const urls = s.urls.map((u, i) => ({ id: u.id, type: u.type, dotStyle: 'width:7px;height:7px;border-radius:50%;background:' + u.color + ';flex:none;', remove: () => this.removeUrl(i) }));
+
+    const canGen = s.urls.length > 0 && sel.length > 0;
+    const genBtnStyle = 'width:100%; height:52px; border:none; border-radius:4px; font-family:inherit; font-size:15px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; '
+      + (canGen ? 'background:#EA4E20; color:#fff; cursor:pointer; box-shadow:0 2px 8px rgba(234,78,32,0.3);' : 'background:rgba(23,21,15,0.12); color:rgba(23,21,15,0.4); cursor:not-allowed;');
+
+    const navActive = '#EA4E20', navIdle = 'rgba(23,21,15,0.4)';
+
+    return {
+      showInput: s.tab === 'generate' && s.genStep === 'input',
+      showRunning: s.tab === 'generate' && s.genStep === 'running',
+      showEditor: s.tab === 'generate' && s.genStep === 'done',
+      isLibrary: s.tab === 'library',
+      isDashboard: s.tab === 'dashboard',
+
+      goGenerate: this.goGenerate, goLibrary: this.goLibrary, goDashboard: this.goDashboard, newAnalysis: this.newAnalysis,
+      navGenColor: s.tab === 'generate' ? navActive : navIdle,
+      navLibColor: s.tab === 'library' ? navActive : navIdle,
+      navDashColor: s.tab === 'dashboard' ? navActive : navIdle,
+
+      urlText: s.urlText, onUrlInput: this.onUrlInput, onUrlKey: this.onUrlKey, addUrl: this.addUrl,
+      urls, hasUrls: s.urls.length > 0,
+      styleCards,
+      selectedShort: sel.length > 1 ? (sel.length + '개 선택') : (sel.length === 1 ? '1개 선택' : '선택하세요'),
+      modeSeg, modeLabel,
+      genBtnStyle, genBtnCount: '×' + sel.length, startGen: this.startGen,
+
+      progress: s.progress, progressBarStyle: 'height:100%; background:#EA4E20; border-radius:100px; width:' + s.progress + '%; transition:width 0.18s linear;',
+      runningSub: sel.length + '개 스타일 · ' + modeLabel + ' · ' + s.urls.length + '개 소스',
+      stages, activeStyle: s.activeStyle,
+
+      docTitle: 'AI 에이전트 시대의 생산성 전략',
+      docMeta: '14:32 · GEMINI-3.1 · 1,840 TOKENS',
+      otherStyles,
+      libraryCards, chartBars,
+    };
+  }
+}
+</script>
+</body>
+</html>
