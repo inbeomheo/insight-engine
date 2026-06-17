@@ -154,7 +154,13 @@ def create_channel_monitor():
 
     try:
         created = _register_monitor(g.user_id, data)
-        return jsonify(created or {}), 201
+        # 도메인 검증 실패(잘못된 주기 등)나 저장 실패 시 None — 성공(201)으로
+        # 위장하지 않고 명시적 4xx로 응답해 조용한 데이터 손실을 방지한다.
+        if created is None:
+            return _ar._error_response(
+                '채널 모니터를 등록하지 못했습니다. 채널 ID와 폴링 주기 등 입력값을 확인해주세요.'
+            )
+        return jsonify(created), 201
     except Exception as e:
         return _ar._exception_error_response(
             '모니터 등록 오류',
@@ -172,7 +178,13 @@ def delete_channel_monitor(monitor_id):
         return error
 
     try:
-        _delete_monitor(g.user_id, monitor_id)
+        # 삭제 결과(bool)를 검증 — 실제로 삭제되지 않았는데 성공으로 응답하면
+        # 클라이언트가 거짓 양성(false positive)을 받게 되므로 4xx로 응답한다.
+        deleted = _delete_monitor(g.user_id, monitor_id)
+        if not deleted:
+            return _ar._error_response(
+                '해당 채널 모니터를 찾을 수 없거나 이미 삭제되었습니다.', 404
+            )
         return _ar._success_response()
     except Exception as e:
         return _ar._exception_error_response(

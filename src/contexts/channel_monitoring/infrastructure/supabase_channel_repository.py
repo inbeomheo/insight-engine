@@ -56,14 +56,17 @@ class SupabaseChannelMonitorRepository(IChannelMonitorRepository):
         if client is None:
             return False
         try:
-            (
+            result = (
                 client.table(self._TABLE)
                 .delete()
                 .eq("id", monitor_id)
                 .eq("user_id", user_id)
                 .execute()
             )
-            return True
+            # 삭제된 행이 없으면(존재하지 않거나 타 사용자 소유) False —
+            # PostgREST delete는 삭제된 행을 result.data로 반환하므로 이를 검사한다.
+            # 이를 무시하고 True를 반환하면 라우트의 404 분기가 무력화된다.
+            return bool(result.data)
         except Exception as exc:
             logger.error("채널 모니터 삭제 실패: %s", exc)
             raise

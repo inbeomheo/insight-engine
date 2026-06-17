@@ -125,9 +125,14 @@ class ApiKeyService:
             if is_supabase_enabled():
                 try:
                     client = get_supabase()
+                    # key_hash IS NOT NULL — 발급 토큰 행만 조회한다.
+                    # BYO 키 행(encrypted_key)이 같은 테이블에 공존하므로,
+                    # 도메인 판별자 없이 조회하면 BYO 키가 깨진 발급 토큰처럼 노출된다.
                     result = client.table('ie_user_api_keys').select(
                         'id, name, key_prefix, usage_count, created_at, last_used_at, is_active'
-                    ).eq('user_id', user_id).eq('is_active', True).execute()
+                    ).eq('user_id', user_id).eq('is_active', True).not_.is_(
+                        'key_hash', 'null'
+                    ).execute()
                     return [
                         {
                             'key_id': k['id'],
@@ -167,8 +172,11 @@ class ApiKeyService:
             if is_supabase_enabled():
                 try:
                     client = get_supabase()
+                    # key_hash IS NOT NULL 조건으로 발급 토큰 행만 비활성화 —
+                    # 같은 테이블의 BYO 키 행이 실수로 취소되지 않도록 보호한다.
                     client.table('ie_user_api_keys').update({'is_active': False}) \
-                        .eq('id', key_id).eq('user_id', user_id).execute()
+                        .eq('id', key_id).eq('user_id', user_id) \
+                        .not_.is_('key_hash', 'null').execute()
                     return True
                 except Exception as e:
                     logger.error(f"API 키 삭제 실패: {e}")

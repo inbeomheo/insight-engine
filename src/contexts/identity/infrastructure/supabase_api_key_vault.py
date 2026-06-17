@@ -76,13 +76,15 @@ class SupabaseApiKeyVault(IApiKeyVault):
 
         try:
             encrypted = self._encrypt(plaintext_key)
+            # on_conflict 지정 — (user_id, provider, label) 유니크 인덱스 기준으로
+            # 동일 키 재저장 시 충돌 에러 대신 기존 행을 갱신(키 회전)한다.
             res = client.table('ie_user_api_keys').upsert({
                 'user_id': str(account_id),
                 'provider': provider,
                 'label': label,
                 'encrypted_key': encrypted,
                 'is_active': True,
-            }).execute()
+            }, on_conflict='user_id,provider,label').execute()
             return ApiKey(
                 provider=provider,
                 masked_key=self._mask(plaintext_key),
