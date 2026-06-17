@@ -39,7 +39,7 @@ const FilterBar = memo(function FilterBar() {
   if (!hasReports) return null;
 
   return (
-    <div className="flex items-center gap-3 w-full mb-5">
+    <div className="mb-5 flex w-full flex-wrap items-center gap-3">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
         <Input
@@ -47,12 +47,12 @@ const FilterBar = memo(function FilterBar() {
           value={localQuery}
           onChange={(e) => setLocalQuery(e.target.value)}
           placeholder="결과 검색..."
-          className="pl-9 h-10 text-sm"
+          className="h-10 rounded-sm border-border bg-card pl-9 text-sm shadow-none focus-visible:ring-primary/30"
           aria-label="결과 검색"
         />
       </div>
       <Select value={styleFilter || 'all'} onValueChange={(v) => setStyleFilter(v === 'all' ? '' : v)}>
-        <SelectTrigger className="h-10 text-sm w-36">
+        <SelectTrigger className="h-10 w-36 rounded-sm border-border bg-card text-sm shadow-none">
           <SelectValue placeholder="스타일" />
         </SelectTrigger>
         <SelectContent>
