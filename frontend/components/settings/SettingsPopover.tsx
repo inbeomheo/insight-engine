@@ -87,7 +87,7 @@ export default function SettingsPopover() {
       role="dialog"
       aria-label="생성 설정"
       aria-describedby="settings-popover-desc"
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 w-[420px] bg-popover border border-border rounded-xl shadow-lg p-5 space-y-5"
+      className="absolute left-1/2 -translate-x-1/2 top-full mt-3 z-40 w-[min(92vw,520px)] rounded-sm border border-border bg-popover p-5 shadow-none space-y-5"
     >
       <p id="settings-popover-desc" className="sr-only">AI 모델, 스타일, 길이, 문체, 언어 등 콘텐츠 생성 옵션을 설정합니다.</p>
       {/* AI 모델 */}
@@ -131,8 +131,11 @@ export default function SettingsPopover() {
 
       {/* 스타일 */}
       <div>
-        <label className="text-sm font-medium text-muted-foreground mb-2 block">스타일</label>
-        <div className="flex flex-wrap gap-2">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <label className="signal-meta text-[10px] font-semibold text-muted-foreground">출력 스타일 {allStyles.length}</label>
+          <span className="signal-meta text-[10px] font-semibold text-primary">선택 1</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {allStyles.map((s) => (
             <button
               key={s.id}
@@ -140,10 +143,10 @@ export default function SettingsPopover() {
               aria-label={`${s.label} 스타일 선택`}
               aria-pressed={selectedStyle === s.id}
               className={cn(
-                'px-3 py-1.5 rounded-full text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
+                'rounded-sm border px-3 py-2 text-left text-xs transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 selectedStyle === s.id
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                  : 'bg-background text-foreground border-border hover:border-primary/50 hover:shadow-sm'
+                  ? 'bg-foreground text-background border-foreground font-semibold'
+                  : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
               )}
             >
               {s.label}
