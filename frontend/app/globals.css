@@ -48,43 +48,54 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* Signal: sharper corners than the old indigo theme */
+  --radius: 0.2rem;
 
-  /* Indigo 테마 (기존 Insight Engine과 동일) */
-  --background: #ffffff;
-  --foreground: #111827;
-  --card: #ffffff;
-  --card-foreground: #111827;
+  /* --- Surfaces --- */
+  --background: #FAF8F4;          /* Paper — warm off-white (was #ffffff) */
+  --foreground: #17150F;          /* Ink — near-black warm (was #111827) */
+  --card: #ffffff;                /* Cards stay pure white on paper bg */
+  --card-foreground: #17150F;
   --popover: #ffffff;
-  --popover-foreground: #111827;
-  --primary: #4F46E5;
+  --popover-foreground: #17150F;
+
+  /* --- Brand / action --- */
+  --primary: #EA4E20;             /* Signal vermilion (was #4F46E5) */
   --primary-foreground: #ffffff;
-  --secondary: #F3F4F6;
-  --secondary-foreground: #111827;
-  --muted: #F9FAFB;
-  --muted-foreground: #6B7280;
-  --accent: #EEF2FF;
-  --accent-foreground: #4F46E5;
-  --destructive: #ef4444;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: rgba(79, 70, 229, 0.3);
 
-  --chart-1: #4F46E5;
-  --chart-2: #10b981;
-  --chart-3: #f59e0b;
-  --chart-4: #8b5cf6;
-  --chart-5: #ec4899;
+  /* --- Neutrals --- */
+  --secondary: #F1EEE7;           /* Wash — warm neutral fill */
+  --secondary-foreground: #17150F;
+  --muted: #F1EEE7;
+  --muted-foreground: #6E6A60;    /* ~rgba(23,21,15,0.55) flattened */
+  --accent: #FBE9E3;              /* Faint vermilion tint for accent surfaces */
+  --accent-foreground: #EA4E20;
 
-  --sidebar: #F8FAFC;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #4F46E5;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #EEF2FF;
-  --sidebar-accent-foreground: #4F46E5;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: rgba(79, 70, 229, 0.3);
+  --destructive: #E5484D;
 
+  /* --- Lines & focus --- */
+  --border: #E5E0D7;              /* Hairline on paper (was #E5E7EB) */
+  --input: #DAD4C9;
+  --ring: rgba(234, 78, 32, 0.35);
+
+  /* --- Charts (source-type / data palette) --- */
+  --chart-1: #EA4E20;            /* vermilion */
+  --chart-2: #1FA672;            /* green */
+  --chart-3: #F59E0B;            /* amber */
+  --chart-4: #7C5CFF;            /* violet (arXiv) */
+  --chart-5: #2D7FF9;            /* blue (web) */
+
+  /* --- Sidebar --- */
+  --sidebar: #F1EEE7;            /* Wash panel (was #F8FAFC) */
+  --sidebar-foreground: #17150F;
+  --sidebar-primary: #17150F;    /* "새 분석" button is INK, not vermilion */
+  --sidebar-primary-foreground: #FAF8F4;
+  --sidebar-accent: #FAF8F4;     /* active history row background */
+  --sidebar-accent-foreground: #17150F;
+  --sidebar-border: #E5E0D7;
+  --sidebar-ring: rgba(234, 78, 32, 0.35);
+
+  /* --- Fonts (unchanged) --- */
   --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
@@ -134,13 +145,13 @@
 .prose ol { @apply list-decimal pl-5 my-4 space-y-2; }
 .prose li { @apply text-foreground/85 leading-[1.65]; }
 .prose blockquote {
-  @apply border-l-[3px] border-foreground/15 pl-5 my-5 text-foreground/70 not-italic bg-muted/30 py-3 rounded-r-lg;
+  @apply border-l-[3px] border-[#EA4E20] pl-5 my-5 text-foreground/70 not-italic bg-muted/30 py-3 rounded-r-sm;
 }
 .prose code {
   @apply bg-muted/70 px-1.5 py-0.5 rounded text-[13px] font-mono text-foreground/80 border border-border/40;
 }
 .prose pre {
-  @apply rounded-xl overflow-x-auto my-5 p-5;
+  @apply rounded-sm overflow-x-auto my-5 p-5;
   background: #1e1e2e;
   color: #cdd6f4;
   border: 1px solid rgba(205, 214, 244, 0.1);
@@ -150,7 +161,7 @@
   color: inherit;
 }
 .prose table {
-  @apply w-full my-5 border-separate border-spacing-0 rounded-lg border border-border/40 overflow-hidden;
+  @apply w-full my-5 border-separate border-spacing-0 rounded-sm border border-border/60 overflow-hidden;
 }
 .prose th {
   @apply border-b-2 border-border/50 bg-muted/50 px-4 py-2.5 text-left font-medium text-xs uppercase tracking-wider text-muted-foreground;
@@ -180,20 +191,19 @@
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+::-webkit-scrollbar-thumb { background: #E5E0D7; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #DAD4C9; }
 
 /* 그라데이션 유틸리티 */
 .gradient-primary {
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  background: #EA4E20;
 }
 .gradient-subtle {
-  background: linear-gradient(180deg, #F8FAFC 0%, #ffffff 100%);
+  background: #FAF8F4;
 }
 .glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
 }
 
 /* 애니메이션 */
@@ -222,12 +232,51 @@
 }
 
 .dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --background: #17150F;
+  --foreground: #FAF8F4;
+  --card: #1F1C15;
+  --card-foreground: #FAF8F4;
+  --popover: #1F1C15;
+  --popover-foreground: #FAF8F4;
+  --primary: #EA4E20;
+  --primary-foreground: #ffffff;
+  --secondary: #262219;
+  --secondary-foreground: #FAF8F4;
+  --muted: #262219;
+  --muted-foreground: rgba(250, 248, 244, 0.55);
+  --accent: #2E2418;
+  --accent-foreground: #EA4E20;
+  --border: rgba(250, 248, 244, 0.10);
+  --input: rgba(250, 248, 244, 0.14);
+  --ring: rgba(234, 78, 32, 0.45);
+
+  --sidebar: #1F1C15;
+  --sidebar-foreground: #FAF8F4;
+  --sidebar-primary: #EA4E20;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262219;
+  --sidebar-accent-foreground: #FAF8F4;
+  --sidebar-border: rgba(250, 248, 244, 0.10);
+  --sidebar-ring: rgba(234, 78, 32, 0.45);
+}
+
+
+/* Signal design utilities */
+.signal-hard-shadow {
+  box-shadow: 3px 3px 0 rgba(23, 21, 15, 0.18);
+}
+.signal-input-shadow {
+  box-shadow: 4px 4px 0 rgba(23, 21, 15, 0.10);
+}
+.signal-meta {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.signal-card {
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-hard-shadow, .signal-input-shadow { transition: none !important; }
 }

@@ -34,8 +34,8 @@ const HistoryItem = memo(function HistoryItem({
       aria-label={`${report.title} 히스토리 보기`}
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-lg cursor-pointer text-xs transition-all duration-200',
-        isActive ? 'bg-primary/10 shadow-sm border border-primary/20' : 'hover:bg-white hover:shadow-sm border border-transparent'
+        'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-sm cursor-pointer text-xs transition-colors duration-200',
+        isActive ? 'bg-sidebar-accent border border-sidebar-border' : 'hover:bg-white border border-transparent'
       )}
       onClick={() => onClick(report.id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(report.id); } }}
@@ -45,7 +45,7 @@ const HistoryItem = memo(function HistoryItem({
         <div className="font-medium text-foreground/90 leading-snug line-clamp-2" title={report.title}>
           {report.title}
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground/50 mt-1">
+        <div className="signal-meta flex items-center gap-1 text-[9px] text-muted-foreground/60 mt-1">
           <Clock className="h-3 w-3" />
           <span>{report.time}</span>
           <span>·</span>
@@ -154,7 +154,7 @@ export default function Sidebar() {
 
       <aside
         className={cn(
-          'w-[260px] border-r border-border/60 bg-[#F8FAFC] dark:bg-zinc-900 flex flex-col h-full shrink-0 z-50',
+          'w-[236px] border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col h-full shrink-0 z-50',
           'transition-all duration-200 ease-out',
           'fixed lg:relative',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-translate-x-full lg:w-0 lg:border-0 lg:overflow-hidden'
@@ -164,7 +164,7 @@ export default function Sidebar() {
       >
         {/* 새 분석 */}
         <div className="p-3 pb-2">
-          <Button className="w-full gap-2 h-10 gradient-primary hover:opacity-90 transition-opacity shadow-sm" size="sm" onClick={handleNewAnalysis}>
+          <Button className="w-full gap-2 h-[42px] bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 shadow-none hover:translate-y-0" size="sm" onClick={handleNewAnalysis}>
             <Plus className="h-4 w-4" />
             <span className="font-medium">{t('sidebar.newAnalysis')}</span>
           </Button>
@@ -181,7 +181,7 @@ export default function Sidebar() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('sidebar.historySearch')}
-              className="pl-8 h-8 text-xs bg-white/70 border-border/50 focus:bg-white transition-colors"
+              className="pl-8 h-8 rounded-sm text-xs bg-white border-sidebar-border focus:bg-white transition-colors"
             />
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function Sidebar() {
             <div className="px-2 pb-2">
               {Object.entries(grouped).map(([date, items]) => (
                 <div key={date}>
-                  <div className="px-2 py-2 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                  <div className="signal-meta px-2 py-2 text-[10px] font-semibold text-muted-foreground/60">
                     {date}
                   </div>
                   {items.map((r) => (
@@ -250,8 +250,8 @@ export default function Sidebar() {
         </div>
 
         {/* 하단 브랜딩 */}
-        <div className="p-3 border-t border-border/40">
-          <p className="text-[10px] text-muted-foreground/30 text-center">
+        <div className="p-3 border-t border-sidebar-border">
+          <p className="signal-meta text-[10px] text-muted-foreground/50 text-center">
             {t('sidebar.poweredBy')}
           </p>
         </div>
