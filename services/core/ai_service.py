@@ -488,12 +488,14 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
         dict 또는 tuple: 생성 결과 (return_prompt=True면 (result, prompt) 튜플)
         결과에 'used_model' 키가 추가됨
     """
-    from config import PROVIDER_API_KEYS, MAX_FALLBACK_ATTEMPTS
+    from config import PROVIDER_API_KEYS, MAX_FALLBACK_ATTEMPTS, get_provider_from_model
 
     # API 키가 있는 모델만 필터링
     available_models = []
     for model_id in models:
-        provider = model_id.split('/')[0] if '/' in model_id else ''
+        # 모델 ID 접두사(예: 'ollama_chat/')와 PROVIDER_API_KEYS 키('ollama')가
+        # 다르므로 정규화 헬퍼로 프로바이더를 추출한다.
+        provider = get_provider_from_model(model_id)
         api_key = PROVIDER_API_KEYS.get(provider, '')
         if api_key:
             available_models.append(model_id)
