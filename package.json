@@ -2,6 +2,14 @@
   "name": "insight-engine",
   "version": "1.0.0",
   "description": "YouTube 영상으로 AI 블로그 포스트 자동 생성",
+  "scripts": {
+    "verify:backend": "python -m pytest tests --ignore=tests/e2e --tb=short --timeout=60 -p no:warnings -q && python -m flake8 . --select=E9,F63,F7,F82 --exclude=__pycache__,migrations,node_modules,.venv,.next --count --show-source --statistics",
+    "verify:frontend": "cd frontend && npx tsc --noEmit && npm run build",
+    "verify:e2e": "cd tests/e2e && npx playwright test main-page/ci-smoke.spec.ts --project=no-auth-chromium",
+    "verify:all": "npm run verify:backend && npm run verify:frontend && npm run verify:e2e",
+    "verify:production": "python scripts/check_production_readiness.py",
+    "verify:app-data-backup": "python scripts/backup_app_data.py rehearse"
+  },
   "devDependencies": {
     "@playwright/test": "^1.58.2"
   },
