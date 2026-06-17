@@ -9,6 +9,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from utils.production_readiness import (
+    default_content_security_policy,
+    parse_cors_origins,
+    validate_production_security_config,
+)
+
 try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
@@ -32,6 +38,19 @@ def create_app(test_config=None):
 
     # CORS: 프론트엔드(Next.js)에서 Flask를 직접 호출할 수 있도록 허용
     allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
+
+    # 부팅 시 production 보안 설정 검증 (fail-closed)
+    # FLASK_ENV != 'production'이면 검증을 건너뛰므로 개발/테스트 환경에는 영향 없음
+    flask_env = os.getenv('FLASK_ENV', '')
+    _csp_header = os.getenv('CONTENT_SECURITY_POLICY') or default_content_security_policy(flask_env)
+    validate_production_security_config(
+        flask_env,
+        parse_cors_origins(os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001')),
+        os.getenv('METRICS_AUTH_TOKEN', ''),
+        os.getenv('ENCRYPTION_SECRET', ''),
+        _csp_header,
+    )
+
     CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
 
     app.config.from_object('config')
