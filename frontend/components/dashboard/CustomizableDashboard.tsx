@@ -19,9 +19,11 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
   const Icon = WIDGET_ICONS[widget.type] || FileText;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-2">
-      <Icon className="h-6 w-6" />
-      <span className="text-xs">{widget.title}</span>
+    <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground/50">
+      <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-muted">
+        <Icon className="h-5 w-5" />
+      </div>
+      <span className="signal-meta text-[10px]">{widget.title}</span>
     </div>
   );
 }
@@ -37,13 +39,16 @@ export default function CustomizableDashboard() {
   const visibleWidgets = widgets.filter((w) => w.visible);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 대시보드 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">대시보드</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="signal-meta mb-1 text-[10px] font-semibold text-primary">DASHBOARD</p>
+          <h2 className="text-2xl font-bold tracking-[-0.02em]">대시보드</h2>
+        </div>
         <div className="flex items-center gap-2">
           {editMode && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={resetLayout}>
+            <Button variant="ghost" size="sm" className="signal-meta h-8 rounded-sm text-[10px] gap-1" onClick={resetLayout}>
               <RotateCcw className="h-3 w-3" />
               초기화
             </Button>
@@ -51,7 +56,7 @@ export default function CustomizableDashboard() {
           <Button
             variant={editMode ? 'default' : 'ghost'}
             size="sm"
-            className="h-7 text-xs gap-1"
+            className="signal-meta h-8 rounded-sm text-[10px] gap-1"
             onClick={() => setEditMode(!editMode)}
           >
             <Settings className="h-3 w-3" />
@@ -62,15 +67,15 @@ export default function CustomizableDashboard() {
 
       {/* 편집 모드: 위젯 토글 리스트 */}
       {editMode && (
-        <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-lg border border-border/40">
+        <div className="flex flex-wrap gap-2 rounded-sm border border-border bg-muted/30 p-3">
           {widgets.map((w) => (
             <button
               key={w.id}
               aria-label={`${w.title} 위젯 ${w.visible ? '숨기기' : '표시'}`}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors border ${
+              className={`signal-meta flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] transition-colors ${
                 w.visible
-                  ? 'bg-primary/8 border-primary/20 text-primary'
-                  : 'bg-white border-border/40 text-muted-foreground/60'
+                  ? 'bg-primary/10 border-primary/30 text-primary'
+                  : 'bg-white border-border text-muted-foreground/60'
               }`}
               onClick={() => toggleWidget(w.id)}
             >
@@ -82,17 +87,17 @@ export default function CustomizableDashboard() {
       )}
 
       {/* 위젯 그리드 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {visibleWidgets.map((widget) => (
           <div
             key={widget.id}
-            className={`border border-border/60 rounded-xl bg-white p-4 min-h-[160px]
-                        transition-all ${editMode ? 'ring-2 ring-primary/20 ring-dashed' : ''}
-                        ${widget.w === 2 ? 'col-span-2' : ''}`}
+            className={`min-h-[160px] rounded-sm border border-border bg-card p-4 shadow-none transition-colors
+                        ${editMode ? 'ring-2 ring-primary/20 ring-dashed' : ''}
+                        ${widget.w === 2 ? 'md:col-span-2' : ''}`}
           >
             {/* 위젯 헤더 */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-muted-foreground/70">{widget.title}</span>
+              <span className="signal-meta text-[10px] font-semibold text-muted-foreground/70">{widget.title}</span>
             </div>
             <WidgetContent widget={widget} />
           </div>
@@ -100,7 +105,7 @@ export default function CustomizableDashboard() {
       </div>
 
       {visibleWidgets.length === 0 && (
-        <div className="text-center py-12 text-sm text-muted-foreground/50">
+        <div className="rounded-sm border border-dashed border-border py-12 text-center text-sm text-muted-foreground/60">
           표시할 위젯이 없습니다. 편집 모드에서 위젯을 활성화하세요.
         </div>
       )}

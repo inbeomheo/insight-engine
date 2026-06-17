@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Plus, CalendarDays, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Header from '@/components/layout/Header';
@@ -56,6 +56,9 @@ export default function Home() {
   const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
   const activeReportId = useUIStore((s) => s.activeReportId);
   const activeView = useUIStore((s) => s.activeView);
+  const setActiveView = useUIStore((s) => s.setActiveView);
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+  const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
   const generationMode = useSettingsStore((s) => s.generationMode);
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
@@ -263,7 +266,7 @@ export default function Home() {
         {/* 콘텐츠 */}
         <main className="flex-1 overflow-hidden" id="main-content" role="main">
           <ScrollArea className="h-full">
-            <div className="px-4 sm:px-8 lg:px-14 py-5 sm:py-10">
+            <div className="px-4 pb-24 pt-5 sm:px-8 sm:pt-10 lg:px-14 lg:pb-10">
 
               {/* 캘린더 뷰 */}
               {activeView === 'calendar' && (
@@ -466,6 +469,43 @@ export default function Home() {
           </ScrollArea>
         </main>
       </div>
+
+      {/* 모바일 커맨드 네비게이션 */}
+      <nav
+        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(23,21,15,0.12)] lg:hidden"
+        aria-label="모바일 빠른 이동"
+      >
+        <button
+          type="button"
+          className={cn(
+            'signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold transition-colors',
+            activeView === 'main' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => { setActiveView('main'); setSidebarOpen(false); }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          새 분석
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold transition-colors',
+            activeView === 'calendar' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => { setActiveView('calendar'); setSidebarOpen(false); }}
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          캘린더
+        </button>
+        <button
+          type="button"
+          className="signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => setSettingsModalOpen(true)}
+        >
+          <Settings className="h-3.5 w-3.5" />
+          설정
+        </button>
+      </nav>
 
       {/* 모달 */}
       <SettingsModal />

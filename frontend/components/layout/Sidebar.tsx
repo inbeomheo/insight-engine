@@ -190,10 +190,10 @@ export default function Sidebar() {
         <ScrollArea className="flex-1 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="px-3 py-12 text-center">
-              <div className="w-10 h-10 mx-auto mb-3 bg-accent rounded-xl flex items-center justify-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-sidebar-border bg-sidebar-accent">
                 <Sparkles className="h-5 w-5 text-primary/40" />
               </div>
-              <p className="text-xs text-muted-foreground/60">
+              <p className="signal-meta text-[10px] text-muted-foreground/60">
                 {reports.length === 0 ? t('sidebar.noHistory') : t('sidebar.noSearchResults')}
               </p>
             </div>
@@ -223,7 +223,7 @@ export default function Sidebar() {
         <div className="px-3 pb-2 flex flex-col gap-1">
           <Button
             variant={activeView === 'calendar' ? 'secondary' : 'ghost'}
-            className="w-full justify-start gap-2 h-9 text-xs"
+            className="signal-meta h-9 w-full justify-start gap-2 rounded-sm text-[10px]"
             onClick={() => {
               setActiveView(activeView === 'calendar' ? 'main' : 'calendar');
               if (isMobile) setSidebarOpen(false);

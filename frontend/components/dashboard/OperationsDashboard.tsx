@@ -28,8 +28,8 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-12 text-zinc-500">로딩 중...</div>;
-  if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
+  if (loading) return <div className="signal-meta py-12 text-center text-[10px] text-muted-foreground">로딩 중...</div>;
+  if (error) return <div className="py-12 text-center text-sm text-destructive">{error}</div>;
   if (!data) return null;
 
   const topStyles = Object.entries(data.style_distribution)
@@ -38,46 +38,50 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">운영 대시보드 (최근 7일)</h2>
+      <div>
+        <p className="signal-meta mb-2 text-[10px] font-semibold text-primary">OPERATIONS</p>
+        <h2 className="text-2xl font-bold tracking-[-0.02em]">운영 대시보드</h2>
+        <p className="mt-1 text-sm text-muted-foreground">최근 7일 생성 품질과 처리 흐름을 확인해요.</p>
+      </div>
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-zinc-500 flex items-center gap-2">
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
               <Activity className="h-4 w-4" /> 총 생성
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">{data.total_generations}</span>
+            <span className="text-3xl font-bold tracking-[-0.03em]">{data.total_generations}</span>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-zinc-500 flex items-center gap-2">
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
               <CheckCircle className="h-4 w-4" /> 성공률
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">{data.success_rate}%</span>
+            <span className="text-3xl font-bold tracking-[-0.03em]">{data.success_rate}%</span>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-zinc-500 flex items-center gap-2">
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
               <Clock className="h-4 w-4" /> 평균 시간
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">{data.avg_time}초</span>
+            <span className="text-3xl font-bold tracking-[-0.03em]">{data.avg_time}초</span>
           </CardContent>
         </Card>
       </div>
 
       {/* 스타일 분포 */}
-      <Card>
+      <Card className="rounded-sm border-border bg-card shadow-none">
         <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
+          <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
             <BarChart3 className="h-4 w-4" /> 스타일 분포 (TOP 5)
           </CardTitle>
         </CardHeader>
@@ -88,10 +92,10 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
               return (
                 <div key={style} className="flex items-center gap-3">
                   <span className="text-sm w-24 truncate">{style}</span>
-                  <div className="flex-1 h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-xs text-zinc-500 w-12 text-right">{count}건</span>
+                  <span className="signal-meta w-12 text-right text-[10px] text-muted-foreground">{count}건</span>
                 </div>
               );
             })}
@@ -101,9 +105,9 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
 
       {/* 일별 사용량 */}
       {data.daily_usage.length > 0 && (
-        <Card>
+        <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader>
-            <CardTitle className="text-sm">일별 사용량</CardTitle>
+            <CardTitle className="signal-meta text-[10px] text-muted-foreground">일별 사용량</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-1 h-24">
@@ -113,11 +117,11 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
                 return (
                   <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
                     <div
-                      className="w-full bg-blue-500 rounded-t"
+                      className="w-full rounded-t-sm bg-primary"
                       style={{ height: `${height}%` }}
                       title={`${d.date}: ${d.count}건`}
                     />
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{d.date.slice(5)}</span>
+                    <span className="signal-meta text-[9px] text-muted-foreground">{d.date.slice(5)}</span>
                   </div>
                 );
               })}
