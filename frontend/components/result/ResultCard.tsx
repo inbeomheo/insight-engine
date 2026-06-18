@@ -156,7 +156,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   }, []);
 
   const charCount = report.content.length;
-  const modelMeta = selectedModel ? selectedModel.toUpperCase() : 'AI MODEL';
   const tokenMeta = `${(report.usage?.total_tokens ?? 0).toLocaleString()} TOKENS`;
   const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
@@ -234,7 +233,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     const shareUrl = report.url || report.source_videos?.[0]?.url;
     const text = shareUrl || `${report.title}\n\n${report.content.slice(0, 200)}...`;
     navigator.clipboard.writeText(text);
-    toast.success(shareUrl ? '원본 URL을 복사했습니다.' : t('result.shareCopied'));
+    toast.success(t('result.shareCopied'));
   }
 
   async function handleExportFormat(format: 'markdown' | 'txt' | 'zip') {
@@ -515,6 +514,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   size="sm"
                   className="signal-meta h-8 gap-1.5 rounded-sm border-primary/40 px-2.5 text-[10px] text-primary hover:bg-primary/5"
                   onClick={handleShare}
+                  aria-label={t('result.share')}
                 >
                   <Share2 className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">공유</span>
@@ -564,7 +564,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
         {/* 제목 */}
         <div className="signal-meta mb-2 text-[10px] text-muted-foreground/70">
-          {report.time} · {modelMeta} · {tokenMeta} · {timeMeta} · {charCount.toLocaleString()}자
+          {report.time} · {tokenMeta} · {timeMeta} · {charCount.toLocaleString()}자
         </div>
         <h3 className="max-w-[760px] text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-[34px]">{report.title}</h3>
 
