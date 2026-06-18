@@ -1,0 +1,136 @@
+services:
+  backend:
+    build:
+      context: .
+      target: final
+    image: insight-engine:local
+    container_name: insight-backend
+    restart: unless-stopped
+    command:
+      - gunicorn
+      - --workers=2
+      - --threads=4
+      - --timeout=300
+      - --bind=0.0.0.0:5001
+      - app:create_app()
+    env_file:
+      - .env
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: "0"
+      HOME: /app
+      PORT: "5001"
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_DB_PATH: /app/data/chroma_db
+      AI_CACHE_DB: /app/cache/ai_cache.db
+      JOB_STORE_DIR: /app/data/jobs
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:5001:5001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - insight_app_data:/app/data
+      - insight_app_cache:/app/cache
+      - insight_app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      chatmock:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  frontend:
+    image: insight-engine:local
+    container_name: insight-frontend
+    restart: unless-stopped
+    working_dir: /app/frontend
+    command:
+      - node
+      - node_modules/.bin/next
+      - start
+      - --hostname
+      - 0.0.0.0
+      - --port
+      - "3000"
+    environment:
+      NODE_ENV: production
+      NEXT_BACKEND_URL: http://backend:5001
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  edge:
+    image: caddy:2-alpine
+    container_name: insight-edge
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - ./Caddyfile.deploy:/etc/caddy/Caddyfile:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  chatmock:
+    image: python:3.11-slim
+    container_name: insight-chatmock
+    restart: unless-stopped
+    environment:
+      CODEX_HOME: /codex
+      CHATGPT_LOCAL_REASONING_EFFORT: minimal
+      CHATGPT_LOCAL_FAST_MODE: "true"
+    command:
+      - sh
+      - -c
+      - >
+        pip install --no-cache-dir chatmock >/dev/null &&
+        chatmock serve --host 0.0.0.0 --port 8000 --reasoning-effort minimal --fast-mode
+    volumes:
+      - /home/heo/.codex:/codex
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/models', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  redis:
+    image: redis:7-alpine
+    container_name: insight-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - insight_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  insight_app_data:
+  insight_app_cache:
+  insight_app_logs:
+  insight_redis_data:

@@ -54,6 +54,8 @@ def create_app(test_config=None):
     CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
 
     app.config.from_object('config')
+    # /api/providers 등 순서가 UI 기본 선택에 영향을 주므로 JSON 키 정렬을 끈다.
+    app.json.sort_keys = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     # 요청 본문 최대 크기 제한 (2MB) — 대용량 입력 DoS 방어
     app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
@@ -176,6 +178,7 @@ def create_app(test_config=None):
     # 분리된 라우트 모듈 import → blog_bp에 라우트 등록
     import routes.utility_routes      # noqa: F401
     import routes.advanced_routes     # noqa: F401
+    import routes.job_routes          # noqa: F401
     import routes.export_routes       # noqa: F401
     import routes.integration_routes  # noqa: F401
     import routes.payment_routes      # noqa: F401
@@ -196,6 +199,10 @@ def create_app(test_config=None):
     # NotebookLM 연동 라우트
     from routes.notebooklm_routes import notebooklm_bp
     app.register_blueprint(notebooklm_bp)
+
+    # 제품 지원/피드백 챗봇 라우트
+    from routes.support_routes import support_bp
+    app.register_blueprint(support_bp)
 
     # 에이전트 오케스트레이션 라우트
     from routes.agent_routes import agent_bp

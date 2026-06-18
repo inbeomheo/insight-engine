@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } f
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, RefreshCw,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, RefreshCw, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -80,6 +80,8 @@ interface ResultCardProps {
 }
 
 const remarkPlugins = [remarkGfm];
+const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true';
+const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
 
@@ -90,6 +92,58 @@ const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string
   C: { badge: 'border-yellow-500/50 text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30 dark:text-yellow-400', label: 'C등급' },
   D: { badge: 'border-red-500/50 text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400', label: 'D등급' },
 };
+
+type VisualCue = {
+  label: string;
+  description: string;
+};
+
+function extractTutorialVisualCues(content: string): VisualCue[] {
+  const seen = new Set<string>();
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .map((line) => {
+      const match = line.match(/^(?:[-*]\s*)?(?:\*\*)?\[?((?:사진|이미지|스크린샷)\s*\d*)\]?(?:\*\*)?\s*[:：-]\s*(.+)$/i);
+      if (!match) return null;
+      const label = match[1].trim();
+      const description = match[2].replace(/\*\*/g, '').trim();
+      const key = `${label}:${description}`;
+      if (!description || seen.has(key)) return null;
+      seen.add(key);
+      return { label, description };
+    })
+    .filter((cue): cue is VisualCue => Boolean(cue))
+    .slice(0, 7);
+}
+
+function TutorialVisualCueSection({ cues }: { cues: VisualCue[] }) {
+  if (cues.length === 0) return null;
+  return (
+    <section className="mb-5 rounded-sm border border-primary/25 bg-primary/5 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-sm border border-primary/30 bg-background text-primary">
+            <ImageIcon className="h-4 w-4" />
+          </span>
+          <div>
+            <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">튜토리얼 사진 가이드</h4>
+            <p className="text-xs text-muted-foreground">각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.</p>
+          </div>
+        </div>
+        <span className="signal-meta shrink-0 text-[10px] font-bold text-primary">{cues.length} CUTS</span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {cues.map((cue, index) => (
+          <div key={`${cue.label}-${index}`} className="rounded-sm border border-border/70 bg-card p-3">
+            <div className="signal-meta mb-1 text-[10px] font-bold text-primary">{cue.label || `사진 ${index + 1}`}</div>
+            <p className="text-sm leading-6 text-foreground/85">{cue.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // 패널 상태 리듀서 — 13개 useState → 단일 리듀서 (상태 변경 시 1회 리렌더)
 interface PanelState {
@@ -129,6 +183,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
+  const [isSharing, setIsSharing] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
@@ -160,10 +215,32 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
   async function copyText(text: string, field: string) {
-    await navigator.clipboard.writeText(text);
+    await copyToClipboard(text);
     setPanel('copiedField', field);
     toast.success(t('result.copied'));
     setTimeout(() => setPanel('copiedField', null), 2000);
+  }
+
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // 공유 링크는 서버 요청 후 복사하므로 브라우저가 사용자 제스처를 잃었다고
+      // 판단할 수 있다. 이때는 legacy textarea 복사로 한 번 더 시도한다.
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (!ok) throw new Error('클립보드 복사 권한이 막혔습니다. 링크를 직접 선택해서 복사해주세요.');
+    }
   }
 
   async function copyRich() {
@@ -229,11 +306,32 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     w.print();
   }
 
-  function handleShare() {
-    const shareUrl = report.url || report.source_videos?.[0]?.url;
-    const text = shareUrl || `${report.title}\n\n${report.content.slice(0, 200)}...`;
-    navigator.clipboard.writeText(text);
-    toast.success(t('result.shareCopied'));
+  async function handleShare() {
+    if (isSharing) return;
+    setIsSharing(true);
+    try {
+      const existingUrl = report.share_url;
+      const shareUrl = existingUrl || (await createSharePage({
+        title: report.title,
+        content: report.content,
+        html: report.html,
+        url: report.url,
+        style: report.style,
+      })).share_url;
+      if (!existingUrl) updateReport(report.id, { share_url: shareUrl });
+
+      await copyToClipboard(shareUrl);
+      setPanel('copiedField', 'share');
+      toast.success(t('result.shareCopied'), {
+        description: shareUrl,
+      });
+      setTimeout(() => setPanel('copiedField', null), 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '공유 링크 생성 실패';
+      toast.error(message);
+    } finally {
+      setIsSharing(false);
+    }
   }
 
   async function handleExportFormat(format: 'markdown' | 'txt' | 'zip') {
@@ -367,6 +465,10 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   );
 
   const hasMath = useMemo(() => MATH_PATTERN.test(processedContent), [processedContent]);
+  const tutorialVisualCues = useMemo(
+    () => report.style === 'tutorial' ? extractTutorialVisualCues(report.content) : [],
+    [report.style, report.content],
+  );
 
   const markdownBody = useMemo(
     () => isStreaming ? (
@@ -426,9 +528,9 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
-    <Card className="overflow-hidden rounded-sm border-border bg-card shadow-none transition-colors hover:border-primary/40">
+    <Card className="mx-auto max-w-[920px] overflow-hidden rounded-sm border-border bg-card shadow-none transition-colors hover:border-primary/40">
       {/* 헤더 */}
-      <div className="px-6 pt-6 pb-3">
+      <div className="px-6 pt-6 pb-3 lg:px-8 xl:px-10">
         {/* 뱃지 + 액션 */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -510,17 +612,24 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="outline"
+variant={report.share_url ? 'secondary' : 'outline'}
                   size="sm"
                   className="signal-meta h-8 gap-1.5 rounded-sm border-primary/40 px-2.5 text-[10px] text-primary hover:bg-primary/5"
                   onClick={handleShare}
-                  aria-label={t('result.share')}
+                  disabled={isSharing}
+                  aria-label={report.share_url ? '공유 링크 복사' : '공유 페이지 만들고 링크 복사'}
                 >
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">공유</span>
+                  {isSharing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : copiedField === 'share' ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Share2 className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{report.share_url ? '링크 복사' : '공유'}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t('result.share')}</TooltipContent>
+              <TooltipContent>{report.share_url ? '공유 링크만 복사' : '공유 페이지 생성 후 URL만 복사'}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -566,7 +675,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
         <div className="signal-meta mb-2 text-[10px] text-muted-foreground/70">
           {report.time} · {tokenMeta} · {timeMeta} · {charCount.toLocaleString()}자
         </div>
-        <h3 className="max-w-[760px] text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-[34px]">{report.title}</h3>
+        <h3 className="max-w-none text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-[34px]">{report.title}</h3>
 
         {/* 소스 링크 */}
         {report.merged && report.source_videos ? (
@@ -599,7 +708,9 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
       {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
       {hasExpanded && (
-      <CardContent className="border-t border-border/50 px-6 pb-6 pt-5" style={{ display: collapsed ? 'none' : undefined }}>
+      <CardContent className="border-t border-border/50 px-6 pb-6 pt-5 lg:px-8 xl:px-10" style={{ display: collapsed ? 'none' : undefined }}>
+          {tutorialVisualCues.length > 0 && <TutorialVisualCueSection cues={tutorialVisualCues} />}
+
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
           {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
@@ -617,7 +728,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                   전체 콘텐츠 보기
                 </summary>
-                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90 mt-3">
+                <div className="prose max-w-none text-[15.5px] leading-[1.75] text-foreground/90 mt-3">
                   {markdownBody}
                 </div>
               </details>
@@ -634,7 +745,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
                 />
               ) : (
-                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90">
+                <div className="prose max-w-none text-[15.5px] leading-[1.75] text-foreground/90">
                   {markdownBody}
                 </div>
               )}
@@ -647,7 +758,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
                 />
               ) : (
-                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90">
+                <div className="prose max-w-none text-[15.5px] leading-[1.75] text-foreground/90">
                   {markdownBody}
                 </div>
               )}
@@ -678,7 +789,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
           {/* FAQ + CTA 섹션 (blog_seo, geo_seo 스타일) */}
           {(report.faq_schema || report.cta) && (
-            <FaqCtaSection faqSchema={report.faq_schema} cta={report.cta} />
+            <FaqCtaSection faqSchema={report.faq_schema} cta={report.cta} content={report.content} />
           )}
 
           {/* Shorts 클립 섹션 */}
@@ -781,43 +892,47 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <RefreshCw className="h-3.5 w-3.5 mr-2" />
                 플랫폼 변환
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleNotebookLm('audio')}>
-                <Headphones className="h-3.5 w-3.5 mr-2" />
-                NLM 팟캐스트
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('video')}>
-                <Layers className="h-3.5 w-3.5 mr-2" />
-                NLM 비디오
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('infographic')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                NLM 인포그래픽
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('slide_deck')}>
-                <Layers className="h-3.5 w-3.5 mr-2" />
-                NLM 슬라이드
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('mindmap')}>
-                <Brain className="h-3.5 w-3.5 mr-2" />
-                NLM 마인드맵
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('quiz')}>
-                <ListChecks className="h-3.5 w-3.5 mr-2" />
-                NLM 퀴즈
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('flashcards')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                NLM 플래시카드
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('briefing')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                NLM 브리핑
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotebookLm('study_guide')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                NLM 스터디 가이드
-              </DropdownMenuItem>
+              {NOTEBOOKLM_ENABLED && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleNotebookLm('audio')}>
+                    <Headphones className="h-3.5 w-3.5 mr-2" />
+                    NLM 팟캐스트
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('video')}>
+                    <Layers className="h-3.5 w-3.5 mr-2" />
+                    NLM 비디오
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('infographic')}>
+                    <FileText className="h-3.5 w-3.5 mr-2" />
+                    NLM 인포그래픽
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('slide_deck')}>
+                    <Layers className="h-3.5 w-3.5 mr-2" />
+                    NLM 슬라이드
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('mindmap')}>
+                    <Brain className="h-3.5 w-3.5 mr-2" />
+                    NLM 마인드맵
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('quiz')}>
+                    <ListChecks className="h-3.5 w-3.5 mr-2" />
+                    NLM 퀴즈
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('flashcards')}>
+                    <FileText className="h-3.5 w-3.5 mr-2" />
+                    NLM 플래시카드
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('briefing')}>
+                    <FileText className="h-3.5 w-3.5 mr-2" />
+                    NLM 브리핑
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotebookLm('study_guide')}>
+                    <FileText className="h-3.5 w-3.5 mr-2" />
+                    NLM 스터디 가이드
+                  </DropdownMenuItem>
+                </>
+              )}
               {(report.url || report.transcript) && (
                 <DropdownMenuItem onClick={handleExtractEvents} disabled={eventLoading}>
                   <ListChecks className="h-3.5 w-3.5 mr-2" />
@@ -855,7 +970,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <Printer className="h-3.5 w-3.5 mr-2" />
                 {t('result.printPdf')}
               </DropdownMenuItem>
-              {mcpPlugins.length > 0 && (
+              {PUBLISHING_ENABLED && mcpPlugins.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
                   {mcpPlugins.map((plugin) => (
@@ -866,11 +981,15 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   ))}
                 </>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onSchedule(report)}>
-                <Calendar className="h-3.5 w-3.5 mr-2" />
-                {t('result.schedule')}
-              </DropdownMenuItem>
+              {PUBLISHING_ENABLED && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onSchedule(report)}>
+                    <Calendar className="h-3.5 w-3.5 mr-2" />
+                    {t('result.schedule')}
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"

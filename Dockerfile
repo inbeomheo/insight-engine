@@ -7,9 +7,12 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm ci --omit=dev
+# Build needs devDependencies because next.config.ts requires TypeScript at build time.
+RUN npm ci
 
 COPY frontend/ ./
+ARG NEXT_BACKEND_URL=http://backend:5001
+ENV NEXT_BACKEND_URL=$NEXT_BACKEND_URL
 RUN npm run build
 
 # ── 스테이지 2: Python 의존성 ──────────────────────────────────────────────────
