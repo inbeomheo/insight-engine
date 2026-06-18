@@ -35,7 +35,7 @@ const HistoryItem = memo(function HistoryItem({
       aria-current={isActive ? 'true' : undefined}
       className={cn(
         'group flex items-start gap-2.5 px-2.5 py-2.5 rounded-sm cursor-pointer text-xs transition-colors duration-200',
-        isActive ? 'bg-sidebar-accent border border-sidebar-border' : 'hover:bg-white border border-transparent'
+        isActive ? 'bg-sidebar-accent border border-sidebar-border' : 'hover:bg-sidebar-accent border border-transparent'
       )}
       onClick={() => onClick(report.id)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(report.id); } }}
