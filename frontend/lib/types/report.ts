@@ -173,6 +173,7 @@ export interface Report {
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
   favorite?: boolean;
+  share_url?: string;
   notebooklm?: NotebookLmData;
 }
 

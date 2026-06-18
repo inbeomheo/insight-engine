@@ -71,6 +71,7 @@ def github_config_status() -> dict[str, Any]:
         "configured": bool(repo and _token_from_env()),
         "repo": repo,
         "has_token": bool(_token_from_env()),
+        "handoff_enabled": bool(os.getenv("SUPPORT_HANDOFF_SECRET", "").strip()),
     }
 
 

@@ -860,7 +860,7 @@ export interface SupportChatResponse {
   action: 'answered' | 'ticket_created' | string;
   ticket?: SupportTicket;
   triage?: Record<string, unknown>;
-  github?: { configured: boolean; repo?: string; has_token?: boolean };
+  github?: { configured: boolean; repo?: string; has_token?: boolean; handoff_enabled?: boolean };
   suggested_next_actions?: string[];
 }
 

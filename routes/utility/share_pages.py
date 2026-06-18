@@ -15,7 +15,7 @@ def _share_store() -> SharePageStore:
     directory = current_app.config.get("SHARE_PAGE_DIR") or os.getenv("SHARE_PAGE_DIR") or "data/shared_pages"
     if not Path(directory).is_absolute():
         directory = str(Path(current_app.root_path) / directory)
-    origin = os.getenv("PUBLIC_ORIGIN", "").rstrip("/")
+    origin = (os.getenv("PUBLIC_ORIGIN", "") or request.host_url.rstrip("/")).rstrip("/")
     return SharePageStore(directory, origin=origin)
 
 

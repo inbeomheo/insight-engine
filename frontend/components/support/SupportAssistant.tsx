@@ -20,7 +20,7 @@ type LocalMessage = {
   role: ChatRole;
   content: string;
   ticket?: SupportTicket;
-  githubConfigured?: boolean;
+  githubHandoffEnabled?: boolean;
 };
 
 const STARTER_MESSAGES = [
@@ -111,7 +111,7 @@ export default function SupportAssistant() {
           role: 'assistant',
           content: res.reply,
           ticket: res.ticket,
-          githubConfigured: res.github?.configured,
+          githubHandoffEnabled: Boolean(res.github?.configured && res.github?.handoff_enabled),
         },
       ]);
     } catch (err) {
@@ -138,7 +138,7 @@ export default function SupportAssistant() {
             ? `GitHub 이슈 #${updated.github_issue_number ?? ''}로 올렸어. 이제 별도 작업 에이전트가 needs-agent 큐에서 가져갈 수 있어.`
             : 'GitHub 이슈 생성 요청을 처리했어.',
           ticket: updated,
-          githubConfigured: true,
+          githubHandoffEnabled: true,
         },
       ]);
       toast.success('GitHub 이슈를 생성했어');
@@ -165,7 +165,7 @@ export default function SupportAssistant() {
             ? `docs-only Draft PR #${updated.github_pr_number ?? ''}을 만들었어. 코드 수정은 하지 않았고, 작업 에이전트가 이어받을 스펙만 담았어.`
             : 'Draft PR 생성 요청을 처리했어.',
           ticket: updated,
-          githubConfigured: true,
+          githubHandoffEnabled: true,
         },
       ]);
       toast.success('Draft PR을 생성했어');
@@ -234,7 +234,7 @@ export default function SupportAssistant() {
                       <TicketActions
                         ticket={message.ticket}
                         disabled={loading}
-                        githubConfigured={message.githubConfigured}
+                        githubHandoffEnabled={message.githubHandoffEnabled}
                         onCreateIssue={handleCreateIssue}
                         onCreateDraftPr={handleCreateDraftPr}
                       />
@@ -299,13 +299,13 @@ export default function SupportAssistant() {
 function TicketActions({
   ticket,
   disabled,
-  githubConfigured,
+  githubHandoffEnabled,
   onCreateIssue,
   onCreateDraftPr,
 }: {
   ticket: SupportTicket;
   disabled: boolean;
-  githubConfigured?: boolean;
+  githubHandoffEnabled?: boolean;
   onCreateIssue: (ticket: SupportTicket) => void;
   onCreateDraftPr: (ticket: SupportTicket) => void;
 }) {
@@ -324,33 +324,35 @@ function TicketActions({
           후보: {ticket.related_files.join(', ')}
         </p>
       )}
-      {!githubConfigured && !ticket.github_issue_url && (
+      {!githubHandoffEnabled && !ticket.github_issue_url && !ticket.github_pr_url && (
         <p className="mb-2 text-[11px] text-muted-foreground">
-          GitHub 연동 전이면 서버에 SUPPORT_GITHUB_TOKEN / SUPPORT_GITHUB_REPO 설정이 필요해.
+          GitHub handoff는 관리자 승인 후 처리돼. 접수된 티켓은 서버에 저장됐어.
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          onClick={() => onCreateIssue(ticket)}
-          disabled={disabled || Boolean(ticket.github_issue_url)}
-        >
-          {ticket.github_issue_url ? <CheckCircle2 className="h-3 w-3" /> : <Github className="h-3 w-3" />}
-          이슈 올리기
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant="outline"
-          onClick={() => onCreateDraftPr(ticket)}
-          disabled={disabled || Boolean(ticket.github_pr_url)}
-        >
-          <MessageSquare className="h-3 w-3" />
-          Draft PR
-        </Button>
-      </div>
+      {githubHandoffEnabled && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={() => onCreateIssue(ticket)}
+            disabled={disabled || Boolean(ticket.github_issue_url)}
+          >
+            {ticket.github_issue_url ? <CheckCircle2 className="h-3 w-3" /> : <Github className="h-3 w-3" />}
+            이슈 올리기
+          </Button>
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={() => onCreateDraftPr(ticket)}
+            disabled={disabled || Boolean(ticket.github_pr_url)}
+          >
+            <MessageSquare className="h-3 w-3" />
+            Draft PR
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

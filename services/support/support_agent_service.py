@@ -86,7 +86,7 @@ def handle_support_chat(
         "viewport": viewport,
         "user_agent": user_agent,
         "console_errors": safe_console_errors,
-        "screenshot_url": screenshot_url,
+        "screenshot_url": redact_diagnostic(screenshot_url) if screenshot_url else "",
         "related_files": triage["related_files"],
         "suggested_fix": triage["suggested_fix"],
         "labels": triage["labels"],

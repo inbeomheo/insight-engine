@@ -6,10 +6,14 @@ or docs-only Draft PRs for separate worker agents.
 """
 from __future__ import annotations
 
+import hmac
+import os
 import re
 from hashlib import sha256
 
 from flask import Blueprint, g, jsonify, request
+
+from extensions import limiter
 
 from services.support.feedback_store import get_feedback_store
 from services.support.github_handoff_service import (
@@ -49,7 +53,23 @@ def _payload() -> dict:
     return request.get_json(silent=True) or {}
 
 
+def _handoff_authorized() -> bool:
+    """Server-side approval gate for actions that spend the GitHub token."""
+    secret = os.getenv("SUPPORT_HANDOFF_SECRET", "").strip()
+    supplied = request.headers.get("X-Support-Handoff-Secret", "")
+    return bool(secret and hmac.compare_digest(secret, supplied))
+
+
+def _handoff_forbidden_response():
+    return jsonify({
+        "error": "GitHub handoff는 관리자 승인키가 필요합니다.",
+        "code": "HANDOFF_APPROVAL_REQUIRED",
+        "github": github_config_status(),
+    }), 403
+
+
 @support_bp.route("/api/support/chat", methods=["POST"])
+@limiter.limit("20/minute;200/day")
 def support_chat():
     data = _payload()
     try:
@@ -87,7 +107,10 @@ def get_support_ticket(ticket_id: str):
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>/create-github-issue", methods=["POST"])
+@limiter.limit("5/minute;30/day")
 def create_support_github_issue(ticket_id: str):
+    if not _handoff_authorized():
+        return _handoff_forbidden_response()
     store = get_feedback_store()
     try:
         ticket = store.get_ticket(ticket_id)
@@ -104,7 +127,10 @@ def create_support_github_issue(ticket_id: str):
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>/create-draft-pr", methods=["POST"])
+@limiter.limit("5/minute;20/day")
 def create_support_draft_pr(ticket_id: str):
+    if not _handoff_authorized():
+        return _handoff_forbidden_response()
     store = get_feedback_store()
     try:
         ticket = store.get_ticket(ticket_id)
