@@ -19,10 +19,10 @@ export default function InputWrapper({ focused, error, className, children }: In
     <div className="w-full">
       <div
         className={cn(
-          'relative border rounded-2xl bg-white shadow-sm transition-all duration-200',
+          'relative rounded-sm border bg-white transition-all duration-200',
           focused
-            ? 'border-primary/40 shadow-[0_0_0_3px_rgba(79,70,229,0.08)] ring-0'
-            : 'border-border/60 hover:border-border',
+            ? 'border-foreground ring-0 signal-input-shadow'
+            : 'border-border hover:border-foreground/50',
           className,
         )}
       >

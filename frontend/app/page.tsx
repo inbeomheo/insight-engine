@@ -263,7 +263,7 @@ export default function Home() {
         {/* 콘텐츠 */}
         <main className="flex-1 overflow-hidden" id="main-content" role="main">
           <ScrollArea className="h-full">
-            <div className="px-4 sm:px-8 lg:px-12 py-4 sm:py-6">
+            <div className="px-4 sm:px-8 lg:px-14 py-5 sm:py-10">
 
               {/* 캘린더 뷰 */}
               {activeView === 'calendar' && (
@@ -276,34 +276,46 @@ export default function Home() {
               {/* 메인 뷰 (콘텐츠 생성) */}
               {activeView === 'main' && <>
               {/* URL 입력 영역 */}
-              <div className="relative mb-10">
-                <UrlInput
-                  urls={urls}
-                  onAddUrl={addUrl}
-                  onAddUrls={addUrls}
-                  onRemoveUrl={removeUrl}
-                  onToggleSettings={handleToggleSettings}
-                  isLoading={isLoading}
-                  onGenerate={handleGenerate}
-                />
-                <SettingsPopover />
+              <section className="relative mb-12 max-w-[880px]">
+                <div className="mb-6 space-y-3">
+                  <p className="signal-meta text-[11px] font-semibold text-primary">새 분석 · STEP 01</p>
+                  <h1 className="max-w-[720px] text-[30px] font-bold leading-[1.08] tracking-[-0.025em] text-foreground sm:text-[38px]">
+                    어떤 영상을<br className="hidden sm:block" /> 콘텐츠로 만들까요?
+                  </h1>
+                  <p className="max-w-[560px] text-sm leading-6 text-muted-foreground">
+                    YouTube, 웹페이지, RSS, arXiv, Podcast를 한 번에 모아 요약·글쓰기·발행-ready 문서로 변환해요.
+                  </p>
+                </div>
+
+                <div className="relative max-w-[720px]">
+                  <UrlInput
+                    urls={urls}
+                    onAddUrl={addUrl}
+                    onAddUrls={addUrls}
+                    onRemoveUrl={removeUrl}
+                    onToggleSettings={handleToggleSettings}
+                    isLoading={isLoading}
+                    onGenerate={handleGenerate}
+                  />
+                  <SettingsPopover />
+                </div>
 
                 {/* 생성 모드 선택 + 퓨전 옵션 */}
                 {urls.length >= 2 && (
-                  <div className="mt-3 animate-fade-in">
+                  <div className="mt-4 max-w-[720px] animate-fade-in">
                     <GenerationModeSelector />
                     <FusionOptions />
                   </div>
                 )}
-              </div>
+              </section>
 
               {/* 생성 버튼 (URL이 있을 때) */}
               {urls.length > 0 && (
-                <div className="flex justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
+                <div className="mb-6 flex max-w-[720px] flex-wrap gap-2 sm:gap-3 animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
                   {generationMode === 'individual' && (
                     <Button
                       onClick={handleGenerate}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
+                      className="h-[50px] gap-2 px-7 text-sm font-semibold"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -317,7 +329,7 @@ export default function Home() {
                     <Button
                       onClick={handleGenerateMerged}
                       variant="outline"
-                      className="gap-2 hover:bg-primary/5 active:scale-[0.98] border-primary/30 text-primary shadow-md shadow-primary/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
+                      className="h-[50px] gap-2 rounded-sm border-primary/40 px-7 text-sm font-semibold text-primary hover:bg-primary/5"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
@@ -329,7 +341,7 @@ export default function Home() {
                     <Button
                       onClick={handleGenerateFusion}
                       variant="outline"
-                      className="gap-2 hover:bg-purple-500/10 active:scale-[0.98] border-purple-400/30 text-purple-500 shadow-md shadow-purple-500/5 hover:shadow-lg transition-all duration-200 px-6 h-11 rounded-xl text-sm font-medium"
+                      className="h-[50px] gap-2 rounded-sm border-[#7C5CFF]/40 px-7 text-sm font-semibold text-[#7C5CFF] hover:bg-[#7C5CFF]/10"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
@@ -341,7 +353,7 @@ export default function Home() {
                   {urls.length === 1 && generationMode !== 'individual' && (
                     <Button
                       onClick={handleGenerate}
-                      className="gap-2 gradient-primary hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-lg px-6 h-11 rounded-xl text-sm font-medium"
+                      className="h-[50px] gap-2 px-7 text-sm font-semibold"
                       size="lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -354,7 +366,7 @@ export default function Home() {
 
               {/* 에이전트 모드 토글 */}
               {urls.length > 0 && generationMode === 'individual' && (
-                <div className="flex justify-center mb-2 animate-fade-in">
+                <div className="mb-3 flex max-w-[720px] animate-fade-in">
                   <button
                     type="button"
                     role="switch"
@@ -362,9 +374,9 @@ export default function Home() {
                     aria-label="에이전트 모드 토글"
                     onClick={() => setEnableAgentMode(!enableAgentMode)}
                     className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50',
+                      'signal-meta flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                       enableAgentMode
-                        ? 'bg-violet-500/10 border-violet-400/40 text-violet-500'
+                        ? 'bg-primary/10 border-primary/40 text-primary'
                         : 'bg-muted/40 border-border/40 text-muted-foreground hover:text-foreground'
                     )}
                   >
@@ -379,7 +391,7 @@ export default function Home() {
                 <div
                   role="alert"
                   aria-live="polite"
-                  className="w-full mb-4 p-3 bg-destructive/5 border border-destructive/20 rounded-xl text-sm text-destructive animate-fade-in flex items-center gap-2 shadow-sm shadow-destructive/5"
+                  className="mb-4 flex w-full items-center gap-2 rounded-sm border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive animate-fade-in"
                 >
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {error}
@@ -407,7 +419,7 @@ export default function Home() {
                     data-report-id={r.id}
                     className={cn(
                       'transition-all duration-300',
-                      activeReportId === r.id && 'ring-2 ring-primary/30 rounded-xl shadow-md shadow-primary/5'
+                      activeReportId === r.id && 'rounded-sm ring-2 ring-primary/30'
                     )}
                   >
                     <ResultCard
@@ -437,8 +449,8 @@ export default function Home() {
                 {/* 빈 상태 */}
                 {!isLoading && reports.length === 0 && (
                   <div className="text-center py-12 sm:py-24">
-                    <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center rounded-3xl border border-indigo-100/50">
-                      <Youtube className="h-9 w-9 text-indigo-300" />
+                    <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-sm border border-border bg-card">
+                      <Youtube className="h-9 w-9 text-primary/45" />
                     </div>
                     <h3 className="font-semibold text-lg text-foreground/80 mb-2">{t('emptyState.title')}</h3>
                     <p className="text-sm text-muted-foreground/60 leading-relaxed">

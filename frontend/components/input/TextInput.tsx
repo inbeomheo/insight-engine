@@ -27,7 +27,7 @@ export default function TextInput({ onGenerate, isLoading }: TextInputProps) {
 
   return (
     <div>
-      <InputWrapper focused={focused} className="px-4 py-3">
+      <InputWrapper focused={focused} className="border-[1.5px] border-foreground px-4 py-3 signal-input-shadow">
         <div className="flex items-start gap-2">
           <Type className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-2" />
           <Textarea
@@ -43,12 +43,12 @@ export default function TextInput({ onGenerate, isLoading }: TextInputProps) {
 
         {/* 하단: 글자수 + 생성 버튼 */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
-          <span className={`text-[11px] ${isValid ? 'text-muted-foreground/50' : 'text-amber-500'}`}>
+          <span className={`signal-meta text-[10px] ${isValid ? 'text-muted-foreground/60' : 'text-amber-500'}`}>
             {charCount}자 {!isValid && charCount > 0 && `(최소 ${MIN_CHARS}자)`}
           </span>
           <Button
             size="icon"
-            className="h-8 w-8 shrink-0 rounded-xl gradient-primary hover:opacity-90 transition-opacity"
+            className="h-9 w-9 shrink-0 rounded-sm"
             onClick={handleSubmit}
             disabled={!isValid || isLoading}
             aria-label="텍스트로 생성"
@@ -58,7 +58,7 @@ export default function TextInput({ onGenerate, isLoading }: TextInputProps) {
         </div>
       </InputWrapper>
 
-      <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
+      <p className="signal-meta text-[10px] text-muted-foreground/55 mt-3 px-1">
         텍스트를 직접 입력하면 URL 없이 콘텐츠를 생성합니다
       </p>
     </div>

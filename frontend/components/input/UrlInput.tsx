@@ -111,7 +111,7 @@ const UrlInput = memo(function UrlInput({
   return (
     <div className="w-full">
       {/* 입력 바 — InputWrapper로 포커스/에러 스타일 통일 */}
-      <InputWrapper focused={focused} error={error} className="flex items-center gap-1.5 px-4 py-2.5">
+      <InputWrapper focused={focused} error={error} className="flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground px-4 py-2.5 signal-input-shadow">
         <InputIcon className={`h-4 w-4 shrink-0 transition-colors duration-150 ${inputIconClass}`} />
         <input
           ref={inputRef}
@@ -123,22 +123,23 @@ const UrlInput = memo(function UrlInput({
           onPaste={handlePaste}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="URL을 붙여넣고 Enter (YouTube, 웹페이지, RSS, arXiv, Podcast)"
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
+          placeholder="YouTube · 웹페이지 · RSS · arXiv · Podcast URL 붙여넣기"
+          className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground/55"
           aria-label="URL 입력"
         />
         <Button
           variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0 text-muted-foreground/50 hover:text-foreground hover:bg-accent"
+          size="sm"
+          className="signal-meta h-9 shrink-0 rounded-sm bg-muted px-3 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground"
           onClick={onToggleSettings}
           aria-label="생성 설정 열기"
         >
-          <SlidersHorizontal className="h-4 w-4" />
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">설정</span>
         </Button>
         <Button
           size="icon"
-          className="h-8 w-8 shrink-0 rounded-xl gradient-primary hover:opacity-90 transition-opacity"
+          className="h-[46px] w-[46px] shrink-0 rounded-sm text-base"
           onClick={input.trim() ? handleSubmit : onGenerate}
           aria-label={input.trim() ? 'URL 추가' : '생성 시작'}
         >
@@ -148,14 +149,14 @@ const UrlInput = memo(function UrlInput({
 
       {/* 힌트 (에러는 InputWrapper가 표시) */}
       {!error && (
-        <p className="text-[11px] text-muted-foreground/40 mt-2 px-2">
+        <p className="signal-meta text-[10px] text-muted-foreground/55 mt-3 px-1">
           YouTube · 웹페이지 · RSS · arXiv · Podcast · 최대 10개
         </p>
       )}
 
       {/* URL 칩 (F5-10: 드래그 정렬 지원) */}
       {urls.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-3 animate-fade-in">
+        <div className="mt-4 flex flex-wrap gap-2 animate-fade-in">
           {urls.map((url, urlIndex) => {
             const videoId = extractVideoId(url);
             const srcType = detectSourceType(url);
@@ -180,7 +181,7 @@ const UrlInput = memo(function UrlInput({
               <Badge
                 key={url}
                 variant="secondary"
-                className={`gap-1.5 pr-1 text-xs font-normal bg-accent/60 border-0 hover:bg-accent hover:shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing ${
+                className={`gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 pr-1 text-xs font-normal hover:border-primary/40 hover:bg-accent transition-colors duration-200 cursor-grab active:cursor-grabbing ${
                   dragOverIndex === urlIndex ? 'ring-2 ring-primary/30' : ''
                 }`}
                 draggable={urls.length > 1}
@@ -199,7 +200,7 @@ const UrlInput = memo(function UrlInput({
               >
                 <GripVertical className="h-3 w-3 shrink-0 text-muted-foreground/30" />
                 <ChipIcon className={`h-3 w-3 shrink-0 ${chipIconEntry.colorClass}`} />
-                <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0">
+                <span className="signal-meta text-[9px] text-muted-foreground/70 font-medium shrink-0">
                   {srcLabel}
                 </span>
                 <span className="max-w-[160px] truncate text-foreground/70">
