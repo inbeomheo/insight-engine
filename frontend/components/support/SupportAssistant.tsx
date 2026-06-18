@@ -33,10 +33,25 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function redactDiagnostic(value: string): string {
+  return value
+    .replace(/(authorization|bearer|token|access_token|refresh_token|api[_-]?key|password|secret)=([^\s&]+)/gi, '$1=[REDACTED]')
+    .replace(/(authorization|bearer|token|access_token|refresh_token|api[_-]?key|password|secret)(\s*[:=]\s*)([^\s,;]+)/gi, '$1$2[REDACTED]')
+    .replace(/https?:\/\/[^\s]+/gi, (url) => {
+      try {
+        const parsed = new URL(url);
+        return `${parsed.origin}${parsed.pathname}`;
+      } catch {
+        return '[REDACTED_URL]';
+      }
+    })
+    .slice(0, 500);
+}
+
 function getConsoleErrors(): string[] {
   if (typeof window === 'undefined') return [];
   const existing = (window as typeof window & { __insightSupportErrors?: string[] }).__insightSupportErrors || [];
-  return existing.slice(-8);
+  return existing.slice(-8).map(redactDiagnostic);
 }
 
 export default function SupportAssistant() {

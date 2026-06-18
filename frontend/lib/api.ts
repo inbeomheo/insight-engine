@@ -61,6 +61,22 @@ const TIMEOUT_MS: Record<string, number> = {
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+const SUPPORT_SESSION_KEY = 'insight-engine-support-session-id';
+
+function getSupportSessionId(): string {
+  if (typeof window === 'undefined') return 'server';
+  let sessionId = localStorage.getItem(SUPPORT_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = `sess_${crypto.randomUUID()}`;
+    localStorage.setItem(SUPPORT_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+}
+
+function supportHeaders(): HeadersInit {
+  return { 'X-Support-Session-Id': getSupportSessionId() };
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
@@ -859,18 +875,19 @@ export async function supportChat(req: {
 }): Promise<SupportChatResponse> {
   return request('/api/support/chat', {
     method: 'POST',
+    headers: supportHeaders(),
     body: JSON.stringify(req),
   });
 }
 
 export async function fetchSupportTickets(): Promise<{ tickets: SupportTicket[]; github?: SupportChatResponse['github'] }> {
-  return request('/api/support/tickets');
+  return request('/api/support/tickets', { headers: supportHeaders() });
 }
 
 export async function createSupportGithubIssue(ticketId: string): Promise<{ ticket: SupportTicket; issue?: { html_url?: string; number?: number } }> {
-  return request(`/api/support/tickets/${ticketId}/create-github-issue`, { method: 'POST' });
+  return request(`/api/support/tickets/${ticketId}/create-github-issue`, { method: 'POST', headers: supportHeaders() });
 }
 
 export async function createSupportDraftPr(ticketId: string): Promise<{ ticket: SupportTicket; pull_request?: { html_url?: string; number?: number } }> {
-  return request(`/api/support/tickets/${ticketId}/create-draft-pr`, { method: 'POST' });
+  return request(`/api/support/tickets/${ticketId}/create-draft-pr`, { method: 'POST', headers: supportHeaders() });
 }

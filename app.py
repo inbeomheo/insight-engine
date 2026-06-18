@@ -178,7 +178,6 @@ def create_app(test_config=None):
     # 분리된 라우트 모듈 import → blog_bp에 라우트 등록
     import routes.utility_routes      # noqa: F401
     import routes.advanced_routes     # noqa: F401
-    import routes.job_routes          # noqa: F401
     import routes.export_routes       # noqa: F401
     import routes.integration_routes  # noqa: F401
     import routes.payment_routes      # noqa: F401

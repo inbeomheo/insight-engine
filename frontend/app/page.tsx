@@ -341,7 +341,6 @@ export default function Home() {
             )}
           </nav>
           <div className="flex items-center gap-4">
-            <span className="signal-meta text-[10px] text-muted-foreground/60">크레딧 <strong className="text-foreground">847</strong></span>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-foreground text-background hover:bg-foreground/90" onClick={() => setSettingsModalOpen(true)} aria-label="설정 열기">
               <Settings className="h-4 w-4" />
             </Button>

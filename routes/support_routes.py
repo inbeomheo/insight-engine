@@ -6,6 +6,9 @@ or docs-only Draft PRs for separate worker agents.
 """
 from __future__ import annotations
 
+import re
+from hashlib import sha256
+
 from flask import Blueprint, g, jsonify, request
 
 from services.support.feedback_store import get_feedback_store
@@ -16,13 +19,26 @@ from services.support.github_handoff_service import (
     github_config_status,
 )
 from services.support.support_agent_service import handle_support_chat
-from src.contexts.identity.interface.auth_decorators import require_auth
 
 support_bp = Blueprint("support", __name__)
 
 
 def _current_user_id() -> str:
-    return getattr(g, "user_id", None) or "anonymous"
+    auth_user = getattr(g, "user_id", None)
+    if auth_user:
+        return str(auth_user)
+
+    # Support Assistant is intentionally lighter than authenticated app APIs so
+    # visitors can ask product questions and file feedback. In no-auth/dev
+    # deployments, isolate tickets by a browser-generated opaque session id
+    # instead of collapsing everyone into the same "anonymous" owner.
+    raw_session = request.headers.get("X-Support-Session-Id", "")
+    session_id = re.sub(r"[^0-9A-Za-z_-]", "", raw_session)[:80]
+    if session_id:
+        return f"support-session:{session_id}"
+
+    fallback = sha256(f"{request.remote_addr}|{request.headers.get('User-Agent', '')}".encode("utf-8")).hexdigest()[:24]
+    return f"support-session:fallback-{fallback}"
 
 
 def _owns(ticket: dict) -> bool:
@@ -34,7 +50,6 @@ def _payload() -> dict:
 
 
 @support_bp.route("/api/support/chat", methods=["POST"])
-@require_auth
 def support_chat():
     data = _payload()
     try:
@@ -54,7 +69,6 @@ def support_chat():
 
 
 @support_bp.route("/api/support/tickets", methods=["GET"])
-@require_auth
 def list_support_tickets():
     limit = min(request.args.get("limit", 50, type=int), 100)
     tickets = get_feedback_store().list_tickets(user_id=_current_user_id(), limit=limit)
@@ -62,7 +76,6 @@ def list_support_tickets():
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>", methods=["GET"])
-@require_auth
 def get_support_ticket(ticket_id: str):
     try:
         ticket = get_feedback_store().get_ticket(ticket_id)
@@ -74,7 +87,6 @@ def get_support_ticket(ticket_id: str):
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>/create-github-issue", methods=["POST"])
-@require_auth
 def create_support_github_issue(ticket_id: str):
     store = get_feedback_store()
     try:
@@ -92,7 +104,6 @@ def create_support_github_issue(ticket_id: str):
 
 
 @support_bp.route("/api/support/tickets/<ticket_id>/create-draft-pr", methods=["POST"])
-@require_auth
 def create_support_draft_pr(ticket_id: str):
     store = get_feedback_store()
     try:
