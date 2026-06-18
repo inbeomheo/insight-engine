@@ -11,9 +11,14 @@ export interface GenerateRequest {
   customPrompt?: string;
   /** 직접 텍스트 입력 (URL 대신 사용) */
   content?: string;
+  /** Research → Writer → Editor → SEO 멀티에이전트 파이프라인 사용 */
+  agent_mode?: boolean;
+  /** 생성 깊이: brief | standard | deep */
+  detail_level?: 'brief' | 'standard' | 'deep';
 }
 
 export interface GenerateResponse {
+  id?: string;
   title: string;
   content: string;
   html: string;
@@ -35,6 +40,42 @@ export interface GenerateResponse {
   transcript_segments?: Array<{ start: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
+  /** agent_mode 요청이 백그라운드 job으로 전환된 경우 */
+  async?: boolean;
+  job_id?: string;
+  job?: AgentJob;
+  status?: string;
+}
+
+export interface AgentJobStep {
+  id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  error?: string | null;
+}
+
+export interface AgentJob {
+  id: string;
+  type: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+  payload: Record<string, unknown>;
+  steps: AgentJobStep[];
+  current_step?: string | null;
+  failed_step?: string | null;
+  result?: {
+    final: {
+      title: string;
+      content: string;
+      seo?: SeoMetadata;
+      sources?: WebSource[];
+    };
+    elapsed_seconds?: number;
+    agent_count?: number;
+  } | null;
+  error?: string | null;
+}
+
+export interface JobResponse {
+  job: AgentJob;
 }
 
 // === 스트리밍 이벤트 ===
@@ -93,6 +134,13 @@ import type { ProviderInfo } from './settings';
 export interface ProvidersResponse {
   providers: Record<string, ProviderInfo>;
   style_options: Array<[string, string]>;
+}
+
+export interface SharePageResponse {
+  id: string;
+  share_url: string;
+  title: string;
+  created_at: string;
 }
 
 // === 프로바이더 유효성 검사 ===

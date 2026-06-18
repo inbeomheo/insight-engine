@@ -5,18 +5,20 @@ import dynamic from 'next/dynamic';
 import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Plus, CalendarDays, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ResultCard from '@/components/result/ResultCard';
+import MobileAppShell from '@/components/mobile/MobileAppShell';
 import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
-import GenerationModeSelector from '@/components/input/GenerationModeSelector';
-import FusionOptions from '@/components/input/FusionOptions';
+
+const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
+
+const DisabledPublishingComponent = () => null;
 
 // Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
 const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
@@ -25,10 +27,11 @@ const OnboardingModal = dynamic(() => import('@/components/modals/OnboardingModa
 const CustomStyleModal = dynamic(() => import('@/components/modals/CustomStyleModal'), { ssr: false });
 const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/WorkspaceSettingsModal'), { ssr: false });
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
-const ScheduleModal = dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false });
-const ContentCalendar = dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false });
+const ScheduleModal = PUBLISHING_ENABLED ? dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false }) : DisabledPublishingComponent;
+const ContentCalendar = PUBLISHING_ENABLED ? dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false }) : DisabledPublishingComponent;
 const GuidedTour = dynamic(() => import('@/components/onboarding/GuidedTour'), { ssr: false });
 const HelpPanel = dynamic(() => import('@/components/help/HelpPanel'), { ssr: false });
+const SupportAssistant = dynamic(() => import('@/components/support/SupportAssistant'), { ssr: false });
 
 
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -42,7 +45,8 @@ import { useSchedule } from '@/hooks/useSchedule';
 import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
-import type { Report, ViewMode } from '@/lib/types';
+import { STYLE_OPTIONS } from '@/lib/constants';
+import type { GenerationMode, Report, ViewMode } from '@/lib/types';
 
 export default function Home() {
   const hydrateSettings = useSettingsStore((s) => s.hydrate);
@@ -61,15 +65,25 @@ export default function Home() {
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
   const generationMode = useSettingsStore((s) => s.generationMode);
+  const setGenerationMode = useSettingsStore((s) => s.setGenerationMode);
+  const selectedStyle = useSettingsStore((s) => s.selectedStyle);
+  const setSelectedStyle = useSettingsStore((s) => s.setSelectedStyle);
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
-  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(activeView === 'calendar');
+  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(PUBLISHING_ENABLED && activeView === 'calendar');
 
-  // MCP 플러그인 — 페이지 레벨에서 1회 로드, 모든 카드에 공유
-  const mcpPlugins = useMcpPlugins();
+  // MCP 발행 플러그인 — 발행 기능이 켜진 환경에서만 로드
+  const mcpPlugins = useMcpPlugins(PUBLISHING_ENABLED);
   const { t } = useTranslation();
+
+  // 발행 기능이 꺼진 환경에서는 예약 캘린더 뷰로 진입하지 않음
+  useEffect(() => {
+    if (!PUBLISHING_ENABLED && activeView === 'calendar') {
+      setActiveView('main');
+    }
+  }, [activeView, setActiveView]);
 
   // 뷰 모드 — localStorage 연동
   const [viewMode, setViewMode] = useState<ViewMode>('full');
@@ -96,6 +110,11 @@ export default function Home() {
 
   // onToggleSettings — 안정 참조 (UrlInput memo 유지)
   const handleToggleSettings = useCallback(() => setSettingsPopoverOpen(!settingsPopoverOpen), [settingsPopoverOpen, setSettingsPopoverOpen]);
+
+  // 스타일 선택 — 현재 선택을 다시 누르면 안전한 기본값으로 복귀
+  const handleStyleSelect = useCallback((styleId: string) => {
+    setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
+  }, [selectedStyle, setSelectedStyle]);
 
   // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
   const filtered = useMemo(() => {
@@ -231,9 +250,38 @@ export default function Home() {
     if (ok) startTransition(() => submitted.forEach(removeUrl));
   }, [urls, generateFusionUrls, removeUrl]);
 
+  // 모바일 생성: 입력창에 남아있는 URL까지 포함해서 바로 생성
+  const handleMobileGenerate = useCallback(async (draftUrl?: string) => {
+    const draft = draftUrl?.trim();
+    const submitted = Array.from(new Set([...(urls || []), ...(draft ? [draft] : [])]));
+    if (submitted.length === 0) return;
+
+    let ok = false;
+    if (generationMode === 'combined' && submitted.length >= 2) {
+      ok = await generateMergedUrls(submitted);
+    } else if (generationMode === 'fusion' && submitted.length >= 2) {
+      ok = await generateFusionUrls(submitted);
+    } else {
+      ok = await generateBatchUrls(submitted);
+    }
+
+    if (ok) startTransition(() => urls.forEach(removeUrl));
+  }, [urls, generationMode, generateBatchUrls, generateMergedUrls, generateFusionUrls, removeUrl]);
+
   return (
-    <div
-      className="flex h-screen overflow-hidden relative"
+    <>
+      <MobileAppShell
+        reports={reports}
+        urls={urls}
+        isLoading={isLoading}
+        error={error}
+        onAddUrl={addUrl}
+        onRemoveUrl={removeUrl}
+        onGenerate={handleMobileGenerate}
+        onSchedule={handleScheduleOpen}
+      />
+      <div
+        className="relative hidden h-screen overflow-hidden xl:flex"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -261,15 +309,51 @@ export default function Home() {
 
       {/* 메인 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/95 px-6" role="banner">
+          <nav className="flex h-full items-center gap-7" aria-label="데스크톱 주요 탭">
+            <button
+              type="button"
+              className={cn(
+                'signal-meta relative h-full text-[11px] font-bold transition-colors',
+                activeView === 'main' ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:bg-primary' : 'text-muted-foreground/55 hover:text-foreground'
+              )}
+              onClick={() => setActiveView('main')}
+            >
+              생성
+            </button>
+            <button type="button" className="signal-meta h-full text-[11px] font-bold text-muted-foreground/55 hover:text-foreground">
+              라이브러리
+            </button>
+            <button type="button" className="signal-meta h-full text-[11px] font-bold text-muted-foreground/55 hover:text-foreground">
+              대시보드
+            </button>
+            {PUBLISHING_ENABLED && (
+              <button
+                type="button"
+                className={cn(
+                  'signal-meta relative h-full text-[11px] font-bold transition-colors',
+                  activeView === 'calendar' ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:bg-primary' : 'text-muted-foreground/55 hover:text-foreground'
+                )}
+                onClick={() => setActiveView('calendar')}
+              >
+                캘린더
+              </button>
+            )}
+          </nav>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-foreground text-background hover:bg-foreground/90" onClick={() => setSettingsModalOpen(true)} aria-label="설정 열기">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
         {/* 콘텐츠 */}
         <main className="flex-1 overflow-hidden" id="main-content" role="main">
           <ScrollArea className="h-full">
-            <div className="px-4 pb-24 pt-5 sm:px-8 sm:pt-10 lg:px-14 lg:pb-10">
+            <div className="px-4 pb-24 pt-5 sm:px-8 sm:pt-10 xl:px-14 xl:pb-10">
 
               {/* 캘린더 뷰 */}
-              {activeView === 'calendar' && (
+              {PUBLISHING_ENABLED && activeView === 'calendar' && (
                 <div className="max-w-3xl mx-auto">
                   <h2 className="text-xl font-semibold mb-6">{t('calendar.title')}</h2>
                   <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
@@ -303,69 +387,89 @@ export default function Home() {
                   <SettingsPopover />
                 </div>
 
-                {/* 생성 모드 선택 + 퓨전 옵션 */}
-                {urls.length >= 2 && (
-                  <div className="mt-4 max-w-[720px] animate-fade-in">
-                    <GenerationModeSelector />
-                    <FusionOptions />
+                {/* 출력 스타일 + 생성 모드 */}
+                <div className="mt-9 max-w-[900px] space-y-8">
+                  <div>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-sm font-bold text-foreground">출력 스타일 <span className="text-muted-foreground/45">{STYLE_OPTIONS.length}</span></h2>
+                      <span className="signal-meta text-[10px] font-bold text-primary">선택 1 · 다시 누르면 기본값</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 xl:grid-cols-7">
+                      {STYLE_OPTIONS.map((style) => {
+                        const active = selectedStyle === style.id;
+                        return (
+                          <button
+                            key={style.id}
+                            type="button"
+                            aria-pressed={active}
+                            title={active && style.id !== 'blog_seo' ? '다시 누르면 Blog+SEO 기본값으로 돌아가요' : undefined}
+                            className={cn(
+                              'h-11 border text-xs font-bold transition-colors',
+                              active
+                                ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_#C73710]'
+                                : 'border-border bg-card text-foreground/60 hover:border-foreground/50 hover:text-foreground'
+                            )}
+                            onClick={() => handleStyleSelect(style.id)}
+                          >
+                            {style.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-              </section>
 
-              {/* 생성 버튼 (URL이 있을 때) */}
-              {urls.length > 0 && (
-                <div className="mb-6 flex max-w-[720px] flex-wrap gap-2 sm:gap-3 animate-fade-in" role="group" aria-label="콘텐츠 생성 버튼">
-                  {generationMode === 'individual' && (
-                    <Button
-                      onClick={handleGenerate}
-                      className="h-[50px] gap-2 px-7 text-sm font-semibold"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {urls.length === 1
-                        ? t('generateButton.singleUrl')
-                        : t('generateButton.multipleUrls', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {generationMode === 'combined' && urls.length >= 2 && (
-                    <Button
-                      onClick={handleGenerateMerged}
-                      variant="outline"
-                      className="h-[50px] gap-2 rounded-sm border-primary/40 px-7 text-sm font-semibold text-primary hover:bg-primary/5"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
-                      {t('generateButton.combined', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {generationMode === 'fusion' && urls.length >= 2 && (
-                    <Button
-                      onClick={handleGenerateFusion}
-                      variant="outline"
-                      className="h-[50px] gap-2 rounded-sm border-[#7C5CFF]/40 px-7 text-sm font-semibold text-[#7C5CFF] hover:bg-[#7C5CFF]/10"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
-                      {t('generateButton.fusion', { count: urls.length })}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
-                  {/* URL 1개 + combined/fusion 모드일 때 개별 분석 fallback */}
-                  {urls.length === 1 && generationMode !== 'individual' && (
-                    <Button
-                      onClick={handleGenerate}
-                      className="h-[50px] gap-2 px-7 text-sm font-semibold"
-                      size="lg"
-                    >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {t('generateButton.singleUrl')}
-                      {isLoading && <span className="text-xs opacity-70">+</span>}
-                    </Button>
-                  )}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {generationMode === 'individual' && (
+                      <Button
+                        onClick={handleGenerate}
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        size="lg"
+                        disabled={urls.length === 0 || isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        콘텐츠 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                      </Button>
+                    )}
+                    {generationMode === 'combined' && (
+                      <Button
+                        onClick={handleGenerateMerged}
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        size="lg"
+                        disabled={urls.length < 2 || isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+                        통합 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                      </Button>
+                    )}
+                    {generationMode === 'fusion' && (
+                      <Button
+                        onClick={handleGenerateFusion}
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        size="lg"
+                        disabled={urls.length < 2 || isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
+                        퓨전 분석 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                      </Button>
+                    )}
+                    {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={cn(
+                          'signal-meta h-10 border px-5 text-[11px] font-bold transition-colors',
+                          generationMode === mode
+                            ? 'border-foreground bg-card text-foreground'
+                            : 'border-border bg-card/50 text-muted-foreground/60 hover:text-foreground'
+                        )}
+                        onClick={() => setGenerationMode(mode)}
+                      >
+                        {mode === 'individual' ? '개별' : mode === 'combined' ? '통합' : '퓨전'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
+              </section>
 
               {/* 에이전트 모드 토글 */}
               {urls.length > 0 && generationMode === 'individual' && (
@@ -472,7 +576,7 @@ export default function Home() {
 
       {/* 모바일 커맨드 네비게이션 */}
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(23,21,15,0.12)] lg:hidden"
+        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(23,21,15,0.12)] xl:hidden"
         aria-label="모바일 빠른 이동"
       >
         <button
@@ -523,15 +627,19 @@ export default function Home() {
       <GuidedTour forceStart={tourActive} onClose={handleCloseTour} />
 
       {/* 예약 발행 모달 — 페이지 레벨 1개 */}
-      <ScheduleModal
-        open={!!scheduleTarget}
-        onOpenChange={handleScheduleOpenChange}
-        title={scheduleTarget?.title || ''}
-        content={scheduleTarget?.content || ''}
-        html={scheduleTarget?.html}
-        isLoading={scheduleLoading}
-        onSchedule={handleScheduleSubmit}
-      />
-    </div>
+      {PUBLISHING_ENABLED && (
+        <ScheduleModal
+          open={!!scheduleTarget}
+          onOpenChange={handleScheduleOpenChange}
+          title={scheduleTarget?.title || ''}
+          content={scheduleTarget?.content || ''}
+          html={scheduleTarget?.html}
+          isLoading={scheduleLoading}
+          onSchedule={handleScheduleSubmit}
+        />
+      )}
+      </div>
+      <SupportAssistant />
+    </>
   );
 }

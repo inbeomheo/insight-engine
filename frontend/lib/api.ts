@@ -31,6 +31,8 @@ import type {
   PlagiarismResponse,
   ReadabilityResponse,
   SentimentFlowResponse,
+  SharePageResponse,
+  JobResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
 
@@ -52,10 +54,28 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/generate-fusion': 300_000,
   '/api/mindmap': 60_000,
   '/api/export/docx': 30_000,
+  '/api/shares': 15_000,
   '/api/providers': 10_000,
   '/api/playlist-videos': 30_000,
+  '/api/support/chat': 30_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+const SUPPORT_SESSION_KEY = 'insight-engine-support-session-id';
+
+function getSupportSessionId(): string {
+  if (typeof window === 'undefined') return 'server';
+  let sessionId = localStorage.getItem(SUPPORT_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = `sess_${crypto.randomUUID()}`;
+    localStorage.setItem(SUPPORT_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+}
+
+function supportHeaders(): HeadersInit {
+  return { 'X-Support-Session-Id': getSupportSessionId() };
+}
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
@@ -131,6 +151,23 @@ export async function fetchProviders(): Promise<ProvidersResponse> {
 // 단일 생성
 export async function generate(req: GenerateRequest): Promise<GenerateResponse> {
   return request('/generate', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function getJob(jobId: string): Promise<JobResponse> {
+  return request(`/api/jobs/${jobId}`);
+}
+
+export async function createSharePage(req: {
+  title: string;
+  content: string;
+  html?: string;
+  url?: string;
+  style?: string;
+}): Promise<SharePageResponse> {
+  return request('/api/shares', {
     method: 'POST',
     body: JSON.stringify(req),
   });
@@ -786,4 +823,71 @@ export async function notebookLmGenerate(params: {
 
 export async function notebookLmStatus(artifactId: string): Promise<{ status: string; type?: string; error?: string }> {
   return request(`/api/notebooklm/status/${artifactId}`);
+}
+
+// ── Support Assistant / Feedback Handoff ──
+
+export interface SupportViewport {
+  width?: number;
+  height?: number;
+}
+
+export interface SupportTicket {
+  id: string;
+  kind: 'question' | 'bug' | 'usability' | 'feature' | 'ops' | string;
+  status: string;
+  severity: 'low' | 'medium' | 'high' | 'critical' | string;
+  title: string;
+  message: string;
+  route?: string;
+  viewport?: SupportViewport | null;
+  user_agent?: string;
+  console_errors?: string[];
+  screenshot_url?: string;
+  related_files?: string[];
+  suggested_fix?: string;
+  github_issue_url?: string;
+  github_issue_number?: number | null;
+  github_pr_url?: string;
+  github_pr_number?: number | null;
+  labels?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupportChatResponse {
+  reply: string;
+  action: 'answered' | 'ticket_created' | string;
+  ticket?: SupportTicket;
+  triage?: Record<string, unknown>;
+  github?: { configured: boolean; repo?: string; has_token?: boolean; handoff_enabled?: boolean };
+  suggested_next_actions?: string[];
+}
+
+export async function supportChat(req: {
+  message: string;
+  mode?: 'auto' | 'question' | 'feedback' | 'bug' | 'feature';
+  route?: string;
+  viewport?: SupportViewport;
+  user_agent?: string;
+  console_errors?: string[];
+  screenshot_url?: string;
+}): Promise<SupportChatResponse> {
+  return request('/api/support/chat', {
+    method: 'POST',
+    headers: supportHeaders(),
+    body: JSON.stringify(req),
+  });
+}
+
+export async function fetchSupportTickets(): Promise<{ tickets: SupportTicket[]; github?: SupportChatResponse['github'] }> {
+  return request('/api/support/tickets', { headers: supportHeaders() });
+}
+
+export async function createSupportGithubIssue(ticketId: string): Promise<{ ticket: SupportTicket; issue?: { html_url?: string; number?: number } }> {
+  return request(`/api/support/tickets/${ticketId}/create-github-issue`, { method: 'POST', headers: supportHeaders() });
+}
+
+export async function createSupportDraftPr(ticketId: string): Promise<{ ticket: SupportTicket; pull_request?: { html_url?: string; number?: number } }> {
+  return request(`/api/support/tickets/${ticketId}/create-draft-pr`, { method: 'POST', headers: supportHeaders() });
 }

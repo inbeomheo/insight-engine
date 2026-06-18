@@ -8,6 +8,16 @@ import type { FaqSchema, CtaData } from '@/lib/types';
 interface FaqCtaSectionProps {
   faqSchema?: FaqSchema;
   cta?: CtaData;
+  /** 렌더링된 본문에 FAQ 섹션이 이미 있으면 별도 FAQ 카드를 숨긴다. */
+  content?: string;
+}
+
+const INLINE_FAQ_HEADING_RE = /^#{2,6}\s*(?:자주\s*묻는\s*질문|FAQ)(?:\s*\([^)]*\))?\s*$/im;
+const INLINE_FAQ_QA_RE = /(?:^|\n)\s*(?:[-*]\s*)?\*{0,2}Q\.\s*.+?\?\*{0,2}\s*\n\s*A\.[\s\S]+/i;
+
+export function hasInlineFaqSection(content?: string): boolean {
+  if (!content) return false;
+  return INLINE_FAQ_HEADING_RE.test(content) || INLINE_FAQ_QA_RE.test(content);
 }
 
 interface AccordionItemProps {
@@ -46,8 +56,9 @@ function AccordionItem({ question, answer, index }: AccordionItemProps) {
   );
 }
 
-export default function FaqCtaSection({ faqSchema, cta }: FaqCtaSectionProps) {
-  const hasFaq = faqSchema && faqSchema.mainEntity && faqSchema.mainEntity.length > 0;
+export default function FaqCtaSection({ faqSchema, cta, content }: FaqCtaSectionProps) {
+  const faqItems = faqSchema?.mainEntity ?? [];
+  const hasFaq = faqItems.length > 0 && !hasInlineFaqSection(content);
   const hasCta = cta && (cta.primary || cta.secondary);
 
   if (!hasFaq && !hasCta) return null;
@@ -62,7 +73,7 @@ export default function FaqCtaSection({ faqSchema, cta }: FaqCtaSectionProps) {
             자주 묻는 질문 (FAQ)
           </div>
           <div className="space-y-1.5">
-            {faqSchema.mainEntity.map((item, i) => (
+            {faqItems.map((item, i) => (
               <AccordionItem
                 key={i}
                 index={i}
