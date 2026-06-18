@@ -156,6 +156,8 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   }, []);
 
   const charCount = report.content.length;
+  const tokenMeta = `${(report.usage?.total_tokens ?? 0).toLocaleString()} TOKENS`;
+  const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
   async function copyText(text: string, field: string) {
     await navigator.clipboard.writeText(text);
@@ -228,7 +230,8 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   }
 
   function handleShare() {
-    const text = `${report.title}\n\n${report.content.slice(0, 200)}...\n\n${report.url}`;
+    const shareUrl = report.url || report.source_videos?.[0]?.url;
+    const text = shareUrl || `${report.title}\n\n${report.content.slice(0, 200)}...`;
     navigator.clipboard.writeText(text);
     toast.success(t('result.shareCopied'));
   }
@@ -384,17 +387,17 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     return (
       <ReportProvider report={report}>
       <Card
-        className="overflow-hidden border-border/40 shadow-none hover:shadow-sm transition-shadow cursor-pointer"
+        className="overflow-hidden rounded-sm border-border bg-card shadow-none transition-colors hover:border-primary/40 cursor-pointer"
         onClick={onExpandToFull}
       >
         <div className="px-4 py-3">
           {/* 메타 칩 + 제목 */}
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs text-muted-foreground/70 font-medium">
+            <span className="signal-meta text-[10px] text-muted-foreground/70 font-medium">
               {getStyleLabel(report.style)}
             </span>
-            <span className="text-xs text-muted-foreground">{report.time}</span>
-            <span className="ml-auto text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <span className="signal-meta text-[10px] text-muted-foreground">{report.time}</span>
+            <span className="signal-meta ml-auto text-[10px] text-muted-foreground inline-flex items-center gap-1">
               <Zap className="h-3 w-3" />
               {(report.usage?.total_tokens ?? 0).toLocaleString()} · {(report.elapsed_time ?? 0).toFixed(1)}초
             </span>
@@ -423,16 +426,16 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       onOpenChange={(open) => setPanel('rewriteOpen', open)}
       content={report.content}
     />
-    <Card className="overflow-hidden border-border/40 shadow-none hover:shadow-sm hover:border-border/60 transition-all duration-200">
+    <Card className="overflow-hidden rounded-sm border-border bg-card shadow-none transition-colors hover:border-primary/40">
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3">
         {/* 뱃지 + 액션 */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground/70 font-medium">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="signal-meta text-[10px] font-semibold text-primary">
               {getStyleLabel(report.style)}
             </span>
-            <span className="text-xs text-muted-foreground">{report.time}</span>
+            <span className="signal-meta text-[10px] text-muted-foreground">{report.time}</span>
             {report.merged && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
                 <Layers className="h-3 w-3 mr-1" />
@@ -488,14 +491,14 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             )}
             <QaGateBadge content={report.content} />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
             {report.transcript_segments && report.transcript_segments.length > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-7 w-7 rounded-sm"
                     onClick={() => setPanel('showTranscript', !showTranscript)}
                   >
                     <FileText className="h-3.5 w-3.5" />
@@ -507,9 +510,24 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  className="signal-meta h-8 gap-1.5 rounded-sm border-primary/40 px-2.5 text-[10px] text-primary hover:bg-primary/5"
+                  onClick={handleShare}
+                  aria-label={t('result.share')}
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">공유</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('result.share')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 rounded-sm"
                   onClick={copyRich}
                 >
                   {copiedField === 'rich' ? (
@@ -524,7 +542,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 rounded-sm"
               aria-label={collapsed ? '카드 펼치기' : '카드 접기'}
               aria-expanded={!collapsed}
               onClick={() => {
@@ -545,7 +563,10 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
         </div>
 
         {/* 제목 */}
-        <h3 className="font-semibold text-xl leading-snug tracking-tight">{report.title}</h3>
+        <div className="signal-meta mb-2 text-[10px] text-muted-foreground/70">
+          {report.time} · {tokenMeta} · {timeMeta} · {charCount.toLocaleString()}자
+        </div>
+        <h3 className="max-w-[760px] text-[26px] font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-[34px]">{report.title}</h3>
 
         {/* 소스 링크 */}
         {report.merged && report.source_videos ? (
@@ -578,7 +599,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
       {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
       {hasExpanded && (
-      <CardContent className="px-6 pb-5 pt-4 border-t border-border/50" style={{ display: collapsed ? 'none' : undefined }}>
+      <CardContent className="border-t border-border/50 px-6 pb-6 pt-5" style={{ display: collapsed ? 'none' : undefined }}>
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
           {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
@@ -596,7 +617,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                 <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                   전체 콘텐츠 보기
                 </summary>
-                <div className="prose max-w-none text-[15.5px] leading-relaxed mt-3">
+                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90 mt-3">
                   {markdownBody}
                 </div>
               </details>
@@ -613,7 +634,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
                 />
               ) : (
-                <div className="prose max-w-none text-[15.5px] leading-relaxed">
+                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90">
                   {markdownBody}
                 </div>
               )}
@@ -626,7 +647,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
                   videoId={report.url?.match(/(?:v=|youtu\.be\/)([^&]+)/)?.[1]}
                 />
               ) : (
-                <div className="prose max-w-none text-[15.5px] leading-relaxed">
+                <div className="prose max-w-[760px] text-[15.5px] leading-[1.75] text-foreground/90">
                   {markdownBody}
                 </div>
               )}
@@ -728,7 +749,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
       )}
 
       {/* 푸터 */}
-      <div className="px-6 py-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 px-6 py-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Zap className="h-3 w-3" />
           {(report.usage?.total_tokens ?? 0).toLocaleString()} tokens · {(report.elapsed_time ?? 0).toFixed(1)}초 · {charCount.toLocaleString()}자
@@ -849,10 +870,6 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
               <DropdownMenuItem onClick={() => onSchedule(report)}>
                 <Calendar className="h-3.5 w-3.5 mr-2" />
                 {t('result.schedule')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShare}>
-                <Share2 className="h-3.5 w-3.5 mr-2" />
-                {t('result.share')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
