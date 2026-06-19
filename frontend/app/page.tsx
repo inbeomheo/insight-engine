@@ -406,7 +406,7 @@ export default function Home() {
                             className={cn(
                               'h-11 border text-xs font-bold transition-colors',
                               active
-                                ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_#C73710]'
+                                ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_#2F54EB]'
                                 : 'border-border bg-card text-foreground/60 hover:border-foreground/50 hover:text-foreground'
                             )}
                             onClick={() => handleStyleSelect(style.id)}
@@ -422,7 +422,7 @@ export default function Home() {
                     {generationMode === 'individual' && (
                       <Button
                         onClick={handleGenerate}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
                         size="lg"
                         disabled={urls.length === 0 || isLoading}
                       >
@@ -433,7 +433,7 @@ export default function Home() {
                     {generationMode === 'combined' && (
                       <Button
                         onClick={handleGenerateMerged}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
                       >
@@ -444,7 +444,7 @@ export default function Home() {
                     {generationMode === 'fusion' && (
                       <Button
                         onClick={handleGenerateFusion}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
                       >
@@ -576,7 +576,7 @@ export default function Home() {
 
       {/* 모바일 커맨드 네비게이션 */}
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(23,21,15,0.12)] xl:hidden"
+        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(21,23,31,0.12)] xl:hidden"
         aria-label="모바일 빠른 이동"
       >
         <button

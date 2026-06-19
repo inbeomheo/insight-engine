@@ -12,8 +12,8 @@ claude.ai/design에서 만든 디자인 시안을 **참고용으로 보관**하�
 
 ### `design_handoff_signal_redesign/` — "Signal" 리디자인 핸드오프
 
-shadcn 기본 indigo 테마 → **에디토리얼 "Signal" 시스템**(따뜻한 페이퍼 캔버스 `#FAF8F4`,
-잉크 `#17150F`, 액션 전용 버밀리언 액센트 `#EA4E20`, 메타/숫자에 JetBrains Mono)으로
+shadcn 기본 indigo 테마 → **에디토리얼 "Signal" 시스템**(쿨 페이퍼 캔버스 `#F5F6F8`,
+잉크 `#15171F`, 액션 전용 시그널 블루 액센트 `#2F54EB`, 메타/숫자에 JetBrains Mono)으로
 전면 리디자인. 핵심 플로우(URL→스타일 선택→생성→에디터) + 라이브러리 + 대시보드,
 데스크탑 + 모바일(하단 탭) 모두 포함.
 
