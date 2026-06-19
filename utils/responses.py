@@ -231,6 +231,24 @@ def safe_float(value, default: float = 0.0) -> float:
         return default
 
 
+def safe_bool(value, default=None):
+    """쿼리 파라미터 문자열을 bool 또는 default로 변환합니다.
+
+    'true'/'1'/'yes'(대소문자 무관) → True, 그 외 문자열 → False,
+    None → default. (예: request.args.get()의 선택적 불리언 필터)
+
+    Args:
+        value: 변환할 값 (보통 str 또는 None)
+        default: value가 None일 때 반환할 기본값
+
+    Returns:
+        bool 또는 default
+    """
+    if value is None:
+        return default
+    return str(value).lower() in ('true', '1', 'yes')
+
+
 def clamp_query_int(value, default: int = 10, min_val: int = 1, max_val: int = 100) -> int:
     """쿼리 파라미터 정수를 안전 범위로 클램핑.
 
