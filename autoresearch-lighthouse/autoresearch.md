@@ -39,6 +39,18 @@ composite_score = performance*0.4 + seo*0.4 + bundle_score*0.2 (higher_is_better
 |----|------|-----------|------|
 | E000 | BASELINE | 68.32 | keep |
 | E002 | Toaster(sonner) dynamic import | 68.32 | revert (first-load 영향 0 — sonner 미미) |
+| E003 | ResultCard dynamic(ssr:false) | 81.12 | keep (+12.8, 모바일 perf 55→87) |
+| E004 | SettingsModal dynamic(ssr:false) 추가 | 68.32 | revert (다중 ssr:false dynamic 간섭 → ResultCard dynamic 이득 상쇄, perf 87→55 회귀) |
+
+## 최고 composite_score: 81.12 (E003) — 🏁 루프 종료 (사용자 결정 "E003 마무리", 2026-06-20)
+
+### 최종 요약
+- 베이스라인 68.32 → **81.12 (+12.8, +18.7%)**
+- 유효 가질: E003 ResultCard dynamic(ssr:false) — 큰 컴포넌트 단일 dynamic이 모바일 perf 55→87 견인
+- revert: E002 Toaster(영향 0), E004 SettingsModal dynamic(다중 ssr:false dynamic 간섭 → ResultCard 이득 상쇄, 회귀)
+- 핵심 학습: (1) page 청크의 큰 컴포넌트 1개 dynamic이 최고 레버 (2) 두 번째 ssr:false dynamic 추가는 Turbopack 청크 간섭으로 역효과 — dynamic은 한 번에 큰 것 하나만
+- 루프 재개 시: 본 파일에서 상태 복원, E003(HEAD 커밋)이 기준
+- E003 분석: first-load(rootMain)는 510.5KB 동일 → ResultCard는 `/` page 청크에 있었음. dynamic으로 page 청크 경량 → 모바일 LCP/TBT 개선 → perf 55→87. bundle_score는 page 청크 미포함이라 무반응, perf가 보상.
 
 ## 학습 노트
 - sonner(Toaster)는 first-load에 유의미 기여 안 함 (이미 작음). 클라이언트 Provider의 작은 의존성 dynamic化는 효과 없음.

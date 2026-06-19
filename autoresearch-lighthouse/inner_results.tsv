@@ -2,3 +2,4 @@ experiment_id	timestamp	description	metric_value	status	commit_hash
 E000	2026-06-20T01:50:00	BASELINE (mobile 3회 median: perf55 seo100 first_load_510KB)	68.32	keep	df25c2d
 E002	2026-06-20T02:23:38.476958	E001: Toaster(sonner) dynamic import - first-load 분리	68.32	revert	
 E003	2026-06-20T02:31:32.830859	E003: ResultCard dynamic import (초기 first-load 분리)	81.12	keep	df25c2d
+E004	2026-06-20T05:18:54.703128	E004: SettingsModal dynamic (page 청크 추가 경량)	68.32	revert	
