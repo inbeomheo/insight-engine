@@ -30,7 +30,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -117,18 +117,31 @@ function extractTutorialVisualCues(content: string): VisualCue[] {
     .slice(0, 7);
 }
 
+function visualSrc(src?: string): string {
+  if (!src) return '';
+  if (/^https?:\/\//.test(src)) return src;
+  return apiUrl(src);
+}
+
 function TutorialVisualCueSection({
   cues,
   onSaveDeepDive,
+  onExtractScreenshots,
   isSaving,
+  isExtracting,
   deepDiveUrl,
+  slides,
 }: {
   cues: VisualCue[];
   onSaveDeepDive?: () => void;
+  onExtractScreenshots?: () => void;
   isSaving?: boolean;
+  isExtracting?: boolean;
   deepDiveUrl?: string | null;
+  slides?: VideoDeepDiveSlide[];
 }) {
-  if (cues.length === 0) return null;
+  if (cues.length === 0 && (!slides || slides.length === 0)) return null;
+  const visibleSlides = (slides || []).filter((slide) => slide.img);
   return (
     <section className="mb-5 rounded-sm border border-primary/25 bg-primary/5 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -138,11 +151,21 @@ function TutorialVisualCueSection({
           </span>
           <div>
             <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">튜토리얼 사진 가이드</h4>
-            <p className="text-xs text-muted-foreground">각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.</p>
+            <p className="text-xs text-muted-foreground">
+              {visibleSlides.length > 0 ? '영상에서 실제 화면을 추출했어.' : '각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{cues.length} CUTS</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+            {visibleSlides.length > 0 ? `${visibleSlides.length} SHOTS` : `${cues.length} CUTS`}
+          </span>
+          {onExtractScreenshots && (
+            <Button size="sm" className="h-8 rounded-sm text-xs" onClick={onExtractScreenshots} disabled={isExtracting || isSaving}>
+              {isExtracting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-1.5 h-3.5 w-3.5" />}
+              {isExtracting ? '추출 중...' : '스크린샷 추출'}
+            </Button>
+          )}
           {deepDiveUrl ? (
             <Button asChild size="sm" variant="outline" className="h-8 rounded-sm border-primary/40 text-xs text-primary">
               <a href={deepDiveUrl} target="_blank" rel="noopener noreferrer">
@@ -151,13 +174,29 @@ function TutorialVisualCueSection({
               </a>
             </Button>
           ) : onSaveDeepDive ? (
-            <Button size="sm" variant="outline" className="h-8 rounded-sm border-primary/40 text-xs text-primary" onClick={onSaveDeepDive} disabled={isSaving}>
+            <Button size="sm" variant="outline" className="h-8 rounded-sm border-primary/40 text-xs text-primary" onClick={onSaveDeepDive} disabled={isSaving || isExtracting}>
               {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-1.5 h-3.5 w-3.5" />}
               딥다이브 저장
             </Button>
           ) : null}
         </div>
       </div>
+
+      {visibleSlides.length > 0 && (
+        <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleSlides.slice(0, 6).map((slide, index) => (
+            <figure key={`${slide.img}-${index}`} className="overflow-hidden rounded-sm border border-border/70 bg-card">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={visualSrc(slide.img)} alt={slide.title || `스크린샷 ${index + 1}`} className="aspect-video w-full object-cover" />
+              <figcaption className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-semibold text-primary">{slide.mmss || '00:00'}</span>
+                <span className="truncate">{slide.title || `스크린샷 ${index + 1}`}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2">
         {cues.map((cue, index) => (
           <div key={`${cue.label}-${index}`} className="rounded-sm border border-border/70 bg-card p-3">
@@ -210,7 +249,9 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingDeepDive, setIsSavingDeepDive] = useState(false);
+  const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
+  const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
@@ -501,6 +542,35 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     }
   }
 
+  async function handleExtractScreenshots() {
+    const videoId = getReportVideoId();
+    if (!videoId) {
+      toast.error('YouTube 영상 URL이 있는 결과에서만 스크린샷을 추출할 수 있어.');
+      return;
+    }
+    setIsExtractingScreenshots(true);
+    try {
+      toast.info('영상 화면을 추출하는 중이야. 영상 길이에 따라 1~5분 걸릴 수 있어.');
+      const res = await extractVideoDeepDiveScreenshots({
+        video_id: videoId,
+        url: report.url,
+        title: report.youtube_title || report.title,
+        content: report.content,
+        transcript: report.transcript,
+        max_slides: Math.min(Math.max(tutorialVisualCues.length || 6, 4), 8),
+        scene_threshold: 0.24,
+        min_gap: 8,
+      });
+      setDeepDiveSlides(res.slides || res.meta.slides || []);
+      setDeepDiveUrl(res.viewer_url);
+      toast.success(`스크린샷 ${res.meta.slide_count || res.slides?.length || 0}장을 추출했어.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '스크린샷 추출에 실패했습니다.');
+    } finally {
+      setIsExtractingScreenshots(false);
+    }
+  }
+
   /**
    * 마크다운 콘텐츠에서 [HH:MM:SS] 형식의 타임코드를 YouTube 딥링크로 변환합니다.
    * 영상 URL이 없거나 타임코드가 없으면 원본 텍스트를 그대로 반환합니다.
@@ -774,8 +844,11 @@ variant={report.share_url ? 'secondary' : 'outline'}
             <TutorialVisualCueSection
               cues={tutorialVisualCues}
               onSaveDeepDive={report.url ? handleSaveDeepDive : undefined}
+              onExtractScreenshots={report.url ? handleExtractScreenshots : undefined}
               isSaving={isSavingDeepDive}
+              isExtracting={isExtractingScreenshots}
               deepDiveUrl={deepDiveUrl}
+              slides={deepDiveSlides}
             />
           )}
 

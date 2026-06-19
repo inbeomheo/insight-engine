@@ -225,6 +225,22 @@ export async function createVideoDeepDiveFromResult(req: {
   });
 }
 
+export async function extractVideoDeepDiveScreenshots(req: {
+  video_id?: string;
+  url?: string;
+  title?: string;
+  content?: string;
+  transcript?: string;
+  max_slides?: number;
+  scene_threshold?: number;
+  min_gap?: number;
+}): Promise<{ meta: VideoDeepDiveItem; slides: VideoDeepDiveSlide[]; viewer_url: string }> {
+  return request('/api/video-deepdives/extract', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
 export async function fetchVideoDeepDive(videoId: string): Promise<VideoDeepDiveResponse> {
   return request(`/api/video-deepdives/${encodeURIComponent(videoId)}`);
 }
