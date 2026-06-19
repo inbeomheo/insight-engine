@@ -48,7 +48,7 @@ const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true'
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-[#FAF8F4]/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-[#F5F6F8]/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
       <div className="mx-auto grid max-w-[430px] grid-cols-3 gap-2">
         {(Object.keys(TAB_META) as MobileTab[]).map((tab) => {
           const Icon = TAB_META[tab].icon;
@@ -138,7 +138,7 @@ function MobileCreateView({
         어떤 영상을<br />콘텐츠로?
       </h1>
 
-      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_#17150F]">
+      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_#15171F]">
         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
         <input
           className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
@@ -156,7 +156,7 @@ function MobileCreateView({
         />
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_#17150F] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_#15171F] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
           onClick={submitDraft}
           aria-label="URL 추가"
         >
@@ -203,7 +203,7 @@ function MobileCreateView({
                   'rounded-full border px-4 py-2 text-xs font-bold transition-colors',
                   active
                     ? 'border-foreground bg-foreground text-background'
-                    : 'border-border/70 bg-card text-foreground/75 shadow-[0_1px_0_rgba(23,21,15,0.04)]'
+                    : 'border-border/70 bg-card text-foreground/75 shadow-[0_1px_0_rgba(21,23,31,0.04)]'
                 )}
                 onClick={() => handleStyleSelect(style.id)}
               >
@@ -234,7 +234,7 @@ function MobileCreateView({
       </div>
 
       <Button
-        className="h-14 w-full rounded-sm bg-primary text-base font-black text-primary-foreground shadow-[0_8px_18px_rgba(199,55,16,0.22)] hover:bg-primary/95"
+        className="h-14 w-full rounded-sm bg-primary text-base font-black text-primary-foreground shadow-[0_8px_18px_rgba(47,84,235,0.22)] hover:bg-primary/95"
         disabled={isLoading || (urls.length === 0 && !draftUrl.trim())}
         onClick={handleGenerateClick}
       >
@@ -278,7 +278,7 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
             <button
               key={report.id}
               type="button"
-              className="block w-full border border-border/70 bg-card px-4 py-4 text-left shadow-[0_1px_8px_rgba(23,21,15,0.04)] transition-transform active:scale-[0.99]"
+              className="block w-full border border-border/70 bg-card px-4 py-4 text-left shadow-[0_1px_8px_rgba(21,23,31,0.04)] transition-transform active:scale-[0.99]"
               onClick={() => onOpen(report)}
             >
               <div className="mb-2 flex items-center gap-2">
@@ -307,29 +307,29 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
     <section className="min-h-dvh px-6 pb-28 pt-12">
       <h1 className="mb-6 text-[28px] font-black tracking-[-0.035em]">대시보드</h1>
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
+        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">총 콘텐츠</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}</p>
           <p className="mt-1 text-[10px] text-emerald-600">▲ 최근 기록</p>
         </div>
-        <div className="bg-foreground p-4 text-background shadow-[0_1px_8px_rgba(23,21,15,0.06)]">
+        <div className="bg-foreground p-4 text-background shadow-[0_1px_8px_rgba(21,23,31,0.06)]">
           <p className="signal-meta text-[9px] text-background/55">총 토큰</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{Math.max(0, Math.round(totalTokens / 1000))}<span className="text-primary">k</span></p>
           <p className="mt-1 text-[10px] text-background/55">누적 사용량</p>
         </div>
-        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
+        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">평균 글자</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length ? Math.round(reports.reduce((s, r) => s + r.content.length, 0) / reports.length) : 0}</p>
           <p className="mt-1 text-[10px] text-muted-foreground/55">콘텐츠 평균</p>
         </div>
-        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
+        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">QA 통과율</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">96<span className="text-base">%</span></p>
           <p className="mt-1 text-[10px] text-primary">지표 5</p>
         </div>
       </div>
 
-      <div className="mb-4 bg-card p-5 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
+      <div className="mb-4 bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-sm font-black">일별 생성량</h2>
           <span className="signal-meta text-[9px] text-muted-foreground/45">최근 7일</span>
@@ -344,7 +344,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
         </div>
       </div>
 
-      <div className="bg-card p-5 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
+      <div className="bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
         <h2 className="mb-4 text-sm font-black">스타일 분포</h2>
         <div className="space-y-3">
           {styleCounts.map((style, index) => {
@@ -370,7 +370,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
   return (
     <section className="min-h-dvh pb-28">
-      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-[#FAF8F4]/95 px-5 backdrop-blur">
+      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-[#F5F6F8]/95 px-5 backdrop-blur">
         <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -426,7 +426,7 @@ export default function MobileAppShell({
 
   if (activeReport) {
     return (
-      <div className="min-h-dvh bg-[#FAF8F4] text-foreground xl:hidden">
+      <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
         <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
@@ -434,7 +434,7 @@ export default function MobileAppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#FAF8F4] text-foreground xl:hidden">
+    <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
       {activeTab === 'create' && (
         <MobileCreateView
           urls={urls}
