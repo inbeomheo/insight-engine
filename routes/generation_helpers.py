@@ -38,35 +38,56 @@ def _get_style_label(style_id: str) -> str:
     return style_id
 
 
-def _handle_direct_text(params: dict, start_time: float):
-    """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
-    direct_content = params.get('content', '')
-    max_tokens = get_model_max_tokens(params['model'])
-    main_content = f"[사용자 입력 텍스트]\n{direct_content}"
-    truncated_content = content_service.truncate_text(main_content, max_tokens)
+def _truncate_for_model(model_id: str, label: str, source_content: str) -> str:
+    """소스 콘텐츠에 라벨을 붙이고 모델 토큰 한도에 맞춰 잘라냅니다."""
+    max_tokens = get_model_max_tokens(model_id)
+    return content_service.truncate_text(f"[{label}]\n{source_content}", max_tokens)
 
+
+def _generate_from_source(params: dict, truncated_content: str):
+    """소스 핸들러 공통 AI 호출: 스타일 프롬프트 결합 + create_content.
+
+    Returns:
+        tuple: (result_dict, used_prompt)
+    """
     style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
-    result, used_prompt = ai_service.create_content(
+    return ai_service.create_content(
         truncated_content, params['model'], style_prompt,
         return_prompt=True, modifiers=params['modifiers'],
         style_id=params['style'],
         detail_level=params.get('detail_level'),
     )
 
-    elapsed_time = round(time.time() - start_time, 2)
-    return jsonify({
+
+def _base_generation_response(result: dict, params: dict, start_time: float,
+                              used_prompt: str) -> dict:
+    """소스 핸들러(직접 텍스트/음성/문서) 공통 응답 필드를 구성합니다.
+
+    소스별 고유 필드(source_type, source_title 등)는 호출 측에서 추가합니다.
+    """
+    return {
         'id': str(uuid.uuid4()),
         **result,
-        'elapsed_time': elapsed_time,
+        'elapsed_time': round(time.time() - start_time, 2),
         'prompt': used_prompt,
-        'prompt_length': len(used_prompt) if used_prompt else 0,
-        'transcript_source': 'direct_input',
         'style_label': _get_style_label(params['style']),
         'cached': False,
         'comment_summary_included': False,
         'has_code_blocks': _has_code_blocks(result),
         'quota': get_usage_for_response(),
-    })
+    }
+
+
+def _handle_direct_text(params: dict, start_time: float):
+    """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
+    direct_content = params.get('content', '')
+    truncated_content = _truncate_for_model(params['model'], '사용자 입력 텍스트', direct_content)
+    result, used_prompt = _generate_from_source(params, truncated_content)
+
+    response = _base_generation_response(result, params, start_time, used_prompt)
+    response['prompt_length'] = len(used_prompt) if used_prompt else 0
+    response['transcript_source'] = 'direct_input'
+    return jsonify(response)
 
 
 def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
@@ -96,33 +117,15 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
             _cleanup_file(audio_path)
 
     source_title = uploaded_file.filename or '음성 메모'
-    max_tokens = get_model_max_tokens(params['model'])
-    truncated_content = content_service.truncate_text(f"[음성 전사]\n{transcript_text}", max_tokens)
-
-    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
-    result, used_prompt = ai_service.create_content(
-        truncated_content, params['model'], style_prompt,
-        return_prompt=True, modifiers=params['modifiers'],
-        style_id=params['style'],
-        detail_level=params.get('detail_level'),
-    )
+    truncated_content = _truncate_for_model(params['model'], '음성 전사', transcript_text)
+    result, used_prompt = _generate_from_source(params, truncated_content)
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
-    elapsed_time = round(time.time() - start_time, 2)
 
-    return jsonify({
-        'id': str(uuid.uuid4()),
-        **result,
-        'elapsed_time': elapsed_time,
-        'prompt': used_prompt,
-        'source_type': 'voice',
-        'source_title': source_title,
-        'style_label': _get_style_label(params['style']),
-        'cached': False,
-        'comment_summary_included': False,
-        'has_code_blocks': _has_code_blocks(result),
-        'quota': get_usage_for_response(),
-    })
+    response = _base_generation_response(result, params, start_time, used_prompt)
+    response['source_type'] = 'voice'
+    response['source_title'] = source_title
+    return jsonify(response)
 
 
 def _handle_document_upload(params: dict, uploaded_file, start_time: float):
@@ -133,34 +136,16 @@ def _handle_document_upload(params: dict, uploaded_file, start_time: float):
     source_title = doc.get('title') or uploaded_file.filename or '업로드 문서'
     source_content = doc['content']
 
-    max_tokens = get_model_max_tokens(params['model'])
-    truncated_content = content_service.truncate_text(f"[문서 본문]\n{source_content}", max_tokens)
-
-    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
-    result, used_prompt = ai_service.create_content(
-        truncated_content, params['model'], style_prompt,
-        return_prompt=True, modifiers=params['modifiers'],
-        style_id=params['style'],
-        detail_level=params.get('detail_level'),
-    )
+    truncated_content = _truncate_for_model(params['model'], '문서 본문', source_content)
+    result, used_prompt = _generate_from_source(params, truncated_content)
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
-    elapsed_time = round(time.time() - start_time, 2)
 
-    return jsonify({
-        'id': str(uuid.uuid4()),
-        **result,
-        'elapsed_time': elapsed_time,
-        'prompt': used_prompt,
-        'source_type': 'document',
-        'source_title': source_title,
-        'page_count': doc.get('page_count', 0),
-        'style_label': _get_style_label(params['style']),
-        'cached': False,
-        'comment_summary_included': False,
-        'has_code_blocks': _has_code_blocks(result),
-        'quota': get_usage_for_response(),
-    })
+    response = _base_generation_response(result, params, start_time, used_prompt)
+    response['source_type'] = 'document'
+    response['source_title'] = source_title
+    response['page_count'] = doc.get('page_count', 0)
+    return jsonify(response)
 
 
 def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
@@ -173,22 +158,14 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
     if not source_content.strip():
         return jsonify({'error': '콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.'}), 400
 
-    max_tokens = get_model_max_tokens(params['model'])
     content_label = {
         'webpage': '웹페이지 본문', 'rss': 'RSS 피드 내용',
         'arxiv': 'arXiv 논문 초록', 'twitter': 'Twitter 게시물',
         'reddit': 'Reddit 포스트', 'github': 'GitHub README',
         'hackernews': 'Hacker News 게시물', 'podcast': '팟캐스트 전사',
     }.get(source_type, '본문')
-    truncated_content = content_service.truncate_text(f"[{content_label}]\n{source_content}", max_tokens)
-
-    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
-    result, used_prompt = ai_service.create_content(
-        truncated_content, params['model'], style_prompt,
-        return_prompt=True, modifiers=params['modifiers'],
-        style_id=params['style'],
-        detail_level=params.get('detail_level'),
-    )
+    truncated_content = _truncate_for_model(params['model'], content_label, source_content)
+    result, used_prompt = _generate_from_source(params, truncated_content)
 
     elapsed_time = round(time.time() - start_time, 2)
 

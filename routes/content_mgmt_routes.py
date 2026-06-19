@@ -5,7 +5,7 @@ F8-01 ~ F8-25 기능에 대한 REST API 엔드포인트.
 import html
 import re
 from flask import Blueprint, request, jsonify, Response, current_app
-from utils.responses import sanitize_error_for_client, clamp_query_int
+from utils.responses import sanitize_error_for_client, clamp_query_int, safe_bool
 
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data import content_library_service
@@ -87,8 +87,8 @@ def list_contents():
         workspace_id=args.get('workspace_id', ''),
         user_id=args.get('user_id', ''),
         folder_id=args.get('folder_id', ''),
-        is_pinned=_bool_arg(args.get('is_pinned')),
-        is_archived=_bool_arg(args.get('is_archived')),
+        is_pinned=safe_bool(args.get('is_pinned')),
+        is_archived=safe_bool(args.get('is_archived')),
         page=clamp_query_int(args.get('page'), default=1, min_val=1, max_val=10000),
         per_page=clamp_query_int(args.get('per_page'), default=20, min_val=1, max_val=100),
         sort_by=args.get('sort_by', 'created_at'),
@@ -805,14 +805,6 @@ def check_permission():
     )
     return _json({'has_permission': has})
 
-
-# ─── 유틸 ──────────────────────────────────────────────────────────
-
-def _bool_arg(val: str | None) -> bool | None:
-    """쿼리 파라미터를 bool 또는 None으로 변환합니다."""
-    if val is None:
-        return None
-    return val.lower() in ('true', '1', 'yes')
 
 # ============================================================
 # 분리된 라우트 서브패키지 — 부수효과 import
