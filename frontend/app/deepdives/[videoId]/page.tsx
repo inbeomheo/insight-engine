@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   apiUrl,
+  extractVideoDeepDiveScreenshots,
   fetchVideoDeepDive,
   updateVideoDeepDiveSlides,
   type VideoDeepDiveResponse,
@@ -34,6 +35,7 @@ export default function VideoDeepDivePage() {
   const [slides, setSlides] = useState<VideoDeepDiveSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +71,33 @@ export default function VideoDeepDivePage() {
       toast.error(err instanceof Error ? err.message : '노트 저장에 실패했어.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function extractScreenshots() {
+    if (!data) return;
+    setExtracting(true);
+    try {
+      toast.info('영상 화면을 추출하는 중이야. 영상 길이에 따라 1~5분 걸릴 수 있어.');
+      const res = await extractVideoDeepDiveScreenshots({
+        video_id: videoId,
+        url: data.meta.source_url,
+        title: data.meta.title,
+        content: data.meta.visual_suggestions
+          .map((cue) => `[${cue.label || (cue.kind === 'screenshot' ? '스크린샷' : '사진')}]: ${cue.description}`)
+          .join('\n'),
+        transcript: data.body,
+        max_slides: Math.min(Math.max(data.meta.visual_suggestions?.length || 6, 4), 8),
+        scene_threshold: 0.24,
+        min_gap: 8,
+      });
+      setData((prev) => prev ? { ...prev, meta: res.meta } : prev);
+      setSlides(res.slides || res.meta.slides || []);
+      toast.success(`스크린샷 ${res.meta.slide_count || res.slides?.length || 0}장을 추출했어.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '스크린샷 추출에 실패했어.');
+    } finally {
+      setExtracting(false);
     }
   }
 
@@ -120,6 +149,12 @@ export default function VideoDeepDivePage() {
                 원본 영상
               </a>
             </Button>
+            {!hasSlides && (
+              <Button onClick={extractScreenshots} disabled={extracting} className="rounded-sm">
+                {extracting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                {extracting ? '추출 중...' : '스크린샷 추출'}
+              </Button>
+            )}
             {hasSlides && (
               <Button onClick={saveSlides} disabled={saving} className="rounded-sm">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
