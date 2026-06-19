@@ -30,7 +30,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage } from '@/lib/api';
+import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -117,11 +117,21 @@ function extractTutorialVisualCues(content: string): VisualCue[] {
     .slice(0, 7);
 }
 
-function TutorialVisualCueSection({ cues }: { cues: VisualCue[] }) {
+function TutorialVisualCueSection({
+  cues,
+  onSaveDeepDive,
+  isSaving,
+  deepDiveUrl,
+}: {
+  cues: VisualCue[];
+  onSaveDeepDive?: () => void;
+  isSaving?: boolean;
+  deepDiveUrl?: string | null;
+}) {
   if (cues.length === 0) return null;
   return (
     <section className="mb-5 rounded-sm border border-primary/25 bg-primary/5 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-sm border border-primary/30 bg-background text-primary">
             <ImageIcon className="h-4 w-4" />
@@ -131,12 +141,27 @@ function TutorialVisualCueSection({ cues }: { cues: VisualCue[] }) {
             <p className="text-xs text-muted-foreground">각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.</p>
           </div>
         </div>
-        <span className="signal-meta shrink-0 text-[10px] font-bold text-primary">{cues.length} CUTS</span>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{cues.length} CUTS</span>
+          {deepDiveUrl ? (
+            <Button asChild size="sm" variant="outline" className="h-8 rounded-sm border-primary/40 text-xs text-primary">
+              <a href={deepDiveUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                딥다이브 열기
+              </a>
+            </Button>
+          ) : onSaveDeepDive ? (
+            <Button size="sm" variant="outline" className="h-8 rounded-sm border-primary/40 text-xs text-primary" onClick={onSaveDeepDive} disabled={isSaving}>
+              {isSaving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="mr-1.5 h-3.5 w-3.5" />}
+              딥다이브 저장
+            </Button>
+          ) : null}
+        </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {cues.map((cue, index) => (
           <div key={`${cue.label}-${index}`} className="rounded-sm border border-border/70 bg-card p-3">
-            <div className="signal-meta mb-1 text-[10px] font-bold text-primary">{cue.label || `사진 ${index + 1}`}</div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{cue.label || `사진 ${index + 1}`}</div>
             <p className="text-sm leading-6 text-foreground/85">{cue.description}</p>
           </div>
         ))}
@@ -184,6 +209,8 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSavingDeepDive, setIsSavingDeepDive] = useState(false);
+  const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
@@ -440,6 +467,40 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     }
   }
 
+  function getReportVideoId(): string | null {
+    const source = report.url || '';
+    const match = source.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/);
+    return match?.[1] ?? null;
+  }
+
+  async function handleSaveDeepDive() {
+    const videoId = getReportVideoId();
+    if (!videoId) {
+      toast.error('YouTube 영상 URL이 있는 결과에서만 딥다이브를 만들 수 있어.');
+      return;
+    }
+    setIsSavingDeepDive(true);
+    try {
+      const res = await createVideoDeepDiveFromResult({
+        video_id: videoId,
+        source_url: report.url,
+        title: report.youtube_title || report.title,
+        content: report.content,
+        transcript: report.transcript,
+        transcript_segments: report.transcript_segments,
+      });
+      setDeepDiveUrl(res.viewer_url);
+      toast.success('사진 가이드를 딥다이브로 저장했어.');
+      if (typeof window !== 'undefined') {
+        window.open(res.viewer_url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '딥다이브 저장에 실패했습니다.');
+    } finally {
+      setIsSavingDeepDive(false);
+    }
+  }
+
   /**
    * 마크다운 콘텐츠에서 [HH:MM:SS] 형식의 타임코드를 YouTube 딥링크로 변환합니다.
    * 영상 URL이 없거나 타임코드가 없으면 원본 텍스트를 그대로 반환합니다.
@@ -466,7 +527,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
 
   const hasMath = useMemo(() => MATH_PATTERN.test(processedContent), [processedContent]);
   const tutorialVisualCues = useMemo(
-    () => report.style === 'tutorial' ? extractTutorialVisualCues(report.content) : [],
+    () => ['tutorial', 'course'].includes(report.style) ? extractTutorialVisualCues(report.content) : [],
     [report.style, report.content],
   );
 
@@ -709,7 +770,14 @@ variant={report.share_url ? 'secondary' : 'outline'}
       {/* 본문 — 한번 펼치면 DOM 유지 + display:none으로만 숨김 → 토글 즉시 반응 */}
       {hasExpanded && (
       <CardContent className="border-t border-border/50 px-6 pb-6 pt-5 lg:px-8 xl:px-10" style={{ display: collapsed ? 'none' : undefined }}>
-          {tutorialVisualCues.length > 0 && <TutorialVisualCueSection cues={tutorialVisualCues} />}
+          {tutorialVisualCues.length > 0 && (
+            <TutorialVisualCueSection
+              cues={tutorialVisualCues}
+              onSaveDeepDive={report.url ? handleSaveDeepDive : undefined}
+              isSaving={isSavingDeepDive}
+              deepDiveUrl={deepDiveUrl}
+            />
+          )}
 
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
           {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
