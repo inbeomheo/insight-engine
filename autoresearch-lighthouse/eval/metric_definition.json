@@ -1,0 +1,13 @@
+{
+  "metric_name": "composite_score",
+  "metric_direction": "higher_is_better",
+  "metric_command": "python autoresearch-lighthouse/eval/benchmark.py",
+  "time_budget_seconds": 1500,
+  "composition": {
+    "performance_lighthouse_mobile": 0.4,
+    "seo_lighthouse": 0.4,
+    "first_load_js": 0.2
+  },
+  "notes": "Performance/SEO는 lighthouse MOBILE(preset 미지정) 3회 median. first_load_kb = build-manifest.json rootMainFiles+polyfillFiles 합산. bundle_score=100KB->100점, 700KB->0점 선형. desktop은 성능/SEO 만점이라 mobile 전환.",
+  "created_at": "2026-06-20"
+}

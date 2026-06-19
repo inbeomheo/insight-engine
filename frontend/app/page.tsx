@@ -9,7 +9,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
-import ResultCard from '@/components/result/ResultCard';
+const ResultCard = dynamic(() => import('@/components/result/ResultCard'), { ssr: false });
 import MobileAppShell from '@/components/mobile/MobileAppShell';
 import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
