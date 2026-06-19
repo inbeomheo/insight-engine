@@ -9,12 +9,49 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 (외부에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
 """
 import os
+import fcntl
+from pathlib import Path
 
 from services.core.logging_config import get_logger
 
 logger = get_logger('scheduler_worker')
 
 _scheduler = None
+_scheduler_lock_file = None
+
+
+def _acquire_scheduler_leader_lock() -> bool:
+    """gunicorn 다중 worker 환경에서 스케줄러를 단일 프로세스만 실행하게 한다."""
+    global _scheduler_lock_file
+    if _scheduler_lock_file is not None:
+        return True
+
+    lock_path = Path(os.getenv('SCHEDULER_LOCK_FILE', '/tmp/insight-engine-scheduler.lock'))
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = lock_path.open('w')
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_file.close()
+        return False
+
+    lock_file.write(str(os.getpid()))
+    lock_file.truncate()
+    lock_file.flush()
+    _scheduler_lock_file = lock_file
+    return True
+
+
+def _release_scheduler_leader_lock() -> None:
+    """stop_scheduler에서 리더락을 해제한다."""
+    global _scheduler_lock_file
+    if _scheduler_lock_file is None:
+        return
+    try:
+        fcntl.flock(_scheduler_lock_file.fileno(), fcntl.LOCK_UN)
+    finally:
+        _scheduler_lock_file.close()
+        _scheduler_lock_file = None
 
 
 def _get_scheduler():
@@ -129,6 +166,12 @@ def start_scheduler(app):
             logger.info("SCHEDULER_ENABLED=false — 스케줄러 기동 생략")
             return
 
+        # gunicorn --workers=2 이상에서는 각 worker가 app.py를 import하므로
+        # APScheduler도 worker 수만큼 뜰 수 있다. 파일락으로 컨테이너 내 1개만 실행한다.
+        if not _acquire_scheduler_leader_lock():
+            logger.info('다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략')
+            return
+
         # 모듈 자기참조로 접근해야 테스트의 scheduler patch와 지연 생성이 모두 동작한다
         import services.data.scheduler_worker as _self
         scheduler = _self.scheduler
@@ -186,11 +229,13 @@ def stop_scheduler():
         # 생성된 적이 없으면 종료할 것도 없다 (불필요한 지연 생성 방지)
         import services.data.scheduler_worker as _self
         if _self._scheduler is None and 'scheduler' not in _self.__dict__:
+            _release_scheduler_leader_lock()
             return
         scheduler = _self.scheduler
         if scheduler.running:
             scheduler.shutdown(wait=False)
             logger.info("예약 발행 스케줄러 종료됨")
+        _release_scheduler_leader_lock()
     except Exception as e:
         logger.error("stop_scheduler 실패: %s", e, exc_info=True)
         return None
