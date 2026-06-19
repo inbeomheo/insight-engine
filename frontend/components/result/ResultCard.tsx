@@ -98,6 +98,19 @@ type VisualCue = {
   description: string;
 };
 
+function isVisualCueLine(line: string): boolean {
+  return /^(?:[-*]\s*)?(?:\*\*)?\[?((?:사진|이미지|스크린샷)\s*\d*)\]?(?:\*\*)?\s*[:：-]\s*(.+)$/i.test(line.trim());
+}
+
+function stripTutorialVisualCueLines(content: string): string {
+  return content
+    .split('\n')
+    .filter((line) => !isVisualCueLine(line))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function extractTutorialVisualCues(content: string): VisualCue[] {
   const seen = new Set<string>();
   return content
@@ -589,10 +602,15 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
   // html이 비어있고 content가 있으면 스트리밍 진행 중
   const isStreaming = !report.html && report.content.length > 0;
 
+  const articleContent = useMemo(
+    () => ['tutorial', 'course'].includes(report.style) ? stripTutorialVisualCueLines(report.content) : report.content,
+    [report.style, report.content],
+  );
+
   // ReactMarkdown은 비싸므로 스트리밍 완료 후에만 렌더링
   const processedContent = useMemo(
-    () => isStreaming ? report.content : injectTimestampLinks(report.content, report.url),
-    [isStreaming, report.content, report.url],
+    () => isStreaming ? articleContent : injectTimestampLinks(articleContent, report.url),
+    [isStreaming, articleContent, report.url],
   );
 
   const hasMath = useMemo(() => MATH_PATTERN.test(processedContent), [processedContent]);
