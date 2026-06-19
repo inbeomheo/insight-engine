@@ -58,6 +58,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/providers': 10_000,
   '/api/playlist-videos': 30_000,
   '/api/support/chat': 30_000,
+  '/api/video-deepdives/extract': 660_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -170,6 +171,71 @@ export async function createSharePage(req: {
   return request('/api/shares', {
     method: 'POST',
     body: JSON.stringify(req),
+  });
+}
+
+export interface VideoDeepDiveSlide {
+  idx: number;
+  t: number;
+  mmss?: string;
+  title?: string;
+  note?: string;
+  img?: string;
+  suggestion?: string;
+  source?: string;
+}
+
+export interface VideoDeepDiveItem {
+  id: string;
+  title: string;
+  youtube_id: string;
+  source_url: string;
+  created: string;
+  slide_count: number;
+  slides: VideoDeepDiveSlide[];
+  visual_suggestions: Array<{
+    idx: number;
+    kind: 'photo' | 'screenshot';
+    label?: string;
+    description: string;
+    section?: string;
+  }>;
+  tags: string[];
+}
+
+export interface VideoDeepDiveResponse {
+  slug: string;
+  meta: VideoDeepDiveItem;
+  body: string;
+}
+
+export async function createVideoDeepDiveFromResult(req: {
+  video_id?: string;
+  url?: string;
+  source_url?: string;
+  title: string;
+  content: string;
+  transcript?: string;
+  transcript_segments?: Array<{ start: number; text: string }>;
+  slides?: VideoDeepDiveSlide[];
+}): Promise<{ item: VideoDeepDiveItem; viewer_url: string }> {
+  return request('/api/video-deepdives/from-result', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export async function fetchVideoDeepDive(videoId: string): Promise<VideoDeepDiveResponse> {
+  return request(`/api/video-deepdives/${encodeURIComponent(videoId)}`);
+}
+
+export async function updateVideoDeepDiveSlides(
+  videoId: string,
+  slides: VideoDeepDiveSlide[],
+): Promise<{ ok: boolean; item: VideoDeepDiveItem }> {
+  return request(`/api/video-deepdives/${encodeURIComponent(videoId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ slides }),
   });
 }
 
