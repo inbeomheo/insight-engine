@@ -56,6 +56,27 @@ class TestCheckAndPublish(unittest.TestCase):
         mock_schedule.update_status.assert_called_once_with('p3', 'failed', error_message='network')
 
 
+class TestStartSchedulerLeaderLock(unittest.TestCase):
+    """start_scheduler: gunicorn worker별 중복 스케줄러 방지"""
+
+    @patch.dict('os.environ', {'SCHEDULER_ENABLED': 'true'}, clear=False)
+    def test_start_scheduler_skips_when_another_worker_holds_leader_lock(self):
+        from services.data import scheduler_worker
+
+        mock_scheduler = MagicMock()
+        mock_scheduler.running = False
+        mock_app = MagicMock()
+
+        with patch.object(scheduler_worker, '_get_scheduler', return_value=mock_scheduler), \
+             patch.object(scheduler_worker, '_acquire_scheduler_leader_lock', return_value=False, create=True), \
+             patch.object(scheduler_worker.logger, 'info') as mock_info:
+            scheduler_worker.start_scheduler(mock_app)
+
+        mock_scheduler.add_job.assert_not_called()
+        mock_scheduler.start.assert_not_called()
+        mock_info.assert_any_call('다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략')
+
+
 class TestStopScheduler(unittest.TestCase):
     """stop_scheduler: 스케줄러 종료"""
 
