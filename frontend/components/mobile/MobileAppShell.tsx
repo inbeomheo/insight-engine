@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import {
   ArrowLeft,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   Grid2X2,
   Loader2,
+  MessageSquare,
   PlusCircle,
   X,
 } from 'lucide-react';
@@ -45,10 +47,11 @@ const MODE_LABELS: Record<GenerationMode, string> = {
   fusion: '퓨전',
 };
 const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
+const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-[#FAF8F4]/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#DDE3F0] bg-white/96 px-4 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] pt-2.5 shadow-[0_-10px_28px_rgba(21,23,31,0.08)] backdrop-blur" aria-label="모바일 하단 네비게이션">
       <div className="mx-auto grid max-w-[430px] grid-cols-3 gap-2">
         {(Object.keys(TAB_META) as MobileTab[]).map((tab) => {
           const Icon = TAB_META[tab].icon;
@@ -58,12 +61,14 @@ function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChan
               key={tab}
               type="button"
               className={cn(
-                'signal-meta flex flex-col items-center justify-center gap-1 rounded-sm py-1.5 text-[10px] font-semibold transition-colors',
-                active ? 'text-primary' : 'text-muted-foreground/55'
+                'flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-extrabold tracking-[-0.01em] transition-all active:scale-[0.98]',
+                active
+                  ? 'bg-[#2F54EB] text-white shadow-[0_8px_18px_rgba(47,84,235,0.28)]'
+                  : 'text-[#667085] hover:bg-[#F5F6F8]'
               )}
               onClick={() => onChange(tab)}
             >
-              <Icon className={cn('h-5 w-5', active && 'stroke-[2.4]')} />
+              <Icon className={cn('h-5 w-5', active && 'stroke-[2.5]')} />
               <span>{TAB_META[tab].label}</span>
             </button>
           );
@@ -122,26 +127,28 @@ function MobileCreateView({
   };
 
   return (
-    <section className="min-h-dvh px-6 pb-28 pt-12">
-      <div className="mb-7 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-foreground">
-            <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-          </span>
-          <span className="text-[15px] font-bold tracking-tight">Insight Engine</span>
+    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
+      <div className="mb-6 rounded-[28px] border border-[#DDE3F0] bg-white px-4 py-4 shadow-[0_12px_32px_rgba(21,23,31,0.08)]">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-2xl bg-[#15171F] shadow-[0_8px_16px_rgba(21,23,31,0.18)]">
+              <span className="h-3 w-3 rounded-full bg-[#2F54EB]" />
+            </span>
+            <span className="text-[16px] font-black tracking-[-0.03em] text-[#15171F]">Insight Engine</span>
+          </div>
+          <span className="rounded-full bg-[#F5F6F8] px-2.5 py-1 text-[10px] font-extrabold text-[#667085]">MOBILE</span>
         </div>
-        <span className="signal-meta text-[10px] text-muted-foreground/55">모바일</span>
+
+        <p className="mb-2 text-[11px] font-black tracking-[0.08em] text-[#2F54EB]">새 분석 · STEP 01</p>
+        <h1 className="text-[31px] font-black leading-[1.05] tracking-[-0.055em] text-[#15171F]">
+          어떤 영상을<br />콘텐츠로 만들까?
+        </h1>
       </div>
 
-      <p className="signal-meta mb-2 text-[10px] font-bold text-primary">새 분석 · STEP 01</p>
-      <h1 className="mb-5 text-[32px] font-black leading-[1.05] tracking-[-0.04em] text-foreground">
-        어떤 영상을<br />콘텐츠로?
-      </h1>
-
-      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_#17150F]">
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
+      <div className="mb-2 flex min-h-[60px] items-center gap-2 rounded-[22px] border border-[#C9D3EA] bg-white px-3 shadow-[0_10px_24px_rgba(47,84,235,0.10)] focus-within:border-[#2F54EB]">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2F54EB]" />
         <input
-          className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
+          className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#15171F] outline-none placeholder:text-[#98A2B3]"
           value={draftUrl}
           type="url"
           inputMode="url"
@@ -156,15 +163,15 @@ function MobileCreateView({
         />
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_#17150F] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2F54EB] text-white shadow-[0_8px_16px_rgba(47,84,235,0.26)] transition-transform active:scale-[0.96]"
           onClick={submitDraft}
           aria-label="URL 추가"
         >
           <ArrowUp className="h-5 w-5" />
         </button>
       </div>
-      <div className="signal-meta mb-3 flex gap-2 text-[10px] text-muted-foreground/50">
-        <span>YouTube</span><span>·</span><span>웹</span><span>·</span><span>RSS</span><span>·</span><span>arXiv</span><span>·</span><span>Podcast</span>
+      <div className="mb-4 flex flex-wrap gap-1.5 text-[11px] font-bold text-[#667085]">
+        <span className="rounded-full bg-white px-2.5 py-1">YouTube</span><span className="rounded-full bg-white px-2.5 py-1">웹</span><span className="rounded-full bg-white px-2.5 py-1">RSS</span><span className="rounded-full bg-white px-2.5 py-1">arXiv</span><span className="rounded-full bg-white px-2.5 py-1">Podcast</span>
       </div>
       {(inputError || error) && (
         <p className="mb-3 rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">{inputError || error}</p>
@@ -173,10 +180,10 @@ function MobileCreateView({
       {urls.length > 0 && (
         <div className="mb-5 space-y-2">
           {urls.map((url) => (
-            <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-[#F1EDE5] px-3 text-xs text-muted-foreground">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[#E90043]" />
-              <span className="min-w-0 flex-1 truncate font-medium text-foreground/75">{url}</span>
-              <span className="signal-meta text-[9px] text-muted-foreground/45">YouTube</span>
+            <div key={url} className="flex min-h-12 items-center gap-2 rounded-2xl border border-[#DDE3F0] bg-white px-3 text-xs text-[#667085] shadow-[0_6px_18px_rgba(21,23,31,0.05)]">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[#2F54EB]" />
+              <span className="min-w-0 flex-1 truncate font-semibold text-[#15171F]/80">{url}</span>
+              <span className="rounded-full bg-[#EEF3FF] px-2 py-0.5 text-[9px] font-black text-[#2F54EB]">YouTube</span>
               <button type="button" onClick={() => onRemoveUrl(url)} aria-label="URL 제거">
                 <X className="h-4 w-4 text-muted-foreground/45" />
               </button>
@@ -185,12 +192,12 @@ function MobileCreateView({
         </div>
       )}
 
-      <div className="mb-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold">출력 스타일 <span className="text-muted-foreground/45">{STYLE_OPTIONS.length}</span></h2>
-          <span className="signal-meta text-[10px] font-semibold text-primary">선택 1 · 다시 누르면 기본값</span>
+      <div className="mb-6 rounded-[24px] border border-[#DDE3F0] bg-white p-4 shadow-[0_10px_26px_rgba(21,23,31,0.06)]">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-black text-[#15171F]">출력 스타일 <span className="text-[#98A2B3]">{STYLE_OPTIONS.length}</span></h2>
+          <span className="text-right text-[10px] font-bold leading-tight text-[#2F54EB]">다시 누르면<br />기본값</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {STYLE_OPTIONS.map((style) => {
             const active = selectedStyle === style.id;
             return (
@@ -200,30 +207,30 @@ function MobileCreateView({
                 aria-pressed={active}
                 title={active && style.id !== 'blog_seo' ? '다시 누르면 Blog+SEO 기본값으로 돌아가요' : undefined}
                 className={cn(
-                  'rounded-full border px-4 py-2 text-xs font-bold transition-colors',
+                  'min-h-10 rounded-2xl border px-3 text-left text-xs font-extrabold transition-all active:scale-[0.98]',
                   active
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-border/70 bg-card text-foreground/75 shadow-[0_1px_0_rgba(23,21,15,0.04)]'
+                    ? 'border-[#2F54EB] bg-[#2F54EB] text-white shadow-[0_8px_18px_rgba(47,84,235,0.24)]'
+                    : 'border-[#DDE3F0] bg-[#F8FAFF] text-[#344054]'
                 )}
                 onClick={() => handleStyleSelect(style.id)}
               >
-                {style.label}
+                <span className="mr-1.5">{style.emoji}</span>{style.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mb-7">
-        <h2 className="mb-3 text-sm font-bold">생성 모드</h2>
-        <div className="grid grid-cols-3 bg-[#F1EDE5] p-1">
+      <div className="mb-7 rounded-[24px] border border-[#DDE3F0] bg-white p-4 shadow-[0_10px_26px_rgba(21,23,31,0.06)]">
+        <h2 className="mb-3 text-sm font-black text-[#15171F]">생성 모드</h2>
+        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-[#F5F6F8] p-1">
           {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
             <button
               key={mode}
               type="button"
               className={cn(
-                'h-11 text-sm font-bold transition-colors',
-                generationMode === mode ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground/55'
+                'min-h-11 rounded-xl text-sm font-black transition-all active:scale-[0.98]',
+                generationMode === mode ? 'bg-white text-[#2F54EB] shadow-[0_6px_14px_rgba(21,23,31,0.08)]' : 'text-[#667085]'
               )}
               onClick={() => setGenerationMode(mode)}
             >
@@ -234,7 +241,7 @@ function MobileCreateView({
       </div>
 
       <Button
-        className="h-14 w-full rounded-sm bg-primary text-base font-black text-primary-foreground shadow-[0_8px_18px_rgba(199,55,16,0.22)] hover:bg-primary/95"
+        className="min-h-14 w-full rounded-[22px] bg-[#2F54EB] text-base font-black text-white shadow-[0_14px_28px_rgba(47,84,235,0.28)] hover:bg-[#2548D8] active:scale-[0.99] disabled:bg-[#B8C4E6]"
         disabled={isLoading || (urls.length === 0 && !draftUrl.trim())}
         onClick={handleGenerateClick}
       >
@@ -253,7 +260,7 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
   }, [reports]);
 
   return (
-    <section className="min-h-dvh px-6 pb-28 pt-12">
+    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
       <div className="mb-5 flex items-end justify-between">
         <h1 className="text-[28px] font-black tracking-[-0.035em]">라이브러리</h1>
         <span className="signal-meta text-[10px] text-muted-foreground/45">{reports.length}개</span>
@@ -304,7 +311,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
   const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens || 0), 0);
 
   return (
-    <section className="min-h-dvh px-6 pb-28 pt-12">
+    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
       <h1 className="mb-6 text-[28px] font-black tracking-[-0.035em]">대시보드</h1>
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
@@ -368,24 +375,40 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 }
 
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
+  const [chatOpen, setChatOpen] = useState(false);
   return (
-    <section className="min-h-dvh pb-28">
-      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-[#FAF8F4]/95 px-5 backdrop-blur">
-        <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-black tracking-[-0.02em]">{report.title}</h1>
-          <p className="signal-meta mt-0.5 truncate text-[9px] text-muted-foreground/50">{getStyleLabel(report.style)} · {report.time}</p>
+    <section className="min-h-dvh pb-[calc(env(safe-area-inset-bottom)+14rem)]">
+      {chatOpen && report.url && (
+        <VideoChatPanel
+          videoUrl={report.url}
+          videoTitle={report.youtube_title || report.title}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
+      <div className="sticky top-0 z-40 border-b border-[#DDE3F0] bg-white/96 px-4 py-3 shadow-[0_8px_24px_rgba(21,23,31,0.06)] backdrop-blur">
+        <div className="mx-auto flex max-w-[430px] items-center gap-2.5">
+          <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F5F6F8] text-[#667085]">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-sm font-black tracking-[-0.02em] text-[#15171F]">{report.title}</h1>
+            <p className="mt-0.5 truncate text-[10px] font-bold text-[#667085]">{getStyleLabel(report.style)} · {report.time}</p>
+          </div>
+          {report.url && (
+            <Button size="sm" variant="outline" className="h-10 shrink-0 rounded-2xl border-[#C9D3EA] bg-[#EEF3FF] px-3 text-xs font-black text-[#2F54EB]" onClick={() => setChatOpen(true)}>
+              <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+              질문
+            </Button>
+          )}
+          {PUBLISHING_ENABLED && (
+            <Button size="sm" className="h-10 shrink-0 rounded-2xl bg-[#2F54EB] px-3 text-xs font-black text-white" onClick={() => onSchedule(report)}>
+              발행
+            </Button>
+          )}
         </div>
-        {PUBLISHING_ENABLED && (
-          <Button size="sm" className="h-9 rounded-sm bg-primary px-4 text-xs font-black" onClick={() => onSchedule(report)}>
-            발행
-          </Button>
-        )}
       </div>
 
-      <article className="px-6 pt-6">
+      <article className="mx-auto max-w-[430px] px-4 pt-6">
         <p className="signal-meta mb-4 text-[10px] text-muted-foreground/45">{report.time} · AI · {(report.usage?.total_tokens || 0).toLocaleString()} TOKENS</p>
         <h2 className="mb-6 text-[25px] font-black leading-[1.16] tracking-[-0.04em] text-foreground">{report.title}</h2>
         <div className="prose max-w-none text-[15px] leading-[1.9] text-foreground/82 prose-headings:font-black prose-headings:tracking-[-0.03em] prose-h2:text-[20px] prose-h3:text-[17px] prose-strong:bg-primary/10 prose-strong:px-0.5 prose-blockquote:border-l-[3px] prose-blockquote:border-primary prose-blockquote:bg-transparent prose-blockquote:pl-4 prose-blockquote:text-foreground/60 prose-a:text-primary">
@@ -426,7 +449,7 @@ export default function MobileAppShell({
 
   if (activeReport) {
     return (
-      <div className="min-h-dvh bg-[#FAF8F4] text-foreground xl:hidden">
+      <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
         <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
@@ -434,7 +457,7 @@ export default function MobileAppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#FAF8F4] text-foreground xl:hidden">
+    <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
       {activeTab === 'create' && (
         <MobileCreateView
           urls={urls}

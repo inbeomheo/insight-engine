@@ -12,6 +12,8 @@ export const STYLE_OPTIONS: StyleOption[] = [
   { id: 'sns_post', label: 'SNS', emoji: '📱' },
   { id: 'newsletter', label: '뉴스레터', emoji: '📧' },
   { id: 'show_notes', label: '쇼노트', emoji: '🎙️' },
+  { id: 'shorts_script', label: 'Shorts', emoji: '🎬' },
+  { id: 'geo_seo', label: 'GEO', emoji: '🧭' },
   { id: 'course', label: 'AI 코스', emoji: '🎓' },
 ];
 

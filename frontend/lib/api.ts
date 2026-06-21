@@ -884,10 +884,10 @@ export async function fetchSupportTickets(): Promise<{ tickets: SupportTicket[];
   return request('/api/support/tickets', { headers: supportHeaders() });
 }
 
-export async function createSupportGithubIssue(ticketId: string): Promise<{ ticket: SupportTicket; issue?: { html_url?: string; number?: number } }> {
+export async function createSupportGithubIssue(ticketId: string): Promise<{ ticket: SupportTicket; issue?: { html_url?: string; number?: number }; message?: string }> {
   return request(`/api/support/tickets/${ticketId}/create-github-issue`, { method: 'POST', headers: supportHeaders() });
 }
 
-export async function createSupportDraftPr(ticketId: string): Promise<{ ticket: SupportTicket; pull_request?: { html_url?: string; number?: number } }> {
+export async function createSupportDraftPr(ticketId: string): Promise<{ ticket: SupportTicket; pull_request?: { html_url?: string; number?: number }; message?: string }> {
   return request(`/api/support/tickets/${ticketId}/create-draft-pr`, { method: 'POST', headers: supportHeaders() });
 }

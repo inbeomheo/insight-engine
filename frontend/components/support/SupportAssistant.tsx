@@ -136,12 +136,12 @@ export default function SupportAssistant() {
           role: 'assistant',
           content: updated.github_issue_url
             ? `GitHub 이슈 #${updated.github_issue_number ?? ''}로 올렸어. 이제 별도 작업 에이전트가 needs-agent 큐에서 가져갈 수 있어.`
-            : 'GitHub 이슈 생성 요청을 처리했어.',
+            : res.message || 'GitHub 이슈 handoff 요청을 접수했어. 티켓은 서버 큐에 저장됐고 별도 작업 에이전트가 이어받을 수 있어.',
           ticket: updated,
-          githubHandoffEnabled: true,
+          githubHandoffEnabled: Boolean(updated.github_issue_url),
         },
       ]);
-      toast.success('GitHub 이슈를 생성했어');
+      toast.success(updated.github_issue_url ? 'GitHub 이슈를 생성했어' : 'GitHub 이슈 요청을 접수했어');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'GitHub 이슈 생성에 실패했어.';
       toast.error(msg);
@@ -163,12 +163,12 @@ export default function SupportAssistant() {
           role: 'assistant',
           content: updated.github_pr_url
             ? `docs-only Draft PR #${updated.github_pr_number ?? ''}을 만들었어. 코드 수정은 하지 않았고, 작업 에이전트가 이어받을 스펙만 담았어.`
-            : 'Draft PR 생성 요청을 처리했어.',
+            : res.message || 'Draft PR handoff 요청을 접수했어. 티켓은 서버 큐에 저장됐고 별도 작업 에이전트가 이어받을 수 있어.',
           ticket: updated,
-          githubHandoffEnabled: true,
+          githubHandoffEnabled: Boolean(updated.github_pr_url),
         },
       ]);
-      toast.success('Draft PR을 생성했어');
+      toast.success(updated.github_pr_url ? 'Draft PR을 생성했어' : 'Draft PR 요청을 접수했어');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Draft PR 생성에 실패했어.';
       toast.error(msg);
@@ -190,14 +190,14 @@ export default function SupportAssistant() {
       <Button
         type="button"
         className={cn(
-          'fixed bottom-24 right-5 z-[70] h-12 rounded-full border border-foreground bg-primary px-4 text-sm font-black text-primary-foreground shadow-[4px_4px_0_#17150F]',
-          'hover:bg-primary/95 xl:bottom-6 xl:right-6',
+          'fixed bottom-6 right-6 z-[70] hidden h-12 rounded-full border border-foreground bg-primary px-4 text-sm font-black text-primary-foreground shadow-[4px_4px_0_#17150F] transition-transform active:scale-[0.96] xl:flex',
+          'hover:bg-primary/95',
         )}
         onClick={() => setOpen(true)}
         aria-label="도움말/피드백 열기"
       >
         <Bot className="h-4 w-4" />
-        도움말/피드백
+        <span className="hidden xl:inline">도움말/피드백</span>
       </Button>
 
       {open && (
@@ -309,6 +309,9 @@ function TicketActions({
   onCreateIssue: (ticket: SupportTicket) => void;
   onCreateDraftPr: (ticket: SupportTicket) => void;
 }) {
+  const issueRequested = ticket.status === 'issue_requested' || Boolean(ticket.github_issue_url);
+  const draftPrRequested = ticket.status === 'draft_pr_requested' || Boolean(ticket.github_pr_url);
+
   return (
     <div className="mt-3 border-t border-border/70 pt-2">
       <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -326,33 +329,31 @@ function TicketActions({
       )}
       {!githubHandoffEnabled && !ticket.github_issue_url && !ticket.github_pr_url && (
         <p className="mb-2 text-[11px] text-muted-foreground">
-          GitHub handoff는 관리자 승인 후 처리돼. 접수된 티켓은 서버에 저장됐어.
+          접수된 티켓은 서버에 저장됐어. 버튼을 누르면 GitHub handoff 요청을 큐에 넣어둘게.
         </p>
       )}
-      {githubHandoffEnabled && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="xs"
-            variant="outline"
-            onClick={() => onCreateIssue(ticket)}
-            disabled={disabled || Boolean(ticket.github_issue_url)}
-          >
-            {ticket.github_issue_url ? <CheckCircle2 className="h-3 w-3" /> : <Github className="h-3 w-3" />}
-            이슈 올리기
-          </Button>
-          <Button
-            type="button"
-            size="xs"
-            variant="outline"
-            onClick={() => onCreateDraftPr(ticket)}
-            disabled={disabled || Boolean(ticket.github_pr_url)}
-          >
-            <MessageSquare className="h-3 w-3" />
-            Draft PR
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          onClick={() => onCreateIssue(ticket)}
+          disabled={disabled || issueRequested}
+        >
+          {issueRequested ? <CheckCircle2 className="h-3 w-3" /> : <Github className="h-3 w-3" />}
+          {ticket.github_issue_url ? '이슈 완료' : ticket.status === 'issue_requested' ? '이슈 요청됨' : githubHandoffEnabled ? '이슈 올리기' : '이슈 요청'}
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          onClick={() => onCreateDraftPr(ticket)}
+          disabled={disabled || draftPrRequested}
+        >
+          {draftPrRequested ? <CheckCircle2 className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />}
+          {ticket.github_pr_url ? 'PR 완료' : ticket.status === 'draft_pr_requested' ? 'PR 요청됨' : githubHandoffEnabled ? 'Draft PR' : 'PR 요청'}
+        </Button>
+      </div>
     </div>
   );
 }
