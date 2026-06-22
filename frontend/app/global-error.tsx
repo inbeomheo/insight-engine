@@ -16,14 +16,14 @@ export default function GlobalError({
             <h2 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>
               앱에 문제가 발생했습니다
             </h2>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
+            <p style={{ fontSize: '14px', color: '#6A6E78', marginBottom: '20px' }}>
               예상치 못한 오류가 발생했습니다. 페이지를 새로고침해주세요.
             </p>
             <button
               onClick={reset}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#6366f1',
+                backgroundColor: '#2F54EB',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
