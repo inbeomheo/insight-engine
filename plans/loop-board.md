@@ -10,7 +10,6 @@
 
 ## 백로그
 
-- [ ] feat(ui): page.tsx:409 #2F54EB(ink-blue) 별도 Signal 토큰 정의 — --foreground 아님. 완료기준: globals.css 토큰 추가 + tsc 0 + build 성공
 - [ ] feat(ui): MobileAppShell.tsx 카테고리/도트 색 토큰화 — CATEGORY_DOTS(#E90043/#7C5CFF/#20C997/#2F80ED/#F2B705) + bg-[#F5F6F8](=--background) + bg-[#F1EDE5] 하드코딩. 완료기준: tsc 0 + build 성공 + 다크모드 정상
 - [ ] feat(ui): settings 영역(15파일) Signal 리디자인 감정 — 구식 영역 식별 후 토큰 적용. 완료기준: tsc 0 + build 성공 + 다크모드 정상
 - [ ] feat(ui): billing(7)·marketplace·library 영역 Signal 감정
@@ -33,6 +32,7 @@
 ## Done
 
 - [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → Signal 토큰 (PR #54, 다크모드 그림자 누락 버그 수정) — tsc 0 + build 성공 + code-reviewer 클린
+- [x] 2026-06-22 feat(ui): #2F54EB 사용처 → --primary 토큰 (PR #56, page shadow + prose border + gradient) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): page/MobileAppShell shadow 5곳 → Signal 토큰 (PR #55, 동일 패턴) — build 성공 + code-reviewer 클린
 - [x] 2026-06-10 PR #23 Codex P2 리뷰 지적 3건 반영 (캐시 히트 자막 재추출 폴백 / GLM 챕터 병렬 제외 / BASE 프롬프트 소스 중립화) — 전체 5,414 passed + code-reviewer 통과
 - [x] 2026-06-10 데드 엔드포인트 ~200개 제거 + 깨진 테스트 142개 정리 — 커밋 6e2da90, 전체 5,414 passed / 0 fail
