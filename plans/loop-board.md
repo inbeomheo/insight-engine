@@ -10,7 +10,6 @@
 
 ## 백로그
 
-- [ ] feat(ui): ResultCard.tsx 남은 hex 감정 — 차트/데이터 색 vs UI 색 구분 후 UI 색 토큰화. 완료기준: 감정 + (UI 색 시) build 성공
 - [ ] refactor(export): useExport.ts + ResultCard.tsx <style> 중복 → 공유 모듈 추출 (code-reviewer 제안). 완료기준: tsc 0 + build 성공
 
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
@@ -29,6 +28,7 @@
 ## Done
 
 - [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → Signal 토큰 (PR #54, 다크모드 그림자 누락 버그 수정) — tsc 0 + build 성공 + code-reviewer 클린
+- [x] 2026-06-23 feat(ui): ResultCard 인쇄 템플릿 #111 → Signal foreground (PR #61, handlePrint 누락분) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): 내보내기 HTML CSS 구식 색 → Signal 정규화 (PR #60, useExport + ResultCard 5종 색) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): global-error/layout 구식 인디고 → Signal primary (PR #59, #6366f1/#4F46E5/#6b7280 정규화) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): MobileAppShell warm beige #F1EDE5 → Signal 토큰 (PR #58, L176 bg-card / L219 bg-muted, 구식 warm 제거+다크모드 버그) — build 성공 + code-reviewer 클린
@@ -46,6 +46,7 @@
 - 2026-06-22 MobileAppShell CATEGORY_DOTS(#E90043/#7C5CFF/#20C997/#2F80ED/#F2B705) 데이터 팔레트는 의도적 유지 결정 — 한 파일 로컬 + 소스 타입 구분은 테마 독립이 맞음, 토큰화는 과잉(Simplicity First).
 - 2026-06-22 settings/billing/marketplace/library/analytics/schedule/search/modals/input 영역 Signal 감정 완료 — 전부 hex 0, 이미 토큰화됨. 남은 hex는 데이터 시각화(GraphVisualization/ResultCard 차트/api og) + 구식 인디고 잔재뿐.
 - 2026-06-22 GraphVisualization NODE_COLORS(#6366f1/#10b981/#f59e0b/#ef4444)는 데이터 시각화 범주 팔레트로 의도적 유지 결정 — 4 노드 타입 구분이 핵심, --chart-*와 부분 일치(entity=#f59e0b)하지만 topic red 대응 없어 로컬 유지(CATEGORY_DOTS와 동일 결정).
+- 2026-06-23 ResultCard 감정 완료 — UI hex는 handlePrint 인쇄 템플릿 #111 한 곳(PR #61 처리). 나머지는 내보내기 CSS(PR #60) 또는 GRADE_STYLES Tailwind 색 이름(hex 아님). ResultCard 토큰 마이그레이션 완료.
 - 2026-06-11 00:26·00:58·01:59·02:59 야간 루프 점검 — 이상 없음 (새 리뷰 코멘트·CI 런·워킹트리 변경 없음)
 
 - 멀티라인 커밋 메시지는 Bash heredoc(`git commit -F - <<'EOF'`) 사용 — PowerShell here-string 금지 (2026-06-10)
