@@ -34,10 +34,10 @@ export function useExport() {
     try {
       const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><title>${report.title}</title>
-<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#111827}
-h1,h2,h3{margin-top:1.5rem}a{color:#4F46E5}blockquote{border-left:3px solid #4F46E5;padding-left:1rem;color:#6B7280}
-table{border-collapse:collapse;width:100%}th,td{border:1px solid #E5E7EB;padding:8px;text-align:left}
-th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
+<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#15171F}
+h1,h2,h3{margin-top:1.5rem}a{color:#2F54EB}blockquote{border-left:3px solid #2F54EB;padding-left:1rem;color:#6A6E78}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #E0E3EB;padding:8px;text-align:left}
+th{background:#E8EBF1}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
