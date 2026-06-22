@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { formatModelSize } from '@/lib/utils';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Trash2, Bot, Brain, RotateCcw } from 'lucide-react';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
@@ -187,11 +188,15 @@ export default function SettingsModal() {
                   <SelectValue placeholder={t('settings.selectModel')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {currentModels.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
+                  {currentModels.map((m) => {
+                    const size = formatModelSize(m.size_bytes);
+                    return (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                        {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
