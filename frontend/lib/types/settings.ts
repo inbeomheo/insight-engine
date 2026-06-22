@@ -28,6 +28,7 @@ export interface ModelInfo {
   max_input_tokens: number;
   price_input: number;
   price_output: number;
+  size_bytes?: number; // 로컬(Ollama) 모델 디스크 크기 — 동적 조회 시에만 제공
 }
 
 export interface CustomStyle {

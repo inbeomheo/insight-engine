@@ -145,7 +145,7 @@
 .prose ol { @apply list-decimal pl-5 my-4 space-y-2; }
 .prose li { @apply text-foreground/85 leading-[1.65]; }
 .prose blockquote {
-  @apply border-l-[3px] border-[#2F54EB] pl-5 my-5 text-foreground/70 not-italic bg-muted/30 py-3 rounded-r-sm;
+  @apply border-l-[3px] border-primary pl-5 my-5 text-foreground/70 not-italic bg-muted/30 py-3 rounded-r-sm;
 }
 .prose code {
   @apply bg-muted/70 px-1.5 py-0.5 rounded text-[13px] font-mono text-foreground/80 border border-border/40;
@@ -196,7 +196,7 @@
 
 /* 그라데이션 유틸리티 */
 .gradient-primary {
-  background: #2F54EB;
+  background: var(--primary);
 }
 .gradient-subtle {
   background: #F5F6F8;

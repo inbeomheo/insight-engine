@@ -867,7 +867,7 @@ def generate_stream():
                         full_content += token
                         token_event = json.dumps({
                             'type': 'token',
-                            'content': token
+                            'data': token
                         }, ensure_ascii=False)
                         yield f"data: {token_event}\n\n"
 
@@ -888,14 +888,24 @@ def generate_stream():
                     if is_supabase_enabled() and user_id:
                         UsageService.decrement(user_id)
 
+                    # 메타데이터 추출 — 비스트리밍 /generate와 동일하게 채워 회귀 방지
+                    style = params['style']
+                    seo = ai_service.extract_seo_metadata(body) if style == 'blog_seo' else None
+                    faq_schema = (
+                        ai_service.extract_faq_schema(body)
+                        if style in ('blog_seo', 'geo_seo') else None
+                    )
+                    cta = ai_service.extract_cta(body) if style == 'geo_seo' else None
+
                     done_event = json.dumps({
                         'type': 'done',
                         'title': title,
-                        'content': body,
-                        'html': html,
+                        'data': html,
                         'youtube_title': youtube_title,
                         'transcript_source': transcript_source,
-                        'transcript_segments': transcript_segments or [],
+                        'seo': seo,
+                        'faq_schema': faq_schema,
+                        'cta': cta,
                     }, ensure_ascii=False)
                     yield f"data: {done_event}\n\n"
 

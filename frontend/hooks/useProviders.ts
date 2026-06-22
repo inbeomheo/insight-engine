@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 
 export function useProviders() {
-  const { setProviders, selectedProvider, setSelectedProvider, setSelectedModel } =
+  const { setProviders, selectedProvider, selectedModel, setSelectedProvider, setSelectedModel } =
     useSettingsStore();
 
   const query = useQuery({
@@ -28,9 +28,15 @@ export function useProviders() {
           const firstModel = query.data.providers[ids[0]]?.models[0];
           if (firstModel) setSelectedModel(firstModel.id);
         }
+      } else {
+        // 프로바이더는 유효하지만 선택된 모델이 현재 목록에 없으면(모델 삭제/교체 등) 첫 모델로 교정
+        const models = query.data.providers[selectedProvider]?.models ?? [];
+        if (models.length > 0 && !models.some((m) => m.id === selectedModel)) {
+          setSelectedModel(models[0].id);
+        }
       }
     }
-  }, [query.data, selectedProvider, setProviders, setSelectedProvider, setSelectedModel]);
+  }, [query.data, selectedProvider, selectedModel, setProviders, setSelectedProvider, setSelectedModel]);
 
   useEffect(() => {
     if (query.error) {

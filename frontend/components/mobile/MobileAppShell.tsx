@@ -48,7 +48,7 @@ const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true'
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-[#F5F6F8]/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-background/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
       <div className="mx-auto grid max-w-[430px] grid-cols-3 gap-2">
         {(Object.keys(TAB_META) as MobileTab[]).map((tab) => {
           const Icon = TAB_META[tab].icon;
@@ -138,7 +138,7 @@ function MobileCreateView({
         어떤 영상을<br />콘텐츠로?
       </h1>
 
-      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_#15171F]">
+      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_var(--foreground)]">
         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
         <input
           className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
@@ -156,7 +156,7 @@ function MobileCreateView({
         />
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_#15171F] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_var(--foreground)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
           onClick={submitDraft}
           aria-label="URL 추가"
         >
@@ -173,7 +173,7 @@ function MobileCreateView({
       {urls.length > 0 && (
         <div className="mb-5 space-y-2">
           {urls.map((url) => (
-            <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-[#F1EDE5] px-3 text-xs text-muted-foreground">
+            <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-card px-3 text-xs text-muted-foreground">
               <span className="h-2 w-2 shrink-0 rounded-full bg-[#E90043]" />
               <span className="min-w-0 flex-1 truncate font-medium text-foreground/75">{url}</span>
               <span className="signal-meta text-[9px] text-muted-foreground/45">YouTube</span>
@@ -216,7 +216,7 @@ function MobileCreateView({
 
       <div className="mb-7">
         <h2 className="mb-3 text-sm font-bold">생성 모드</h2>
-        <div className="grid grid-cols-3 bg-[#F1EDE5] p-1">
+        <div className="grid grid-cols-3 bg-muted p-1">
           {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
             <button
               key={mode}
@@ -370,7 +370,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
   return (
     <section className="min-h-dvh pb-28">
-      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-[#F5F6F8]/95 px-5 backdrop-blur">
+      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-background/95 px-5 backdrop-blur">
         <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -426,7 +426,7 @@ export default function MobileAppShell({
 
   if (activeReport) {
     return (
-      <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+      <div className="min-h-dvh bg-background text-foreground xl:hidden">
         <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
@@ -434,7 +434,7 @@ export default function MobileAppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+    <div className="min-h-dvh bg-background text-foreground xl:hidden">
       {activeTab === 'create' && (
         <MobileCreateView
           urls={urls}

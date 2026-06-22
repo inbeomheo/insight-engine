@@ -94,22 +94,61 @@ def api_close():
     return jsonify({'ok': True})
 
 
+def _fetch_ollama_models(base_url=None):
+    """Ollama 서버(/api/tags)에서 실제 설치된 모델을 조회해 동적 모델 목록을 만든다.
+
+    서버에 연결할 수 없으면 None을 반환해 호출측이 정적 config 목록으로 폴백하게 한다.
+    """
+    import requests as http_requests
+
+    base_url = base_url or os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+    try:
+        resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        return None
+
+    models = []
+    for m in data.get('models', []):
+        name = m.get('name', '')
+        if not name:
+            continue
+        ctx = (m.get('details') or {}).get('context_length') or 8192
+        models.append({
+            'id': f'ollama_chat/{name}',
+            'name': name,
+            'max_input_tokens': ctx,
+            'price_input': 0,
+            'price_output': 0,
+            'size_bytes': m.get('size'),  # 모델 디스크 크기 (UI에서 대용량 경고용)
+        })
+    return models
+
+
 @blog_bp.route('/api/providers', methods=['GET'])
 def api_providers():
     """API 키가 설정된 AI 서비스 및 모델 목록을 반환합니다.
     환경변수에 API 키가 설정된 프로바이더만 반환됩니다.
+    Ollama는 로컬 서버에 실제 설치된 모델을 동적으로 조회해 반환합니다.
     """
     from config import get_available_providers, SUPADATA_API_KEY
 
     providers = get_available_providers()
     styles = current_app.config.get('STYLE_OPTIONS', [])
 
-    # 각 프로바이더에 model_count 필드 추가
+    # 각 프로바이더에 model_count 필드 추가 (원본 dict 변형 금지 — 복사본 사용)
     enriched = {}
     for pid, pdata in providers.items():
         models = pdata.get('models', [])
+        if pid == 'ollama':
+            # 설치된 모델을 실시간 조회 — 실패 시 정적 config 목록으로 폴백
+            live_models = _fetch_ollama_models(pdata.get('api_base'))
+            if live_models:
+                models = live_models
         enriched[pid] = {
             **pdata,
+            'models': models,
             'model_count': len(models),
             'default_model': models[0]['id'] if models else None,
         }
