@@ -10,7 +10,7 @@
 
 ## 백로그
 
-- [ ] refactor(export): useExport.ts + ResultCard.tsx <style> 중복 → 공유 모듈 추출 (code-reviewer 제안). 완료기준: tsc 0 + build 성공
+- [ ] [대기] refactor(export): useExport.ts + ResultCard.tsx <style> 중복 → 공유 모듈 추출 — **PR #60/#61 머지 후에만 안전**(현재 미머지, 같은 인라인 `<style>` 영역이라 충돌). 완료기준: tsc 0 + build 성공
 
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
@@ -47,6 +47,7 @@
 - 2026-06-22 settings/billing/marketplace/library/analytics/schedule/search/modals/input 영역 Signal 감정 완료 — 전부 hex 0, 이미 토큰화됨. 남은 hex는 데이터 시각화(GraphVisualization/ResultCard 차트/api og) + 구식 인디고 잔재뿐.
 - 2026-06-22 GraphVisualization NODE_COLORS(#6366f1/#10b981/#f59e0b/#ef4444)는 데이터 시각화 범주 팔레트로 의도적 유지 결정 — 4 노드 타입 구분이 핵심, --chart-*와 부분 일치(entity=#f59e0b)하지만 topic red 대응 없어 로컬 유지(CATEGORY_DOTS와 동일 결정).
 - 2026-06-23 ResultCard 감정 완료 — UI hex는 handlePrint 인쇄 템플릿 #111 한 곳(PR #61 처리). 나머지는 내보내기 CSS(PR #60) 또는 GRADE_STYLES Tailwind 색 이름(hex 아님). ResultCard 토큰 마이그레이션 완료.
+- 2026-06-23 cycle 9 트리아지: PR #54~#61 전부 미머지 → `<style>` 리팩터 블로커(PR #60/#61과 같은 인라인 영역, 충돌). 디자인 토큰 마이그레이션은 완료. 남은 산물 = PR 8개 머지 + 리팩터 1건(머지 후).
 - 2026-06-11 00:26·00:58·01:59·02:59 야간 루프 점검 — 이상 없음 (새 리뷰 코멘트·CI 런·워킹트리 변경 없음)
 
 - 멀티라인 커밋 메시지는 Bash heredoc(`git commit -F - <<'EOF'`) 사용 — PowerShell here-string 금지 (2026-06-10)
