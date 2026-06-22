@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn, formatModelSize } from '@/lib/utils';
 import { testWebhook } from '@/lib/api';
 import KnowledgeManager from './KnowledgeManager';
 
@@ -119,11 +119,15 @@ export default function SettingsPopover() {
               <SelectValue placeholder="모델" />
             </SelectTrigger>
             <SelectContent>
-              {currentModels.map((m) => (
-                <SelectItem key={m.id} value={m.id} className="text-sm">
-                  {m.name}
-                </SelectItem>
-              ))}
+              {currentModels.map((m) => {
+                const size = formatModelSize(m.size_bytes);
+                return (
+                  <SelectItem key={m.id} value={m.id} className="text-sm">
+                    {m.name}
+                    {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>

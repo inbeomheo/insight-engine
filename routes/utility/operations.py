@@ -121,6 +121,7 @@ def _fetch_ollama_models(base_url=None):
             'max_input_tokens': ctx,
             'price_input': 0,
             'price_output': 0,
+            'size_bytes': m.get('size'),  # 모델 디스크 크기 (UI에서 대용량 경고용)
         })
     return models
 
