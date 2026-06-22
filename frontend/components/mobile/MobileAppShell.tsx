@@ -173,7 +173,7 @@ function MobileCreateView({
       {urls.length > 0 && (
         <div className="mb-5 space-y-2">
           {urls.map((url) => (
-            <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-[#F1EDE5] px-3 text-xs text-muted-foreground">
+            <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-card px-3 text-xs text-muted-foreground">
               <span className="h-2 w-2 shrink-0 rounded-full bg-[#E90043]" />
               <span className="min-w-0 flex-1 truncate font-medium text-foreground/75">{url}</span>
               <span className="signal-meta text-[9px] text-muted-foreground/45">YouTube</span>
@@ -216,7 +216,7 @@ function MobileCreateView({
 
       <div className="mb-7">
         <h2 className="mb-3 text-sm font-bold">생성 모드</h2>
-        <div className="grid grid-cols-3 bg-[#F1EDE5] p-1">
+        <div className="grid grid-cols-3 bg-muted p-1">
           {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
             <button
               key={mode}
