@@ -48,7 +48,7 @@ const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true'
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-[#F5F6F8]/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-background/95 px-7 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 backdrop-blur" aria-label="모바일 하단 네비게이션">
       <div className="mx-auto grid max-w-[430px] grid-cols-3 gap-2">
         {(Object.keys(TAB_META) as MobileTab[]).map((tab) => {
           const Icon = TAB_META[tab].icon;
@@ -370,7 +370,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
   return (
     <section className="min-h-dvh pb-28">
-      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-[#F5F6F8]/95 px-5 backdrop-blur">
+      <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-background/95 px-5 backdrop-blur">
         <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -426,7 +426,7 @@ export default function MobileAppShell({
 
   if (activeReport) {
     return (
-      <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+      <div className="min-h-dvh bg-background text-foreground xl:hidden">
         <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
@@ -434,7 +434,7 @@ export default function MobileAppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+    <div className="min-h-dvh bg-background text-foreground xl:hidden">
       {activeTab === 'create' && (
         <MobileCreateView
           urls={urls}
