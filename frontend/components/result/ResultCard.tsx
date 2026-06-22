@@ -35,6 +35,7 @@ import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
+import { EXPORT_HTML_STYLE, PRINT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
 const AudioPlayer = dynamic(() => import('./AudioPlayer'), { ssr: false });
@@ -361,10 +362,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   function handleExportHtml() {
     const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><title>${report.title}</title>
-<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#111827}
-h1,h2,h3{margin-top:1.5rem}a{color:#4F46E5}blockquote{border-left:3px solid #4F46E5;padding-left:1rem;color:#6B7280}
-table{border-collapse:collapse;width:100%}th,td{border:1px solid #E5E7EB;padding:8px;text-align:left}
-th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
+<style>${EXPORT_HTML_STYLE}</style></head><body>${sanitizeHtml(report.html || report.content)}</body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -380,8 +378,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     if (!w) return;
     w.document.write(`<!DOCTYPE html>
 <html><head><title>${report.title}</title>
-<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;line-height:1.6;color:#111}
-@media print{body{margin:0}}</style></head>
+<style>${PRINT_HTML_STYLE}</style></head>
 <body>${sanitizeHtml(report.html || report.content)}</body></html>`);
     w.document.close();
     w.print();
