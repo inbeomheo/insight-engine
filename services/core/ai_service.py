@@ -151,10 +151,15 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
     from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS
 
+    # 타임아웃은 환경변수로 조정 가능. 로컬(Ollama) 모델은 CPU 추론으로 느릴 수 있어 더 길게 둔다.
+    if model.startswith('ollama'):
+        request_timeout = int(os.getenv('OLLAMA_REQUEST_TIMEOUT', '1800'))
+    else:
+        request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "timeout": 300,  # 5분 타임아웃 (GLM 느린 응답 대비)
+        "timeout": request_timeout,
     }
     if stream:
         kwargs["stream"] = True
