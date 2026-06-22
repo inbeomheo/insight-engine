@@ -406,7 +406,7 @@ export default function Home() {
                             className={cn(
                               'h-11 border text-xs font-bold transition-colors',
                               active
-                                ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_#2F54EB]'
+                                ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_var(--primary)]'
                                 : 'border-border bg-card text-foreground/60 hover:border-foreground/50 hover:text-foreground'
                             )}
                             onClick={() => handleStyleSelect(style.id)}
