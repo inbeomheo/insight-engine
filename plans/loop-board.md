@@ -10,7 +10,6 @@
 
 ## 백로그
 
-- [ ] feat(ui): MobileAppShell.tsx #F1EDE5(warm beige) 2곳(176/219) 검토 — Signal 카드 토큰(--card)으로 통일할지 warm tint 의도 유지할지 결정. 완료기준: 결정 + (변경 시) build 성공
 - [ ] feat(ui): settings 영역(15파일) Signal 리디자인 감정 — 구식 영역 식별 후 토큰 적용. 완료기준: tsc 0 + build 성공 + 다크모드 정상
 - [ ] feat(ui): billing(7)·marketplace·library 영역 Signal 감정
 - [ ] feat(ui): knowledge·analytics·schedule·search 영역 Signal 감정
@@ -32,6 +31,7 @@
 ## Done
 
 - [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → Signal 토큰 (PR #54, 다크모드 그림자 누락 버그 수정) — tsc 0 + build 성공 + code-reviewer 클린
+- [x] 2026-06-22 feat(ui): MobileAppShell warm beige #F1EDE5 → Signal 토큰 (PR #58, L176 bg-card / L219 bg-muted, 구식 warm 제거+다크모드 버그) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): MobileAppShell 배경 #F5F6F8 → bg-background 토큰 (PR #57, 4곳, 다크모드 버그 수정) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): #2F54EB 사용처 → --primary 토큰 (PR #56, page shadow + prose border + gradient) — build 성공 + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): page/MobileAppShell shadow 5곳 → Signal 토큰 (PR #55, 동일 패턴) — build 성공 + code-reviewer 클린
