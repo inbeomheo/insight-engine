@@ -380,7 +380,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     if (!w) return;
     w.document.write(`<!DOCTYPE html>
 <html><head><title>${report.title}</title>
-<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;line-height:1.6;color:#111}
+<style>body{font-family:sans-serif;max-width:800px;margin:2rem auto;line-height:1.6;color:#15171F}
 @media print{body{margin:0}}</style></head>
 <body>${sanitizeHtml(report.html || report.content)}</body></html>`);
     w.document.close();
