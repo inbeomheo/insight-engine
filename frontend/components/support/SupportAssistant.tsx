@@ -190,7 +190,7 @@ export default function SupportAssistant() {
       <Button
         type="button"
         className={cn(
-          'fixed bottom-24 right-5 z-[70] h-12 rounded-full border border-foreground bg-primary px-4 text-sm font-black text-primary-foreground shadow-[4px_4px_0_#15171F]',
+          'fixed bottom-24 right-5 z-[70] h-12 rounded-full border border-foreground bg-primary px-4 text-sm font-black text-primary-foreground shadow-[4px_4px_0_var(--foreground)]',
           'hover:bg-primary/95 xl:bottom-6 xl:right-6',
         )}
         onClick={() => setOpen(true)}
@@ -202,7 +202,7 @@ export default function SupportAssistant() {
 
       {open && (
         <div className="fixed inset-0 z-[80] flex items-end justify-end bg-foreground/18 p-3 backdrop-blur-[1px] sm:p-5">
-          <section className="flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-[430px] flex-col overflow-hidden border border-foreground bg-background shadow-[8px_8px_0_#15171F]">
+          <section className="flex h-[min(720px,calc(100dvh-2rem))] w-full max-w-[430px] flex-col overflow-hidden border border-foreground bg-background shadow-[8px_8px_0_var(--foreground)]">
             <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-foreground text-background">

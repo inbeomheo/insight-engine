@@ -10,6 +10,13 @@
 
 ## 백로그
 
+- [ ] feat(ui): page.tsx shadow #15171F 3곳(425/436/447) + MobileAppShell.tsx 2곳(141/159) → var(--foreground). 완료기준: 동일 패턴, tsc 0 + build 성공 + code-reviewer
+- [ ] feat(ui): page.tsx:409 #2F54EB(ink-blue) 별도 토큰 검토 — --foreground 아님, Signal 팔레트에 맞는 토큰 정의 필요
+- [ ] feat(ui): settings 영역(15파일) Signal 리디자인 감정 — 구식 영역 식별 후 토큰 적용. 완료기준: tsc 0 + build 성공 + 다크모드 정상
+- [ ] feat(ui): billing(7)·marketplace·library 영역 Signal 감정
+- [ ] feat(ui): knowledge·analytics·schedule·search 영역 Signal 감정
+- [ ] feat(ui): modals(7)·input(12) 영역 Signal 감정
+
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
@@ -25,6 +32,7 @@
 
 ## Done
 
+- [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → var(--foreground) Signal 토큰 — 다크모드 그림자 누락 버그 수정 / tsc 0 + build 성공 + code-reviewer 클린 / 브랜치 design/cycle-1-support-assistant
 - [x] 2026-06-10 PR #23 Codex P2 리뷰 지적 3건 반영 (캐시 히트 자막 재추출 폴백 / GLM 챕터 병렬 제외 / BASE 프롬프트 소스 중립화) — 전체 5,414 passed + code-reviewer 통과
 - [x] 2026-06-10 데드 엔드포인트 ~200개 제거 + 깨진 테스트 142개 정리 — 커밋 6e2da90, 전체 5,414 passed / 0 fail
 - [x] 2026-06-10 성능 최적화 + 프롬프트 v4 재작성 + 정리 — 5커밋, PR #23 푸시됨
