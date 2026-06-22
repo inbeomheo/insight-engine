@@ -422,7 +422,7 @@ export default function Home() {
                     {generationMode === 'individual' && (
                       <Button
                         onClick={handleGenerate}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
                         size="lg"
                         disabled={urls.length === 0 || isLoading}
                       >
@@ -433,7 +433,7 @@ export default function Home() {
                     {generationMode === 'combined' && (
                       <Button
                         onClick={handleGenerateMerged}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
                       >
@@ -444,7 +444,7 @@ export default function Home() {
                     {generationMode === 'fusion' && (
                       <Button
                         onClick={handleGenerateFusion}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#15171F]"
+                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
                       >

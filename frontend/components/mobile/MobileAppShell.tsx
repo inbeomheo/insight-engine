@@ -138,7 +138,7 @@ function MobileCreateView({
         어떤 영상을<br />콘텐츠로?
       </h1>
 
-      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_#15171F]">
+      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_var(--foreground)]">
         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
         <input
           className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
@@ -156,7 +156,7 @@ function MobileCreateView({
         />
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_#15171F] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_var(--foreground)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
           onClick={submitDraft}
           aria-label="URL 추가"
         >
