@@ -44,12 +44,16 @@ export function useGenerate() {
         return;
       }
 
+      // 로컬(Ollama) 모델은 CPU 추론으로 느릴 수 있어 스트리밍을 사용 —
+      // 5분 타임아웃으로 끊기는 대신 토큰을 즉시 표시한다.
+      const streaming = useStreaming || selectedModel.startsWith('ollama');
+
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
       const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode, detail_level: detailLevel };
 
       try {
-        if (useStreaming) {
+        if (streaming) {
           // 스트리밍 모드
           const tempId = crypto.randomUUID();
           const tempReport: Report = createReport({
@@ -84,6 +88,7 @@ export function useGenerate() {
                 // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
                 rafRef.current = false;
                 updateReport(tempId, {
+                  title: event.title || '생성 완료',
                   content,
                   html: event.data || '',
                   usage: event.usage || { total_tokens: 0 },
