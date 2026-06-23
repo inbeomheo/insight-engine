@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -89,9 +89,37 @@ function MobileCreateView({
   const [draftUrl, setDraftUrl] = useState('');
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
   const setSelectedStyle = useSettingsStore((s) => s.setSelectedStyle);
+  const providers = useSettingsStore((s) => s.providers);
+  const selectedProvider = useSettingsStore((s) => s.selectedProvider);
+  const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const setSelectedProvider = useSettingsStore((s) => s.setSelectedProvider);
+  const setSelectedModel = useSettingsStore((s) => s.setSelectedModel);
   const generationMode = useSettingsStore((s) => s.generationMode);
   const setGenerationMode = useSettingsStore((s) => s.setGenerationMode);
   const [inputError, setInputError] = useState('');
+  const mobileProviderIds = useMemo(() => {
+    const preferred = ['chatmock', 'zhipuai'].filter((id) => providers[id]);
+    return preferred.length > 0 ? preferred : Object.keys(providers);
+  }, [providers]);
+  const activeProviderId = mobileProviderIds.includes(selectedProvider) ? selectedProvider : mobileProviderIds[0] || '';
+  const currentModels = activeProviderId ? providers[activeProviderId]?.models || [] : [];
+  const activeModelId = currentModels.some((model) => model.id === selectedModel) ? selectedModel : currentModels[0]?.id || '';
+
+  useEffect(() => {
+    if (!activeProviderId) return;
+    if (selectedProvider !== activeProviderId) {
+      setSelectedProvider(activeProviderId);
+    }
+    if (activeModelId && selectedModel !== activeModelId) {
+      setSelectedModel(activeModelId);
+    }
+  }, [activeProviderId, activeModelId, selectedProvider, selectedModel, setSelectedProvider, setSelectedModel]);
+
+  const selectMobileProvider = (providerId: string) => {
+    setSelectedProvider(providerId);
+    const firstModel = providers[providerId]?.models?.[0];
+    if (firstModel) setSelectedModel(firstModel.id);
+  };
 
   const submitDraft = () => {
     const value = draftUrl.trim();
@@ -192,6 +220,55 @@ function MobileCreateView({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {mobileProviderIds.length > 0 && (
+        <div className="mb-5 rounded-[24px] border border-[#DDE3F0] bg-white p-4 shadow-[0_10px_26px_rgba(21,23,31,0.06)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-black text-[#15171F]">AI 모델</h2>
+            <span className="text-[10px] font-bold text-[#2F54EB]">GLM · ChatMock</span>
+          </div>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            {mobileProviderIds.map((providerId) => {
+              const active = activeProviderId === providerId;
+              return (
+                <button
+                  key={providerId}
+                  type="button"
+                  className={cn(
+                    'min-h-11 rounded-2xl border px-3 text-left text-xs font-black transition-all active:scale-[0.98]',
+                    active
+                      ? 'border-[#2F54EB] bg-[#EEF3FF] text-[#2F54EB] shadow-[0_8px_18px_rgba(47,84,235,0.16)]'
+                      : 'border-[#DDE3F0] bg-[#F8FAFF] text-[#667085]'
+                  )}
+                  onClick={() => selectMobileProvider(providerId)}
+                >
+                  {providers[providerId]?.name || providerId}
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid gap-2">
+            {currentModels.map((model) => {
+              const active = activeModelId === model.id;
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  className={cn(
+                    'min-h-10 rounded-2xl border px-3 text-left text-xs font-extrabold transition-all active:scale-[0.98]',
+                    active
+                      ? 'border-[#15171F] bg-[#15171F] text-white'
+                      : 'border-[#DDE3F0] bg-white text-[#344054]'
+                  )}
+                  onClick={() => setSelectedModel(model.id)}
+                >
+                  {model.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
