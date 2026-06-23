@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   ArrowUp,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   Grid2X2,
   Loader2,
+  MessageSquare,
   PlusCircle,
   X,
 } from 'lucide-react';
@@ -18,6 +20,9 @@ import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
+
+// 영상 채팅 패널 — 특정 동작에서만 열리므로 dynamic import (ResultCard와 동일 패턴)
+const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
 
 type MobileTab = 'create' | 'library' | 'dashboard';
 
@@ -368,7 +373,10 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 }
 
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
+  const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const [chatOpen, setChatOpen] = useState(false);
   return (
+    <>
     <section className="min-h-dvh pb-28">
       <div className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/50 bg-background/95 px-5 backdrop-blur">
         <button type="button" onClick={onBack} aria-label="뒤로가기" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
@@ -406,8 +414,28 @@ function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBa
             <CheckCircle2 className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
+
+        {report.url && (
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-sm border border-foreground bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)] transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+          >
+            <MessageSquare className="h-4 w-4" />
+            영상에 질문하기
+          </button>
+        )}
       </article>
     </section>
+    {chatOpen && report.url && (
+      <VideoChatPanel
+        videoUrl={report.url}
+        videoTitle={report.youtube_title || report.title}
+        model={selectedModel || undefined}
+        onClose={() => setChatOpen(false)}
+      />
+    )}
+    </>
   );
 }
 

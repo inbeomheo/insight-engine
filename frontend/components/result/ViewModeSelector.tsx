@@ -32,7 +32,7 @@ export const ViewModeSelector = memo(function ViewModeSelector({ mode, onChange 
           aria-checked={mode === id}
           aria-label={`${label} 뷰 모드`}
           className={cn(
-            'signal-meta inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-semibold transition-colors',
+            'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-tight transition-colors',
             mode === id
               ? 'bg-foreground text-background'
               : 'text-muted-foreground hover:text-foreground',
