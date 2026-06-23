@@ -126,8 +126,11 @@ function MobileCreateView({
     setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
   };
 
+  const canGenerate = !isLoading && (urls.length > 0 || Boolean(draftUrl.trim()));
+  const generateCount = Math.max(1, urls.length || (draftUrl.trim() ? 1 : 0));
+
   return (
-    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
+    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+17rem)] pt-7">
       <div className="mb-6 rounded-[28px] border border-[#DDE3F0] bg-white px-4 py-4 shadow-[0_12px_32px_rgba(21,23,31,0.08)]">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -240,14 +243,20 @@ function MobileCreateView({
         </div>
       </div>
 
-      <Button
-        className="min-h-14 w-full rounded-[22px] bg-[#2F54EB] text-base font-black text-white shadow-[0_14px_28px_rgba(47,84,235,0.28)] hover:bg-[#2548D8] active:scale-[0.99] disabled:bg-[#B8C4E6]"
-        disabled={isLoading || (urls.length === 0 && !draftUrl.trim())}
-        onClick={handleGenerateClick}
-      >
-        {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-        콘텐츠 생성 <span className="ml-1 text-xs opacity-80">×{Math.max(1, urls.length || (draftUrl.trim() ? 1 : 0))}</span>
-      </Button>
+      <div className="h-24" aria-hidden="true" />
+
+      <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 px-4 xl:hidden">
+        <div className="mx-auto max-w-[430px] rounded-[26px] border border-[#C9D3EA] bg-white/95 p-2 shadow-[0_-12px_32px_rgba(21,23,31,0.14)] backdrop-blur">
+          <Button
+            className="min-h-14 w-full rounded-[20px] bg-[#2F54EB] text-base font-black text-white shadow-[0_14px_28px_rgba(47,84,235,0.28)] hover:bg-[#2548D8] active:scale-[0.99] disabled:bg-[#B8C4E6]"
+            disabled={!canGenerate}
+            onClick={handleGenerateClick}
+          >
+            {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+            콘텐츠 생성 <span className="ml-1 text-xs opacity-80">×{generateCount}</span>
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }
@@ -260,7 +269,7 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
   }, [reports]);
 
   return (
-    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
+    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
       <div className="mb-5 flex items-end justify-between">
         <h1 className="text-[28px] font-black tracking-[-0.035em]">라이브러리</h1>
         <span className="signal-meta text-[10px] text-muted-foreground/45">{reports.length}개</span>
@@ -311,7 +320,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
   const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens || 0), 0);
 
   return (
-    <section className="mx-auto min-h-dvh max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
+    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+14rem)] pt-7">
       <h1 className="mb-6 text-[28px] font-black tracking-[-0.035em]">대시보드</h1>
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(23,21,15,0.04)]">
@@ -377,7 +386,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
   const [chatOpen, setChatOpen] = useState(false);
   return (
-    <section className="min-h-dvh pb-[calc(env(safe-area-inset-bottom)+14rem)]">
+    <section className="min-h-[100svh] pb-[calc(env(safe-area-inset-bottom)+14rem)]">
       {chatOpen && report.url && (
         <VideoChatPanel
           videoUrl={report.url}
@@ -449,7 +458,7 @@ export default function MobileAppShell({
 
   if (activeReport) {
     return (
-      <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+      <div className="fixed inset-0 overflow-y-auto overscroll-contain bg-[#F5F6F8] text-foreground [-webkit-overflow-scrolling:touch] xl:hidden">
         <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
@@ -457,7 +466,7 @@ export default function MobileAppShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#F5F6F8] text-foreground xl:hidden">
+    <div className="fixed inset-0 overflow-y-auto overscroll-contain bg-[#F5F6F8] text-foreground [-webkit-overflow-scrolling:touch] xl:hidden">
       {activeTab === 'create' && (
         <MobileCreateView
           urls={urls}

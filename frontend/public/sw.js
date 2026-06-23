@@ -1,6 +1,6 @@
 // Insight Engine — Service Worker (캐시 전략: Network-first + 오프라인 폴백)
-// v2: 동일 출처만 캐싱 + 엔트리 수 상한(LRU 정리) + 캐시 버전 분리
-const CACHE_NAME = 'ie-cache-v2';
+// v3: 모바일 fixed CTA/스크롤 컨테이너 배포 후 이전 모바일 번들 강제 교체
+const CACHE_NAME = 'ie-cache-v3';
 const OFFLINE_URL = '/';
 const MAX_ENTRIES = 100;
 
