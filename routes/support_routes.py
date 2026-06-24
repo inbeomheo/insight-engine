@@ -91,9 +91,10 @@ def support_chat():
 @support_bp.route("/api/support/tickets", methods=["GET"])
 def list_support_tickets():
     limit = min(request.args.get("limit", 50, type=int), 100)
+    include_internal = request.args.get("include_internal", "false").lower() in {"1", "true", "yes"}
     status = request.args.get("status") or None
     tickets = get_feedback_store().list_tickets(
-        user_id=_current_user_id(), limit=limit, status=status
+        user_id=_current_user_id(), limit=limit, include_internal=include_internal, status=status
     )
     return jsonify({"tickets": tickets, "github": github_config_status()})
 
