@@ -86,7 +86,9 @@ class FeedbackStore:
             raise KeyError(f"ticket not found: {ticket_id}")
         return json.loads(path.read_text(encoding="utf-8"))
 
-    def list_tickets(self, user_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    def list_tickets(
+        self, user_id: str | None = None, limit: int = 50, status: str | None = None
+    ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for path in self.items_dir.glob("*.json"):
             try:
@@ -94,6 +96,9 @@ class FeedbackStore:
             except Exception:
                 continue
             if user_id is not None and ticket.get("user_id") != user_id:
+                continue
+            # status 필터 — 미해결(triaged)만 보기 등 티켓 관리용.
+            if status is not None and ticket.get("status") != status:
                 continue
             items.append(ticket)
         items.sort(key=lambda item: item.get("created_at", ""), reverse=True)
