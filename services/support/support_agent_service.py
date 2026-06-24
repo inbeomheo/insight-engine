@@ -44,6 +44,37 @@ def sanitize_console_errors(console_errors: list[str] | None) -> list[str]:
     return [redact_diagnostic(item) for item in console_errors[-8:]]
 
 
+# 접수 '의도'만 표현한 짧은 문장 감지 (#48) — 구체 내용이 없으면 티켓 대신 구체화 유도.
+_FEEDBACK_INTENT_MARKERS = (
+    "접수하고 싶",
+    "접수하고싶",
+    "불편사항 접수",
+    "불편 사항 접수",
+    "피드백 접수",
+    "피드백 남기",
+    "버그 신고",
+    "신고하고 싶",
+    "접수할래",
+)
+_CONCRETE_FEEDBACK_HINTS = (
+    "화면", "버튼", "페이지", "에러", "오류", "안 됨", "안됨", "안돼",
+    "깨", "느려", "느린", "멈", "크래시", "크래쉬", "http", "://", "동작",
+)
+
+
+def _is_vague_feedback_intent(text: str) -> bool:
+    """접수 '의도'만 있고 구체 내용이 부족한지 판별 (#48).
+
+    "불편사항 접수하고 싶어" 처럼 의도만 표현한 짧은 문장은 티켓으로 바로
+    만들지 않고 구체 입력을 유도한다.
+    """
+    if len(text) > 24:
+        return False
+    if not any(marker in text for marker in _FEEDBACK_INTENT_MARKERS):
+        return False
+    return not any(hint in text for hint in _CONCRETE_FEEDBACK_HINTS)
+
+
 def handle_support_chat(
     *,
     message: str,
@@ -75,6 +106,16 @@ def handle_support_chat(
             "answer": answer,
             "github": github_config_status(),
             "suggested_next_actions": ["불편사항으로 접수", "GitHub 이슈 올리기", "닫기"],
+        }
+
+    # 접수 의도만 있고 구체 내용이 부족하면 티켓 대신 구체화를 유도한다 (#48).
+    if not forced_feedback and _is_vague_feedback_intent(text):
+        return {
+            "reply": "접수 도와드릴게요. 어떤 화면에서 어떤 동작이 불편했는지 조금만 더 알려주세요. (예: \"모바일 메인에서 생성 버튼이 안 눌려요\")",
+            "action": "needs_detail",
+            "triage": triage,
+            "github": github_config_status(),
+            "suggested_next_actions": ["구체적으로 입력하기", "닫기"],
         }
 
     ticket = store.create_ticket({
