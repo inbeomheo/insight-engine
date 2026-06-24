@@ -32,6 +32,33 @@ def _safe_slug(text: str, fallback: str = "feedback") -> str:
     return (slug[:80] or fallback).lower()
 
 
+# 테스트/스모크 목적 피드백 자동 감지 마커 (운영 피드백 큐 오염 방지, 이슈 #49).
+# title/message에 이 마커가 있거나 internal 플래그가 명시되면 내부 티켓으로 분류한다.
+_INTERNAL_FEEDBACK_MARKERS = (
+    "버그 접수 테스트",
+    "테스트 피드백",
+    "smoke test",
+    "qa smoke",
+    "test feedback",
+    "[test]",
+)
+
+
+def _looks_internal(payload: dict[str, Any]) -> bool:
+    """테스트/스모크 목적 피드백 자동 감지 (#49).
+
+    명시적 internal 플래그가 있거나 title/message에 테스트 마커가 있으면
+    내부 티켓으로 분류해 운영 피드백 큐에서 분리한다.
+    """
+    if payload.get("internal") is True:
+        return True
+    text = " ".join(
+        filter(None, [str(payload.get("title") or ""), str(payload.get("message") or "")])
+    )
+    lowered = text.lower()
+    return any(marker.lower() in lowered for marker in _INTERNAL_FEEDBACK_MARKERS)
+
+
 class FeedbackStore:
     """Small JSON store for user feedback tickets.
 
@@ -70,6 +97,7 @@ class FeedbackStore:
             "labels": payload.get("labels") or [],
             "metadata": payload.get("metadata") or {},
             "user_id": user_id or "anonymous",
+            "internal": _looks_internal(payload),
             "slug": _safe_slug(title),
             "created_at": now,
             "updated_at": now,
@@ -87,13 +115,20 @@ class FeedbackStore:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def list_tickets(
-        self, user_id: str | None = None, limit: int = 50, status: str | None = None
+        self,
+        user_id: str | None = None,
+        limit: int = 50,
+        include_internal: bool = False,
+        status: str | None = None,
     ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         for path in self.items_dir.glob("*.json"):
             try:
                 ticket = json.loads(path.read_text(encoding="utf-8"))
             except Exception:
+                continue
+            # 내부 테스트/스모크 티켓은 기본적으로 숨긴다 (#49).
+            if not include_internal and ticket.get("internal"):
                 continue
             if user_id is not None and ticket.get("user_id") != user_id:
                 continue

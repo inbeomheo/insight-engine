@@ -139,6 +139,9 @@ def _format_bullets(items: list[Any]) -> str:
 def create_github_issue(ticket_id: str, store: FeedbackStore | None = None) -> dict[str, Any]:
     store = store or get_feedback_store()
     ticket = store.get_ticket(ticket_id)
+    if ticket.get("internal"):
+        # 내부 테스트/스모크 피드백은 운영 GitHub 큐로 승격하지 않는다 (#49).
+        raise GitHubHandoffError("내부 테스트 피드백은 GitHub 핸드오프 대상이 아닙니다.")
     repo = _repo_from_env()
     payload = {
         "title": ticket.get("title") or "[Feedback] 사용자 피드백",
@@ -196,6 +199,8 @@ def create_draft_pr(ticket_id: str, store: FeedbackStore | None = None) -> dict[
     """
     store = store or get_feedback_store()
     ticket = store.get_ticket(ticket_id)
+    if ticket.get("internal"):
+        raise GitHubHandoffError("내부 테스트 피드백은 GitHub 핸드오프 대상이 아닙니다.")
     repo = _repo_from_env()
     default_branch = _get_default_branch(repo)
     base_sha = _get_ref_sha(repo, default_branch)
