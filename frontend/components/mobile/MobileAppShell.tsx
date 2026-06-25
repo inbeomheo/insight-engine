@@ -275,7 +275,7 @@ function MobileCreateView({
       {(inputError || failureSummary) && (
         <div role="alert" className="mb-3 rounded-2xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
           <p className="font-black">{inputError ? 'URL 입력 오류' : failureSummary?.title}</p>
-          <p className="mt-1 leading-relaxed">{inputError || failureSummary?.detail}</p>
+          <p className="mt-1 whitespace-pre-line leading-relaxed">{inputError || failureSummary?.detail}</p>
         </div>
       )}
 

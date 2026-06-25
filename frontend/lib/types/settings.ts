@@ -45,16 +45,29 @@ export interface ProviderHealth {
   action?: string;
   is_default?: boolean;
   is_selectable?: boolean;
+  provider_label?: string;
 }
 
 export interface ProviderDiagnostics {
   provider_id: string;
+  provider_name?: string;
+  provider_label?: string;
   available: boolean;
   generation_visible: boolean;
   api_key_configured: boolean;
   base_url_configured: boolean;
   model_count: number;
   default_model?: string | null;
+  health_status?: ProviderHealthStatus;
+  health_label?: string;
+  safe_summary?: string;
+  next_step?: string;
+  required_env?: string[];
+}
+
+export interface ProviderDiagnosticEntry {
+  health: ProviderHealth;
+  diagnostics: ProviderDiagnostics;
 }
 
 export interface CustomStyle {

@@ -18,7 +18,7 @@ import { ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
 import { toast } from 'sonner';
 import LanguageSwitcher from './LanguageSwitcher';
-import type { ProviderHealth } from '@/lib/types';
+import type { ProviderDiagnosticEntry, ProviderHealth } from '@/lib/types';
 
 const STYLE_LABELS: Record<string, string> = {
   blog_seo: '블로그+SEO',
@@ -65,6 +65,41 @@ function ProviderHealthLine({ health }: { health?: ProviderHealth }) {
         <span>{health.label}</span>
       </div>
       <p className="mt-1 opacity-85">{health.message}</p>
+      {health.action && health.severity !== 'ok' && (
+        <p className="mt-1 opacity-80">{health.action}</p>
+      )}
+    </div>
+  );
+}
+
+function ProviderDiagnosticsList({ entries }: { entries: ProviderDiagnosticEntry[] }) {
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        생성 provider 상태
+      </p>
+      {entries.map(({ health, diagnostics }) => {
+        const tone = health.severity === 'ok'
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+          : health.severity === 'error'
+            ? 'border-red-200 bg-red-50 text-red-900'
+            : 'border-amber-200 bg-amber-50 text-amber-900';
+
+        return (
+          <div key={diagnostics.provider_id} className={`rounded-md border px-3 py-2 text-xs leading-relaxed ${tone}`}>
+            <div className="flex items-center justify-between gap-2 font-semibold">
+              <span>{health.provider_label || diagnostics.provider_label || diagnostics.provider_id}</span>
+              <span className="text-[10px] opacity-75">{diagnostics.model_count}개 모델</span>
+            </div>
+            <p className="mt-1 opacity-85">{health.message}</p>
+            {health.action && health.severity !== 'ok' && (
+              <p className="mt-1 opacity-80">{health.action}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -74,6 +109,7 @@ export default function SettingsModal() {
   const settingsModalOpen = activeModal === 'settings';
   const {
     providers,
+    providerDiagnostics,
     selectedProvider,
     selectedModel,
     setSelectedProvider,
@@ -88,6 +124,9 @@ export default function SettingsModal() {
   const activeModel = currentModels.some((model) => model.id === selectedModel)
     ? selectedModel
     : currentModels[0]?.id || '';
+  const diagnosticEntries = ALLOWED_GENERATION_PROVIDER_IDS
+    .map((id) => providerDiagnostics[id])
+    .filter((entry): entry is ProviderDiagnosticEntry => Boolean(entry));
   const { t } = useTranslation();
 
   // 스타일 메모리 상태
@@ -185,9 +224,12 @@ export default function SettingsModal() {
           <h3 className="text-sm font-semibold flex items-center gap-2">{t('settings.aiService')}</h3>
 
           {providerIds.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {t('settings.noProviders')}
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {t('settings.noProviders')}
+              </p>
+              <ProviderDiagnosticsList entries={diagnosticEntries} />
+            </div>
           ) : (
             <div className="space-y-2">
               <Select
@@ -223,6 +265,7 @@ export default function SettingsModal() {
                 </SelectContent>
               </Select>
               <ProviderHealthLine health={providers[activeProvider]?.health} />
+              <ProviderDiagnosticsList entries={diagnosticEntries} />
             </div>
           )}
         </div>

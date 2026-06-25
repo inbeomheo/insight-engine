@@ -24,7 +24,7 @@ from flask import Blueprint, request, jsonify, current_app, g, Response, stream_
 from extensions import limiter
 from utils.responses import handle_error, sanitize_error_for_client, api_error_from_exception
 
-from config import get_model_max_tokens
+from config import get_model_display_name, get_model_max_tokens, get_provider_from_model
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
@@ -41,9 +41,105 @@ MAX_BATCH_WORKERS = 5
 BATCH_CONTENT_TOKEN_LIMIT = 3000
 MAX_MERGED_URLS = 5
 
-# 에러 응답 헬퍼 (기존 호출 호환)
-_handle_error_response = handle_error
+# 에러 문자열 정리 alias (기존 호출 호환)
 _sanitize_error_for_client = sanitize_error_for_client
+
+_GENERATION_ERROR_PROVIDER_LABELS = {
+    'chatmock': 'ChatMock Spark',
+    'zhipuai': 'GLM',
+}
+
+
+def _build_provider_error_context(error_msg: str, model: str | None) -> dict | None:
+    """생성 UI에 노출 가능한 provider 실패 설명을 구성합니다.
+
+    API 키/토큰 값은 포함하지 않고, 현재 생성 UI에서 허용하는 ChatMock/GLM만
+    provider 컨텍스트로 반환한다.
+    """
+    if not model:
+        return None
+
+    provider_id = get_provider_from_model(model)
+    if provider_id not in _GENERATION_ERROR_PROVIDER_LABELS:
+        return None
+
+    text = str(error_msg or '')
+    lower = text.lower()
+    provider_label = _GENERATION_ERROR_PROVIDER_LABELS[provider_id]
+    retryable = any(token in lower for token in ('timeout', 'timed out', 'connection', 'connect', '503', '1302'))
+
+    if provider_id == 'chatmock':
+        if any(token in lower for token in ('timeout', 'timed out')):
+            reason = 'ChatMock Spark 응답 시간이 초과되었습니다.'
+            action = '잠시 후 다시 시도하고, 반복되면 ChatMock 서비스가 실행 중인지 확인해주세요.'
+        elif any(token in lower for token in ('connection', 'connect', 'connection refused', 'max retries')):
+            reason = 'ChatMock Spark 프록시에 연결하지 못했습니다.'
+            action = '서버의 ChatMock 실행 상태와 CHATMOCK_BASE_URL 설정을 확인해주세요.'
+        elif any(token in lower for token in ('401', 'unauthorized', 'authentication')):
+            reason = 'ChatMock Spark 프록시 인증이 실패했습니다.'
+            action = '프록시 서버 인증 설정을 확인한 뒤 다시 시도해주세요.'
+        elif any(token in lower for token in ('404', 'not found', 'does not exist')):
+            reason = 'ChatMock Spark에서 선택한 모델을 찾지 못했습니다.'
+            action = '모델 목록을 새로고침하거나 기본 Spark 모델을 다시 선택해주세요.'
+        else:
+            reason = 'ChatMock Spark 생성 중 문제가 발생했습니다.'
+            action = '서비스 상태를 확인한 뒤 다시 시도해주세요.'
+    else:
+        if any(token in lower for token in ('zai_api_key', 'zhipuai_api_key', '환경변수가 설정되지')):
+            reason = 'GLM API 키가 서버에 설정되지 않았습니다.'
+            action = '서버 환경변수 ZAI_API_KEY 또는 ZHIPUAI_API_KEY 설정을 확인해주세요.'
+            retryable = False
+        elif '1302' in text:
+            reason = 'GLM 동시 요청 한도가 초과되었습니다.'
+            action = '잠시 후 다시 시도하거나 동시에 실행 중인 GLM 요청을 줄여주세요.'
+        elif '1113' in text:
+            reason = 'GLM 모델 접근 권한이 없습니다.'
+            action = 'GLM 콘솔에서 API 키 권한과 모델 접근 범위를 확인해주세요.'
+            retryable = False
+        elif '1211' in text:
+            reason = 'GLM 모델명을 찾을 수 없습니다.'
+            action = '다른 GLM 모델을 선택하거나 모델 목록을 새로고침해주세요.'
+            retryable = False
+        elif any(token in lower for token in ('insufficient', 'balance', 'credit')):
+            reason = 'GLM API 크레딧이 부족합니다.'
+            action = 'GLM 콘솔에서 잔액과 결제 상태를 확인해주세요.'
+            retryable = False
+        else:
+            reason = 'GLM 생성 중 문제가 발생했습니다.'
+            action = '키 권한, 잔액, 서비스 상태를 확인한 뒤 다시 시도해주세요.'
+
+    return {
+        'provider_id': provider_id,
+        'provider_label': provider_label,
+        'model': model,
+        'model_name': get_model_display_name(model),
+        'reason': reason,
+        'action': action,
+        'retryable': retryable,
+        'user_message': f'{reason} {action}',
+    }
+
+
+def _status_code_for_error(error_msg: str) -> int:
+    if error_msg.startswith('[인증 실패]'):
+        return 401
+    if error_msg.startswith('[사용량 초과]'):
+        return 429
+    if error_msg.startswith((
+        '[모델 오류]', '[타임아웃]', '[연결 실패]', '[서비스 불가]', '[서버 오류]',
+        '[잔액 부족]', '[컨텐츠 차단]', '[AI 오류]', '[동시성 초과]', '[권한 없음]', '[모델 없음]',
+    )):
+        return 503
+    return 500
+
+
+def _handle_provider_error_response(error_msg: str, model: str | None = None):
+    safe_error = sanitize_error_for_client(str(error_msg or ''))
+    body = {'error': safe_error}
+    provider_error = _build_provider_error_context(str(error_msg or ''), model)
+    if provider_error:
+        body['provider_error'] = provider_error
+    return jsonify(body), _status_code_for_error(safe_error)
 
 
 def _extract_client_id(req) -> str:
@@ -242,6 +338,7 @@ def generate():
     """
     from services.content.multi_source_collector import detect_source_type, SOURCE_YOUTUBE
 
+    params = None
     try:
         start_time = time.time()
         params = _get_request_data(request)
@@ -437,7 +534,8 @@ def generate():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate failed: {e}")
-        return _handle_error_response(str(e))
+        model = params.get('model') if isinstance(params, dict) else None
+        return _handle_provider_error_response(str(e), model)
 
 
 @blog_bp.route('/regenerate', methods=['POST'])
@@ -448,6 +546,7 @@ def regenerate():
     API 키는 서버 환경변수에서 자동으로 로드됩니다.
     로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
     """
+    params = None
     try:
         params = _get_request_data(request)
         content = params['content']
@@ -479,7 +578,8 @@ def regenerate():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Regenerate failed: {e}")
-        return _handle_error_response(str(e))
+        model = params.get('model') if isinstance(params, dict) else None
+        return _handle_provider_error_response(str(e), model)
 
 
 @blog_bp.route('/generate-batch', methods=['POST'])
@@ -664,6 +764,7 @@ def generate_merged():
     """여러 YouTube URL의 자막을 합쳐 하나의 통합 콘텐츠를 생성합니다.
     2~5개 URL 지원, AI 호출 1회, 사용량 1회 차감.
     """
+    params = None
     try:
         start_time = time.time()
         params = _get_request_data(request)
@@ -810,7 +911,8 @@ def generate_merged():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate merged failed: {e}")
-        return _handle_error_response(str(e))
+        model = params.get('model') if isinstance(params, dict) else None
+        return _handle_provider_error_response(str(e), model)
 
 
 @blog_bp.route('/generate-stream', methods=['POST'])
@@ -824,6 +926,7 @@ def generate_stream():
     from services.usage.usage_service import UsageService
     import markdown as md_lib
 
+    params = None
     try:
         params = _get_request_data(request)
         url = params['url']
@@ -887,7 +990,8 @@ def generate_stream():
                         full_content += token
                         token_event = json.dumps({
                             'type': 'token',
-                            'content': token
+                            'content': token,
+                            'data': token,
                         }, ensure_ascii=False)
                         yield f"data: {token_event}\n\n"
 
@@ -920,9 +1024,13 @@ def generate_stream():
                     yield f"data: {done_event}\n\n"
 
                 except Exception as e:
+                    safe_error = _sanitize_error_for_client(str(e))
+                    provider_error = _build_provider_error_context(str(e), model)
                     error_event = json.dumps({
                         'type': 'error',
-                        'message': _sanitize_error_for_client(str(e))
+                        'error': safe_error,
+                        'message': safe_error,
+                        'provider_error': provider_error,
                     }, ensure_ascii=False)
                     yield f"data: {error_event}\n\n"
 
@@ -937,7 +1045,8 @@ def generate_stream():
 
     except Exception as e:
         current_app.logger.error(f"Generate stream setup failed: {e}")
-        return _handle_error_response(str(e))
+        model = params.get('model') if isinstance(params, dict) else None
+        return _handle_provider_error_response(str(e), model)
 
 @blog_bp.route('/api/video-qa', methods=['POST'])
 @require_auth

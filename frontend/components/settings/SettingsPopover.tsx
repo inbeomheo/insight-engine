@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { testWebhook } from '@/lib/api';
-import type { ProviderHealth } from '@/lib/types';
+import type { ProviderDiagnosticEntry, ProviderHealth } from '@/lib/types';
 import KnowledgeManager from './KnowledgeManager';
 
 function providerHealthTone(health?: ProviderHealth) {
@@ -42,10 +42,38 @@ function ProviderHealthNotice({ health }: { health?: ProviderHealth }) {
   );
 }
 
+function ProviderDiagnosticsList({ entries }: { entries: ProviderDiagnosticEntry[] }) {
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="signal-meta text-[10px] font-semibold text-muted-foreground">PROVIDER 상태</p>
+      {entries.map(({ health, diagnostics }) => (
+        <div
+          key={diagnostics.provider_id}
+          className={cn('rounded-sm border px-3 py-2 text-xs leading-relaxed', providerHealthTone(health))}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold">{health.provider_label || diagnostics.provider_label || diagnostics.provider_id}</span>
+            <span className="text-[10px] font-semibold opacity-75">
+              {diagnostics.model_count}개 모델
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] opacity-85">{health.message}</p>
+          {health.action && health.severity !== 'ok' && (
+            <p className="mt-1 text-[11px] opacity-80">{health.action}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function SettingsPopover() {
   const { settingsPopoverOpen, setSettingsPopoverOpen } = useUIStore();
   const {
     providers,
+    providerDiagnostics,
     selectedProvider,
     selectedModel,
     selectedStyle,
@@ -106,6 +134,9 @@ export default function SettingsPopover() {
     ? selectedModel
     : currentModels[0]?.id || '';
   const activeProviderHealth = activeProvider ? providers[activeProvider]?.health : undefined;
+  const diagnosticEntries = ALLOWED_GENERATION_PROVIDER_IDS
+    .map((id) => providerDiagnostics[id])
+    .filter((entry): entry is ProviderDiagnosticEntry => Boolean(entry));
 
   // 내장 + 커스텀 스타일
   const allStyles = [
@@ -126,9 +157,12 @@ export default function SettingsPopover() {
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
         {providerIds.length === 0 ? (
-          <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-            ChatMock Spark 또는 GLM 설정을 찾지 못했습니다. 서버 환경변수를 확인한 뒤 새로고침해주세요.
-          </div>
+          <>
+            <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+              ChatMock Spark 또는 GLM 설정을 찾지 못했습니다. 서버 환경변수를 확인한 뒤 새로고침해주세요.
+            </div>
+            <ProviderDiagnosticsList entries={diagnosticEntries} />
+          </>
         ) : (
           <>
             <div className="flex gap-2">
@@ -166,6 +200,7 @@ export default function SettingsPopover() {
               </Select>
             </div>
             <ProviderHealthNotice health={activeProviderHealth} />
+            <ProviderDiagnosticsList entries={diagnosticEntries} />
           </>
         )}
       </div>

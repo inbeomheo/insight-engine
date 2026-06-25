@@ -15,6 +15,17 @@ interface GenerateState {
   error: string | null;
 }
 
+function formatStreamError(event: StreamEvent): string {
+  const base = event.error || '생성 실패';
+  const providerError = event.provider_error;
+  if (!providerError) return base;
+
+  const details = [providerError.reason, providerError.action]
+    .filter((part): part is string => Boolean(part && !base.includes(part)));
+
+  return details.length > 0 ? [base, ...details].join('\n') : base;
+}
+
 export function useGenerate() {
   const [state, setState] = useState<GenerateState>({
     activeCount: 0,
@@ -71,7 +82,7 @@ export function useGenerate() {
                   transcript_source: event.transcript_source || '',
                 });
               } else if (event.type === 'token') {
-                content += event.data || '';
+                content += event.data || event.content || '';
                 // rAF throttle: 프레임당 1회만 store 업데이트 (메인 스레드 블로킹 방지)
                 if (!rafRef.current) {
                   rafRef.current = true;
@@ -98,7 +109,7 @@ export function useGenerate() {
                 setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
               } else if (event.type === 'error') {
                 rafRef.current = false;
-                setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: event.error || '생성 실패' }; });
+                setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: formatStreamError(event) }; });
               }
             },
             controller.signal

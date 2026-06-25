@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode } from '@/lib/types';
+import type { Modifiers, ProviderDiagnosticEntry, ProviderInfo, CustomStyle, GenerationMode } from '@/lib/types';
 import {
   loadSelectedProvider,
   saveSelectedProvider,
@@ -16,9 +16,11 @@ import {
 interface SettingsState {
   // 프로바이더
   providers: Record<string, ProviderInfo>;
+  providerDiagnostics: Record<string, ProviderDiagnosticEntry>;
   selectedProvider: string;
   selectedModel: string;
   setProviders: (p: Record<string, ProviderInfo>) => void;
+  setProviderDiagnostics: (p: Record<string, ProviderDiagnosticEntry>) => void;
   setSelectedProvider: (id: string) => void;
   setSelectedModel: (id: string) => void;
 
@@ -70,6 +72,7 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   providers: {},
+  providerDiagnostics: {},
   selectedProvider: '',
   selectedModel: '',
   selectedStyle: 'blog_seo',
@@ -85,6 +88,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   detailLevel: 'standard',
 
   setProviders: (p) => set({ providers: p }),
+  setProviderDiagnostics: (p) => set({ providerDiagnostics: p }),
 
   setSelectedProvider: (id) => {
     saveSelectedProvider(id);

@@ -501,9 +501,9 @@ export default function Home() {
                 <div
                   role="alert"
                   aria-live="polite"
-                  className="mb-4 flex w-full items-center gap-2 rounded-sm border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive animate-fade-in"
+                  className="mb-4 flex w-full items-start gap-2 whitespace-pre-line rounded-sm border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive animate-fade-in"
                 >
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   {error}
                 </div>
               )}

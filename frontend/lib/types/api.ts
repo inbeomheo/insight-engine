@@ -70,6 +70,17 @@ export interface JobResponse {
   job: AgentJob;
 }
 
+export interface ProviderErrorContext {
+  provider_id: string;
+  provider_label: string;
+  model: string;
+  model_name: string;
+  reason: string;
+  action: string;
+  retryable: boolean;
+  user_message: string;
+}
+
 // === 스트리밍 이벤트 ===
 
 export type StreamEventType = 'meta' | 'token' | 'done' | 'error';
@@ -77,6 +88,7 @@ export type StreamEventType = 'meta' | 'token' | 'done' | 'error';
 export interface StreamEvent {
   type: StreamEventType;
   data?: string;
+  content?: string;
   title?: string;
   youtube_title?: string;
   transcript_source?: string;
@@ -91,6 +103,7 @@ export interface StreamEvent {
   cta?: CtaData;
   quality_summary?: QualitySummary;
   error?: string;
+  provider_error?: ProviderErrorContext | null;
 }
 
 // === 마인드맵 ===
@@ -130,6 +143,7 @@ export interface ProvidersResponse {
     health: ProviderHealth;
     diagnostics: ProviderDiagnostics;
   }>;
+  styles?: Array<{ id: string; name: string }>;
   style_options: Array<[string, string]>;
 }
 

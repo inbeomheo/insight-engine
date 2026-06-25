@@ -67,6 +67,28 @@ const JOB_POLL_INTERVAL_MS = 2_000;
 
 const SUPPORT_SESSION_KEY = 'insight-engine-support-session-id';
 
+interface ProviderErrorPayload {
+  reason?: string;
+  action?: string;
+  user_message?: string;
+}
+
+interface ErrorResponseBody {
+  error?: string;
+  provider_error?: ProviderErrorPayload;
+}
+
+function buildErrorMessage(body: ErrorResponseBody, fallback: string): string {
+  const base = body.error || fallback;
+  const providerError = body.provider_error;
+  if (!providerError) return base;
+
+  const details = [providerError.reason, providerError.action]
+    .filter((part): part is string => Boolean(part && !base.includes(part)));
+
+  return details.length > 0 ? [base, ...details].join('\n') : base;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -110,8 +132,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       signal: controller.signal,
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const body = await res.json().catch(() => ({})) as ErrorResponseBody;
+      throw new Error(buildErrorMessage(body, `HTTP ${res.status}`));
     }
     return res.json();
   } catch (err) {
@@ -137,8 +159,8 @@ async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
       signal: controller.signal,
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const body = await res.json().catch(() => ({})) as ErrorResponseBody;
+      throw new Error(buildErrorMessage(body, `HTTP ${res.status}`));
     }
     return res.blob();
   } catch (err) {
@@ -251,8 +273,8 @@ export async function generateStream(
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({})) as ErrorResponseBody;
+    throw new Error(buildErrorMessage(body, `HTTP ${res.status}`));
   }
 
   await parseSSEStream<StreamEvent>(

@@ -23,6 +23,11 @@ from routes.utility._state import (
 
 GENERATION_PROVIDER_IDS = ('chatmock', 'zhipuai')
 
+GENERATION_PROVIDER_LABELS = {
+    'chatmock': 'ChatMock Spark',
+    'zhipuai': 'GLM',
+}
+
 
 def _env_present(*names: str) -> bool:
     """환경변수 존재 여부만 확인합니다. 값은 절대 응답에 포함하지 않습니다."""
@@ -42,13 +47,14 @@ def _provider_health(pid: str, pdata: dict, *, available: bool) -> dict:
             'severity': 'ok' if status == 'ready' else 'error',
             'label': '기본 모델 사용 가능' if status == 'ready' else 'ChatMock 확인 필요',
             'message': (
-                'ChatMock Spark가 기본 생성 모델로 준비되었습니다.'
+                'ChatMock Spark가 기본 생성 모델로 준비되었습니다. 생성 실패 시 프록시 연결 상태를 함께 확인합니다.'
                 if status == 'ready'
                 else 'ChatMock Spark 모델 정보를 찾지 못했습니다.'
             ),
             'action': '생성 실패 시 ChatMock 서비스 실행 상태와 CHATMOCK_BASE_URL 설정을 확인해주세요.',
             'is_default': True,
             'is_selectable': status == 'ready',
+            'provider_label': GENERATION_PROVIDER_LABELS[pid],
         }
 
     if pid == 'zhipuai':
@@ -59,13 +65,14 @@ def _provider_health(pid: str, pdata: dict, *, available: bool) -> dict:
             'severity': 'ok' if status == 'ready' else 'warning',
             'label': 'GLM 사용 가능' if status == 'ready' else 'GLM 키 필요',
             'message': (
-                'GLM API 키가 감지되어 선택 가능한 상태입니다.'
+                'GLM API 키가 감지되어 선택 가능한 상태입니다. 권한/한도 오류는 생성 실패 메시지에 별도로 표시됩니다.'
                 if status == 'ready'
                 else 'GLM을 사용하려면 서버 환경변수에 ZAI_API_KEY 또는 ZHIPUAI_API_KEY를 설정해주세요.'
             ),
             'action': '권한 또는 한도 오류가 계속되면 GLM 콘솔에서 키 권한과 잔액을 확인해주세요.',
             'is_default': False,
             'is_selectable': status == 'ready',
+            'provider_label': GENERATION_PROVIDER_LABELS[pid],
         }
 
     status = 'ready' if available and has_models else 'unavailable'
@@ -85,19 +92,29 @@ def _provider_diagnostics(pid: str, pdata: dict, *, available: bool) -> dict:
     models = pdata.get('models') or []
     default_model = models[0]['id'] if models else None
     api_key_configured = True
+    key_names = []
     if pid == 'zhipuai':
+        key_names = ['ZAI_API_KEY', 'ZHIPUAI_API_KEY']
         api_key_configured = _env_present('ZAI_API_KEY', 'ZHIPUAI_API_KEY')
     elif pid not in ('chatmock', 'ollama'):
         api_key_configured = available
 
+    health = _provider_health(pid, pdata, available=available)
     return {
         'provider_id': pid,
+        'provider_name': pdata.get('name') or GENERATION_PROVIDER_LABELS.get(pid, pid),
+        'provider_label': GENERATION_PROVIDER_LABELS.get(pid, pdata.get('name') or pid),
         'available': available,
         'generation_visible': pid in GENERATION_PROVIDER_IDS,
         'api_key_configured': api_key_configured,
         'base_url_configured': bool(pdata.get('api_base')),
         'model_count': len(models),
         'default_model': default_model,
+        'health_status': health['status'],
+        'health_label': health['label'],
+        'safe_summary': health['message'],
+        'next_step': health.get('action'),
+        'required_env': key_names,
     }
 
 
@@ -208,6 +225,7 @@ def api_providers():
     return jsonify({
         'providers': enriched,
         'providerDiagnostics': generation_diagnostics,
+        'style_options': styles,
         'styles': [{'id': s[0], 'name': s[1]} for s in styles],
         'supadataConfigured': bool(SUPADATA_API_KEY),
         'hasAutoFallback': True

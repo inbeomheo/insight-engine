@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 
 export function useProviders() {
-  const { setProviders, selectedProvider, selectedModel, setSelectedProvider, setSelectedModel } =
+  const { setProviders, setProviderDiagnostics, selectedProvider, selectedModel, setSelectedProvider, setSelectedModel } =
     useSettingsStore();
 
   const query = useQuery({
@@ -20,6 +20,7 @@ export function useProviders() {
   useEffect(() => {
     if (query.data?.providers) {
       setProviders(query.data.providers);
+      setProviderDiagnostics(query.data.providerDiagnostics ?? {});
 
       const ids: string[] = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => query.data.providers[id]);
       if (ids.length === 0) return;
@@ -40,7 +41,7 @@ export function useProviders() {
         setSelectedModel(models[0].id);
       }
     }
-  }, [query.data, selectedProvider, selectedModel, setProviders, setSelectedProvider, setSelectedModel]);
+  }, [query.data, selectedProvider, selectedModel, setProviders, setProviderDiagnostics, setSelectedProvider, setSelectedModel]);
 
   useEffect(() => {
     if (query.error) {
