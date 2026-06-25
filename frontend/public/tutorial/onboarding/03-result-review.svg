@@ -1,0 +1,30 @@
+<svg width="960" height="600" viewBox="0 0 960 600" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Insight Engine 결과 카드 화면</title>
+  <desc id="desc">생성된 튜토리얼 결과 카드와 활용 버튼을 보여주는 튜토리얼 이미지</desc>
+  <rect width="960" height="600" fill="#F6F3EC"/>
+  <rect x="32" y="32" width="196" height="536" rx="10" fill="#17150F"/>
+  <rect x="58" y="60" width="32" height="32" rx="8" fill="#F08A24"/>
+  <text x="104" y="82" fill="#FFF7E8" font-family="Arial, sans-serif" font-size="18" font-weight="700">Insight Engine</text>
+  <rect x="58" y="132" width="132" height="28" rx="4" fill="#2B261C"/>
+  <rect x="58" y="178" width="92" height="12" rx="6" fill="#655E50"/>
+  <rect x="58" y="208" width="124" height="12" rx="6" fill="#655E50"/>
+  <rect x="58" y="238" width="104" height="12" rx="6" fill="#655E50"/>
+  <rect x="260" y="32" width="668" height="536" rx="10" fill="#FFFFFF" stroke="#DDD4C4"/>
+  <text x="304" y="92" fill="#C73710" font-family="Arial, sans-serif" font-size="12" font-weight="700">새 분석 · STEP 03</text>
+  <text x="304" y="142" fill="#17150F" font-family="Arial, sans-serif" font-size="34" font-weight="800">생성된 결과를 확인하세요</text>
+  <rect x="304" y="188" width="540" height="292" rx="6" fill="#FFFDF9" stroke="#DDD4C4"/>
+  <rect x="328" y="214" width="82" height="24" rx="12" fill="#FFF5E7"/>
+  <text x="348" y="231" fill="#C73710" font-family="Arial, sans-serif" font-size="12" font-weight="700">튜토리얼</text>
+  <text x="328" y="270" fill="#17150F" font-family="Arial, sans-serif" font-size="26" font-weight="800">핵심 흐름을 단계별로 정리한 가이드</text>
+  <rect x="328" y="302" width="456" height="12" rx="6" fill="#D8D0C4"/>
+  <rect x="328" y="326" width="392" height="12" rx="6" fill="#D8D0C4"/>
+  <rect x="328" y="358" width="212" height="12" rx="6" fill="#17150F"/>
+  <rect x="328" y="390" width="438" height="12" rx="6" fill="#D8D0C4"/>
+  <rect x="328" y="414" width="360" height="12" rx="6" fill="#D8D0C4"/>
+  <rect x="328" y="448" width="78" height="30" rx="4" fill="#17150F"/>
+  <text x="352" y="468" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="12" font-weight="700">복사</text>
+  <rect x="418" y="448" width="104" height="30" rx="4" fill="#F1E8DB"/>
+  <text x="448" y="468" fill="#514A3D" font-family="Arial, sans-serif" font-size="12" font-weight="700">내보내기</text>
+  <rect x="304" y="510" width="360" height="38" rx="6" fill="#FFF5E7" stroke="#F08A24"/>
+  <text x="328" y="534" fill="#17150F" font-family="Arial, sans-serif" font-size="14" font-weight="700">3단계: 결과를 검토하고 다음 작업으로 이어가세요</text>
+</svg>

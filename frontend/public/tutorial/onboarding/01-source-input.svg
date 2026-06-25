@@ -1,0 +1,33 @@
+<svg width="960" height="600" viewBox="0 0 960 600" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Insight Engine URL 입력 화면</title>
+  <desc id="desc">새 분석 화면에서 URL 입력창과 설정, 생성 버튼을 강조한 튜토리얼 이미지</desc>
+  <rect width="960" height="600" fill="#F6F3EC"/>
+  <rect x="32" y="32" width="196" height="536" rx="10" fill="#17150F"/>
+  <rect x="58" y="60" width="32" height="32" rx="8" fill="#F08A24"/>
+  <text x="104" y="82" fill="#FFF7E8" font-family="Arial, sans-serif" font-size="18" font-weight="700">Insight Engine</text>
+  <rect x="58" y="132" width="132" height="28" rx="4" fill="#2B261C"/>
+  <rect x="58" y="178" width="92" height="12" rx="6" fill="#655E50"/>
+  <rect x="58" y="208" width="124" height="12" rx="6" fill="#655E50"/>
+  <rect x="58" y="238" width="104" height="12" rx="6" fill="#655E50"/>
+  <rect x="260" y="32" width="668" height="536" rx="10" fill="#FFFFFF" stroke="#DDD4C4"/>
+  <rect x="260" y="32" width="668" height="58" rx="10" fill="#FFFCF7"/>
+  <line x1="260" y1="90" x2="928" y2="90" stroke="#DDD4C4"/>
+  <text x="304" y="140" fill="#C73710" font-family="Arial, sans-serif" font-size="12" font-weight="700">새 분석 · STEP 01</text>
+  <text x="304" y="190" fill="#17150F" font-family="Arial, sans-serif" font-size="38" font-weight="800">어떤 영상을</text>
+  <text x="304" y="234" fill="#17150F" font-family="Arial, sans-serif" font-size="38" font-weight="800">콘텐츠로 만들까요?</text>
+  <text x="304" y="274" fill="#6F6A61" font-family="Arial, sans-serif" font-size="16">YouTube, 웹페이지, RSS, arXiv, Podcast를 한 번에 모읍니다.</text>
+  <rect x="304" y="314" width="540" height="74" rx="4" fill="#FFFDF9" stroke="#17150F" stroke-width="2"/>
+  <circle cx="334" cy="351" r="10" fill="#D92D20"/>
+  <text x="360" y="357" fill="#8A847A" font-family="Arial, sans-serif" font-size="16">YouTube · 웹페이지 · RSS · arXiv · Podcast URL 붙여넣기</text>
+  <rect x="696" y="331" width="68" height="40" rx="4" fill="#F1E8DB"/>
+  <text x="718" y="356" fill="#514A3D" font-family="Arial, sans-serif" font-size="13" font-weight="700">설정</text>
+  <rect x="778" y="328" width="48" height="46" rx="4" fill="#C73710"/>
+  <path d="M802 362V342M802 342L793 351M802 342L811 351" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="304" y="408" width="118" height="28" rx="14" fill="#F1E8DB"/>
+  <text x="326" y="427" fill="#514A3D" font-family="Arial, sans-serif" font-size="12" font-weight="700">YouTube</text>
+  <rect x="438" y="408" width="104" height="28" rx="14" fill="#F1E8DB"/>
+  <text x="460" y="427" fill="#514A3D" font-family="Arial, sans-serif" font-size="12" font-weight="700">RSS</text>
+  <rect x="304" y="472" width="302" height="58" rx="6" fill="#FFF5E7" stroke="#F08A24"/>
+  <text x="328" y="496" fill="#17150F" font-family="Arial, sans-serif" font-size="15" font-weight="700">1단계: 분석할 소스를 먼저 추가하세요</text>
+  <text x="328" y="518" fill="#6F6A61" font-family="Arial, sans-serif" font-size="13">여러 URL은 칩으로 정리되고 생성 버튼과 연결됩니다.</text>
+</svg>

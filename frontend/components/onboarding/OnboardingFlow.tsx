@@ -1,19 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, Check } from 'lucide-react';
+import { ChevronRight, Check, Image as ImageIcon } from 'lucide-react';
+import { TUTORIAL_ONBOARDING_STEPS } from '@/lib/tutorialAssets';
 
 interface OnboardingStep {
+  id?: string;
   title: string;
   description: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  fallbackLabel?: string;
   action?: () => void;
 }
 
-const DEFAULT_STEPS: OnboardingStep[] = [
-  { title: 'AI 프로바이더 확인', description: 'ChatMock Spark 기본 모델과 GLM 선택 상태를 확인하세요.' },
-  { title: '첫 콘텐츠 생성', description: 'YouTube URL을 입력하고 스타일을 선택하세요.' },
-  { title: '결과 확인', description: '생성된 콘텐츠를 확인하고 내보내기하세요.' },
-];
+const DEFAULT_STEPS: OnboardingStep[] = TUTORIAL_ONBOARDING_STEPS.map((step) => ({
+  id: step.id,
+  title: step.title,
+  description: step.description,
+  imageSrc: step.imageSrc,
+  imageAlt: step.imageAlt,
+  fallbackLabel: step.fallbackLabel,
+}));
 
 interface OnboardingFlowProps {
   steps?: OnboardingStep[];
@@ -24,12 +32,16 @@ interface OnboardingFlowProps {
 export default function OnboardingFlow({ steps = DEFAULT_STEPS, onComplete }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState(false);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
+  const visibleSteps = steps.length > 0 ? steps : DEFAULT_STEPS;
+  const currentIndex = Math.min(currentStep, visibleSteps.length - 1);
+  const step = visibleSteps[currentIndex];
+  const stepKey = step.id ?? String(currentIndex);
 
   const handleNext = () => {
-    const step = steps[currentStep];
     step.action?.();
 
-    if (currentStep < steps.length - 1) {
+    if (currentIndex < visibleSteps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
       setCompleted(true);
@@ -53,31 +65,47 @@ export default function OnboardingFlow({ steps = DEFAULT_STEPS, onComplete }: On
     <div className="space-y-6 rounded-xl border border-white/10 bg-white/5 p-6">
       {/* 진행 바 */}
       <div className="flex gap-2">
-        {steps.map((_, idx) => (
+        {visibleSteps.map((_, idx) => (
           <div
             key={idx}
             className={`h-1.5 flex-1 rounded-full ${
-              idx <= currentStep ? 'bg-indigo-500' : 'bg-white/10'
+              idx <= currentIndex ? 'bg-indigo-500' : 'bg-white/10'
             }`}
           />
         ))}
       </div>
 
+      {step.imageSrc && !brokenImages[stepKey] ? (
+        <img
+          src={step.imageSrc}
+          alt={step.imageAlt ?? step.title}
+          loading="lazy"
+          className="aspect-[16/10] w-full rounded-lg border border-white/10 object-cover"
+          onError={() => setBrokenImages((prev) => ({ ...prev, [stepKey]: true }))}
+        />
+      ) : (
+        <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 text-center">
+          <ImageIcon className="h-6 w-6 text-gray-500" />
+          <p className="text-sm font-semibold">{step.fallbackLabel ?? step.title}</p>
+          <p className="text-xs leading-5 text-gray-400">{step.description}</p>
+        </div>
+      )}
+
       {/* 현재 스텝 */}
       <div className="space-y-2">
         <p className="text-xs text-gray-400">
-          단계 {currentStep + 1} / {steps.length}
+          단계 {currentIndex + 1} / {visibleSteps.length}
         </p>
-        <h3 className="text-lg font-semibold">{steps[currentStep].title}</h3>
-        <p className="text-sm text-gray-400">{steps[currentStep].description}</p>
+        <h3 className="text-lg font-semibold">{step.title}</h3>
+        <p className="text-sm text-gray-400">{step.description}</p>
       </div>
 
       <button
         onClick={handleNext}
-        aria-label={currentStep < steps.length - 1 ? '다음 단계' : '온보딩 완료'}
+        aria-label={currentIndex < visibleSteps.length - 1 ? '다음 단계' : '온보딩 완료'}
         className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
       >
-        {currentStep < steps.length - 1 ? '다음' : '완료'}
+        {currentIndex < visibleSteps.length - 1 ? '다음' : '완료'}
         <ChevronRight className="h-4 w-4" />
       </button>
     </div>

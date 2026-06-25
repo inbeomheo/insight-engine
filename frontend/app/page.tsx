@@ -389,7 +389,7 @@ export default function Home() {
 
                 {/* 출력 스타일 + 생성 모드 */}
                 <div className="mt-9 max-w-[900px] space-y-8">
-                  <div>
+                  <div data-tour="style-selector">
                     <div className="mb-3 flex items-center justify-between">
                       <h2 className="text-sm font-bold text-foreground">출력 스타일 <span className="text-muted-foreground/45">{STYLE_OPTIONS.length}</span></h2>
                       <span className="signal-meta text-[10px] font-bold text-primary">선택 1 · 다시 누르면 기본값</span>
@@ -422,6 +422,7 @@ export default function Home() {
                     {generationMode === 'individual' && (
                       <Button
                         onClick={handleGenerate}
+                        data-tour="generate-btn"
                         className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
                         size="lg"
                         disabled={urls.length === 0 || isLoading}
@@ -433,6 +434,7 @@ export default function Home() {
                     {generationMode === 'combined' && (
                       <Button
                         onClick={handleGenerateMerged}
+                        data-tour="generate-btn"
                         className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
@@ -444,6 +446,7 @@ export default function Home() {
                     {generationMode === 'fusion' && (
                       <Button
                         onClick={handleGenerateFusion}
+                        data-tour="generate-btn"
                         className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_#17150F]"
                         size="lg"
                         disabled={urls.length < 2 || isLoading}
@@ -514,7 +517,7 @@ export default function Home() {
               </div>
 
               {/* 결과 카드 / 빈 상태 */}
-              <div className="w-full space-y-4">
+              <div className="w-full space-y-4" data-tour="result-area">
                 {isLoading && generationMode === 'fusion' && (
                   <FusionProgress isLoading={isLoading} isFusion={true} />
                 )}
