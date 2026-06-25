@@ -29,8 +29,8 @@ def _get_completion():
     from litellm import completion
     return completion
 
-# Zhipu AI (GLM) OpenAI 호환 API 설정
-ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
+# Zhipu AI / Z.AI (GLM) OpenAI 호환 API 설정
+DEFAULT_ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
 
 # GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
 _glm_lock = threading.Lock()
@@ -172,11 +172,11 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
 
     # GLM → OpenAI 호환 API 변환
     if model.startswith("zhipuai/"):
-        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
+        zhipuai_key = os.getenv("ZAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY")
         if not zhipuai_key:
-            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
+            raise ValueError("ZAI_API_KEY 또는 ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
         kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
-        kwargs["api_base"] = ZHIPUAI_API_BASE
+        kwargs["api_base"] = os.getenv("ZHIPUAI_API_BASE", DEFAULT_ZHIPUAI_API_BASE)
         kwargs["api_key"] = zhipuai_key
 
     # Ollama → api_base 설정 (API 키 불필요)
