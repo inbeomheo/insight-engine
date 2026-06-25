@@ -12,7 +12,7 @@ from src.contexts.content_library import save_history_entry as save_history
 from services.usage.usage_decorator import get_usage_for_response
 from services.platform.webhook_service import WebhookService
 from config import get_model_max_tokens, WEBHOOK_URL, WEBHOOK_ENABLED
-from utils.responses import sanitize_error_for_client
+from utils.responses import api_error, sanitize_error_for_client
 
 _webhook = WebhookService(url=WEBHOOK_URL, enabled=WEBHOOK_ENABLED)
 
@@ -98,7 +98,7 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
 
     whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
     if not whisper_enabled:
-        return jsonify({'error': '음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.'}), 400
+        return api_error('음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
 
     filename = (uploaded_file.filename or '').lower()
     audio_path = None
@@ -111,7 +111,7 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
         whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
         transcript_text = transcribe_audio(audio_path, whisper_model)
         if not transcript_text or not transcript_text.strip():
-            return jsonify({'error': '음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.'}), 400
+            return api_error('음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.', 400)
     finally:
         if audio_path:
             _cleanup_file(audio_path)
@@ -156,7 +156,7 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
     source_title = collected.get('title') or url
     source_content = collected.get('content', '')
     if not source_content.strip():
-        return jsonify({'error': '콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.'}), 400
+        return api_error('콘텐츠를 추출할 수 없습니다. URL을 확인해주세요.', 400)
 
     content_label = {
         'webpage': '웹페이지 본문', 'rss': 'RSS 피드 내용',

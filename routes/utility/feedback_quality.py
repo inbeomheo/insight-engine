@@ -6,6 +6,7 @@ utility_routes.py에서 분리됨:
 - 팩트체크 / SEO 최적화 / 표절 / 가독성 / 감정 흐름
 """
 from flask import current_app, g, jsonify, request
+from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
@@ -33,7 +34,7 @@ def api_feedback():
     comment = data.get('comment')
 
     if not style_id or not content_id or rating not in ('like', 'dislike'):
-        return jsonify({'error': 'style_id, content_id, rating(like/dislike) 필수'}), 400
+        return api_error('style_id, content_id, rating(like/dislike) 필수', 400)
 
     from services.data.prompt_optimizer_service import save_feedback
     result = save_feedback(
@@ -60,7 +61,7 @@ def api_fact_check():
     data = request.get_json(silent=True) or {}
     content = data.get('content', '')
     if not content:
-        return jsonify({'error': 'content 필수'}), 400
+        return api_error('content 필수', 400)
 
     from services.agents.fact_check_agent import fact_check
     result = fact_check(content)
@@ -76,7 +77,7 @@ def api_seo_optimize():
     content = data.get('content', '')
     keywords = data.get('keywords', [])
     if not content:
-        return jsonify({'error': 'content 필수'}), 400
+        return api_error('content 필수', 400)
 
     from services.agents.seo_optimize_agent import optimize_seo
     result = optimize_seo(content, keywords)
@@ -91,7 +92,7 @@ def api_plagiarism_check():
     data = request.get_json(silent=True) or {}
     content = data.get('content', '')
     if not content:
-        return jsonify({'error': 'content 필수'}), 400
+        return api_error('content 필수', 400)
 
     from services.quality.plagiarism_service import check_plagiarism
     result = check_plagiarism(content)
@@ -106,7 +107,7 @@ def api_readability():
     data = request.get_json(silent=True) or {}
     text = data.get('text', '')
     if not text:
-        return jsonify({'error': 'text 필수'}), 400
+        return api_error('text 필수', 400)
 
     from services.analysis.readability_service import analyze_readability
     result = analyze_readability(text)
@@ -121,7 +122,7 @@ def api_sentiment_flow():
     data = request.get_json(silent=True) or {}
     content = data.get('content', '')
     if not content:
-        return jsonify({'error': 'content 필수'}), 400
+        return api_error('content 필수', 400)
 
     from services.analysis.nlp_analysis_service import analyze_sentiment_flow
     result = analyze_sentiment_flow(content)
@@ -138,7 +139,7 @@ def submit_nps_feedback():
     feedback = data.get('feedback', '')
 
     if score is None or not (0 <= int(score) <= 10):
-        return jsonify({'error': 'score는 0~10 사이여야 합니다.'}), 400
+        return api_error('score는 0~10 사이여야 합니다.', 400)
 
     # 인메모리 저장 (프로덕션에서는 DB)
     entry = {

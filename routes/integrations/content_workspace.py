@@ -57,7 +57,7 @@ def diff_content_versions(content_id):
     a = request.args.get('a', '')
     b = request.args.get('b', '')
     if not a or not b:
-        return jsonify({'error': 'a, b 버전 ID가 필요합니다.'}), 400
+        return api_error('a, b 버전 ID가 필요합니다.', 400)
 
     result = diff_versions(content_id, a, b)
     if not result:

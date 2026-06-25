@@ -32,11 +32,11 @@ def knowledge_upload():
     allowed_exts = {'txt', 'md', 'pdf'}
     ext = file.filename.lower().rsplit('.', 1)[-1] if '.' in file.filename else ''
     if ext not in allowed_exts:
-        return jsonify({'error': f'지원하지 않는 파일 형식입니다. ({", ".join(allowed_exts)}만 가능)'}), 400
+        return api_error(f'지원하지 않는 파일 형식입니다. ({", ".join(allowed_exts)}만 가능)', 400)
 
     file_bytes = file.read()
     if len(file_bytes) > MAX_UPLOAD_SIZE:
-        return jsonify({'error': f'파일 크기가 제한을 초과합니다. (최대 {MAX_UPLOAD_SIZE // (1024*1024)}MB)'}), 400
+        return api_error(f'파일 크기가 제한을 초과합니다. (최대 {MAX_UPLOAD_SIZE // (1024*1024)}MB)', 400)
 
     try:
         from services.rag.chunker import extract_text_from_file, chunk_text

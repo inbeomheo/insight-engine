@@ -32,7 +32,7 @@ def mcp_publish():
     content = data.get('content')
 
     if not plugin_id or not title or not content:
-        return jsonify({"error": "plugin_id, title, content는 필수입니다."}), 400
+        return api_error("plugin_id, title, content는 필수입니다.", 400)
 
     try:
         result = plugin_registry.execute(plugin_id, content, title)
@@ -73,7 +73,7 @@ def mcp_app_render(app_name: str):
 
     app = app_registry.get(app_name)
     if app is None:
-        return jsonify({"error": f"앱 '{app_name}'을(를) 찾을 수 없습니다."}), 404
+        return api_error(f"앱 '{app_name}'을(를) 찾을 수 없습니다.", 404)
 
     try:
         result = app.render(data)
@@ -99,7 +99,7 @@ def mcp_app_action(app_name: str):
 
     app = app_registry.get(app_name)
     if app is None:
-        return jsonify({"error": f"앱 '{app_name}'을(를) 찾을 수 없습니다."}), 404
+        return api_error(f"앱 '{app_name}'을(를) 찾을 수 없습니다.", 404)
 
     try:
         result = app.handle_action(action, data)
@@ -158,7 +158,7 @@ def mcp_sdk_plugin_schema(plugin_id):
     from services.mcp.registry import plugin_registry
     plugin = plugin_registry.get(plugin_id)
     if not plugin:
-        return jsonify({'error': f"플러그인 '{plugin_id}'을(를) 찾을 수 없습니다."}), 404
+        return api_error(f"플러그인 '{plugin_id}'을(를) 찾을 수 없습니다.", 404)
     return jsonify({
         'plugin_id': plugin_id,
         'name': plugin.name,

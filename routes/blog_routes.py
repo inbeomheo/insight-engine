@@ -22,7 +22,7 @@ import uuid
 
 from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context
 from extensions import limiter
-from utils.responses import handle_error, sanitize_error_for_client, api_error_from_exception
+from utils.responses import api_error, handle_error, sanitize_error_for_client, api_error_from_exception
 
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
@@ -266,7 +266,7 @@ def generate():
                 return handle_error(str(e))
 
         if not url:
-            return jsonify({'error': 'URL이 필요합니다.'}), 400
+            return api_error('URL이 필요합니다.', 400)
 
         # ── 비YouTube 소스 (웹페이지 / RSS / arXiv) ──
         source_type = params.get('source_type') or detect_source_type(url)
@@ -278,11 +278,11 @@ def generate():
 
         # ── YouTube 흐름 ──
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+            return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         # 캐시 체크 — 자막/제목 추출 전에 선조회 (히트 시 YouTube I/O 전부 생략)
         from services.core.cache_service import AICacheService
@@ -304,7 +304,7 @@ def generate():
             youtube_title = title_future.result() or 'YouTube 영상'
             transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = content_future.result()
         if error:
-            return jsonify({'error': error}), 400
+            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(params['model'])
         main_content = f"[영상 자막]\n{transcript_text}"
@@ -452,7 +452,7 @@ def regenerate():
         content = params['content']
 
         if not content:
-            return jsonify({'error': '재생성할 콘텐츠가 없습니다'}), 400
+            return api_error('재생성할 콘텐츠가 없습니다', 400)
 
         style_prompt = _get_style_prompt(params['style'])
         result, used_prompt = ai_service.create_content(
@@ -498,7 +498,7 @@ def generate_batch():
 
         if not data:
             current_app.logger.error("No JSON data received")
-            return jsonify({'error': 'JSON 데이터가 제공되지 않았습니다'}), 400
+            return api_error('JSON 데이터가 제공되지 않았습니다', 400)
 
         urls = data.get('urls', [])
         model = data.get('model', DEFAULT_MODEL)
@@ -509,9 +509,9 @@ def generate_batch():
         current_app.logger.info(f"URLs to process: {urls}, Model: {model}, Style: {style}")
 
         if not urls or not isinstance(urls, list):
-            return jsonify({'error': 'URL 목록이 제공되지 않았습니다'}), 400
+            return api_error('URL 목록이 제공되지 않았습니다', 400)
         if len(urls) > MAX_BATCH_URLS:
-            return jsonify({'error': f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다'}), 400
+            return api_error(f'최대 {MAX_BATCH_URLS}개의 URL만 처리할 수 있습니다', 400)
 
         app = current_app._get_current_object()
         results = [None] * len(urls)
@@ -659,14 +659,14 @@ def generate_merged():
         urls = params['urls']
 
         if len(urls) < 2:
-            return jsonify({'error': '합쳐서 생성은 최소 2개 URL이 필요합니다.'}), 400
+            return api_error('합쳐서 생성은 최소 2개 URL이 필요합니다.', 400)
         if len(urls) > MAX_MERGED_URLS:
-            return jsonify({'error': f'최대 {MAX_MERGED_URLS}개 URL까지 합칠 수 있습니다.'}), 400
+            return api_error(f'최대 {MAX_MERGED_URLS}개 URL까지 합칠 수 있습니다.', 400)
 
         # URL 유효성 검사
         for url in urls:
             if not content_service.is_youtube_url(url):
-                return jsonify({'error': f'유효하지 않은 YouTube URL: {url}'}), 400
+                return api_error(f'유효하지 않은 YouTube URL: {url}', 400)
 
         # 병렬로 자막+댓글 추출
         app = current_app._get_current_object()
@@ -809,13 +809,13 @@ def generate_stream():
         url = params['url']
 
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+            return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         # 사용량 체크 (수동)
         user_id = getattr(g, 'user_id', None)
@@ -831,7 +831,7 @@ def generate_stream():
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
         transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
         if error:
-            return jsonify({'error': error}), 400
+            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(params['model'])
         main_content = f"[영상 자막]\n{transcript_text}"
@@ -954,17 +954,17 @@ def video_qa():
 
     # 입력값 검증
     if not video_url:
-        return jsonify({'error': 'video_url이 필요합니다.'}), 400
+        return api_error('video_url이 필요합니다.', 400)
     if not content_service.is_youtube_url(video_url):
-        return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+        return api_error('유효한 YouTube URL을 입력해주세요.', 400)
     if not question:
-        return jsonify({'error': '질문을 입력해주세요.'}), 400
+        return api_error('질문을 입력해주세요.', 400)
     if len(question) > 500:
-        return jsonify({'error': '질문은 500자 이내로 입력해주세요.'}), 400
+        return api_error('질문은 500자 이내로 입력해주세요.', 400)
 
     video_id = content_service.get_video_id(video_url)
     if not video_id:
-        return jsonify({'error': '영상 ID를 추출할 수 없습니다.'}), 400
+        return api_error('영상 ID를 추출할 수 없습니다.', 400)
 
     try:
         # 아직 인덱싱이 안 됐으면 자막을 가져와 인덱싱
@@ -974,7 +974,7 @@ def video_qa():
             # get_transcript 반환값은 str 또는 dict
             if isinstance(transcript_result, dict):
                 if transcript_result.get('error'):
-                    return jsonify({'error': sanitize_error_for_client(transcript_result['error'])}), 400
+                    return api_error(sanitize_error_for_client(transcript_result['error']), 400)
                 transcript_text = transcript_result.get('text') or transcript_result.get('transcript', '')
             elif isinstance(transcript_result, str):
                 transcript_text = transcript_result
@@ -982,11 +982,11 @@ def video_qa():
                 transcript_text = ''
 
             if not transcript_text:
-                return jsonify({'error': '영상 자막을 가져올 수 없습니다.'}), 400
+                return api_error('영상 자막을 가져올 수 없습니다.', 400)
 
             ok = index_video_transcript(video_id, transcript_text)
             if not ok:
-                return jsonify({'error': '[서버 오류] 영상 자막 인덱싱에 실패했습니다.'}), 500
+                return api_error('[서버 오류] 영상 자막 인덱싱에 실패했습니다.', 500)
 
         # Q&A 답변 생성
         result = answer_question(
@@ -1021,7 +1021,7 @@ def text_to_speech():
 
     text = (data.get('text') or '').strip()
     if not text:
-        return jsonify({'error': '변환할 텍스트를 입력하세요.'}), 400
+        return api_error('변환할 텍스트를 입력하세요.', 400)
 
     if len(text) > TTS_MAX_CHARS:
         return jsonify({
@@ -1082,19 +1082,19 @@ def extract_events_endpoint():
     # 자막 획득: transcript 직접 제공 또는 URL에서 추출
     if not transcript_text:
         if not url:
-            return jsonify({'error': 'url 또는 transcript 중 하나를 제공해야 합니다.'}), 400
+            return api_error('url 또는 transcript 중 하나를 제공해야 합니다.', 400)
 
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL이 아닙니다.'}), 400
+            return api_error('유효한 YouTube URL이 아닙니다.', 400)
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': 'YouTube 비디오 ID를 추출할 수 없습니다.'}), 400
+            return api_error('YouTube 비디오 ID를 추출할 수 없습니다.', 400)
 
         try:
             transcript_data = content_service.get_transcript(video_id)
             if not transcript_data or not transcript_data.get('transcript'):
-                return jsonify({'error': '영상 자막을 추출할 수 없습니다. 자막이 없는 영상이거나 접근 불가합니다.'}), 422
+                return api_error('영상 자막을 추출할 수 없습니다. 자막이 없는 영상이거나 접근 불가합니다.', 422)
 
             # 자막 세그먼트 → 타임스탬프 포함 텍스트 변환 (이벤트 추출 품질 향상)
             segments = transcript_data.get('segments', [])

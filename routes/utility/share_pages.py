@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from flask import Response, current_app, jsonify, request
+from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
 from services.content.share_page_service import SharePageStore, render_share_html
@@ -24,15 +25,15 @@ def _share_store() -> SharePageStore:
 def create_share_page():
     data = request.get_json(silent=True) or {}
     if not isinstance(data, dict):
-        return jsonify({"error": "JSON 본문이 필요합니다."}), 400
+        return api_error("JSON 본문이 필요합니다.", 400)
 
     title = str(data.get("title") or "").strip()
     content = str(data.get("content") or "").strip()
     html = str(data.get("html") or "").strip()
     if not title:
-        return jsonify({"error": "공유할 제목이 필요합니다."}), 400
+        return api_error("공유할 제목이 필요합니다.", 400)
     if not content and not html:
-        return jsonify({"error": "공유할 콘텐츠가 필요합니다."}), 400
+        return api_error("공유할 콘텐츠가 필요합니다.", 400)
 
     item = _share_store().create({
         "title": title,
@@ -54,7 +55,7 @@ def get_share_page_json(share_id: str):
     try:
         item = _share_store().get(share_id)
     except (FileNotFoundError, ValueError):
-        return jsonify({"error": "공유 페이지를 찾을 수 없습니다."}), 404
+        return api_error("공유 페이지를 찾을 수 없습니다.", 404)
     return jsonify(item)
 
 

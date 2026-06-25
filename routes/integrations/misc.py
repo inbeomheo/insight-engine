@@ -66,7 +66,7 @@ def submit_feedback():
 
     valid_types = {'bug', 'feature', 'general'}
     if feedback_type not in valid_types:
-        return jsonify({'error': f'유효하지 않은 피드백 유형: {feedback_type}'}), 400
+        return api_error(f'유효하지 않은 피드백 유형: {feedback_type}', 400)
 
     # 실제 운영 시 DB 저장 / Slack 알림 등으로 연결
     current_app.logger.info(

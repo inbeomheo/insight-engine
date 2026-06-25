@@ -1,7 +1,7 @@
 """content_mgmt 서브 라우트 공용 응답 헬퍼."""
 from flask import jsonify, request
 
-from utils.responses import safe_error_or_fallback
+from utils.responses import api_error, safe_error_or_fallback
 
 
 def _json(data, status=200):
@@ -9,7 +9,7 @@ def _json(data, status=200):
 
 
 def _err(msg, status=400):
-    return jsonify({'error': msg}), status
+    return api_error(msg, status)
 
 
 def _get_json():

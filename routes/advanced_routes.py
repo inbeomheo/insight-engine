@@ -160,7 +160,7 @@ def generate_campaign():
         if not content_service.is_youtube_url(url):
             return api_error('유효한 YouTube URL을 입력해주세요.', 400)
         if not pack_id or pack_id not in CAMPAIGN_PACKS:
-            return jsonify({'error': f'유효하지 않은 캠페인 팩: {pack_id}'}), 400
+            return api_error(f'유효하지 않은 캠페인 팩: {pack_id}', 400)
 
         pack = CAMPAIGN_PACKS[pack_id]
         styles = pack['styles']
@@ -274,7 +274,7 @@ def run_pipeline():
         pipeline_id = data.get('pipeline_id', 'blog_automation')
 
         if pipeline_id not in PIPELINE_PRESETS:
-            return jsonify({'error': f'알 수 없는 파이프라인: {pipeline_id}'}), 400
+            return api_error(f'알 수 없는 파이프라인: {pipeline_id}', 400)
 
         url = params['url']
         if not url:
@@ -504,7 +504,7 @@ def generate_multilang():
         style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
         sp = style_prompts_dict.get(style, '')
         if not sp:
-            return jsonify({'error': f'유효하지 않은 스타일: {style}'}), 400
+            return api_error(f'유효하지 않은 스타일: {style}', 400)
         from prompts import compose_style_prompt
         sp = compose_style_prompt(style, sp)
 

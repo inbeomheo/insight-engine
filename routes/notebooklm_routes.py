@@ -23,19 +23,19 @@ def generate():
     """NotebookLM 콘텐츠 생성 요청."""
     data = request.get_json()
     if not data:
-        return jsonify({'error': '요청 본문이 비어있습니다.'}), 400
+        return api_error('요청 본문이 비어있습니다.', 400)
 
     content_type = data.get('type')
     url = data.get('url')
     source_text = data.get('source_text')
 
     if not content_type or not url or not source_text:
-        return jsonify({'error': 'type, url, source_text 필드가 필요합니다.'}), 400
+        return api_error('type, url, source_text 필드가 필요합니다.', 400)
 
     # 인증 확인
     auth = _service.check_auth()
     if not auth.get('valid'):
-        return jsonify({'error': auth.get('message', '인증이 필요합니다.')}), 401
+        return api_error(auth.get('message', '인증이 필요합니다.'), 401)
 
     try:
         result = _service.generate(content_type, url, source_text)

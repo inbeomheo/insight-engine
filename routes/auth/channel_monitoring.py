@@ -5,6 +5,7 @@ auth_routes.py에서 분리됨. namespace 경유 호출 패턴 유지.
 경유로 통합 — 직접 `.table()` 호출 제거.
 """
 from flask import g, jsonify
+from utils.responses import api_error
 
 from routes import auth_routes as _ar
 from routes.auth_routes import auth_bp
@@ -25,7 +26,7 @@ def admin_dashboard():
         return error
 
     if not _ar.is_supabase_enabled():
-        return jsonify({'error': 'Supabase 미연결'}), 503
+        return api_error('Supabase 미연결', 503)
 
     try:
         from src.contexts.content_library import fetch_admin_history_stats
@@ -119,7 +120,7 @@ def admin_dashboard():
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Dashboard data failed: {e}")
-        return jsonify({'error': '데이터 조회 실패'}), 500
+        return api_error('데이터 조회 실패', 500)
 
 
 @auth_bp.route('/api/channel-monitors', methods=['GET'])

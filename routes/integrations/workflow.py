@@ -95,7 +95,7 @@ def schedule_create():
     scheduled_at = data.get('scheduled_at')
 
     if not title or not content or not target_plugin or not scheduled_at:
-        return jsonify({'error': 'title, content, target_plugin, scheduled_at는 필수입니다.'}), 400
+        return api_error('title, content, target_plugin, scheduled_at는 필수입니다.', 400)
 
     post = schedule_service.create(
         user_id=g.user_id,
