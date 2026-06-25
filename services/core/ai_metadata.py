@@ -40,6 +40,44 @@ _FAQ_QA_RE = re.compile(
 )
 
 
+def build_faqpage_schema(qa_pairs) -> Optional[Dict[str, Any]]:
+    """(질문, 답변) 쌍 목록에서 schema.org FAQPage JSON-LD dict를 생성합니다.
+
+    여러 서비스(ai_metadata, faq_generator 등)에서 동일하게 하드코딩하던
+    FAQPage JSON-LD 구조를 단일 소스로 통합한 공통 헬퍼입니다.
+
+    Args:
+        qa_pairs: (question, answer) 형태의 튜플/리스트를 담은 이터러블.
+            앞뒤 공백은 제거되며, 질문 또는 답변이 비어 있는 항목은 건너뜁니다.
+
+    Returns:
+        dict 또는 None: JSON-LD FAQPage 스키마 dict. 유효한 Q&A가 하나도
+        없으면 None.
+    """
+    entities = []
+    for question, answer in qa_pairs:
+        q_text = (question or '').strip()
+        a_text = (answer or '').strip()
+        if q_text and a_text:
+            entities.append({
+                "@type": "Question",
+                "name": q_text,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": a_text
+                }
+            })
+
+    if not entities:
+        return None
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": entities
+    }
+
+
 def extract_seo_metadata(content: str) -> Optional[Dict[str, Any]]:
     """blog_seo 스타일 콘텐츠에서 SEO 메타데이터를 정규식으로 추출합니다.
 
@@ -170,28 +208,12 @@ def extract_faq_schema(content: str) -> Optional[Dict[str, Any]]:
     if not matches:
         return None
 
-    entities = []
-    for question, answer in matches:
-        q_text = question.strip()
-        a_text = ' '.join(answer.strip().split())  # 줄바꿈 정규화
-        if q_text and a_text:
-            entities.append({
-                "@type": "Question",
-                "name": q_text,
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": a_text
-                }
-            })
-
-    if not entities:
-        return None
-
-    return {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": entities
-    }
+    # 답변은 줄바꿈 정규화 후 공통 FAQPage 스키마 헬퍼로 위임
+    qa_pairs = [
+        (question, ' '.join(answer.split()))
+        for question, answer in matches
+    ]
+    return build_faqpage_schema(qa_pairs)
 
 
 def extract_cta(content: str) -> Optional[Dict[str, str]]:

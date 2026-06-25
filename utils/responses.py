@@ -68,6 +68,25 @@ def sanitize_error_for_client(error_msg: str) -> str:
     return error_msg
 
 
+def safe_error_or_fallback(error, fallback_message: str) -> str:
+    """예외/에러 메시지를 클라이언트 노출용으로 정리하고, 내부 오류면 fallback을 반환합니다.
+
+    sanitize_error_for_client()로 1차 필터링한 뒤, 결과가 '[서버 오류]' 접두사로
+    시작하면(내부 정보가 숨겨진 경우) 호출자가 지정한 fallback_message로 대체합니다.
+
+    Args:
+        error: 예외 객체 또는 에러 메시지 (None 허용)
+        fallback_message: 내부 오류로 판정될 때 반환할 사용자 메시지
+
+    Returns:
+        안전한 사용자 노출용 메시지
+    """
+    safe_message = sanitize_error_for_client(str(error or ''))
+    if safe_message.startswith('[서버 오류]'):
+        return fallback_message
+    return safe_message
+
+
 def handle_error(error_msg, log_detail=None):
     """에러 메시지에 따른 적절한 HTTP 상태 코드를 결정하고 응답을 반환합니다.
 

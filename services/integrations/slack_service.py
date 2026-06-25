@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from services.core.logging_config import ServiceLogger
+from services.integrations._shared import disabled_result, webhook_result
 
 logger = ServiceLogger('SlackService')
 
@@ -29,7 +30,7 @@ class SlackService:
              icon_emoji: str = ':robot_face:') -> dict[str, Any]:
         """단순 텍스트 메시지 전송"""
         if not self.is_enabled():
-            return {'ok': False, 'reason': 'SLACK_WEBHOOK_URL 미설정'}
+            return disabled_result('SLACK_WEBHOOK_URL 미설정')
 
         payload: dict[str, Any] = {
             'text': text,
@@ -43,9 +44,7 @@ class SlackService:
             resp = requests.post(
                 self.webhook_url, json=payload, timeout=SLACK_TIMEOUT_SEC
             )
-            if resp.status_code == 200:
-                return {'ok': True}
-            return {'ok': False, 'status': resp.status_code, 'body': resp.text}
+            return webhook_result(resp, (200,))
         except Exception as e:
             logger.error(f'Slack 전송 실패: {e}')
             return {'ok': False, 'error': str(e)}
@@ -53,7 +52,7 @@ class SlackService:
     def send_blocks(self, blocks: list[dict], text: str = '') -> dict[str, Any]:
         """Block Kit 메시지 전송"""
         if not self.is_enabled():
-            return {'ok': False, 'reason': 'SLACK_WEBHOOK_URL 미설정'}
+            return disabled_result('SLACK_WEBHOOK_URL 미설정')
 
         payload = {'blocks': blocks}
         if text:
@@ -63,9 +62,7 @@ class SlackService:
             resp = requests.post(
                 self.webhook_url, json=payload, timeout=SLACK_TIMEOUT_SEC
             )
-            if resp.status_code == 200:
-                return {'ok': True}
-            return {'ok': False, 'status': resp.status_code, 'body': resp.text}
+            return webhook_result(resp, (200,))
         except Exception as e:
             logger.error(f'Slack Block 전송 실패: {e}')
             return {'ok': False, 'error': str(e)}

@@ -8,13 +8,10 @@ DISCORD_BOT_TOKEN, DISCORD_PUBLIC_KEY 환경변수 필요.
 import json
 import logging
 import os
-import re
+
+from services.integrations._shared import YOUTUBE_URL_RE
 
 logger = logging.getLogger(__name__)
-
-YOUTUBE_URL_RE = re.compile(
-    r'https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]+'
-)
 
 # Discord Interaction 타입
 INTERACTION_PING = 1

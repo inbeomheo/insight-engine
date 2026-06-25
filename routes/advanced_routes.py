@@ -17,15 +17,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, sanitize_error_for_client, sanitize_path, clamp_query_int, validate_content_length
-
-
-def _sanitize_generation_error(error: Exception | str, fallback_message: str) -> str:
-    """중첩 결과/SSE 응답에 들어가는 예외 메시지를 정리합니다."""
-    safe_message = sanitize_error_for_client(str(error or ''))
-    if safe_message.startswith('[서버 오류]'):
-        return fallback_message
-    return safe_message
+from utils.responses import handle_error, safe_error_or_fallback, sanitize_path, clamp_query_int, validate_content_length
 
 
 @blog_bp.route('/api/generate-multi', methods=['POST'])
@@ -92,7 +84,7 @@ def generate_multi():
                     return {
                         'style': style_id,
                         'style_elapsed_time': round(time.time() - style_start, 2),
-                        'error': _sanitize_generation_error(
+                        'error': safe_error_or_fallback(
                             e,
                             '[서버 오류] 스타일별 콘텐츠 생성 중 문제가 발생했습니다.'
                         )
@@ -213,7 +205,7 @@ def generate_campaign():
                 except Exception as e:
                     return {
                         'style': style_id,
-                        'error': _sanitize_generation_error(
+                        'error': safe_error_or_fallback(
                             e,
                             '[서버 오류] 캠페인 스타일 생성 중 문제가 발생했습니다.'
                         )
@@ -385,7 +377,7 @@ def generate_thumbnail():
 
         if not result.get('success'):
             return jsonify({
-                'error': _sanitize_generation_error(
+                'error': safe_error_or_fallback(
                     result.get('error', '썸네일 생성 실패'),
                     '[서버 오류] 썸네일 생성 중 문제가 발생했습니다.'
                 )
@@ -532,7 +524,7 @@ def generate_multilang():
                 except Exception as e:
                     return lang, {
                         'language': lang,
-                        'error': _sanitize_generation_error(
+                        'error': safe_error_or_fallback(
                             e,
                             '[서버 오류] 다국어 콘텐츠 생성 중 문제가 발생했습니다.'
                         )
@@ -657,7 +649,7 @@ def agent_research():
                 except Exception as e:
                     event_queue.put((
                         'error',
-                        _sanitize_generation_error(
+                        safe_error_or_fallback(
                             e,
                             '[서버 오류] 리서치 에이전트 실행 중 문제가 발생했습니다.'
                         )

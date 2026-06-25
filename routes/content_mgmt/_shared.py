@@ -1,7 +1,7 @@
 """content_mgmt 서브 라우트 공용 응답 헬퍼."""
 from flask import jsonify, request
 
-from utils.responses import sanitize_error_for_client
+from utils.responses import safe_error_or_fallback
 
 
 def _json(data, status=200):
@@ -17,7 +17,4 @@ def _get_json():
 
 
 def _safe_route_error(message, fallback_message):
-    safe_message = sanitize_error_for_client(str(message or ''))
-    if safe_message.startswith('[서버 오류]'):
-        return fallback_message
-    return safe_message
+    return safe_error_or_fallback(message, fallback_message)

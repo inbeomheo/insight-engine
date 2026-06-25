@@ -341,23 +341,6 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
 ]
 
 
-STYLE_DESCRIPTIONS: Dict[str, str] = {
-    'blog_seo': 'SEO 최적화된 블로그 포스트를 생성합니다',
-    'summary': '영상 핵심 내용을 간결하게 요약합니다',
-    'tutorial': '단계별 학습 가이드를 작성합니다',
-    'qna': 'Q&A 형식으로 핵심 질문과 답변을 정리합니다',
-    'app_ideas': '영상에서 앱/서비스 아이디어를 도출합니다',
-    'yozm_it': '요즘IT 스타일의 기술 아티클을 작성합니다',
-    'brunch_essay': '브런치 감성의 에세이를 작성합니다',
-    'naver_popular': '네이버 인기글 스타일로 작성합니다',
-    'sns_post': 'SNS에 바로 올릴 수 있는 짧은 포스트를 생성합니다',
-    'newsletter': '뉴스레터 형식의 큐레이션 콘텐츠를 작성합니다',
-    'show_notes': '팟캐스트/유튜브 쇼노트를 작성합니다',
-    'shorts_script': '60초 Shorts 클립 스크립트를 추출합니다',
-    'geo_seo': 'AI 검색엔진에 최적화된 콘텐츠를 생성합니다',
-    'course': 'AI 학습 코스 형식의 교육 콘텐츠를 작성합니다',
-}
-
 # 모디파이어 지시문 — prompts/modifiers.py가 단일 소스 (v4에서 이중화 제거)
 STYLE_MODIFIERS: Dict[str, Dict[str, str]] = MODIFIERS
 
@@ -384,126 +367,6 @@ def get_model_display_name(model_id: str) -> str:
                 return model.get('name', model_id)
     return model_id
 
-
-@functools.lru_cache(maxsize=1)
-def get_style_options() -> List[Tuple[str, str]]:
-    """
-    스타일 옵션 목록을 반환합니다.
-
-    Returns:
-        (style_id, label) 튜플 리스트
-    """
-    return STYLE_OPTIONS
-
-
-@functools.lru_cache(maxsize=1)
-def get_modifier_options() -> Dict[str, Dict[str, Any]]:
-    """
-    모디파이어 옵션 정보를 반환합니다 (UI 구성용).
-
-    Returns:
-        MODIFIER_OPTIONS 딕셔너리
-    """
-    return MODIFIER_OPTIONS
-
-
-__all__ = [
-    # API Keys
-    'YOUTUBE_API_KEY',
-    'PROVIDER_API_KEYS',
-    'SUPADATA_API_KEY',
-
-    # Webhook
-    'WEBHOOK_URL',
-    'WEBHOOK_ENABLED',
-
-    # Token Limits
-    'MAX_TRANSCRIPT_TOKENS',
-    'MAX_COMMENTS_TOKENS',
-    'MAX_CONTENT_TOKENS',
-
-    # Short Content Bypass
-    'SHORT_CONTENT_THRESHOLD',
-    'SHORT_CONTENT_BYPASS_STYLES',
-
-    # AI Cache
-    'AI_CACHE_DB',
-    'AI_CACHE_TTL_DAYS',
-    'AI_CACHE_MAX_SIZE_MB',
-
-    # Fallback Chain
-    'FALLBACK_CHAIN',
-    'MAX_FALLBACK_ATTEMPTS',
-
-    # Style/Length Tuning
-    'STYLE_TEMPERATURE',
-    'LENGTH_MAX_TOKENS',
-    'DETAIL_PRESETS',
-    'PLATFORM_PRESETS',
-
-    # QA Gate
-    'QA_FORBIDDEN_WORDS',
-    'QA_MIN_SECTIONS',
-    'QA_MIN_CHARS',
-
-    # Campaign Packs
-    'CAMPAIGN_PACKS',
-
-    # Providers
-    'SUPPORTED_PROVIDERS',
-    'get_available_providers',
-    'get_provider_from_model',
-    'get_model_max_tokens',
-
-    # Styles (v3.0)
-    'STYLE_OPTIONS',
-    'STYLE_PROMPTS',
-    'get_style_options',
-
-    # Modifiers (v3.0)
-    'STYLE_MODIFIERS',
-    'MODIFIER_OPTIONS',
-    'DEFAULT_MODIFIERS',
-    'get_modifier_options',
-
-    # Prompt Builder
-    'build_full_prompt',
-
-    # 웹 검색 보강
-    'TAVILY_API_KEY',
-    'WEB_SEARCH_ENABLED',
-    'WEB_SEARCH_MAX_RESULTS',
-
-    # RAG
-    'RAG_ENABLED',
-    'CHROMA_DB_PATH',
-    'RAG_TOP_K',
-
-    # GraphRAG
-    'GRAPH_RAG_ENABLED',
-    'GRAPH_STORE_PATH',
-    'RERANKER_ENABLED',
-    'RERANKER_TOP_K',
-
-    # TTS
-    'TTS_ENABLED',
-    'TTS_BACKEND',
-    'TTS_DEFAULT_VOICE',
-    'TTS_MAX_CHARS',
-
-    # Phase 9: 인프라 & 성능
-    'REDIS_URL',
-    'ENCRYPTION_KEY',
-    'SENTRY_DSN',
-
-    # Phase 10: 고급 AI & 미래 기술
-    'ELEVENLABS_API_KEY',
-    'RUNWAY_API_KEY',
-    'DEEPL_API_KEY',
-    'TRANSLATION_MODEL',
-    'FINETUNE_OUTPUT_DIR',
-    'EMBEDDING_MODEL',
-]
 
 # === Phase 9: 인프라 & 성능 설정 ===
 
@@ -569,3 +432,102 @@ FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE'
 
 # 모델 라우터 기본 모드
 MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balanced')
+
+
+# === Public API (모든 정의 후 배치 — NameError 방지) ===
+
+__all__ = [
+    # API Keys
+    'YOUTUBE_API_KEY',
+    'PROVIDER_API_KEYS',
+    'SUPADATA_API_KEY',
+
+    # Webhook
+    'WEBHOOK_URL',
+    'WEBHOOK_ENABLED',
+
+    # Token Limits
+    'MAX_TRANSCRIPT_TOKENS',
+    'MAX_COMMENTS_TOKENS',
+    'MAX_CONTENT_TOKENS',
+
+    # Short Content Bypass
+    'SHORT_CONTENT_THRESHOLD',
+    'SHORT_CONTENT_BYPASS_STYLES',
+
+    # AI Cache
+    'AI_CACHE_DB',
+    'AI_CACHE_TTL_DAYS',
+    'AI_CACHE_MAX_SIZE_MB',
+
+    # Fallback Chain
+    'FALLBACK_CHAIN',
+    'MAX_FALLBACK_ATTEMPTS',
+
+    # Style/Length Tuning
+    'STYLE_TEMPERATURE',
+    'LENGTH_MAX_TOKENS',
+    'DETAIL_PRESETS',
+    'PLATFORM_PRESETS',
+
+    # QA Gate
+    'QA_FORBIDDEN_WORDS',
+    'QA_MIN_SECTIONS',
+    'QA_MIN_CHARS',
+
+    # Campaign Packs
+    'CAMPAIGN_PACKS',
+
+    # Providers
+    'SUPPORTED_PROVIDERS',
+    'get_available_providers',
+    'get_provider_from_model',
+    'get_model_max_tokens',
+
+    # Styles (v3.0)
+    'STYLE_OPTIONS',
+    'STYLE_PROMPTS',
+
+    # Modifiers (v3.0)
+    'STYLE_MODIFIERS',
+    'MODIFIER_OPTIONS',
+    'DEFAULT_MODIFIERS',
+
+    # Prompt Builder
+    'build_full_prompt',
+
+    # 웹 검색 보강
+    'TAVILY_API_KEY',
+    'WEB_SEARCH_ENABLED',
+    'WEB_SEARCH_MAX_RESULTS',
+
+    # RAG
+    'RAG_ENABLED',
+    'CHROMA_DB_PATH',
+    'RAG_TOP_K',
+
+    # GraphRAG
+    'GRAPH_RAG_ENABLED',
+    'GRAPH_STORE_PATH',
+    'RERANKER_ENABLED',
+    'RERANKER_TOP_K',
+
+    # TTS
+    'TTS_ENABLED',
+    'TTS_BACKEND',
+    'TTS_DEFAULT_VOICE',
+    'TTS_MAX_CHARS',
+
+    # Phase 9: 인프라 & 성능
+    'REDIS_URL',
+    'ENCRYPTION_KEY',
+    'SENTRY_DSN',
+
+    # Phase 10: 고급 AI & 미래 기술
+    'ELEVENLABS_API_KEY',
+    'RUNWAY_API_KEY',
+    'DEEPL_API_KEY',
+    'TRANSLATION_MODEL',
+    'FINETUNE_OUTPUT_DIR',
+    'EMBEDDING_MODEL',
+]

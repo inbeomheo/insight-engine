@@ -513,30 +513,30 @@ class TestSanitizeGenerationError(_Base):
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_safe_message(self, _):
-        from routes.advanced_routes import _sanitize_generation_error
+        from utils.responses import safe_error_or_fallback
         with self.app.app_context():
-            result = _sanitize_generation_error('[인증 실패] bad', 'fallback')
+            result = safe_error_or_fallback('[인증 실패] bad', 'fallback')
             self.assertIn('인증', result)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_server_error_uses_fallback(self, _):
-        from routes.advanced_routes import _sanitize_generation_error
+        from utils.responses import safe_error_or_fallback
         with self.app.app_context():
-            result = _sanitize_generation_error('[서버 오류] internal details', 'fallback')
+            result = safe_error_or_fallback('[서버 오류] internal details', 'fallback')
             self.assertEqual(result, 'fallback')
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_none_error(self, _):
-        from routes.advanced_routes import _sanitize_generation_error
+        from utils.responses import safe_error_or_fallback
         with self.app.app_context():
-            result = _sanitize_generation_error(None, 'fallback')
+            result = safe_error_or_fallback(None, 'fallback')
             self.assertIsInstance(result, str)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_exception_object(self, _):
-        from routes.advanced_routes import _sanitize_generation_error
+        from utils.responses import safe_error_or_fallback
         with self.app.app_context():
-            result = _sanitize_generation_error(ValueError('oops'), 'fallback')
+            result = safe_error_or_fallback(ValueError('oops'), 'fallback')
             self.assertIsInstance(result, str)
 
 

@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from services.core.logging_config import ServiceLogger
+from services.integrations._shared import disabled_result, webhook_result
 
 logger = ServiceLogger('DiscordService')
 
@@ -28,7 +29,7 @@ class DiscordService:
     def send(self, content: str, username: str = 'Insight Engine') -> dict[str, Any]:
         """단순 텍스트 메시지 전송"""
         if not self.is_enabled():
-            return {'ok': False, 'reason': 'DISCORD_WEBHOOK_URL 미설정'}
+            return disabled_result('DISCORD_WEBHOOK_URL 미설정')
 
         payload = {'content': content, 'username': username}
         try:
@@ -36,9 +37,7 @@ class DiscordService:
                 self.webhook_url, json=payload, timeout=DISCORD_TIMEOUT_SEC
             )
             # Discord는 성공 시 204 반환
-            if resp.status_code in (200, 204):
-                return {'ok': True}
-            return {'ok': False, 'status': resp.status_code, 'body': resp.text}
+            return webhook_result(resp, (200, 204))
         except Exception as e:
             logger.error(f'Discord 전송 실패: {e}')
             return {'ok': False, 'error': str(e)}
@@ -48,7 +47,7 @@ class DiscordService:
                    fields: list[dict] | None = None) -> dict[str, Any]:
         """Embed 메시지 전송"""
         if not self.is_enabled():
-            return {'ok': False, 'reason': 'DISCORD_WEBHOOK_URL 미설정'}
+            return disabled_result('DISCORD_WEBHOOK_URL 미설정')
 
         embed: dict[str, Any] = {
             'title': title,
@@ -63,9 +62,7 @@ class DiscordService:
             resp = requests.post(
                 self.webhook_url, json=payload, timeout=DISCORD_TIMEOUT_SEC
             )
-            if resp.status_code in (200, 204):
-                return {'ok': True}
-            return {'ok': False, 'status': resp.status_code, 'body': resp.text}
+            return webhook_result(resp, (200, 204))
         except Exception as e:
             logger.error(f'Discord Embed 전송 실패: {e}')
             return {'ok': False, 'error': str(e)}
