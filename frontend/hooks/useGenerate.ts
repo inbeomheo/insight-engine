@@ -94,17 +94,24 @@ export function useGenerate() {
               } else if (event.type === 'done') {
                 // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
                 rafRef.current = false;
+                const finalContent = event.content || content;
                 updateReport(tempId, {
-                  content,
-                  html: event.data || '',
+                  title: event.title || '생성 완료',
+                  content: finalContent,
+                  html: event.html || event.data || '',
+                  youtube_title: event.youtube_title || '',
+                  transcript_source: event.transcript_source || '',
                   usage: event.usage || { total_tokens: 0 },
                   elapsed_time: event.elapsed_time || 0,
                   prompt: event.prompt || '',
                   cached: event.cached || false,
                   comment_summary_included: event.comment_summary_included || false,
                   seo: event.seo,
+                  geo: event.geo,
                   faq_schema: event.faq_schema,
                   cta: event.cta,
+                  qualitySummary: event.quality_summary,
+                  transcript_segments: event.transcript_segments || [],
                 });
                 setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
               } else if (event.type === 'error') {

@@ -1008,6 +1008,15 @@ def generate_stream():
                     except Exception:
                         html = f"<pre>{html_lib.escape(body)}</pre>"
 
+                    quality_summary = _build_generation_quality_summary(
+                        'youtube',
+                        raw_transcript,
+                        {'title': title, 'content': body, 'html': html},
+                        comments=comments,
+                        comments_reflected=bool(comments),
+                        transcript_source=transcript_source,
+                    )
+
                     # 사용량 차감 (성공 시)
                     if is_supabase_enabled() and user_id:
                         UsageService.decrement(user_id)
@@ -1020,6 +1029,10 @@ def generate_stream():
                         'youtube_title': youtube_title,
                         'transcript_source': transcript_source,
                         'transcript_segments': transcript_segments or [],
+                        'elapsed_time': round(time.time() - start_time, 2),
+                        'cached': False,
+                        'comment_summary_included': False,
+                        'quality_summary': quality_summary,
                     }, ensure_ascii=False)
                     yield f"data: {done_event}\n\n"
 

@@ -147,7 +147,7 @@ function TutorialVisualCueSection({ cues }: { cues: VisualCue[] }) {
 }
 
 function isFusionQualitySummary(summary: Report['qualitySummary']): summary is FusionQualitySummary {
-  return Boolean(summary && !('kind' in summary));
+  return Boolean(typeof summary === 'object' && summary !== null && !('kind' in summary));
 }
 
 // 패널 상태 리듀서 — 13개 useState → 단일 리듀서 (상태 변경 시 1회 리렌더)

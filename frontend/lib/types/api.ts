@@ -91,7 +91,9 @@ export interface StreamEvent {
   content?: string;
   title?: string;
   youtube_title?: string;
+  html?: string;
   transcript_source?: string;
+  transcript_segments?: Array<{ start: number; text: string }>;
   usage?: TokenUsage;
   elapsed_time?: number;
   prompt?: string;

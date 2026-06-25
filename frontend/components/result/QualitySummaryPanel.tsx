@@ -40,7 +40,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 function isGenerationSummary(summary: QualitySummary): summary is GenerationQualitySummary {
-  return 'kind' in summary && summary.kind === 'generation';
+  return typeof summary === 'object' && summary !== null && 'kind' in summary && summary.kind === 'generation';
 }
 
 function statusClass(status?: FusionQualityStatus): string {
@@ -54,7 +54,8 @@ function qualityLabel(status?: FusionQualityStatus): string {
   return status ? QUALITY_LABELS[status] : '확인 전';
 }
 
-function sourceLabel(type: string): string {
+function sourceLabel(type?: string): string {
+  if (!type) return '알 수 없는 원본';
   return SOURCE_LABELS[type] ?? type;
 }
 
@@ -115,9 +116,24 @@ function FusionQualityItems({ summary }: { summary: FusionQualitySummary }) {
 }
 
 function GenerationQualityItems({ summary }: { summary: GenerationQualitySummary }) {
-  const source = summary.source;
-  const comments = summary.comments;
-  const body = summary.body;
+  const source = summary.source ?? {
+    status: 'error' as const,
+    type: 'unknown',
+    has_content: false,
+    char_count: 0,
+  };
+  const comments = summary.comments ?? {
+    status: 'disabled' as const,
+    available_count: 0,
+    reflected: false,
+  };
+  const body = summary.body ?? {
+    status: 'error' as const,
+    has_title: false,
+    has_content: false,
+    has_html: false,
+    char_count: 0,
+  };
 
   const sourceDetail = [
     sourceLabel(source.type),
