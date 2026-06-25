@@ -38,7 +38,6 @@ import { ReportProvider } from './ReportContext';
 import { EXPORT_HTML_STYLE, PRINT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
-const AudioPlayer = dynamic(() => import('./AudioPlayer'), { ssr: false });
 const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
 const GeoSection = dynamic(() => import('./GeoSection'), { ssr: false });
 const FaqCtaSection = dynamic(() => import('./FaqCtaSection'), { ssr: false });
@@ -230,8 +229,6 @@ interface PanelState {
   copiedField: string | null;
   chatOpen: boolean;
   showTranscript: boolean;
-  audioBlob: Blob | null;
-  ttsLoading: boolean;
   eventOpen: boolean;
   eventLoading: boolean;
   extractedEvents: VideoEvent[] | null;
@@ -244,7 +241,7 @@ type PanelAction =
 
 const panelInitial: PanelState = {
   collapsed: false, hasExpanded: true, copiedField: null,
-  chatOpen: false, showTranscript: false, audioBlob: null, ttsLoading: false,
+  chatOpen: false, showTranscript: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
   rewriteOpen: false,
 };
@@ -267,7 +264,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, audioBlob, ttsLoading, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -969,15 +966,6 @@ variant={report.share_url ? 'secondary' : 'outline'}
           {/* SEO 자동 삽입 링크 섹션 */}
           {report.inserted_links && report.inserted_links.length > 0 && (
             <InsertedLinksSection links={report.inserted_links} />
-          )}
-
-          {/* 팟캐스트 오디오 플레이어 */}
-          {audioBlob && (
-            <AudioPlayer
-              audioBlob={audioBlob}
-              title={report.title}
-              onClose={() => setPanel('audioBlob', null)}
-            />
           )}
 
           {/* 이벤트 타임라인 */}
