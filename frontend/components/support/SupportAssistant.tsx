@@ -11,6 +11,7 @@ import {
   type SupportChatResponse,
   type SupportTicket,
 } from '@/lib/api';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
 type ChatRole = 'assistant' | 'user' | 'system';
@@ -36,7 +37,8 @@ function uid() {
 function redactDiagnostic(value: string): string {
   return value
     .replace(/(authorization|bearer|token|access_token|refresh_token|api[_-]?key|password|secret)=([^\s&]+)/gi, '$1=[REDACTED]')
-    .replace(/(authorization|bearer|token|access_token|refresh_token|api[_-]?key|password|secret)(\s*[:=]\s*)([^\s,;]+)/gi, '$1$2[REDACTED]')
+    .replace(/(authorization|bearer|token|access_token|refresh_token|api[_-]?key|password|secret)(\s*[:=]\s*)([^\s,;&]+)/gi, '$1$2[REDACTED]')
+    .replace(/\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{16,}|AIza[0-9A-Za-z_-]{20,})\b/g, '[REDACTED_TOKEN]')
     .replace(/https?:\/\/[^\s]+/gi, (url) => {
       try {
         const parsed = new URL(url);
@@ -48,6 +50,22 @@ function redactDiagnostic(value: string): string {
     .slice(0, 500);
 }
 
+function getCurrentUrlForSupport(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const parsed = new URL(window.location.href);
+    parsed.hash = '';
+    for (const key of Array.from(parsed.searchParams.keys())) {
+      if (/^(token|access_token|refresh_token|api_key|key|sig|signature|x-amz-signature)$/i.test(key)) {
+        parsed.searchParams.set(key, 'REDACTED');
+      }
+    }
+    return parsed.toString();
+  } catch {
+    return redactDiagnostic(window.location.href);
+  }
+}
+
 function getConsoleErrors(): string[] {
   if (typeof window === 'undefined') return [];
   const existing = (window as typeof window & { __insightSupportErrors?: string[] }).__insightSupportErrors || [];
@@ -55,6 +73,11 @@ function getConsoleErrors(): string[] {
 }
 
 export default function SupportAssistant() {
+  const selectedProvider = useSettingsStore((s) => s.selectedProvider);
+  const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const generationMode = useSettingsStore((s) => s.generationMode);
+  const selectedStyle = useSettingsStore((s) => s.selectedStyle);
+  const detailLevel = useSettingsStore((s) => s.detailLevel);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -100,9 +123,15 @@ export default function SupportAssistant() {
         message,
         mode,
         route: typeof window !== 'undefined' ? window.location.pathname : '/',
+        current_url: getCurrentUrlForSupport(),
         viewport: typeof window !== 'undefined' ? { width: window.innerWidth, height: window.innerHeight } : undefined,
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         console_errors: getConsoleErrors(),
+        selected_provider: selectedProvider,
+        selected_model: selectedModel,
+        generation_mode: generationMode,
+        selected_style: selectedStyle,
+        detail_level: detailLevel,
       });
       setMessages((prev) => [
         ...prev,
@@ -319,6 +348,9 @@ function TicketActions({
           <Bug className="h-3 w-3" /> {ticket.kind}
         </span>
         <span className="border border-border bg-background px-2 py-0.5 font-bold">{ticket.severity}</span>
+        {ticket.priority && ticket.priority !== ticket.severity && (
+          <span className="border border-border bg-background px-2 py-0.5 font-bold">P {ticket.priority}</span>
+        )}
         {ticket.github_issue_url && <StatusLink href={ticket.github_issue_url} label={`Issue #${ticket.github_issue_number ?? ''}`} />}
         {ticket.github_pr_url && <StatusLink href={ticket.github_pr_url} label={`PR #${ticket.github_pr_number ?? ''}`} />}
       </div>

@@ -77,7 +77,8 @@ def github_config_status() -> dict[str, Any]:
 
 def issue_labels(ticket: dict[str, Any]) -> list[str]:
     labels = list(ticket.get("labels") or [])
-    for label in ["support-feedback", "needs-agent", ticket.get("kind"), f"priority:{ticket.get('severity', 'medium')}"]:
+    priority = ticket.get("priority") or ticket.get("severity", "medium")
+    for label in ["support-feedback", "needs-agent", ticket.get("kind"), f"priority:{priority}"]:
         if label and label not in labels:
             labels.append(label)
     if ticket.get("kind") == "feature" and "feature-request" not in labels:
@@ -85,23 +86,73 @@ def issue_labels(ticket: dict[str, Any]) -> list[str]:
     return [label for label in labels if label]
 
 
+def _ticket_context(ticket: dict[str, Any]) -> dict[str, Any]:
+    metadata = ticket.get("metadata") if isinstance(ticket.get("metadata"), dict) else {}
+    context = metadata.get("context") if isinstance(metadata.get("context"), dict) else {}
+    return context
+
+
+def _context_value(ticket: dict[str, Any], key: str, default: str = "unknown") -> str:
+    metadata = ticket.get("metadata") if isinstance(ticket.get("metadata"), dict) else {}
+    context = _ticket_context(ticket)
+    value = ticket.get(key) or context.get(key) or metadata.get(key) or ""
+    if value is None:
+        value = ""
+    value = str(value).strip()
+    return value or default
+
+
+def _classification_confidence(ticket: dict[str, Any]) -> str:
+    metadata = ticket.get("metadata") if isinstance(ticket.get("metadata"), dict) else {}
+    confidence = metadata.get("classification_confidence")
+    if isinstance(confidence, (int, float)):
+        return f"{confidence:.2f}"
+    return "unknown"
+
+
+def _fallback_reproduction(ticket: dict[str, Any]) -> str:
+    current_url = _context_value(ticket, "current_url")
+    route = _context_value(ticket, "route")
+    selected_model = _context_value(ticket, "selected_model")
+    generation_mode = _context_value(ticket, "generation_mode")
+    message = ticket.get("message") or ticket.get("title") or "사용자 메시지가 비어 있습니다."
+    return "\n".join([
+        f"1. `{current_url}` 화면에서 접수되었습니다.",
+        f"2. 라우트 `{route}`, 모델 `{selected_model}`, 생성 모드 `{generation_mode}` 상태를 맞춥니다.",
+        f"3. 사용자 보고 내용: {message}",
+    ])
+
+
 def build_issue_body(ticket: dict[str, Any]) -> str:
     viewport = ticket.get("viewport") or {}
     related = ticket.get("related_files") or []
     console_errors = ticket.get("console_errors") or []
     metadata = ticket.get("metadata") or {}
+    priority = ticket.get("priority") or metadata.get("priority") or ticket.get("severity", "medium")
+    reproduction = metadata.get("reproduction") or _fallback_reproduction(ticket)
     return f"""## 사용자 피드백
 {ticket.get('message') or ticket.get('title') or ''}
 
 ## 자동 분류
 - 유형: `{ticket.get('kind', 'usability')}`
+- 우선순위: `{priority}`
 - 심각도: `{ticket.get('severity', 'medium')}`
-- 화면: `{ticket.get('route') or 'unknown'}`
+- 분류 신뢰도: `{_classification_confidence(ticket)}`
+- 지원 접수 모드: `{_context_value(ticket, 'support_mode', metadata.get('mode') or 'auto')}`
+
+## 화면/실행 컨텍스트
+- 현재 URL: `{_context_value(ticket, 'current_url')}`
+- Route: `{_context_value(ticket, 'route')}`
+- 생성 모델: `{_context_value(ticket, 'selected_model')}`
+- 프로바이더: `{_context_value(ticket, 'selected_provider')}`
+- 생성 모드: `{_context_value(ticket, 'generation_mode')}`
+- 스타일: `{_context_value(ticket, 'selected_style')}`
+- 상세도: `{_context_value(ticket, 'detail_level')}`
 - 뷰포트: `{viewport.get('width', '?')}x{viewport.get('height', '?')}`
 - User-Agent: `{ticket.get('user_agent') or 'unknown'}`
 
 ## 재현 정보
-{metadata.get('reproduction') or '아직 상세 재현 단계가 부족합니다. 작업 에이전트는 먼저 재현 가능 여부를 확인해주세요.'}
+{reproduction}
 
 ## 기대 동작
 {metadata.get('expected') or '사용자가 자연스럽게 기능을 이해하고 불편 없이 사용할 수 있어야 합니다.'}
@@ -132,6 +183,14 @@ _이 이슈는 Insight Engine Support Assistant가 사용자 피드백을 바탕
 """.strip()
 
 
+def build_issue_payload(ticket: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": ticket.get("title") or "[Feedback] 사용자 피드백",
+        "body": build_issue_body(ticket),
+        "labels": issue_labels(ticket),
+    }
+
+
 def _format_bullets(items: list[Any]) -> str:
     return "\n".join(f"- `{item}`" if isinstance(item, str) and ("/" in item or item.endswith(".tsx") or item.endswith(".py")) else f"- {item}" for item in items if item)
 
@@ -140,11 +199,7 @@ def create_github_issue(ticket_id: str, store: FeedbackStore | None = None) -> d
     store = store or get_feedback_store()
     ticket = store.get_ticket(ticket_id)
     repo = _repo_from_env()
-    payload = {
-        "title": ticket.get("title") or "[Feedback] 사용자 피드백",
-        "body": build_issue_body(ticket),
-        "labels": issue_labels(ticket),
-    }
+    payload = build_issue_payload(ticket)
     issue = _github_request("POST", f"/repos/{repo}/issues", payload)
     updated = store.update_ticket(ticket_id, {
         "status": "issue_created",

@@ -5,10 +5,17 @@ import re
 from typing import Any
 
 _KIND_KEYWORDS = {
-    "bug": ["안돼", "안 돼", "안됨", "오류", "에러", "버그", "깨져", "멈춰", "실패", "안보여", "안 보여"],
+    "bug": ["안돼", "안 돼", "안됨", "안되", "안 되", "생성 안", "작동 안", "오류", "에러", "버그", "깨져", "멈춰", "실패", "안보여", "안 보여"],
     "usability": ["불편", "헷갈", "찌그러", "이상해", "어색", "작아", "잘려", "취소", "눌러도", "보기 싫", "폰트", "글씨"],
     "feature": ["넣어", "추가", "만들", "지원", "가능", "되게", "원해", "하고싶", "구조", "기능"],
     "question": ["뭐야", "무엇", "어떻게", "왜", "차이", "설명", "알려", "궁금", "사용법", "어디"],
+}
+
+_PRIORITY_BY_SEVERITY = {
+    "critical": "critical",
+    "high": "high",
+    "medium": "medium",
+    "low": "low",
 }
 
 _FILE_HINTS = [
@@ -45,6 +52,7 @@ def classify_message(message: str) -> dict[str, Any]:
         severity = "critical"
     if kind == "question":
         severity = "low"
+    priority = _PRIORITY_BY_SEVERITY.get(severity, "medium")
 
     related_files: list[str] = []
     for pattern, files in _FILE_HINTS:
@@ -56,7 +64,7 @@ def classify_message(message: str) -> dict[str, Any]:
     labels = ["support-feedback", kind]
     if kind in {"bug", "usability", "feature"}:
         labels.append("needs-agent")
-    labels.append(f"priority:{severity}")
+    labels.append(f"priority:{priority}")
     labels = list(dict.fromkeys(labels))
 
     title = build_title(message, kind)
@@ -65,6 +73,7 @@ def classify_message(message: str) -> dict[str, Any]:
     return {
         "kind": kind,
         "severity": severity,
+        "priority": priority,
         "title": title,
         "labels": labels,
         "related_files": related_files,

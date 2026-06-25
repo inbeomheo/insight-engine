@@ -891,9 +891,16 @@ export interface SupportTicket {
   kind: 'question' | 'bug' | 'usability' | 'feature' | 'ops' | string;
   status: string;
   severity: 'low' | 'medium' | 'high' | 'critical' | string;
+  priority?: 'low' | 'medium' | 'high' | 'critical' | string;
   title: string;
   message: string;
   route?: string;
+  current_url?: string;
+  selected_provider?: string;
+  selected_model?: string;
+  generation_mode?: string;
+  selected_style?: string;
+  detail_level?: string;
   viewport?: SupportViewport | null;
   user_agent?: string;
   console_errors?: string[];
@@ -922,10 +929,16 @@ export async function supportChat(req: {
   message: string;
   mode?: 'auto' | 'question' | 'feedback' | 'bug' | 'feature';
   route?: string;
+  current_url?: string;
   viewport?: SupportViewport;
   user_agent?: string;
   console_errors?: string[];
   screenshot_url?: string;
+  selected_provider?: string;
+  selected_model?: string;
+  generation_mode?: string;
+  selected_style?: string;
+  detail_level?: string;
 }): Promise<SupportChatResponse> {
   return request('/api/support/chat', {
     method: 'POST',

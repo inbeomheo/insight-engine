@@ -76,10 +76,16 @@ def support_chat():
         result = handle_support_chat(
             message=data.get("message", ""),
             route=data.get("route") or request.headers.get("X-Insight-Route", ""),
+            current_url=data.get("current_url") or "",
             viewport=data.get("viewport") if isinstance(data.get("viewport"), dict) else None,
             user_agent=data.get("user_agent") or request.headers.get("User-Agent", ""),
             console_errors=data.get("console_errors") if isinstance(data.get("console_errors"), list) else [],
             screenshot_url=data.get("screenshot_url") or "",
+            selected_provider=data.get("selected_provider") or "",
+            selected_model=data.get("selected_model") or data.get("model") or "",
+            generation_mode=data.get("generation_mode") or "",
+            selected_style=data.get("selected_style") or "",
+            detail_level=data.get("detail_level") or "",
             mode=data.get("mode") or "auto",
             user_id=_current_user_id(),
         )
