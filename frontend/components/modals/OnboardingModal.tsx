@@ -8,6 +8,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { setOnboardingDone } from '@/lib/storage';
+import { ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 
 export default function OnboardingModal() {
   const { activeModal, setOnboardingOpen } = useUIStore();
@@ -15,7 +16,7 @@ export default function OnboardingModal() {
   const { providers, selectedProvider, setSelectedProvider, setSelectedModel } =
     useSettingsStore();
 
-  const providerIds = Object.keys(providers);
+  const providerIds = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => providers[id]);
   const { t } = useTranslation();
 
   function handleStart() {

@@ -226,7 +226,7 @@ function MobileCreateView({
         <div className="mb-5 rounded-[24px] border border-[#DDE3F0] bg-white p-4 shadow-[0_10px_26px_rgba(21,23,31,0.06)]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-black text-[#15171F]">AI 모델</h2>
-            <span className="text-[10px] font-bold text-[#2F54EB]">GLM · ChatMock</span>
+            <span className="text-[10px] font-bold text-[#2F54EB]">ChatMock · GLM</span>
           </div>
           <div className="mb-3 grid grid-cols-2 gap-2">
             {mobileProviderIds.map((providerId) => {

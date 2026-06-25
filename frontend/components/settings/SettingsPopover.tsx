@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS, ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
@@ -13,7 +14,33 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { testWebhook } from '@/lib/api';
+import type { ProviderHealth } from '@/lib/types';
 import KnowledgeManager from './KnowledgeManager';
+
+function providerHealthTone(health?: ProviderHealth) {
+  if (!health) return 'border-border bg-muted/30 text-muted-foreground';
+  if (health.severity === 'ok') return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+  if (health.severity === 'error') return 'border-red-200 bg-red-50 text-red-900';
+  return 'border-amber-200 bg-amber-50 text-amber-900';
+}
+
+function ProviderHealthNotice({ health }: { health?: ProviderHealth }) {
+  if (!health) return null;
+  const Icon = health.severity === 'ok' ? CheckCircle2 : health.severity === 'error' ? AlertCircle : Info;
+
+  return (
+    <div className={cn('mt-2 rounded-sm border px-3 py-2 text-xs leading-relaxed', providerHealthTone(health))}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span>{health.label}</span>
+      </div>
+      <p className="mt-1 text-[11px] opacity-85">{health.message}</p>
+      {health.action && health.severity !== 'ok' && (
+        <p className="mt-1 text-[11px] opacity-80">{health.action}</p>
+      )}
+    </div>
+  );
+}
 
 export default function SettingsPopover() {
   const { settingsPopoverOpen, setSettingsPopoverOpen } = useUIStore();
@@ -24,14 +51,12 @@ export default function SettingsPopover() {
     selectedStyle,
     modifiers,
     customStyles,
-    ollamaBaseUrl,
     webhookUrl,
     enableWebSearch,
     setSelectedProvider,
     setSelectedModel,
     setSelectedStyle,
     setModifiers,
-    setOllamaBaseUrl,
     setWebhookUrl,
     setEnableWebSearch,
   } = useSettingsStore();
@@ -77,6 +102,10 @@ export default function SettingsPopover() {
     ? selectedProvider
     : providerIds[0] || '';
   const currentModels = activeProvider ? providers[activeProvider]?.models || [] : [];
+  const activeModel = currentModels.some((model) => model.id === selectedModel)
+    ? selectedModel
+    : currentModels[0]?.id || '';
+  const activeProviderHealth = activeProvider ? providers[activeProvider]?.health : undefined;
 
   // 내장 + 커스텀 스타일
   const allStyles = [
@@ -96,40 +125,49 @@ export default function SettingsPopover() {
       {/* AI 모델 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
-        <div className="flex gap-2">
-          <Select
-            value={activeProvider}
-            onValueChange={(v) => {
-              setSelectedProvider(v);
-              const first = providers[v]?.models[0];
-              if (first) setSelectedModel(first.id);
-            }}
-          >
-            <SelectTrigger className="h-9 text-sm flex-1">
-              <SelectValue placeholder="서비스" />
-            </SelectTrigger>
-            <SelectContent>
-              {providerIds.map((id) => (
-                <SelectItem key={id} value={id} className="text-sm">
-                  {providers[id].name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {providerIds.length === 0 ? (
+          <div className="rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            ChatMock Spark 또는 GLM 설정을 찾지 못했습니다. 서버 환경변수를 확인한 뒤 새로고침해주세요.
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <Select
+                value={activeProvider}
+                onValueChange={(v) => {
+                  setSelectedProvider(v);
+                  const first = providers[v]?.models[0];
+                  if (first) setSelectedModel(first.id);
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm flex-1">
+                  <SelectValue placeholder="서비스" />
+                </SelectTrigger>
+                <SelectContent>
+                  {providerIds.map((id) => (
+                    <SelectItem key={id} value={id} className="text-sm">
+                      {providers[id].name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="h-9 text-sm flex-1">
-              <SelectValue placeholder="모델" />
-            </SelectTrigger>
-            <SelectContent>
-              {currentModels.map((m) => (
-                <SelectItem key={m.id} value={m.id} className="text-sm">
-                  {m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              <Select value={activeModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="h-9 text-sm flex-1">
+                  <SelectValue placeholder="모델" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentModels.map((m) => (
+                    <SelectItem key={m.id} value={m.id} className="text-sm">
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <ProviderHealthNotice health={activeProviderHealth} />
+          </>
+        )}
       </div>
 
       {/* 스타일 */}
@@ -227,25 +265,6 @@ export default function SettingsPopover() {
           ))}
         </div>
       </div>
-
-      {/* Ollama 설정 — ollama 프로바이더 선택 시만 표시 */}
-      {selectedProvider === 'ollama' && (
-        <div>
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">
-            Ollama Base URL
-          </label>
-          <input
-            type="text"
-            value={ollamaBaseUrl}
-            onChange={(e) => setOllamaBaseUrl(e.target.value)}
-            placeholder="http://localhost:11434"
-            className="w-full h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Ollama 서버 주소 (기본: http://localhost:11434)
-          </p>
-        </div>
-      )}
 
       {/* 웹 검색 보강 */}
       <div>

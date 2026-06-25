@@ -18,8 +18,12 @@ export interface StyleOption {
 
 export interface ProviderInfo {
   name: string;
-  api_base: string;
+  api_base?: string;
   models: ModelInfo[];
+  model_count?: number;
+  default_model?: string | null;
+  health?: ProviderHealth;
+  diagnostics?: ProviderDiagnostics;
 }
 
 export interface ModelInfo {
@@ -28,6 +32,29 @@ export interface ModelInfo {
   max_input_tokens: number;
   price_input: number;
   price_output: number;
+}
+
+export type ProviderHealthStatus = 'ready' | 'missing_key' | 'unavailable' | 'unknown';
+export type ProviderHealthSeverity = 'ok' | 'warning' | 'error';
+
+export interface ProviderHealth {
+  status: ProviderHealthStatus;
+  severity: ProviderHealthSeverity;
+  label: string;
+  message: string;
+  action?: string;
+  is_default?: boolean;
+  is_selectable?: boolean;
+}
+
+export interface ProviderDiagnostics {
+  provider_id: string;
+  available: boolean;
+  generation_visible: boolean;
+  api_key_configured: boolean;
+  base_url_configured: boolean;
+  model_count: number;
+  default_model?: string | null;
 }
 
 export interface CustomStyle {

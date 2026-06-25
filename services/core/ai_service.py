@@ -5,6 +5,7 @@ LiteLLM을 사용한 다중 AI 프로바이더 지원
 import functools
 import html as html_lib
 import os
+import re
 import time
 markdown = None  # 지연 로딩 (cold start 최적화)
 import threading
@@ -40,6 +41,23 @@ GLM_RETRY_COUNT = 5
 GLM_RETRY_DELAY = 10  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
+
+_SENSITIVE_ERROR_PATTERNS = [
+    re.compile(r'(?i)\b(api[_-]?key|token|secret|password|authorization)(\s*[:=]\s*)([^\s,;]+)'),
+    re.compile(r'(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+'),
+    re.compile(r'\bsk-[A-Za-z0-9_-]+'),
+]
+
+
+def _redact_sensitive_error_detail(error_msg: str) -> str:
+    """사용자에게 전달할 수 있는 오류 세부 정보에서 비밀값 패턴을 제거합니다."""
+    redacted = error_msg
+    for pattern in _SENSITIVE_ERROR_PATTERNS:
+        if pattern.pattern.startswith('(?i)\\b(api'):
+            redacted = pattern.sub(r'\1\2[REDACTED]', redacted)
+        else:
+            redacted = pattern.sub('[REDACTED]', redacted)
+    return redacted
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -221,6 +239,31 @@ def _convert_error_message(error_msg, model=None):
     error_lower = error_msg.lower()
     model_info = f" (모델: {model})" if model else ""
 
+    is_chatmock = bool(model and model.startswith('chatmock/'))
+    is_glm = bool(model and model.startswith('zhipuai/'))
+
+    if is_chatmock:
+        if 'timeout' in error_lower or 'timed out' in error_lower:
+            return f"[타임아웃] ChatMock Spark 응답 시간이 초과되었습니다{model_info}. 잠시 후 다시 시도하거나 ChatMock 서비스 상태를 확인해주세요."
+        if any(term in error_lower for term in ('connection', 'connect', 'connection refused', 'max retries exceeded')):
+            return f"[연결 실패] ChatMock Spark 서버에 연결할 수 없습니다{model_info}. ChatMock 서비스 실행 상태와 CHATMOCK_BASE_URL 설정을 확인해주세요."
+        if '404' in error_lower or 'not found' in error_lower or 'does not exist' in error_lower:
+            return f"[모델 오류] ChatMock Spark에서 선택한 모델을 찾지 못했습니다{model_info}. 모델 목록을 새로고침한 뒤 다시 시도해주세요."
+        if '401' in error_lower or 'unauthorized' in error_lower or 'authentication' in error_lower:
+            return f"[인증 실패] ChatMock Spark 프록시 인증에 실패했습니다{model_info}. 서버의 ChatMock 설정을 확인해주세요."
+
+    if is_glm:
+        if 'zai_api_key' in error_lower or 'zhipuai_api_key' in error_lower or '환경변수가 설정되지' in error_msg:
+            return f"[인증 실패] GLM API 키가 서버에 설정되지 않았습니다{model_info}. ZAI_API_KEY 또는 ZHIPUAI_API_KEY 환경변수를 확인해주세요."
+        if '1302' in error_msg:
+            return f"[동시성 초과] GLM 동시 요청 수가 초과되었습니다{model_info}. 잠시 후 자동 재시도하거나 요청을 줄여주세요."
+        if '1113' in error_msg:
+            return f"[권한 없음] GLM 모델 접근 권한이 없습니다{model_info}. GLM 콘솔에서 API 키 권한을 확인해주세요."
+        if '1211' in error_msg:
+            return f"[모델 없음] GLM 모델명을 찾을 수 없습니다{model_info}. 다른 GLM 모델을 선택해주세요."
+        if 'insufficient' in error_lower or 'balance' in error_lower or 'credit' in error_lower:
+            return f"[잔액 부족] GLM API 크레딧이 부족합니다{model_info}. GLM 콘솔에서 잔액을 확인해주세요."
+
     # 인증 관련
     if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
         return f"[인증 실패] API 키가 유효하지 않습니다{model_info}. 환경변수를 확인해주세요."
@@ -263,8 +306,9 @@ def _convert_error_message(error_msg, model=None):
     if '1302' in error_msg:
         return f"[동시성 초과] 동시 요청 수가 초과되었습니다{model_info}. 잠시 후 다시 시도해주세요."
 
-    # 기타 - 원본 메시지 포함
-    return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
+    # 기타 - 민감값 패턴을 제거한 세부 메시지만 포함
+    safe_detail = _redact_sensitive_error_detail(error_msg)
+    return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {safe_detail}"
 
 
 def create_content(content: str, model: str, style_prompt: Optional[str] = None, return_prompt: bool = False,

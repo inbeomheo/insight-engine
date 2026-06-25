@@ -10,7 +10,7 @@ interface OnboardingStep {
 }
 
 const DEFAULT_STEPS: OnboardingStep[] = [
-  { title: 'AI 프로바이더 설정', description: 'Gemini, DeepSeek 등 API 키를 입력하세요.' },
+  { title: 'AI 프로바이더 확인', description: 'ChatMock Spark 기본 모델과 GLM 선택 상태를 확인하세요.' },
   { title: '첫 콘텐츠 생성', description: 'YouTube URL을 입력하고 스타일을 선택하세요.' },
   { title: '결과 확인', description: '생성된 콘텐츠를 확인하고 내보내기하세요.' },
 ];

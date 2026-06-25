@@ -13,10 +13,12 @@ import {
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Trash2, Bot, Brain, RotateCcw } from 'lucide-react';
+import { AlertCircle, Bot, Brain, CheckCircle2, Info, RotateCcw, Trash2 } from 'lucide-react';
+import { ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
 import { toast } from 'sonner';
 import LanguageSwitcher from './LanguageSwitcher';
+import type { ProviderHealth } from '@/lib/types';
 
 const STYLE_LABELS: Record<string, string> = {
   blog_seo: '블로그+SEO',
@@ -47,6 +49,26 @@ const WRITING_STYLE_LABELS: Record<string, string> = {
   expert: '전문가체',
 };
 
+function ProviderHealthLine({ health }: { health?: ProviderHealth }) {
+  if (!health) return null;
+  const Icon = health.severity === 'ok' ? CheckCircle2 : health.severity === 'error' ? AlertCircle : Info;
+  const tone = health.severity === 'ok'
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+    : health.severity === 'error'
+      ? 'border-red-200 bg-red-50 text-red-900'
+      : 'border-amber-200 bg-amber-50 text-amber-900';
+
+  return (
+    <div className={`rounded-md border px-3 py-2 text-xs leading-relaxed ${tone}`}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{health.label}</span>
+      </div>
+      <p className="mt-1 opacity-85">{health.message}</p>
+    </div>
+  );
+}
+
 export default function SettingsModal() {
   const { activeModal, setSettingsModalOpen } = useUIStore();
   const settingsModalOpen = activeModal === 'settings';
@@ -58,8 +80,14 @@ export default function SettingsModal() {
     setSelectedModel,
   } = useSettingsStore();
 
-  const providerIds = Object.keys(providers);
-  const currentModels = selectedProvider ? providers[selectedProvider]?.models || [] : [];
+  const providerIds: string[] = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => providers[id]);
+  const activeProvider = providerIds.includes(selectedProvider)
+    ? selectedProvider
+    : providerIds[0] || '';
+  const currentModels = activeProvider ? providers[activeProvider]?.models || [] : [];
+  const activeModel = currentModels.some((model) => model.id === selectedModel)
+    ? selectedModel
+    : currentModels[0]?.id || '';
   const { t } = useTranslation();
 
   // 스타일 메모리 상태
@@ -163,7 +191,7 @@ export default function SettingsModal() {
           ) : (
             <div className="space-y-2">
               <Select
-                value={selectedProvider}
+                value={activeProvider}
                 onValueChange={(v) => {
                   setSelectedProvider(v);
                   const first = providers[v]?.models[0];
@@ -182,7 +210,7 @@ export default function SettingsModal() {
                 </SelectContent>
               </Select>
 
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <Select value={activeModel} onValueChange={setSelectedModel}>
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder={t('settings.selectModel')} />
                 </SelectTrigger>
@@ -194,6 +222,7 @@ export default function SettingsModal() {
                   ))}
                 </SelectContent>
               </Select>
+              <ProviderHealthLine health={providers[activeProvider]?.health} />
             </div>
           )}
         </div>

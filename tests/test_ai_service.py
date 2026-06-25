@@ -120,6 +120,40 @@ class TestConvertErrorMessage(unittest.TestCase):
 
         self.assertIn(original, result)
 
+    def test_chatmock_connection_error_is_friendly(self):
+        """ChatMock 연결 실패는 실행 상태 확인 안내로 변환"""
+        from services.core.ai_service import _convert_error_message
+
+        result = _convert_error_message(
+            "Connection refused by upstream",
+            model="chatmock/gpt-5.3-codex-spark",
+        )
+
+        self.assertIn("ChatMock Spark 서버에 연결할 수 없습니다", result)
+        self.assertIn("CHATMOCK_BASE_URL", result)
+
+    def test_glm_missing_key_is_friendly(self):
+        """GLM 키 누락은 지원 env 이름을 안내"""
+        from services.core.ai_service import _convert_error_message
+
+        result = _convert_error_message(
+            "ZAI_API_KEY 또는 ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.",
+            model="zhipuai/GLM-4.7",
+        )
+
+        self.assertIn("GLM API 키", result)
+        self.assertIn("ZAI_API_KEY", result)
+        self.assertIn("ZHIPUAI_API_KEY", result)
+
+    def test_unknown_error_redacts_secret_values(self):
+        """원본 오류에 키처럼 보이는 값이 있으면 마스킹"""
+        from services.core.ai_service import _convert_error_message
+
+        result = _convert_error_message("upstream failed api_key=sk-secret123")
+
+        self.assertIn("[REDACTED]", result)
+        self.assertNotIn("sk-secret123", result)
+
 
 class TestCreateContent(unittest.TestCase):
     """create_content 함수 테스트 (Flask 앱 컨텍스트 필요)"""

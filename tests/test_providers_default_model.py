@@ -78,6 +78,12 @@ class TestProvidersDefaultModel(unittest.TestCase):
         self.assertEqual(data['providers']['gemini']['default_model'], 'gemini/flash')
         self.assertEqual(data['providers']['deepseek']['default_model'], 'deepseek/chat')
 
+    def test_backend_default_model_is_chatmock_spark(self):
+        """명시 모델이 없을 때 제품 기본은 ChatMock Spark다."""
+        from routes.blog_routes import DEFAULT_MODEL
+
+        self.assertEqual(DEFAULT_MODEL, 'chatmock/gpt-5.3-codex-spark')
+
 
 if __name__ == '__main__':
     unittest.main()

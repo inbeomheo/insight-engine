@@ -31,7 +31,7 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
     'gemini': os.getenv('GEMINI_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
-    'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
+    'zhipuai': os.getenv('ZAI_API_KEY') or os.getenv('ZHIPUAI_API_KEY', ''),
     'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
     'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),

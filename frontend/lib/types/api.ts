@@ -120,10 +120,14 @@ export interface MultiStyleResponse {
 
 // === 프로바이더 API 응답 ===
 
-import type { ProviderInfo } from './settings';
+import type { ProviderDiagnostics, ProviderHealth, ProviderInfo } from './settings';
 
 export interface ProvidersResponse {
   providers: Record<string, ProviderInfo>;
+  providerDiagnostics?: Record<string, {
+    health: ProviderHealth;
+    diagnostics: ProviderDiagnostics;
+  }>;
   style_options: Array<[string, string]>;
 }
 

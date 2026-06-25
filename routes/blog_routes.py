@@ -34,7 +34,7 @@ from services.usage.usage_decorator import get_usage_for_response
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'zhipuai/GLM-4.5-Air'
+DEFAULT_MODEL = 'chatmock/gpt-5.3-codex-spark'
 DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5

@@ -6,17 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, Circle } from 'lucide-react';
 import { validateProvider } from '@/lib/api';
+import { ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 import type { ProviderInfo } from '@/lib/types';
 
 // 프로바이더별 라벨 (SVG 아이콘 대신 텍스트 약어)
 const PROVIDER_LABELS: Record<string, string> = {
-  gemini: 'G',
-  deepseek: 'DS',
+  chatmock: 'CM',
   zhipuai: 'ZH',
-  ollama: 'OL',
-  openrouter: 'OR',
-  openai: 'AI',
-  anthropic: 'AN',
 };
 
 type ValidationStatus = 'untested' | 'testing' | 'valid' | 'invalid';
@@ -33,7 +29,7 @@ interface ProviderSetupProps {
 }
 
 export default function ProviderSetup({ providers }: ProviderSetupProps) {
-  const providerIds = Object.keys(providers);
+  const providerIds = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => providers[id]);
 
   const [states, setStates] = useState<Record<string, ProviderState>>(() => {
     const init: Record<string, ProviderState> = {};
@@ -49,9 +45,8 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
 
   const handleTest = useCallback(async (providerId: string) => {
     const state = states[providerId];
-    const isOllama = providerId === 'ollama';
 
-    if (!isOllama && !state.apiKey) return;
+    if (!state?.apiKey) return;
 
     updateState(providerId, { status: 'testing', error: undefined });
 
@@ -131,8 +126,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
       <div className="space-y-3">
         {providerIds.map((id) => {
           const provider = providers[id];
-          const state = states[id];
-          const isOllama = id === 'ollama';
+          const state = states[id] ?? { apiKey: '', showKey: false, status: 'untested' as ValidationStatus };
 
           return (
             <div
@@ -153,7 +147,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
                 <div className="relative flex-1">
                   <Input
                     type={state.showKey ? 'text' : 'password'}
-                    placeholder={isOllama ? 'Base URL (예: http://localhost:11434)' : 'API 키 입력'}
+                    placeholder="API 키 입력"
                     value={state.apiKey}
                     onChange={(e) => updateState(id, { apiKey: e.target.value, status: 'untested' })}
                     className="pr-9 text-sm"
@@ -171,7 +165,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
                   size="sm"
                   variant="outline"
                   onClick={() => handleTest(id)}
-                  disabled={state.status === 'testing' || (!isOllama && !state.apiKey)}
+                  disabled={state.status === 'testing' || !state.apiKey}
                 >
                   {state.status === 'testing' ? (
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />

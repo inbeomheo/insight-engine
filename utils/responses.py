@@ -16,14 +16,15 @@ logger = logging.getLogger(__name__)
 _ERROR_PREFIXES = [
     '[인증 실패]', '[사용량 초과]', '[모델 오류]', '[타임아웃]',
     '[연결 실패]', '[서비스 불가]', '[서버 오류]', '[잔액 부족]',
-    '[컨텐츠 차단]', '[AI 오류]',
+    '[컨텐츠 차단]', '[AI 오류]', '[동시성 초과]', '[권한 없음]', '[모델 없음]',
 ]
 
 # 클라이언트에 노출해도 안전한 에러 접두사
 _SAFE_ERROR_PREFIXES = [
     '[인증 실패]', '[사용량 초과]', '[입력 오류]', '[자막 없음]',
     '[생성 실패]', '[타임아웃]', '[모델 오류]', '[잔액 부족]',
-    '[컨텐츠 차단]', '[AI 오류]',
+    '[컨텐츠 차단]', '[AI 오류]', '[연결 실패]', '[서비스 불가]',
+    '[동시성 초과]', '[권한 없음]', '[모델 없음]',
     '자막을', '댓글을', 'YouTube', 'API', '영상', 'URL',
 ]
 
@@ -59,7 +60,10 @@ def error_response(message, status_code=400):
 def sanitize_error_for_client(error_msg: str) -> str:
     """에러 메시지에서 내부 정보를 제거하여 클라이언트에 안전한 메시지를 반환합니다."""
     is_safe = any(error_msg.startswith(prefix) for prefix in _SAFE_ERROR_PREFIXES)
-    has_internal_info = any(kw in error_msg.lower() for kw in _INTERNAL_KEYWORDS)
+    internal_scan_text = error_msg.lower()
+    for allowed_env_name in ('zai_api_key', 'zhipuai_api_key', 'chatmock_base_url'):
+        internal_scan_text = internal_scan_text.replace(allowed_env_name, '')
+    has_internal_info = any(kw in internal_scan_text for kw in _INTERNAL_KEYWORDS)
 
     if not is_safe or has_internal_info:
         current_app.logger.error(f'Internal error hidden from user: {error_msg}')
