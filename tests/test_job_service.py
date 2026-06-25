@@ -1,10 +1,18 @@
+import sys
 import time
+import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from services.core import job_service
 
 _H = {'Origin': 'http://localhost:3000'}
+
+
+def _fake_fusion_module(generate_fusion):
+    module = types.ModuleType('services.core.fusion_service')
+    module.generate_fusion = generate_fusion
+    return module
 
 
 def _wait_for_terminal_job(client, job_id):
@@ -87,31 +95,74 @@ class TestJobRoutes(unittest.TestCase):
 
     @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
     @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
-    @patch('services.core.fusion_service.generate_fusion')
-    def test_fusion_async_job_success(self, generate_fusion, *_):
-        generate_fusion.return_value = {
+    def test_fusion_sync_api_still_returns_result(self, *_):
+        from services import core as services_core
+
+        generate_fusion = Mock(return_value={
+            'title': 'Sync fused',
+            'content': 'sync done',
+            'html': '<p>sync done</p>',
+            'sections': {},
+            'fusion_meta': {'processing_time': 0.8},
+            'usage': {'total_tokens': 8},
+        })
+        fake_module = _fake_fusion_module(generate_fusion)
+
+        with (
+            patch.dict(sys.modules, {'services.core.fusion_service': fake_module}),
+            patch.object(services_core, 'fusion_service', fake_module, create=True),
+        ):
+            resp = self.client.post(
+                '/api/generate-fusion',
+                json={
+                    'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
+                    'model': 'gemini/test',
+                    'style': 'blog_seo',
+                },
+                headers=_H,
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data['title'], 'Sync fused')
+        self.assertNotIn('job_id', data)
+        self.assertNotIn('job', data)
+        generate_fusion.assert_called_once()
+
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    def test_fusion_async_job_success(self, *_):
+        from services import core as services_core
+
+        generate_fusion = Mock(return_value={
             'title': 'Fused',
             'content': 'done',
             'html': '<p>done</p>',
             'sections': {},
             'fusion_meta': {'processing_time': 1.2},
             'usage': {'total_tokens': 10},
-        }
+        })
+        fake_module = _fake_fusion_module(generate_fusion)
 
-        resp = self.client.post(
-            '/api/generate-fusion',
-            json={
-                'async': True,
-                'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
-                'model': 'gemini/test',
-                'style': 'blog_seo',
-            },
-            headers=_H,
-        )
+        with (
+            patch.dict(sys.modules, {'services.core.fusion_service': fake_module}),
+            patch.object(services_core, 'fusion_service', fake_module, create=True),
+        ):
+            resp = self.client.post(
+                '/api/generate-fusion',
+                json={
+                    'async': True,
+                    'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
+                    'model': 'gemini/test',
+                    'style': 'blog_seo',
+                },
+                headers=_H,
+            )
 
-        self.assertEqual(resp.status_code, 202)
-        job_id = resp.get_json()['job_id']
-        job_resp, data = _wait_for_terminal_job(self.client, job_id)
+            self.assertEqual(resp.status_code, 202)
+            job_id = resp.get_json()['job_id']
+            job_resp, data = _wait_for_terminal_job(self.client, job_id)
+
         self.assertEqual(job_resp.status_code, 200)
         self.assertEqual(data['job']['status'], 'succeeded')
         self.assertEqual(data['job']['result']['title'], 'Fused')
@@ -119,23 +170,30 @@ class TestJobRoutes(unittest.TestCase):
 
     @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
     @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
-    @patch('services.core.fusion_service.generate_fusion')
-    def test_fusion_async_job_failure_preserves_error(self, generate_fusion, *_):
-        generate_fusion.side_effect = ValueError('bad input preserved')
+    def test_fusion_async_job_failure_preserves_error(self, *_):
+        from services import core as services_core
 
-        resp = self.client.post(
-            '/api/generate-fusion',
-            json={
-                'async': True,
-                'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
-                'model': 'gemini/test',
-            },
-            headers=_H,
-        )
+        generate_fusion = Mock(side_effect=ValueError('bad input preserved'))
+        fake_module = _fake_fusion_module(generate_fusion)
 
-        self.assertEqual(resp.status_code, 202)
-        job_id = resp.get_json()['job_id']
-        job_resp, data = _wait_for_terminal_job(self.client, job_id)
+        with (
+            patch.dict(sys.modules, {'services.core.fusion_service': fake_module}),
+            patch.object(services_core, 'fusion_service', fake_module, create=True),
+        ):
+            resp = self.client.post(
+                '/api/generate-fusion',
+                json={
+                    'async': True,
+                    'urls': ['https://youtube.com/watch?v=a', 'https://youtube.com/watch?v=b'],
+                    'model': 'gemini/test',
+                },
+                headers=_H,
+            )
+
+            self.assertEqual(resp.status_code, 202)
+            job_id = resp.get_json()['job_id']
+            job_resp, data = _wait_for_terminal_job(self.client, job_id)
+
         self.assertEqual(job_resp.status_code, 200)
         self.assertEqual(data['job']['status'], 'failed')
         self.assertEqual(data['job']['error'], 'bad input preserved')
