@@ -2,7 +2,7 @@
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp
-from utils.responses import clamp_query_int
+from utils.responses import api_error, clamp_query_int
 
 
 # ── 버전 히스토리 (F5-04) ────────────────────────────
@@ -23,7 +23,7 @@ def save_content_version(content_id):
     title = data.get('title', '')
     content = data.get('content', '')
     if not content:
-        return jsonify({'error': '콘텐츠가 비어 있습니다.'}), 400
+        return api_error('콘텐츠가 비어 있습니다.', 400)
 
     try:
         version = save_version(
@@ -36,7 +36,7 @@ def save_content_version(content_id):
         )
     except Exception as e:
         current_app.logger.error('Save content version failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] 버전 저장 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] 버전 저장 중 문제가 발생했습니다.', 500)
     return jsonify(version), 201
 
 
@@ -46,7 +46,7 @@ def get_content_version(content_id, version_id):
     from services.data.version_service import get_version
     ver = get_version(content_id, version_id)
     if not ver:
-        return jsonify({'error': '버전을 찾을 수 없습니다.'}), 404
+        return api_error('버전을 찾을 수 없습니다.', 404)
     return jsonify(ver)
 
 
@@ -61,7 +61,7 @@ def diff_content_versions(content_id):
 
     result = diff_versions(content_id, a, b)
     if not result:
-        return jsonify({'error': '버전을 찾을 수 없습니다.'}), 404
+        return api_error('버전을 찾을 수 없습니다.', 404)
     return jsonify(result)
 
 
@@ -71,7 +71,7 @@ def restore_content_version(content_id, version_id):
     from services.data.version_service import restore_version
     ver = restore_version(content_id, version_id)
     if not ver:
-        return jsonify({'error': '버전을 찾을 수 없습니다.'}), 404
+        return api_error('버전을 찾을 수 없습니다.', 404)
     return jsonify(ver), 201
 
 
@@ -109,7 +109,7 @@ def create_content_folder():
     data = request.get_json(silent=True) or {}
     name = data.get('name', '').strip()
     if not name:
-        return jsonify({'error': '폴더 이름이 필요합니다.'}), 400
+        return api_error('폴더 이름이 필요합니다.', 400)
 
     folder = create_folder(name=name, parent_id=data.get('parent_id'))
     return jsonify(folder), 201
@@ -122,7 +122,7 @@ def update_content_folder(folder_id):
     data = request.get_json(silent=True) or {}
     folder = update_folder(folder_id, name=data.get('name'))
     if not folder:
-        return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
+        return api_error('폴더를 찾을 수 없습니다.', 404)
     return jsonify(folder)
 
 
@@ -131,7 +131,7 @@ def delete_content_folder(folder_id):
     """폴더를 삭제합니다."""
     from services.data.folder_service import delete_folder
     if not delete_folder(folder_id):
-        return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
+        return api_error('폴더를 찾을 수 없습니다.', 404)
     return jsonify({'success': True})
 
 
@@ -149,7 +149,7 @@ def move_content_to_folder(content_id):
     data = request.get_json(silent=True) or {}
     folder_id = data.get('folder_id')  # None이면 미분류
     if not move_content(content_id, folder_id):
-        return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
+        return api_error('폴더를 찾을 수 없습니다.', 404)
     return jsonify({'success': True})
 
 
@@ -201,7 +201,7 @@ def create_collab_session():
     user_id = data.get('user_id', 'anonymous')
     user_name = data.get('user_name', '')
     if not content_id:
-        return jsonify({'error': 'content_id가 필요합니다.'}), 400
+        return api_error('content_id가 필요합니다.', 400)
 
     result = create_session(content_id, user_id, user_name)
     return jsonify(result)
@@ -213,7 +213,7 @@ def poll_collab_session(session_id):
     from services.data.collaboration_service import get_session
     result = get_session(session_id)
     if not result:
-        return jsonify({'error': '세션을 찾을 수 없습니다.'}), 404
+        return api_error('세션을 찾을 수 없습니다.', 404)
     return jsonify(result)
 
 
@@ -228,7 +228,7 @@ def update_collab_content(session_id):
 
     result = update_content(session_id, user_id, content, cursor)
     if not result:
-        return jsonify({'error': '세션을 찾을 수 없습니다.'}), 404
+        return api_error('세션을 찾을 수 없습니다.', 404)
     return jsonify(result)
 
 

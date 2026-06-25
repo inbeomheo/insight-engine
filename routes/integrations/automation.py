@@ -7,7 +7,7 @@ from routes.integrations._shared import (
     sanitize_result_message,
 )
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error, clamp_query_int
+from utils.responses import api_error, handle_error, clamp_query_int
 
 
 # ── Slack 봇 웹훅 (F7-02) ──────────────────────────────────────
@@ -23,7 +23,7 @@ def slack_webhook():
     signature = request.headers.get('X-Slack-Signature', '')
 
     if not slack_bot_service.verify_signature(body, timestamp, signature):
-        return jsonify({'error': 'Slack 서명 검증 실패'}), 401
+        return api_error('Slack 서명 검증 실패', 401)
 
     payload = request.get_json(silent=True) or {}
     result = slack_bot_service.handle_event(payload)
@@ -43,7 +43,7 @@ def discord_webhook():
     signature = request.headers.get('X-Signature-Ed25519', '')
 
     if not discord_bot_service.verify_signature(body, timestamp, signature):
-        return jsonify({'error': 'Discord 서명 검증 실패'}), 401
+        return api_error('Discord 서명 검증 실패', 401)
 
     payload = request.get_json(silent=True) or {}
     result = discord_bot_service.handle_interaction(payload)
@@ -77,7 +77,7 @@ def telegram_set_webhook():
     data = request.get_json(silent=True) or {}
     webhook_url = data.get('webhook_url', '')
     if not webhook_url:
-        return jsonify({'error': 'webhook_url이 필요합니다.'}), 400
+        return api_error('webhook_url이 필요합니다.', 400)
 
     success = telegram_bot_service.set_webhook(webhook_url)
     return jsonify({'success': success})
@@ -97,7 +97,7 @@ def zapier_trigger():
     style_id = data.get('style_id', 'blog_seo')
 
     if not url:
-        return jsonify({'error': 'url이 필요합니다.'}), 400
+        return api_error('url이 필요합니다.', 400)
 
     # 동기 생성 (Zapier는 동기 응답 필요)
     try:
@@ -105,7 +105,7 @@ def zapier_trigger():
         from services.core.ai_service import create_content
         transcript = get_transcript(url)
         if not transcript:
-            return jsonify({'error': '자막을 가져올 수 없습니다.'}), 400
+            return api_error('자막을 가져올 수 없습니다.', 400)
 
         result = create_content(transcript, style_id)
         return jsonify({
@@ -116,7 +116,7 @@ def zapier_trigger():
         })
     except Exception as e:
         current_app.logger.error(f"Zapier 트리거 오류: {e}")
-        return jsonify({'error': '콘텐츠 생성 중 오류가 발생했습니다.'}), 500
+        return api_error('콘텐츠 생성 중 오류가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/zapier/auth/test', methods=['GET'])
@@ -141,7 +141,7 @@ def make_webhook():
     callback_url = data.get('callback_url', '')  # Make 응답 URL
 
     if not url:
-        return jsonify({'error': 'url이 필요합니다.'}), 400
+        return api_error('url이 필요합니다.', 400)
 
     # 즉시 수락 응답 (Make는 비동기 처리 가능)
     import threading
@@ -198,14 +198,14 @@ def ifttt_trigger():
     language = data.get('value3') or data.get('language', 'ko')
 
     if not url:
-        return jsonify({'error': 'value1(URL)이 필요합니다.'}), 400
+        return api_error('value1(URL)이 필요합니다.', 400)
 
     try:
         from services.core.content_service import get_transcript
         from services.core.ai_service import create_content
         transcript = get_transcript(url)
         if not transcript:
-            return jsonify({'error': '자막을 가져올 수 없습니다.'}), 400
+            return api_error('자막을 가져올 수 없습니다.', 400)
 
         result = create_content(transcript, style_id, modifiers={'language': language})
         return jsonify({
@@ -215,7 +215,7 @@ def ifttt_trigger():
         })
     except Exception as e:
         current_app.logger.error(f"IFTTT 트리거 오류: {e}")
-        return jsonify({'error': '처리 중 오류가 발생했습니다.'}), 500
+        return api_error('처리 중 오류가 발생했습니다.', 500)
 
 
 # ── Airtable 동기화 (F7-21) ──────────────────────────────────────
@@ -234,13 +234,13 @@ def sync_to_airtable():
     table_name = data.get('table_name', 'Contents')
 
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         result = airtable_service.sync_content(title, content, style, url, table_name)
     except Exception as e:
         current_app.logger.error('Airtable sync failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] Airtable 동기화 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] Airtable 동기화 중 문제가 발생했습니다.', 500)
 
     if not result.get('success'):
         result = sanitize_result_message(
@@ -268,13 +268,13 @@ def sync_to_gsheets():
     sheet_name = data.get('sheet_name', 'Contents')
 
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         result = gsheets_service.sync_content(title, content, style, url, sheet_name)
     except Exception as e:
         current_app.logger.error('Google Sheets sync failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] Google Sheets 동기화 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] Google Sheets 동기화 중 문제가 발생했습니다.', 500)
 
     if not result.get('success'):
         result = sanitize_result_message(
@@ -301,17 +301,17 @@ def webhook_relay():
     timeout = clamp_query_int(data.get('timeout'), default=15, min_val=1, max_val=60)
 
     if not urls:
-        return jsonify({'error': 'urls 목록이 필요합니다.'}), 400
+        return api_error('urls 목록이 필요합니다.', 400)
     if not payload:
-        return jsonify({'error': 'payload가 필요합니다.'}), 400
+        return api_error('payload가 필요합니다.', 400)
     if len(urls) > 50:
-        return jsonify({'error': 'URL은 최대 50개까지 허용됩니다.'}), 400
+        return api_error('URL은 최대 50개까지 허용됩니다.', 400)
 
     try:
         result = webhook_relay_service.send_all(urls, payload, headers, timeout)
     except Exception as e:
         current_app.logger.error('Webhook relay failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] 웹훅 전송 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] 웹훅 전송 중 문제가 발생했습니다.', 500)
 
     sanitized_results = []
     for item in result.get('results', []):
@@ -348,7 +348,7 @@ def discord_send():
     data = request.get_json(silent=True) or {}
     content = data.get('content', '').strip()
     if not content:
-        return jsonify({'error': '메시지 내용이 필요합니다.'}), 400
+        return api_error('메시지 내용이 필요합니다.', 400)
 
     try:
         svc = DiscordService()
@@ -373,7 +373,7 @@ def discord_send_embed():
     title = data.get('title', '').strip()
     description = data.get('description', '').strip()
     if not title or not description:
-        return jsonify({'error': 'title과 description이 필요합니다.'}), 400
+        return api_error('title과 description이 필요합니다.', 400)
 
     try:
         svc = DiscordService()
@@ -413,7 +413,7 @@ def slack_send():
     data = request.get_json(silent=True) or {}
     text = data.get('text', '').strip()
     if not text:
-        return jsonify({'error': '메시지 내용이 필요합니다.'}), 400
+        return api_error('메시지 내용이 필요합니다.', 400)
 
     try:
         svc = SlackService()
@@ -441,7 +441,7 @@ def slack_send_blocks():
     data = request.get_json(silent=True) or {}
     blocks = data.get('blocks', [])
     if not blocks:
-        return jsonify({'error': 'blocks가 필요합니다.'}), 400
+        return api_error('blocks가 필요합니다.', 400)
 
     try:
         svc = SlackService()

@@ -4,7 +4,7 @@ from flask import request, jsonify, current_app
 from routes.blog_routes import blog_bp
 from routes.integrations._shared import sanitize_result_message
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 # ── MCP 플러그인 ──────────────────────────────────────
@@ -25,7 +25,7 @@ def mcp_publish():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "요청 데이터가 없습니다."}), 400
+        return api_error("요청 데이터가 없습니다.", 400)
 
     plugin_id = data.get('plugin_id')
     title = data.get('title')
@@ -38,7 +38,7 @@ def mcp_publish():
         result = plugin_registry.execute(plugin_id, content, title)
     except Exception as e:
         current_app.logger.error('MCP publish failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] 플러그인 발행 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] 플러그인 발행 중 문제가 발생했습니다.', 500)
 
     if not result.get('success'):
         result = sanitize_result_message(
@@ -69,7 +69,7 @@ def mcp_app_render(app_name: str):
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"error": "요청 데이터가 없습니다."}), 400
+        return api_error("요청 데이터가 없습니다.", 400)
 
     app = app_registry.get(app_name)
     if app is None:
@@ -79,7 +79,7 @@ def mcp_app_render(app_name: str):
         result = app.render(data)
     except Exception as e:
         current_app.logger.error('MCP app render failed for %s: %s', app_name, e, exc_info=True)
-        return jsonify({'error': '[서버 오류] 앱 렌더링 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] 앱 렌더링 중 문제가 발생했습니다.', 500)
     return jsonify(result)
 
 
@@ -91,11 +91,11 @@ def mcp_app_action(app_name: str):
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"error": "요청 데이터가 없습니다."}), 400
+        return api_error("요청 데이터가 없습니다.", 400)
 
     action = data.get("action")
     if not action:
-        return jsonify({"error": "'action' 필드가 필요합니다."}), 400
+        return api_error("'action' 필드가 필요합니다.", 400)
 
     app = app_registry.get(app_name)
     if app is None:
@@ -105,7 +105,7 @@ def mcp_app_action(app_name: str):
         result = app.handle_action(action, data)
     except Exception as e:
         current_app.logger.error('MCP app action failed for %s: %s', app_name, e, exc_info=True)
-        return jsonify({'error': '[서버 오류] 앱 작업 처리 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] 앱 작업 처리 중 문제가 발생했습니다.', 500)
     status_code = 200 if result.get("success") else 400
     return jsonify(result), status_code
 
@@ -178,11 +178,11 @@ def inline_editor_render():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     content_text = data.get('content', '').strip()
     if not content_text:
-        return jsonify({'error': 'content가 필요합니다.'}), 400
+        return api_error('content가 필요합니다.', 400)
 
     try:
         app = InlineEditorApp()
@@ -200,11 +200,11 @@ def inline_editor_action():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     action = data.get('action', '').strip()
     if not action:
-        return jsonify({'error': 'action이 필요합니다.'}), 400
+        return api_error('action이 필요합니다.', 400)
 
     try:
         app = InlineEditorApp()
@@ -226,12 +226,12 @@ def ghost_publish():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     title = data.get('title', '').strip()
     content = data.get('content', '').strip()
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         plugin = GhostPlugin()
@@ -268,12 +268,12 @@ def instagram_publish():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     title = data.get('title', '').strip()
     content = data.get('content', '').strip()
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         plugin = InstagramPlugin()
@@ -310,12 +310,12 @@ def shopify_publish():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     title = data.get('title', '').strip()
     content = data.get('content', '').strip()
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         plugin = ShopifyPlugin()
@@ -357,9 +357,9 @@ def substack_publish():
     api_key = data.get('api_key', '').strip()
 
     if not title or not content:
-        return jsonify({'error': 'title과 content는 필수입니다.'}), 400
+        return api_error('title과 content는 필수입니다.', 400)
     if not subdomain or not api_key:
-        return jsonify({'error': 'subdomain과 api_key는 필수입니다.'}), 400
+        return api_error('subdomain과 api_key는 필수입니다.', 400)
 
     try:
         plugin = SubstackPlugin()
@@ -403,13 +403,13 @@ def threads_publish():
     content = data.get('content', '').strip()
 
     if not content:
-        return jsonify({'error': 'content는 필수입니다.'}), 400
+        return api_error('content는 필수입니다.', 400)
 
     access_token = data.get('access_token', '').strip()
     user_id = data.get('user_id', '').strip()
 
     if not access_token or not user_id:
-        return jsonify({'error': 'access_token과 user_id는 필수입니다.'}), 400
+        return api_error('access_token과 user_id는 필수입니다.', 400)
 
     try:
         plugin = ThreadsPlugin()

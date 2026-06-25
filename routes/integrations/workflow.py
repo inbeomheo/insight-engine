@@ -1,5 +1,6 @@
 """발행 큐, 예약 발행, CMS 통합 허브 워크플로우."""
 from flask import request, jsonify, current_app, g
+from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
 from routes.integrations._shared import sanitize_result_message
@@ -29,7 +30,7 @@ def publish_queue_enqueue():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     content_id = data.get('content_id')
     title = data.get('title')
@@ -85,7 +86,7 @@ def schedule_create():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     title = data.get('title')
     content = data.get('content')
@@ -105,7 +106,7 @@ def schedule_create():
         scheduled_at=scheduled_at,
     )
     if post is None:
-        return jsonify({'error': '예약 생성에 실패했습니다.'}), 500
+        return api_error('예약 생성에 실패했습니다.', 500)
 
     return jsonify(post), 201
 
@@ -137,7 +138,7 @@ def schedule_delete(post_id):
 
     success = schedule_service.delete(post_id, g.user_id)
     if not success:
-        return jsonify({'error': '삭제할 예약을 찾을 수 없습니다.'}), 404
+        return api_error('삭제할 예약을 찾을 수 없습니다.', 404)
 
     return jsonify({'success': True})
 
@@ -157,15 +158,15 @@ def cms_publish_all():
     plugin_configs = data.get('plugin_configs', {})
 
     if not plugin_ids:
-        return jsonify({'error': 'plugin_ids 목록이 필요합니다.'}), 400
+        return api_error('plugin_ids 목록이 필요합니다.', 400)
     if not title or not content:
-        return jsonify({'error': 'title과 content가 필요합니다.'}), 400
+        return api_error('title과 content가 필요합니다.', 400)
 
     try:
         result = cms_hub.publish_to_all(plugin_ids, title, content, plugin_configs)
     except Exception as e:
         current_app.logger.error('CMS publish-all failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] CMS 발행 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] CMS 발행 중 문제가 발생했습니다.', 500)
 
     sanitized_results = {}
     for plugin_id, plugin_result in (result.get('results') or {}).items():
@@ -197,7 +198,7 @@ def cms_validate_config():
     config = data.get('config', {})
 
     if not plugin_id:
-        return jsonify({'error': 'plugin_id가 필요합니다.'}), 400
+        return api_error('plugin_id가 필요합니다.', 400)
 
     result = cms_hub.validate_plugin_config(plugin_id, config)
     return jsonify(result)
