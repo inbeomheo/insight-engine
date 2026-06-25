@@ -2,7 +2,27 @@
 
 > 작성일: 2026-06-25
 > 방법론: 15개 에이전트 fan-out 진단 (11개 코드 영역 + 3개 횡단 관심사 + 1개 종합) → 후보 80건 수집 → 영향도/노력/위험 우선순위 종합
-> 상태: **진단 완료 · 실행 전**. 각 항목은 실행 직전 직접 재검증 후 작은 단위로 커밋.
+> 상태: **실행 중** (2026-06-25, 브랜치 `refactor/roadmap-2026-06-25`). 진행 현황은 아래 참조.
+
+---
+
+## 진행 현황 (2026-06-25)
+
+**완료 (11커밋):**
+- ✅ **1단계 무위험 청소** — middleware/workers/빌드스크립트/cov_report 삭제, ResultCard 도달불가 dead state(audioBlob/ttsLoading), HelpPanel/GuidedTour 제거(사용자 승인)
+- ✅ **2단계 소규모 중복 흡수** — 봇 정규식→_shared, routes 에러헬퍼+content_mgmt 중복, useExport triggerDownload, config 미사용심볼+__all__, Slack/Discord 웹훅 헬퍼, FAQ JSON-LD 스키마
+- ✅ **3단계 보안 #2** — SSRF 방어 `utils/url_safety.py` 추출 + social_scraper 4개 진입점 적용
+
+**별도 트랙:**
+- ⏭ resultStore 용량경고 버그 (spawn_task) — dead code가 아닌 잠복 버그라 분리
+
+**남음:**
+- 3단계 #1: **jsonify 에러응답 274건+ → utils/responses** (방대 — 디렉토리별 점진 권장)
+- 4단계: 스타일 단일소스(#3), 타임스탬프/video_id 유틸 통합(#10), zustand 셀렉터(#5), raw fetch 흡수(#6)
+- 5단계: Supabase 데코레이터(#4), LiteLLM kwargs(#8), MCP 등록 일원화(#9), ResultCard god-component 분리(#7)
+- 6단계 대형(설계 선행): routes god-file 분리(#2), agents 이중 프레임워크 통합(#3, 용도 확정 선행), **DDD 평행구조+사용량 단일권위(#4 — 결제 정합성 위험, 사용자 합의 필수)**
+
+> **검증된 교훈**: dead_code 삭제 전 반드시 동적 등록(importlib/pkgutil) 재확인. `services/{analysis,seo,content,quality,media,transcript,rag,platform}`은 AGENT_MODE 도구 백엔드라 정적 import 0건이어도 살아있음.
 
 ---
 
