@@ -1,6 +1,6 @@
 """퓨전 오케스트레이터 서비스 테스트"""
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 class TestFusionService(unittest.TestCase):
@@ -36,6 +36,26 @@ class TestFusionService(unittest.TestCase):
         self.assertIn('content', result)
         self.assertIn('fusion_meta', result)
         self.assertIn('videos_analyzed', result['fusion_meta'])
+        self.assertIn('pipeline_trace', result)
+        self.assertIn('quality_summary', result)
+
+        trace = result['pipeline_trace']
+        self.assertEqual(trace['pipeline'], 'fusion')
+        self.assertEqual(trace['model'], 'gemini/gemini-3-flash-preview')
+        steps = {step['name']: step for step in trace['steps']}
+        self.assertEqual(steps['transcript_collect']['count'], 2)
+        self.assertEqual(steps['transcript_collect']['failed_urls'], [])
+        self.assertEqual(steps['comment_analyze']['collected_count'], 4)
+        self.assertEqual(steps['comment_analyze']['analyzed_count'], 4)
+        self.assertEqual(steps['web_research']['sources_found'], 1)
+        self.assertEqual(steps['final_generation']['status'], 'success')
+
+        quality = result['quality_summary']
+        self.assertEqual(quality['status'], 'ok')
+        self.assertEqual(quality['source_coverage']['status'], 'ok')
+        self.assertEqual(quality['comment_reflection']['status'], 'ok')
+        self.assertEqual(quality['web_research']['status'], 'ok')
+        self.assertEqual(quality['warnings'], [])
 
     @patch('services.core.fusion_service.ai_service')
     @patch('services.core.fusion_service.content_service')
@@ -58,6 +78,40 @@ class TestFusionService(unittest.TestCase):
             enable_deep_comments=False
         )
         self.assertIn('title', result)
+        self.assertEqual(result['quality_summary']['status'], 'ok')
+        self.assertEqual(result['quality_summary']['comment_reflection']['status'], 'disabled')
+        self.assertEqual(result['quality_summary']['web_research']['status'], 'disabled')
+
+    @patch('services.core.fusion_service.ai_service')
+    @patch('services.core.fusion_service.web_research_service')
+    @patch('services.core.fusion_service.content_service')
+    def test_generate_fusion_quality_warnings_for_empty_optional_steps(self, mock_cs, mock_wr, mock_ai):
+        mock_cs.get_video_id.return_value = 'vid1'
+        mock_cs.get_transcript.return_value = {'text': '자막1', 'source': 'api'}
+        mock_cs.get_top_comments.return_value = []
+        mock_wr.research_topic.return_value = []
+        mock_ai.create_content.return_value = {
+            'title': '제목', 'content': '내용', 'html': '<p>내용</p>',
+            'usage': {'prompt_tokens': 50, 'completion_tokens': 100, 'total_tokens': 150}
+        }
+
+        from services.core.fusion_service import generate_fusion
+        result = generate_fusion(
+            urls=['https://youtube.com/watch?v=vid1', 'https://youtube.com/watch?v=vid2'],
+            style_id='blog_seo',
+            model='gemini/gemini-3-flash-preview',
+            modifiers={},
+            enable_web_research=True,
+            enable_deep_comments=True
+        )
+
+        self.assertEqual(result['quality_summary']['status'], 'warning')
+        self.assertEqual(result['quality_summary']['comment_reflection']['status'], 'warning')
+        self.assertEqual(result['quality_summary']['web_research']['status'], 'warning')
+        self.assertGreaterEqual(len(result['quality_summary']['warnings']), 2)
+        steps = {step['name']: step for step in result['pipeline_trace']['steps']}
+        self.assertEqual(steps['comment_collect']['status'], 'warning')
+        self.assertEqual(steps['web_research']['status'], 'warning')
 
     def test_generate_fusion_too_few_urls(self):
         from services.core.fusion_service import generate_fusion

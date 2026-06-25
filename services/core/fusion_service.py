@@ -76,12 +76,13 @@ def _phase2_analyze(
     """Phase 2: 자막 요약, 댓글 분석, 웹 리서치를 병렬 수행합니다.
 
     Returns:
-        (video_summaries, comment_analysis, web_sources, tokens_used)
+        (video_summaries, comment_analysis, web_sources, tokens_used, task_failures)
     """
     video_summaries = []
     comment_analysis = None
     web_sources = []
     tokens_used = 0
+    task_failures = []
 
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {}
@@ -116,8 +117,166 @@ def _phase2_analyze(
                     web_sources = result
             except Exception as e:
                 logger.warning('Phase 2 작업 실패 (%s): %s', task_type, e)
+                failure = {'task': task_type}
+                if task_type == 'summary' and meta:
+                    failure['video_id'] = meta.get('video_id', '')
+                task_failures.append(failure)
 
-    return video_summaries, comment_analysis, web_sources, tokens_used
+    return video_summaries, comment_analysis, web_sources, tokens_used, task_failures
+
+
+def _add_warning(warnings: List[str], message: str) -> None:
+    """중복 없이 사용자 표시용 경고를 누적합니다."""
+    if message and message not in warnings:
+        warnings.append(message)
+
+
+def _has_phase2_failure(task_failures: List[Dict[str, Any]], task_name: str) -> bool:
+    return any(failure.get('task') == task_name for failure in task_failures)
+
+
+def _comment_analysis_has_content(comment_analysis: Any) -> bool:
+    if not isinstance(comment_analysis, dict):
+        return False
+    if str(comment_analysis.get('content') or '').strip():
+        return True
+    return any(comment_analysis.get(key) for key in ('insights', 'questions', 'fact_checks', 'sentiments'))
+
+
+def _build_diagnostics(
+    urls: List[str],
+    model: str,
+    transcripts: List[Dict[str, Any]],
+    video_summaries: List[Dict[str, Any]],
+    failed_urls: List[str],
+    total_comments: int,
+    comment_analysis: Any,
+    web_sources: List[Dict[str, Any]],
+    phase2_failures: List[Dict[str, Any]],
+    enable_web_research: bool,
+    enable_deep_comments: bool,
+    final_result: Dict[str, Any],
+) -> tuple:
+    """퓨전 결과의 실행 추적과 저비용 품질 요약을 생성합니다."""
+    warnings: List[str] = []
+    requested_count = len(urls)
+    transcript_count = len(transcripts)
+    summary_count = len(video_summaries)
+    failed_count = len(failed_urls)
+    web_source_count = len(web_sources)
+    comment_reflected = _comment_analysis_has_content(comment_analysis)
+    comments_analyzed = min(total_comments, 100) if comment_reflected else 0
+    final_has_content = bool(final_result.get('content') or final_result.get('html'))
+
+    source_status = 'ok'
+    if transcript_count == 0:
+        source_status = 'error'
+        _add_warning(warnings, '자막을 수집한 영상이 없습니다.')
+    elif failed_count > 0:
+        source_status = 'warning'
+        _add_warning(warnings, f'{failed_count}개 URL의 자막 수집에 실패했습니다.')
+    if summary_count < transcript_count:
+        source_status = 'warning' if source_status != 'error' else source_status
+        _add_warning(warnings, f'{transcript_count - summary_count}개 영상 요약 단계가 비어 있습니다.')
+
+    if not enable_deep_comments:
+        comment_status = 'disabled'
+    elif total_comments == 0:
+        comment_status = 'warning'
+        _add_warning(warnings, '댓글 분석이 켜져 있지만 수집된 댓글이 없습니다.')
+    elif _has_phase2_failure(phase2_failures, 'comments') or not comment_reflected:
+        comment_status = 'warning'
+        _add_warning(warnings, '댓글 분석 결과가 비어 있어 최종 반영이 제한되었습니다.')
+    else:
+        comment_status = 'ok'
+
+    if not enable_web_research:
+        web_status = 'disabled'
+    elif _has_phase2_failure(phase2_failures, 'web') or web_source_count == 0:
+        web_status = 'warning'
+        _add_warning(warnings, '웹 리서치가 켜져 있지만 발견된 외부 소스가 없습니다.')
+    else:
+        web_status = 'ok'
+
+    final_status = 'ok' if final_has_content else 'warning'
+    if not final_has_content:
+        _add_warning(warnings, '최종 생성 결과 본문이 비어 있습니다.')
+
+    overall_status = 'error' if source_status == 'error' else ('warning' if warnings else 'ok')
+
+    pipeline_trace = {
+        'pipeline': 'fusion',
+        'model': model,
+        'steps': [
+            {
+                'name': 'transcript_collect',
+                'status': 'error' if transcript_count == 0 else ('warning' if failed_count else 'success'),
+                'requested_count': requested_count,
+                'count': transcript_count,
+                'failed_count': failed_count,
+                'failed_urls': failed_urls,
+            },
+            {
+                'name': 'transcript_summarize',
+                'status': 'success' if summary_count == transcript_count else ('warning' if summary_count else 'error'),
+                'requested_count': transcript_count,
+                'count': summary_count,
+            },
+            {
+                'name': 'comment_collect',
+                'status': 'warning' if enable_deep_comments and total_comments == 0 else 'success',
+                'count': total_comments,
+            },
+            {
+                'name': 'comment_analyze',
+                'enabled': enable_deep_comments,
+                'status': 'success' if comment_status in ('ok', 'disabled') else 'warning',
+                'collected_count': total_comments,
+                'analyzed_count': comments_analyzed,
+            },
+            {
+                'name': 'web_research',
+                'enabled': enable_web_research,
+                'status': 'success' if web_status in ('ok', 'disabled') else 'warning',
+                'sources_found': web_source_count,
+            },
+            {
+                'name': 'final_generation',
+                'status': 'success' if final_has_content else 'warning',
+                'has_content': final_has_content,
+            },
+        ],
+        'warnings': warnings,
+    }
+
+    quality_summary = {
+        'status': overall_status,
+        'source_coverage': {
+            'status': source_status,
+            'requested_count': requested_count,
+            'collected_count': transcript_count,
+            'summary_count': summary_count,
+            'failed_count': failed_count,
+        },
+        'comment_reflection': {
+            'status': comment_status,
+            'enabled': enable_deep_comments,
+            'collected_count': total_comments,
+            'analyzed_count': comments_analyzed,
+            'reflected': comment_reflected,
+        },
+        'web_research': {
+            'status': web_status,
+            'enabled': enable_web_research,
+            'sources_found': web_source_count,
+        },
+        'final_generation': {
+            'status': final_status,
+            'has_content': final_has_content,
+        },
+        'warnings': warnings,
+    }
+    return pipeline_trace, quality_summary
 
 
 def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[str, Any],
@@ -133,7 +292,7 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
         enable_deep_comments: 댓글 심층 분석 활성화
 
     Returns:
-        dict: {title, content, html, sections, fusion_meta, usage}
+        dict: {title, content, html, sections, fusion_meta, pipeline_trace, quality_summary, usage}
 
     Raises:
         ValueError: URL이 2개 미만이거나 5개 초과 시
@@ -151,7 +310,7 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
         raise ValueError('모든 영상의 자막 추출에 실패했습니다')
 
     # Phase 2: 분석 & 압축
-    video_summaries, comment_analysis, web_sources, phase2_tokens = _phase2_analyze(
+    video_summaries, comment_analysis, web_sources, phase2_tokens, phase2_failures = _phase2_analyze(
         transcripts, all_comments, model, enable_web_research, enable_deep_comments,
     )
 
@@ -175,6 +334,21 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     for ws in web_sources:
         sections['sources_used'].append({'type': 'web', 'title': ws['title'], 'url': ws['url']})
 
+    pipeline_trace, quality_summary = _build_diagnostics(
+        urls=urls,
+        model=model,
+        transcripts=transcripts,
+        video_summaries=video_summaries,
+        failed_urls=failed_urls,
+        total_comments=total_comments,
+        comment_analysis=comment_analysis,
+        web_sources=web_sources,
+        phase2_failures=phase2_failures,
+        enable_web_research=enable_web_research,
+        enable_deep_comments=enable_deep_comments,
+        final_result=final_result,
+    )
+
     return {
         'title': final_result.get('title', ''),
         'content': final_result.get('content', ''),
@@ -188,6 +362,8 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
             'processing_time': round(time.time() - start_time, 1),
             'failed_urls': failed_urls,
         },
+        'pipeline_trace': pipeline_trace,
+        'quality_summary': quality_summary,
         'usage': final_result.get('usage', {}),
     }
 

@@ -237,6 +237,8 @@ export function useGenerate() {
           isFusion: true,
           fusionMeta: result.fusion_meta,
           sections: result.sections,
+          pipelineTrace: result.pipeline_trace,
+          qualitySummary: result.quality_summary,
         });
         addReport(report);
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });

@@ -65,6 +65,67 @@ export interface FusionMeta {
   failed_urls: string[];
 }
 
+export type FusionPipelineStepStatus = 'success' | 'warning' | 'error';
+export type FusionQualityStatus = 'ok' | 'warning' | 'error' | 'disabled';
+
+export interface FusionPipelineStep {
+  name: string;
+  status: FusionPipelineStepStatus;
+  enabled?: boolean;
+  requested_count?: number;
+  count?: number;
+  failed_count?: number;
+  failed_urls?: string[];
+  collected_count?: number;
+  analyzed_count?: number;
+  sources_found?: number;
+  has_content?: boolean;
+  message?: string;
+}
+
+export interface FusionPipelineTrace {
+  pipeline: 'fusion' | string;
+  model: string;
+  steps: FusionPipelineStep[];
+  warnings: string[];
+}
+
+export interface FusionSourceCoverageSummary {
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  requested_count: number;
+  collected_count: number;
+  summary_count: number;
+  failed_count: number;
+}
+
+export interface FusionCommentReflectionSummary {
+  status: FusionQualityStatus;
+  enabled: boolean;
+  collected_count: number;
+  analyzed_count: number;
+  reflected: boolean;
+}
+
+export interface FusionWebResearchSummary {
+  status: FusionQualityStatus;
+  enabled: boolean;
+  sources_found: number;
+}
+
+export interface FusionFinalGenerationSummary {
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  has_content: boolean;
+}
+
+export interface FusionQualitySummary {
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  source_coverage: FusionSourceCoverageSummary;
+  comment_reflection: FusionCommentReflectionSummary;
+  web_research: FusionWebResearchSummary;
+  final_generation?: FusionFinalGenerationSummary;
+  warnings: string[];
+}
+
 export interface FusionSections {
   faq: string;
   fact_checks: string[];
@@ -163,6 +224,8 @@ export interface Report {
   isFusion?: boolean;
   fusionMeta?: FusionMeta;
   sections?: FusionSections;
+  pipelineTrace?: FusionPipelineTrace;
+  qualitySummary?: FusionQualitySummary;
   shorts_clips?: ShortsClip[];
   quality_score?: QualityScore;
   analysis?: NlpAnalysis;

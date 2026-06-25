@@ -1,6 +1,6 @@
 // Insight Engine — Service Worker (캐시 전략: Network-first + 오프라인 폴백)
-// v5: provider 선택지를 ChatMock/GLM으로 제한하고 퓨전 댓글 분석 누락 수정
-const CACHE_NAME = 'ie-cache-v5';
+// v6: 퓨전 pipeline trace/품질 점검 UI 배포 후 이전 번들 교체
+const CACHE_NAME = 'ie-cache-v6';
 const OFFLINE_URL = '/';
 const MAX_ENTRIES = 100;
 

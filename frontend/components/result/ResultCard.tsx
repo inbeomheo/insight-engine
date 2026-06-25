@@ -799,7 +799,12 @@ variant={report.share_url ? 'secondary' : 'outline'}
 
           {/* 퓨전 섹션 */}
           {report.isFusion && (
-            <FusionSections sections={report.sections} fusionMeta={report.fusionMeta} />
+            <FusionSections
+              sections={report.sections}
+              fusionMeta={report.fusionMeta}
+              pipelineTrace={report.pipelineTrace}
+              qualitySummary={report.qualitySummary}
+            />
           )}
 
           {/* NLP 분석 섹션 */}

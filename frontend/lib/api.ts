@@ -10,6 +10,8 @@ import type {
   SourceVideo,
   FusionMeta,
   FusionSections,
+  FusionPipelineTrace,
+  FusionQualitySummary,
   McpPlugin,
   McpPublishRequest,
   McpPublishResponse,
@@ -328,6 +330,8 @@ export interface FusionResponse {
   html: string;
   sections: FusionSections;
   fusion_meta: FusionMeta;
+  pipeline_trace?: FusionPipelineTrace;
+  quality_summary?: FusionQualitySummary;
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
