@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, jsonify, request, send_file
 
 from services.notebooklm.notebooklm_service import NotebookLmService
+from utils.responses import api_error, api_error_from_exception
 
 notebooklm_bp = Blueprint('notebooklm', __name__, url_prefix='/api/notebooklm')
 
@@ -40,9 +41,9 @@ def generate():
         result = _service.generate(content_type, url, source_text)
         return jsonify(result), 202
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return api_error(str(e), 400)
     except RuntimeError as e:
-        return jsonify({'error': str(e)}), 500
+        return api_error_from_exception(e, '[서버 오류] NotebookLM 콘텐츠 생성 중 문제가 발생했습니다.')
 
 
 @notebooklm_bp.route('/status/<artifact_id>', methods=['GET'])
@@ -63,4 +64,4 @@ def download(artifact_id):
             download_name=os.path.basename(file_path),
         )
     except RuntimeError as e:
-        return jsonify({'error': str(e)}), 400
+        return api_error(str(e), 400)

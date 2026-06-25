@@ -14,7 +14,7 @@ from services.core import ai_service, content_service
 from services.core.content_service import clear_cache
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.platform.webhook_service import WebhookService
-from utils.responses import handle_error, sanitize_error_for_client
+from utils.responses import api_error, handle_error, sanitize_error_for_client
 
 # 공용 상태/카운터 re-export (기존 import 경로 호환)
 from routes.utility._state import (  # noqa: F401
@@ -53,7 +53,7 @@ def api_clear_cache():
     try:
         deleted = clear_cache(video_id)
     except ValueError as e:
-        return jsonify({'error': f'[입력 오류] 잘못된 videoId 형식: {e}'}), 400
+        return api_error(sanitize_error_for_client(f'[입력 오류] 잘못된 videoId 형식: {e}'), 400)
 
     if video_id:
         return jsonify({
