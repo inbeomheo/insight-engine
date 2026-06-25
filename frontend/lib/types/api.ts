@@ -1,6 +1,6 @@
 // === API 요청/응답 타입 ===
 
-import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSchema, NlpAnalysis, InsertedLink, Citation, WebSource } from './report';
+import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSchema, NlpAnalysis, InsertedLink, Citation, WebSource, QualitySummary } from './report';
 import type { Modifiers } from './settings';
 
 export interface GenerateRequest {
@@ -34,6 +34,7 @@ export interface GenerateResponse {
   cta?: CtaData;
   json_ld_schemas?: JsonLdSchema[];
   youtube_title?: string;
+  quality_summary?: QualitySummary;
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
   inserted_links?: InsertedLink[];
@@ -88,6 +89,7 @@ export interface StreamEvent {
   geo?: GeoMetadata;
   faq_schema?: FaqSchema;
   cta?: CtaData;
+  quality_summary?: QualitySummary;
   error?: string;
 }
 

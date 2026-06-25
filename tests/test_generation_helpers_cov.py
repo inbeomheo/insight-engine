@@ -164,6 +164,54 @@ class TestBuildCombinedContent(unittest.TestCase):
         self.assertIn('(댓글 없음)', result)
 
 
+class TestBuildGenerationQualitySummary(unittest.TestCase):
+    """일반 생성 품질 요약 헬퍼 테스트."""
+
+    def test_ok_summary_with_source_comments_and_body(self):
+        from routes.generation_helpers import _build_generation_quality_summary
+        result = _build_generation_quality_summary(
+            'youtube',
+            '자막 ' * 120,
+            {'title': '제목', 'content': '본문 ' * 80, 'html': '<p>본문</p>'},
+            comments=['좋아요', '도움 됐어요'],
+            comments_reflected=True,
+            transcript_source='api',
+        )
+
+        self.assertEqual(result['kind'], 'generation')
+        self.assertEqual(result['status'], 'ok')
+        self.assertEqual(result['source']['transcript_source'], 'api')
+        self.assertEqual(result['comments']['available_count'], 2)
+        self.assertTrue(result['comments']['reflected'])
+
+    def test_missing_source_or_body_is_error(self):
+        from routes.generation_helpers import _build_generation_quality_summary
+        result = _build_generation_quality_summary(
+            'webpage',
+            '',
+            {'title': '', 'content': '', 'html': ''},
+        )
+
+        self.assertEqual(result['status'], 'error')
+        self.assertEqual(result['source']['status'], 'error')
+        self.assertEqual(result['body']['status'], 'error')
+        self.assertGreaterEqual(len(result['warnings']), 2)
+
+    def test_collected_comments_without_reflection_warns(self):
+        from routes.generation_helpers import _build_generation_quality_summary
+        result = _build_generation_quality_summary(
+            'youtube',
+            '자막 ' * 120,
+            {'title': '제목', 'content': '본문 ' * 80, 'html': '<p>본문</p>'},
+            comments=['의견'],
+            comments_reflected=False,
+        )
+
+        self.assertEqual(result['status'], 'warning')
+        self.assertEqual(result['comments']['status'], 'warning')
+        self.assertIn('댓글', result['warnings'][0])
+
+
 class TestCombineResults(unittest.TestCase):
     """_combine_results 함수 테스트."""
 

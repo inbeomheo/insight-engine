@@ -126,6 +126,39 @@ export interface FusionQualitySummary {
   warnings: string[];
 }
 
+export interface GenerationSourceQualitySummary {
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  type: string;
+  has_content: boolean;
+  char_count: number;
+  transcript_source?: string;
+}
+
+export interface GenerationCommentQualitySummary {
+  status: FusionQualityStatus;
+  available_count: number;
+  reflected: boolean;
+}
+
+export interface GenerationBodyQualitySummary {
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  has_title: boolean;
+  has_content: boolean;
+  has_html: boolean;
+  char_count: number;
+}
+
+export interface GenerationQualitySummary {
+  kind: 'generation';
+  status: Exclude<FusionQualityStatus, 'disabled'>;
+  source: GenerationSourceQualitySummary;
+  comments: GenerationCommentQualitySummary;
+  body: GenerationBodyQualitySummary;
+  warnings: string[];
+}
+
+export type QualitySummary = FusionQualitySummary | GenerationQualitySummary;
+
 export interface FusionSections {
   faq: string;
   fact_checks: string[];
@@ -225,7 +258,7 @@ export interface Report {
   fusionMeta?: FusionMeta;
   sections?: FusionSections;
   pipelineTrace?: FusionPipelineTrace;
-  qualitySummary?: FusionQualitySummary;
+  qualitySummary?: QualitySummary;
   shorts_clips?: ShortsClip[];
   quality_score?: QualityScore;
   analysis?: NlpAnalysis;

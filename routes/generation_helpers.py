@@ -54,6 +54,11 @@ def _handle_direct_text(params: dict, start_time: float):
     )
 
     elapsed_time = round(time.time() - start_time, 2)
+    quality_summary = _build_generation_quality_summary(
+        'direct_input',
+        direct_content,
+        result,
+    )
     return jsonify({
         'id': str(uuid.uuid4()),
         **result,
@@ -64,6 +69,7 @@ def _handle_direct_text(params: dict, start_time: float):
         'style_label': _get_style_label(params['style']),
         'cached': False,
         'comment_summary_included': False,
+        'quality_summary': quality_summary,
         'has_code_blocks': _has_code_blocks(result),
         'quota': get_usage_for_response(),
     })
@@ -109,6 +115,12 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
     elapsed_time = round(time.time() - start_time, 2)
+    quality_summary = _build_generation_quality_summary(
+        'voice',
+        transcript_text,
+        result,
+        transcript_source='whisper',
+    )
 
     return jsonify({
         'id': str(uuid.uuid4()),
@@ -120,6 +132,7 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
         'style_label': _get_style_label(params['style']),
         'cached': False,
         'comment_summary_included': False,
+        'quality_summary': quality_summary,
         'has_code_blocks': _has_code_blocks(result),
         'quota': get_usage_for_response(),
     })
@@ -146,6 +159,11 @@ def _handle_document_upload(params: dict, uploaded_file, start_time: float):
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
     elapsed_time = round(time.time() - start_time, 2)
+    quality_summary = _build_generation_quality_summary(
+        'document',
+        source_content,
+        result,
+    )
 
     return jsonify({
         'id': str(uuid.uuid4()),
@@ -158,6 +176,7 @@ def _handle_document_upload(params: dict, uploaded_file, start_time: float):
         'style_label': _get_style_label(params['style']),
         'cached': False,
         'comment_summary_included': False,
+        'quality_summary': quality_summary,
         'has_code_blocks': _has_code_blocks(result),
         'quota': get_usage_for_response(),
     })
@@ -205,6 +224,11 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
         })
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+    quality_summary = _build_generation_quality_summary(
+        source_type,
+        source_content,
+        result,
+    )
 
     response_data = {
         **result,
@@ -215,6 +239,7 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
         'source_type': source_type,
         'source_title': source_title,
         'style_label': _get_style_label(params['style']),
+        'quality_summary': quality_summary,
         'quota': get_usage_for_response(),
     }
     if params.get('include_transcript'):
@@ -261,6 +286,89 @@ def _apply_output_format(result: dict, output_format: str, max_chars: int = None
         result = {**result, 'content': result['content'][:max_chars]}
 
     return result
+
+
+def _build_generation_quality_summary(
+    source_type: str,
+    source_text: str = '',
+    result: dict = None,
+    comments: list = None,
+    comments_reflected: bool = False,
+    transcript_source: str = None,
+) -> dict:
+    """일반 생성 결과용 저비용 품질/진단 요약을 만듭니다.
+
+    LLM을 호출하지 않고 원본/댓글/생성 본문 존재 여부만 확인합니다.
+    """
+    result = result or {}
+    source_body = str(source_text or '').strip()
+    output_body = str(result.get('content') or '').strip()
+    output_title = str(result.get('title') or '').strip()
+    output_html = str(result.get('html') or '').strip()
+    comment_count = len([c for c in (comments or []) if str(c or '').strip()])
+    warnings = []
+
+    source_chars = len(source_body)
+    if source_chars == 0:
+        source_status = 'error'
+        warnings.append('원본 본문/자막을 찾지 못했습니다.')
+    elif source_chars < 300:
+        source_status = 'warning'
+        warnings.append('원본 입력이 짧아 생성 근거가 제한적입니다.')
+    else:
+        source_status = 'ok'
+
+    body_chars = len(output_body)
+    if body_chars == 0:
+        body_status = 'error'
+        warnings.append('생성 본문이 비어 있습니다.')
+    elif body_chars < 120:
+        body_status = 'warning'
+        warnings.append('생성 본문이 짧아 검토가 필요합니다.')
+    else:
+        body_status = 'ok'
+
+    if comment_count > 0 or comments_reflected:
+        comment_status = 'ok' if comments_reflected else 'warning'
+        if not comments_reflected:
+            warnings.append('댓글은 수집됐지만 결과 반영 여부가 낮습니다.')
+    else:
+        comment_status = 'disabled'
+
+    if source_status == 'error' or body_status == 'error':
+        status = 'error'
+    elif source_status == 'warning' or body_status == 'warning' or comment_status == 'warning':
+        status = 'warning'
+    else:
+        status = 'ok'
+
+    source = {
+        'status': source_status,
+        'type': source_type or 'unknown',
+        'has_content': source_chars > 0,
+        'char_count': source_chars,
+    }
+    if transcript_source:
+        source['transcript_source'] = transcript_source
+
+    return {
+        'kind': 'generation',
+        'status': status,
+        'source': source,
+        'comments': {
+            'status': comment_status,
+            'available_count': comment_count,
+            'reflected': bool(comments_reflected),
+        },
+        'body': {
+            'status': body_status,
+            'has_title': bool(output_title),
+            'has_content': body_chars > 0,
+            'has_html': bool(output_html),
+            'char_count': body_chars,
+        },
+        'warnings': warnings,
+    }
 
 
 def _fetch_youtube_content(video_id):
@@ -413,6 +521,13 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
     g.skip_usage_decrement = True
     bypass_html = md_lib.markdown(transcript_text, extensions=['tables', 'fenced_code', 'nl2br'])
     elapsed_time = round(time.time() - start_time, 2)
+    bypass_result = {'title': youtube_title, 'content': transcript_text, 'html': bypass_html}
+    quality_summary = _build_generation_quality_summary(
+        'youtube',
+        transcript_text,
+        bypass_result,
+        transcript_source=transcript_source,
+    )
     return jsonify({
         'title': youtube_title,
         'content': transcript_text,
@@ -424,6 +539,7 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
         'transcript': raw_transcript,
         'transcript_source': transcript_source,
         'comment_summary_included': False,
+        'quality_summary': quality_summary,
         'bypassed': True,
         'bypass_reason': 'short_content',
         'quota': get_usage_for_response()
@@ -467,6 +583,14 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time):
         # 구버전 캐시 엔트리 폴백 (신규 저장분은 페이로드에 제목 포함)
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
+    quality_summary = cached.get('quality_summary') or _build_generation_quality_summary(
+        'youtube',
+        raw_transcript,
+        cached,
+        comments_reflected=bool(cached.get('comment_summary_included')),
+        transcript_source=transcript_source,
+    )
+
     return jsonify({
         **cached,
         'id': str(uuid.uuid4()),
@@ -477,6 +601,7 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time):
         'cached': True,
         'duplicate_message': '동일 설정으로 이전에 생성된 콘텐츠입니다.',
         'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0},
+        'quality_summary': quality_summary,
         'quota': get_usage_for_response()
     })
 
@@ -582,6 +707,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
 
     model = params['model']
     modifiers = params['modifiers'] or {}
+    comments_reflected = bool(comments and (comment_result or model == 'auto'))
 
     elapsed_time = round(time.time() - start_time, 2)
     report_id = str(uuid.uuid4())
@@ -597,6 +723,14 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         'prompt': used_prompt,
         # 캐시 히트 시 YouTube 제목 API 재호출을 피하기 위해 함께 저장
         'youtube_title': youtube_title,
+        'quality_summary': _build_generation_quality_summary(
+            'youtube',
+            raw_transcript,
+            result,
+            comments=comments,
+            comments_reflected=comments_reflected,
+            transcript_source=transcript_source,
+        ),
     }
     _history_data = {
         'id': report_id,
@@ -728,6 +862,14 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         params.get('output_format', 'html'),
         params.get('max_chars'),
     )
+    quality_summary = _build_generation_quality_summary(
+        'youtube',
+        raw_transcript,
+        result,
+        comments=comments,
+        comments_reflected=comments_reflected,
+        transcript_source=transcript_source,
+    )
 
     return jsonify({
         **result,
@@ -746,6 +888,7 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         "cta": cta,
         "json_ld_schemas": json_ld_schemas,
         "quality_score": quality_score,
+        "quality_summary": quality_summary,
         "web_sources": web_sources,
         "analysis": analysis,
         "transcript_segments": transcript_segments or [],
@@ -806,6 +949,7 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                 return_prompt=True, modifiers=modifiers,
                 style_id=style
             )
+            comments_reflected = bool(comments)
 
             return {
                 'success': True,
@@ -814,7 +958,15 @@ def _process_single_url(app, url, model, style, modifiers, custom_prompt):
                 'content': result.get('content', ''),
                 'html': result.get('html', ''),
                 'prompt': used_prompt,
-                'transcript_source': transcript_source
+                'transcript_source': transcript_source,
+                'quality_summary': _build_generation_quality_summary(
+                    'youtube',
+                    raw_transcript,
+                    result,
+                    comments=comments,
+                    comments_reflected=comments_reflected,
+                    transcript_source=transcript_source,
+                ),
             }
 
         except Exception as e:

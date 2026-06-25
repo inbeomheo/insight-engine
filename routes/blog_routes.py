@@ -224,6 +224,7 @@ from routes.generation_helpers import (
     _process_single_url,
     _get_style_prompt, _handle_direct_text, _handle_audio_upload,
     _handle_document_upload, _handle_web_source,
+    _build_generation_quality_summary,
 )
 
 
@@ -461,8 +462,18 @@ def regenerate():
             style_prompt,
             return_prompt=True
         )
+        quality_summary = _build_generation_quality_summary(
+            'regenerate',
+            content,
+            result,
+        )
 
-        return jsonify({**result, "prompt": used_prompt, "quota": get_usage_for_response()})
+        return jsonify({
+            **result,
+            "prompt": used_prompt,
+            "quality_summary": quality_summary,
+            "quota": get_usage_for_response(),
+        })
 
     except ValueError as e:
         return handle_error(str(e))
@@ -774,6 +785,14 @@ def generate_merged():
         if params['style'] == 'geo_seo':
             geo = ai_service.extract_geo_metadata(result.get('content', ''))
 
+        quality_summary = _build_generation_quality_summary(
+            'merged_youtube',
+            merged_content,
+            result,
+            comments=all_comments,
+            comments_reflected=bool(all_comments),
+        )
+
         return jsonify({
             **result,
             'id': report_id,
@@ -783,6 +802,7 @@ def generate_merged():
             'merged': True,
             'seo': seo,
             'geo': geo,
+            'quality_summary': quality_summary,
             'quota': get_usage_for_response(),
         })
 

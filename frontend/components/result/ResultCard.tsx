@@ -24,7 +24,7 @@ import remarkGfm from 'remark-gfm';
 // KaTeX는 수식 감지 시에만 동적 로드 (초기 번들 ~280KB 절감)
 // remark-math + rehype-katex는 MathMarkdown 컴포넌트에서 조건부 import
 import { toast } from 'sonner';
-import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
+import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode, FusionQualitySummary } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -33,6 +33,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
+import QualitySummaryPanel from './QualitySummaryPanel';
 
 import { ReportProvider } from './ReportContext';
 
@@ -143,6 +144,10 @@ function TutorialVisualCueSection({ cues }: { cues: VisualCue[] }) {
       </div>
     </section>
   );
+}
+
+function isFusionQualitySummary(summary: Report['qualitySummary']): summary is FusionQualitySummary {
+  return Boolean(summary && !('kind' in summary));
 }
 
 // 패널 상태 리듀서 — 13개 useState → 단일 리듀서 (상태 변경 시 1회 리렌더)
@@ -469,6 +474,7 @@ th{background:#F9FAFB}</style></head><body>${sanitizeHtml(report.html || report.
     () => report.style === 'tutorial' ? extractTutorialVisualCues(report.content) : [],
     [report.style, report.content],
   );
+  const fusionQualitySummary = isFusionQualitySummary(report.qualitySummary) ? report.qualitySummary : undefined;
 
   const markdownBody = useMemo(
     () => isStreaming ? (
@@ -770,6 +776,10 @@ variant={report.share_url ? 'secondary' : 'outline'}
             </>
           )}
 
+          {!report.isFusion && report.qualitySummary && (
+            <QualitySummaryPanel summary={report.qualitySummary} className="mt-5" />
+          )}
+
           {/* NotebookLM 섹션 */}
           {report.notebooklm?.artifacts && (
             <NotebookLmSection artifacts={report.notebooklm.artifacts} />
@@ -803,7 +813,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
               sections={report.sections}
               fusionMeta={report.fusionMeta}
               pipelineTrace={report.pipelineTrace}
-              qualitySummary={report.qualitySummary}
+              qualitySummary={fusionQualitySummary}
             />
           )}
 

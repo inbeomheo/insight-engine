@@ -10,6 +10,7 @@ import type {
   FusionQualitySummary,
   FusionSections as FusionSectionsType,
 } from '@/lib/types';
+import QualitySummaryPanel from './QualitySummaryPanel';
 
 interface FusionSectionsProps {
   sections?: FusionSectionsType;
@@ -27,13 +28,6 @@ const STEP_LABELS: Record<string, string> = {
   final_generation: '최종 생성',
 };
 
-const QUALITY_LABELS: Record<FusionQualityStatus, string> = {
-  ok: '정상',
-  warning: '주의',
-  error: '오류',
-  disabled: '꺼짐',
-};
-
 const TRACE_LABELS: Record<FusionPipelineStepStatus, string> = {
   success: '완료',
   warning: '주의',
@@ -45,10 +39,6 @@ function statusClass(status?: FusionQualityStatus | FusionPipelineStepStatus): s
   if (status === 'error') return 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400';
   if (status === 'disabled') return 'border-border bg-muted/40 text-muted-foreground';
   return 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400';
-}
-
-function qualityLabel(status?: FusionQualityStatus): string {
-  return status ? QUALITY_LABELS[status] : '확인 전';
 }
 
 function traceLabel(step: FusionPipelineStep): string {
@@ -66,28 +56,6 @@ function stepDetail(step: FusionPipelineStep): string {
     step.failed_count ? `실패 ${step.failed_count}개` : null,
   ].filter(Boolean);
   return parts.join(' · ');
-}
-
-function QualityItem({
-  label,
-  status,
-  detail,
-}: {
-  label: string;
-  status?: FusionQualityStatus;
-  detail: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-md border border-border/60 bg-background/60 px-3 py-2">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium text-foreground">{label}</span>
-        <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] ${statusClass(status)}`}>
-          {qualityLabel(status)}
-        </span>
-      </div>
-      <p className="break-words text-xs leading-5 text-muted-foreground">{detail}</p>
-    </div>
-  );
 }
 
 export default function FusionSections({ sections, fusionMeta, pipelineTrace, qualitySummary }: FusionSectionsProps) {
@@ -123,52 +91,11 @@ export default function FusionSections({ sections, fusionMeta, pipelineTrace, qu
       )}
 
       {qualitySummary && (
-        <section className="rounded-md border border-border/70 bg-muted/20 p-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">퓨전 품질 점검</p>
-              {pipelineTrace?.model && (
-                <p className="mt-0.5 break-all text-xs text-muted-foreground">모델 {pipelineTrace.model}</p>
-              )}
-            </div>
-            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${statusClass(qualitySummary.status)}`}>
-              {qualityLabel(qualitySummary.status)}
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <QualityItem
-              label="소스 커버리지"
-              status={qualitySummary.source_coverage?.status}
-              detail={`${qualitySummary.source_coverage?.collected_count ?? 0}/${qualitySummary.source_coverage?.requested_count ?? 0}개 수집 · 요약 ${qualitySummary.source_coverage?.summary_count ?? 0}개`}
-            />
-            <QualityItem
-              label="댓글 반영"
-              status={qualitySummary.comment_reflection?.status}
-              detail={
-                qualitySummary.comment_reflection?.enabled
-                  ? `${qualitySummary.comment_reflection.collected_count ?? 0}개 수집 · ${qualitySummary.comment_reflection.analyzed_count ?? 0}개 반영`
-                  : '댓글 분석 꺼짐'
-              }
-            />
-            <QualityItem
-              label="웹 리서치"
-              status={qualitySummary.web_research?.status}
-              detail={
-                qualitySummary.web_research?.enabled
-                  ? `외부 소스 ${qualitySummary.web_research.sources_found ?? 0}개`
-                  : '웹 리서치 꺼짐'
-              }
-            />
-          </div>
-          {warnings.length > 0 && (
-            <ul className="mt-3 space-y-1 text-xs leading-5 text-yellow-600 dark:text-yellow-400">
-              {warnings.slice(0, 3).map((warning, i) => (
-                <li key={`${warning}-${i}`} className="break-words">- {warning}</li>
-              ))}
-              {warnings.length > 3 && <li>외 {warnings.length - 3}개 경고</li>}
-            </ul>
-          )}
-        </section>
+        <QualitySummaryPanel
+          summary={qualitySummary}
+          model={pipelineTrace?.model}
+          warnings={warnings}
+        />
       )}
 
       {traceSteps.length > 0 && (
