@@ -15,6 +15,8 @@ from typing import Dict
 import requests
 import trafilatura
 
+from utils.url_safety import is_safe_public_url
+
 logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT = 15  # 초
@@ -55,6 +57,9 @@ def scrape_twitter_thread(url: str) -> Dict:
     Raises:
         ValueError: 본문을 추출할 수 없는 경우
     """
+    if not is_safe_public_url(url):
+        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+
     # 원본 URL에서 경로 추출 (예: /user/status/123)
     from urllib.parse import urlparse
     parsed = urlparse(url)
@@ -96,6 +101,9 @@ def scrape_reddit_post(url: str) -> Dict:
     Raises:
         ValueError: 포스트를 추출할 수 없는 경우
     """
+    if not is_safe_public_url(url):
+        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+
     json_url = url.rstrip("/") + ".json"
 
     try:
@@ -161,6 +169,9 @@ def scrape_hackernews(url: str) -> Dict:
     Raises:
         ValueError: 아이템을 추출할 수 없는 경우
     """
+    if not is_safe_public_url(url):
+        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+
     # URL에서 아이템 ID 추출
     match = _HN_ITEM_RE.search(url)
     if not match:
@@ -237,6 +248,9 @@ def scrape_stackoverflow(url: str) -> Dict:
     Raises:
         ValueError: 질문을 추출할 수 없는 경우
     """
+    if not is_safe_public_url(url):
+        raise ValueError(f"안전하지 않은 URL입니다: {url}")
+
     match = _SO_QUESTION_RE.search(url)
     if not match:
         raise ValueError(f"유효하지 않은 Stack Overflow URL: {url}")
