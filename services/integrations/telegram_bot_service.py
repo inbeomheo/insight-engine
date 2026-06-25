@@ -8,14 +8,11 @@ TELEGRAM_BOT_TOKEN 환경변수 필요.
 import json
 import logging
 import os
-import re
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from services.integrations._shared import YOUTUBE_URL_RE
 
-YOUTUBE_URL_RE = re.compile(
-    r'https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]+'
-)
+logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = 'https://api.telegram.org/bot'
 
