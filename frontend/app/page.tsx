@@ -29,8 +29,6 @@ const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/Workspa
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
 const ScheduleModal = PUBLISHING_ENABLED ? dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false }) : DisabledPublishingComponent;
 const ContentCalendar = PUBLISHING_ENABLED ? dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false }) : DisabledPublishingComponent;
-const GuidedTour = dynamic(() => import('@/components/onboarding/GuidedTour'), { ssr: false });
-const HelpPanel = dynamic(() => import('@/components/help/HelpPanel'), { ssr: false });
 const SupportAssistant = dynamic(() => import('@/components/support/SupportAssistant'), { ssr: false });
 
 
@@ -159,14 +157,6 @@ export default function Home() {
     });
     if (ok) setScheduleTarget(null);
   }, [scheduleTarget, addSchedule]);
-
-  // 도움말 패널 + 가이드 투어
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [tourActive, setTourActive] = useState(false);
-
-  // HelpPanel + GuidedTour 핸들러 — 안정 참조
-  const handleCloseHelp = useCallback(() => setHelpOpen(false), []);
-  const handleCloseTour = useCallback(() => setTourActive(false), []);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -619,12 +609,6 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
-
-      {/* 도움말 패널 */}
-      <HelpPanel open={helpOpen} onClose={handleCloseHelp} />
-
-      {/* 가이드 투어 */}
-      <GuidedTour forceStart={tourActive} onClose={handleCloseTour} />
 
       {/* 예약 발행 모달 — 페이지 레벨 1개 */}
       {PUBLISHING_ENABLED && (
