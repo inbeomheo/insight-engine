@@ -36,6 +36,10 @@ export const LANGUAGE_OPTIONS = [
   { value: 'ja' as const, label: '日本語' },
 ];
 
+// 생성 UI에서 노출/선택 가능한 프로바이더.
+// 서버에는 다른 키가 있어도 제품 기본은 ChatMock + GLM만 허용한다.
+export const ALLOWED_GENERATION_PROVIDER_IDS = ['chatmock', 'zhipuai'] as const;
+
 export const STORAGE_KEYS = {
   REPORTS: 'insight-engine-reports',
   PROVIDER: 'insight-engine-selected-provider',

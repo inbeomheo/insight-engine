@@ -49,22 +49,30 @@ def build_fusion_context(video_summaries, comment_analysis=None, web_sources=Non
     # 댓글 분석
     if comment_analysis:
         parts.append('\n\n[댓글 분석]')
+        has_structured_items = False
         if comment_analysis.get('insights'):
+            has_structured_items = True
             parts.append('\n#### 인사이트 (본문에 녹여내기)')
             for item in comment_analysis['insights']:
                 parts.append(f'- {item}')
         if comment_analysis.get('questions'):
+            has_structured_items = True
             parts.append('\n#### 질문 (FAQ 섹션용)')
             for item in comment_analysis['questions']:
                 parts.append(f'- {item}')
         if comment_analysis.get('fact_checks'):
+            has_structured_items = True
             parts.append('\n#### 팩트체크 (인라인 표시)')
             for item in comment_analysis['fact_checks']:
                 parts.append(f'- {item}')
         if comment_analysis.get('sentiments'):
+            has_structured_items = True
             parts.append('\n#### 감상')
             for item in comment_analysis['sentiments']:
                 parts.append(f'- {item}')
+        if comment_analysis.get('content') and not has_structured_items:
+            parts.append('\n#### 종합 댓글 분석 (본문에 녹여내기)')
+            parts.append(str(comment_analysis['content']))
 
     # 외부 소스
     if web_sources:

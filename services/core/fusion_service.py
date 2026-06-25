@@ -1,5 +1,7 @@
 """퓨전 오케스트레이터 — 3단계 파이프라인으로 다중 소스 융합 콘텐츠 생성"""
+import json
 import logging
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
@@ -190,24 +192,65 @@ def generate_fusion(urls: List[str], style_id: str, model: str, modifiers: Dict[
     }
 
 
+def _coerce_list(value: Any) -> List[str]:
+    """댓글 분석 JSON 필드를 문자열 리스트로 정규화합니다."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _parse_comment_analysis(content: str) -> Dict[str, Any]:
+    """댓글 분석 LLM 출력을 구조화합니다. JSON 실패 시 원문 fallback을 보존합니다."""
+    raw = (content or '').strip()
+    if not raw:
+        return {'content': '', 'insights': [], 'questions': [], 'fact_checks': [], 'sentiments': []}
+
+    candidate = raw
+    fence_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', raw, re.IGNORECASE)
+    if fence_match:
+        candidate = fence_match.group(1).strip()
+
+    try:
+        parsed = json.loads(candidate)
+        if isinstance(parsed, dict):
+            return {
+                'content': raw,
+                'insights': _coerce_list(parsed.get('insights') or parsed.get('인사이트')),
+                'questions': _coerce_list(parsed.get('questions') or parsed.get('질문')),
+                'fact_checks': _coerce_list(parsed.get('fact_checks') or parsed.get('factChecks') or parsed.get('팩트체크')),
+                'sentiments': _coerce_list(parsed.get('sentiments') or parsed.get('감상') or parsed.get('sentiment')),
+            }
+    except Exception:
+        pass
+
+    # 구조화 실패해도 최종 퓨전 프롬프트에서 댓글 분석 원문을 사용하도록 보존
+    return {'content': raw, 'insights': [], 'questions': [], 'fact_checks': [], 'sentiments': []}
+
+
 def _analyze_comments(comments: list, model: str) -> dict:
     """댓글 목록을 AI로 분석하여 핵심 인사이트를 추출합니다."""
     comments_text = "\n".join(comments[:100])
     prompt = (
-        "다음 YouTube 댓글을 분석하여 주요 의견, 팩트체크 필요 항목, "
-        "시청자 감정을 JSON 형식으로 정리하세요.\n\n"
+        "다음 YouTube 댓글을 분석하여 주요 의견, FAQ로 쓸 질문, 팩트체크 필요 항목, "
+        "시청자 감정을 JSON 형식으로 정리하세요.\n"
+        "반드시 다음 키를 가진 JSON 객체만 출력하세요: "
+        "insights, questions, fact_checks, sentiments. 각 값은 문자열 배열입니다.\n\n"
         f"{comments_text[:5000]}"
     )
     result = ai_service.create_content(
         content=prompt, model=model,
-        style_prompt="댓글 분석 요약. JSON 형식.",
+        style_prompt="댓글 분석 요약. JSON만 출력.",
         style_id="summary"
     )
-    return {
-        'content': result.get('content', ''),
-        'fact_checks': [],
-        'usage': result.get('usage', {}),
-    }
+    if isinstance(result, tuple):
+        result = result[0]
+    parsed = _parse_comment_analysis(result.get('content', ''))
+    parsed['usage'] = result.get('usage', {})
+    return parsed
 
 
 def _summarize_transcript(text, video_id, model):

@@ -68,6 +68,24 @@ class TestFusionService(unittest.TestCase):
                 enable_web_research=False, enable_deep_comments=False
             )
 
+    def test_comment_analysis_content_fallback_in_context(self):
+        from prompts.fusion.fusion_prompt import build_fusion_context
+
+        context = build_fusion_context(
+            video_summaries=[{'title': '영상1', 'summary': '요약1'}],
+            comment_analysis={
+                'content': '댓글에서 반복 질문과 반박이 많음',
+                'insights': [],
+                'questions': [],
+                'fact_checks': [],
+                'sentiments': [],
+            },
+            web_sources=None,
+        )
+
+        self.assertIn('종합 댓글 분석', context)
+        self.assertIn('댓글에서 반복 질문과 반박이 많음', context)
+
 
 if __name__ == '__main__':
     unittest.main()

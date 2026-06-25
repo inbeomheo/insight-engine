@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { STYLE_OPTIONS } from '@/lib/constants';
+import { ALLOWED_GENERATION_PROVIDER_IDS, STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -97,9 +97,8 @@ function MobileCreateView({
   const generationMode = useSettingsStore((s) => s.generationMode);
   const setGenerationMode = useSettingsStore((s) => s.setGenerationMode);
   const [inputError, setInputError] = useState('');
-  const mobileProviderIds = useMemo(() => {
-    const preferred = ['chatmock', 'zhipuai'].filter((id) => providers[id]);
-    return preferred.length > 0 ? preferred : Object.keys(providers);
+  const mobileProviderIds = useMemo<string[]>(() => {
+    return ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => providers[id]);
   }, [providers]);
   const activeProviderId = mobileProviderIds.includes(selectedProvider) ? selectedProvider : mobileProviderIds[0] || '';
   const currentModels = activeProviderId ? providers[activeProviderId]?.models || [] : [];

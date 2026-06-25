@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
-import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
+import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS, ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 import {
   Select,
   SelectContent,
@@ -72,8 +72,11 @@ export default function SettingsPopover() {
 
   if (!settingsPopoverOpen) return null;
 
-  const providerIds = Object.keys(providers);
-  const currentModels = selectedProvider ? providers[selectedProvider]?.models || [] : [];
+  const providerIds: string[] = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => providers[id]);
+  const activeProvider = providerIds.includes(selectedProvider)
+    ? selectedProvider
+    : providerIds[0] || '';
+  const currentModels = activeProvider ? providers[activeProvider]?.models || [] : [];
 
   // 내장 + 커스텀 스타일
   const allStyles = [
@@ -95,7 +98,7 @@ export default function SettingsPopover() {
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
         <div className="flex gap-2">
           <Select
-            value={selectedProvider}
+            value={activeProvider}
             onValueChange={(v) => {
               setSelectedProvider(v);
               const first = providers[v]?.models[0];

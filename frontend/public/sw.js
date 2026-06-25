@@ -1,6 +1,6 @@
 // Insight Engine — Service Worker (캐시 전략: Network-first + 오프라인 폴백)
-// v4: 모바일 ChatMock/Spark 기본 모델 선택 UI 배포 후 이전 모바일 번들 강제 교체
-const CACHE_NAME = 'ie-cache-v4';
+// v5: provider 선택지를 ChatMock/GLM으로 제한하고 퓨전 댓글 분석 누락 수정
+const CACHE_NAME = 'ie-cache-v5';
 const OFFLINE_URL = '/';
 const MAX_ENTRIES = 100;
 

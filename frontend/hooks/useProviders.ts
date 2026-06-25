@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchProviders } from '@/lib/api';
+import { ALLOWED_GENERATION_PROVIDER_IDS } from '@/lib/constants';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -20,12 +21,14 @@ export function useProviders() {
     if (query.data?.providers) {
       setProviders(query.data.providers);
 
-      const ids = Object.keys(query.data.providers);
+      const ids: string[] = ALLOWED_GENERATION_PROVIDER_IDS.filter((id) => query.data.providers[id]);
       if (ids.length === 0) return;
 
-      // 선택된 프로바이더가 없거나 유효하지 않으면 첫 번째 프로바이더로 보정
-      const fallbackProviderId = ids.includes('chatmock') ? 'chatmock' : ids.includes('zhipuai') ? 'zhipuai' : ids[0];
-      const providerId = selectedProvider && ids.includes(selectedProvider) ? selectedProvider : fallbackProviderId;
+      // 선택된 프로바이더가 없거나 생성 UI 허용 목록 밖이면 ChatMock → GLM 순으로 보정
+      const fallbackProviderId = ids[0];
+      const providerId = selectedProvider && ids.includes(selectedProvider)
+        ? selectedProvider
+        : fallbackProviderId;
       if (providerId !== selectedProvider) {
         setSelectedProvider(providerId);
       }
