@@ -9,7 +9,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, validate_content_length
+from utils.responses import api_error, handle_error, validate_content_length
 
 
 @blog_bp.route('/api/mindmap', methods=['POST'])
@@ -27,18 +27,18 @@ def generate_mindmap():
         model = data.get('model', DEFAULT_MODEL)
 
         if not content:
-            return jsonify({'error': '마인드맵으로 변환할 콘텐츠가 필요합니다.'}), 400
+            return api_error('마인드맵으로 변환할 콘텐츠가 필요합니다.', 400)
 
         length_error = validate_content_length(content)
         if length_error:
-            return jsonify({'error': length_error}), 400
+            return api_error(length_error, 400)
 
         # MINDMAP_PROMPT 가져오기
         style_prompts = current_app.config.get('STYLE_PROMPTS', {})
         mindmap_prompt = style_prompts.get('mindmap', '')
 
         if not mindmap_prompt:
-            return jsonify({'error': '마인드맵 프롬프트가 설정되지 않았습니다.'}), 500
+            return api_error('마인드맵 프롬프트가 설정되지 않았습니다.', 500)
 
         # 콘텐츠 길이 제한 (토큰 절약)
         max_tokens = get_model_max_tokens(model)

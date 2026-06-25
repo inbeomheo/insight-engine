@@ -7,7 +7,7 @@ from routes.blog_routes import blog_bp, DEFAULT_MODEL
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, safe_error_or_fallback, validate_content_length
+from utils.responses import api_error, handle_error, safe_error_or_fallback, validate_content_length
 
 
 @blog_bp.route('/api/rewrite/platforms')
@@ -39,12 +39,12 @@ def rewrite_content():
         model = data.get('model', DEFAULT_MODEL)
 
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 필요합니다.'}), 400
+            return api_error('변환할 콘텐츠가 필요합니다.', 400)
         length_error = validate_content_length(content)
         if length_error:
-            return jsonify({'error': length_error}), 400
+            return api_error(length_error, 400)
         if not platform:
-            return jsonify({'error': '대상 플랫폼을 선택해주세요.'}), 400
+            return api_error('대상 플랫폼을 선택해주세요.', 400)
 
         from services.content.rewrite_service import rewrite_for_platform
         result = rewrite_for_platform(content, platform, model)

@@ -5,7 +5,7 @@ from routes.blog_routes import blog_bp
 from extensions import limiter
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 @blog_bp.route('/api/generate-fusion', methods=['POST'])
@@ -23,11 +23,11 @@ def generate_fusion():
     enable_deep_comments = data.get('enable_deep_comments', True)
 
     if not urls or len(urls) < 2:
-        return jsonify({'error': '[입력 오류] 퓨전 분석은 최소 2개 URL이 필요합니다'}), 400
+        return api_error('[입력 오류] 퓨전 분석은 최소 2개 URL이 필요합니다', 400)
     if len(urls) > 5:
-        return jsonify({'error': '[입력 오류] 퓨전 분석은 최대 5개 URL까지 가능합니다'}), 400
+        return api_error('[입력 오류] 퓨전 분석은 최대 5개 URL까지 가능합니다', 400)
     if not model:
-        return jsonify({'error': '[입력 오류] 모델을 선택해주세요'}), 400
+        return api_error('[입력 오류] 모델을 선택해주세요', 400)
 
     try:
         from services.core import fusion_service
