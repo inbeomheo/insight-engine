@@ -6,8 +6,10 @@ import ReactMarkdown from 'react-markdown';
 import {
   ArrowLeft,
   ArrowUp,
+  AlertCircle,
   BarChart3,
   CheckCircle2,
+  Clock3,
   Grid2X2,
   Loader2,
   MessageSquare,
@@ -46,8 +48,58 @@ const MODE_LABELS: Record<GenerationMode, string> = {
   combined: '통합',
   fusion: '퓨전',
 };
+const MODE_DETAILS: Record<GenerationMode, string> = {
+  individual: 'URL별 결과 생성',
+  combined: '여러 URL을 한 문서로 통합',
+  fusion: '교차 분석과 코멘트 결합',
+};
+const MODE_REQUIREMENTS: Record<GenerationMode, string> = {
+  individual: '1개 이상',
+  combined: '2개 이상',
+  fusion: '2개 이상',
+};
+const MODE_PROGRESS: Record<GenerationMode, string> = {
+  individual: '소스를 읽고 개별 초안을 생성 중',
+  combined: '여러 소스를 합쳐 통합 문서를 생성 중',
+  fusion: '소스 비교와 퓨전 분석을 생성 중',
+};
 const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
+
+function sanitizeGenerationError(error: string) {
+  return error
+    .replace(/sk-[A-Za-z0-9_-]+/g, '[redacted]')
+    .replace(/(api[_-]?key=)[^\s&]+/gi, '$1[redacted]')
+    .replace(/(bearer\s+)[A-Za-z0-9._-]+/gi, '$1[redacted]');
+}
+
+function getFailureSummary(error: string | null) {
+  if (!error) return null;
+
+  const detail = sanitizeGenerationError(error);
+  const lower = detail.toLowerCase();
+
+  if (/모델|model/.test(detail)) {
+    return { title: '모델 설정 확인', detail };
+  }
+  if (/최소|url|입력|source/.test(lower)) {
+    return { title: '입력 조건 부족', detail };
+  }
+  if (/network|fetch|네트워크|연결/.test(lower)) {
+    return { title: '네트워크 연결 문제', detail };
+  }
+  if (/timeout|timed out|시간/.test(lower)) {
+    return { title: '응답 시간 초과', detail };
+  }
+  if (/401|403|인증|권한|api key|apikey/.test(lower)) {
+    return { title: '인증 또는 권한 문제', detail };
+  }
+  if (/429|quota|rate|limit|한도/.test(lower)) {
+    return { title: '사용량 한도 또는 과다 요청', detail };
+  }
+
+  return { title: '생성 요청 실패', detail };
+}
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
@@ -103,6 +155,10 @@ function MobileCreateView({
   const activeProviderId = mobileProviderIds.includes(selectedProvider) ? selectedProvider : mobileProviderIds[0] || '';
   const currentModels = activeProviderId ? providers[activeProviderId]?.models || [] : [];
   const activeModelId = currentModels.some((model) => model.id === selectedModel) ? selectedModel : currentModels[0]?.id || '';
+  const activeProviderName = activeProviderId ? providers[activeProviderId]?.name || activeProviderId : '모델 목록 로딩';
+  const activeModel = currentModels.find((model) => model.id === activeModelId);
+  const activeModelName = activeModel?.name || activeModelId || '모델 선택 필요';
+  const failureSummary = getFailureSummary(error);
 
   useEffect(() => {
     if (!activeProviderId) return;
@@ -153,11 +209,24 @@ function MobileCreateView({
     setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
   };
 
-  const canGenerate = !isLoading && (urls.length > 0 || Boolean(draftUrl.trim()));
-  const generateCount = Math.max(1, urls.length || (draftUrl.trim() ? 1 : 0));
+  const trimmedDraftUrl = draftUrl.trim();
+  const pendingDraftCount = trimmedDraftUrl && !urls.includes(trimmedDraftUrl) ? 1 : 0;
+  const sourceCount = urls.length + pendingDraftCount;
+  const hasRequiredSourceCount = generationMode === 'individual' ? sourceCount > 0 : sourceCount >= 2;
+  const canGenerate = !isLoading && hasRequiredSourceCount;
+  const generateCount = sourceCount;
+  const generationPercent = isLoading
+    ? generationMode === 'fusion'
+      ? 72
+      : generationMode === 'combined'
+        ? 64
+        : 58
+    : failureSummary
+      ? 100
+      : 0;
 
   return (
-    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+17rem)] pt-7">
+    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+20rem)] pt-7">
       <div className="mb-6 rounded-[28px] border border-[#DDE3F0] bg-white px-4 py-4 shadow-[0_12px_32px_rgba(21,23,31,0.08)]">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -203,8 +272,11 @@ function MobileCreateView({
       <div className="mb-4 flex flex-wrap gap-1.5 text-[11px] font-bold text-[#667085]">
         <span className="rounded-full bg-white px-2.5 py-1">YouTube</span><span className="rounded-full bg-white px-2.5 py-1">웹</span><span className="rounded-full bg-white px-2.5 py-1">RSS</span><span className="rounded-full bg-white px-2.5 py-1">arXiv</span><span className="rounded-full bg-white px-2.5 py-1">Podcast</span>
       </div>
-      {(inputError || error) && (
-        <p className="mb-3 rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">{inputError || error}</p>
+      {(inputError || failureSummary) && (
+        <div role="alert" className="mb-3 rounded-2xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
+          <p className="font-black">{inputError ? 'URL 입력 오류' : failureSummary?.title}</p>
+          <p className="mt-1 leading-relaxed">{inputError || failureSummary?.detail}</p>
+        </div>
       )}
 
       {urls.length > 0 && (
@@ -227,6 +299,10 @@ function MobileCreateView({
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-black text-[#15171F]">AI 모델</h2>
             <span className="text-[10px] font-bold text-[#2F54EB]">ChatMock · GLM</span>
+          </div>
+          <div className="mb-3 rounded-2xl border border-[#C9D3EA] bg-[#F8FAFF] px-3 py-2.5">
+            <p className="text-[10px] font-black text-[#667085]">현재 선택</p>
+            <p className="mt-1 truncate text-sm font-black text-[#15171F]">{activeProviderName} / {activeModelName}</p>
           </div>
           <div className="mb-3 grid grid-cols-2 gap-2">
             {mobileProviderIds.map((providerId) => {
@@ -256,14 +332,17 @@ function MobileCreateView({
                   key={model.id}
                   type="button"
                   className={cn(
-                    'min-h-10 rounded-2xl border px-3 text-left text-xs font-extrabold transition-all active:scale-[0.98]',
+                    'min-h-11 rounded-2xl border px-3 py-2 text-left text-xs font-extrabold transition-all active:scale-[0.98]',
                     active
                       ? 'border-[#15171F] bg-[#15171F] text-white'
                       : 'border-[#DDE3F0] bg-white text-[#344054]'
                   )}
                   onClick={() => setSelectedModel(model.id)}
                 >
-                  {model.name}
+                  <span className="block truncate">{model.name}</span>
+                  <span className={cn('mt-0.5 block truncate text-[9px] font-bold', active ? 'text-white/65' : 'text-[#98A2B3]')}>
+                    {active ? '선택됨' : model.id}
+                  </span>
                 </button>
               );
             })}
@@ -301,35 +380,80 @@ function MobileCreateView({
       </div>
 
       <div className="mb-7 rounded-[24px] border border-[#DDE3F0] bg-white p-4 shadow-[0_10px_26px_rgba(21,23,31,0.06)]">
-        <h2 className="mb-3 text-sm font-black text-[#15171F]">생성 모드</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-black text-[#15171F]">생성 모드</h2>
+          <span className="text-[10px] font-bold text-[#2F54EB]">{MODE_LABELS[generationMode]} · {MODE_REQUIREMENTS[generationMode]}</span>
+        </div>
         <div className="grid grid-cols-3 gap-1 rounded-2xl bg-[#F5F6F8] p-1">
           {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
             <button
               key={mode}
               type="button"
               className={cn(
-                'min-h-11 rounded-xl text-sm font-black transition-all active:scale-[0.98]',
+                'min-h-[58px] rounded-xl px-1.5 text-center transition-all active:scale-[0.98]',
                 generationMode === mode ? 'bg-white text-[#2F54EB] shadow-[0_6px_14px_rgba(21,23,31,0.08)]' : 'text-[#667085]'
               )}
               onClick={() => setGenerationMode(mode)}
             >
-              {MODE_LABELS[mode]}
+              <span className="block text-sm font-black">{MODE_LABELS[mode]}</span>
+              <span className="mt-0.5 block text-[9px] font-bold leading-tight opacity-70">{MODE_REQUIREMENTS[mode]}</span>
             </button>
           ))}
         </div>
+        <p className="mt-3 text-xs font-bold leading-relaxed text-[#667085]">{MODE_DETAILS[generationMode]}</p>
       </div>
 
-      <div className="h-24" aria-hidden="true" />
+      <div className="h-32" aria-hidden="true" />
 
       <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 px-4 xl:hidden">
         <div className="mx-auto max-w-[430px] rounded-[26px] border border-[#C9D3EA] bg-white/95 p-2 shadow-[0_-12px_32px_rgba(21,23,31,0.14)] backdrop-blur">
+          {(isLoading || failureSummary) && (
+            <div
+              role={isLoading ? 'status' : 'alert'}
+              aria-live="polite"
+              aria-busy={isLoading}
+              className={cn(
+                'mb-2 rounded-[20px] border px-3 py-2.5',
+                failureSummary ? 'border-destructive/25 bg-destructive/5 text-destructive' : 'border-[#DDE3F0] bg-[#F8FAFF] text-[#15171F]'
+              )}
+            >
+              <div className="flex items-start gap-2.5">
+                <span className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-2xl', failureSummary ? 'bg-destructive/10' : 'bg-[#EEF3FF] text-[#2F54EB]')}>
+                  {failureSummary ? <AlertCircle className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-black">
+                    {failureSummary ? failureSummary.title : MODE_PROGRESS[generationMode]}
+                  </p>
+                  <p className={cn('mt-1 truncate text-[10px] font-bold', failureSummary ? 'text-destructive/80' : 'text-[#667085]')}>
+                    {failureSummary
+                      ? failureSummary.detail
+                      : `${activeProviderName} / ${activeModelName} · ${MODE_LABELS[generationMode]} · ${generateCount || 0}개`}
+                  </p>
+                </div>
+              </div>
+              {isLoading && (
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#DDE3F0]" aria-hidden="true">
+                  <div
+                    className="h-full rounded-full bg-[#2F54EB] transition-all duration-500"
+                    style={{ width: `${generationPercent}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           <Button
             className="min-h-14 w-full rounded-[20px] bg-[#2F54EB] text-base font-black text-white shadow-[0_14px_28px_rgba(47,84,235,0.28)] hover:bg-[#2548D8] active:scale-[0.99] disabled:bg-[#B8C4E6]"
             disabled={!canGenerate}
             onClick={handleGenerateClick}
           >
             {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-            콘텐츠 생성 <span className="ml-1 text-xs opacity-80">×{generateCount}</span>
+            {isLoading
+              ? '생성 진행 중'
+              : hasRequiredSourceCount
+                ? `${MODE_LABELS[generationMode]} 생성`
+                : `${MODE_REQUIREMENTS[generationMode]} 필요`}
+            {generateCount > 0 && <span className="ml-1 text-xs opacity-80">×{generateCount}</span>}
           </Button>
         </div>
       </div>
