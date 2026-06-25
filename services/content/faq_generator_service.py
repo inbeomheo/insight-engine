@@ -160,21 +160,13 @@ def _build_faq_schema(faqs: list) -> str:
     """FAQ 구조화 데이터 (JSON-LD) 생성."""
     import json
 
-    schema = {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        'mainEntity': [
-            {
-                '@type': 'Question',
-                'name': faq['question'],
-                'acceptedAnswer': {
-                    '@type': 'Answer',
-                    'text': faq['answer'],
-                },
-            }
-            for faq in faqs
-        ],
-    }
+    from services.core.ai_metadata import build_faqpage_schema
+
+    schema = build_faqpage_schema(
+        (faq['question'], faq['answer']) for faq in faqs
+    )
+    if schema is None:
+        return ''
 
     return json.dumps(schema, ensure_ascii=False, indent=2)
 
