@@ -7,15 +7,7 @@ from routes.blog_routes import blog_bp, DEFAULT_MODEL
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, sanitize_error_for_client, validate_content_length
-
-
-def _sanitize_generation_error(error, fallback_message: str) -> str:
-    """예외 메시지를 사용자 응답용으로 정리합니다."""
-    safe_message = sanitize_error_for_client(str(error or ''))
-    if safe_message.startswith('[서버 오류]'):
-        return fallback_message
-    return safe_message
+from utils.responses import handle_error, safe_error_or_fallback, validate_content_length
 
 
 @blog_bp.route('/api/rewrite/platforms')
@@ -59,7 +51,7 @@ def rewrite_content():
 
         if 'error' in result:
             safe_result = dict(result)
-            safe_result['error'] = _sanitize_generation_error(
+            safe_result['error'] = safe_error_or_fallback(
                 result.get('error'),
                 '[서버 오류] 콘텐츠 변환 중 문제가 발생했습니다.'
             )

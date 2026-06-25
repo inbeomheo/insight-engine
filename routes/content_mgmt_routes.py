@@ -5,7 +5,7 @@ F8-01 ~ F8-25 기능에 대한 REST API 엔드포인트.
 import html
 import re
 from flask import Blueprint, request, jsonify, Response, current_app
-from utils.responses import sanitize_error_for_client, clamp_query_int, safe_bool
+from utils.responses import clamp_query_int, safe_bool
 
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.data import content_library_service
@@ -26,26 +26,12 @@ from services.data import trash_service
 
 content_mgmt_bp = Blueprint('content_mgmt', __name__, url_prefix='/api/content')
 
+# content_mgmt_bp 정의 이후 import (서브패키지 __init__ → backup_io 순환 방지)
+from routes.content_mgmt._shared import _json, _err, _get_json, _safe_route_error  # noqa: E402
+
 
 # ─── 헬퍼 ──────────────────────────────────────────────────────────
-
-def _json(data, status=200):
-    return jsonify(data), status
-
-
-def _err(msg, status=400):
-    return jsonify({'error': msg}), status
-
-
-def _get_json():
-    return request.get_json(silent=True) or {}
-
-
-def _safe_route_error(message, fallback_message):
-    safe_message = sanitize_error_for_client(str(message or ''))
-    if safe_message.startswith('[서버 오류]'):
-        return fallback_message
-    return safe_message
+# _json / _err / _get_json / _safe_route_error 는 routes.content_mgmt._shared 에서 import.
 
 
 # ══════════════════════════════════════════════════════════════════
