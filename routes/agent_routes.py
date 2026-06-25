@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from flask import Blueprint, Response, jsonify, request, g, stream_with_context
+from utils.responses import api_error
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def agent_chat():
         data = request.json or {}
         message = data.get("message", "").strip()
         if not message:
-            return jsonify({"error": "메시지가 필요합니다."}), 400
+            return api_error("메시지가 필요합니다.", 400)
 
         session_id = data.get("session_id")
         model = data.get("model")
@@ -71,7 +72,7 @@ def agent_chat():
 
     except Exception as e:
         logger.error("에이전트 채팅 실패: %s", e, exc_info=True)
-        return jsonify({"error": f"에이전트 오류: {e}"}), 500
+        return api_error("[서버 오류] 에이전트 처리 중 문제가 발생했습니다.", 500)
 
 
 @agent_bp.route("/api/agent/chat/stream", methods=["POST"])
@@ -92,7 +93,7 @@ def agent_chat_stream():
         data = request.json or {}
         message = data.get("message", "").strip()
         if not message:
-            return jsonify({"error": "메시지가 필요합니다."}), 400
+            return api_error("메시지가 필요합니다.", 400)
 
         session_id = data.get("session_id")
         model = data.get("model")
@@ -176,7 +177,7 @@ def agent_chat_stream():
 
     except Exception as e:
         logger.error("에이전트 스트리밍 실패: %s", e, exc_info=True)
-        return jsonify({"error": f"에이전트 오류: {e}"}), 500
+        return api_error("[서버 오류] 에이전트 처리 중 문제가 발생했습니다.", 500)
 
 
 @agent_bp.route("/api/agent/sdk", methods=["POST"])
@@ -197,7 +198,7 @@ def agent_sdk_chat():
         data = request.json or {}
         message = data.get("message", "").strip()
         if not message:
-            return jsonify({"error": "메시지가 필요합니다."}), 400
+            return api_error("메시지가 필요합니다.", 400)
 
         from agent.sdk_agent import run_sdk_agent_sync
 
@@ -213,7 +214,7 @@ def agent_sdk_chat():
 
     except Exception as e:
         logger.error("SDK 에이전트 실패: %s", e, exc_info=True)
-        return jsonify({"error": f"SDK 에이전트 오류: {e}"}), 500
+        return api_error("[서버 오류] SDK 에이전트 처리 중 문제가 발생했습니다.", 500)
 
 
 @agent_bp.route("/api/agent/sessions", methods=["GET"])
@@ -227,7 +228,7 @@ def agent_sessions():
         sessions = memory_store.list_sessions(user_id=user_id, limit=limit)
         return jsonify({"sessions": sessions})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error(str(e), 500)
 
 
 @agent_bp.route("/api/agent/tools", methods=["GET"])
@@ -258,7 +259,7 @@ def agent_tools():
             "stats": registry.stats(),
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error(str(e), 500)
 
 
 @agent_bp.route("/api/agent/toolsets", methods=["GET"])
@@ -278,4 +279,4 @@ def agent_toolsets():
             }
         return jsonify({"toolsets": result})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return api_error(str(e), 500)
