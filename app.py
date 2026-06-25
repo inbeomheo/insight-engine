@@ -181,6 +181,7 @@ def create_app(test_config=None):
     import routes.export_routes       # noqa: F401
     import routes.integration_routes  # noqa: F401
     import routes.payment_routes      # noqa: F401
+    import routes.jobs                # noqa: F401
     app.register_blueprint(blog_bp)
     app.register_blueprint(auth_bp)
 

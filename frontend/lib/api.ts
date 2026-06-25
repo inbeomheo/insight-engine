@@ -62,8 +62,14 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/support/chat': 30_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
+const FUSION_JOB_TIMEOUT_MS = 660_000;
+const JOB_POLL_INTERVAL_MS = 2_000;
 
 const SUPPORT_SESSION_KEY = 'insight-engine-support-session-id';
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function getSupportSessionId(): string {
   if (typeof window === 'undefined') return 'server';
@@ -160,6 +166,31 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
 
 export async function getJob(jobId: string): Promise<JobResponse> {
   return request(`/api/jobs/${jobId}`);
+}
+
+async function waitForJobResult<T>(jobId: string, timeoutMs: number): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (true) {
+    const { job } = await getJob(jobId);
+
+    if (job.status === 'succeeded') {
+      if (job.result === null || job.result === undefined) {
+        throw new Error('작업 결과가 비어 있습니다.');
+      }
+      return job.result as T;
+    }
+
+    if (job.status === 'failed' || job.status === 'cancelled') {
+      throw new Error(job.error || '작업이 실패했습니다.');
+    }
+
+    if (Date.now() >= deadline) {
+      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
+    }
+
+    await delay(JOB_POLL_INTERVAL_MS);
+  }
 }
 
 export async function createSharePage(req: {
@@ -322,6 +353,9 @@ export interface FusionRequest {
   modifiers?: Modifiers;
   enable_web_research?: boolean;
   enable_deep_comments?: boolean;
+  async?: boolean;
+  background?: boolean;
+  use_job?: boolean;
 }
 
 export interface FusionResponse {
@@ -335,11 +369,27 @@ export interface FusionResponse {
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
+interface FusionJobStartResponse {
+  async: true;
+  job_id: string;
+  status: string;
+}
+
+function isFusionJobStartResponse(response: FusionResponse | FusionJobStartResponse): response is FusionJobStartResponse {
+  return typeof (response as FusionJobStartResponse).job_id === 'string';
+}
+
 export async function generateFusion(req: FusionRequest): Promise<FusionResponse> {
-  return request('/api/generate-fusion', {
+  const response = await request<FusionResponse | FusionJobStartResponse>('/api/generate-fusion', {
     method: 'POST',
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, async: req.async ?? true }),
   });
+
+  if (isFusionJobStartResponse(response)) {
+    return waitForJobResult<FusionResponse>(response.job_id, FUSION_JOB_TIMEOUT_MS);
+  }
+
+  return response;
 }
 
 // 캐시 삭제

@@ -61,16 +61,7 @@ export interface AgentJob {
   steps: AgentJobStep[];
   current_step?: string | null;
   failed_step?: string | null;
-  result?: {
-    final: {
-      title: string;
-      content: string;
-      seo?: SeoMetadata;
-      sources?: WebSource[];
-    };
-    elapsed_seconds?: number;
-    agent_count?: number;
-  } | null;
+  result?: unknown | null;
   error?: string | null;
 }
 
