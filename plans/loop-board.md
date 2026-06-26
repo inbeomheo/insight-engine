@@ -6,16 +6,13 @@
 
 ## 진행중
 
-- [ ] [근본] logging_config.py cp949 UnicodeEncodeError 영구 차단 (사이클 3).
-  완료 기준: Windows에서 em-dash/이모지 포함 로깅 시 UnicodeEncodeError 0 + pytest 회귀 없음 + 기존 로거 동작 유지.
-  브랜치: fix/logging-cp949-root (PR #71 미머지 시 fcntl 회귀로 app import 불가 → PR #71 브랜치 기반)
+- [ ] datetime.utcnow() deprecation 경고 제거 (사이클 4). test_account_service.py:108에서
+  datetime.utcnow() → datetime.now(datetime.UTC). 완료 기준: pytest DeprecationWarning 0 (현재 1건).
+  브랜치: fix/datetime-utcnow-deprecation
 
 ## 백로그
 
-- [ ] services/data/scheduler_worker.py ruff format 위반 (기존 라인: 따옴표 `'scheduler_worker'`/`'/tmp/...'` wrap/빈줄) —
-  PR #71 책임 아님(추가 라인은 전부 준수), Surgical Changes 원칙상 분리. 단일 `style:` 커밋 PR로 처리 (code-reviewer 제안)
-- [ ] [근본] logging_config.py `StreamHandler(sys.stdout)`(L34)가 cp949 환경에서 non-cp949 문자(—/•/₩/이모지)에 UnicodeEncodeError —
-  services/ 전체 123개 파일이 cp949 비지원 문자 사용(em-dash만 105개). PR #71은 scheduler_worker 3곳만 핫픽스(메시지 손실/pytest 노이즈 일부). 근본은 logging_config 한 곳: 부트스트랩 `sys.stdout.reconfigure(errors="backslashreplace")` 또는 `codecs.getwriter("utf-8")` 래핑. 완료 기준: Windows에서 em-dash/이모지 로깅 시 UnicodeEncodeError 0 (전체). code-reviewer [CRITICAL]
+- [ ] ruff 정리 (기존 위반, 단일 `style:` PR): scheduler_worker.py format(따옴표 `'scheduler_worker'`/`'/tmp/...'` wrap/빈줄) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401). PR #71/#72 추가 라인은 준수.
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
@@ -31,6 +28,7 @@
 
 ## Done
 
+- [x] 2026-06-27 fix(logging): logging_config cp949 UnicodeEncodeError 근본 차단 (PR #72, stacked base PR #71). _ensure_utf8_stdout()로 sys.stdout을 utf-8/errors='replace'로 재구성 → get_logger 시점 buffer 고정 회피 + surrogate 안전. code-reviewer 지적(reconfigure 전환+errors=replace+테스트+타입힌트) 반영 — em-dash/이모지/surrogate 로깅 에러 0 + test_logging_config 12 passed + 전체 5,448 passed/0 fail
 - [x] 2026-06-27 fix(scheduler): scheduler_worker cp949 로깅 em-dash UnicodeEncodeError 핫픽스 (PR #71 추가 커밋 9682c78+065420e). em-dash 3곳 ASCII 교정 + test 기대값 동기화 + 주석 공백 복원 — app import 에러 제거 + scheduler_worker 테스트 7 passed + ruff 통과. code-reviewer [CRITICAL](근본 미해결, services/ 123개 파일)은 사이클 3 logging_config 근본으로 이관
 - [x] 2026-06-27 fix(scheduler): scheduler_worker 모듈 최상단 `import fcntl`(PR #42) → Windows에서 app import 실패, 테스트 46개 파일 컬렉션 에러 회귀 수정 (PR #71). fcntl 조건부 import + Windows 리더 락 우회, Unix flock 로직 보존 — pytest 5,445 passed(0 fail, 46 컬렉션 에러 해소) + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → Signal 토큰 (PR #54, 다크모드 그림자 누락 버그 수정) — tsc 0 + build 성공 + code-reviewer 클린
