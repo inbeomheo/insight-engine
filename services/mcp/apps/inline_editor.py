@@ -6,7 +6,11 @@
 """
 import html as html_lib
 import re
+
 from ..mcp_apps import BaseMCPApp
+from services.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _MAX_HISTORY = 20  # 편집 이력 최대 보관 수
 
