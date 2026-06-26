@@ -11,9 +11,9 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 import os
 
 try:
-    import fcntl  # Unix 전용 — gunicorn 다중 worker 리더 락에 사용
+    import fcntl  # Unix 전용 -gunicorn 다중 worker 리더 락에 사용
 except ImportError:
-    # Windows — gunicorn 다중 worker를 쓰지 않으므로 리더 락이 불필요하다.
+    # Windows -gunicorn 다중 worker를 쓰지 않으므로 리더 락이 불필요하다.
     fcntl = None
 
 from pathlib import Path
@@ -163,7 +163,7 @@ def _check_rss_subscriptions():
             for r in results:
                 feed_title = r['subscription'].get('title', '알 수 없음')
                 count = len(r['new_entries'])
-                logger.info(f"RSS 새 글 감지: {feed_title} — {count}건 (user={r['user_id']})")
+                logger.info(f"RSS 새 글 감지: {feed_title} - {count}건 (user={r['user_id']})")
     except Exception as e:
         logger.error(f"RSS 구독 확인 실패: {e}")
 
@@ -173,13 +173,13 @@ def start_scheduler(app):
     try:
         # 테스트/스크립트 등에서 스케줄러 기동을 끌 수 있는 게이트
         if os.getenv('SCHEDULER_ENABLED', 'true').lower() not in ('true', '1', 'yes'):
-            logger.info("SCHEDULER_ENABLED=false — 스케줄러 기동 생략")
+            logger.info("SCHEDULER_ENABLED=false - 스케줄러 기동 생략")
             return
 
         # gunicorn --workers=2 이상에서는 각 worker가 app.py를 import하므로
         # APScheduler도 worker 수만큼 뜰 수 있다. 파일락으로 컨테이너 내 1개만 실행한다.
         if not _acquire_scheduler_leader_lock():
-            logger.info('다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략')
+            logger.info('다른 worker가 스케줄러 리더락을 보유 중 - 스케줄러 기동 생략')
             return
 
         # 모듈 자기참조로 접근해야 테스트의 scheduler patch와 지연 생성이 모두 동작한다

@@ -74,7 +74,7 @@ class TestStartSchedulerLeaderLock(unittest.TestCase):
 
         mock_scheduler.add_job.assert_not_called()
         mock_scheduler.start.assert_not_called()
-        mock_info.assert_any_call('다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략')
+        mock_info.assert_any_call('다른 worker가 스케줄러 리더락을 보유 중 - 스케줄러 기동 생략')
 
 
 class TestStopScheduler(unittest.TestCase):
