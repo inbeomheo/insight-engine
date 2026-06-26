@@ -6,8 +6,9 @@
 
 ## 진행중
 
-- [ ] 열린 PR #69 리뷰 (refactor: 에러 응답 jsonify → utils.responses 일관화) (사이클 6).
-  완료 기준: PR #69 diff 리뷰 + GitHub 코멘트(approve 또는 change request + 실질 지적).
+- [ ] PR #69 BLOCKER 2건 수정 (사이클 7). notebooklm_routes download RuntimeError → api_error_from_exception
+  + agent_routes sessions/tools/toolsets → logger.error + api_error("[서버 오류]...", 500).
+  완료 기준: ruff + 해당 라우트 동작 검증 + PR #69 갱신. 브랜치: refactor/jsonify-error-responses
 
 ## 백로그
 
@@ -27,6 +28,7 @@
 
 ## Done
 
+- [x] 2026-06-27 PR #69 리뷰 (refactor: 에러 응답 api_error 일관화). code-reviewer 리뷰 → BLOCKER 2건(notebooklm download stderr 노출 / agent_routes sessions-tools-toolsets str(e) 500 + 로깅 누락) + SUGGESTION 1건. GitHub 리뷰 코멘트 게시(reviews:1) — 사이클 7에서 BLOCKER 수정
 - [x] 2026-06-27 fix(mcp): inline_editor 미정의 logger로 except 블록 NameError 버그 (PR #74, base master). ruff F821(진짜 런타임 버그 — 에러 처리 마스킹) 수정, get_logger 추가. code-reviewer 지적(get_logger '짧은명' 패턴 통일) 반영 — ruff 클린 + import/logger 동작 OK. ruff 367 위반 중 F821(진짜 버그)만 선별 처리
 - [x] 2026-06-27 fix(test): datetime.utcnow() deprecation 제거 (PR #73, stacked base PR #71). test_account_service.py:108 datetime.utcnow() → datetime.now(timezone.utc). code-reviewer 승인(-W error::DeprecationWarning 통과, 외과적/회귀 없음) — pytest DeprecationWarning 0 + 전체 5,445 passed/0 fail
 - [x] 2026-06-27 fix(logging): logging_config cp949 UnicodeEncodeError 근본 차단 (PR #72, stacked base PR #71). _ensure_utf8_stdout()로 sys.stdout을 utf-8/errors='replace'로 재구성 → get_logger 시점 buffer 고정 회피 + surrogate 안전. code-reviewer 지적(reconfigure 전환+errors=replace+테스트+타입힌트) 반영 — em-dash/이모지/surrogate 로깅 에러 0 + test_logging_config 12 passed + 전체 5,448 passed/0 fail
