@@ -11,9 +11,9 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 import os
 
 try:
-    import fcntl  # Unix 전용 -gunicorn 다중 worker 리더 락에 사용
+    import fcntl  # Unix 전용 - gunicorn 다중 worker 리더 락에 사용
 except ImportError:
-    # Windows -gunicorn 다중 worker를 쓰지 않으므로 리더 락이 불필요하다.
+    # Windows - gunicorn 다중 worker를 쓰지 않으므로 리더 락이 불필요하다.
     fcntl = None
 
 from pathlib import Path
