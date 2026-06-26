@@ -10,7 +10,7 @@ import re
 from ..mcp_apps import BaseMCPApp
 from services.core.logging_config import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger('inline_editor')
 
 _MAX_HISTORY = 20  # 편집 이력 최대 보관 수
 
