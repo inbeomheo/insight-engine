@@ -6,8 +6,10 @@
 
 ## 진행중
 
-- [ ] 열린 PR #70 리뷰 (test: resultStore 용량 초과 경고 회귀 테스트 + vitest 도입) (사이클 8).
-  완료 기준: PR #70 diff 리뷰 + GitHub 코멘트(실질 지적).
+- [ ] ruff F841 프로덕션 미사용 변수 검토 (사이클 9). supabase_history_repository.py:44 `data` /
+  supabase_api_key_vault.py:81 `res` 등 DB 응답 미사용 = 잠재 논리 버거(저장 결과 무시). app.py:28 `base_dir` /
+  support_agent_service.py:66 `forced_feedback` 포함.
+  완료 기준: 진짜 버거면 수정+검증, 무해하면 NIT 기록.
 
 ## 백로그
 
@@ -15,6 +17,7 @@
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
+  추가(PR #70, 사이클 8): frontend-test 잡에 `npm test --reporter=dot` 스텝 추가(vitest 도입에 따른 CI 연동).
   - 적용법: `gh auth refresh -h github.com -s workflow` (브라우저 인증) →
     `git apply plans/ci-workflow-fix.patch` → 커밋 → 푸시
 - [ ] [사람] duckduckgo_search가 requirements.txt에 미선언 — web_research_service.py:7이 톱레벨
@@ -27,6 +30,7 @@
 
 ## Done
 
+- [x] 2026-06-27 PR #70 리뷰 (test: resultStore 회귀 테스트 + vitest 도입). code-reviewer 실측 검증(tsc/test 4 passed/lint/build exit 0) → IMPORTANT(CI npm test 스텝 누락, [사람] CI 항목으로 이관) + NIT 2건. GitHub 리뷰 코멘트 게시(reviews:2)
 - [x] 2026-06-27 PR #69 BLOCKER 2건 수정 (refactor/jsonify-error-responses 97751a6). notebooklm download RuntimeError → api_error_from_exception(stderr 노출 차단) + agent_routes sessions/tools/toolsets → logger.error + api_error("[서버 오류]...",500)(로깅+노출 차단). 검증: ruff All passed + import OK
 - [x] 2026-06-27 PR #69 리뷰 (refactor: 에러 응답 api_error 일관화). code-reviewer 리뷰 → BLOCKER 2건(notebooklm download stderr 노출 / agent_routes sessions-tools-toolsets str(e) 500 + 로깅 누락) + SUGGESTION 1건. GitHub 리뷰 코멘트 게시(reviews:1) — 사이클 7에서 BLOCKER 수정
 - [x] 2026-06-27 fix(mcp): inline_editor 미정의 logger로 except 블록 NameError 버그 (PR #74, base master). ruff F821(진짜 런타임 버그 — 에러 처리 마스킹) 수정, get_logger 추가. code-reviewer 지적(get_logger '짧은명' 패턴 통일) 반영 — ruff 클린 + import/logger 동작 OK. ruff 367 위반 중 F821(진짜 버그)만 선별 처리
