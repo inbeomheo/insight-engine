@@ -6,9 +6,7 @@
 
 ## 진행중
 
-- [ ] datetime.utcnow() deprecation 경고 제거 (사이클 4). test_account_service.py:108에서
-  datetime.utcnow() → datetime.now(datetime.UTC). 완료 기준: pytest DeprecationWarning 0 (현재 1건).
-  브랜치: fix/datetime-utcnow-deprecation
+(없음)
 
 ## 백로그
 
@@ -28,6 +26,7 @@
 
 ## Done
 
+- [x] 2026-06-27 fix(test): datetime.utcnow() deprecation 제거 (PR #73, stacked base PR #71). test_account_service.py:108 datetime.utcnow() → datetime.now(timezone.utc). code-reviewer 승인(-W error::DeprecationWarning 통과, 외과적/회귀 없음) — pytest DeprecationWarning 0 + 전체 5,445 passed/0 fail
 - [x] 2026-06-27 fix(logging): logging_config cp949 UnicodeEncodeError 근본 차단 (PR #72, stacked base PR #71). _ensure_utf8_stdout()로 sys.stdout을 utf-8/errors='replace'로 재구성 → get_logger 시점 buffer 고정 회피 + surrogate 안전. code-reviewer 지적(reconfigure 전환+errors=replace+테스트+타입힌트) 반영 — em-dash/이모지/surrogate 로깅 에러 0 + test_logging_config 12 passed + 전체 5,448 passed/0 fail
 - [x] 2026-06-27 fix(scheduler): scheduler_worker cp949 로깅 em-dash UnicodeEncodeError 핫픽스 (PR #71 추가 커밋 9682c78+065420e). em-dash 3곳 ASCII 교정 + test 기대값 동기화 + 주석 공백 복원 — app import 에러 제거 + scheduler_worker 테스트 7 passed + ruff 통과. code-reviewer [CRITICAL](근본 미해결, services/ 123개 파일)은 사이클 3 logging_config 근본으로 이관
 - [x] 2026-06-27 fix(scheduler): scheduler_worker 모듈 최상단 `import fcntl`(PR #42) → Windows에서 app import 실패, 테스트 46개 파일 컬렉션 에러 회귀 수정 (PR #71). fcntl 조건부 import + Windows 리더 락 우회, Unix flock 로직 보존 — pytest 5,445 passed(0 fail, 46 컬렉션 에러 해소) + code-reviewer 클린
