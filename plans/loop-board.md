@@ -6,11 +6,12 @@
 
 ## 진행중
 
-(없음)
+- [ ] 열린 PR #69 리뷰 (refactor: 에러 응답 jsonify → utils.responses 일관화) (사이클 6).
+  완료 기준: PR #69 diff 리뷰 + GitHub 코멘트(approve 또는 change request + 실질 지적).
 
 ## 백로그
 
-- [ ] ruff 정리 (기존 위반, 단일 `style:` PR): scheduler_worker.py format(따옴표 `'scheduler_worker'`/`'/tmp/...'` wrap/빈줄) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401). PR #71/#72 추가 라인은 준수.
+- [ ] ruff 정리 (기존 위반, 단일 `style:` PR, PR #71/#72/#74 머지 후 안전): scheduler_worker.py format + inline_editor.py format(docstring 빈줄/따옴표) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401). 기존 라인 위반이라 추가 라인은 준수.
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
@@ -26,6 +27,7 @@
 
 ## Done
 
+- [x] 2026-06-27 fix(mcp): inline_editor 미정의 logger로 except 블록 NameError 버그 (PR #74, base master). ruff F821(진짜 런타임 버그 — 에러 처리 마스킹) 수정, get_logger 추가. code-reviewer 지적(get_logger '짧은명' 패턴 통일) 반영 — ruff 클린 + import/logger 동작 OK. ruff 367 위반 중 F821(진짜 버그)만 선별 처리
 - [x] 2026-06-27 fix(test): datetime.utcnow() deprecation 제거 (PR #73, stacked base PR #71). test_account_service.py:108 datetime.utcnow() → datetime.now(timezone.utc). code-reviewer 승인(-W error::DeprecationWarning 통과, 외과적/회귀 없음) — pytest DeprecationWarning 0 + 전체 5,445 passed/0 fail
 - [x] 2026-06-27 fix(logging): logging_config cp949 UnicodeEncodeError 근본 차단 (PR #72, stacked base PR #71). _ensure_utf8_stdout()로 sys.stdout을 utf-8/errors='replace'로 재구성 → get_logger 시점 buffer 고정 회피 + surrogate 안전. code-reviewer 지적(reconfigure 전환+errors=replace+테스트+타입힌트) 반영 — em-dash/이모지/surrogate 로깅 에러 0 + test_logging_config 12 passed + 전체 5,448 passed/0 fail
 - [x] 2026-06-27 fix(scheduler): scheduler_worker cp949 로깅 em-dash UnicodeEncodeError 핫픽스 (PR #71 추가 커밋 9682c78+065420e). em-dash 3곳 ASCII 교정 + test 기대값 동기화 + 주석 공백 복원 — app import 에러 제거 + scheduler_worker 테스트 7 passed + ruff 통과. code-reviewer [CRITICAL](근본 미해결, services/ 123개 파일)은 사이클 3 logging_config 근본으로 이관
