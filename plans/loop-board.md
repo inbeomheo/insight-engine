@@ -10,6 +10,10 @@
 
 ## 백로그
 
+- [ ] services/data/scheduler_worker.py ruff format 위반 (기존 라인: 따옴표 `'scheduler_worker'`/`'/tmp/...'` wrap/빈줄) —
+  PR #71 책임 아님(추가 라인은 전부 준수), Surgical Changes 원칙상 분리. 단일 `style:` 커밋 PR로 처리 (code-reviewer 제안)
+- [ ] scheduler_worker 로깅의 em-dash(`—`)가 Windows cp949 콘솔에서 UnicodeEncodeError —
+  app import엔 영향 없음(logging이 예외 삼킴)이나 pytest 출력 노이즈. logging_config 인코딩 처리 검토 (PR #71 작업 중 발견)
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
@@ -25,6 +29,7 @@
 
 ## Done
 
+- [x] 2026-06-27 fix(scheduler): scheduler_worker 모듈 최상단 `import fcntl`(PR #42) → Windows에서 app import 실패, 테스트 46개 파일 컬렉션 에러 회귀 수정 (PR #71). fcntl 조건부 import + Windows 리더 락 우회, Unix flock 로직 보존 — pytest 5,445 passed(0 fail, 46 컬렉션 에러 해소) + code-reviewer 클린
 - [x] 2026-06-22 feat(ui): SupportAssistant shadow #15171F → Signal 토큰 (PR #54, 다크모드 그림자 누락 버그 수정) — tsc 0 + build 성공 + code-reviewer 클린
 - [x] 2026-06-23 refactor(export): <style> → 공유 모듈 + Signal 정규화 (PR #62, PR #60/#61 대체 + useExport 인쇄 #111 처리) — tsc+build 성공 + code-reviewer 클린
 - [x] 2026-06-23 feat(ui): ResultCard 인쇄 템플릿 #111 → Signal foreground (PR #61, handlePrint 누락분) — build 성공 + code-reviewer 클린
