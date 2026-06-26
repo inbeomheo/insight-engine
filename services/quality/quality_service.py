@@ -112,11 +112,11 @@ def _build_eval_kwargs(eval_model: str, eval_prompt: str) -> Dict:
     }
 
     if eval_model.startswith("zhipuai/"):
-        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
+        zhipuai_key = os.getenv("ZAI_API_KEY") or os.getenv("ZHIPUAI_API_KEY")
         if not zhipuai_key:
-            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
+            raise ValueError("ZAI_API_KEY 또는 ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
         kwargs["model"] = f"openai/{eval_model.replace('zhipuai/', '')}"
-        kwargs["api_base"] = 'https://open.bigmodel.cn/api/paas/v4/'
+        kwargs["api_base"] = os.getenv("ZHIPUAI_API_BASE", "https://api.z.ai/api/paas/v4/")
         kwargs["api_key"] = zhipuai_key
 
     if eval_model.startswith("ollama_chat/") or eval_model.startswith("ollama/"):

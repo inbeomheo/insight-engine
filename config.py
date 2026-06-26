@@ -232,9 +232,10 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
     },
     'zhipuai': {
         'name': 'Zhipu AI (GLM)',
-        'api_base': 'https://open.bigmodel.cn/api/paas/v4/',
+        'api_base': os.getenv('ZHIPUAI_API_BASE', 'https://api.z.ai/api/paas/v4/'),
         'models': [
-            {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7 (최신)', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
+            {'id': 'zhipuai/glm-5.2', 'name': 'GLM-5.2 (1M 최신)', 'max_input_tokens': 1000000, 'price_input': 1.00, 'price_output': 1.00},
+            {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
             {'id': 'zhipuai/GLM-4.5-Air', 'name': 'GLM-4.5 Air (경량)', 'max_input_tokens': 128000, 'price_input': 0.10, 'price_output': 0.10},
         ]
     },

@@ -31,7 +31,7 @@ def _get_completion():
     return completion
 
 # Zhipu AI / Z.AI (GLM) OpenAI 호환 API 설정
-DEFAULT_ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
+DEFAULT_ZHIPUAI_API_BASE = 'https://api.z.ai/api/paas/v4/'
 
 # GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
 _glm_lock = threading.Lock()

@@ -238,8 +238,9 @@ def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[s
             kwargs["reasoning_effort"] = "minimal"
 
         if model.startswith("zhipuai/"):
-            kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
-            api_key = os.environ.get("ZHIPUAI_API_KEY", "")
+            kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
+            kwargs["api_base"] = os.environ.get("ZHIPUAI_API_BASE", "https://api.z.ai/api/paas/v4/")
+            api_key = os.environ.get("ZAI_API_KEY") or os.environ.get("ZHIPUAI_API_KEY", "")
             if api_key:
                 kwargs["api_key"] = api_key
 
