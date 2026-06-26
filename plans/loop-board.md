@@ -6,9 +6,8 @@
 
 ## 진행중
 
-- [ ] PR #69 BLOCKER 2건 수정 (사이클 7). notebooklm_routes download RuntimeError → api_error_from_exception
-  + agent_routes sessions/tools/toolsets → logger.error + api_error("[서버 오류]...", 500).
-  완료 기준: ruff + 해당 라우트 동작 검증 + PR #69 갱신. 브랜치: refactor/jsonify-error-responses
+- [ ] 열린 PR #70 리뷰 (test: resultStore 용량 초과 경고 회귀 테스트 + vitest 도입) (사이클 8).
+  완료 기준: PR #70 diff 리뷰 + GitHub 코멘트(실질 지적).
 
 ## 백로그
 
@@ -28,6 +27,7 @@
 
 ## Done
 
+- [x] 2026-06-27 PR #69 BLOCKER 2건 수정 (refactor/jsonify-error-responses 97751a6). notebooklm download RuntimeError → api_error_from_exception(stderr 노출 차단) + agent_routes sessions/tools/toolsets → logger.error + api_error("[서버 오류]...",500)(로깅+노출 차단). 검증: ruff All passed + import OK
 - [x] 2026-06-27 PR #69 리뷰 (refactor: 에러 응답 api_error 일관화). code-reviewer 리뷰 → BLOCKER 2건(notebooklm download stderr 노출 / agent_routes sessions-tools-toolsets str(e) 500 + 로깅 누락) + SUGGESTION 1건. GitHub 리뷰 코멘트 게시(reviews:1) — 사이클 7에서 BLOCKER 수정
 - [x] 2026-06-27 fix(mcp): inline_editor 미정의 logger로 except 블록 NameError 버그 (PR #74, base master). ruff F821(진짜 런타임 버그 — 에러 처리 마스킹) 수정, get_logger 추가. code-reviewer 지적(get_logger '짧은명' 패턴 통일) 반영 — ruff 클린 + import/logger 동작 OK. ruff 367 위반 중 F821(진짜 버그)만 선별 처리
 - [x] 2026-06-27 fix(test): datetime.utcnow() deprecation 제거 (PR #73, stacked base PR #71). test_account_service.py:108 datetime.utcnow() → datetime.now(timezone.utc). code-reviewer 승인(-W error::DeprecationWarning 통과, 외과적/회귀 없음) — pytest DeprecationWarning 0 + 전체 5,445 passed/0 fail
