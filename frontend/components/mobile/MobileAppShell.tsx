@@ -63,6 +63,16 @@ const MODE_PROGRESS: Record<GenerationMode, string> = {
   combined: '여러 소스를 합쳐 통합 문서를 생성 중',
   fusion: '소스 비교와 퓨전 분석을 생성 중',
 };
+const MODE_PROGRESS_STEPS: Record<GenerationMode, string[]> = {
+  individual: ['소스 확인', '모델 호출', '결과 저장'],
+  combined: ['소스 병합', '통합 생성', '결과 저장'],
+  fusion: ['교차 분석', '근거 결합', '퓨전 저장'],
+};
+const MODE_PROGRESS_DETAIL: Record<GenerationMode, string> = {
+  individual: 'URL마다 결과 카드를 따로 만들고 있습니다.',
+  combined: '여러 URL을 하나의 문서로 묶고 있습니다.',
+  fusion: '소스 비교와 코멘트 근거를 함께 정리하고 있습니다.',
+};
 const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
 
@@ -73,32 +83,43 @@ function sanitizeGenerationError(error: string) {
     .replace(/(bearer\s+)[A-Za-z0-9._-]+/gi, '$1[redacted]');
 }
 
+function buildFailureSummary(title: string, detail: string, fallbackAction: string) {
+  const lines = detail
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const reason = lines[0] || title;
+  const action = lines.slice(1).join(' ') || fallbackAction;
+
+  return { title, reason, action, detail };
+}
+
 function getFailureSummary(error: string | null) {
   if (!error) return null;
 
   const detail = sanitizeGenerationError(error);
   const lower = detail.toLowerCase();
 
-  if (/모델|model/.test(detail)) {
-    return { title: '모델 설정 확인', detail };
-  }
-  if (/최소|url|입력|source/.test(lower)) {
-    return { title: '입력 조건 부족', detail };
-  }
-  if (/network|fetch|네트워크|연결/.test(lower)) {
-    return { title: '네트워크 연결 문제', detail };
-  }
-  if (/timeout|timed out|시간/.test(lower)) {
-    return { title: '응답 시간 초과', detail };
-  }
   if (/401|403|인증|권한|api key|apikey/.test(lower)) {
-    return { title: '인증 또는 권한 문제', detail };
+    return buildFailureSummary('인증 또는 권한 문제', detail, '설정에서 ChatMock/Spark 또는 GLM 키와 권한을 확인해주세요.');
   }
   if (/429|quota|rate|limit|한도/.test(lower)) {
-    return { title: '사용량 한도 또는 과다 요청', detail };
+    return buildFailureSummary('사용량 한도 또는 과다 요청', detail, '잠시 후 다시 시도하거나 프로바이더 사용량 한도를 확인해주세요.');
+  }
+  if (/timeout|timed out|시간/.test(lower)) {
+    return buildFailureSummary('응답 시간 초과', detail, '네트워크 상태를 확인한 뒤 같은 URL로 다시 시도해주세요.');
+  }
+  if (/network|fetch|네트워크|연결/.test(lower)) {
+    return buildFailureSummary('네트워크 연결 문제', detail, '연결 상태 또는 백엔드 API 접근 가능 여부를 확인해주세요.');
+  }
+  if (/최소|url|입력|source/.test(lower)) {
+    return buildFailureSummary('입력 조건 부족', detail, '현재 생성 모드에 필요한 URL 수를 채운 뒤 다시 생성해주세요.');
+  }
+  if (/모델|model/.test(lower)) {
+    return buildFailureSummary('모델 설정 확인', detail, '모델 목록을 새로고침하거나 ChatMock/Spark 기본 모델을 다시 선택해주세요.');
   }
 
-  return { title: '생성 요청 실패', detail };
+  return buildFailureSummary('생성 요청 실패', detail, 'URL, 모델, 네트워크 상태를 확인한 뒤 다시 시도해주세요.');
 }
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
@@ -213,7 +234,8 @@ function MobileCreateView({
   const pendingDraftCount = trimmedDraftUrl && !urls.includes(trimmedDraftUrl) ? 1 : 0;
   const sourceCount = urls.length + pendingDraftCount;
   const hasRequiredSourceCount = generationMode === 'individual' ? sourceCount > 0 : sourceCount >= 2;
-  const canGenerate = !isLoading && hasRequiredSourceCount;
+  const hasSelectableModel = Boolean(activeProviderId && activeModelId);
+  const canGenerate = !isLoading && hasRequiredSourceCount && hasSelectableModel;
   const generateCount = sourceCount;
   const generationPercent = isLoading
     ? generationMode === 'fusion'
@@ -224,9 +246,20 @@ function MobileCreateView({
     : failureSummary
       ? 100
       : 0;
+  const progressSteps = MODE_PROGRESS_STEPS[generationMode];
+  const activeProgressStep = Math.min(progressSteps.length - 1, Math.max(0, Math.floor(generationPercent / 34)));
+  const modelSummary = `${activeProviderName} / ${activeModelName}`;
+  const modeSummary = `${MODE_LABELS[generationMode]} · ${MODE_REQUIREMENTS[generationMode]} · ${generateCount || 0}개`;
+  const ctaLabel = isLoading
+    ? '생성 진행 중'
+    : !hasSelectableModel
+      ? '모델 로딩 중'
+      : hasRequiredSourceCount
+        ? `${MODE_LABELS[generationMode]} 생성`
+        : `${MODE_REQUIREMENTS[generationMode]} 필요`;
 
   return (
-    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+20rem)] pt-7">
+    <section className="mx-auto min-h-[100svh] max-w-[430px] px-4 pb-[calc(env(safe-area-inset-bottom)+22rem)] pt-7">
       <div className="mb-6 rounded-[28px] border border-[#DDE3F0] bg-white px-4 py-4 shadow-[0_12px_32px_rgba(21,23,31,0.08)]">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -275,7 +308,14 @@ function MobileCreateView({
       {(inputError || failureSummary) && (
         <div role="alert" className="mb-3 rounded-2xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
           <p className="font-black">{inputError ? 'URL 입력 오류' : failureSummary?.title}</p>
-          <p className="mt-1 whitespace-pre-line leading-relaxed">{inputError || failureSummary?.detail}</p>
+          {inputError ? (
+            <p className="mt-1 whitespace-pre-line leading-relaxed">{inputError}</p>
+          ) : (
+            <>
+              <p className="mt-1 leading-relaxed"><span className="font-black">원인</span> {failureSummary?.reason}</p>
+              <p className="mt-1 leading-relaxed"><span className="font-black">조치</span> {failureSummary?.action}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -407,6 +447,16 @@ function MobileCreateView({
 
       <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 px-4 xl:hidden">
         <div className="mx-auto max-w-[430px] rounded-[26px] border border-[#C9D3EA] bg-white/95 p-2 shadow-[0_-12px_32px_rgba(21,23,31,0.14)] backdrop-blur">
+          <div className="mb-2 grid grid-cols-[minmax(0,1fr)_8.75rem] gap-2 rounded-[20px] border border-[#DDE3F0] bg-[#F8FAFF] px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-[9px] font-black text-[#667085]">모델</p>
+              <p className="mt-0.5 truncate text-[11px] font-black text-[#15171F]">{modelSummary}</p>
+            </div>
+            <div className="min-w-0 border-l border-[#DDE3F0] pl-2">
+              <p className="text-[9px] font-black text-[#667085]">모드</p>
+              <p className="mt-0.5 truncate text-[11px] font-black text-[#2F54EB]">{modeSummary}</p>
+            </div>
+          </div>
           {(isLoading || failureSummary) && (
             <div
               role={isLoading ? 'status' : 'alert'}
@@ -422,22 +472,42 @@ function MobileCreateView({
                   {failureSummary ? <AlertCircle className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-black">
+                  <p className="text-xs font-black">
                     {failureSummary ? failureSummary.title : MODE_PROGRESS[generationMode]}
                   </p>
-                  <p className={cn('mt-1 truncate text-[10px] font-bold', failureSummary ? 'text-destructive/80' : 'text-[#667085]')}>
+                  <p className={cn('mt-1 text-[10px] font-bold leading-relaxed', failureSummary ? 'line-clamp-2 text-destructive/80' : 'text-[#667085]')}>
                     {failureSummary
-                      ? failureSummary.detail
-                      : `${activeProviderName} / ${activeModelName} · ${MODE_LABELS[generationMode]} · ${generateCount || 0}개`}
+                      ? failureSummary.reason
+                      : `${MODE_PROGRESS_DETAIL[generationMode]} ${modelSummary}`}
                   </p>
                 </div>
               </div>
               {isLoading && (
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#DDE3F0]" aria-hidden="true">
-                  <div
-                    className="h-full rounded-full bg-[#2F54EB] transition-all duration-500"
-                    style={{ width: `${generationPercent}%` }}
-                  />
+                <>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#DDE3F0]" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full bg-[#2F54EB] transition-all duration-500"
+                      style={{ width: `${generationPercent}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-1" aria-label="생성 진행 단계">
+                    {progressSteps.map((step, index) => (
+                      <span
+                        key={step}
+                        className={cn(
+                          'truncate rounded-full px-2 py-1 text-center text-[9px] font-black',
+                          index <= activeProgressStep ? 'bg-[#EEF3FF] text-[#2F54EB]' : 'bg-white text-[#98A2B3]'
+                        )}
+                      >
+                        {index + 1}. {step}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              {failureSummary && (
+                <div className="mt-2 max-h-20 overflow-y-auto rounded-2xl bg-white/70 px-3 py-2 text-[10px] font-bold leading-relaxed text-destructive/80">
+                  <p><span className="font-black">조치</span> {failureSummary.action}</p>
                 </div>
               )}
             </div>
@@ -448,11 +518,7 @@ function MobileCreateView({
             onClick={handleGenerateClick}
           >
             {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-            {isLoading
-              ? '생성 진행 중'
-              : hasRequiredSourceCount
-                ? `${MODE_LABELS[generationMode]} 생성`
-                : `${MODE_REQUIREMENTS[generationMode]} 필요`}
+            {ctaLabel}
             {generateCount > 0 && <span className="ml-1 text-xs opacity-80">×{generateCount}</span>}
           </Button>
         </div>
