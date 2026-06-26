@@ -228,7 +228,8 @@ def agent_sessions():
         sessions = memory_store.list_sessions(user_id=user_id, limit=limit)
         return jsonify({"sessions": sessions})
     except Exception as e:
-        return api_error(str(e), 500)
+        logger.error("세션 목록 조회 실패: %s", e, exc_info=True)
+        return api_error("[서버 오류] 세션 목록 조회 중 문제가 발생했습니다.", 500)
 
 
 @agent_bp.route("/api/agent/tools", methods=["GET"])
@@ -259,7 +260,8 @@ def agent_tools():
             "stats": registry.stats(),
         })
     except Exception as e:
-        return api_error(str(e), 500)
+        logger.error("도구 목록 조회 실패: %s", e, exc_info=True)
+        return api_error("[서버 오류] 도구 목록 조회 중 문제가 발생했습니다.", 500)
 
 
 @agent_bp.route("/api/agent/toolsets", methods=["GET"])
@@ -279,4 +281,5 @@ def agent_toolsets():
             }
         return jsonify({"toolsets": result})
     except Exception as e:
-        return api_error(str(e), 500)
+        logger.error("Toolset 목록 조회 실패: %s", e, exc_info=True)
+        return api_error("[서버 오류] Toolset 목록 조회 중 문제가 발생했습니다.", 500)

@@ -64,4 +64,4 @@ def download(artifact_id):
             download_name=os.path.basename(file_path),
         )
     except RuntimeError as e:
-        return api_error(str(e), 400)
+        return api_error_from_exception(e, '[서버 오류] 파일 다운로드 중 문제가 발생했습니다.')
