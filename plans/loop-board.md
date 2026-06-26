@@ -6,14 +6,13 @@
 
 ## 진행중
 
-- [ ] ruff F841 프로덕션 미사용 변수 검토 (사이클 9). supabase_history_repository.py:44 `data` /
-  supabase_api_key_vault.py:81 `res` 등 DB 응답 미사용 = 잠재 논리 버거(저장 결과 무시). app.py:28 `base_dir` /
-  support_agent_service.py:66 `forced_feedback` 포함.
-  완료 기준: 진짜 버거면 수정+검증, 무해하면 NIT 기록.
+## 진행중
+
+(없음)
 
 ## 백로그
 
-- [ ] ruff 정리 (기존 위반, 단일 `style:` PR, PR #71/#72/#74 머지 후 안전): scheduler_worker.py format + inline_editor.py format(docstring 빈줄/따옴표) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401). 기존 라인 위반이라 추가 라인은 준수.
+- [ ] ruff 정리 (기존 위반, 단일 `style:` PR, PR #71/#72/#74 머지 후 안전): scheduler_worker.py format + inline_editor.py format(docstring 빈줄/따옴표) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401) + F841 프로덕션 미사용 변수 4건(app.py base_dir / support_agent forced_feedback / history_repository data / api_key_vault res, 사이클 9 무해 확인). 기존 라인 위반이라 추가 라인은 준수.
 - [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
   푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
   (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
@@ -30,6 +29,7 @@
 
 ## Done
 
+- [x] 2026-06-27 ruff F841 프로덕션 미사용 변수 4건 검토 (사이클 9). app.py:28 `base_dir` / support_agent_service.py:66 `forced_feedback` / supabase_history_repository.py:44 `data` / supabase_api_key_vault.py:81 `res` — **모두 무해**(의도적 결과 무시 / legacy fallback / 예외 기반 에러 처리). 진짜 버거 0건. 정리는 백록 ruff cleanup NIT로 이관
 - [x] 2026-06-27 PR #70 리뷰 (test: resultStore 회귀 테스트 + vitest 도입). code-reviewer 실측 검증(tsc/test 4 passed/lint/build exit 0) → IMPORTANT(CI npm test 스텝 누락, [사람] CI 항목으로 이관) + NIT 2건. GitHub 리뷰 코멘트 게시(reviews:2)
 - [x] 2026-06-27 PR #69 BLOCKER 2건 수정 (refactor/jsonify-error-responses 97751a6). notebooklm download RuntimeError → api_error_from_exception(stderr 노출 차단) + agent_routes sessions/tools/toolsets → logger.error + api_error("[서버 오류]...",500)(로깅+노출 차단). 검증: ruff All passed + import OK
 - [x] 2026-06-27 PR #69 리뷰 (refactor: 에러 응답 api_error 일관화). code-reviewer 리뷰 → BLOCKER 2건(notebooklm download stderr 노출 / agent_routes sessions-tools-toolsets str(e) 500 + 로깅 누락) + SUGGESTION 1건. GitHub 리뷰 코멘트 게시(reviews:1) — 사이클 7에서 BLOCKER 수정
