@@ -9,7 +9,13 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 (외부에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
 """
 import os
-import fcntl
+
+try:
+    import fcntl  # Unix 전용 — gunicorn 다중 worker 리더 락에 사용
+except ImportError:
+    # Windows — gunicorn 다중 worker를 쓰지 않으므로 리더 락이 불필요하다.
+    fcntl = None
+
 from pathlib import Path
 
 from services.core.logging_config import get_logger
@@ -24,6 +30,10 @@ def _acquire_scheduler_leader_lock() -> bool:
     """gunicorn 다중 worker 환경에서 스케줄러를 단일 프로세스만 실행하게 한다."""
     global _scheduler_lock_file
     if _scheduler_lock_file is not None:
+        return True
+
+    # Windows(fcntl 미사용)는 gunicorn 다중 worker가 없으므로 파일 리더 락을 우회한다.
+    if fcntl is None:
         return True
 
     lock_path = Path(os.getenv('SCHEDULER_LOCK_FILE', '/tmp/insight-engine-scheduler.lock'))
