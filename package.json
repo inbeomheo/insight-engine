@@ -8,7 +8,9 @@
     "verify:e2e": "cd tests/e2e && npx playwright test main-page/ci-smoke.spec.ts --project=no-auth-chromium",
     "verify:all": "npm run verify:backend && npm run verify:frontend && npm run verify:e2e",
     "verify:production": "python scripts/check_production_readiness.py",
-    "verify:app-data-backup": "python scripts/backup_app_data.py rehearse"
+    "verify:app-data-backup": "python scripts/backup_app_data.py rehearse",
+    "docker:cleanup": "bash scripts/docker_cleanup_after_deploy.sh",
+    "deploy:local": "docker compose -f docker-compose.deploy.yml up -d --build backend frontend edge && npm run docker:cleanup"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"
