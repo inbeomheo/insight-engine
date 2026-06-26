@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -105,7 +105,7 @@ class TestApiKeyManagement:
             masked_key="****1234",
             label="default",
             is_active=True,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         service.api_keys.store.return_value = expected
         result = service.add_api_key(account_id, "gemini", "sk-test-12341234", "default")
