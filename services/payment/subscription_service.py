@@ -12,7 +12,7 @@ from services.core.logging_config import ServiceLogger
 logger = ServiceLogger('SubscriptionService')
 
 _LOCAL_SUBS_FILE = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'subscriptions.json'
+    os.getenv('APP_DATA_DIR', 'data'), 'subscriptions.json'
 )
 
 

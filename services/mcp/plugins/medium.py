@@ -59,7 +59,14 @@ class MediumPlugin(MCPPlugin):
 
         # 사용자 ID 조회
         try:
-            me_resp = requests.get(f'{MEDIUM_API_URL}/me', headers=headers, timeout=15)
+            me_resp = requests.get(
+                f'{MEDIUM_API_URL}/me',
+                headers=headers,
+                timeout=15,
+                allow_redirects=False,
+            )
+            if 300 <= me_resp.status_code < 400:
+                return {'success': False, 'message': 'Medium 리다이렉트 차단', 'url': None}
             if me_resp.status_code != 200:
                 return {'success': False, 'message': 'Medium 인증 실패', 'url': None}
             user_id = me_resp.json()['data']['id']
@@ -86,7 +93,10 @@ class MediumPlugin(MCPPlugin):
                 json=payload,
                 headers=headers,
                 timeout=30,
+                allow_redirects=False,
             )
+            if 300 <= post_resp.status_code < 400:
+                return {'success': False, 'message': 'Medium 리다이렉트 차단', 'url': None}
             if post_resp.status_code in (200, 201):
                 post_data = post_resp.json()['data']
                 return {

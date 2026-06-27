@@ -4,6 +4,7 @@ Locust 부하 테스트 (F9-25)
      locust -f tests/load/locustfile.py --host=http://localhost:5001 --headless -u 50 -r 5 --run-time 60s
 """
 import random
+import os
 from locust import HttpUser, task, between, events
 
 # 테스트용 YouTube URL 샘플
@@ -88,7 +89,9 @@ class AdminUser(HttpUser):
     @task
     def check_metrics(self):
         """Prometheus 메트릭 조회"""
-        self.client.get("/metrics", name="GET /metrics")
+        token = (os.getenv("METRICS_AUTH_TOKEN") or "").strip()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        self.client.get("/metrics", headers=headers, name="GET /metrics")
 
 
 @events.test_start.add_listener

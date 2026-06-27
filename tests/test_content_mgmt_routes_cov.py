@@ -612,6 +612,12 @@ class TestBackup(_Base):
         self.assertEqual(resp.status_code, 404)
 
     @patch(_SB_PATCH, return_value=False)
+    @patch('services.data.backup_service.restore_backup', side_effect=ValueError('bad name'))
+    def test_restore_backup_invalid_filename(self, _m1, _):
+        resp = self.client.post('/api/content/backup/bad.zip/restore', json={}, headers=_H)
+        self.assertEqual(resp.status_code, 400)
+
+    @patch(_SB_PATCH, return_value=False)
     @patch('services.data.backup_service.restore_backup', side_effect=Exception('corrupted'))
     def test_restore_backup_error(self, _m1, _):
         resp = self.client.post('/api/content/backup/bad.zip/restore', json={}, headers=_H)

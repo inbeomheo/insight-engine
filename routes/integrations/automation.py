@@ -1,4 +1,7 @@
 """외부 자동화 통합 — Slack/Discord/Telegram 봇, Zapier, Make, IFTTT, Airtable, Sheets, Webhook Relay, Slack/Discord 알림."""
+import hmac
+import os
+
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp
@@ -8,6 +11,65 @@ from routes.integrations._shared import (
 )
 from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import handle_error, clamp_query_int
+
+
+AUTOMATION_WEBHOOK_SECRET_HEADER = 'X-Insight-Webhook-Secret'
+TELEGRAM_WEBHOOK_SECRET_HEADER = 'X-Telegram-Bot-Api-Secret-Token'
+
+
+def _is_production() -> bool:
+    return (os.getenv('FLASK_ENV') or '').strip().lower() == 'production'
+
+
+def _bearer_token() -> str:
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        return auth_header[7:].strip()
+    return ''
+
+
+def _automation_webhook_secret_error():
+    configured_secret = (os.getenv('AUTOMATION_WEBHOOK_SECRET') or '').strip()
+    if not configured_secret:
+        if _is_production():
+            current_app.logger.warning('Blocked automation webhook without AUTOMATION_WEBHOOK_SECRET')
+            return jsonify({
+                'error': '자동화 웹훅 secret이 설정되지 않았습니다.',
+                'code': 'AUTOMATION_WEBHOOK_SECRET_NOT_CONFIGURED',
+            }), 503
+        return None
+
+    supplied_secret = (
+        request.headers.get(AUTOMATION_WEBHOOK_SECRET_HEADER, '').strip()
+        or request.headers.get('X-Automation-Webhook-Secret', '').strip()
+        or _bearer_token()
+    )
+    if not supplied_secret or not hmac.compare_digest(supplied_secret, configured_secret):
+        return jsonify({
+            'error': '자동화 웹훅 인증에 실패했습니다.',
+            'code': 'AUTOMATION_WEBHOOK_AUTH_FAILED',
+        }), 401
+    return None
+
+
+def _telegram_webhook_secret_error():
+    configured_secret = (os.getenv('TELEGRAM_WEBHOOK_SECRET') or '').strip()
+    if not configured_secret:
+        if _is_production():
+            current_app.logger.warning('Blocked Telegram webhook without TELEGRAM_WEBHOOK_SECRET')
+            return jsonify({
+                'error': 'Telegram 웹훅 secret이 설정되지 않았습니다.',
+                'code': 'TELEGRAM_WEBHOOK_SECRET_NOT_CONFIGURED',
+            }), 503
+        return None
+
+    supplied_secret = request.headers.get(TELEGRAM_WEBHOOK_SECRET_HEADER, '').strip()
+    if not supplied_secret or not hmac.compare_digest(supplied_secret, configured_secret):
+        return jsonify({
+            'error': 'Telegram 웹훅 인증에 실패했습니다.',
+            'code': 'TELEGRAM_WEBHOOK_AUTH_FAILED',
+        }), 401
+    return None
 
 
 # ── Slack 봇 웹훅 (F7-02) ──────────────────────────────────────
@@ -58,6 +120,10 @@ def telegram_webhook():
     """Telegram 웹훅 수신"""
     from services.integrations.telegram_bot_service import telegram_bot_service
 
+    secret_error = _telegram_webhook_secret_error()
+    if secret_error:
+        return secret_error
+
     update = request.get_json(silent=True) or {}
 
     # 콜백 쿼리 (인라인 버튼)
@@ -70,9 +136,16 @@ def telegram_webhook():
 
 
 @blog_bp.route('/api/webhooks/telegram/setwebhook', methods=['POST'])
+@require_auth
 def telegram_set_webhook():
     """Telegram 웹훅 URL 등록"""
     from services.integrations.telegram_bot_service import telegram_bot_service
+
+    if _is_production() and not (os.getenv('TELEGRAM_WEBHOOK_SECRET') or '').strip():
+        return jsonify({
+            'error': 'Telegram 웹훅 secret이 설정되지 않았습니다.',
+            'code': 'TELEGRAM_WEBHOOK_SECRET_NOT_CONFIGURED',
+        }), 503
 
     data = request.get_json(silent=True) or {}
     webhook_url = data.get('webhook_url', '')
@@ -92,6 +165,10 @@ def zapier_trigger():
 
     Zapier Action에서 이 엔드포인트를 호출하면 됩니다.
     """
+    secret_error = _automation_webhook_secret_error()
+    if secret_error:
+        return secret_error
+
     data = request.get_json(silent=True) or {}
     url = data.get('url', '').strip()
     style_id = data.get('style_id', 'blog_seo')
@@ -122,6 +199,10 @@ def zapier_trigger():
 @blog_bp.route('/api/zapier/auth/test', methods=['GET'])
 def zapier_auth_test():
     """Zapier 인증 테스트 엔드포인트"""
+    secret_error = _automation_webhook_secret_error()
+    if secret_error:
+        return secret_error
+
     return jsonify({'status': 'ok', 'service': 'Insight Engine'})
 
 
@@ -134,6 +215,10 @@ def make_webhook():
 
     Make 시나리오의 Custom Webhook 모듈에서 이 URL을 트리거로 사용합니다.
     """
+    secret_error = _automation_webhook_secret_error()
+    if secret_error:
+        return secret_error
+
     data = request.get_json(silent=True) or {}
     url = data.get('url', '').strip()
     style_id = data.get('style_id', 'blog_seo')
@@ -160,19 +245,18 @@ def make_webhook():
 
                 # callback_url이 있으면 결과 전달
                 if callback_url:
-                    import json
-                    import urllib.request
-                    payload = json.dumps({
+                    from services.platform.webhook_relay_service import webhook_relay_service
+                    payload = {
                         'title': result.get('title', ''),
                         'content': result.get('content', ''),
                         'source_url': url,
-                    }).encode()
-                    req = urllib.request.Request(
-                        callback_url,
-                        data=payload,
+                    }
+                    webhook_relay_service.send_all(
+                        [callback_url],
+                        payload,
                         headers={'Content-Type': 'application/json'},
+                        timeout=30,
                     )
-                    urllib.request.urlopen(req, timeout=30)
             except Exception as e:
                 app.logger.error(f"Make 웹훅 처리 오류: {e}")
 
@@ -192,6 +276,10 @@ def ifttt_trigger():
 
     IFTTT Webhooks 형식: {"value1": "URL", "value2": "스타일", "value3": "언어"}
     """
+    secret_error = _automation_webhook_secret_error()
+    if secret_error:
+        return secret_error
+
     data = request.get_json(silent=True) or {}
     url = (data.get('value1') or data.get('url', '')).strip()
     style_id = data.get('value2') or data.get('style_id', 'blog_seo')
@@ -222,6 +310,7 @@ def ifttt_trigger():
 
 
 @blog_bp.route('/api/sync/airtable', methods=['POST'])
+@require_auth
 def sync_to_airtable():
     """생성된 콘텐츠를 Airtable에 동기화"""
     from services.integrations.airtable_service import airtable_service
@@ -256,6 +345,7 @@ def sync_to_airtable():
 
 
 @blog_bp.route('/api/sync/gsheets', methods=['POST'])
+@require_auth
 def sync_to_gsheets():
     """생성된 콘텐츠를 Google Sheets에 동기화"""
     from services.integrations.gsheets_service import gsheets_service
@@ -290,6 +380,7 @@ def sync_to_gsheets():
 
 
 @blog_bp.route('/api/webhook-relay', methods=['POST'])
+@require_auth
 def webhook_relay():
     """다수의 웹훅 URL에 동시 발송"""
     from services.platform.webhook_relay_service import webhook_relay_service

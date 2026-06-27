@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from bs4 import BeautifulSoup
+from utils.runtime_paths import app_data_path
 
 try:
     import markdown as _markdown
@@ -35,7 +36,7 @@ _ALLOWED_ATTRS = {
     "code": {"class"},
     "pre": {"class"},
 }
-_DEFAULT_SHARE_DIR = Path(os.getenv("SHARE_PAGE_DIR", "data/shared_pages"))
+_DEFAULT_SHARE_DIR = Path(os.getenv("SHARE_PAGE_DIR") or app_data_path("shared_pages"))
 
 
 def _safe_token(token: str) -> str:
@@ -80,7 +81,11 @@ def _preview_text(content: str, limit: int = 180) -> str:
 
 
 def public_origin() -> str:
-    return os.getenv("PUBLIC_ORIGIN", "").rstrip("/")
+    for key in ("PUBLIC_ORIGIN", "INSIGHT_BASE_URL", "APP_BASE_URL"):
+        value = (os.getenv(key) or "").strip().rstrip("/")
+        if value:
+            return value
+    return ""
 
 
 class SharePageStore:

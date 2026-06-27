@@ -126,7 +126,7 @@ def _synthesize_openai(text: str, voice: str, speed: float) -> bytes:
         'response_format': 'mp3',
     }
 
-    with httpx.Client(timeout=60) as client:
+    with httpx.Client(timeout=60, follow_redirects=False) as client:
         resp = client.post(
             'https://api.openai.com/v1/audio/speech',
             headers={
@@ -135,6 +135,10 @@ def _synthesize_openai(text: str, voice: str, speed: float) -> bytes:
             },
             json=payload,
         )
+
+    status_code = getattr(resp, 'status_code', 0)
+    if isinstance(status_code, int) and 300 <= status_code < 400:
+        raise RuntimeError(f'OpenAI TTS API 리다이렉트 차단: {resp.status_code}')
 
     if resp.status_code != 200:
         raise RuntimeError(f'OpenAI TTS API 오류: {resp.status_code} {resp.text[:200]}')

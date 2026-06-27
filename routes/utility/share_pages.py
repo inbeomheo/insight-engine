@@ -7,15 +7,20 @@ from pathlib import Path
 from flask import Response, current_app, jsonify, request
 
 from routes.blog_routes import blog_bp
-from services.content.share_page_service import SharePageStore, render_share_html
+from services.content.share_page_service import SharePageStore, public_origin, render_share_html
 from src.contexts.identity.interface.auth_decorators import require_auth
+from utils.runtime_paths import app_data_path
 
 
 def _share_store() -> SharePageStore:
-    directory = current_app.config.get("SHARE_PAGE_DIR") or os.getenv("SHARE_PAGE_DIR") or "data/shared_pages"
+    directory = (
+        current_app.config.get("SHARE_PAGE_DIR")
+        or os.getenv("SHARE_PAGE_DIR")
+        or app_data_path("shared_pages")
+    )
     if not Path(directory).is_absolute():
         directory = str(Path(current_app.root_path) / directory)
-    origin = (os.getenv("PUBLIC_ORIGIN", "") or request.host_url.rstrip("/")).rstrip("/")
+    origin = (public_origin() or request.host_url.rstrip("/")).rstrip("/")
     return SharePageStore(directory, origin=origin)
 
 

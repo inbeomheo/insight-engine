@@ -80,7 +80,14 @@ class SubstackPlugin(MCPPlugin):
                 json=payload,
                 headers=headers,
                 timeout=30,
+                allow_redirects=False,
             )
+            if 300 <= resp.status_code < 400:
+                return {
+                    'success': False,
+                    'message': f'Substack 리다이렉트 차단: {resp.status_code}',
+                    'url': None,
+                }
             if resp.status_code in (200, 201):
                 data = resp.json()
                 post_id = data.get('id', '')

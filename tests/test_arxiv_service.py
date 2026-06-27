@@ -1,8 +1,16 @@
 """arxiv_service 단위 테스트 (XML 파싱 위주)"""
 import unittest
+from unittest.mock import patch
 from xml.etree import ElementTree
 
-from services.data.arxiv_service import _ns, _parse_entry, _ATOM_NS, _ARXIV_NS
+from services.data.arxiv_service import (
+    _ATOM_NS,
+    _ARXIV_NS,
+    _is_arxiv_pdf_url,
+    _ns,
+    _parse_entry,
+    fetch_paper_fulltext,
+)
 
 
 def _make_entry_xml(
@@ -127,6 +135,43 @@ class TestParseEntry(unittest.TestCase):
         self.assertNotIn('\n', result['title'])
         self.assertNotIn('  ', result['title'])
         self.assertNotIn('\n', result['abstract'])
+
+
+class TestArxivPdfUrlSafety(unittest.TestCase):
+
+    def test_arxiv_pdf_url_allowed_when_public(self):
+        with patch('services.data.arxiv_service.public_url_error', return_value=None):
+            self.assertTrue(_is_arxiv_pdf_url('https://arxiv.org/pdf/2303.08774'))
+
+    def test_non_arxiv_pdf_url_blocked(self):
+        with patch('services.data.arxiv_service.public_url_error', return_value=None):
+            self.assertFalse(_is_arxiv_pdf_url('https://evil.example/pdf/2303.08774'))
+
+    def test_arxiv_dns_private_result_blocked(self):
+        with patch(
+            'services.data.arxiv_service.public_url_error',
+            return_value='arXiv PDF URL DNS 해석 결과가 안전하지 않아 차단되었습니다.',
+        ):
+            self.assertFalse(_is_arxiv_pdf_url('https://arxiv.org/pdf/2303.08774'))
+
+    @patch('services.data.arxiv_service.requests.get')
+    @patch('services.data.arxiv_service.fetch_paper')
+    def test_fulltext_blocks_unsafe_pdf_url_without_download(self, mock_fetch, mock_get):
+        paper = {
+            'title': 'T',
+            'abstract': 'A',
+            'authors': [],
+            'published': '',
+            'category': '',
+            'pdf_url': 'http://127.0.0.1/private.pdf',
+        }
+        mock_fetch.return_value = dict(paper)
+
+        result = fetch_paper_fulltext('2303.08774')
+
+        self.assertEqual(result['pdf_url'], paper['pdf_url'])
+        self.assertNotIn('fulltext', result)
+        mock_get.assert_not_called()
 
 
 if __name__ == '__main__':

@@ -1,5 +1,76 @@
-# Insight Engine Kubernetes Deployment (F9-24)
-# 적용: kubectl apply -f k8s/
+# Insight Engine Kubernetes production reference manifest.
+#
+# Before applying:
+# - Replace ghcr.io/your-org/insight-engine:replace-with-git-sha with an immutable tag or digest.
+# - Replace replace-with-rwx-storage-class with a ReadWriteMany-capable storage class.
+# - Create the insight-secrets Secret out of band. Required keys:
+#   SECRET_KEY, ENCRYPTION_SECRET, METRICS_AUTH_TOKEN, BASIC_AUTH_USER,
+#   BASIC_AUTH_HASH, ZAI_API_KEY or another configured provider key,
+#   SENTRY_DSN, ALERT_WEBHOOK_URL.
+# - Create the insight-edge-basic-auth Secret for the ingress controller if
+#   nginx basic auth is enabled in your cluster.
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: insight-config
+  namespace: insight-engine
+data:
+  FLASK_ENV: "production"
+  FLASK_DEBUG: "0"
+  AUTH_MODE: "edge"
+  PORT: "5001"
+  CORS_ORIGINS: "https://insight.example.com"
+  INSIGHT_BASE_URL: "https://insight.example.com"
+  APP_BASE_URL: "https://insight.example.com"
+  TRUSTED_HOSTS: "insight.example.com"
+  SESSION_COOKIE_SECURE: "true"
+  RATE_LIMIT_ENABLED: "true"
+  REDIS_URL: "redis://insight-redis:6379/0"
+  PUBLISH_QUEUE_BACKEND: "redis"
+  PUBLISH_QUEUE_REDIS_URL: "redis://insight-redis:6379/0"
+  APP_DATA_DIR: "/app/data"
+  AGENT_DB_PATH: "/app/data/agent_state.db"
+  APP_DATA_BACKUP_DIR: "/app/backups"
+  APP_DATA_BACKUP_REPLICA_DIR: "/app/backup-replica"
+  APP_DATA_BACKUP_REPLICA_MAX_BACKUPS: "30"
+  APP_DATA_BACKUP_MAX_AGE_HOURS: "12"
+  CONTENT_BACKUP_DIR: "/app/backups/content-library"
+  AUTO_BACKUP_INTERVAL_HOURS: "6"
+  MAX_BACKUPS: "30"
+  SCHEDULER_LOCK_FILE: "/tmp/insight-engine-scheduler.lock"
+  CHROMA_DB_PATH: "/app/data/chroma_db"
+  FEEDBACK_DATA_DIR: "/app/data/feedback"
+  FEEDBACK_STORE_DIR: "/app/data/feedback"
+  FINETUNE_OUTPUT_DIR: "/app/data/finetune"
+  GRAPH_STORE_PATH: "/app/data/graph_store"
+  APP_CACHE_DIR: "/app/cache"
+  AI_CACHE_DB: "/app/cache/ai_cache.db"
+  JOB_STORE_DIR: "/app/data/jobs"
+  PREFERENCE_DATA_PATH: "/app/data/preferences.jsonl"
+  SHARE_PAGE_DIR: "/app/data/shared_pages"
+  USER_MEMORY_PATH: "/app/data/user_memory"
+  DEFAULT_GENERATION_MODEL: "zhipuai/GLM-4.5-Air"
+  VIDEO_QA_DEFAULT_MODEL: "zhipuai/GLM-4.5-Air"
+  ERROR_TRACKING_REQUIRED: "true"
+  ALERT_WEBHOOK_REQUIRED: "true"
+  APP_VERSION: "v2.0"
+  APP_RELEASE: "replace-with-git-sha"
+  GIT_SHA: "replace-with-git-sha"
+  BUILD_TIME: "replace-with-build-time"
+  NEXT_TELEMETRY_DISABLED: "1"
+  NEXT_BACKEND_URL: "http://insight-backend:5001"
+  SCHEDULER_ENABLED: "false"
+  SCHEDULER_HEARTBEAT_FILE: "/tmp/insight-engine-scheduler.heartbeat"
 
 ---
 apiVersion: apps/v1
@@ -8,68 +79,252 @@ metadata:
   name: insight-backend
   namespace: insight-engine
   labels:
-    app: insight-backend
-    version: v1
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: backend
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
-      app: insight-backend
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: backend
   template:
     metadata:
       labels:
-        app: insight-backend
-        version: v1
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: "/metrics"
-        prometheus.io/port: "5001"
+        app.kubernetes.io/name: insight-engine
+        app.kubernetes.io/component: backend
     spec:
+      serviceAccountName: insight-runtime
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: backend
-          image: insight-engine-backend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/your-org/insight-engine:replace-with-git-sha
+          imagePullPolicy: IfNotPresent
+          command:
+            - gunicorn
+            - --workers=2
+            - --threads=4
+            - --timeout=300
+            - --bind=0.0.0.0:5001
+            - app:app
           ports:
             - containerPort: 5001
               name: http
           envFrom:
-            - secretRef:
-                name: insight-secrets
             - configMapRef:
                 name: insight-config
+            - secretRef:
+                name: insight-secrets
+          env:
+            - name: HOME
+              value: /app
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: XDG_CACHE_HOME
+              value: /app/cache/xdg
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: 512Mi
+              cpu: 250m
             limits:
-              memory: "2Gi"
-              cpu: "1000m"
-          readinessProbe:
+              memory: 2Gi
+              cpu: "1"
+          startupProbe:
             httpGet:
               path: /health
-              port: 5001
-            initialDelaySeconds: 20
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
             periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /health
-              port: 5001
-            initialDelaySeconds: 30
+              port: http
             periodSeconds: 30
+            timeoutSeconds: 5
             failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - name: app-data
               mountPath: /app/data
+            - name: app-backups
+              mountPath: /app/backups
+            - name: app-backup-replica
+              mountPath: /app/backup-replica
             - name: app-cache
               mountPath: /app/cache
+            - name: app-logs
+              mountPath: /app/logs
+            - name: tmp
+              mountPath: /tmp
+            - name: gunicorn-tmp
+              mountPath: /app/.gunicorn
       volumes:
         - name: app-data
           persistentVolumeClaim:
             claimName: insight-data-pvc
+        - name: app-backups
+          persistentVolumeClaim:
+            claimName: insight-backups-pvc
+        - name: app-backup-replica
+          persistentVolumeClaim:
+            claimName: insight-backup-replica-pvc
         - name: app-cache
-          emptyDir: {}
-      terminationGracePeriodSeconds: 30
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: app-logs
+          emptyDir:
+            sizeLimit: 512Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+        - name: gunicorn-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insight-worker
+  namespace: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: insight-engine
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: insight-runtime
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: ghcr.io/your-org/insight-engine:replace-with-git-sha
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - scripts/run_scheduler_worker.py
+          envFrom:
+            - configMapRef:
+                name: insight-config
+            - secretRef:
+                name: insight-secrets
+          env:
+            - name: SCHEDULER_ENABLED
+              value: "true"
+            - name: HOME
+              value: /app
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: XDG_CACHE_HOME
+              value: /app/cache/xdg
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os,time,pathlib; p=pathlib.Path(os.environ.get('SCHEDULER_HEARTBEAT_FILE','/tmp/insight-engine-scheduler.heartbeat')); raise SystemExit(0 if p.exists() and time.time() - p.stat().st_mtime < 120 else 1)"
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os,time,pathlib; p=pathlib.Path(os.environ.get('SCHEDULER_HEARTBEAT_FILE','/tmp/insight-engine-scheduler.heartbeat')); raise SystemExit(0 if p.exists() and time.time() - p.stat().st_mtime < 180 else 1)"
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/data
+            - name: app-backups
+              mountPath: /app/backups
+            - name: app-backup-replica
+              mountPath: /app/backup-replica
+            - name: app-cache
+              mountPath: /app/cache
+            - name: app-logs
+              mountPath: /app/logs
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: insight-data-pvc
+        - name: app-backups
+          persistentVolumeClaim:
+            claimName: insight-backups-pvc
+        - name: app-backup-replica
+          persistentVolumeClaim:
+            claimName: insight-backup-replica-pvc
+        - name: app-cache
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: app-logs
+          emptyDir:
+            sizeLimit: 512Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
 
 ---
 apiVersion: apps/v1
@@ -78,68 +333,358 @@ metadata:
   name: insight-frontend
   namespace: insight-engine
   labels:
-    app: insight-frontend
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: frontend
 spec:
   replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
-      app: insight-frontend
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: frontend
   template:
     metadata:
       labels:
-        app: insight-frontend
+        app.kubernetes.io/name: insight-engine
+        app.kubernetes.io/component: frontend
     spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
-          image: insight-engine-frontend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/your-org/insight-engine:replace-with-git-sha
+          imagePullPolicy: IfNotPresent
+          workingDir: /app/frontend
+          command:
+            - node
+            - node_modules/.bin/next
+            - start
+            - --hostname
+            - 0.0.0.0
+            - --port
+            - "3000"
           ports:
             - containerPort: 3000
               name: http
+          envFrom:
+            - configMapRef:
+                name: insight-config
           env:
-            - name: NEXT_PUBLIC_API_URL
-              value: http://insight-backend-svc:5001
+            - name: NODE_ENV
+              value: production
+            - name: HOME
+              value: /app
+            - name: XDG_CACHE_HOME
+              value: /tmp/xdg-cache
+            - name: TMPDIR
+              value: /tmp
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "100m"
+              memory: 256Mi
+              cpu: 100m
             limits:
-              memory: "1Gi"
-              cpu: "500m"
+              memory: 1Gi
+              cpu: 500m
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
           readinessProbe:
             httpGet:
               path: /
-              port: 3000
-            initialDelaySeconds: 15
+              port: http
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/frontend/.next/cache
+            - name: next-diagnostics
+              mountPath: /app/frontend/.next/diagnostics
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+        - name: next-cache
+          emptyDir:
+            sizeLimit: 128Mi
+        - name: next-diagnostics
+          emptyDir:
+            sizeLimit: 8Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insight-redis
+  namespace: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: insight-engine
+        app.kubernetes.io/component: redis
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+            - --maxmemory
+            - 256mb
+            - --maxmemory-policy
+            - allkeys-lru
+            - --appendonly
+            - "yes"
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: insight-redis-pvc
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 32Mi
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: insight-runtime
+  namespace: insight-engine
+automountServiceAccountToken: false
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: insight-backend-svc
+  name: insight-backend
   namespace: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: backend
 spec:
+  type: ClusterIP
   selector:
-    app: insight-backend
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: backend
   ports:
     - port: 5001
-      targetPort: 5001
+      targetPort: http
       name: http
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: insight-frontend-svc
+  name: insight-frontend
   namespace: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: frontend
 spec:
+  type: ClusterIP
   selector:
-    app: insight-frontend
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: frontend
   ports:
     - port: 3000
-      targetPort: 3000
+      targetPort: http
       name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insight-redis
+  namespace: insight-engine
+  labels:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: insight-engine
+    app.kubernetes.io/component: redis
+  ports:
+    - port: 6379
+      targetPort: redis
+      name: redis
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: insight-public-ingress
+  namespace: insight-engine
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - insight.example.com
+      secretName: insight-tls
+  rules:
+    - host: insight.example.com
+      http:
+        paths:
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /share
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/shares/
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/payment/webhook
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/paddle/webhook
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/crypto/webhook
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/webhooks/slack
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/webhooks/discord
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /api/webhooks/telegram
+            pathType: Exact
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -148,8 +693,12 @@ metadata:
   name: insight-ingress
   namespace: insight-engine
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: insight-edge-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
 spec:
   tls:
     - hosts:
@@ -163,14 +712,84 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: insight-backend-svc
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /generate
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /generate-stream
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /generate-batch
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /regenerate
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /feed.xml
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /version
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /openapi.json
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /oauth
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
+                port:
+                  number: 5001
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: insight-backend
                 port:
                   number: 5001
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: insight-frontend-svc
+                name: insight-frontend
                 port:
                   number: 3000
 
@@ -178,7 +797,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: insight-backend-hpa
+  name: insight-backend
   namespace: insight-engine
 spec:
   scaleTargetRef:
@@ -202,15 +821,51 @@ spec:
           averageUtilization: 80
 
 ---
-apiVersion: v1
-kind: ConfigMap
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
 metadata:
-  name: insight-config
+  name: insight-frontend
   namespace: insight-engine
-data:
-  FLASK_ENV: "production"
-  REDIS_URL: "redis://insight-redis-svc:6379/0"
-  CHROMA_DB_PATH: "/app/data/chroma_db"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: insight-frontend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: insight-backend
+  namespace: insight-engine
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: backend
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: insight-frontend
+  namespace: insight-engine
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: insight-engine
+      app.kubernetes.io/component: frontend
 
 ---
 apiVersion: v1
@@ -220,8 +875,50 @@ metadata:
   namespace: insight-engine
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 20Gi
+  storageClassName: replace-with-rwx-storage-class
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: insight-backups-pvc
+  namespace: insight-engine
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: replace-with-rwx-storage-class
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: insight-backup-replica-pvc
+  namespace: insight-engine
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: replace-with-rwx-storage-class
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: insight-redis-pvc
+  namespace: insight-engine
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
   storageClassName: standard

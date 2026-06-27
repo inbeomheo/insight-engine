@@ -2,10 +2,12 @@
 스마트 콘텐츠 생성기 - Flask 애플리케이션 팩토리
 """
 import os
+import re
 import sys
+import uuid
 from urllib.parse import urlparse
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -14,11 +16,135 @@ from utils.production_readiness import (
     parse_cors_origins,
     validate_production_security_config,
 )
+from utils.error_tracking import init_error_tracking
+from utils.release_metadata import release_metadata
 
 try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
     load_dotenv = lambda *args, **kwargs: False
+
+
+REQUEST_ID_HEADER = 'X-Request-ID'
+REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
+LOCAL_TRUSTED_HOSTS = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
+SIGNED_INBOUND_WEBHOOK_PATHS = {
+    '/api/payment/webhook',
+    '/api/paddle/webhook',
+    '/api/crypto/webhook',
+    '/api/webhooks/slack',
+    '/api/webhooks/discord',
+    '/api/webhooks/telegram',
+}
+SUPABASE_AUTH_PUBLIC_EXACT_PATHS = {
+    '/',
+    '/health',
+    '/ready',
+    '/metrics',
+    '/version',
+    '/api/heartbeat',
+    '/api/close',
+    '/api/auth/status',
+    '/api/auth/config',
+    '/api/auth/signup',
+    '/api/auth/reset-password',
+    '/api/auth/oauth/callback',
+    '/api/auth/login',
+    '/api/auth/refresh',
+    '/api/app-feedback',
+    '/api/support/chat',
+    '/oauth/register',
+    '/oauth/token',
+    '/oauth/revoke',
+}
+SUPABASE_AUTH_PUBLIC_READ_PREFIXES = (
+    '/share/',
+    '/api/shares/',
+)
+SUPABASE_AUTH_PUBLIC_OAUTH_PREFIX = '/api/auth/oauth/'
+SUPABASE_AUTH_PUBLIC_SSO_PATTERN = re.compile(r'^/api/sso/[^/]+/(?:login|callback)$')
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _normalize_request_id(value: str | None) -> str:
+    candidate = (value or '').strip()
+    if candidate and REQUEST_ID_PATTERN.fullmatch(candidate):
+        return candidate
+    return uuid.uuid4().hex
+
+
+def _request_id() -> str | None:
+    return getattr(g, 'request_id', None)
+
+
+def _hostname_from_host(value: str) -> str:
+    raw = (value or '').strip().lower()
+    if not raw:
+        return ''
+    parsed = urlparse(raw if '://' in raw else f'//{raw}')
+    return (parsed.hostname or '').lower()
+
+
+def _origin_from_url(value: str) -> str:
+    raw = (value or '').strip()
+    if not raw:
+        return ''
+
+    parsed = urlparse(raw)
+    scheme = (parsed.scheme or '').lower()
+    host = (parsed.hostname or '').lower()
+    if not scheme or not host or parsed.username or parsed.password:
+        return ''
+
+    try:
+        port = parsed.port
+    except ValueError:
+        return ''
+
+    if ':' in host and not host.startswith('['):
+        host = f'[{host}]'
+
+    default_port = (scheme == 'https' and port == 443) or (scheme == 'http' and port == 80)
+    port_suffix = f':{port}' if port and not default_port else ''
+    return f'{scheme}://{host}{port_suffix}'
+
+
+def _trusted_hosts_from_env(allowed_origins: list[str]) -> set[str]:
+    hosts = set(LOCAL_TRUSTED_HOSTS)
+    for origin in allowed_origins:
+        host = _hostname_from_host(origin)
+        if host:
+            hosts.add(host)
+    for raw_host in (os.getenv('TRUSTED_HOSTS') or '').split(','):
+        host = _hostname_from_host(raw_host)
+        if host:
+            hosts.add(host)
+    return hosts
+
+
+def _auth_mode() -> str:
+    return (os.getenv('AUTH_MODE') or '').strip().lower()
+
+
+def _is_supabase_public_path(path: str, method: str) -> bool:
+    if method == 'OPTIONS':
+        return True
+    if path in SUPABASE_AUTH_PUBLIC_EXACT_PATHS:
+        return True
+    if method == 'POST' and path in SIGNED_INBOUND_WEBHOOK_PATHS:
+        return True
+    if method == 'GET' and path.startswith(SUPABASE_AUTH_PUBLIC_READ_PREFIXES):
+        return True
+    if method == 'GET' and path.startswith(SUPABASE_AUTH_PUBLIC_OAUTH_PREFIX):
+        return True
+    if method == 'POST' and SUPABASE_AUTH_PUBLIC_SSO_PATTERN.fullmatch(path):
+        return True
+    if path.startswith('/api/support/'):
+        return True
+    return False
 
 
 def create_app(test_config=None):
@@ -37,7 +163,13 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # CORS: 프론트엔드(Next.js)에서 Flask를 직접 호출할 수 있도록 허용
-    allowed_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
+    allowed_origins = parse_cors_origins(os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001'))
+    allowed_origin_set = {
+        origin
+        for origin in (_origin_from_url(origin) for origin in allowed_origins)
+        if origin
+    }
+    trusted_hosts = _trusted_hosts_from_env(allowed_origins)
 
     # 부팅 시 production 보안 설정 검증 (fail-closed)
     # FLASK_ENV != 'production'이면 검증을 건너뛰므로 개발/테스트 환경에는 영향 없음
@@ -47,13 +179,22 @@ def create_app(test_config=None):
         flask_env,
         parse_cors_origins(os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001')),
         os.getenv('METRICS_AUTH_TOKEN', ''),
+        os.getenv('SECRET_KEY', ''),
         os.getenv('ENCRYPTION_SECRET', ''),
         _csp_header,
+        dict(os.environ),
     )
 
-    CORS(app, origins=[o.strip() for o in allowed_origins], supports_credentials=True)
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
     app.config.from_object('config')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', app.config.get('SECRET_KEY', ''))
+    is_production = (flask_env or '').strip().lower() == 'production'
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_SECURE=is_production or _truthy(os.getenv('SESSION_COOKIE_SECURE')),
+    )
     # /api/providers 등 순서가 UI 기본 선택에 영향을 주므로 JSON 키 정렬을 끈다.
     app.json.sort_keys = False
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -73,6 +214,8 @@ def create_app(test_config=None):
     if test_config:
         app.config.from_mapping(test_config)
 
+    init_error_tracking(app)
+
     # AI 결과 캐시 초기화
     from services.core.cache_service import AICacheService
     app.ai_cache = AICacheService(
@@ -81,40 +224,115 @@ def create_app(test_config=None):
         max_size_mb=config_module.AI_CACHE_MAX_SIZE_MB,
     )
 
-    # API 응답 시간 로깅
+    # 요청 상관관계/응답 시간 로깅
     import time as _time
-    import logging as _logging
-    _perf_logger = _logging.getLogger('api.perf')
+    from services.core.logging_config import get_logger
+    _access_logger = get_logger('api.access')
+    _perf_logger = get_logger('api.perf')
+    _release = release_metadata()
 
     @app.before_request
-    def _start_timer():
+    def _start_request_context():
         request._start_time = _time.perf_counter()
+        g.request_id = _normalize_request_id(
+            request.headers.get(REQUEST_ID_HEADER)
+            or request.headers.get('X-Correlation-ID')
+        )
+
+    @app.before_request
+    def _enforce_trusted_host():
+        if not is_production:
+            return None
+        host = _hostname_from_host(request.host)
+        if host and host in trusted_hosts:
+            return None
+        return jsonify({
+            'error': '허용되지 않은 Host 헤더입니다.',
+            'requestId': _request_id(),
+        }), 400
 
     # Issue #17 소PR B-2: g.auth 슬롯 초기화 (UserAccount Aggregate는 require_auth가 채움)
+    from src.contexts.identity.interface import auth_decorators as _auth_decorators
     from src.contexts.identity.interface.auth_decorators import inject_auth_context
     app.before_request(inject_auth_context)
 
+    @app.before_request
+    def _enforce_supabase_auth_mode():
+        if not is_production or _auth_mode() != 'supabase':
+            return None
+        if _is_supabase_public_path(request.path, request.method):
+            return None
+        if not _auth_decorators.is_supabase_enabled():
+            return jsonify({
+                'error': '인증 공급자가 설정되지 않았습니다.',
+                'code': 'AUTH_PROVIDER_NOT_CONFIGURED',
+                'requestId': _request_id(),
+            }), 503
+
+        token = _auth_decorators._extract_bearer_token()
+        if not token:
+            return jsonify({
+                'error': '인증이 필요합니다.',
+                'code': 'AUTH_REQUIRED',
+                'requestId': _request_id(),
+            }), 401
+
+        result = _auth_decorators._validate_token(token)
+        if not result['valid']:
+            return jsonify({
+                'error': result['error'],
+                'code': result['code'],
+                'requestId': _request_id(),
+            }), 401
+        g.auth_validated = True
+        return None
+
     @app.after_request
     def _log_response_time(response):
+        request_id = _request_id() or _normalize_request_id(None)
+        response.headers.setdefault(REQUEST_ID_HEADER, request_id)
         start = getattr(request, '_start_time', None)
         if start is not None:
             elapsed_ms = (_time.perf_counter() - start) * 1000
             response.headers['X-Response-Time'] = f'{elapsed_ms:.1f}ms'
+            _access_logger.info(
+                'request_complete request_id=%s release=%s method=%s path=%s status=%s duration_ms=%.1f',
+                request_id,
+                _release['release'],
+                request.method,
+                request.path,
+                response.status_code,
+                elapsed_ms,
+            )
             if elapsed_ms > 1000:  # 1초 이상은 warning
-                _perf_logger.warning('느린 응답: %s %s %.1fms', request.method, request.path, elapsed_ms)
+                _perf_logger.warning(
+                    'slow_request request_id=%s method=%s path=%s duration_ms=%.1f',
+                    request_id,
+                    request.method,
+                    request.path,
+                    elapsed_ms,
+                )
         return response
 
     # 보안 헤더 설정
     @app.after_request
     def add_security_headers(response):
         """보안 헤더를 응답에 추가합니다."""
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers.setdefault('Content-Security-Policy', _csp_header)
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('X-XSS-Protection', '0')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+        )
         # HTTPS 환경에서만 HSTS 활성화
         if request.is_secure:
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            response.headers.setdefault(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains; preload',
+            )
         return response
 
     # CSRF 보호 (Origin 헤더 검증)
@@ -128,24 +346,33 @@ def create_app(test_config=None):
             # 헬스체크, 정적 파일은 제외
             if request.path in ('/health', '/api/heartbeat'):
                 return None
+            # Server-to-server payment webhooks do not send browser Origin/Referer.
+            # These endpoints perform their own provider signature verification.
+            if request.path in SIGNED_INBOUND_WEBHOOK_PATHS:
+                return None
             # Origin 또는 Referer 헤더 검증
             origin = request.headers.get('Origin')
             referer = request.headers.get('Referer')
-            host = request.host_url.rstrip('/')
+            host_origin = _origin_from_url(request.host_url)
 
             def is_allowed_origin(url):
                 """CORS 허용 목록에 포함된 origin인지 확인"""
-                return url.rstrip('/') in [o.rstrip('/') for o in allowed_origins]
+                origin_value = _origin_from_url(url)
+                return bool(origin_value and origin_value in allowed_origin_set)
 
             if origin:
-                if not origin.startswith(host) and origin != 'file://':
+                allow_file_origin = (
+                    origin == 'file://'
+                    and (flask_env or '').strip().lower() == 'development'
+                )
+                origin_value = _origin_from_url(origin)
+                if origin_value != host_origin and not allow_file_origin:
                     # CORS 허용 목록 또는 로컬 개발 환경이면 통과
                     if not is_allowed_origin(origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Origin'}), 403
             elif referer:
-                parsed = urlparse(referer)
-                referer_origin = f"{parsed.scheme}://{parsed.netloc}"
-                if not referer_origin.startswith(host):
+                referer_origin = _origin_from_url(referer)
+                if referer_origin != host_origin:
                     if not is_allowed_origin(referer_origin):
                         return jsonify({'error': 'CSRF 검증 실패: 잘못된 Referer'}), 403
             else:
@@ -158,20 +385,33 @@ def create_app(test_config=None):
     # 글로벌 에러 핸들러 — JSON 응답 통일
     @app.errorhandler(404)
     def not_found(e):
-        return jsonify({'error': '요청한 페이지를 찾을 수 없습니다.'}), 404
+        return jsonify({
+            'error': '요청한 페이지를 찾을 수 없습니다.',
+            'requestId': _request_id(),
+        }), 404
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        return jsonify({'error': '허용되지 않는 요청 메서드입니다.'}), 405
+        return jsonify({
+            'error': '허용되지 않는 요청 메서드입니다.',
+            'requestId': _request_id(),
+        }), 405
 
     @app.errorhandler(413)
     def payload_too_large(e):
-        return jsonify({'error': '요청 데이터가 너무 큽니다.'}), 413
+        return jsonify({
+            'error': '요청 데이터가 너무 큽니다.',
+            'requestId': _request_id(),
+        }), 413
 
     @app.errorhandler(500)
     def internal_error(e):
-        app.logger.error(f'Unhandled 500: {e}')
-        return jsonify({'error': '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.'}), 500
+        request_id = _request_id()
+        app.logger.error('Unhandled 500 request_id=%s error=%s', request_id, e, exc_info=True)
+        return jsonify({
+            'error': '[서버 오류] 처리 중 예상치 못한 오류가 발생했습니다. 다시 시도해주세요.',
+            'requestId': request_id,
+        }), 500
 
     from routes.blog_routes import blog_bp
     from routes.auth_routes import auth_bp

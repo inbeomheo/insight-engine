@@ -24,7 +24,12 @@ from flask import Blueprint, request, jsonify, current_app, g, Response, stream_
 from extensions import limiter
 from utils.responses import handle_error, sanitize_error_for_client, api_error_from_exception
 
-from config import get_model_display_name, get_model_max_tokens, get_provider_from_model
+from config import (
+    DEFAULT_GENERATION_MODEL,
+    get_model_display_name,
+    get_model_max_tokens,
+    get_provider_from_model,
+)
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from src.shared.infrastructure.supabase_client import is_supabase_enabled, get_supabase
@@ -34,7 +39,7 @@ from services.usage.usage_decorator import get_usage_for_response
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'chatmock/gpt-5.3-codex-spark'
+DEFAULT_MODEL = DEFAULT_GENERATION_MODEL
 DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
@@ -928,6 +933,7 @@ def generate_stream():
 
     params = None
     try:
+        start_time = time.time()
         params = _get_request_data(request)
         url = params['url']
 
@@ -1194,6 +1200,7 @@ def text_to_speech():
 # =============================================
 
 @blog_bp.route('/api/extract-events', methods=['POST'])
+@require_auth
 def extract_events_endpoint():
     """YouTube 영상 자막에서 구조화된 이벤트를 추출합니다.
 

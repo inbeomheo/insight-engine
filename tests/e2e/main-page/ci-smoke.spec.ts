@@ -12,7 +12,12 @@ test.describe('CI smoke @no-auth', () => {
 
     await page.goto('/');
     await expect(page).toHaveTitle(/Insight Engine/i);
-    await expect(page.getByText('Insight Engine').first()).toBeVisible();
+
+    const startButton = page.getByRole('button', { name: /시작하기/ }).first();
+    if ((await startButton.count()) > 0 && await startButton.isVisible()) {
+      await startButton.click();
+    }
+
     await expect(page.locator('#url-input')).toBeVisible();
 
     const criticalErrors = errors.filter(
@@ -21,4 +26,3 @@ test.describe('CI smoke @no-auth', () => {
     expect(criticalErrors).toHaveLength(0);
   });
 });
-

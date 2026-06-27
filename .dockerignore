@@ -31,8 +31,14 @@ build/
 tests/
 pytest_cache/
 .pytest_cache/
+test-results/
+tests/test-results/
+tests/e2e/test-results/
+playwright-report/
+.playwright-mcp/
 htmlcov/
 .coverage
+coverage.json
 coverage.xml
 
 # Node / Next.js local artifacts (Docker builds install dependencies inside build stages)
@@ -45,16 +51,17 @@ frontend/.turbo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
+/package-lock.json
 
 # Local app/runtime artifacts copied through Docker volumes or regenerated at runtime
 cache/
 logs/
-data/jobs/
-data/chroma_db/
+/data/
 *.sqlite
 *.sqlite3
 *.db
+*.jsonl
+publish_queue.json
 
 # 문서/설정
 *.md
@@ -67,4 +74,14 @@ railway.json
 # 기타
 .DS_Store
 *.log
+stdout
 tmp/
+tmpclaude-*
+.agent/
+.agents/
+.claude/
+.cmux/
+.understand-anything/
+.worktrees/
+downloads/
+skills-lock.json

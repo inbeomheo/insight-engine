@@ -10,6 +10,7 @@ class TestDocxFontSize(unittest.TestCase):
     def setUp(self):
         from app import create_app
         self.app = create_app()
+        self.app.config['TESTING'] = True
         self.client = self.app.test_client()
 
     def _export(self, font_size=None):

@@ -21,6 +21,7 @@ from prompts import (
     DEFAULT_MODIFIERS,
     build_full_prompt,
 )
+from utils.runtime_paths import app_data_path
 
 # === API Keys ===
 
@@ -34,7 +35,7 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'zhipuai': os.getenv('ZAI_API_KEY') or os.getenv('ZHIPUAI_API_KEY', ''),
     'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
     'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
-    'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
+    'chatmock': os.getenv('CHATMOCK_API_KEY', ''),
 }
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
@@ -52,13 +53,13 @@ NOTION_API_KEY: str = os.getenv('NOTION_API_KEY', '')
 # === RAG (지식 참조) ===
 
 RAG_ENABLED: bool = os.environ.get('RAG_ENABLED', 'false').lower() == 'true'
-CHROMA_DB_PATH: str = os.environ.get('CHROMA_DB_PATH', './data/chroma_db')
+CHROMA_DB_PATH: str = os.getenv('CHROMA_DB_PATH') or app_data_path('chroma_db')
 RAG_TOP_K: int = int(os.environ.get('RAG_TOP_K', '5'))
 
 # === GraphRAG (지식 그래프 + 리랭킹) ===
 
 GRAPH_RAG_ENABLED: bool = os.environ.get('GRAPH_RAG_ENABLED', 'false').lower() == 'true'
-GRAPH_STORE_PATH: str = os.environ.get('GRAPH_STORE_PATH', './data/graph_store')
+GRAPH_STORE_PATH: str = os.getenv('GRAPH_STORE_PATH') or app_data_path('graph_store')
 RERANKER_ENABLED: bool = os.environ.get('RERANKER_ENABLED', 'false').lower() == 'true'
 RERANKER_TOP_K: int = int(os.environ.get('RERANKER_TOP_K', '5'))
 
@@ -135,11 +136,28 @@ SHORT_CONTENT_BYPASS_STYLES = {'summary'}  # 바이패스 대상 스타일
 
 # === AI Cache ===
 
-AI_CACHE_DB = os.path.join(os.path.dirname(__file__), 'cache', 'ai_results.db')
-AI_CACHE_TTL_DAYS = 30
-AI_CACHE_MAX_SIZE_MB = 512
+
+def _app_cache_dir() -> str:
+    return (
+        (os.getenv('APP_CACHE_DIR') or '').strip()
+        or (os.getenv('CACHE_DIR') or '').strip()
+        or os.path.join(os.path.dirname(__file__), 'cache')
+    )
+
+
+AI_CACHE_DB = (
+    (os.getenv('AI_CACHE_DB') or '').strip()
+    or os.path.join(_app_cache_dir(), 'ai_cache.db')
+)
+AI_CACHE_TTL_DAYS = int((os.getenv('AI_CACHE_TTL_DAYS') or '30').strip())
+AI_CACHE_MAX_SIZE_MB = int((os.getenv('AI_CACHE_MAX_SIZE_MB') or '512').strip())
 
 # === AI Model & Fallback ===
+
+DEFAULT_GENERATION_MODEL = (
+    os.getenv('DEFAULT_GENERATION_MODEL', 'zhipuai/GLM-4.5-Air').strip()
+    or 'zhipuai/GLM-4.5-Air'
+)
 
 FALLBACK_CHAIN = [
     'zhipuai/GLM-4.5-Air',
@@ -494,9 +512,18 @@ __all__ = [
     'TTS_MAX_CHARS',
 
     # Phase 9: 인프라 & 성능
+    'APP_VERSION',
+    'APP_RELEASE',
+    'GIT_SHA',
+    'BUILD_TIME',
     'REDIS_URL',
-    'ENCRYPTION_KEY',
+    'ENCRYPTION_SECRET',
+    'ERROR_TRACKING_REQUIRED',
     'SENTRY_DSN',
+    'SENTRY_ENVIRONMENT',
+    'SENTRY_TRACES_SAMPLE_RATE',
+    'SENTRY_PROFILES_SAMPLE_RATE',
+    'SENTRY_RELEASE',
 
     # Phase 10: 고급 AI & 미래 기술
     'ELEVENLABS_API_KEY',
@@ -509,15 +536,26 @@ __all__ = [
 
 # === Phase 9: 인프라 & 성능 설정 ===
 
+# 릴리즈/빌드 식별자
+APP_VERSION: str = os.getenv('APP_VERSION', 'v2.0')
+APP_RELEASE: str = os.getenv('APP_RELEASE', os.getenv('SENTRY_RELEASE', ''))
+GIT_SHA: str = os.getenv('GIT_SHA', os.getenv('BUILD_SHA', ''))
+BUILD_TIME: str = os.getenv('BUILD_TIME', os.getenv('BUILD_DATE', ''))
+
 # Redis 캐싱 (옵셔널)
 REDIS_URL: str = os.getenv('REDIS_URL', '')
 REDIS_TTL_SECONDS: int = int(os.getenv('REDIS_TTL_SECONDS', '3600'))
 
 # 암호화
-ENCRYPTION_KEY: str = os.getenv('ENCRYPTION_KEY', '')
+ENCRYPTION_SECRET: str = os.getenv('ENCRYPTION_SECRET', '')
 
 # Sentry 오류 추적
+ERROR_TRACKING_REQUIRED: str = os.getenv('ERROR_TRACKING_REQUIRED', 'false')
 SENTRY_DSN: str = os.getenv('SENTRY_DSN', '')
+SENTRY_ENVIRONMENT: str = os.getenv('SENTRY_ENVIRONMENT', os.getenv('FLASK_ENV', 'development'))
+SENTRY_TRACES_SAMPLE_RATE: str = os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.0')
+SENTRY_PROFILES_SAMPLE_RATE: str = os.getenv('SENTRY_PROFILES_SAMPLE_RATE', '0.0')
+SENTRY_RELEASE: str = os.getenv('SENTRY_RELEASE', '')
 
 # 환경별 설정
 class Config:
@@ -566,7 +604,7 @@ TRANSLATION_MODEL: str = os.getenv(
 EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
 
 # 파인튜닝
-FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR', './data/finetune')
+FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR') or app_data_path('finetune')
 FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE', '0.6'))
 
 # 모델 라우터 기본 모드

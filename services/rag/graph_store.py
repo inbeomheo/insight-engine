@@ -10,10 +10,12 @@ from typing import Any
 
 import networkx as nx
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
 # 기본 그래프 저장 경로
-_DEFAULT_STORE_PATH = "./data/graph_store"
+_DEFAULT_STORE_PATH = app_data_path("graph_store")
 
 
 class GraphStore:
@@ -257,5 +259,5 @@ class GraphStore:
 
 
 # 싱글턴 인스턴스
-_store_path = os.environ.get("GRAPH_STORE_PATH", _DEFAULT_STORE_PATH)
+_store_path = os.environ.get("GRAPH_STORE_PATH") or _DEFAULT_STORE_PATH
 graph_store = GraphStore(store_path=_store_path)

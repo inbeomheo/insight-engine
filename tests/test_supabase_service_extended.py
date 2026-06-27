@@ -76,6 +76,48 @@ class TestEncryptDecryptRoundTrip(unittest.TestCase):
             mod._fernet_instance = old_fernet
 
 
+class TestProductionEncryptionFailClosed(unittest.TestCase):
+    """production에서는 API 키 암호화 누락 시 평문 폴백 금지"""
+
+    def test_encrypt_without_secret_raises_in_production(self):
+        from services.data.supabase_service import encrypt_api_key
+        from services.exceptions import ConfigurationError
+        import src.shared.infrastructure.supabase_client as mod
+        old_enc = mod._encryption_enabled
+        old_fernet = mod._fernet_instance
+        mod._encryption_enabled = None
+        mod._fernet_instance = None
+        try:
+            with patch.dict('os.environ', {
+                'FLASK_ENV': 'production',
+                'ENCRYPTION_SECRET': '',
+            }, clear=False):
+                with self.assertRaises(ConfigurationError):
+                    encrypt_api_key('my-api-key')
+        finally:
+            mod._encryption_enabled = old_enc
+            mod._fernet_instance = old_fernet
+
+    def test_decrypt_without_secret_raises_in_production(self):
+        from services.data.supabase_service import decrypt_api_key
+        from services.exceptions import ConfigurationError
+        import src.shared.infrastructure.supabase_client as mod
+        old_enc = mod._encryption_enabled
+        old_fernet = mod._fernet_instance
+        mod._encryption_enabled = None
+        mod._fernet_instance = None
+        try:
+            with patch.dict('os.environ', {
+                'FLASK_ENV': 'production',
+                'ENCRYPTION_SECRET': '',
+            }, clear=False):
+                with self.assertRaises(ConfigurationError):
+                    decrypt_api_key('stored-token')
+        finally:
+            mod._encryption_enabled = old_enc
+            mod._fernet_instance = old_fernet
+
+
 class TestUpdateHistory(unittest.TestCase):
     """update_history 테스트"""
 

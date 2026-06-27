@@ -9,10 +9,10 @@ import base64
 import json
 import os
 import re
-import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Any
+
+import requests
 
 from services.support.feedback_store import FeedbackStore, get_feedback_store
 
@@ -41,27 +41,31 @@ def _github_request(method: str, path: str, payload: dict[str, Any] | None = Non
         raise GitHubHandoffError("GitHub repo가 설정되지 않았어. SUPPORT_GITHUB_REPO=owner/repo 형식으로 설정해줘.")
 
     url = f"https://api.github.com{path}"
-    data = json.dumps(payload).encode("utf-8") if payload is not None else None
-    req = urllib.request.Request(
-        url,
-        data=data,
-        method=method,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "Content-Type": "application/json",
-            "User-Agent": "insight-engine-support-assistant",
-        },
-    )
     try:
-        with urllib.request.urlopen(req, timeout=20) as res:
-            raw = res.read().decode("utf-8")
-            return json.loads(raw) if raw else {}
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise GitHubHandoffError(f"GitHub API 오류 {exc.code}: {detail[:500]}") from exc
-    except urllib.error.URLError as exc:
+        response = requests.request(
+            method,
+            url,
+            json=payload if payload is not None else None,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+                "User-Agent": "insight-engine-support-assistant",
+            },
+            timeout=20,
+            allow_redirects=False,
+        )
+        if 300 <= response.status_code < 400:
+            raise GitHubHandoffError(f"GitHub API 리다이렉트 차단: {response.status_code}")
+        response.raise_for_status()
+        return response.json() if response.content else {}
+    except requests.HTTPError as exc:
+        response = exc.response
+        status = response.status_code if response is not None else "unknown"
+        detail = response.text if response is not None else str(exc)
+        raise GitHubHandoffError(f"GitHub API 오류 {status}: {detail[:500]}") from exc
+    except requests.RequestException as exc:
         raise GitHubHandoffError(f"GitHub API 연결 실패: {exc}") from exc
 
 

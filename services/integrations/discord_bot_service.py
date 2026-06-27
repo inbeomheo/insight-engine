@@ -5,10 +5,11 @@ Discord Interactions Endpoint (webhook 기반)를 통해
 /generate 슬래시 명령어로 콘텐츠를 생성합니다.
 DISCORD_BOT_TOKEN, DISCORD_PUBLIC_KEY 환경변수 필요.
 """
-import json
 import logging
 import os
 import re
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class DiscordBotService:
     def verify_signature(self, body: bytes, timestamp: str, signature: str) -> bool:
         """Ed25519 서명 검증"""
         if not self.public_key:
-            return True  # 개발 환경
+            return os.getenv('FLASK_ENV', '').strip().lower() != 'production'
 
         try:
             from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -53,7 +54,7 @@ class DiscordBotService:
             return True
         except ImportError:
             logger.warning("cryptography 패키지 미설치 — 서명 검증 건너뜀")
-            return True
+            return os.getenv('FLASK_ENV', '').strip().lower() != 'production'
         except Exception:
             return False
 
@@ -143,20 +144,22 @@ class DiscordBotService:
         ]
 
         try:
-            import urllib.request
-            payload = json.dumps(commands).encode()
-            req = urllib.request.Request(
+            resp = requests.put(
                 f'https://discord.com/api/v10/applications/{application_id}/commands',
-                data=payload,
+                json=commands,
                 headers={
                     'Authorization': f'Bot {self.bot_token}',
                     'Content-Type': 'application/json',
                 },
+                timeout=15,
+                allow_redirects=False,
             )
-            req.get_method = lambda: 'PUT'
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                logger.info(f"Discord 명령어 등록 완료: {resp.status}")
-                return True
+            if 300 <= resp.status_code < 400:
+                logger.error("Discord 명령어 등록 리다이렉트 차단: %s", resp.status_code)
+                return False
+            resp.raise_for_status()
+            logger.info(f"Discord 명령어 등록 완료: {resp.status_code}")
+            return True
         except Exception as e:
             logger.error(f"Discord 명령어 등록 실패: {e}")
             return False

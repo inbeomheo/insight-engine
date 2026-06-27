@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from services.core.logging_config import ServiceLogger
+from services.platform.webhook_service import _is_production, _webhook_url_error
 
 logger = ServiceLogger('SlackService')
 
@@ -19,17 +20,23 @@ class SlackService:
     """Slack Incoming Webhook 클라이언트"""
 
     def __init__(self, webhook_url: str | None = None):
-        self.webhook_url = webhook_url or SLACK_WEBHOOK_URL
+        self.webhook_url = (webhook_url or SLACK_WEBHOOK_URL).strip()
 
     def is_enabled(self) -> bool:
         """Slack 웹훅 URL 설정 여부"""
         return bool(self.webhook_url)
+
+    def _url_error(self) -> str | None:
+        return _webhook_url_error(self.webhook_url, require_https=_is_production())
 
     def send(self, text: str, channel: str = '', username: str = 'Insight Engine',
              icon_emoji: str = ':robot_face:') -> dict[str, Any]:
         """단순 텍스트 메시지 전송"""
         if not self.is_enabled():
             return {'ok': False, 'reason': 'SLACK_WEBHOOK_URL 미설정'}
+        url_error = self._url_error()
+        if url_error:
+            return {'ok': False, 'reason': url_error}
 
         payload: dict[str, Any] = {
             'text': text,
@@ -41,7 +48,10 @@ class SlackService:
 
         try:
             resp = requests.post(
-                self.webhook_url, json=payload, timeout=SLACK_TIMEOUT_SEC
+                self.webhook_url,
+                json=payload,
+                timeout=SLACK_TIMEOUT_SEC,
+                allow_redirects=False,
             )
             if resp.status_code == 200:
                 return {'ok': True}
@@ -54,6 +64,9 @@ class SlackService:
         """Block Kit 메시지 전송"""
         if not self.is_enabled():
             return {'ok': False, 'reason': 'SLACK_WEBHOOK_URL 미설정'}
+        url_error = self._url_error()
+        if url_error:
+            return {'ok': False, 'reason': url_error}
 
         payload = {'blocks': blocks}
         if text:
@@ -61,7 +74,10 @@ class SlackService:
 
         try:
             resp = requests.post(
-                self.webhook_url, json=payload, timeout=SLACK_TIMEOUT_SEC
+                self.webhook_url,
+                json=payload,
+                timeout=SLACK_TIMEOUT_SEC,
+                allow_redirects=False,
             )
             if resp.status_code == 200:
                 return {'ok': True}

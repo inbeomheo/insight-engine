@@ -38,6 +38,7 @@ class TestExtractGoogleDoc(unittest.TestCase):
         self.assertEqual(result['title'], '문서 제목')
         self.assertIn('본문 내용', result['content'])
         self.assertEqual(result['source_type'], 'gdocs')
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.export.gdocs_service.requests.get')
     def test_fallback_to_api(self, mock_get):
@@ -74,6 +75,8 @@ class TestExtractGoogleDoc(unittest.TestCase):
         self.assertEqual(result['title'], 'API 문서 제목')
         self.assertIn('API로 가져온', result['content'])
         self.assertEqual(result['source_type'], 'gdocs')
+        self.assertFalse(mock_get.call_args_list[0].kwargs['allow_redirects'])
+        self.assertFalse(mock_get.call_args_list[1].kwargs['allow_redirects'])
 
     @patch('services.export.gdocs_service.requests.get')
     def test_no_access_no_key(self, mock_get):
@@ -101,6 +104,23 @@ class TestExtractGoogleDoc(unittest.TestCase):
             extract_google_doc(
                 'https://docs.google.com/document/d/test123/edit'
             )
+
+    @patch('services.export.gdocs_service.requests.get')
+    def test_api_redirect_blocked(self, mock_get):
+        export_resp = MagicMock()
+        export_resp.status_code = 403
+        export_resp.text = ''
+        api_resp = MagicMock(status_code=302)
+        mock_get.side_effect = [export_resp, api_resp]
+
+        with self.assertRaises(ValueError) as ctx:
+            extract_google_doc(
+                'https://docs.google.com/document/d/test123/edit',
+                api_key='test_api_key',
+            )
+
+        self.assertIn('리다이렉트 차단', str(ctx.exception))
+        self.assertFalse(mock_get.call_args_list[1].kwargs['allow_redirects'])
 
 
 if __name__ == '__main__':

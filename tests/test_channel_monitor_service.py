@@ -33,6 +33,16 @@ class TestGetLatestVideo(unittest.TestCase):
         self.assertEqual(result['video_id'], 'abc123')
         self.assertEqual(result['title'], '테스트 영상')
         self.assertEqual(result['published_at'], '2026-03-01T00:00:00Z')
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
+    @patch('requests.get')
+    def test_redirect_response_blocked(self, mock_get):
+        """리다이렉트 응답은 따라가지 않고 실패 처리"""
+        mock_get.return_value = MagicMock(status_code=302)
+        result = get_latest_video('UC_redirect')
+        self.assertIsNone(result)
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch.dict('os.environ', {'YOUTUBE_API_KEY': 'test-key'}, clear=False)
     @patch('requests.get')

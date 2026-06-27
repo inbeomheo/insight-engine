@@ -28,7 +28,7 @@ from services.core.logging_config import ServiceLogger
 logger = ServiceLogger('ApiKeyService')
 
 _LOCAL_API_KEYS_FILE = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'user_api_keys.json'
+    os.getenv('APP_DATA_DIR', 'data'), 'user_api_keys.json'
 )
 
 

@@ -124,7 +124,7 @@ VIDEO_ID_PATTERNS = [
 
 # ==================== Cache System ====================
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+CACHE_DIR = os.getenv('APP_CACHE_DIR', os.getenv('CACHE_DIR', 'cache'))
 
 # YouTube video_id 형식: 11자 영숫자 + 하이픈 + 언더스코어
 VIDEO_ID_PATTERN = re.compile(r'^[A-Za-z0-9_-]{11}$')
@@ -841,4 +841,3 @@ def truncate_text(text: str, max_tokens: int) -> str:
     if len(tokens) > max_tokens:
         return " ".join(tokens[:max_tokens]) + "..."
     return text
-

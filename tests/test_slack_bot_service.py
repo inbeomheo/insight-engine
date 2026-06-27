@@ -25,7 +25,13 @@ class TestSlackBotService(unittest.TestCase):
 
     def test_verify_signature_no_secret(self):
         self.svc.signing_secret = ''
-        self.assertTrue(self.svc.verify_signature(b'body', 'ts', 'sig'))
+        with patch.dict('os.environ', {'FLASK_ENV': 'development'}):
+            self.assertTrue(self.svc.verify_signature(b'body', 'ts', 'sig'))
+
+    def test_verify_signature_no_secret_fails_closed_in_production(self):
+        self.svc.signing_secret = ''
+        with patch.dict('os.environ', {'FLASK_ENV': 'production'}):
+            self.assertFalse(self.svc.verify_signature(b'body', 'ts', 'sig'))
 
     def test_verify_signature_valid(self):
         self.svc.signing_secret = 'test_secret'
@@ -105,6 +111,28 @@ class TestSlackBotService(unittest.TestCase):
         self.svc.bot_token = ''
         result = self.svc._send_message('C123', 'hello')
         self.assertIsNone(result)
+
+    @patch('services.integrations.slack_bot_service.requests.post')
+    def test_send_message_disables_redirects(self, mock_post):
+        self.svc.bot_token = 'xoxb-token'
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {'ok': True}
+        mock_post.return_value = mock_resp
+
+        result = self.svc._send_message('C123', 'hello')
+
+        self.assertTrue(result['ok'])
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
+    @patch('services.integrations.slack_bot_service.requests.post')
+    def test_send_message_blocks_redirect_response(self, mock_post):
+        self.svc.bot_token = 'xoxb-token'
+        mock_post.return_value = MagicMock(status_code=302)
+
+        result = self.svc._send_message('C123', 'hello')
+
+        self.assertIsNone(result)
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
 
 
 if __name__ == '__main__':

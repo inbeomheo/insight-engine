@@ -39,6 +39,7 @@ class TestDiscordService(unittest.TestCase):
         mock_post.assert_called_once()
         call_kwargs = mock_post.call_args
         self.assertEqual(call_kwargs[1]['json']['content'], '테스트 메시지')
+        self.assertFalse(call_kwargs.kwargs['allow_redirects'])
 
     @patch('services.integrations.discord_service.requests.post')
     def test_send_failure_status(self, mock_post):
@@ -56,6 +57,29 @@ class TestDiscordService(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertIn('error', result)
 
+    @patch.dict('os.environ', {'FLASK_ENV': 'production'})
+    @patch('services.integrations.discord_service.requests.post')
+    def test_send_blocks_plain_http_in_production(self, mock_post):
+        svc = DiscordService(webhook_url='http://discord.com/api/webhooks/123')
+        result = svc.send('test')
+
+        self.assertFalse(result['ok'])
+        self.assertIn('HTTPS', result['reason'])
+        mock_post.assert_not_called()
+
+    @patch('services.integrations.discord_service.requests.post')
+    @patch('socket.getaddrinfo')
+    def test_send_embed_revalidates_dns_before_posting(self, mock_getaddrinfo, mock_post):
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, '', ('127.0.0.1', 443)),
+        ]
+        svc = DiscordService(webhook_url='https://discord.com/api/webhooks/123')
+        result = svc.send_embed('title', 'body')
+
+        self.assertFalse(result['ok'])
+        self.assertIn('DNS', result['reason'])
+        mock_post.assert_not_called()
+
     def test_send_embed_disabled(self):
         svc = DiscordService(webhook_url='')
         result = svc.send_embed('제목', '설명')
@@ -70,6 +94,7 @@ class TestDiscordService(unittest.TestCase):
         payload = mock_post.call_args[1]['json']
         self.assertEqual(len(payload['embeds']), 1)
         self.assertEqual(payload['embeds'][0]['title'], '제목')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
 
     @patch('services.integrations.discord_service.requests.post')
     def test_notify_generation_complete(self, mock_post):

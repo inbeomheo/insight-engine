@@ -53,8 +53,26 @@ class TestTranslateWithDeepL(unittest.TestCase):
         with patch.dict('sys.modules', {'httpx': mock_httpx}):
             result = _translate_with_deepl('hello', 'ko')
         self.assertEqual(result, '안녕')
+        self.assertFalse(mock_httpx.Client.call_args.kwargs['follow_redirects'])
         call_args = mock_client.post.call_args
         self.assertIn('api-free', call_args[0][0])
+
+    @patch('services.transcript.realtime_translate_service.DEEPL_API_KEY', 'test-key')
+    def test_redirect_blocked(self):
+        """DeepL API 3xx 응답은 AI 폴백 대상으로 처리"""
+        mock_httpx = MagicMock()
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_client.post.return_value = mock_resp
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_httpx.Client.return_value = mock_client
+
+        with patch.dict('sys.modules', {'httpx': mock_httpx}):
+            result = _translate_with_deepl('hello', 'ko')
+        self.assertIsNone(result)
+        self.assertFalse(mock_httpx.Client.call_args.kwargs['follow_redirects'])
 
 
 class TestRealtimeTranslateService(unittest.TestCase):

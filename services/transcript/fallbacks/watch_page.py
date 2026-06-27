@@ -19,6 +19,9 @@ from services.transcript._shared import (
     USER_AGENT,
     log_warning,
 )
+from utils.url_safety import fetch_public_url, hostname_matches, public_url_error
+
+_CAPTION_ALLOWED_HOSTS = {"youtube.com", "google.com", "googlevideo.com"}
 
 
 def extract_yt_initial_player_response(html_text: str) -> Optional[Dict[str, Any]]:
@@ -116,10 +119,9 @@ def is_safe_caption_url(url: str) -> bool:
     try:
         from urllib.parse import urlparse
         parsed = urlparse(url)
-        if parsed.scheme not in ('http', 'https'):
+        if not hostname_matches(parsed.hostname, _CAPTION_ALLOWED_HOSTS):
             return False
-        host = (parsed.hostname or '').lower()
-        return host.endswith('.youtube.com') or host.endswith('.google.com') or host.endswith('.googlevideo.com')
+        return public_url_error(url, label="자막 URL") is None
     except Exception:
         return False
 
@@ -143,9 +145,12 @@ def download_caption_from_url(base_url: str) -> str:
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT),
-                                allow_redirects=False)
-        response.raise_for_status()
+        response = fetch_public_url(
+            url,
+            headers=headers,
+            timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT),
+            label="자막 URL",
+        )
         text = response.text or ""
 
         if text.lstrip().startswith('WEBVTT'):
@@ -157,6 +162,9 @@ def download_caption_from_url(base_url: str) -> str:
 
     except requests.exceptions.Timeout:
         log_warning(f"Caption download timeout: {url[:50]}...")
+        return ""
+    except ValueError as e:
+        log_warning(f"Caption download blocked: {str(e)[:100]}")
         return ""
     except requests.exceptions.HTTPError as e:
         log_warning(f"Caption download HTTP error: {e.response.status_code if e.response else 'unknown'}")
@@ -178,7 +186,15 @@ def get_transcript_from_watch_page(video_id: str) -> TranscriptResult:
         }
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
 
-        response = requests.get(watch_url, headers=headers, timeout=HTTP_TIMEOUT)
+        response = requests.get(
+            watch_url,
+            headers=headers,
+            timeout=HTTP_TIMEOUT,
+            allow_redirects=False,
+        )
+        status_code = getattr(response, "status_code", 200)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            return {'error': 'watch 페이지 리다이렉트가 차단되었습니다.'}
         response.raise_for_status()
 
         player = extract_yt_initial_player_response(response.text)

@@ -24,12 +24,14 @@ class TestEncryptDecryptApiKey(unittest.TestCase):
 
     # Issue #17 소PR A: encrypt/decrypt 실제 구현이 src.shared.infrastructure.supabase_client로
     # 이전됨 (services.data.supabase_service는 re-export shim). patch는 구현 모듈을 대상으로 한다.
+    @patch.dict('os.environ', {'FLASK_ENV': 'development'}, clear=False)
     @patch('src.shared.infrastructure.supabase_client._is_encryption_enabled', return_value=False)
     def test_encrypt_disabled(self, mock_enc):
         """암호화 비활성 → 원본 반환"""
         result = encrypt_api_key('my-secret-key')
         self.assertEqual(result, 'my-secret-key')
 
+    @patch.dict('os.environ', {'FLASK_ENV': 'development'}, clear=False)
     @patch('src.shared.infrastructure.supabase_client._is_encryption_enabled', return_value=False)
     def test_decrypt_disabled(self, mock_enc):
         """암호화 비활성 → 원본 반환"""

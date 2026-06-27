@@ -36,6 +36,19 @@ class TestExtractGithubReadme(unittest.TestCase):
         self.assertEqual(result["source_type"], "github")
         self.assertEqual(result["stars"], 1500)
         self.assertEqual(result["forks"], 200)
+        self.assertFalse(mock_get.call_args.kwargs["allow_redirects"])
+
+    @patch("services.platform.github_service.requests.get")
+    def test_readme_redirect_blocked(self, mock_get):
+        """README API 리다이렉트는 차단"""
+        mock_get.return_value = MagicMock(status_code=302)
+
+        from services.platform.github_service import extract_github_readme
+
+        with self.assertRaises(ValueError) as ctx:
+            extract_github_readme("https://github.com/owner/repo")
+        self.assertIn("리다이렉트 차단", str(ctx.exception))
+        self.assertFalse(mock_get.call_args.kwargs["allow_redirects"])
 
     def test_raises_on_invalid_url(self):
         """유효하지 않은 GitHub URL에서 ValueError 발생"""

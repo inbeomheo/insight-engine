@@ -4,12 +4,11 @@ Instagram 발행 플러그인 (F7-17)
 Instagram Graph API를 통해 포스트를 게시합니다.
 Instagram Business/Creator 계정 + Facebook Access Token 필요.
 """
-import json
 import logging
 import os
-import urllib.error
 import urllib.parse
-import urllib.request
+
+import requests
 
 from ..plugin_interface import MCPPlugin
 
@@ -71,11 +70,19 @@ class InstagramPlugin(MCPPlugin):
             'access_token': access_token,
         })
         container_url = f'{GRAPH_API_BASE}/{account_id}/media?{container_params}'
-        req = urllib.request.Request(container_url, method='POST')
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                container_data = json.loads(resp.read())
+            container_resp = requests.post(
+                container_url,
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= container_resp.status_code < 400:
+                return {'success': False, 'message': f'Instagram 리다이렉트 차단: {container_resp.status_code}', 'url': None}
+            if container_resp.status_code >= 400:
+                logger.error(f"Instagram HTTP 오류: {container_resp.status_code} — {container_resp.text}")
+                return {'success': False, 'message': f'Instagram API 오류: {container_resp.status_code}', 'url': None}
+            container_data = container_resp.json()
             container_id = container_data.get('id', '')
             if not container_id:
                 return {'success': False, 'message': 'Instagram 미디어 컨테이너 생성 실패', 'url': None}
@@ -86,9 +93,17 @@ class InstagramPlugin(MCPPlugin):
                 'access_token': access_token,
             })
             publish_url = f'{GRAPH_API_BASE}/{account_id}/media_publish?{publish_params}'
-            req2 = urllib.request.Request(publish_url, method='POST')
-            with urllib.request.urlopen(req2, timeout=30) as resp2:
-                publish_data = json.loads(resp2.read())
+            publish_resp = requests.post(
+                publish_url,
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= publish_resp.status_code < 400:
+                return {'success': False, 'message': f'Instagram 리다이렉트 차단: {publish_resp.status_code}', 'url': None}
+            if publish_resp.status_code >= 400:
+                logger.error(f"Instagram HTTP 오류: {publish_resp.status_code} — {publish_resp.text}")
+                return {'success': False, 'message': f'Instagram API 오류: {publish_resp.status_code}', 'url': None}
+            publish_data = publish_resp.json()
 
             media_id = publish_data.get('id', '')
             return {
@@ -97,10 +112,6 @@ class InstagramPlugin(MCPPlugin):
                 'url': f'https://www.instagram.com/p/{media_id}/' if media_id else None,
             }
 
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            logger.error(f"Instagram HTTP 오류: {e.code} — {error_body}")
-            return {'success': False, 'message': f'Instagram API 오류: {e.code}', 'url': None}
-        except Exception as e:
+        except requests.RequestException as e:
             logger.error(f"Instagram 발행 실패: {e}")
             return {'success': False, 'message': f'Instagram 발행 실패: {str(e)}', 'url': None}

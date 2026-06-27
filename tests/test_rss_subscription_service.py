@@ -3,7 +3,7 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import services.platform.rss_subscription_service as rss_sub_mod
 
@@ -37,31 +37,28 @@ class TestRssSubscriptionService(unittest.TestCase):
         loaded = rss_sub_mod._load_all()
         self.assertEqual(loaded['user1'][0]['id'], 'sub1')
 
+    @patch('services.platform.rss_subscription_service.get_feed_title', return_value='Test Feed')
     @patch('services.platform.rss_subscription_service.parse_feed', return_value=[{'title': 'T'}])
-    @patch('services.platform.rss_subscription_service._feedparser')
-    def test_subscribe(self, mock_fp, mock_parse):
+    def test_subscribe(self, mock_parse, mock_title):
         """구독 추가"""
-        mock_fp.parse.return_value = MagicMock(feed=MagicMock(title='Test Feed'))
         result = rss_sub_mod.subscribe('user1', 'https://example.com/feed')
         self.assertIn('id', result)
         self.assertEqual(result['feed_url'], 'https://example.com/feed')
         self.assertEqual(result['title'], 'Test Feed')
 
+    @patch('services.platform.rss_subscription_service.get_feed_title', return_value='Feed')
     @patch('services.platform.rss_subscription_service.parse_feed', return_value=[{'title': 'T'}])
-    @patch('services.platform.rss_subscription_service._feedparser')
-    def test_subscribe_duplicate(self, mock_fp, mock_parse):
+    def test_subscribe_duplicate(self, mock_parse, mock_title):
         """중복 구독 → ValueError"""
-        mock_fp.parse.return_value = MagicMock(feed=MagicMock(title='Feed'))
         rss_sub_mod.subscribe('user1', 'https://dup.com/feed')
         with self.assertRaises(ValueError) as ctx:
             rss_sub_mod.subscribe('user1', 'https://dup.com/feed')
         self.assertIn('이미 구독', str(ctx.exception))
 
+    @patch('services.platform.rss_subscription_service.get_feed_title', return_value='Feed')
     @patch('services.platform.rss_subscription_service.parse_feed', return_value=[{'title': 'T'}])
-    @patch('services.platform.rss_subscription_service._feedparser')
-    def test_unsubscribe(self, mock_fp, mock_parse):
+    def test_unsubscribe(self, mock_parse, mock_title):
         """구독 해제"""
-        mock_fp.parse.return_value = MagicMock(feed=MagicMock(title='Feed'))
         sub = rss_sub_mod.subscribe('user1', 'https://unsub.com/feed')
         result = rss_sub_mod.unsubscribe('user1', sub['id'])
         self.assertTrue(result)
@@ -76,11 +73,10 @@ class TestRssSubscriptionService(unittest.TestCase):
         result = rss_sub_mod.list_subscriptions('nobody')
         self.assertEqual(result, [])
 
+    @patch('services.platform.rss_subscription_service.get_feed_title', return_value='Feed')
     @patch('services.platform.rss_subscription_service.parse_feed', return_value=[{'title': 'T'}])
-    @patch('services.platform.rss_subscription_service._feedparser')
-    def test_list_subscriptions(self, mock_fp, mock_parse):
+    def test_list_subscriptions(self, mock_parse, mock_title):
         """구독 목록 조회"""
-        mock_fp.parse.return_value = MagicMock(feed=MagicMock(title='Feed'))
         rss_sub_mod.subscribe('user2', 'https://list.com/feed')
         subs = rss_sub_mod.list_subscriptions('user2')
         self.assertEqual(len(subs), 1)
@@ -109,11 +105,10 @@ class TestRssSubscriptionService(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['title'], 'New')
 
+    @patch('services.platform.rss_subscription_service.get_feed_title', return_value='Feed')
     @patch('services.platform.rss_subscription_service.parse_feed', return_value=[{'title': 'T'}])
-    @patch('services.platform.rss_subscription_service._feedparser')
-    def test_update_last_checked(self, mock_fp, mock_parse):
+    def test_update_last_checked(self, mock_parse, mock_title):
         """마지막 확인 시간 업데이트"""
-        mock_fp.parse.return_value = MagicMock(feed=MagicMock(title='Feed'))
         sub = rss_sub_mod.subscribe('user3', 'https://update.com/feed')
         rss_sub_mod.update_last_checked('user3', sub['id'], 'https://update.com/latest')
         subs = rss_sub_mod.list_subscriptions('user3')

@@ -4,12 +4,11 @@ Airtable 동기화 서비스 (F7-21)
 생성된 콘텐츠를 Airtable 베이스에 동기화합니다.
 AIRTABLE_API_KEY, AIRTABLE_BASE_ID 환경변수 필요.
 """
-import json
 import logging
 import os
-import urllib.request
-import urllib.error
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +30,23 @@ class AirtableService:
 
     def _request(self, method: str, path: str, data: Optional[dict] = None) -> dict:
         url = f'{AIRTABLE_API_BASE}/{self.base_id}/{path}'
-        body = json.dumps(data).encode() if data else None
-        req = urllib.request.Request(url, data=body, headers=self._headers(), method=method)
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            raise ValueError(f"Airtable API 오류 ({e.code}): {error_body}")
+            resp = requests.request(
+                method,
+                url,
+                json=data if data else None,
+                headers=self._headers(),
+                timeout=15,
+                allow_redirects=False,
+            )
+            if 300 <= resp.status_code < 400:
+                raise ValueError(f"Airtable API 리다이렉트 차단 ({resp.status_code})")
+            resp.raise_for_status()
+            return resp.json()
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else 'unknown'
+            error_body = e.response.text if e.response is not None else str(e)
+            raise ValueError(f"Airtable API 오류 ({status}): {error_body}")
 
     def create_record(self, table_name: str, fields: dict) -> dict:
         """테이블에 레코드 생성
@@ -69,11 +77,18 @@ class AirtableService:
         import urllib.parse
         encoded_table = urllib.parse.quote(table_name, safe='')
         url = f'{AIRTABLE_API_BASE}/{self.base_id}/{encoded_table}?maxRecords={max_records}'
-        req = urllib.request.Request(url, headers=self._headers())
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = json.loads(resp.read())
-                return data.get('records', [])
+            resp = requests.get(
+                url,
+                headers=self._headers(),
+                timeout=15,
+                allow_redirects=False,
+            )
+            if 300 <= resp.status_code < 400:
+                raise ValueError(f"Airtable API 리다이렉트 차단 ({resp.status_code})")
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get('records', [])
         except Exception as e:
             logger.error(f"Airtable 레코드 조회 실패: {e}")
             return []

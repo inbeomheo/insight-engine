@@ -64,28 +64,55 @@ class TestAirtableService(unittest.TestCase):
         result = svc.sync_content('제목', '본문', 'blog_seo')
         self.assertFalse(result['success'])
 
-    @patch('services.integrations.airtable_service.urllib.request.urlopen')
-    def test_list_records_success(self, mock_urlopen):
+    @patch('services.integrations.airtable_service.requests.get')
+    def test_list_records_success(self, mock_get):
         mock_resp = MagicMock()
-        mock_resp.read.return_value = b'{"records": [{"id": "rec1"}, {"id": "rec2"}]}'
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"records": [{"id": "rec1"}, {"id": "rec2"}]}
+        mock_get.return_value = mock_resp
 
         svc = AirtableService()
         svc.api_key = 'key'
         svc.base_id = 'base'
         records = svc.list_records('Contents')
         self.assertEqual(len(records), 2)
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
-    @patch('services.integrations.airtable_service.urllib.request.urlopen')
-    def test_list_records_error(self, mock_urlopen):
-        mock_urlopen.side_effect = Exception('timeout')
+    @patch('services.integrations.airtable_service.requests.get')
+    def test_list_records_error(self, mock_get):
+        mock_get.side_effect = Exception('timeout')
         svc = AirtableService()
         svc.api_key = 'key'
         svc.base_id = 'base'
         records = svc.list_records('Contents')
         self.assertEqual(records, [])
+
+    @patch('services.integrations.airtable_service.requests.request')
+    def test_create_record_disables_redirects(self, mock_request):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {'id': 'rec1'}
+        mock_request.return_value = mock_resp
+
+        svc = AirtableService()
+        svc.api_key = 'key'
+        svc.base_id = 'base'
+        result = svc.create_record('Contents', {'Title': 'T'})
+
+        self.assertEqual(result['id'], 'rec1')
+        self.assertFalse(mock_request.call_args.kwargs['allow_redirects'])
+
+    @patch('services.integrations.airtable_service.requests.request')
+    def test_create_record_blocks_redirect_response(self, mock_request):
+        mock_request.return_value = MagicMock(status_code=302)
+
+        svc = AirtableService()
+        svc.api_key = 'key'
+        svc.base_id = 'base'
+
+        with self.assertRaises(ValueError) as ctx:
+            svc.create_record('Contents', {'Title': 'T'})
+        self.assertIn('리다이렉트 차단', str(ctx.exception))
 
     def test_sync_content_truncates_title(self):
         svc = AirtableService()

@@ -9,6 +9,7 @@ from __future__ import annotations
 import hmac
 import os
 import re
+from datetime import datetime, timezone
 from hashlib import sha256
 
 from flask import Blueprint, g, jsonify, request
@@ -68,6 +69,26 @@ def _handoff_forbidden_response():
     }), 403
 
 
+def _handoff_requested_response(ticket: dict, status: str, label: str):
+    """Persist a user handoff request without spending the GitHub token."""
+    metadata = ticket.get("metadata") if isinstance(ticket.get("metadata"), dict) else {}
+    requested = dict(metadata.get("handoff_requests") or {})
+    requested[label] = datetime.now(timezone.utc).isoformat()
+    updated = get_feedback_store().update_ticket(ticket["id"], {
+        "status": status,
+        "metadata": {
+            **metadata,
+            "handoff_requests": requested,
+        },
+    })
+    return jsonify({
+        "ticket": updated,
+        "message": f"{label} handoff 요청을 저장했습니다. 관리자 승인 후 GitHub로 전달됩니다.",
+        "code": "HANDOFF_APPROVAL_REQUIRED",
+        "github": github_config_status(),
+    }), 202
+
+
 @support_bp.route("/api/support/chat", methods=["POST"])
 @limiter.limit("20/minute;200/day")
 def support_chat():
@@ -115,8 +136,6 @@ def get_support_ticket(ticket_id: str):
 @support_bp.route("/api/support/tickets/<ticket_id>/create-github-issue", methods=["POST"])
 @limiter.limit("5/minute;30/day")
 def create_support_github_issue(ticket_id: str):
-    if not _handoff_authorized():
-        return _handoff_forbidden_response()
     store = get_feedback_store()
     try:
         ticket = store.get_ticket(ticket_id)
@@ -126,6 +145,8 @@ def create_support_github_issue(ticket_id: str):
         return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
     if ticket.get("github_issue_url"):
         return jsonify({"ticket": ticket, "issue": {"html_url": ticket["github_issue_url"], "number": ticket.get("github_issue_number")}})
+    if not _handoff_authorized():
+        return _handoff_requested_response(ticket, "issue_requested", "GitHub Issue")
     try:
         return jsonify(create_github_issue(ticket_id, store=store)), 201
     except GitHubHandoffError as exc:
@@ -135,8 +156,6 @@ def create_support_github_issue(ticket_id: str):
 @support_bp.route("/api/support/tickets/<ticket_id>/create-draft-pr", methods=["POST"])
 @limiter.limit("5/minute;20/day")
 def create_support_draft_pr(ticket_id: str):
-    if not _handoff_authorized():
-        return _handoff_forbidden_response()
     store = get_feedback_store()
     try:
         ticket = store.get_ticket(ticket_id)
@@ -146,6 +165,8 @@ def create_support_draft_pr(ticket_id: str):
         return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
     if ticket.get("github_pr_url"):
         return jsonify({"ticket": ticket, "pull_request": {"html_url": ticket["github_pr_url"], "number": ticket.get("github_pr_number")}})
+    if not _handoff_authorized():
+        return _handoff_requested_response(ticket, "draft_pr_requested", "Draft PR")
     try:
         return jsonify(create_draft_pr(ticket_id, store=store)), 201
     except GitHubHandoffError as exc:

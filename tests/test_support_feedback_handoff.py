@@ -1,8 +1,10 @@
 from services.support.feedback_store import FeedbackStore
 from services.support.github_handoff_service import (
+    GitHubHandoffError,
     build_issue_body,
     build_issue_payload,
     create_github_issue,
+    _github_request,
 )
 from services.support.support_agent_service import handle_support_chat
 
@@ -90,3 +92,53 @@ def test_create_github_issue_uses_mocked_request_and_temp_store(tmp_path, monkey
             "payload": build_issue_payload(ticket),
         }
     ]
+
+
+def test_github_request_disables_redirects(monkeypatch):
+    class Response:
+        status_code = 200
+        content = b'{"ok": true}'
+
+        def json(self):
+            return {"ok": True}
+
+        def raise_for_status(self):
+            return None
+
+    calls = []
+
+    def fake_request(method, url, **kwargs):
+        calls.append({"method": method, "url": url, "kwargs": kwargs})
+        return Response()
+
+    monkeypatch.setenv("SUPPORT_GITHUB_REPO", "acme/insight-engine")
+    monkeypatch.setenv("SUPPORT_GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setattr("services.support.github_handoff_service.requests.request", fake_request)
+
+    result = _github_request("POST", "/repos/acme/insight-engine/issues", {"title": "T"})
+
+    assert result == {"ok": True}
+    assert calls[0]["kwargs"]["allow_redirects"] is False
+
+
+def test_github_request_blocks_redirect_response(monkeypatch):
+    class Response:
+        status_code = 302
+        content = b''
+
+        def raise_for_status(self):
+            return None
+
+    monkeypatch.setenv("SUPPORT_GITHUB_REPO", "acme/insight-engine")
+    monkeypatch.setenv("SUPPORT_GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setattr(
+        "services.support.github_handoff_service.requests.request",
+        lambda *args, **kwargs: Response(),
+    )
+
+    try:
+        _github_request("POST", "/repos/acme/insight-engine/issues", {"title": "T"})
+    except GitHubHandoffError as exc:
+        assert "리다이렉트 차단" in str(exc)
+    else:
+        raise AssertionError("redirect response should be blocked")

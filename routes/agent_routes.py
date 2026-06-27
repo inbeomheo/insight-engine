@@ -10,12 +10,15 @@ import json
 import logging
 from flask import Blueprint, Response, jsonify, request, g, stream_with_context
 
+from src.contexts.identity.interface.auth_decorators import require_auth
+
 logger = logging.getLogger(__name__)
 
 agent_bp = Blueprint("agent", __name__)
 
 
 @agent_bp.route("/api/agent/chat", methods=["POST"])
+@require_auth
 def agent_chat():
     """에이전트와 대화형 콘텐츠 생성.
 
@@ -75,6 +78,7 @@ def agent_chat():
 
 
 @agent_bp.route("/api/agent/chat/stream", methods=["POST"])
+@require_auth
 def agent_chat_stream():
     """에이전트 스트리밍 대화 (SSE).
 
@@ -180,6 +184,7 @@ def agent_chat_stream():
 
 
 @agent_bp.route("/api/agent/sdk", methods=["POST"])
+@require_auth
 def agent_sdk_chat():
     """Claude Code SDK 기반 에이전트 채팅.
 

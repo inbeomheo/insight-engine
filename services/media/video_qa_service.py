@@ -10,6 +10,8 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
 # ChromaDB는 선택적 의존성 — 없으면 기능 비활성화
@@ -29,6 +31,7 @@ except ImportError:
     logger.warning("litellm이 설치되지 않아 영상 Q&A 기능이 비활성화됩니다.")
 
 from services.rag.chunker import chunk_text
+from config import DEFAULT_GENERATION_MODEL
 
 # 설정 기본값
 DEFAULT_CHUNK_SIZE = 600
@@ -39,8 +42,11 @@ MAX_HISTORY_MESSAGES = 10  # 대화 히스토리 최대 보관 수
 # 영상 Q&A 전용 ChromaDB 컬렉션 접두사
 VIDEO_COLLECTION_PREFIX = "video_qa_"
 
-# LiteLLM 기본 모델 (답변 생성용) — ChatMock GPT-5.4
-DEFAULT_QA_MODEL = "chatmock/gpt-5.4"
+# LiteLLM 기본 모델 (답변 생성용)
+DEFAULT_QA_MODEL = (
+    os.getenv("VIDEO_QA_DEFAULT_MODEL", DEFAULT_GENERATION_MODEL).strip()
+    or DEFAULT_GENERATION_MODEL
+)
 
 
 def _get_chroma_client() -> Optional[Any]:
@@ -53,7 +59,7 @@ def _get_chroma_client() -> Optional[Any]:
         return None
     try:
         from services.rag.chroma_client_factory import get_chroma_client
-        db_path = os.environ.get("CHROMA_DB_PATH", "./data/chroma_db")
+        db_path = os.environ.get("CHROMA_DB_PATH") or app_data_path("chroma_db")
         return get_chroma_client(db_path)
     except ImportError:
         # chromadb 자체가 없는 경우 — _CHROMA_AVAILABLE 플래그와 일관성 유지

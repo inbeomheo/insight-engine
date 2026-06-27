@@ -10,9 +10,16 @@ from typing import Dict
 
 import trafilatura
 
+from utils.url_safety import fetch_public_url, public_url_error
+
 logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT = 15  # 초
+_REQUEST_HEADERS = {
+    "User-Agent": "InsightEngine/1.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
+}
 
 # Wikipedia URL 패턴
 _WIKIPEDIA_RE = re.compile(r"wikipedia\.org", re.IGNORECASE)
@@ -40,6 +47,10 @@ def scrape_webpage(url: str) -> Dict:
     Raises:
         ValueError: 본문을 추출할 수 없는 경우
     """
+    url_error = public_url_error(url, label="웹페이지 URL")
+    if url_error:
+        raise ValueError(url_error)
+
     is_wikipedia = bool(_WIKIPEDIA_RE.search(url))
 
     # 1차: trafilatura
@@ -63,7 +74,7 @@ def scrape_webpage(url: str) -> Dict:
 def _extract_with_trafilatura(url: str) -> tuple:
     """trafilatura로 본문 + 제목 추출."""
     try:
-        html = trafilatura.fetch_url(url)
+        html = _fetch_public_html(url)
         if not html:
             return "", ""
 
@@ -74,9 +85,22 @@ def _extract_with_trafilatura(url: str) -> tuple:
         title = meta.title if meta and meta.title else ""
 
         return title, content
+    except ValueError:
+        raise
     except Exception as e:
         logger.warning("trafilatura 실패: %s — %s", url, e)
         return "", ""
+
+
+def _fetch_public_html(url: str) -> str:
+    """서버 측 URL fetch를 앱이 제어해서 redirect/SSRF 우회를 막습니다."""
+    response = fetch_public_url(
+        url,
+        headers=_REQUEST_HEADERS,
+        timeout=_REQUEST_TIMEOUT,
+        label="웹페이지 URL",
+    )
+    return response.text or ""
 
 
 def _extract_with_scrapling(url: str) -> tuple:
@@ -84,7 +108,16 @@ def _extract_with_scrapling(url: str) -> tuple:
     try:
         from scrapling.fetchers import Fetcher
 
-        page = Fetcher.get(url, timeout=_REQUEST_TIMEOUT)
+        url_error = public_url_error(url, label="웹페이지 URL")
+        if url_error:
+            raise ValueError(url_error)
+
+        page = Fetcher.get(
+            url,
+            timeout=_REQUEST_TIMEOUT,
+            follow_redirects=False,
+            retries=1,
+        )
 
         # 제목 추출
         title = ""
@@ -112,6 +145,8 @@ def _extract_with_scrapling(url: str) -> tuple:
                 content = body.text.strip() if body else ""
 
         return title, content
+    except ValueError:
+        raise
     except Exception as e:
         logger.warning("Scrapling 폴백 실패: %s — %s", url, e)
         return "", ""

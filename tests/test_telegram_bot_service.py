@@ -118,6 +118,44 @@ class TestTelegramBotService(unittest.TestCase):
         self.svc.bot_token = ''
         self.assertFalse(self.svc.set_webhook('https://example.com/webhook'))
 
+    @patch('services.integrations.telegram_bot_service.requests.post')
+    def test_set_webhook_includes_secret_token_when_configured(self, mock_post):
+        self.svc.bot_token = '123:ABCdef'
+        mock_response = MagicMock(status_code=200)
+        mock_response.json.return_value = {"ok": True}
+        mock_post.return_value = mock_response
+
+        with patch.dict(
+            'os.environ',
+            {'TELEGRAM_WEBHOOK_SECRET': 'telegram-secret-1234567890abcdef'},
+        ):
+            self.assertTrue(self.svc.set_webhook('https://example.com/webhook'))
+
+        payload = mock_post.call_args.kwargs['json']
+        self.assertEqual(payload['url'], 'https://example.com/webhook')
+        self.assertEqual(payload['secret_token'], 'telegram-secret-1234567890abcdef')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
+    @patch('services.integrations.telegram_bot_service.requests.post')
+    def test_set_webhook_blocks_redirect_response(self, mock_post):
+        self.svc.bot_token = '123:ABCdef'
+        mock_post.return_value = MagicMock(status_code=302)
+
+        self.assertFalse(self.svc.set_webhook('https://example.com/webhook'))
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
+    @patch('services.integrations.telegram_bot_service.requests.post')
+    def test_send_message_disables_redirects(self, mock_post):
+        self.svc.bot_token = '123:ABCdef'
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {'ok': True}
+        mock_post.return_value = mock_resp
+
+        result = self.svc._send_message(12345, 'hello')
+
+        self.assertTrue(result['ok'])
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
     def test_send_message_no_token(self):
         self.svc.bot_token = ''
         result = self.svc._send_message(12345, 'hello')

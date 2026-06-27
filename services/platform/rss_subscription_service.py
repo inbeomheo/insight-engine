@@ -13,15 +13,13 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
 
-import feedparser as _feedparser
-
 from services.core.logging_config import get_logger
-from services.platform.rss_service import parse_feed
+from services.platform.rss_service import get_feed_title, parse_feed
 
 logger = get_logger('rss_subscription')
 
 # 구독 데이터 저장 경로
-_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+_DATA_DIR = os.getenv('APP_DATA_DIR', 'data')
 _SUBS_FILE = os.path.join(_DATA_DIR, 'rss_subscriptions.json')
 _lock = Lock()
 
@@ -72,8 +70,7 @@ def subscribe(user_id: str, feed_url: str, title: str = '') -> Dict:
 
     # 자동 제목 감지
     if not title:
-        parsed = _feedparser.parse(feed_url)
-        title = getattr(parsed.feed, 'title', '') or feed_url
+        title = get_feed_title(feed_url)
 
     with _lock:
         data = _load_all()

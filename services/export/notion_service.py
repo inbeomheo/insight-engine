@@ -123,7 +123,10 @@ def _fetch_page_blocks(page_id: str, hdrs: Dict) -> List[dict]:
             headers=hdrs,
             params=params,
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if 300 <= resp.status_code < 400:
+            raise ValueError(f'Notion 블록 조회 리다이렉트 차단: {resp.status_code}')
         if resp.status_code != 200:
             raise ValueError(f'Notion 블록 조회 실패: {resp.status_code}')
 
@@ -169,7 +172,10 @@ def extract_notion_page(page_url: str, api_key: str) -> Dict:
         f'{_NOTION_API_BASE}/pages/{page_id}',
         headers=hdrs,
         timeout=_REQUEST_TIMEOUT,
+        allow_redirects=False,
     )
+    if 300 <= resp.status_code < 400:
+        raise ValueError(f'Notion 페이지 조회 리다이렉트 차단: {resp.status_code}')
     if resp.status_code != 200:
         raise ValueError(f'Notion 페이지 조회 실패: {resp.status_code} {resp.text[:200]}')
 

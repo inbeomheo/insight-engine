@@ -4,12 +4,12 @@ Shopify 블로그 발행 플러그인 (F7-14)
 Shopify Admin REST API를 통해 블로그 포스트(Article)를 생성합니다.
 SHOPIFY_STORE_DOMAIN, SHOPIFY_ACCESS_TOKEN 환경변수 필요.
 """
-import json
 import logging
 import os
-import urllib.error
-import urllib.request
 
+import requests
+
+from utils.url_safety import public_url_error
 from ..plugin_interface import MCPPlugin
 
 logger = logging.getLogger(__name__)
@@ -84,18 +84,27 @@ class ShopifyPlugin(MCPPlugin):
         }
 
         url = f'https://{store_domain}/admin/api/2024-01/blogs/{blog_id}/articles.json'
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(article_data).encode(),
-            headers={
-                'X-Shopify-Access-Token': access_token,
-                'Content-Type': 'application/json',
-            },
-        )
+        url_error = public_url_error(url, require_https=True, label='Shopify API URL')
+        if url_error:
+            return {'success': False, 'message': url_error, 'url': None}
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
+            resp = requests.post(
+                url,
+                json=article_data,
+                headers={
+                'X-Shopify-Access-Token': access_token,
+                'Content-Type': 'application/json',
+                },
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= resp.status_code < 400:
+                return {'success': False, 'message': f'Shopify 리다이렉트 차단: {resp.status_code}', 'url': None}
+            if resp.status_code >= 400:
+                logger.error(f"Shopify HTTP 오류: {resp.status_code} — {resp.text}")
+                return {'success': False, 'message': f'Shopify API 오류: {resp.status_code}', 'url': None}
+            data = resp.json()
 
             article = data.get('article', {})
             article_id = article.get('id', '')
@@ -108,10 +117,6 @@ class ShopifyPlugin(MCPPlugin):
                 'url': article_url,
             }
 
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            logger.error(f"Shopify HTTP 오류: {e.code} — {error_body}")
-            return {'success': False, 'message': f'Shopify API 오류: {e.code}', 'url': None}
-        except Exception as e:
+        except requests.RequestException as e:
             logger.error(f"Shopify 발행 실패: {e}")
             return {'success': False, 'message': f'Shopify 발행 실패: {str(e)}', 'url': None}

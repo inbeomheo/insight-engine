@@ -37,6 +37,7 @@ class TestSlackService(unittest.TestCase):
         self.assertTrue(result['ok'])
         payload = mock_post.call_args[1]['json']
         self.assertEqual(payload['text'], '테스트 메시지')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
 
     @patch('services.integrations.slack_service.requests.post')
     def test_send_with_channel(self, mock_post):
@@ -62,6 +63,29 @@ class TestSlackService(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertIn('error', result)
 
+    @patch.dict('os.environ', {'FLASK_ENV': 'production'})
+    @patch('services.integrations.slack_service.requests.post')
+    def test_send_blocks_plain_http_in_production(self, mock_post):
+        svc = SlackService(webhook_url='http://hooks.slack.com/services/T/B/X')
+        result = svc.send('test')
+
+        self.assertFalse(result['ok'])
+        self.assertIn('HTTPS', result['reason'])
+        mock_post.assert_not_called()
+
+    @patch('services.integrations.slack_service.requests.post')
+    @patch('socket.getaddrinfo')
+    def test_send_revalidates_dns_before_posting(self, mock_getaddrinfo, mock_post):
+        mock_getaddrinfo.return_value = [
+            (2, 1, 6, '', ('127.0.0.1', 443)),
+        ]
+        svc = SlackService(webhook_url='https://hooks.slack.com/services/T/B/X')
+        result = svc.send('test')
+
+        self.assertFalse(result['ok'])
+        self.assertIn('DNS', result['reason'])
+        mock_post.assert_not_called()
+
     def test_send_blocks_disabled(self):
         svc = SlackService(webhook_url='')
         result = svc.send_blocks([{'type': 'section'}])
@@ -77,6 +101,7 @@ class TestSlackService(unittest.TestCase):
         payload = mock_post.call_args[1]['json']
         self.assertEqual(payload['blocks'], blocks)
         self.assertEqual(payload['text'], 'fallback')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
 
     @patch('services.integrations.slack_service.requests.post')
     def test_notify_generation_complete(self, mock_post):

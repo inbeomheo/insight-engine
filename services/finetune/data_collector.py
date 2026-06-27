@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 from .dataset_builder import DatasetBuilder
 from .reward_model import RuleBasedRewardModel
+from utils.runtime_paths import app_data_path
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +24,19 @@ class AutoDataCollector:
 
     def __init__(
         self,
-        output_dir: str = './data/finetune',
+        output_dir: str | None = None,
         min_quality_score: float = 0.6,
         min_content_length: int = 500,
     ):
-        self.output_dir = output_dir
+        self.output_dir = (
+            output_dir
+            or os.getenv('FINETUNE_OUTPUT_DIR')
+            or app_data_path('finetune')
+        )
         self.min_quality_score = min_quality_score
         self.min_content_length = min_content_length
         self.reward_model = RuleBasedRewardModel()
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def collect_from_supabase(
         self,

@@ -4,6 +4,8 @@
 APScheduler를 통해 일정 주기로 자동 실행합니다.
 """
 import json
+import os
+import re
 import uuid
 import time
 import logging
@@ -14,8 +16,36 @@ from services.data import content_library_service
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = Path('data/backups')
-MAX_BACKUPS = 30  # 최대 보관 백업 수
+_BACKUP_FILENAME_RE = re.compile(r'^backup_[A-Za-z0-9_.-]+\.json$')
+
+
+def _default_backup_dir() -> Path:
+    explicit_dir = (os.getenv('CONTENT_BACKUP_DIR') or '').strip()
+    if explicit_dir:
+        return Path(explicit_dir)
+
+    app_data_backup_dir = (os.getenv('APP_DATA_BACKUP_DIR') or '').strip()
+    if app_data_backup_dir:
+        return Path(app_data_backup_dir) / 'content-library'
+
+    app_data_dir = (os.getenv('APP_DATA_DIR') or '').strip()
+    if app_data_dir:
+        return Path(app_data_dir) / 'backups'
+
+    return Path('data/backups')
+
+
+def _max_backups() -> int:
+    raw = (
+        (os.getenv('CONTENT_BACKUP_MAX_BACKUPS') or '').strip()
+        or (os.getenv('MAX_BACKUPS') or '').strip()
+        or '30'
+    )
+    return int(raw)
+
+
+BACKUP_DIR = _default_backup_dir()
+MAX_BACKUPS = _max_backups()  # 최대 보관 백업 수
 
 _lock = Lock()
 
@@ -26,6 +56,19 @@ def _now() -> str:
 
 def _ts() -> str:
     return time.strftime('%Y%m%d_%H%M%S', time.gmtime())
+
+
+def _backup_file_path(filename: str) -> Path:
+    if not _BACKUP_FILENAME_RE.fullmatch(filename or ''):
+        raise ValueError('invalid backup filename')
+
+    root = BACKUP_DIR.resolve()
+    path = (root / filename).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as exc:
+        raise ValueError('invalid backup filename') from exc
+    return path
 
 
 def create_backup(
@@ -98,7 +141,7 @@ def restore_backup(filename: str) -> dict:
     Returns:
         {'restored': N, 'skipped': N}
     """
-    path = BACKUP_DIR / filename
+    path = _backup_file_path(filename)
     if not path.exists():
         raise FileNotFoundError(f'백업 파일 없음: {filename}')
 
@@ -149,7 +192,7 @@ def _prune_old_backups() -> None:
 
 def get_backup_info(filename: str) -> Optional[dict]:
     """백업 파일의 메타데이터를 반환합니다."""
-    path = BACKUP_DIR / filename
+    path = _backup_file_path(filename)
     if not path.exists():
         return None
     payload = json.loads(path.read_text(encoding='utf-8'))

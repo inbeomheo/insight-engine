@@ -150,6 +150,20 @@ class TestVaultWithMockedSupabase:
         assert result == "plain-key"
         dec.assert_called_once_with("ENC(plain)")
 
+    def test_reveal_raises_when_decrypt_returns_empty(self, account_id):
+        """복호화 실패(None/empty)는 평문 키로 취급하지 않는다."""
+        vault = SupabaseApiKeyVault()
+        client, table = self._make_client()
+        chain = table.select.return_value.eq.return_value.eq.return_value.eq.return_value.limit.return_value
+        chain.execute.return_value = MagicMock(
+            data=[{"encrypted_key": "bad-token", "is_active": True}]
+        )
+
+        with patch.object(vault, "_get_client", return_value=client), \
+             patch.object(vault, "_decrypt", return_value=None):
+            with pytest.raises(InvalidApiKey, match="키 복호화 실패"):
+                vault.reveal(account_id, "gemini", "default")
+
     def test_reveal_raises_when_no_active_row(self, account_id):
         """행이 없거나 is_active=False면 InvalidApiKey."""
         vault = SupabaseApiKeyVault()

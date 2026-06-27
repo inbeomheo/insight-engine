@@ -36,6 +36,16 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                         'type': 'http',
                         'scheme': 'bearer',
                         'bearerFormat': 'Supabase JWT',
+                    },
+                    'AutomationWebhookSecret': {
+                        'type': 'apiKey',
+                        'in': 'header',
+                        'name': 'X-Insight-Webhook-Secret',
+                    },
+                    'TelegramWebhookSecret': {
+                        'type': 'apiKey',
+                        'in': 'header',
+                        'name': 'X-Telegram-Bot-Api-Secret-Token',
                     }
                 },
                 'schemas': {
@@ -267,7 +277,7 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                         'summary': 'Zapier 트리거 — 콘텐츠 생성 완료 이벤트',
                         'operationId': 'zapierTrigger',
                         'tags': ['Integrations'],
-                        'security': [],
+                        'security': [{'AutomationWebhookSecret': []}],
                         'requestBody': {
                             'required': True,
                             'content': {
@@ -308,7 +318,7 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                         'summary': 'Telegram 웹훅',
                         'operationId': 'telegramWebhook',
                         'tags': ['Integrations'],
-                        'security': [],
+                        'security': [{'TelegramWebhookSecret': []}],
                         'responses': {'200': {'description': '처리 완료'}},
                     }
                 },

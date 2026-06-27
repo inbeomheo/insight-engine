@@ -50,7 +50,11 @@ def extract_google_doc(url: str, api_key: str = None) -> Dict:
     # 1차: 공개 export URL (텍스트 형식)
     export_url = f'https://docs.google.com/document/d/{doc_id}/export?format=txt'
     try:
-        resp = requests.get(export_url, timeout=_REQUEST_TIMEOUT)
+        resp = requests.get(
+            export_url,
+            timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
+        )
         if resp.status_code == 200 and len(resp.text.strip()) > 50:
             content = resp.text.strip()
             # 제목: 첫 줄
@@ -82,7 +86,10 @@ def _extract_via_api(doc_id: str, api_key: str, original_url: str) -> Dict:
         api_url,
         params={'key': api_key},
         timeout=_REQUEST_TIMEOUT,
+        allow_redirects=False,
     )
+    if 300 <= resp.status_code < 400:
+        raise ValueError(f'Google Docs API 리다이렉트 차단: {resp.status_code}')
     if resp.status_code != 200:
         raise ValueError(f'Google Docs API 오류: {resp.status_code}')
 

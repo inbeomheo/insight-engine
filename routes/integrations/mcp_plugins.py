@@ -62,6 +62,7 @@ def mcp_apps_list():
 
 
 @blog_bp.route('/api/mcp-apps/<app_name>/render', methods=['POST'])
+@require_auth
 def mcp_app_render(app_name: str):
     """지정된 MCP 앱으로 콘텐츠를 렌더링합니다."""
     from services.mcp.mcp_apps import app_registry
@@ -84,6 +85,7 @@ def mcp_app_render(app_name: str):
 
 
 @blog_bp.route('/api/mcp-apps/<app_name>/action', methods=['POST'])
+@require_auth
 def mcp_app_action(app_name: str):
     """MCP 앱의 사용자 액션을 처리합니다."""
     from services.mcp.mcp_apps import app_registry

@@ -3,14 +3,28 @@
   "version": "1.0.0",
   "description": "YouTube 영상으로 AI 블로그 포스트 자동 생성",
   "scripts": {
-    "verify:backend": "python -m pytest tests --ignore=tests/e2e --tb=short --timeout=60 -p no:warnings -q && python -m flake8 . --select=E9,F63,F7,F82 --exclude=__pycache__,migrations,node_modules,.venv,.next --count --show-source --statistics",
+    "verify:backend": "sh -c 'PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" -m pytest tests --ignore=tests/e2e --ignore=tests/web_feature_test.py --tb=short --timeout=60 -p no:warnings -q && \"$PY\" -m flake8 . --select=E9,F63,F7,F82 --exclude=__pycache__,migrations,node_modules,.venv,.next --count --show-source --statistics'",
     "verify:frontend": "cd frontend && npx tsc --noEmit && npm run build",
     "verify:e2e": "cd tests/e2e && npx playwright test main-page/ci-smoke.spec.ts --project=no-auth-chromium",
     "verify:all": "npm run verify:backend && npm run verify:frontend && npm run verify:e2e",
-    "verify:production": "python scripts/check_production_readiness.py",
-    "verify:app-data-backup": "python scripts/backup_app_data.py rehearse",
+    "verify:audit": "npm audit && cd frontend && npm audit && cd ../tests/e2e && npm audit && cd ../.. && npm run verify:python-audit",
+    "verify:python-audit": "sh -c 'PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/audit_python_dependencies.py'",
+    "verify:secrets": "python3 scripts/check_no_secrets.py",
+    "verify:production": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; python3 scripts/check_production_readiness.py'",
+    "verify:app-data-backup": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; python3 scripts/backup_app_data.py rehearse --summary'",
+    "verify:caddy": "bash scripts/validate_caddy_config.sh",
+    "verify:k8s": "python3 scripts/validate_k8s_manifest.py",
+    "verify:ci": "python3 scripts/validate_ci_workflow.py",
+    "verify:maintenance": "python3 scripts/validate_maintenance_config.py",
+    "verify:image-hygiene": "bash scripts/verify_docker_image_hygiene.sh",
+    "verify:release": "bash scripts/verify_release.sh",
     "docker:cleanup": "bash scripts/docker_cleanup_after_deploy.sh",
-    "deploy:local": "docker compose -f docker-compose.deploy.yml up -d --build backend frontend edge && npm run docker:cleanup"
+    "deploy:local": "bash scripts/deploy_local.sh",
+    "ops:rollback-local": "bash scripts/rollback_local.sh",
+    "ops:monitor": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/monitor_readiness.py'",
+    "ops:restore-drill": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; python3 scripts/backup_app_data.py drill-latest --summary'",
+    "ops:host-check": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/check_host_prereqs.py'",
+    "ops:cutover-check": "bash scripts/production_cutover_check.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"

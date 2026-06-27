@@ -18,6 +18,7 @@ Issue #17 (소PR B-2) — `g.auth` (UserAccount Aggregate) 인터페이스 추�
 from __future__ import annotations
 
 from functools import wraps
+import os
 from typing import Callable
 
 from flask import g, jsonify, request
@@ -122,6 +123,15 @@ def inject_auth_context() -> None:
     g.auth = None
 
 
+def _auth_mode() -> str:
+    return (os.getenv('AUTH_MODE') or '').strip().lower()
+
+
+def _production_auth_requires_provider() -> bool:
+    """Production must not silently bypass app auth unless edge mode is explicit."""
+    return (os.getenv('FLASK_ENV') or '').strip().lower() == 'production' and _auth_mode() != 'edge'
+
+
 def require_auth(f: Callable) -> Callable:
     """JWT 토큰 검증 데코레이터.
 
@@ -131,7 +141,15 @@ def require_auth(f: Callable) -> Callable:
     """
     @wraps(f)
     def decorated(*args, **kwargs):
+        if g.get('auth_validated'):
+            return f(*args, **kwargs)
+
         if not is_supabase_enabled():
+            if _production_auth_requires_provider():
+                return jsonify({
+                    'error': '인증 공급자가 설정되지 않았습니다.',
+                    'code': 'AUTH_PROVIDER_NOT_CONFIGURED',
+                }), 503
             g.user_id = None
             return f(*args, **kwargs)
 

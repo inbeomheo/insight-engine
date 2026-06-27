@@ -86,6 +86,7 @@ def playlist_videos():
 
 
 @blog_bp.route('/api/recommend-sources', methods=['POST'])
+@require_auth
 def api_recommend_sources():
     """주제 기반 소스 추천"""
     try:

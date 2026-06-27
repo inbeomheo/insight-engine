@@ -8,6 +8,7 @@ from typing import Any
 import requests
 
 from services.core.logging_config import ServiceLogger
+from services.platform.webhook_service import _is_production, _webhook_url_error
 
 logger = ServiceLogger('DiscordService')
 
@@ -19,21 +20,30 @@ class DiscordService:
     """Discord Incoming Webhook 클라이언트"""
 
     def __init__(self, webhook_url: str | None = None):
-        self.webhook_url = webhook_url or DISCORD_WEBHOOK_URL
+        self.webhook_url = (webhook_url or DISCORD_WEBHOOK_URL).strip()
 
     def is_enabled(self) -> bool:
         """Discord 웹훅 URL 설정 여부"""
         return bool(self.webhook_url)
 
+    def _url_error(self) -> str | None:
+        return _webhook_url_error(self.webhook_url, require_https=_is_production())
+
     def send(self, content: str, username: str = 'Insight Engine') -> dict[str, Any]:
         """단순 텍스트 메시지 전송"""
         if not self.is_enabled():
             return {'ok': False, 'reason': 'DISCORD_WEBHOOK_URL 미설정'}
+        url_error = self._url_error()
+        if url_error:
+            return {'ok': False, 'reason': url_error}
 
         payload = {'content': content, 'username': username}
         try:
             resp = requests.post(
-                self.webhook_url, json=payload, timeout=DISCORD_TIMEOUT_SEC
+                self.webhook_url,
+                json=payload,
+                timeout=DISCORD_TIMEOUT_SEC,
+                allow_redirects=False,
             )
             # Discord는 성공 시 204 반환
             if resp.status_code in (200, 204):
@@ -49,6 +59,9 @@ class DiscordService:
         """Embed 메시지 전송"""
         if not self.is_enabled():
             return {'ok': False, 'reason': 'DISCORD_WEBHOOK_URL 미설정'}
+        url_error = self._url_error()
+        if url_error:
+            return {'ok': False, 'reason': url_error}
 
         embed: dict[str, Any] = {
             'title': title,
@@ -61,7 +74,10 @@ class DiscordService:
         payload = {'embeds': [embed]}
         try:
             resp = requests.post(
-                self.webhook_url, json=payload, timeout=DISCORD_TIMEOUT_SEC
+                self.webhook_url,
+                json=payload,
+                timeout=DISCORD_TIMEOUT_SEC,
+                allow_redirects=False,
             )
             if resp.status_code in (200, 204):
                 return {'ok': True}

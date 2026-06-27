@@ -10,6 +10,8 @@ import time
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -131,10 +133,17 @@ class RuleBasedRewardModel:
 class PreferenceCollector:
     """선호도 쌍 수집 및 저장"""
 
-    def __init__(self, storage_path: str = './data/preferences.jsonl'):
-        self.storage_path = storage_path
+    def __init__(self, storage_path: Optional[str] = None):
+        self.storage_path = (
+            storage_path
+            or os.getenv('PREFERENCE_DATA_PATH')
+            or app_data_path('preferences.jsonl')
+        )
         self.reward_model = RuleBasedRewardModel()
-        os.makedirs(os.path.dirname(storage_path) if os.path.dirname(storage_path) else '.', exist_ok=True)
+        os.makedirs(
+            os.path.dirname(self.storage_path) if os.path.dirname(self.storage_path) else '.',
+            exist_ok=True,
+        )
 
     def collect_from_ab_test(
         self,

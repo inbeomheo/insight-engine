@@ -10,10 +10,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from utils.runtime_paths import app_data_path
+
 TICKET_STATUSES = {
     "new",
     "answered",
     "triaged",
+    "issue_requested",
+    "draft_pr_requested",
     "issue_created",
     "draft_pr_created",
     "handed_off",
@@ -40,7 +44,9 @@ class FeedbackStore:
     """
 
     def __init__(self, base_dir: str | os.PathLike[str] | None = None):
-        self.base_dir = Path(base_dir or os.getenv("FEEDBACK_STORE_DIR", "./data/feedback"))
+        self.base_dir = Path(
+            base_dir or os.getenv("FEEDBACK_STORE_DIR") or app_data_path("feedback")
+        )
         self.items_dir = self.base_dir / "items"
         self.items_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()

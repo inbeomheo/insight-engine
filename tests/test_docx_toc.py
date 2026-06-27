@@ -87,6 +87,7 @@ class TestExportDocxWithToc(unittest.TestCase):
     def setUp(self):
         from app import create_app
         self.app = create_app()
+        self.app.config['TESTING'] = True
         self.client = self.app.test_client()
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)

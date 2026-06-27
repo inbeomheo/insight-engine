@@ -16,7 +16,7 @@ logger = ServiceLogger('ReferralService')
 REFERRAL_REWARD_CREDITS = 5  # 추천 성공 시 양측에 지급할 크레딧
 
 _LOCAL_REFERRALS_FILE = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'referrals.json'
+    os.getenv('APP_DATA_DIR', 'data'), 'referrals.json'
 )
 
 

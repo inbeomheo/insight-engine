@@ -44,8 +44,9 @@ class TestParsePublishedDt(unittest.TestCase):
 class TestParseFeed(unittest.TestCase):
     """parse_feed 테스트"""
 
+    @patch('services.platform.rss_service._fetch_feed_content', return_value=b'<rss />')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_success(self, mock_parse):
+    def test_success(self, mock_parse, mock_fetch):
         """정상 파싱"""
         entry = MagicMock()
         entry.content = [{'value': '<p>본문</p>'}]
@@ -58,16 +59,19 @@ class TestParseFeed(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['title'], '제목')
         self.assertEqual(result[0]['source_type'], 'rss')
+        mock_fetch.assert_called_once_with('https://example.com/feed')
 
+    @patch('services.platform.rss_service._fetch_feed_content', return_value=b'<rss />')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_bozo_no_entries_raises(self, mock_parse):
+    def test_bozo_no_entries_raises(self, mock_parse, mock_fetch):
         """bozo + 엔트리 없으면 ValueError"""
         mock_parse.return_value = MagicMock(bozo=True, entries=[], bozo_exception='bad')
         with self.assertRaises(ValueError):
             parse_feed('https://bad.com/feed')
 
+    @patch('services.platform.rss_service._fetch_feed_content', return_value=b'<rss />')
     @patch('services.platform.rss_service.feedparser.parse')
-    def test_max_items(self, mock_parse):
+    def test_max_items(self, mock_parse, mock_fetch):
         """max_items 제한"""
         entries = [MagicMock(content=[], summary='s', published='', get=lambda k, d='': d) for _ in range(20)]
         for e in entries:
@@ -77,6 +81,14 @@ class TestParseFeed(unittest.TestCase):
 
         result = parse_feed('https://example.com/feed', max_items=5)
         self.assertEqual(len(result), 5)
+
+    @patch('services.platform.rss_service.feedparser.parse')
+    def test_unsafe_feed_url_blocked_before_parse(self, mock_parse):
+        """private RSS URL은 feedparser 호출 전에 차단"""
+        with self.assertRaises(ValueError) as ctx:
+            parse_feed('http://127.0.0.1/feed.xml')
+        self.assertIn('안전하지 않아 차단', str(ctx.exception))
+        mock_parse.assert_not_called()
 
 
 class TestGetLatestEntries(unittest.TestCase):

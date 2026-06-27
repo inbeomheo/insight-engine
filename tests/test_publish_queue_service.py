@@ -1,8 +1,26 @@
 """publish_queue_service 단위 테스트"""
 import unittest
+from contextlib import nullcontext
 from unittest.mock import patch
 
 from services.data.publish_queue_service import PublishQueueService
+
+
+class _FakeRedis:
+    def __init__(self):
+        self.data = {}
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def set(self, key, value):
+        self.data[key] = value
+
+    def lock(self, *args, **kwargs):
+        return nullcontext()
+
+    def ping(self):
+        return True
 
 
 class TestPublishQueueService(unittest.TestCase):
@@ -139,6 +157,39 @@ class TestPublishQueueService(unittest.TestCase):
         self.assertIsNotNone(sanitized['next_retry_at'])
         # ISO 형식인지 확인
         self.assertIn('T', sanitized['next_retry_at'])
+
+
+class TestRedisPublishQueueService(unittest.TestCase):
+    """Redis backend: 프로덕션 다중 worker 공유 저장소"""
+
+    def test_redis_backend_persists_queue_between_service_instances(self):
+        fake_redis = _FakeRedis()
+
+        with patch.object(PublishQueueService, '_create_redis_client', return_value=fake_redis):
+            svc = PublishQueueService(backend='redis')
+            item = svc.enqueue('c1', '제목', '내용', 'p1', 'u1')
+            reloaded = PublishQueueService(backend='redis')
+
+        items = reloaded.get_queue_status(user_id='u1')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['id'], item['id'])
+        self.assertEqual(items[0]['status'], 'queued')
+
+    def test_redis_backend_process_queue_updates_shared_store(self):
+        fake_redis = _FakeRedis()
+
+        with patch.object(PublishQueueService, '_create_redis_client', return_value=fake_redis):
+            svc = PublishQueueService(backend='redis')
+            svc.enqueue('c1', '제목', '내용', 'p1', 'u1')
+
+            with patch('services.mcp.plugin_registry') as mock_registry:
+                mock_registry.execute.return_value = {'success': True, 'url': 'https://example.com/post'}
+                results = svc.process_queue()
+
+            reloaded = PublishQueueService(backend='redis')
+
+        self.assertEqual(results[0]['status'], 'success')
+        self.assertEqual(reloaded.get_queue_status()[0]['published_url'], 'https://example.com/post')
 
 
 if __name__ == '__main__':

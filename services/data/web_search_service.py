@@ -34,7 +34,12 @@ def search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
             TAVILY_API_URL,
             json={'api_key': api_key, 'query': query, 'max_results': max_results, 'search_depth': 'basic'},
             timeout=10,
+            allow_redirects=False,
         )
+        status_code = getattr(resp, 'status_code', 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            logger.warning("Tavily 웹 검색 리다이렉트 차단: %s", resp.status_code)
+            return []
         resp.raise_for_status()
         return _parse_search_results(resp.json())
     except requests.exceptions.RequestException as e:

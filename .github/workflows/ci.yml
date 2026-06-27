@@ -1,5 +1,4 @@
-# Insight Engine CI/CD 파이프라인 (F9-11)
-# 트리거: main/develop 브랜치 푸시, PR
+# Insight Engine CI/CD pipeline
 
 name: CI/CD
 
@@ -9,141 +8,358 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
 
 jobs:
-  # ── 백엔드 테스트 ─────────────────────────────────────────────────────────────
-  backend-test:
-    name: Backend Tests
+  backend:
+    name: Backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     services:
       redis:
         image: redis:7-alpine
         ports:
           - 6379:6379
-        options: --health-cmd "redis-cli ping" --health-interval 10s
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_TEST }}
-      SUPABASE_ENABLED: "false"
-      REDIS_URL: redis://localhost:6379/0
       FLASK_ENV: testing
+      FLASK_DEBUG: "0"
+      RATE_LIMIT_ENABLED: "false"
+      REDIS_URL: memory://
+      PUBLISH_QUEUE_BACKEND: file
+      SCHEDULER_ENABLED: "false"
+      SUPABASE_ENABLED: "false"
+      ZAI_API_KEY: ""
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Python 설정
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
-      - name: 의존성 설치
-        run: pip install -r requirements.txt
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: 린트 (flake8)
+      - name: Install backend dependencies
         run: |
-          pip install flake8
-          flake8 . --max-line-length=120 --exclude=__pycache__,migrations,node_modules --count --statistics
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest-timeout flake8
 
-      - name: 단위 테스트 실행
-        run: |
-          python -m pytest tests/ \
-            -v \
-            --ignore=tests/e2e \
-            --tb=short \
-            -x \
-            --timeout=60 \
-            -p no:warnings \
-            2>&1 | head -500
+      - name: Run backend verification
+        run: npm run verify:backend
 
-      - name: 커버리지 업로드
-        if: github.ref == 'refs/heads/main'
-        run: |
-          pip install coverage pytest-cov
-          python -m pytest tests/ --ignore=tests/e2e --cov=. --cov-report=xml -q
-        continue-on-error: true
-
-  # ── 프론트엔드 테스트 ─────────────────────────────────────────────────────────
-  frontend-test:
-    name: Frontend Tests
+  frontend:
+    name: Frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: frontend
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Node.js 설정
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: 의존성 설치
+      - name: Install frontend dependencies
+        working-directory: frontend
         run: npm ci
 
-      - name: 타입 체크
-        run: npx tsc --noEmit
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit
 
-      - name: 빌드
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:5001
+      - name: Run frontend verification
+        run: npm run verify:frontend
 
-  # ── Docker 빌드 ───────────────────────────────────────────────────────────────
+  e2e-smoke:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [backend, frontend]
+
+    env:
+      FLASK_ENV: testing
+      FLASK_DEBUG: "0"
+      RATE_LIMIT_ENABLED: "false"
+      REDIS_URL: memory://
+      PUBLISH_QUEUE_BACKEND: file
+      SCHEDULER_ENABLED: "false"
+      SUPABASE_ENABLED: "false"
+      ZAI_API_KEY: ""
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install E2E dependencies
+        working-directory: tests/e2e
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke
+        run: npm run verify:e2e
+
+  production-gates:
+    name: Production Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      FLASK_ENV: production
+      FLASK_DEBUG: "0"
+      CORS_ORIGINS: https://insight.example.com
+      METRICS_AUTH_TOKEN: ci-metrics-token-1234567890abcdefABCDEF
+      BASIC_AUTH_USER: ci-admin
+      BASIC_AUTH_HASH: "$2a$14$cihashplaceholdercihashplaceholdercihashplaceholdercihashp"
+      SECRET_KEY: ci-flask-secret-1234567890abcdefABCDEF
+      ENCRYPTION_SECRET: ci-encryption-secret-1234567890abcdefABCDEF
+      REDIS_URL: redis://localhost:6379/0
+      PUBLISH_QUEUE_BACKEND: redis
+      PUBLISH_QUEUE_REDIS_URL: redis://localhost:6379/0
+      AUTO_BACKUP_INTERVAL_HOURS: "6"
+      MAX_BACKUPS: "30"
+      ZAI_API_KEY: ci-zai-provider-key
+      SUPPORT_HANDOFF_SECRET: ""
+      SUPPORT_GITHUB_REPO: ""
+      SUPPORT_GITHUB_TOKEN: ""
+      GITHUB_TOKEN: ""
+      APP_VERSION: v2.0
+      APP_RELEASE: ${{ github.sha }}
+      GIT_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install production gate Python dependencies
+        run: python -m pip install 'PyYAML>=6.0'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Capture release metadata
+        run: echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Audit root dependencies
+        run: npm audit
+
+      - name: Audit E2E dependencies
+        working-directory: tests/e2e
+        run: npm ci && npm audit
+
+      - name: Install Python audit dependencies
+        run: python -m pip install -r requirements-ci.txt
+
+      - name: Audit Python dependencies
+        run: npm run verify:python-audit
+
+      - name: Scan tracked files for leaked secrets
+        run: npm run verify:secrets
+
+      - name: Prepare app data backup fixture
+        run: |
+          mkdir -p "$RUNNER_TEMP/insight-app-data/chroma_db" "$RUNNER_TEMP/insight-app-backups" "$RUNNER_TEMP/insight-app-backup-replica"
+          printf 'ci-agent-state\n' > "$RUNNER_TEMP/insight-app-data/agent_state.db"
+          printf 'ci-chroma\n' > "$RUNNER_TEMP/insight-app-data/chroma_db/chroma.sqlite3"
+          {
+            echo "APP_DATA_DIR=$RUNNER_TEMP/insight-app-data"
+            echo "APP_DATA_BACKUP_DIR=$RUNNER_TEMP/insight-app-backups"
+            echo "APP_DATA_BACKUP_REPLICA_DIR=$RUNNER_TEMP/insight-app-backup-replica"
+          } >> "$GITHUB_ENV"
+
+      - name: Run production readiness verification
+        run: npm run verify:production
+
+      - name: Run app data backup rehearsal
+        run: npm run verify:app-data-backup
+
+      - name: Validate Docker Compose deployment config
+        run: docker compose -f docker-compose.deploy.yml config --quiet
+
+      - name: Validate Caddy deployment config
+        run: npm run verify:caddy
+
+      - name: Validate Kubernetes deployment manifest
+        run: npm run verify:k8s
+
+      - name: Validate GitHub Actions workflow contract
+        run: npm run verify:ci
+
+      - name: Validate maintenance automation contract
+        run: npm run verify:maintenance
+
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
-    if: github.ref == 'refs/heads/main'
-    timeout-minutes: 20
+    timeout-minutes: 30
+    needs: [backend, frontend, production-gates]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Docker Buildx 설정
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Docker Hub 로그인
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+      - name: Capture build metadata
+        run: echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Build production image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: final
+          push: false
+          tags: insight-engine:ci
+          build-args: |
+            APP_VERSION=v2.0
+            APP_RELEASE=${{ github.sha }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ env.BUILD_TIME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify production image hygiene
+        env:
+          IMAGE_REF: insight-engine:ci
+        run: npm run verify:image-hygiene
+
+  publish-image:
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [docker-build, e2e-smoke]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Capture build metadata
+        run: echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Docker 이미지 빌드 및 푸시
-        uses: docker/build-push-action@v5
+      - name: Build and push production image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          target: final
+          push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/insight-engine:latest
             ${{ secrets.DOCKER_USERNAME }}/insight-engine:${{ github.sha }}
+          build-args: |
+            APP_VERSION=v2.0
+            APP_RELEASE=${{ github.sha }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ env.BUILD_TIME }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 프로덕션 배포 ─────────────────────────────────────────────────────────────
   deploy:
-    name: Deploy (Railway)
+    name: Deploy Railway
     runs-on: ubuntu-latest
-    needs: docker-build
+    timeout-minutes: 20
+    needs: publish-image
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
+    concurrency:
+      group: insight-engine-production
+      cancel-in-progress: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Railway 배포
-        uses: bervProject/railway-deploy@v1
+      - name: Deploy to Railway
+        uses: bervProject/railway-deploy@4a1cfdb24551aee5c891e0bc716e8de963c4fbe6 # 0.2.0-beta
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
           service: insight-engine
-        continue-on-error: true
+
+      - name: Verify required production monitor configuration
+        env:
+          INSIGHT_BASE_URL: ${{ secrets.INSIGHT_BASE_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          test -n "$INSIGHT_BASE_URL" || { echo "INSIGHT_BASE_URL production secret is required"; exit 2; }
+          test -n "$ALERT_WEBHOOK_URL" || { echo "ALERT_WEBHOOK_URL production secret is required"; exit 2; }
+
+      - name: Verify deployed production readiness
+        env:
+          INSIGHT_BASE_URL: ${{ secrets.INSIGHT_BASE_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          INSIGHT_EXPECTED_RELEASE: ${{ github.sha }}
+          INSIGHT_EXPECTED_GIT_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/monitor_readiness.py \
+            --base-url "$INSIGHT_BASE_URL" \
+            --attempts 12 \
+            --retry-delay 10 \
+            --timeout 10 \
+            --require-public-host \
+            --require-https \
+            --tls-min-days 21 \
+            --require-release-metadata \
+            --expected-release "$INSIGHT_EXPECTED_RELEASE" \
+            --expected-git-sha "$INSIGHT_EXPECTED_GIT_SHA" \
+            --require-webhook

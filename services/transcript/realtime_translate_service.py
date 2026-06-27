@@ -48,7 +48,7 @@ def _translate_with_deepl(text: str, target_lang: str) -> Optional[str]:
             else "https://api.deepl.com/v2/translate"
         )
 
-        with httpx.Client(timeout=30) as client:
+        with httpx.Client(timeout=30, follow_redirects=False) as client:
             resp = client.post(
                 base_url,
                 headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"},
@@ -57,6 +57,10 @@ def _translate_with_deepl(text: str, target_lang: str) -> Optional[str]:
                     "target_lang": deepl_lang,
                 }
             )
+        status_code = getattr(resp, "status_code", 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            logger.warning("DeepL 번역 리다이렉트 차단: %s", resp.status_code)
+            return None
         resp.raise_for_status()
         return resp.json()['translations'][0]['text']
     except Exception as e:

@@ -20,13 +20,15 @@ import os
 import threading
 from typing import Any, Dict, Optional
 
+from utils.runtime_paths import app_data_path
+
 _chroma_clients: Dict[str, Any] = {}
 _chroma_lock = threading.Lock()
 
 
 def _resolve_path(path: Optional[str]) -> str:
     """전달받은 경로(또는 환경변수)를 절대경로로 정규화."""
-    actual = path or os.getenv("CHROMA_DB_PATH", "./data/chroma_db")
+    actual = path or os.getenv("CHROMA_DB_PATH") or app_data_path("chroma_db")
     return os.path.abspath(actual)
 
 

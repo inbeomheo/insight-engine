@@ -184,17 +184,38 @@ export default defineConfig({
   ],
 
   /* 테스트 서버 자동 실행 */
-  webServer: {
-    command: 'python app.py',
-    url: 'http://localhost:5001',
-    cwd: '../../', // 프로젝트 루트 디렉토리
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    // 테스트 시 Supabase 인증 비활성화 (로그인 없이 모든 기능 사용)
-    env: {
-      ...process.env,
-      SUPABASE_URL: '',
-      SUPABASE_ANON_KEY: '',
+  webServer: [
+    {
+      command:
+        'sh -c \'PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; "$PY" app.py\'',
+      url: 'http://localhost:5001/health',
+      cwd: '../../', // 프로젝트 루트 디렉토리
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      // 테스트 시 Supabase/Redis/스케줄러를 비활성화해 외부 서비스 없이 smoke 실행
+      env: {
+        ...process.env,
+        FLASK_ENV: 'development',
+        FLASK_DEBUG: '0',
+        RATE_LIMIT_ENABLED: 'false',
+        REDIS_URL: 'memory://',
+        PUBLISH_QUEUE_BACKEND: 'file',
+        SCHEDULER_ENABLED: 'false',
+        CORS_ORIGINS: 'http://localhost:3000,http://localhost:3001',
+        SUPABASE_URL: '',
+        SUPABASE_ANON_KEY: '',
+      },
     },
-  },
+    {
+      command: 'npm run dev -- --hostname 127.0.0.1',
+      url: 'http://localhost:3000',
+      cwd: '../../frontend',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      env: {
+        ...process.env,
+        NEXT_BACKEND_URL: 'http://localhost:5001',
+      },
+    },
+  ],
 });

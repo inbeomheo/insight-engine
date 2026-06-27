@@ -2,6 +2,7 @@
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import clamp_query_int
 
 
@@ -16,6 +17,7 @@ def list_content_versions(content_id):
 
 
 @blog_bp.route('/api/content/<content_id>/versions', methods=['POST'])
+@require_auth
 def save_content_version(content_id):
     """콘텐츠의 새 버전을 저장합니다."""
     from services.data.version_service import save_version
@@ -66,6 +68,7 @@ def diff_content_versions(content_id):
 
 
 @blog_bp.route('/api/content/<content_id>/versions/<version_id>/restore', methods=['POST'])
+@require_auth
 def restore_content_version(content_id, version_id):
     """특정 버전을 복원합니다."""
     from services.data.version_service import restore_version
@@ -103,6 +106,7 @@ def list_content_folders():
 
 
 @blog_bp.route('/api/folders', methods=['POST'])
+@require_auth
 def create_content_folder():
     """폴더를 생성합니다."""
     from services.data.folder_service import create_folder
@@ -116,6 +120,7 @@ def create_content_folder():
 
 
 @blog_bp.route('/api/folders/<folder_id>', methods=['PUT'])
+@require_auth
 def update_content_folder(folder_id):
     """폴더를 수정합니다."""
     from services.data.folder_service import update_folder
@@ -127,6 +132,7 @@ def update_content_folder(folder_id):
 
 
 @blog_bp.route('/api/folders/<folder_id>', methods=['DELETE'])
+@require_auth
 def delete_content_folder(folder_id):
     """폴더를 삭제합니다."""
     from services.data.folder_service import delete_folder
@@ -143,6 +149,7 @@ def list_folder_content_ids(folder_id):
 
 
 @blog_bp.route('/api/content/<content_id>/folder', methods=['PUT'])
+@require_auth
 def move_content_to_folder(content_id):
     """콘텐츠를 폴더로 이동합니다."""
     from services.data.folder_service import move_content
@@ -171,6 +178,7 @@ def get_notifications():
 
 
 @blog_bp.route('/api/notifications/<notification_id>/read', methods=['POST'])
+@require_auth
 def mark_notification_read(notification_id):
     """알림을 읽음으로 표시합니다."""
     from services.data.notification_service import mark_read
@@ -180,6 +188,7 @@ def mark_notification_read(notification_id):
 
 
 @blog_bp.route('/api/notifications/read-all', methods=['POST'])
+@require_auth
 def mark_all_notifications_read():
     """모든 알림을 읽음으로 표시합니다."""
     from services.data.notification_service import mark_all_read
@@ -193,6 +202,7 @@ def mark_all_notifications_read():
 
 
 @blog_bp.route('/api/collab/session', methods=['POST'])
+@require_auth
 def create_collab_session():
     """협업 세션을 생성하거나 참가합니다."""
     from services.data.collaboration_service import create_session
@@ -218,6 +228,7 @@ def poll_collab_session(session_id):
 
 
 @blog_bp.route('/api/collab/session/<session_id>/update', methods=['POST'])
+@require_auth
 def update_collab_content(session_id):
     """협업 콘텐츠를 업데이트합니다."""
     from services.data.collaboration_service import update_content
@@ -233,6 +244,7 @@ def update_collab_content(session_id):
 
 
 @blog_bp.route('/api/collab/session/<session_id>/heartbeat', methods=['POST'])
+@require_auth
 def collab_heartbeat(session_id):
     """협업 세션 하트비트."""
     from services.data.collaboration_service import heartbeat
@@ -245,6 +257,7 @@ def collab_heartbeat(session_id):
 
 
 @blog_bp.route('/api/collab/session/<session_id>/leave', methods=['POST'])
+@require_auth
 def leave_collab_session(session_id):
     """협업 세션에서 나갑니다."""
     from services.data.collaboration_service import leave_session

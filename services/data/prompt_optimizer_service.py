@@ -11,10 +11,12 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
 # 피드백 저장 경로
-_FEEDBACK_DIR = Path(os.getenv('FEEDBACK_DATA_DIR', 'data/feedback'))
+_FEEDBACK_DIR = Path(os.getenv('FEEDBACK_DATA_DIR') or app_data_path('feedback'))
 
 # 최적화에 필요한 최소 피드백 수
 _MIN_FEEDBACK_FOR_OPTIMIZATION = 5

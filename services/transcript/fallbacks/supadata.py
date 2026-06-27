@@ -23,8 +23,14 @@ def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[Transcr
             SUPADATA_API_URL,
             params={"videoId": video_id, "text": "true"},
             headers={"x-api-key": api_key},
-            timeout=HTTP_TIMEOUT
+            timeout=HTTP_TIMEOUT,
+            allow_redirects=False,
         )
+
+        status_code = getattr(response, "status_code", 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            log_warning(f"Supadata API redirect blocked with status {response.status_code} for video_id={video_id}")
+            return None
 
         if response.status_code == 200:
             data = response.json()

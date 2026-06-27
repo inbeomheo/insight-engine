@@ -82,28 +82,40 @@ class TestMakeTwitterTitle(unittest.TestCase):
 
 class TestScrapeTwitterThread(unittest.TestCase):
 
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
     @patch('services.platform.social_scraper_service._extract_with_trafilatura')
-    def test_nitter_success(self, mock_extract):
+    def test_nitter_success(self, mock_extract, mock_url_error):
         """Nitter 추출 성공"""
         mock_extract.return_value = ('제목', 'A' * 50)
         result = scrape_twitter_thread('https://twitter.com/user/status/123')
         self.assertEqual(result['source_type'], 'twitter')
         self.assertIn('content', result)
 
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
     @patch('services.platform.social_scraper_service._extract_with_trafilatura', return_value=('', ''))
-    def test_all_fail(self, mock_extract):
+    def test_all_fail(self, mock_extract, mock_url_error):
         """모든 추출 실패 → ValueError"""
         with self.assertRaises(ValueError) as ctx:
             scrape_twitter_thread('https://twitter.com/user/status/123')
         self.assertIn('본문을 추출할 수 없습니다', str(ctx.exception))
 
+    @patch('services.platform.social_scraper_service._extract_with_trafilatura')
+    def test_invalid_host_rejected(self, mock_extract):
+        """Twitter가 아닌 host는 fetch 전에 차단"""
+        with self.assertRaises(ValueError) as ctx:
+            scrape_twitter_thread('https://evil.example/user/status/123')
+        self.assertIn('도메인', str(ctx.exception))
+        mock_extract.assert_not_called()
+
 
 class TestScrapeRedditPost(unittest.TestCase):
 
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
     @patch('services.platform.social_scraper_service.requests.get')
-    def test_success(self, mock_get):
+    def test_success(self, mock_get, mock_url_error):
         """Reddit 포스트 성공"""
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.json.return_value = [
             {'data': {'children': [{'data': {'title': '질문', 'selftext': '본문 내용'}}]}},
             {'data': {'children': [
@@ -116,18 +128,22 @@ class TestScrapeRedditPost(unittest.TestCase):
         self.assertEqual(result['title'], '질문')
         self.assertEqual(result['source_type'], 'reddit')
         self.assertIn('본문 내용', result['content'])
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
     @patch('services.platform.social_scraper_service.requests.get')
-    def test_request_error(self, mock_get):
+    def test_request_error(self, mock_get, mock_url_error):
         """네트워크 오류 → ValueError"""
         mock_get.side_effect = requests.RequestException('network')
         with self.assertRaises(ValueError):
             scrape_reddit_post('https://reddit.com/r/test/comments/abc/t')
 
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
     @patch('services.platform.social_scraper_service.requests.get')
-    def test_empty_content(self, mock_get):
+    def test_empty_content(self, mock_get, mock_url_error):
         """빈 본문 + 빈 댓글 → ValueError"""
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.json.return_value = [
             {'data': {'children': [{'data': {'title': '제목', 'selftext': ''}}]}},
             {'data': {'children': []}},
@@ -135,6 +151,23 @@ class TestScrapeRedditPost(unittest.TestCase):
         mock_get.return_value = mock_resp
         with self.assertRaises(ValueError):
             scrape_reddit_post('https://reddit.com/r/test/comments/abc/t')
+
+    @patch('services.platform.social_scraper_service.requests.get')
+    def test_private_host_rejected_before_request(self, mock_get):
+        """private URL은 요청 전에 차단"""
+        with self.assertRaises(ValueError) as ctx:
+            scrape_reddit_post('http://127.0.0.1/r/test/comments/abc/t')
+        self.assertIn('도메인', str(ctx.exception))
+        mock_get.assert_not_called()
+
+    @patch('services.platform.social_scraper_service._source_url_error', return_value=None)
+    @patch('services.platform.social_scraper_service.requests.get')
+    def test_redirect_response_blocked(self, mock_get, mock_url_error):
+        """Reddit JSON 리다이렉트는 차단"""
+        mock_get.return_value = MagicMock(status_code=302)
+        with self.assertRaises(ValueError) as ctx:
+            scrape_reddit_post('https://reddit.com/r/test/comments/abc/t')
+        self.assertIn('리다이렉트', str(ctx.exception))
 
 
 class TestScrapeHackernews(unittest.TestCase):

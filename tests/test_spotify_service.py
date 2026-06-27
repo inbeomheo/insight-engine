@@ -63,6 +63,17 @@ class TestSpotifyEpisodeInfo(unittest.TestCase):
         self.assertEqual(result['provider'], 'spotify')
         self.assertIn('thumbnail_url', result)
         mock_get.assert_called_once()
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch('services.platform.spotify_service.requests.get')
+    def test_get_episode_info_redirect_blocked(self, mock_get):
+        """oEmbed 리다이렉트는 차단"""
+        mock_get.return_value = MagicMock(status_code=302)
+
+        with self.assertRaises(ValueError) as ctx:
+            get_episode_info("https://open.spotify.com/episode/abc123")
+        self.assertIn('리다이렉트 차단', str(ctx.exception))
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.platform.spotify_service.requests.get')
     def test_get_episode_info_network_error(self, mock_get):

@@ -1,43 +1,101 @@
+x-service-hardening: &service-hardening
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 512
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${DOCKER_LOG_MAX_SIZE:-10m}
+    max-file: ${DOCKER_LOG_MAX_FILE:-5}
+
+x-app-service-hardening: &app-service-hardening
+  <<: *service-hardening
+  cap_drop:
+    - ALL
+
 services:
   backend:
+    <<: *app-service-hardening
     build:
       context: .
       target: final
+      args:
+        APP_VERSION: ${APP_VERSION:-v2.0}
+        APP_RELEASE: ${APP_RELEASE:-local}
+        GIT_SHA: ${GIT_SHA:-local}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
     image: insight-engine:local
     container_name: insight-backend
     restart: unless-stopped
+    stop_grace_period: 60s
+    logging: *default-logging
+    read_only: true
     command:
       - gunicorn
       - --workers=2
       - --threads=4
       - --timeout=300
       - --bind=0.0.0.0:5001
-      - app:create_app()
+      - app:app
     env_file:
       - .env
     environment:
       FLASK_ENV: production
       FLASK_DEBUG: "0"
+      AUTH_MODE: ${AUTH_MODE:-edge}
       HOME: /app
+      PYTHONDONTWRITEBYTECODE: "1"
+      XDG_CACHE_HOME: /app/cache/xdg
       PORT: "5001"
+      APP_VERSION: ${APP_VERSION:-v2.0}
+      APP_RELEASE: ${APP_RELEASE:-local}
+      GIT_SHA: ${GIT_SHA:-local}
+      BUILD_TIME: ${BUILD_TIME:-unknown}
       REDIS_URL: redis://redis:6379/0
+      PUBLISH_QUEUE_BACKEND: redis
+      PUBLISH_QUEUE_REDIS_URL: redis://redis:6379/0
+      APP_DATA_DIR: /app/data
+      AGENT_DB_PATH: /app/data/agent_state.db
+      APP_DATA_BACKUP_DIR: /app/backups
+      APP_DATA_BACKUP_REPLICA_DIR: /app/backup-replica
+      APP_DATA_BACKUP_REPLICA_MAX_BACKUPS: ${APP_DATA_BACKUP_REPLICA_MAX_BACKUPS:-30}
+      CONTENT_BACKUP_DIR: /app/backups/content-library
+      APP_CACHE_DIR: /app/cache
+      AUTO_BACKUP_INTERVAL_HOURS: ${AUTO_BACKUP_INTERVAL_HOURS:-6}
+      MAX_BACKUPS: ${MAX_BACKUPS:-30}
+      SCHEDULER_LOCK_FILE: /tmp/insight-engine-scheduler.lock
+      SCHEDULER_HEARTBEAT_FILE: /tmp/insight-engine-scheduler.heartbeat
       CHROMA_DB_PATH: /app/data/chroma_db
+      FEEDBACK_DATA_DIR: /app/data/feedback
+      FEEDBACK_STORE_DIR: /app/data/feedback
+      FINETUNE_OUTPUT_DIR: /app/data/finetune
+      GRAPH_STORE_PATH: /app/data/graph_store
       AI_CACHE_DB: /app/cache/ai_cache.db
       JOB_STORE_DIR: /app/data/jobs
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      PREFERENCE_DATA_PATH: /app/data/preferences.jsonl
+      SHARE_PAGE_DIR: /app/data/shared_pages
+      USER_MEMORY_PATH: /app/data/user_memory
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS to your production HTTPS origin, for example https://insight.example.com}
+      INSIGHT_BASE_URL: ${INSIGHT_BASE_URL:-}
+      APP_BASE_URL: ${APP_BASE_URL:-}
     ports:
       - "127.0.0.1:5001:5001"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - insight_app_data:/app/data
+      - ${APP_DATA_BACKUP_VOLUME:-insight_app_backups}:/app/backups
+      - ${APP_DATA_BACKUP_REPLICA_VOLUME:-insight_app_backup_replica}:/app/backup-replica
       - insight_app_cache:/app/cache
       - insight_app_logs:/app/logs
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=128m
+      - /app/.gunicorn:rw,noexec,nosuid,nodev,size=1m,mode=1777
     depends_on:
       redis:
         condition: service_healthy
-      chatmock:
-        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
@@ -46,9 +104,13 @@ services:
       start_period: 60s
 
   frontend:
+    <<: *app-service-hardening
     image: insight-engine:local
     container_name: insight-frontend
     restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+    read_only: true
     working_dir: /app/frontend
     command:
       - node
@@ -60,12 +122,20 @@ services:
       - "3000"
     environment:
       NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      HOME: /app
+      XDG_CACHE_HOME: /tmp/xdg-cache
+      TMPDIR: /tmp
       NEXT_BACKEND_URL: http://backend:5001
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
       backend:
         condition: service_healthy
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+      - /app/frontend/.next/cache:rw,noexec,nosuid,nodev,size=128m
+      - /app/frontend/.next/diagnostics:rw,noexec,nosuid,nodev,size=8m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
@@ -74,13 +144,24 @@ services:
       start_period: 30s
 
   edge:
+    # The official Caddy binary carries file capabilities for low-port binding;
+    # cap_drop: ALL prevents exec even when this deployment listens on 8090.
+    <<: *service-hardening
     image: caddy:2-alpine
     container_name: insight-edge
     restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+    read_only: true
+    environment:
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?Set BASIC_AUTH_USER for the edge basic auth login}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?Set BASIC_AUTH_HASH from `caddy hash-password --plaintext <password>`}
     ports:
       - "127.0.0.1:8090:8090"
     volumes:
       - ./Caddyfile.deploy:/etc/caddy/Caddyfile:ro
+      - insight_caddy_data:/data
+      - insight_caddy_config:/config
     depends_on:
       backend:
         condition: service_healthy
@@ -94,9 +175,14 @@ services:
       start_period: 20s
 
   chatmock:
+    <<: *app-service-hardening
+    profiles:
+      - chatmock
     image: python:3.11-slim
     container_name: insight-chatmock
     restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
     environment:
       CODEX_HOME: /codex
       CHATGPT_LOCAL_REASONING_EFFORT: minimal
@@ -117,12 +203,18 @@ services:
       start_period: 90s
 
   redis:
+    <<: *service-hardening
     image: redis:7-alpine
     container_name: insight-redis
     restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *default-logging
+    read_only: true
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
     volumes:
       - insight_redis_data:/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -131,6 +223,10 @@ services:
 
 volumes:
   insight_app_data:
+  insight_app_backups:
+  insight_app_backup_replica:
   insight_app_cache:
   insight_app_logs:
+  insight_caddy_data:
+  insight_caddy_config:
   insight_redis_data:

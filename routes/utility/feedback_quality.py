@@ -24,6 +24,7 @@ def api_clear_ai_cache():
 # === 피드백 (F3-06) ===
 
 @blog_bp.route('/api/feedback', methods=['POST'])
+@require_auth
 def api_feedback():
     """사용자 피드백(좋아요/싫어요)을 저장합니다."""
     data = request.get_json(silent=True) or {}
@@ -55,6 +56,7 @@ def api_feedback_stats(style_id: str):
 # === 팩트체크 (F3-07) ===
 
 @blog_bp.route('/api/fact-check', methods=['POST'])
+@require_auth
 def api_fact_check():
     """콘텐츠의 팩트체크를 수행합니다."""
     data = request.get_json(silent=True) or {}
@@ -70,6 +72,7 @@ def api_fact_check():
 # === SEO 최적화 (F3-08) ===
 
 @blog_bp.route('/api/seo-optimize', methods=['POST'])
+@require_auth
 def api_seo_optimize():
     """콘텐츠의 SEO를 분석하고 최적화 제안을 반환합니다."""
     data = request.get_json(silent=True) or {}
@@ -86,6 +89,7 @@ def api_seo_optimize():
 # === 표절 감지 (F3-09) ===
 
 @blog_bp.route('/api/plagiarism-check', methods=['POST'])
+@require_auth
 def api_plagiarism_check():
     """콘텐츠의 표절/중복 여부를 검사합니다."""
     data = request.get_json(silent=True) or {}
@@ -101,6 +105,7 @@ def api_plagiarism_check():
 # === 가독성 분석 (F3-10) ===
 
 @blog_bp.route('/api/readability', methods=['POST'])
+@require_auth
 def api_readability():
     """콘텐츠의 가독성 점수를 분석합니다."""
     data = request.get_json(silent=True) or {}
@@ -116,6 +121,7 @@ def api_readability():
 # === 감정 흐름 분석 (F3-11) ===
 
 @blog_bp.route('/api/sentiment-flow', methods=['POST'])
+@require_auth
 def api_sentiment_flow():
     """콘텐츠의 문단별 감정 흐름을 분석합니다."""
     data = request.get_json(silent=True) or {}
@@ -131,6 +137,7 @@ def api_sentiment_flow():
 # === NPS 피드백 (F4-20) ===
 
 @blog_bp.route('/api/feedback/nps', methods=['POST'])
+@require_auth
 def submit_nps_feedback():
     """NPS 점수 + 피드백 제출"""
     data = request.get_json(silent=True) or {}

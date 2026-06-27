@@ -11,19 +11,32 @@ from __future__ import annotations
 import logging
 import re
 from typing import Dict
+from urllib.parse import urlparse
 
 import requests
 import trafilatura
 
+from utils.url_safety import fetch_public_url, hostname_matches, public_url_error
+
 logger = logging.getLogger(__name__)
 
 _REQUEST_TIMEOUT = 15  # 초
+_REQUEST_HEADERS = {
+    "User-Agent": "InsightEngine/1.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
+}
 
 # Nitter 인스턴스 목록 (가용성 순)
 _NITTER_INSTANCES = [
     "nitter.net",
     "nitter.privacydev.net",
 ]
+
+_TWITTER_HOSTS = {"twitter.com", "x.com"}
+_REDDIT_HOSTS = {"reddit.com"}
+_HN_HOSTS = {"news.ycombinator.com"}
+_SO_HOSTS = {"stackoverflow.com"}
 
 # Reddit URL → .json 변환용 패턴
 _REDDIT_COMMENT_RE = re.compile(
@@ -55,8 +68,11 @@ def scrape_twitter_thread(url: str) -> Dict:
     Raises:
         ValueError: 본문을 추출할 수 없는 경우
     """
+    url_error = _source_url_error(url, "Twitter URL", _TWITTER_HOSTS)
+    if url_error:
+        raise ValueError(url_error)
+
     # 원본 URL에서 경로 추출 (예: /user/status/123)
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     path = parsed.path
 
@@ -96,6 +112,13 @@ def scrape_reddit_post(url: str) -> Dict:
     Raises:
         ValueError: 포스트를 추출할 수 없는 경우
     """
+    url_error = _source_url_error(url, "Reddit URL", _REDDIT_HOSTS)
+    if url_error:
+        raise ValueError(url_error)
+
+    if not _REDDIT_COMMENT_RE.search(url):
+        raise ValueError(f"유효하지 않은 Reddit URL: {url}")
+
     json_url = url.rstrip("/") + ".json"
 
     try:
@@ -103,7 +126,10 @@ def scrape_reddit_post(url: str) -> Dict:
             json_url,
             headers={"User-Agent": "InsightEngine/1.0"},
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if 300 <= resp.status_code < 400:
+            raise ValueError("Reddit 리다이렉트가 차단되었습니다.")
         resp.raise_for_status()
         data = resp.json()
     except (requests.RequestException, ValueError) as e:
@@ -162,6 +188,9 @@ def scrape_hackernews(url: str) -> Dict:
         ValueError: 아이템을 추출할 수 없는 경우
     """
     # URL에서 아이템 ID 추출
+    if not _host_allowed(url, _HN_HOSTS, allow_subdomains=False):
+        raise ValueError(f"유효하지 않은 Hacker News URL: {url}")
+
     match = _HN_ITEM_RE.search(url)
     if not match:
         raise ValueError(f"유효하지 않은 Hacker News URL: {url}")
@@ -238,6 +267,9 @@ def scrape_stackoverflow(url: str) -> Dict:
         ValueError: 질문을 추출할 수 없는 경우
     """
     match = _SO_QUESTION_RE.search(url)
+    if not _host_allowed(url, _SO_HOSTS, allow_subdomains=True):
+        raise ValueError(f"유효하지 않은 Stack Overflow URL: {url}")
+
     if not match:
         raise ValueError(f"유효하지 않은 Stack Overflow URL: {url}")
 
@@ -316,7 +348,11 @@ def scrape_stackoverflow(url: str) -> Dict:
 def _extract_with_trafilatura(url: str) -> tuple:
     """trafilatura로 본문 + 제목 추출."""
     try:
-        html = trafilatura.fetch_url(url)
+        url_error = public_url_error(url, label="소셜 콘텐츠 URL")
+        if url_error:
+            raise ValueError(url_error)
+
+        html = _fetch_social_html(url)
         if not html:
             return "", ""
 
@@ -325,14 +361,40 @@ def _extract_with_trafilatura(url: str) -> tuple:
         title = meta.title if meta and meta.title else ""
 
         return title, content
+    except ValueError as e:
+        logger.warning("소셜 URL fetch 차단/실패: %s — %s", url, e)
+        return "", ""
     except Exception as e:
         logger.warning("trafilatura 실패: %s — %s", url, e)
         return "", ""
 
 
+def _host_allowed(url: str, allowed_hosts: set[str], *, allow_subdomains: bool = True) -> bool:
+    try:
+        hostname = urlparse(url).hostname
+    except Exception:
+        return False
+    return hostname_matches(hostname, allowed_hosts, allow_subdomains=allow_subdomains)
+
+
+def _source_url_error(url: str, label: str, allowed_hosts: set[str]) -> str | None:
+    if not _host_allowed(url, allowed_hosts):
+        return f"{label} 도메인이 올바르지 않습니다."
+    return public_url_error(url, label=label)
+
+
+def _fetch_social_html(url: str) -> str:
+    response = fetch_public_url(
+        url,
+        headers=_REQUEST_HEADERS,
+        timeout=_REQUEST_TIMEOUT,
+        label="소셜 콘텐츠 URL",
+    )
+    return response.text or ""
+
+
 def _make_twitter_title(url: str) -> str:
     """Twitter URL에서 기본 제목을 생성합니다."""
-    from urllib.parse import urlparse
     parsed = urlparse(url)
     parts = parsed.path.strip("/").split("/")
     if parts:

@@ -1,8 +1,10 @@
 """tts_service 단위 테스트 (내부 함수 위주)"""
 import unittest
+from unittest.mock import MagicMock, patch
 
 from services.media.tts_service import (
     preprocess_for_tts,
+    _synthesize_openai,
     _split_text,
     OPENAI_VOICES,
     EDGE_VOICE_KO,
@@ -128,6 +130,48 @@ class TestSplitText(unittest.TestCase):
         text = '가' * 100
         result = _split_text(text, 30)
         self.assertGreater(len(result), 1)
+
+
+class TestOpenAITts(unittest.TestCase):
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'}, clear=False)
+    def test_openai_tts_disables_redirects(self):
+        """OpenAI TTS 호출은 인증 헤더 redirect를 따르지 않음"""
+        mock_httpx = MagicMock()
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b'mp3-bytes'
+        mock_client.post.return_value = mock_resp
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_httpx.Client.return_value = mock_client
+
+        with patch.dict('sys.modules', {'httpx': mock_httpx}):
+            result = _synthesize_openai('hello', 'alloy', 1.0)
+
+        self.assertEqual(result, b'mp3-bytes')
+        self.assertFalse(mock_httpx.Client.call_args.kwargs['follow_redirects'])
+
+    @patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'}, clear=False)
+    def test_openai_tts_redirect_blocked(self):
+        """OpenAI TTS 3xx 응답은 차단"""
+        mock_httpx = MagicMock()
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_resp.text = 'redirect'
+        mock_client.post.return_value = mock_resp
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_httpx.Client.return_value = mock_client
+
+        with patch.dict('sys.modules', {'httpx': mock_httpx}):
+            with self.assertRaises(RuntimeError) as ctx:
+                _synthesize_openai('hello', 'alloy', 1.0)
+
+        self.assertIn('리다이렉트', str(ctx.exception))
+        self.assertFalse(mock_httpx.Client.call_args.kwargs['follow_redirects'])
 
 
 if __name__ == '__main__':

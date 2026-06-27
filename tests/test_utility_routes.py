@@ -116,8 +116,22 @@ class TestHealthAndHome(_BaseTestCase):
         data = resp.get_json()
         self.assertEqual(data['status'], 'healthy')
         self.assertIn('api_version', data)
-        self.assertIn('request_count', data)
-        self.assertIn('error_rate', data)
+        self.assertIn('release', data)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.utility.operations.runtime_readiness_report')
+    @patch.dict('os.environ', {'FLASK_ENV': 'development'}, clear=False)
+    def test_ready_returns_runtime_readiness(self, mock_report, _):
+        mock_report.return_value = {
+            'status': 'ready',
+            'components': {'redis': {'status': 'ok', 'message': 'redis ping succeeded'}},
+            'duration_ms': 1.2,
+        }
+        resp = self.client.get('/ready')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data['status'], 'ready')
+        self.assertIn('components', data)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_home_returns_ok(self, _):
@@ -308,6 +322,17 @@ class TestWebhookRoutes(_BaseTestCase):
                                 json={'url': 'https://hooks.example.com/bad'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('services.platform.webhook_service.requests.post')
+    def test_webhook_test_blocks_unsafe_url_without_posting(self, mock_post, _):
+        resp = self.client.post('/api/webhook/test',
+                                json={'url': 'http://169.254.169.254/latest/meta-data/'},
+                                headers=_H)
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.get_json()['success'])
+        mock_post.assert_not_called()
 
 
 # ── 재생목록 ──────────────────────────────────────

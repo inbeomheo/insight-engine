@@ -8,10 +8,10 @@ GOOGLE_SHEETS_API_KEY + GOOGLE_SPREADSHEET_ID 필요.
 import json
 import logging
 import os
-import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -76,17 +76,22 @@ class GoogleSheetsService:
             f'{encoded_range}:append?valueInputOption=USER_ENTERED&key={self.api_key}'
         )
         body = {'values': [values]}
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode(),
-            headers={'Content-Type': 'application/json'},
-        )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            raise ValueError(f"Sheets API 오류 ({e.code}): {error_body}")
+            resp = requests.post(
+                url,
+                json=body,
+                headers={'Content-Type': 'application/json'},
+                timeout=15,
+                allow_redirects=False,
+            )
+            if 300 <= resp.status_code < 400:
+                raise ValueError(f"Sheets API 리다이렉트 차단 ({resp.status_code})")
+            resp.raise_for_status()
+            return resp.json()
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else 'unknown'
+            error_body = e.response.text if e.response is not None else str(e)
+            raise ValueError(f"Sheets API 오류 ({status}): {error_body}")
 
     def sync_content(self, title: str, content: str, style: str,
                      url: str = '', sheet_name: str = 'Contents') -> dict:

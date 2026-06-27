@@ -59,7 +59,11 @@ def _generate_openai(prompt: str, size: str) -> bytes:
                 'response_format': 'b64_json',
             },
             timeout=60,
+            allow_redirects=False,
         )
+        status_code = getattr(resp, 'status_code', 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            raise RuntimeError(f'이미지 생성 API 리다이렉트 차단: {resp.status_code}')
         resp.raise_for_status()
         data = resp.json()
         b64_str = data['data'][0]['b64_json']

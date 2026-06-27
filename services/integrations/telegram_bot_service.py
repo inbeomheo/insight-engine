@@ -5,11 +5,12 @@ Telegram Bot API (webhook 기반)를 통해
 URL 전송 시 자동으로 콘텐츠 생성을 요청합니다.
 TELEGRAM_BOT_TOKEN 환경변수 필요.
 """
-import json
 import logging
 import os
 import re
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -161,18 +162,22 @@ class TelegramBotService:
             return None
 
         try:
-            import urllib.request
             payload: dict = {'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}
             if reply_markup:
                 payload['reply_markup'] = reply_markup
 
-            req = urllib.request.Request(
+            resp = requests.post(
                 f'{self.api_url}/sendMessage',
-                data=json.dumps(payload).encode(),
+                json=payload,
                 headers={'Content-Type': 'application/json'},
+                timeout=10,
+                allow_redirects=False,
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read())
+            if 300 <= resp.status_code < 400:
+                logger.error("Telegram 메시지 전송 리다이렉트 차단: %s", resp.status_code)
+                return None
+            resp.raise_for_status()
+            return resp.json()
         except Exception as e:
             logger.error(f"Telegram 메시지 전송 실패: {e}")
             return None
@@ -182,14 +187,17 @@ class TelegramBotService:
         if not self.bot_token:
             return
         try:
-            import urllib.request
-            payload = json.dumps({'callback_query_id': callback_id, 'text': text}).encode()
-            req = urllib.request.Request(
+            resp = requests.post(
                 f'{self.api_url}/answerCallbackQuery',
-                data=payload,
+                json={'callback_query_id': callback_id, 'text': text},
                 headers={'Content-Type': 'application/json'},
+                timeout=5,
+                allow_redirects=False,
             )
-            urllib.request.urlopen(req, timeout=5)
+            if 300 <= resp.status_code < 400:
+                logger.error("Telegram 콜백 응답 리다이렉트 차단: %s", resp.status_code)
+                return
+            resp.raise_for_status()
         except Exception as e:
             logger.error(f"Telegram 콜백 응답 실패: {e}")
 
@@ -198,16 +206,23 @@ class TelegramBotService:
         if not self.bot_token:
             return False
         try:
-            import urllib.request
-            payload = json.dumps({'url': webhook_url}).encode()
-            req = urllib.request.Request(
+            payload_data = {'url': webhook_url}
+            webhook_secret = (os.getenv('TELEGRAM_WEBHOOK_SECRET') or '').strip()
+            if webhook_secret:
+                payload_data['secret_token'] = webhook_secret
+            resp = requests.post(
                 f'{self.api_url}/setWebhook',
-                data=payload,
+                json=payload_data,
                 headers={'Content-Type': 'application/json'},
+                timeout=15,
+                allow_redirects=False,
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                result = json.loads(resp.read())
-                return result.get('ok', False)
+            if 300 <= resp.status_code < 400:
+                logger.error("Telegram 웹훅 등록 리다이렉트 차단: %s", resp.status_code)
+                return False
+            resp.raise_for_status()
+            result = resp.json()
+            return result.get('ok', False)
         except Exception as e:
             logger.error(f"Telegram 웹훅 등록 실패: {e}")
             return False

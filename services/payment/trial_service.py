@@ -14,7 +14,7 @@ logger = ServiceLogger('TrialService')
 TRIAL_DURATION_DAYS = 7
 
 _LOCAL_TRIALS_FILE = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'trials.json'
+    os.getenv('APP_DATA_DIR', 'data'), 'trials.json'
 )
 
 

@@ -39,20 +39,27 @@ class TestSearchWeb(unittest.TestCase):
 
 class TestCrawlArticle(unittest.TestCase):
 
+    @patch('services.data.web_research_service._fetch_article_html', return_value='<html>...</html>')
     @patch('services.data.web_research_service.trafilatura')
-    def test_crawl_article_success(self, mock_traf):
-        mock_traf.fetch_url.return_value = '<html>...</html>'
+    def test_crawl_article_success(self, mock_traf, mock_fetch):
         mock_traf.extract.return_value = '기사 본문 내용입니다.'
         from services.data.web_research_service import crawl_article
         text = crawl_article('http://example.com/article')
         self.assertEqual(text, '기사 본문 내용입니다.')
+        mock_fetch.assert_called_once_with('http://example.com/article')
 
-    @patch('services.data.web_research_service.trafilatura')
-    def test_crawl_article_failure(self, mock_traf):
-        mock_traf.fetch_url.return_value = None
+    @patch('services.data.web_research_service._fetch_article_html', return_value=None)
+    def test_crawl_article_failure(self, mock_fetch):
         from services.data.web_research_service import crawl_article
         text = crawl_article('http://example.com/blocked')
         self.assertIsNone(text)
+
+    @patch('services.data.web_research_service.trafilatura')
+    def test_crawl_article_blocks_private_url(self, mock_traf):
+        from services.data.web_research_service import crawl_article
+        text = crawl_article('http://127.0.0.1/admin')
+        self.assertIsNone(text)
+        mock_traf.extract.assert_not_called()
 
 
 class TestResearchTopic(unittest.TestCase):

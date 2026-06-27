@@ -1,26 +1,66 @@
 :8090 {
-    encode gzip zstd
+	encode gzip zstd
 
-    handle /health {
-        reverse_proxy backend:5001
-    }
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		X-XSS-Protection "0"
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
 
-    @publicShare {
-        method GET
-        path /share/* /api/shares/*
-    }
-    handle @publicShare {
-        reverse_proxy backend:5001
-    }
+	handle /health {
+		reverse_proxy backend:5001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
 
-    handle {
-        basicauth {
-            inbeom $2a$14$3/yyohmMHJwLiyM8j7CLDevjysvIJ150X96SGUralxmFXJ9rtFy4K
-        }
+	handle /ready {
+		reverse_proxy backend:5001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
 
-        @backend path /api/* /generate /generate-stream /generate-batch /regenerate /feed.xml /version /metrics /openapi.json /oauth/*
-        reverse_proxy @backend backend:5001
+	@publicShare {
+		method GET
+		path /share/* /api/shares/*
+	}
+	handle @publicShare {
+		reverse_proxy backend:5001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
 
-        reverse_proxy frontend:3000
-    }
+	@signedInboundWebhook {
+		method POST
+		path /api/payment/webhook /api/paddle/webhook /api/crypto/webhook /api/webhooks/slack /api/webhooks/discord /api/webhooks/telegram
+	}
+	handle @signedInboundWebhook {
+		reverse_proxy backend:5001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		basic_auth {
+			{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+		}
+
+		@backend path /api/* /generate /generate-stream /generate-batch /regenerate /feed.xml /version /metrics /openapi.json /oauth/* /graphql /graphql/*
+		reverse_proxy @backend backend:5001 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+
+		reverse_proxy frontend:3000 {
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
 }

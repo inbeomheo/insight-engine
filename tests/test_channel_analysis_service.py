@@ -4,6 +4,10 @@ from unittest.mock import patch, MagicMock
 
 from services.content.channel_analysis_service import (
     _extract_channel_id,
+    _get_channel_info,
+    _get_recent_videos,
+    _get_video_stats,
+    _resolve_channel_id,
     _compute_stats,
     _cluster_topics,
     analyze_channel,
@@ -53,6 +57,65 @@ class TestExtractChannelId(unittest.TestCase):
         """하이픈 포함 채널 ID"""
         url = 'https://youtube.com/channel/UC-abc_DEF123'
         self.assertEqual(_extract_channel_id(url), 'UC-abc_DEF123')
+
+
+class TestYouTubeApiRequests(unittest.TestCase):
+
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service.requests.get')
+    def test_resolve_channel_id_disables_redirects(self, mock_get):
+        """채널 ID 조회는 API 키 redirect를 따르지 않음"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {'items': [{'id': 'UC_resolved'}]}
+        mock_get.return_value = mock_resp
+
+        self.assertEqual(_resolve_channel_id('handle'), 'UC_resolved')
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service.requests.get')
+    def test_resolve_channel_id_redirect_blocked(self, mock_get):
+        """채널 ID 조회 3xx 응답은 차단"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_get.return_value = mock_resp
+
+        self.assertIsNone(_resolve_channel_id('handle'))
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service.requests.get')
+    def test_channel_info_redirect_blocked(self, mock_get):
+        """채널 정보 조회 3xx 응답은 차단"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_get.return_value = mock_resp
+
+        self.assertIsNone(_get_channel_info('UC_test'))
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service.requests.get')
+    def test_recent_videos_redirect_blocked(self, mock_get):
+        """최근 영상 조회 3xx 응답은 차단"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_get.return_value = mock_resp
+
+        self.assertEqual(_get_recent_videos('UC_test'), [])
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
+
+    @patch('services.content.channel_analysis_service.YOUTUBE_API_KEY', 'test-key')
+    @patch('services.content.channel_analysis_service.requests.get')
+    def test_video_stats_redirect_blocked(self, mock_get):
+        """영상 통계 조회 3xx 응답은 차단"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_get.return_value = mock_resp
+
+        self.assertEqual(_get_video_stats(['video1']), {})
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
 
 class TestComputeStats(unittest.TestCase):

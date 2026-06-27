@@ -8,9 +8,11 @@ import logging
 import os
 from typing import Any, Dict
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MEMORY_PATH = "./data/user_memory"
+_DEFAULT_MEMORY_PATH = app_data_path("user_memory")
 
 # 메모리 키 정의
 MEMORY_KEYS = {
@@ -157,5 +159,5 @@ class MemoryService:
 
 
 # 싱글턴 인스턴스
-_store_path = os.environ.get("USER_MEMORY_PATH", _DEFAULT_MEMORY_PATH)
+_store_path = os.environ.get("USER_MEMORY_PATH") or _DEFAULT_MEMORY_PATH
 memory_service = MemoryService(store_path=_store_path)

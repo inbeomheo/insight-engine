@@ -33,6 +33,18 @@ _fernet_instance: Fernet | None = None
 _encryption_enabled: bool | None = None
 
 
+def _is_production_env() -> bool:
+    return (os.getenv('FLASK_ENV') or '').strip().lower() == 'production'
+
+
+def _missing_encryption_secret_error() -> ConfigurationError:
+    return ConfigurationError(
+        "ENCRYPTION_SECRET 환경변수가 필요합니다. "
+        "production에서는 API 키를 평문으로 저장할 수 없습니다.",
+        config_key='ENCRYPTION_SECRET',
+    )
+
+
 def _lazy_create_client(url: str, key: str):
     """supabase.create_client를 지연 로딩 (cold start ~1.5초 절감)."""
     from supabase import create_client
@@ -102,11 +114,7 @@ def _get_fernet() -> Fernet:
         secret = os.getenv('ENCRYPTION_SECRET')
 
         if not secret or not secret.strip():
-            raise ConfigurationError(
-                "ENCRYPTION_SECRET 환경변수가 필요합니다. "
-                "API 키 암호화를 위해 설정해주세요.",
-                config_key='ENCRYPTION_SECRET',
-            )
+            raise _missing_encryption_secret_error()
 
         key = hashlib.sha256(secret.encode()).digest()
         _fernet_instance = Fernet(base64.urlsafe_b64encode(key))
@@ -115,28 +123,36 @@ def _get_fernet() -> Fernet:
 
 
 def encrypt_api_key(api_key: str) -> str:
-    """API 키 암호화. 비활성화 시 원본 반환."""
+    """API 키 암호화. 개발 비활성화 시 원본 반환, production에서는 fail-closed."""
     if not api_key:
         return None
     if not _is_encryption_enabled():
+        if _is_production_env():
+            raise _missing_encryption_secret_error()
         logger.debug("암호화 비활성화 상태, 원본 저장")
         return api_key
     try:
         return _get_fernet().encrypt(api_key.encode()).decode()
     except ConfigurationError:
+        if _is_production_env():
+            raise
         logger.warning("암호화 설정 오류, 원본 저장")
         return api_key
 
 
 def decrypt_api_key(encrypted_key: str) -> str:
-    """API 키 복호화. 비활성화 시 원본 반환."""
+    """API 키 복호화. 개발 비활성화 시 원본 반환, production에서는 fail-closed."""
     if not encrypted_key:
         return None
     if not _is_encryption_enabled():
+        if _is_production_env():
+            raise _missing_encryption_secret_error()
         return encrypted_key
     try:
         return _get_fernet().decrypt(encrypted_key.encode()).decode()
     except ConfigurationError:
+        if _is_production_env():
+            raise
         return encrypted_key
     except Exception as e:
         logger.warning(f"API 키 복호화 실패: {e}")

@@ -1,0 +1,10 @@
+{
+  "ignored_vulnerabilities": [
+    {
+      "id": "CVE-2026-45829",
+      "package": "chromadb",
+      "reason": "pip-audit reports no fixed ChromaDB release as of 2026-06-27; ChromaDB is used as an in-process local vector store behind authenticated app workflows.",
+      "expires": "2026-07-27"
+    }
+  ]
+}

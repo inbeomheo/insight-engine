@@ -129,6 +129,8 @@ class SupabaseApiKeyVault(IApiKeyVault):
             if not rows or not rows[0].get('is_active'):
                 raise InvalidApiKey(f"활성 키 없음: provider={provider}, label={label}")
             decrypted = self._decrypt(rows[0]['encrypted_key'])
+            if not decrypted:
+                raise InvalidApiKey(f"키 복호화 실패: provider={provider}, label={label}")
             # TODO: last_used_at 갱신 (Phase 2 다음 PR)
             return decrypted
         except InvalidApiKey:

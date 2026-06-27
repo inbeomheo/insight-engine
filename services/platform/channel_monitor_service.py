@@ -32,7 +32,12 @@ def get_latest_video(channel_id: str) -> Optional[dict]:
                 'part': 'snippet',
             },
             timeout=10,
+            allow_redirects=False,
         )
+        status_code = getattr(resp, "status_code", 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            logger.error("YouTube API 리다이렉트 차단: %s", resp.status_code)
+            return None
         resp.raise_for_status()
         items = resp.json().get('items', [])
         if not items:

@@ -50,6 +50,9 @@ def restore_backup(filename):
     try:
         result = backup_service.restore_backup(filename)
         return _json(result)
+    except ValueError as e:
+        current_app.logger.warning('Invalid backup filename: %s', e)
+        return _err('잘못된 백업 파일명입니다.', 400)
     except FileNotFoundError as e:
         current_app.logger.warning('Backup file not found: %s', e)
         return _err('백업 파일을 찾을 수 없습니다.', 404)

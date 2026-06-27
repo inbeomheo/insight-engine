@@ -13,7 +13,15 @@ import feedparser
 from bs4 import BeautifulSoup
 import logging
 
+from utils.url_safety import fetch_public_url
+
 logger = logging.getLogger(__name__)
+
+_REQUEST_TIMEOUT = 15
+_REQUEST_HEADERS = {
+    "User-Agent": "InsightEngine/1.0",
+    "Accept": "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*;q=0.8",
+}
 
 
 def _clean_html(raw: str) -> str:
@@ -91,7 +99,7 @@ def parse_feed(url: str, max_items: int = 10) -> List[Dict]:
         ValueError: 유효하지 않은 피드이거나 파싱 실패
     """
     try:
-        feed = feedparser.parse(url)
+        feed = _parse_feed_document(url)
 
         # bozo == True 이면 파싱 오류 (단, 일부 피드는 bozo여도 파싱 가능)
         if feed.bozo and not feed.entries:
@@ -104,6 +112,27 @@ def parse_feed(url: str, max_items: int = 10) -> List[Dict]:
     except Exception as e:
         logger.error("parse_feed 실패: %s", e, exc_info=True)
         return []
+
+
+def _fetch_feed_content(url: str) -> bytes:
+    response = fetch_public_url(
+        url,
+        headers=_REQUEST_HEADERS,
+        timeout=_REQUEST_TIMEOUT,
+        label="RSS 피드 URL",
+    )
+    return response.content or b""
+
+
+def _parse_feed_document(url: str):
+    """Fetch a feed without redirects, then parse local bytes only."""
+    return feedparser.parse(_fetch_feed_content(url))
+
+
+def get_feed_title(url: str) -> str:
+    """Return the feed title using the same safe fetch path as parse_feed."""
+    feed = _parse_feed_document(url)
+    return getattr(feed.feed, "title", "") or url
 
 
 def get_latest_entries(url: str, since_days: int = 7) -> List[Dict]:

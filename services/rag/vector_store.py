@@ -3,12 +3,14 @@ import os
 import logging
 
 from services.rag.chroma_client_factory import get_chroma_client
+from utils.runtime_paths import app_data_path
 
 logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    def __init__(self, db_path: str = './data/chroma_db'):
+    def __init__(self, db_path: str | None = None):
+        db_path = db_path or os.environ.get('CHROMA_DB_PATH') or app_data_path('chroma_db')
         os.makedirs(db_path, exist_ok=True)
         # 프로세스 단위 싱글톤 클라이언트 사용 — video_qa_service와 동일 디렉토리 충돌 방지
         self._client = get_chroma_client(db_path)
@@ -72,5 +74,5 @@ class VectorStore:
 
 
 # 싱글턴 인스턴스
-_db_path = os.environ.get('CHROMA_DB_PATH', './data/chroma_db')
+_db_path = os.environ.get('CHROMA_DB_PATH') or app_data_path('chroma_db')
 vector_store = VectorStore(db_path=_db_path)

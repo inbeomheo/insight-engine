@@ -18,9 +18,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from utils.runtime_paths import app_data_path
+
 logger = logging.getLogger(__name__)
 
-DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "agent_state.db")
+DEFAULT_DB_PATH = app_data_path("agent_state.db")
 
 
 @dataclass
@@ -59,7 +61,7 @@ class AgentMemoryStore:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        self.db_path = db_path or os.environ.get("AGENT_DB_PATH", DEFAULT_DB_PATH)
+        self.db_path = db_path or os.environ.get("AGENT_DB_PATH") or DEFAULT_DB_PATH
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._init_db()
 

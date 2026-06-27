@@ -8,9 +8,10 @@ import json
 import logging
 import os
 import time
-import urllib.error
-import urllib.request
 
+import requests
+
+from utils.url_safety import is_production, public_url_error
 from ..plugin_interface import MCPPlugin
 
 logger = logging.getLogger(__name__)
@@ -121,19 +122,26 @@ class GhostPlugin(MCPPlugin):
         }
 
         posts_url = f'{api_url}/ghost/api/admin/posts/'
-        req = urllib.request.Request(
-            posts_url,
-            data=json.dumps(post_data).encode(),
-            headers={
+        url_error = public_url_error(posts_url, require_https=is_production(), label='Ghost API URL')
+        if url_error:
+            return {'success': False, 'message': url_error, 'url': None}
+
+        try:
+            resp = requests.post(
+                posts_url,
+                json=post_data,
+                headers={
                 'Authorization': f'Ghost {token}',
                 'Content-Type': 'application/json',
                 'Accept-Version': 'v5.0',
-            },
-        )
-
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
+                },
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= resp.status_code < 400:
+                return {'success': False, 'message': f'Ghost 리다이렉트 차단: {resp.status_code}', 'url': None}
+            resp.raise_for_status()
+            data = resp.json()
 
             post = data.get('posts', [{}])[0]
             post_url = post.get('url')
@@ -145,9 +153,11 @@ class GhostPlugin(MCPPlugin):
                 'url': post_url,
             }
 
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            logger.error(f"Ghost HTTP 오류: {e.code} — {error_body}")
+        except requests.HTTPError as e:
+            response = e.response
+            status = response.status_code if response is not None else 'unknown'
+            error_body = response.text if response is not None else str(e)
+            logger.error(f"Ghost HTTP 오류: {status} — {error_body}")
             try:
                 err_data = json.loads(error_body)
                 msg = err_data.get('errors', [{}])[0].get('message', error_body)

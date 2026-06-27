@@ -8,13 +8,20 @@ import json
 import os
 import time
 import uuid
-from threading import Lock
+from contextlib import nullcontext
+from copy import deepcopy
+from threading import RLock
 
 from services.core.logging_config import get_logger
 
 logger = get_logger('publish_queue')
 
-QUEUE_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'publish_queue.json')
+QUEUE_FILE = os.getenv(
+    'PUBLISH_QUEUE_FILE',
+    os.path.join(os.getenv('APP_DATA_DIR', 'data'), 'publish_queue.json'),
+)
+REDIS_KEY = os.getenv('PUBLISH_QUEUE_REDIS_KEY', 'insight-engine:publish_queue')
+REDIS_LOCK_KEY = os.getenv('PUBLISH_QUEUE_REDIS_LOCK_KEY', 'insight-engine:publish_queue:lock')
 
 
 class PublishQueueService:
@@ -24,28 +31,67 @@ class PublishQueueService:
     MAX_RETRIES = 3
     RETRY_DELAYS = [60, 300, 1800]  # 1분, 5분, 30분 (초)
 
-    def __init__(self):
+    def __init__(self, backend: str | None = None):
         self._queue: list[dict] = []
-        self._lock = Lock()
+        self._lock = RLock()
+        self.backend = (backend or os.getenv('PUBLISH_QUEUE_BACKEND', 'file')).strip().lower()
+        if self.backend not in {'file', 'redis'}:
+            logger.warning("알 수 없는 PUBLISH_QUEUE_BACKEND=%s — file backend 사용", self.backend)
+            self.backend = 'file'
+        self._redis = self._create_redis_client() if self.backend == 'redis' else None
         self._load_queue()
 
+    def _create_redis_client(self):
+        redis_url = os.getenv('PUBLISH_QUEUE_REDIS_URL') or os.getenv('REDIS_URL')
+        if not redis_url:
+            raise RuntimeError('PUBLISH_QUEUE_BACKEND=redis requires REDIS_URL or PUBLISH_QUEUE_REDIS_URL')
+
+        import redis
+
+        client = redis.from_url(
+            redis_url,
+            socket_connect_timeout=3,
+            socket_timeout=5,
+            decode_responses=True,
+        )
+        client.ping()
+        return client
+
+    def _store_lock(self):
+        if self._redis is None:
+            return nullcontext()
+        return self._redis.lock(REDIS_LOCK_KEY, timeout=30, blocking_timeout=5)
+
     def _save_queue(self):
-        """큐 상태를 파일로 저장."""
+        """큐 상태를 저장."""
+        if self._redis is not None:
+            self._redis.set(REDIS_KEY, json.dumps(self._queue, ensure_ascii=False, default=str))
+            return
+
         try:
             os.makedirs(os.path.dirname(QUEUE_FILE), exist_ok=True)
             with open(QUEUE_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self._queue, f, ensure_ascii=False, default=str)
-        except Exception:
-            pass  # 파일 저장 실패는 무시 (인메모리가 primary)
+        except Exception as e:
+            logger.warning("발행 큐 파일 저장 실패: %s", e)
 
     def _load_queue(self):
-        """시작 시 파일에서 큐 복원."""
+        """저장소에서 큐 복원."""
+        if self._redis is not None:
+            raw = self._redis.get(REDIS_KEY)
+            self._queue = json.loads(raw) if raw else []
+            return
+
         try:
             if os.path.exists(QUEUE_FILE):
                 with open(QUEUE_FILE, 'r', encoding='utf-8') as f:
                     self._queue = json.load(f)
         except Exception:
             self._queue = []
+
+    def _reload_queue(self):
+        if self._redis is not None:
+            self._load_queue()
 
     def enqueue(self, content_id: str, title: str, content: str,
                 plugin_id: str, user_id: str) -> dict:
@@ -67,7 +113,8 @@ class PublishQueueService:
                 'created_at': now,
                 'updated_at': now,
             }
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 self._queue.append(item)
                 self._save_queue()
             logger.info("큐 추가: %s (plugin=%s, title=%s)", item['id'], plugin_id, title[:30])
@@ -84,47 +131,56 @@ class PublishQueueService:
             now = time.time()
             results = []
 
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 # 처리 대상: status=queued, next_retry_at이 None이거나 현재 시간 이전
                 pending = [
                     item for item in self._queue
                     if item['status'] == 'queued'
                     and (item['next_retry_at'] is None or item['next_retry_at'] <= now)
                 ]
+                for item in pending:
+                    item['status'] = 'publishing'
+                    item['updated_at'] = time.time()
+                self._save_queue()
+                pending = [deepcopy(item) for item in pending]
 
             for item in pending:
                 item_id = item['id']
-                # 상태를 publishing으로 전환
-                with self._lock:
-                    item['status'] = 'publishing'
-                    item['updated_at'] = time.time()
-
                 try:
                     result = plugin_registry.execute(
                         item['plugin_id'],
                         item['content'],
                         item['title'],
                     )
-                    with self._lock:
+                    with self._lock, self._store_lock():
+                        self._reload_queue()
+                        current = self._find_item(item_id)
+                        if not current:
+                            continue
                         if result.get('success'):
-                            item['status'] = 'success'
-                            item['published_url'] = result.get('url')
-                            item['error_message'] = None
+                            current['status'] = 'success'
+                            current['published_url'] = result.get('url')
+                            current['error_message'] = None
                             logger.info("발행 성공: %s", item_id)
                         else:
                             self._handle_failure(
-                                item, result.get('message', '발행 실패')
+                                current, result.get('message', '발행 실패')
                             )
-                        item['updated_at'] = time.time()
+                        current['updated_at'] = time.time()
                         self._save_queue()
+                        results.append(self._sanitize(current))
                 except Exception as e:
-                    with self._lock:
-                        self._handle_failure(item, str(e))
-                        item['updated_at'] = time.time()
+                    with self._lock, self._store_lock():
+                        self._reload_queue()
+                        current = self._find_item(item_id)
+                        if not current:
+                            continue
+                        self._handle_failure(current, str(e))
+                        current['updated_at'] = time.time()
                         self._save_queue()
+                        results.append(self._sanitize(current))
                     logger.error("발행 예외: %s - %s", item_id, e)
-
-                results.append(self._sanitize(item))
 
             return results
         except Exception as e:
@@ -156,7 +212,8 @@ class PublishQueueService:
     def get_queue_status(self, user_id: str = None) -> list:
         """큐 상태 조회 (user_id 있으면 해당 사용자만)"""
         try:
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 items = self._queue
                 if user_id:
                     items = [i for i in items if i['user_id'] == user_id]
@@ -175,7 +232,8 @@ class PublishQueueService:
             {'queued': int, 'publishing': int, 'success': int, 'failed': int, 'total': int}
         """
         try:
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 items = self._queue
                 if user_id:
                     items = [i for i in items if i['user_id'] == user_id]
@@ -193,7 +251,8 @@ class PublishQueueService:
     def cancel_item(self, item_id: str) -> dict:
         """큐 항목 취소 — queued 상태만 취소 가능"""
         try:
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 item = self._find_item(item_id)
                 if not item:
                     return {'success': False, 'error': '항목을 찾을 수 없습니다.'}
@@ -213,7 +272,8 @@ class PublishQueueService:
     def retry_item(self, item_id: str) -> dict:
         """실패 항목 수동 재시도 — failed 상태만 재시도 가능"""
         try:
-            with self._lock:
+            with self._lock, self._store_lock():
+                self._reload_queue()
                 item = self._find_item(item_id)
                 if not item:
                     return {'success': False, 'error': '항목을 찾을 수 없습니다.'}

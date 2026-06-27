@@ -74,6 +74,10 @@ nul
 .coverage
 coverage.json
 htmlcov/
+playwright-report/
+test-results/
+tests/test-results/
+tests/e2e/test-results/
 
 # autoresearch 실험 결과
 autoresearch/prompt-tuning/scores/*_results.md

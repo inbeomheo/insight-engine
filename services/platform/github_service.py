@@ -37,7 +37,11 @@ def _fetch_readme_raw(owner: str, repo: str) -> str:
             api_url,
             headers={"Accept": "application/vnd.github.v3+json"},
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        status_code = getattr(resp, "status_code", 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            raise ValueError(f"GitHub API 리다이렉트 차단: {resp.status_code}")
         resp.raise_for_status()
         data = resp.json()
     except requests.HTTPError as e:
@@ -125,7 +129,11 @@ def _get_repo_metadata(owner: str, repo: str) -> Dict:
             f"{_GITHUB_API_BASE}/repos/{owner}/{repo}",
             headers={"Accept": "application/vnd.github.v3+json"},
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        status_code = getattr(resp, "status_code", 0)
+        if isinstance(status_code, int) and 300 <= status_code < 400:
+            return {"description": "", "stars": 0, "forks": 0}
         resp.raise_for_status()
         data = resp.json()
         return {

@@ -120,7 +120,7 @@ class TestStripeWebhook(_Base):
     def test_webhook_success(self, mock_ss, _):
         mock_ss.handle_webhook.return_value = {'success': True}
         resp = self.client.post('/api/payment/webhook', data=b'payload',
-                                headers={**_H, 'Stripe-Signature': 'sig'})
+                                headers={'Stripe-Signature': 'sig'})
         self.assertEqual(resp.status_code, 200)
 
     @patch(_SB_PATCH, return_value=False)
@@ -626,7 +626,7 @@ class TestCrypto(_Base):
         resp = self.client.post('/api/crypto/webhook',
                                 data=b'{"type":"charge:confirmed","data":{}}',
                                 content_type='application/json',
-                                headers={**_H, 'X-CC-Webhook-Signature': 'good'})
+                                headers={'X-CC-Webhook-Signature': 'good'})
         self.assertEqual(resp.status_code, 200)
 
 
@@ -656,7 +656,7 @@ class TestPaddle(_Base):
         resp = self.client.post('/api/paddle/webhook',
                                 data=b'{"event_type":"subscription.created","data":{}}',
                                 content_type='application/json',
-                                headers={**_H, 'Paddle-Signature': 'good'})
+                                headers={'Paddle-Signature': 'good'})
         self.assertEqual(resp.status_code, 200)
 
     @patch(_SB_PATCH, return_value=False)

@@ -14,6 +14,8 @@ from xml.etree import ElementTree
 import requests
 import logging
 
+from utils.url_safety import fetch_public_url, hostname_matches, public_url_error, url_hostname
+
 logger = logging.getLogger(__name__)
 
 # arXiv Atom 피드 네임스페이스
@@ -23,6 +25,7 @@ _ARXIV_NS = "http://arxiv.org/schemas/atom"
 _API_BASE = "http://export.arxiv.org/api/query"
 _SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1/paper/ARXIV:{arxiv_id}"
 _REQUEST_TIMEOUT = 15  # 초
+_ARXIV_PDF_ALLOWED_HOSTS = {"arxiv.org"}
 
 
 def _ns(tag: str) -> str:
@@ -59,6 +62,13 @@ def _fetch_citation_count(arxiv_id: str):
     except Exception:
         pass
     return None
+
+
+def _is_arxiv_pdf_url(url: str) -> bool:
+    """Return True only for public arxiv.org PDF URLs."""
+    if not hostname_matches(url_hostname(url), _ARXIV_PDF_ALLOWED_HOSTS):
+        return False
+    return public_url_error(url, label="arXiv PDF URL") is None
 
 
 def _parse_entry(entry: ElementTree.Element) -> Dict:
@@ -179,8 +189,15 @@ def fetch_paper_fulltext(arxiv_id: str) -> Dict:
         return paper
 
     try:
-        pdf_resp = requests.get(paper['pdf_url'], timeout=30)
-        pdf_resp.raise_for_status()
+        if not _is_arxiv_pdf_url(paper['pdf_url']):
+            logger.warning("안전하지 않은 arXiv PDF URL 차단: %s", paper['pdf_url'])
+            return paper
+
+        pdf_resp = fetch_public_url(
+            paper['pdf_url'],
+            timeout=30,
+            label="arXiv PDF URL",
+        )
 
         import io
         try:

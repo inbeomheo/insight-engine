@@ -17,7 +17,7 @@ _credit_lock = threading.Lock()
 
 # 로컬 폴백용 JSON 파일 경로
 _LOCAL_CREDITS_FILE = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'data', 'credits.json'
+    os.getenv('APP_DATA_DIR', 'data'), 'credits.json'
 )
 
 

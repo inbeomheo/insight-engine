@@ -146,6 +146,7 @@ def schedule_delete(post_id):
 
 
 @blog_bp.route('/api/cms/publish-all', methods=['POST'])
+@require_auth
 def cms_publish_all():
     """여러 CMS에 동시에 콘텐츠를 발행합니다."""
     from services.mcp.cms_hub import cms_hub
@@ -188,6 +189,7 @@ def cms_list_plugins():
 
 
 @blog_bp.route('/api/cms/validate-config', methods=['POST'])
+@require_auth
 def cms_validate_config():
     """플러그인 설정 유효성 검사"""
     from services.mcp.cms_hub import cms_hub

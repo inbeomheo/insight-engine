@@ -7,11 +7,18 @@ import trafilatura
 from duckduckgo_search import DDGS
 
 from services.core import ai_service
+from utils.url_safety import fetch_public_url
 
 logger = logging.getLogger(__name__)
 
 MAX_SEARCH_RESULTS = 5
 MAX_ARTICLE_LENGTH = 5000
+_REQUEST_TIMEOUT = 15
+_REQUEST_HEADERS = {
+    "User-Agent": "InsightEngine/1.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
+}
 
 
 def extract_keywords(transcripts: List[str], model: str) -> List[str]:
@@ -77,7 +84,7 @@ def crawl_article(url: str) -> Optional[str]:
         str 또는 None: 본문 텍스트
     """
     try:
-        downloaded = trafilatura.fetch_url(url)
+        downloaded = _fetch_article_html(url)
         if not downloaded:
             return None
         text = trafilatura.extract(downloaded)
@@ -87,6 +94,16 @@ def crawl_article(url: str) -> Optional[str]:
     except Exception as e:
         logger.warning('기사 크롤링 실패 (%s): %s', url, e)
         return None
+
+
+def _fetch_article_html(url: str) -> str:
+    response = fetch_public_url(
+        url,
+        headers=_REQUEST_HEADERS,
+        timeout=_REQUEST_TIMEOUT,
+        label='기사 URL',
+    )
+    return response.text or ""
 
 
 def _crawl_articles(search_results: List[Dict[str, str]]) -> List[Dict[str, str]]:

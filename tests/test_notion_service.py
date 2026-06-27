@@ -147,6 +147,8 @@ class TestExtractNotionPage(unittest.TestCase):
         self.assertIn('첫 번째 문단', result['content'])
         self.assertIn('## 소제목', result['content'])
         self.assertEqual(result['source_type'], 'notion')
+        self.assertFalse(mock_get.call_args_list[0].kwargs['allow_redirects'])
+        self.assertFalse(mock_get.call_args_list[1].kwargs['allow_redirects'])
 
     def test_missing_api_key(self):
         with self.assertRaises(ValueError) as ctx:
@@ -166,6 +168,19 @@ class TestExtractNotionPage(unittest.TestCase):
                 'bad_key',
             )
         self.assertIn('401', str(ctx.exception))
+
+    @patch('services.export.notion_service.requests.get')
+    def test_page_redirect_blocked(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=302)
+
+        with self.assertRaises(ValueError) as ctx:
+            extract_notion_page(
+                'https://notion.so/test/Page-abcdef1234567890abcdef1234567890',
+                'ntn_test_api_key',
+            )
+
+        self.assertIn('리다이렉트 차단', str(ctx.exception))
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
 
 if __name__ == '__main__':

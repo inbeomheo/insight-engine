@@ -17,6 +17,11 @@ _API_BASE = 'https://www.googleapis.com/youtube/v3'
 _REQUEST_TIMEOUT = 15
 
 
+def _redirect_blocked(resp: requests.Response) -> bool:
+    status_code = getattr(resp, 'status_code', 0)
+    return isinstance(status_code, int) and 300 <= status_code < 400
+
+
 def analyze_channel(channel_url: str) -> Dict:
     """YouTube 채널을 분석하여 통계와 주제 클러스터를 반환합니다.
 
@@ -93,7 +98,11 @@ def _resolve_channel_id(handle: str) -> Optional[str]:
                 'part': 'id',
             },
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if _redirect_blocked(resp):
+            logger.warning("채널 ID 조회 리다이렉트 차단 (@%s): %s", handle, resp.status_code)
+            return None
         resp.raise_for_status()
         items = resp.json().get('items', [])
         if items:
@@ -108,7 +117,11 @@ def _resolve_channel_id(handle: str) -> Optional[str]:
                 'part': 'id',
             },
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if _redirect_blocked(resp):
+            logger.warning("채널 ID 폴백 조회 리다이렉트 차단 (@%s): %s", handle, resp.status_code)
+            return None
         resp.raise_for_status()
         items = resp.json().get('items', [])
         if items:
@@ -131,7 +144,11 @@ def _get_channel_info(channel_id: str) -> Optional[Dict]:
                 'part': 'snippet,statistics',
             },
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if _redirect_blocked(resp):
+            logger.error("채널 정보 조회 리다이렉트 차단 (%s): %s", channel_id, resp.status_code)
+            return None
         resp.raise_for_status()
         items = resp.json().get('items', [])
         if not items:
@@ -167,7 +184,11 @@ def _get_recent_videos(channel_id: str, max_results: int = 50) -> List[Dict]:
                 'part': 'snippet',
             },
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if _redirect_blocked(resp):
+            logger.error("최근 영상 조회 리다이렉트 차단 (%s): %s", channel_id, resp.status_code)
+            return []
         resp.raise_for_status()
         items = resp.json().get('items', [])
 
@@ -211,7 +232,11 @@ def _get_video_stats(video_ids: List[str]) -> Dict[str, Dict]:
                 'part': 'statistics',
             },
             timeout=_REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+        if _redirect_blocked(resp):
+            logger.warning("영상 통계 조회 리다이렉트 차단: %s", resp.status_code)
+            return {}
         resp.raise_for_status()
         items = resp.json().get('items', [])
 

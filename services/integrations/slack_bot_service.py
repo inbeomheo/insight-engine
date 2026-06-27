@@ -6,12 +6,13 @@ SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET 환경변수 필요.
 """
 import hashlib
 import hmac
-import json
 import logging
 import os
 import re
 import time
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class SlackBotService:
     def verify_signature(self, body: bytes, timestamp: str, signature: str) -> bool:
         """Slack 요청 서명 검증 (재전송 공격 방지 포함)"""
         if not self.signing_secret:
-            return True  # 개발 환경에서 서명 미설정 시 통과
+            return os.getenv('FLASK_ENV', '').strip().lower() != 'production'
 
         # 5분 이상 지난 요청 거부
         try:
@@ -96,18 +97,21 @@ class SlackBotService:
             return None
 
         try:
-            import urllib.request
-            payload = json.dumps({'channel': channel, 'text': text}).encode()
-            req = urllib.request.Request(
+            resp = requests.post(
                 'https://slack.com/api/chat.postMessage',
-                data=payload,
+                json={'channel': channel, 'text': text},
                 headers={
                     'Authorization': f'Bearer {self.bot_token}',
                     'Content-Type': 'application/json',
                 },
+                timeout=10,
+                allow_redirects=False,
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read())
+            if 300 <= resp.status_code < 400:
+                logger.error("Slack 메시지 전송 리다이렉트 차단: %s", resp.status_code)
+                return None
+            resp.raise_for_status()
+            return resp.json()
         except Exception as e:
             logger.error(f"Slack 메시지 전송 실패: {e}")
             return None

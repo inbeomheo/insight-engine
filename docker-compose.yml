@@ -28,7 +28,7 @@ services:
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - REDIS_URL=redis://redis:6379/0
       - CHROMA_DB_PATH=/app/data/chroma_db
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET}
     volumes:
       - app_data:/app/data
       - app_cache:/app/cache

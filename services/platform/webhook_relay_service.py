@@ -7,10 +7,12 @@ ThreadPoolExecutor로 병렬 전송, 각 URL별 결과를 수집합니다.
 import json
 import logging
 import time
-import urllib.error
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
+
+import requests
+
+from services.platform.webhook_service import _is_production, _webhook_url_error
 
 logger = logging.getLogger(__name__)
 
@@ -91,23 +93,45 @@ class WebhookRelayService:
 
         for attempt in range(_MAX_RETRIES + 1):
             try:
-                req = urllib.request.Request(url, data=body, headers=all_headers)
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                url_error = _webhook_url_error(url, require_https=_is_production())
+                if url_error:
+                    return {
+                        'url': url,
+                        'success': False,
+                        'status': 0,
+                        'error': url_error,
+                    }
+
+                resp = requests.post(
+                    url,
+                    data=body,
+                    headers=all_headers,
+                    timeout=timeout,
+                    allow_redirects=False,
+                )
+                if 300 <= resp.status_code < 400:
+                    return {
+                        'url': url,
+                        'success': False,
+                        'status': resp.status_code,
+                        'error': f'HTTP {resp.status_code} redirect blocked',
+                    }
+                if 200 <= resp.status_code < 300:
                     return {
                         'url': url,
                         'success': True,
-                        'status': resp.status,
+                        'status': resp.status_code,
                         'error': None,
                     }
-            except urllib.error.HTTPError as e:
-                if attempt < _MAX_RETRIES and e.code >= 500:
+
+                if attempt < _MAX_RETRIES and resp.status_code >= 500:
                     time.sleep(1)
                     continue
                 return {
                     'url': url,
                     'success': False,
-                    'status': e.code,
-                    'error': f'HTTP {e.code}',
+                    'status': resp.status_code,
+                    'error': f'HTTP {resp.status_code}',
                 }
             except Exception as e:
                 if attempt < _MAX_RETRIES:

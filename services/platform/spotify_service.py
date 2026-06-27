@@ -62,7 +62,10 @@ def get_episode_info(url: str) -> Dict:
             OEMBED_URL,
             params={"url": url, "format": "json"},
             timeout=TIMEOUT,
+            allow_redirects=False,
         )
+        if 300 <= resp.status_code < 400:
+            raise ValueError(f"Spotify oEmbed 리다이렉트 차단: {resp.status_code}")
         resp.raise_for_status()
         data = resp.json()
 

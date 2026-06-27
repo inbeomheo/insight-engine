@@ -21,6 +21,23 @@ class TestBackupService(unittest.TestCase):
         backup_service.BACKUP_DIR = self._orig_dir
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
+    def test_default_backup_dir_prefers_app_data_backup_dir(self):
+        with patch.dict(os.environ, {
+            'APP_DATA_BACKUP_DIR': '/mnt/backups/insight-engine',
+            'CONTENT_BACKUP_DIR': '',
+        }):
+            self.assertEqual(
+                backup_service._default_backup_dir(),
+                Path('/mnt/backups/insight-engine/content-library'),
+            )
+
+    def test_default_backup_dir_prefers_explicit_content_backup_dir(self):
+        with patch.dict(os.environ, {'CONTENT_BACKUP_DIR': '/mnt/content-backups'}):
+            self.assertEqual(
+                backup_service._default_backup_dir(),
+                Path('/mnt/content-backups'),
+            )
+
     @patch('services.data.content_library_service.get_all_items_raw', return_value=[
         {'id': '1', 'title': '제목1', 'content': '내용1'},
         {'id': '2', 'title': '제목2', 'content': '내용2'},
@@ -69,7 +86,11 @@ class TestBackupService(unittest.TestCase):
     def test_restore_nonexistent_raises(self):
         """없는 백업 파일 복원 → FileNotFoundError"""
         with self.assertRaises(FileNotFoundError):
-            backup_service.restore_backup('nonexistent.json')
+            backup_service.restore_backup('backup_nonexistent.json')
+
+    def test_restore_rejects_invalid_filename(self):
+        with self.assertRaises(ValueError):
+            backup_service.restore_backup('../backup_test.json')
 
     def test_get_backup_info(self):
         """백업 메타데이터 조회"""
@@ -90,7 +111,7 @@ class TestBackupService(unittest.TestCase):
 
     def test_get_backup_info_nonexistent(self):
         """없는 백업 메타데이터 → None"""
-        self.assertIsNone(backup_service.get_backup_info('bad.json'))
+        self.assertIsNone(backup_service.get_backup_info('backup_bad.json'))
 
     @patch('services.data.content_library_service.get_all_items_raw', return_value=[{'id': '1'}])
     def test_prune_old_backups(self, mock_items):

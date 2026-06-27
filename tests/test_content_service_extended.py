@@ -137,15 +137,18 @@ class TestIsSafeCaptionUrl(unittest.TestCase):
 
     def test_youtube_domain(self):
         from services.core.content_service import _is_safe_caption_url
-        self.assertTrue(_is_safe_caption_url('https://www.youtube.com/api/timedtext?v=abc'))
+        with patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
+            self.assertTrue(_is_safe_caption_url('https://www.youtube.com/api/timedtext?v=abc'))
 
     def test_google_domain(self):
         from services.core.content_service import _is_safe_caption_url
-        self.assertTrue(_is_safe_caption_url('https://video.google.com/timedtext'))
+        with patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
+            self.assertTrue(_is_safe_caption_url('https://video.google.com/timedtext'))
 
     def test_googlevideo_domain(self):
         from services.core.content_service import _is_safe_caption_url
-        self.assertTrue(_is_safe_caption_url('https://r1---sn-abc.googlevideo.com/timedtext'))
+        with patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
+            self.assertTrue(_is_safe_caption_url('https://r1---sn-abc.googlevideo.com/timedtext'))
 
     def test_external_domain_blocked(self):
         from services.core.content_service import _is_safe_caption_url
@@ -158,6 +161,14 @@ class TestIsSafeCaptionUrl(unittest.TestCase):
     def test_ftp_scheme_blocked(self):
         from services.core.content_service import _is_safe_caption_url
         self.assertFalse(_is_safe_caption_url('ftp://youtube.com/caption'))
+
+    def test_allowed_domain_dns_private_blocked(self):
+        from services.core.content_service import _is_safe_caption_url
+        with patch(
+            'services.transcript.fallbacks.watch_page.public_url_error',
+            return_value='자막 URL DNS 해석 결과가 안전하지 않아 차단되었습니다.',
+        ):
+            self.assertFalse(_is_safe_caption_url('https://www.youtube.com/api/timedtext?v=abc'))
 
 
 class TestDownloadCaptionFromUrl(unittest.TestCase):
@@ -179,9 +190,11 @@ class TestDownloadCaptionFromUrl(unittest.TestCase):
         mock_resp.text = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n테스트 자막"
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
-        with patch('services.core.content_service._is_safe_caption_url', return_value=True):
+        with patch('services.core.content_service._is_safe_caption_url', return_value=True), \
+             patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
             result = _download_caption_from_url('https://www.youtube.com/api/timedtext?v=x')
             self.assertIn('테스트 자막', result)
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.core.content_service.requests.get')
     def test_xml_response(self, mock_get):
@@ -190,7 +203,8 @@ class TestDownloadCaptionFromUrl(unittest.TestCase):
         mock_resp.text = '<transcript><text start="0" dur="3">XML 자막</text></transcript>'
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
-        with patch('services.core.content_service._is_safe_caption_url', return_value=True):
+        with patch('services.core.content_service._is_safe_caption_url', return_value=True), \
+             patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
             result = _download_caption_from_url('https://www.youtube.com/api/timedtext?v=x')
             self.assertIn('XML 자막', result)
 
@@ -198,8 +212,17 @@ class TestDownloadCaptionFromUrl(unittest.TestCase):
     def test_timeout(self, mock_get):
         from services.core.content_service import _download_caption_from_url
         mock_get.side_effect = requests.exceptions.Timeout('timeout')
-        with patch('services.core.content_service._is_safe_caption_url', return_value=True):
+        with patch('services.core.content_service._is_safe_caption_url', return_value=True), \
+             patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
             self.assertEqual(_download_caption_from_url('https://www.youtube.com/api/timedtext'), '')
+
+    @patch('services.core.content_service.requests.get')
+    def test_redirect_blocked(self, mock_get):
+        from services.core.content_service import _download_caption_from_url
+        mock_get.return_value = MagicMock(status_code=302)
+        with patch('services.transcript.fallbacks.watch_page.public_url_error', return_value=None):
+            self.assertEqual(_download_caption_from_url('https://www.youtube.com/api/timedtext'), '')
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
 
 class TestCreateHttpSession(unittest.TestCase):
@@ -294,6 +317,7 @@ class TestGetTranscriptFromWatchPage(unittest.TestCase):
         mock_get.return_value = mock_resp
         result = _get_transcript_from_watch_page('dQw4w9WgXcQ')
         self.assertIn('error', result)
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.core.content_service.requests.get')
     def test_network_error(self, mock_get):

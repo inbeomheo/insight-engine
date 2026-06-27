@@ -81,6 +81,32 @@ class TestGoogleSheetsService(unittest.TestCase):
         svc.spreadsheet_id = 'sheet_id'
         self.assertFalse(svc.ensure_header_row())
 
+    @patch('services.integrations.gsheets_service.requests.post')
+    def test_append_row_disables_redirects(self, mock_post):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {'updates': {'updatedRange': 'A1'}}
+        mock_post.return_value = mock_resp
+        svc = GoogleSheetsService()
+        svc.api_key = 'key'
+        svc.spreadsheet_id = 'sheet_id'
+
+        result = svc.append_row(['a', 'b'])
+
+        self.assertEqual(result['updates']['updatedRange'], 'A1')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
+    @patch('services.integrations.gsheets_service.requests.post')
+    def test_append_row_blocks_redirect_response(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=302)
+        svc = GoogleSheetsService()
+        svc.api_key = 'key'
+        svc.spreadsheet_id = 'sheet_id'
+
+        with self.assertRaises(ValueError) as ctx:
+            svc.append_row(['a', 'b'])
+        self.assertIn('리다이렉트 차단', str(ctx.exception))
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
     def test_get_access_token_no_json(self):
         svc = GoogleSheetsService()
         svc._service_account_json = ''

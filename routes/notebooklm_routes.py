@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, jsonify, request, send_file
 
 from services.notebooklm.notebooklm_service import NotebookLmService
+from src.contexts.identity.interface.auth_decorators import require_auth
 
 notebooklm_bp = Blueprint('notebooklm', __name__, url_prefix='/api/notebooklm')
 
@@ -18,6 +19,7 @@ def auth_check():
 
 
 @notebooklm_bp.route('/generate', methods=['POST'])
+@require_auth
 def generate():
     """NotebookLM 콘텐츠 생성 요청."""
     data = request.get_json()

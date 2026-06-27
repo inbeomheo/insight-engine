@@ -4,12 +4,11 @@ Threads 발행 플러그인 (F7-18)
 Threads API (Meta Graph API 기반)를 통해 포스트를 게시합니다.
 Threads API Access Token이 필요합니다.
 """
-import json
 import logging
 import os
-import urllib.error
 import urllib.parse
-import urllib.request
+
+import requests
 
 from ..plugin_interface import MCPPlugin
 
@@ -81,11 +80,19 @@ class ThreadsPlugin(MCPPlugin):
 
         container_url = f'{THREADS_API_BASE}/{user_id}/threads'
         encoded = urllib.parse.urlencode(container_payload)
-        req = urllib.request.Request(f'{container_url}?{encoded}', method='POST')
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                container_data = json.loads(resp.read())
+            container_resp = requests.post(
+                f'{container_url}?{encoded}',
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= container_resp.status_code < 400:
+                return {'success': False, 'message': f'Threads 리다이렉트 차단: {container_resp.status_code}', 'url': None}
+            if container_resp.status_code >= 400:
+                logger.error(f"Threads HTTP 오류: {container_resp.status_code} — {container_resp.text}")
+                return {'success': False, 'message': f'Threads API 오류: {container_resp.status_code}', 'url': None}
+            container_data = container_resp.json()
             container_id = container_data.get('id', '')
             if not container_id:
                 return {'success': False, 'message': 'Threads 컨테이너 생성 실패', 'url': None}
@@ -96,9 +103,17 @@ class ThreadsPlugin(MCPPlugin):
                 'creation_id': container_id,
                 'access_token': access_token,
             })
-            req2 = urllib.request.Request(f'{publish_url}?{publish_params}', method='POST')
-            with urllib.request.urlopen(req2, timeout=30) as resp2:
-                publish_data = json.loads(resp2.read())
+            publish_resp = requests.post(
+                f'{publish_url}?{publish_params}',
+                timeout=30,
+                allow_redirects=False,
+            )
+            if 300 <= publish_resp.status_code < 400:
+                return {'success': False, 'message': f'Threads 리다이렉트 차단: {publish_resp.status_code}', 'url': None}
+            if publish_resp.status_code >= 400:
+                logger.error(f"Threads HTTP 오류: {publish_resp.status_code} — {publish_resp.text}")
+                return {'success': False, 'message': f'Threads API 오류: {publish_resp.status_code}', 'url': None}
+            publish_data = publish_resp.json()
 
             post_id = publish_data.get('id', '')
             return {
@@ -107,10 +122,6 @@ class ThreadsPlugin(MCPPlugin):
                 'url': None,  # Threads API는 직접 URL 미제공
             }
 
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            logger.error(f"Threads HTTP 오류: {e.code} — {error_body}")
-            return {'success': False, 'message': f'Threads API 오류: {e.code}', 'url': None}
-        except Exception as e:
+        except requests.RequestException as e:
             logger.error(f"Threads 발행 실패: {e}")
             return {'success': False, 'message': f'Threads 발행 실패: {str(e)}', 'url': None}

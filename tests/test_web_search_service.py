@@ -31,6 +31,19 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]['title'], '결과1')
         self.assertEqual(result[0]['url'], 'https://a.com')
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
+
+    @patch('services.data.web_search_service.requests.post')
+    @patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}, clear=False)
+    def test_redirect_blocked(self, mock_post):
+        """Tavily API 3xx 응답은 검색 실패로 처리"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_post.return_value = mock_resp
+
+        result = search('AI 트렌드')
+        self.assertEqual(result, [])
+        self.assertFalse(mock_post.call_args.kwargs['allow_redirects'])
 
     @patch('services.data.web_search_service.requests.post')
     @patch.dict('os.environ', {'TAVILY_API_KEY': 'test-key'}, clear=False)

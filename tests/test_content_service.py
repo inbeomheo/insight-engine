@@ -439,6 +439,7 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
 
         result = get_transcript_via_supadata('vid1', 'test-key')
         self.assertEqual(result, '자막 내용입니다')
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.core.content_service.requests.get')
     def test_success_transcript_list(self, mock_get):
@@ -453,6 +454,17 @@ class TestGetTranscriptViaSupadata(unittest.TestCase):
 
         result = get_transcript_via_supadata('vid1', 'test-key')
         self.assertEqual(result, '첫째 둘째')
+
+    @patch('services.core.content_service.requests.get')
+    def test_redirect_blocked(self, mock_get):
+        """Supadata API 3xx 응답은 차단"""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 302
+        mock_get.return_value = mock_resp
+
+        result = get_transcript_via_supadata('vid1', 'test-key')
+        self.assertIsNone(result)
+        self.assertFalse(mock_get.call_args.kwargs['allow_redirects'])
 
     @patch('services.core.content_service.requests.get')
     def test_401_error(self, mock_get):

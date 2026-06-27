@@ -4,10 +4,12 @@ import time
 from flask import current_app, jsonify, request
 
 from routes.blog_routes import blog_bp
+from src.contexts.identity.interface.auth_decorators import require_auth
 from utils.responses import handle_error
 
 
 @blog_bp.route('/api/qa-check', methods=['POST'])
+@require_auth
 def qa_check():
     """콘텐츠 QA 검증을 실행합니다."""
     try:
