@@ -14,6 +14,7 @@ def test_cutover_script_enforces_strict_external_gates():
     assert 'ALERT_WEBHOOK_REQUIRED="${ALERT_WEBHOOK_REQUIRED:-true}"' in script
     assert 'INSIGHT_BASE_URL or APP_BASE_URL is required' in script
     assert 'check_release_source_state.py --require-clean' in script
+    assert '--require-pushed' in script
     assert 'npm run verify:release' in script
     assert 'check_production_readiness.py' in script
     assert 'verify_docker_image_hygiene.sh "$image_ref"' in script

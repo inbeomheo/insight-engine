@@ -35,7 +35,7 @@ tls_min_days="${MONITOR_TLS_MIN_DAYS:-21}"
 image_ref="${IMAGE_REF:-insight-engine:local}"
 
 printf '== release source state ==\n'
-"$PY" scripts/check_release_source_state.py --require-clean
+"$PY" scripts/check_release_source_state.py --require-clean --require-pushed
 
 printf '== release verification ==\n'
 npm run verify:release
