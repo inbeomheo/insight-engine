@@ -253,6 +253,40 @@ def test_host_prereqs_rejects_loopback_backup_mounts(tmp_path):
     assert all('loopback' in check['message'] for check in storage_checks)
 
 
+def test_host_prereqs_rejects_system_backup_mounts(tmp_path):
+    backup = tmp_path / 'backups'
+    replica = tmp_path / 'replica'
+    backup.mkdir()
+    replica.mkdir()
+
+    def fake_run(command, **_kwargs):
+        if command[0] == 'findmnt':
+            path = command[3]
+            if path == str(check_host_prereqs.ROOT):
+                return _findmnt_completed('/dev/root', '/')
+            if path == str(backup):
+                return _findmnt_completed('/dev/nvme0n1p2', '/boot', fstype='ext4')
+            if path == str(replica):
+                return _findmnt_completed('/dev/nvme0n1p1', '/boot/efi', fstype='vfat')
+        return _completed()
+
+    with patch.object(check_host_prereqs, '_run', side_effect=fake_run):
+        checks = check_host_prereqs.backup_mount_checks(
+            {
+                'APP_DATA_BACKUP_VOLUME': str(backup),
+                'APP_DATA_BACKUP_REPLICA_VOLUME': str(replica),
+            },
+            required=True,
+        )
+
+    storage_checks = [
+        check for check in checks
+        if check['name'] in {'app_data_backup_mount', 'app_data_backup_replica_mount'}
+    ]
+    assert all(check['status'] == 'error' for check in storage_checks)
+    assert all('system mount' in check['message'] for check in storage_checks)
+
+
 def test_host_prereqs_can_require_backup_mounts_in_full_report(tmp_path):
     backup = tmp_path / 'backups'
     replica = tmp_path / 'replica'

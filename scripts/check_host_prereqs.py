@@ -44,6 +44,13 @@ UNSUITABLE_BACKUP_FSTYPES = {
     'tmpfs',
     'tracefs',
 }
+SYSTEM_BACKUP_MOUNT_TARGETS = {
+    '/boot',
+    '/boot/efi',
+    '/efi',
+    '/snap',
+    '/var/lib/docker',
+}
 
 
 def _truthy(value: str | None) -> bool:
@@ -257,6 +264,9 @@ def _backup_mount_storage_error(info: dict[str, str]) -> str | None:
     fstype = (info.get('fstype') or '').strip().lower()
     if fstype in UNSUITABLE_BACKUP_FSTYPES:
         return f'backup mounts must use durable storage, not {fstype or "unknown"}'
+    target = (info.get('target') or '').strip()
+    if target in SYSTEM_BACKUP_MOUNT_TARGETS:
+        return f'backup mounts must not use system mount {target}'
     source = (info.get('source') or '').strip().lower()
     if source.startswith('/dev/loop') or source == 'loop':
         return 'backup mounts must use external disk or network storage, not loopback files'
