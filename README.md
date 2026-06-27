@@ -461,6 +461,15 @@ HOST_CHECK_REQUIRE_BACKUP_MOUNTS=true \
 npm run ops:host-check
 ```
 
+컷오버 전 남은 production blocker를 한 번에 보려면 status 리포트를 실행합니다. 기본 리포트는 Git source provenance,
+production env, strict host prerequisite, 공개 base URL, alert webhook 설정을 JSON으로 요약합니다. 실제 public endpoint까지
+검증하려면 `--live-monitor`를 추가하세요.
+
+```bash
+npm run ops:production-status
+npm run ops:production-status -- --live-monitor
+```
+
 ChatMock은 production stack의 필수 의존성이 아니며, 로컬 테스트가 필요할 때만 `docker compose -f docker-compose.deploy.yml --profile chatmock up -d chatmock`으로 실행합니다.
 
 ### Kubernetes

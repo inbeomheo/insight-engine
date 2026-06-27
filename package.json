@@ -24,6 +24,7 @@
     "ops:monitor": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/monitor_readiness.py'",
     "ops:restore-drill": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; python3 scripts/backup_app_data.py drill-latest --summary'",
     "ops:host-check": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/check_host_prereqs.py'",
+    "ops:production-status": "sh -c 'if [ -f .env ]; then set -a; . ./.env; set +a; fi; PY=${PYTHON:-python3}; if [ -x .venv/bin/python ]; then PY=.venv/bin/python; fi; \"$PY\" scripts/production_blocker_report.py \"$@\"' --",
     "ops:cutover-check": "bash scripts/production_cutover_check.sh"
   },
   "devDependencies": {
