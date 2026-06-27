@@ -485,7 +485,7 @@ kubectl apply -f k8s/deployment.yaml
 
 실제 공개 도메인으로 전환하기 직전에는 strict cutover gate를 실행합니다. 이 명령은 전체 release gate(npm/Python audit,
 secret scan, production env, backup rehearsal/drill, Compose/Caddy/Kubernetes/CI/maintenance validation)를 먼저 통과시킨 뒤
-clean Git source state, Docker image hygiene, OCI revision label, Sentry DSN, alert webhook, Redis host sysctl, external backup/replica mount,
+clean Git source state, Docker image hygiene, OCI revision label, Sentry DSN, HTTPS public alert webhook, Redis host sysctl, external backup/replica mount,
 최신 backup restore drill, public DNS/HTTPS/TLS/release metadata monitor, webhook test alert를 한 번에 검증합니다.
 
 ```bash
@@ -497,6 +497,8 @@ HOST_CHECK_REQUIRE_EXTERNAL_BACKUPS=true \
 HOST_CHECK_REQUIRE_BACKUP_MOUNTS=true \
 ERROR_TRACKING_REQUIRED=true \
 ALERT_WEBHOOK_REQUIRED=true \
+MONITOR_WEBHOOK_REQUIRE_HTTPS=true \
+MONITOR_WEBHOOK_REQUIRE_PUBLIC_HOST=true \
 MONITOR_TLS_MIN_DAYS=21 \
 IMAGE_REF=insight-engine:local \
 npm run ops:cutover-check

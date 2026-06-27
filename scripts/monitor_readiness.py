@@ -24,6 +24,14 @@ GIT_SHA_PATTERN = re.compile(r'^[0-9a-fA-F]{7,64}$')
 PLACEHOLDER_RELEASE_VALUES = {'', 'local', 'unknown', 'dev', 'development', 'test', 'none', 'null'}
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirectHandler)
+
+
 def _env_int(name: str, default: int) -> int:
     raw = (os.getenv(name) or '').strip()
     if not raw:
@@ -99,12 +107,25 @@ def public_base_url(base_url: str) -> str:
     return urllib.parse.urlunparse((parsed.scheme, netloc, parsed.path, '', '', ''))
 
 
-def validate_webhook_url(webhook_url: str) -> str:
+def validate_webhook_url(
+    webhook_url: str,
+    *,
+    require_https: bool = False,
+    require_public_host: bool = False,
+) -> str:
     """Return a normalized alert webhook URL or raise ValueError."""
     normalized = (webhook_url or '').strip()
     parsed = urllib.parse.urlparse(normalized)
     if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
         raise ValueError('webhook URL must be an absolute http(s) URL')
+    if parsed.username or parsed.password:
+        raise ValueError('webhook URL must not include credentials')
+    if require_https and parsed.scheme != 'https':
+        raise ValueError('webhook URL must use HTTPS')
+    if require_public_host:
+        public_host_check = check_public_host(normalized, require_public_host=True)
+        if public_host_check and not public_host_check.get('ok'):
+            raise ValueError(f'webhook URL host must be public: {public_host_check.get("message")}')
     return normalized
 
 
@@ -134,7 +155,7 @@ def _request(
     raw_body = b''
     headers: dict[str, str] = {}
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _NO_REDIRECT_OPENER.open(request, timeout=timeout) as response:
             status_code = response.status
             headers = {key.lower(): value for key, value in response.headers.items()}
             raw_body = response.read(MAX_RESPONSE_BYTES)
@@ -624,9 +645,20 @@ def run_with_retries(
     }
 
 
-def send_webhook_alert(webhook_url: str, report: dict[str, Any], *, timeout: float = 5.0) -> dict[str, Any]:
+def send_webhook_alert(
+    webhook_url: str,
+    report: dict[str, Any],
+    *,
+    timeout: float = 5.0,
+    require_https: bool = False,
+    require_public_host: bool = False,
+) -> dict[str, Any]:
     """POST a generic alert payload to Slack/Discord/n8n-compatible webhooks."""
-    normalized_webhook_url = validate_webhook_url(webhook_url)
+    normalized_webhook_url = validate_webhook_url(
+        webhook_url,
+        require_https=require_https,
+        require_public_host=require_public_host,
+    )
     payload = {
         'service': report.get('service', 'insight-engine'),
         'status': report.get('status'),
@@ -645,7 +677,7 @@ def send_webhook_alert(webhook_url: str, report: dict[str, Any], *, timeout: flo
             'User-Agent': USER_AGENT,
         },
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _NO_REDIRECT_OPENER.open(request, timeout=timeout) as response:
         response.read(MAX_RESPONSE_BYTES)
         return {'status_code': response.status}
 
@@ -690,6 +722,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         action='store_true',
         default=_env_bool('ALERT_WEBHOOK_REQUIRED') or _env_bool('MONITOR_WEBHOOK_REQUIRED'),
         help='Fail the monitor run when no valid alert webhook is configured.',
+    )
+    parser.add_argument(
+        '--require-webhook-https',
+        action='store_true',
+        default=_env_bool('MONITOR_WEBHOOK_REQUIRE_HTTPS'),
+        help='Fail when the alert webhook URL is not HTTPS.',
+    )
+    parser.add_argument(
+        '--require-webhook-public-host',
+        action='store_true',
+        default=_env_bool('MONITOR_WEBHOOK_REQUIRE_PUBLIC_HOST'),
+        help='Fail when the alert webhook host is localhost, private, or resolves to non-public addresses.',
     )
     parser.add_argument(
         '--skip-edge-auth',
@@ -772,7 +816,11 @@ def main(argv: list[str] | None = None) -> int:
             alert_config_failed = True
         else:
             try:
-                validate_webhook_url(args.webhook_url)
+                validate_webhook_url(
+                    args.webhook_url,
+                    require_https=args.require_webhook_https,
+                    require_public_host=args.require_webhook_public_host,
+                )
             except ValueError as exc:
                 report['alert'] = {'status': 'error', 'message': str(exc)}
                 alert_config_failed = True
@@ -790,14 +838,26 @@ def main(argv: list[str] | None = None) -> int:
                     'status': 'test_alert',
                     'message': 'Insight Engine monitor webhook test',
                 }
-                report['alert_test'] = send_webhook_alert(args.webhook_url, test_report, timeout=args.timeout)
+                report['alert_test'] = send_webhook_alert(
+                    args.webhook_url,
+                    test_report,
+                    timeout=args.timeout,
+                    require_https=args.require_webhook_https,
+                    require_public_host=args.require_webhook_public_host,
+                )
             except Exception as exc:
                 report['alert_test'] = {'status': 'error', 'message': f'{exc.__class__.__name__}: {exc}'}
                 alert_test_failed = True
 
     if report['status'] != 'ready' and args.webhook_url and not args.dry_run and not args.send_test_alert:
         try:
-            report['alert'] = send_webhook_alert(args.webhook_url, report, timeout=args.timeout)
+            report['alert'] = send_webhook_alert(
+                args.webhook_url,
+                report,
+                timeout=args.timeout,
+                require_https=args.require_webhook_https,
+                require_public_host=args.require_webhook_public_host,
+            )
         except Exception as exc:
             report['alert'] = {'error': f'{exc.__class__.__name__}: {exc}'}
 

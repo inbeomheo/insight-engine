@@ -25,6 +25,8 @@ def _monitor_env(**overrides):
         'MONITOR_WEBHOOK_URL',
         'ALERT_WEBHOOK_REQUIRED',
         'MONITOR_WEBHOOK_REQUIRED',
+        'MONITOR_WEBHOOK_REQUIRE_HTTPS',
+        'MONITOR_WEBHOOK_REQUIRE_PUBLIC_HOST',
     ):
         env.pop(key, None)
     env.update(overrides)
@@ -48,11 +50,18 @@ class _JsonHandler(BaseHTTPRequestHandler):
             'path': self.path,
             'headers': {key: value for key, value in self.headers.items()},
         })
-        status_code, payload = self.server.routes.get(self.path, (404, {'error': 'not found'}))
+        route = self.server.routes.get(self.path, (404, {'error': 'not found'}))
+        if len(route) == 3:
+            status_code, payload, route_headers = route
+        else:
+            status_code, payload = route
+            route_headers = {}
         body = json.dumps(payload).encode('utf-8')
         self.send_response(status_code)
         self.send_header('Content-Type', 'application/json')
         for name, value in self.server.response_headers.items():
+            self.send_header(name, value)
+        for name, value in route_headers.items():
             self.send_header(name, value)
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
@@ -262,6 +271,20 @@ def test_monitor_readiness_public_host_rejects_private_dns_resolution():
 
     assert check['ok'] is False
     assert check['non_public_addresses'] == ['10.0.0.5']
+
+
+def test_monitor_readiness_request_does_not_follow_redirects():
+    routes = {
+        '/redirect': (302, {'status': 'redirect'}, {'Location': '/ok'}),
+        '/ok': (200, {'status': 'ok'}),
+    }
+
+    with _Server(routes) as server:
+        response = monitor_readiness._request('/redirect', server.base_url, timeout=1)
+        paths = [request['path'] for request in server.requests]
+
+    assert response['status_code'] == 302
+    assert paths == ['/redirect']
 
 
 def test_monitor_readiness_reports_tls_certificate_expiry_threshold():
@@ -500,6 +523,83 @@ def test_monitor_readiness_posts_generic_webhook_alert_without_secrets():
         assert webhook.posts[0]['text'].startswith('Insight Engine readiness is not_ready')
         assert webhook.posts[0]['content'].startswith('Insight Engine readiness is not_ready')
         assert webhook.posts[0]['base_url'] == 'https://app.example.com'
+
+
+def test_monitor_readiness_webhook_alert_does_not_follow_redirects():
+    report = {
+        'service': 'insight-engine',
+        'status': 'not_ready',
+        'base_url': 'https://app.example.com',
+        'checks': [],
+    }
+
+    with _Server(
+        post_routes={
+            '/hook': (302, {'redirect': True}, {'Location': '/other'}),
+            '/other': (200, {'ok': True}, {}),
+        },
+    ) as webhook:
+        try:
+            monitor_readiness.send_webhook_alert(f'{webhook.base_url}/hook', report, timeout=1)
+        except monitor_readiness.urllib.error.HTTPError as exc:
+            status_code = exc.code
+        else:
+            status_code = None
+
+    assert status_code == 302
+    assert webhook.posts == []
+
+
+def test_monitor_readiness_required_webhook_can_require_https():
+    with _Server(_ready_routes()) as server:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                '--base-url',
+                server.base_url,
+                '--require-webhook',
+                '--require-webhook-https',
+                '--webhook-url',
+                f'{server.base_url}/hook',
+                '--attempts',
+                '1',
+                '--retry-delay',
+                '0',
+                '--timeout',
+                '1',
+                '--dry-run',
+            ],
+            cwd=ROOT,
+            env=_monitor_env(),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    payload = json.loads(result.stdout)
+    assert result.returncode == 2
+    assert payload['alert']['status'] == 'error'
+    assert 'HTTPS' in payload['alert']['message']
+
+
+def test_monitor_readiness_required_webhook_can_require_public_host():
+    with patch.object(
+        monitor_readiness.socket,
+        'getaddrinfo',
+        return_value=[(monitor_readiness.socket.AF_INET, monitor_readiness.socket.SOCK_STREAM, 6, '', ('10.0.0.5', 443))],
+    ):
+        try:
+            monitor_readiness.validate_webhook_url(
+                'https://hooks.example.com/insight',
+                require_public_host=True,
+            )
+        except ValueError as exc:
+            message = str(exc)
+        else:
+            message = ''
+
+    assert 'host must be public' in message
 
 
 def test_monitor_readiness_cli_exits_nonzero_for_not_ready(tmp_path):

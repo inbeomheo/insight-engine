@@ -28,6 +28,8 @@ def test_cutover_script_enforces_strict_external_gates():
     assert '--require-https' in script
     assert '--tls-min-days "$tls_min_days"' in script
     assert '--require-webhook' in script
+    assert '--require-webhook-https' in script
+    assert '--require-webhook-public-host' in script
     assert '--send-test-alert' in script
 
 

@@ -66,4 +66,6 @@ printf '\n== public deployment monitor ==\n'
   --expected-release "$APP_RELEASE" \
   --expected-git-sha "$GIT_SHA" \
   --require-webhook \
+  --require-webhook-https \
+  --require-webhook-public-host \
   --send-test-alert
