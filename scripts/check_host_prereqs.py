@@ -257,7 +257,12 @@ def _backup_mount_storage_error(info: dict[str, str]) -> str | None:
     fstype = (info.get('fstype') or '').strip().lower()
     if fstype in UNSUITABLE_BACKUP_FSTYPES:
         return f'backup mounts must use durable storage, not {fstype or "unknown"}'
+    source = (info.get('source') or '').strip().lower()
+    if source.startswith('/dev/loop') or source == 'loop':
+        return 'backup mounts must use external disk or network storage, not loopback files'
     options = {option.strip().lower() for option in (info.get('options') or '').split(',') if option.strip()}
+    if 'loop' in options:
+        return 'backup mounts must use external disk or network storage, not loopback files'
     if 'ro' in options:
         return 'backup mounts must be writable'
     return None

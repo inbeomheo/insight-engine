@@ -446,7 +446,7 @@ frontend는 `/tmp`, `.next/cache`, `.next/diagnostics`만 tmpfs로 열고, edge�
 Redis는 `/data` volume과 `/tmp` tmpfs만 씁니다.
 운영에서 백업을 named volume이 아닌 host/external mount에 저장하려면 `APP_DATA_BACKUP_VOLUME=/var/backups/insight-engine`,
 `APP_DATA_BACKUP_REPLICA_VOLUME=/mnt/backup-replica/insight-engine`처럼 compose source를 절대 경로로 지정합니다.
-strict host check는 두 경로가 app workspace와 서로 다른 마운트에 있는지, 그리고 `tmpfs`/`overlay` 같은 휘발성 파일시스템이 아닌 durable storage인지 확인합니다.
+strict host check는 두 경로가 app workspace와 서로 다른 마운트에 있는지, 그리고 `tmpfs`/`overlay` 같은 휘발성 파일시스템이나 loopback file이 아닌 durable external disk/network storage인지 확인합니다.
 운영 호스트에서는 Redis background save/AOF 안정성을 위해 `vm.overcommit_memory=1`을 런타임과 영구 sysctl 설정에 모두 적용하세요.
 호스트 전제 조건은 다음 명령으로 점검할 수 있습니다. 운영에서는 strict 옵션을 켜서 Redis sysctl, persistent sysctl, external backup mount를 배포 게이트로 삼습니다.
 
