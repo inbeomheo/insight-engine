@@ -5,7 +5,27 @@ Flask 컨텍스트 유무와 관계없이 동작하는 로거 제공
 import logging
 import sys
 from functools import wraps
-from typing import Optional
+from typing import Any, Optional
+
+
+def _ensure_utf8_stdout() -> Any:
+    """콘솔 출력 스트림(sys.stdout)을 안전한 인코딩으로 재구성해 반환한다.
+
+    cp949 같은 제한적 인코딩 콘솔에서 non-cp949 문자(em-dash/불릿/이모지)가
+    UnicodeEncodeError를 일으켜 로그가 손실되는 것을 막는다. sys.stdout의 인코딩을
+    utf-8 + errors='replace'로 재구성해 surrogate 등 어떤 문자열에서도 인코딩 에러를
+    원천 차단한다(reconfigure 미지원 환경은 그대로 반환). 핸들러가 sys.stdout 참조를
+    그대로 들고 있어 pytest 캡처 교체 등에도 자연 반영된다.
+    """
+    stdout = sys.stdout
+    reconfigure = getattr(stdout, 'reconfigure', None)
+    if reconfigure is not None:
+        try:
+            reconfigure(encoding='utf-8', errors='replace')
+        except (ValueError, OSError):
+            pass
+    return stdout
+
 
 # 로그 포맷
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -31,7 +51,7 @@ def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
         logger.setLevel(level)
 
         # 콘솔 핸들러
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(_ensure_utf8_stdout())
         console_handler.setLevel(level)
         console_handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
 

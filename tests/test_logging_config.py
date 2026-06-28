@@ -1,5 +1,6 @@
 """logging_config 단위 테스트 — get_logger, ServiceLogger, with_flask_context"""
 import logging
+import sys
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -9,6 +10,7 @@ from services.core.logging_config import (
     with_flask_context,
     LOG_FORMAT,
     DATE_FORMAT,
+    _ensure_utf8_stdout,
 )
 
 
@@ -88,6 +90,32 @@ class TestPreDefinedLoggers(unittest.TestCase):
         )
         for slogger in [content_logger, ai_logger, supabase_logger, auth_logger, cache_logger]:
             self.assertIsInstance(slogger, ServiceLogger)
+
+
+class TestEnsureUtf8Stdout(unittest.TestCase):
+    """_ensure_utf8_stdout: cp949 인코딩 에러 원천 차단"""
+
+    def test_reconfigures_to_utf8_replace(self):
+        fake = MagicMock()
+        with patch.object(sys, 'stdout', fake):
+            _ensure_utf8_stdout()
+        fake.reconfigure.assert_called_once_with(encoding='utf-8', errors='replace')
+
+    def test_fallback_when_reconfigure_unavailable(self):
+        class NoReconfigure:
+            pass
+
+        fake = NoReconfigure()
+        with patch.object(sys, 'stdout', fake):
+            result = _ensure_utf8_stdout()
+        self.assertIs(result, fake)
+
+    def test_swallows_reconfigure_error(self):
+        fake = MagicMock()
+        fake.reconfigure.side_effect = ValueError('locked')
+        with patch.object(sys, 'stdout', fake):
+            result = _ensure_utf8_stdout()
+        self.assertIs(result, fake)
 
 
 if __name__ == '__main__':
