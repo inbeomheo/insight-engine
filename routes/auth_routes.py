@@ -6,7 +6,7 @@ import logging
 import os
 
 from flask import Blueprint, request, jsonify, g
-from utils.responses import success_response, error_response, sanitize_error_for_client
+from utils.responses import api_error, success_response, error_response, sanitize_error_for_client
 from src.contexts.identity.interface.auth_decorators import require_auth
 from src.shared.infrastructure.supabase_client import get_supabase, is_supabase_enabled
 from src.contexts.content_library import (
@@ -45,7 +45,7 @@ def _get_json_data():
 def _check_supabase():
     """Supabase 활성화 확인, 비활성화시 에러 응답 반환"""
     if not is_supabase_enabled():
-        return jsonify({'error': 'Supabase가 설정되지 않았습니다.'}), 400
+        return api_error('Supabase가 설정되지 않았습니다.', 400)
     return None
 
 

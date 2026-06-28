@@ -8,7 +8,7 @@ from flask import request, jsonify, current_app, send_file
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 @blog_bp.route('/api/export/docx', methods=['POST'])
@@ -21,7 +21,7 @@ def export_docx():
         content = data.get('content', '')
 
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from docx import Document
         from docx.shared import Pt
@@ -80,10 +80,10 @@ def export_docx():
         return response
 
     except ImportError:
-        return jsonify({'error': 'python-docx 패키지가 설치되지 않았습니다.'}), 500
+        return api_error('python-docx 패키지가 설치되지 않았습니다.', 500)
     except Exception as e:
         current_app.logger.error(f"DOCX export failed: {e}")
-        return jsonify({'error': 'DOCX 변환 중 오류가 발생했습니다.'}), 500
+        return api_error('DOCX 변환 중 오류가 발생했습니다.', 500)
 
 
 def _extract_headings(markdown_text):
@@ -270,7 +270,7 @@ def export_epub():
         author = data.get('author', '')
 
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.export.epub_service import create_epub
         epub_bytes = create_epub(title, content, author)
@@ -289,7 +289,7 @@ def export_epub():
         )
     except Exception as e:
         current_app.logger.error(f"EPUB export failed: {e}")
-        return jsonify({'error': 'EPUB 변환 중 오류가 발생했습니다.'}), 500
+        return api_error('EPUB 변환 중 오류가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/export/markdown', methods=['POST'])
@@ -301,7 +301,7 @@ def export_markdown():
         title = data.get('title', 'AI 생성 결과')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         frontmatter = data.get('frontmatter')
 
@@ -322,7 +322,7 @@ def export_markdown():
         return send_file(buffer, mimetype='text/markdown', as_attachment=True, download_name=f'{safe_title}.md')
     except Exception as e:
         current_app.logger.error(f"MD export failed: {e}")
-        return jsonify({'error': '마크다운 내보내기 실패'}), 500
+        return api_error('마크다운 내보내기 실패', 500)
 
 
 @blog_bp.route('/api/export/txt', methods=['POST'])
@@ -334,7 +334,7 @@ def export_txt():
         title = data.get('title', 'AI 생성 결과')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         line_ending = data.get('line_ending', 'unix')
         if line_ending not in ('unix', 'windows'):
@@ -347,7 +347,7 @@ def export_txt():
         return send_file(buffer, mimetype='text/plain', as_attachment=True, download_name=f'{safe_title}.txt')
     except Exception as e:
         current_app.logger.error(f"TXT export failed: {e}")
-        return jsonify({'error': '텍스트 내보내기 실패'}), 500
+        return api_error('텍스트 내보내기 실패', 500)
 
 
 @blog_bp.route('/api/export/zip', methods=['POST'])
@@ -359,7 +359,7 @@ def export_zip():
         title = data.get('title', 'AI 생성 결과')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.export.export_service import export_zip as _export_zip
         buffer = _export_zip(title, content)
@@ -368,7 +368,7 @@ def export_zip():
         return send_file(buffer, mimetype='application/zip', as_attachment=True, download_name=f'{safe_title}.zip')
     except Exception as e:
         current_app.logger.error(f"ZIP export failed: {e}")
-        return jsonify({'error': 'ZIP 내보내기 실패'}), 500
+        return api_error('ZIP 내보내기 실패', 500)
 
 
 @blog_bp.route('/api/export/slides', methods=['POST'])
@@ -382,7 +382,7 @@ def export_slides():
         title = data.get('title', '슬라이드')
 
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.media.slide_service import convert_to_slides
         html = convert_to_slides(content, theme)
@@ -397,7 +397,7 @@ def export_slides():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Slide export failed: {e}")
-        return jsonify({'error': '슬라이드 변환 중 오류가 발생했습니다.'}), 500
+        return api_error('슬라이드 변환 중 오류가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/export/srt', methods=['POST'])
@@ -410,7 +410,7 @@ def export_srt():
         title = data.get('title', '자막')
 
         if not segments:
-            return jsonify({'error': '변환할 자막 세그먼트가 없습니다.'}), 400
+            return api_error('변환할 자막 세그먼트가 없습니다.', 400)
 
         srt_lines = []
         for idx, seg in enumerate(segments, 1):
@@ -429,7 +429,7 @@ def export_srt():
 
     except Exception as e:
         current_app.logger.error(f"SRT export failed: {e}")
-        return jsonify({'error': 'SRT 변환 중 오류가 발생했습니다.'}), 500
+        return api_error('SRT 변환 중 오류가 발생했습니다.', 500)
 
 
 def _seconds_to_srt_time(seconds: float) -> str:
@@ -451,7 +451,7 @@ def export_infographic():
         title = data.get('title', '인포그래픽')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.media.infographic_service import generate_infographic
         html_content = generate_infographic(content, title)
@@ -464,7 +464,7 @@ def export_infographic():
                          download_name=f'{safe_title}_infographic.html')
     except Exception as e:
         current_app.logger.error(f"Infographic export failed: {e}")
-        return jsonify({'error': '인포그래픽 생성 실패'}), 500
+        return api_error('인포그래픽 생성 실패', 500)
 
 
 @blog_bp.route('/api/export/card-news', methods=['POST'])
@@ -477,12 +477,12 @@ def export_card_news():
         title = data.get('title', '카드뉴스')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.media.card_news_service import generate_card_news
         cards = generate_card_news(content, title)
         if not cards:
-            return jsonify({'error': '카드뉴스로 변환할 포인트가 없습니다.'}), 400
+            return api_error('카드뉴스로 변환할 포인트가 없습니다.', 400)
 
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -496,7 +496,7 @@ def export_card_news():
                          download_name=f'{safe_title}_cards.zip')
     except Exception as e:
         current_app.logger.error(f"Card news export failed: {e}")
-        return jsonify({'error': '카드뉴스 생성 실패'}), 500
+        return api_error('카드뉴스 생성 실패', 500)
 
 
 @blog_bp.route('/api/export/summary-card', methods=['POST'])
@@ -508,7 +508,7 @@ def export_summary_card():
         title = data.get('title', '요약')
         key_points = data.get('key_points', [])
         if not key_points:
-            return jsonify({'error': '핵심 포인트가 필요합니다.'}), 400
+            return api_error('핵심 포인트가 필요합니다.', 400)
 
         from services.content.summary_card_service import generate_summary_card
         svg = generate_summary_card(title, key_points)
@@ -521,7 +521,7 @@ def export_summary_card():
                          download_name=f'{safe_title}_card.svg')
     except Exception as e:
         current_app.logger.error(f"Summary card export failed: {e}")
-        return jsonify({'error': '요약 카드 생성 실패'}), 500
+        return api_error('요약 카드 생성 실패', 500)
 
 
 @blog_bp.route('/api/export/code-image', methods=['POST'])
@@ -534,7 +534,7 @@ def export_code_image():
         language = data.get('language', 'python')
         title = data.get('title', '')
         if not code:
-            return jsonify({'error': '코드가 필요합니다.'}), 400
+            return api_error('코드가 필요합니다.', 400)
 
         from services.media.code_image_service import generate_code_image
         html_content = generate_code_image(code, language, title)
@@ -547,7 +547,7 @@ def export_code_image():
                          download_name=f'{safe_title}_code.html')
     except Exception as e:
         current_app.logger.error(f"Code image export failed: {e}")
-        return jsonify({'error': '코드 이미지 생성 실패'}), 500
+        return api_error('코드 이미지 생성 실패', 500)
 
 
 @blog_bp.route('/api/export/newsletter-html', methods=['POST'])
@@ -559,7 +559,7 @@ def export_newsletter_html():
         title = data.get('title', 'Newsletter')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.content.newsletter_template_service import convert_to_newsletter
         html = convert_to_newsletter(content, title)
@@ -569,7 +569,7 @@ def export_newsletter_html():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Newsletter export failed: {e}")
-        return jsonify({'error': '뉴스레터 변환 실패'}), 500
+        return api_error('뉴스레터 변환 실패', 500)
 
 
 @blog_bp.route('/api/export/interactive-report', methods=['POST'])
@@ -581,7 +581,7 @@ def export_interactive_report():
         title = data.get('title', '보고서')
         content = data.get('content', '')
         if not content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         from services.content.interactive_report_service import generate_interactive_report
         html = generate_interactive_report(content, title)
@@ -591,7 +591,7 @@ def export_interactive_report():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Interactive report export failed: {e}")
-        return jsonify({'error': '인터랙티브 보고서 변환 실패'}), 500
+        return api_error('인터랙티브 보고서 변환 실패', 500)
 
 
 def _add_table_to_docx(doc, rows):
@@ -675,7 +675,7 @@ def export_html():
         print_friendly = data.get('print_friendly', False)
 
         if not html_content:
-            return jsonify({'error': '변환할 콘텐츠가 없습니다.'}), 400
+            return api_error('변환할 콘텐츠가 없습니다.', 400)
 
         include_toc = data.get('include_toc', False)
         lang = _detect_lang(html_content)

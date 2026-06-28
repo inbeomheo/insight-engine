@@ -5,7 +5,7 @@ from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error, clamp_query_int
+from utils.responses import api_error, handle_error, clamp_query_int
 
 
 # ── 지식 베이스 (RAG) ──────────────────────────────────────
@@ -19,24 +19,24 @@ def knowledge_upload():
     """참고 문서 업로드 → 벡터 DB에 저장"""
     from config import RAG_ENABLED
     if not RAG_ENABLED:
-        return jsonify({'error': 'RAG 기능이 비활성화되어 있습니다. RAG_ENABLED=true로 설정해주세요.'}), 400
+        return api_error('RAG 기능이 비활성화되어 있습니다. RAG_ENABLED=true로 설정해주세요.', 400)
 
     if 'file' not in request.files:
-        return jsonify({'error': '파일이 필요합니다.'}), 400
+        return api_error('파일이 필요합니다.', 400)
 
     file = request.files['file']
     if not file.filename:
-        return jsonify({'error': '파일명이 비어 있습니다.'}), 400
+        return api_error('파일명이 비어 있습니다.', 400)
 
     # 확장자 검증
     allowed_exts = {'txt', 'md', 'pdf'}
     ext = file.filename.lower().rsplit('.', 1)[-1] if '.' in file.filename else ''
     if ext not in allowed_exts:
-        return jsonify({'error': f'지원하지 않는 파일 형식입니다. ({", ".join(allowed_exts)}만 가능)'}), 400
+        return api_error(f'지원하지 않는 파일 형식입니다. ({", ".join(allowed_exts)}만 가능)', 400)
 
     file_bytes = file.read()
     if len(file_bytes) > MAX_UPLOAD_SIZE:
-        return jsonify({'error': f'파일 크기가 제한을 초과합니다. (최대 {MAX_UPLOAD_SIZE // (1024*1024)}MB)'}), 400
+        return api_error(f'파일 크기가 제한을 초과합니다. (최대 {MAX_UPLOAD_SIZE // (1024*1024)}MB)', 400)
 
     try:
         from services.rag.chunker import extract_text_from_file, chunk_text
@@ -45,7 +45,7 @@ def knowledge_upload():
 
         text = extract_text_from_file(file_bytes, file.filename)
         if not text.strip():
-            return jsonify({'error': '파일에서 텍스트를 추출할 수 없습니다.'}), 400
+            return api_error('파일에서 텍스트를 추출할 수 없습니다.', 400)
 
         chunks = chunk_text(text)
         doc_id = str(uuid.uuid4())
@@ -65,7 +65,7 @@ def knowledge_upload():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Knowledge upload failed: {e}")
-        return jsonify({'error': '문서 업로드 중 오류가 발생했습니다.'}), 500
+        return api_error('문서 업로드 중 오류가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/knowledge/list', methods=['GET'])
@@ -91,7 +91,7 @@ def knowledge_delete(doc_id):
     """문서 삭제"""
     from config import RAG_ENABLED
     if not RAG_ENABLED:
-        return jsonify({'error': 'RAG 기능이 비활성화되어 있습니다.'}), 400
+        return api_error('RAG 기능이 비활성화되어 있습니다.', 400)
 
     try:
         from services.rag import vector_store
@@ -99,7 +99,7 @@ def knowledge_delete(doc_id):
         return jsonify({'success': True})
     except Exception as e:
         current_app.logger.error(f"Knowledge delete failed: {e}")
-        return jsonify({'error': '문서 삭제 중 오류가 발생했습니다.'}), 500
+        return api_error('문서 삭제 중 오류가 발생했습니다.', 500)
 
 
 # ── GraphRAG 엔진 ──────────────────────────────────────
@@ -114,7 +114,7 @@ def graph_rag_ingest():
     data = request.get_json(silent=True) or {}
     text = data.get('text', '').strip()
     if not text:
-        return jsonify({'error': 'text는 필수입니다.'}), 400
+        return api_error('text는 필수입니다.', 400)
 
     try:
         engine = GraphRAGEngine()
@@ -133,7 +133,7 @@ def graph_rag_local_search():
     data = request.get_json(silent=True) or {}
     entities = data.get('entities', [])
     if not entities:
-        return jsonify({'error': 'entities 목록은 필수입니다.'}), 400
+        return api_error('entities 목록은 필수입니다.', 400)
 
     try:
         engine = GraphRAGEngine()
@@ -175,7 +175,7 @@ def multimodal_detect_type():
     data = request.get_json(silent=True) or {}
     file_path = data.get('file_path', '').strip()
     if not file_path:
-        return jsonify({'error': 'file_path는 필수입니다.'}), 400
+        return api_error('file_path는 필수입니다.', 400)
 
     rag = MultimodalRAG()
     file_type = rag.detect_file_type(file_path)
@@ -191,7 +191,7 @@ def multimodal_ingest():
     data = request.get_json(silent=True) or {}
     file_path = data.get('file_path', '').strip()
     if not file_path:
-        return jsonify({'error': 'file_path는 필수입니다.'}), 400
+        return api_error('file_path는 필수입니다.', 400)
 
     try:
         rag = MultimodalRAG()
@@ -215,7 +215,7 @@ def multimodal_query():
     data = request.get_json(silent=True) or {}
     query = data.get('query', '').strip()
     if not query:
-        return jsonify({'error': 'query는 필수입니다.'}), 400
+        return api_error('query는 필수입니다.', 400)
 
     try:
         rag = MultimodalRAG()

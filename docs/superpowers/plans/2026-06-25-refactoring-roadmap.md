@@ -8,16 +8,19 @@
 
 ## 진행 현황 (2026-06-25)
 
-**완료 (11커밋):**
+**완료 (PR #68, 11커밋):**
 - ✅ **1단계 무위험 청소** — middleware/workers/빌드스크립트/cov_report 삭제, ResultCard 도달불가 dead state(audioBlob/ttsLoading), HelpPanel/GuidedTour 제거(사용자 승인)
 - ✅ **2단계 소규모 중복 흡수** — 봇 정규식→_shared, routes 에러헬퍼+content_mgmt 중복, useExport triggerDownload, config 미사용심볼+__all__, Slack/Discord 웹훅 헬퍼, FAQ JSON-LD 스키마
 - ✅ **3단계 보안 #2** — SSRF 방어 `utils/url_safety.py` 추출 + social_scraper 4개 진입점 적용
 
+**완료 (PR #69, 5커밋):**
+- ✅ **3단계 #1 jsonify 에러응답 → api_error** — 약 270건 치환(integrations 107, advanced 51, 나머지 라우트 전반). 보안 분리 커밋(NotebookLM/agent 500 예외 노출 차단, utility videoId sanitize). 베이스라인 회귀 0건(master 79 fail → 78 fail). 의도적 보존: OAuth 멀티키, GitHubHandoffError 멀티키, 멀티라인 sanitize 호출.
+
 **별도 트랙:**
 - ⏭ resultStore 용량경고 버그 (spawn_task) — dead code가 아닌 잠복 버그라 분리
+- ⏭ NotebookLM 서비스 `result.stderr` raise 임베드 → 소스 레벨 내부 로깅 분리 (spawn_task)
 
 **남음:**
-- 3단계 #1: **jsonify 에러응답 274건+ → utils/responses** (방대 — 디렉토리별 점진 권장)
 - 4단계: 스타일 단일소스(#3), 타임스탬프/video_id 유틸 통합(#10), zustand 셀렉터(#5), raw fetch 흡수(#6)
 - 5단계: Supabase 데코레이터(#4), LiteLLM kwargs(#8), MCP 등록 일원화(#9), ResultCard god-component 분리(#7)
 - 6단계 대형(설계 선행): routes god-file 분리(#2), agents 이중 프레임워크 통합(#3, 용도 확정 선행), **DDD 평행구조+사용량 단일권위(#4 — 결제 정합성 위험, 사용자 합의 필수)**

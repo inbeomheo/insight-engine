@@ -11,7 +11,7 @@ from routes.utility._state import _PLAYLIST_CACHE, _PLAYLIST_CACHE_TTL
 from services.core import content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.platform.webhook_service import WebhookService
-from utils.responses import handle_error, sanitize_error_for_client
+from utils.responses import api_error, handle_error, sanitize_error_for_client
 
 
 @blog_bp.route('/api/webhook/test', methods=['POST'])
@@ -52,7 +52,7 @@ def playlist_videos():
         max_results = min(int(data.get('maxResults', 10)), 50)
 
         if not url:
-            return jsonify({'error': 'URL이 필요합니다.'}), 400
+            return api_error('URL이 필요합니다.', 400)
 
         # 캐시 키: URL + max_results
         cache_key = f"{url}|{max_results}"
@@ -70,7 +70,7 @@ def playlist_videos():
         elif content_service.is_channel_url(url):
             result = content_service.get_channel_videos(url, max_results)
         else:
-            return jsonify({'error': '유효한 채널 또는 재생목록 URL이 아닙니다.'}), 400
+            return api_error('유효한 채널 또는 재생목록 URL이 아닙니다.', 400)
 
         if 'error' in result:
             return jsonify(result), 400
@@ -82,7 +82,7 @@ def playlist_videos():
 
     except Exception as e:
         current_app.logger.error(f"Playlist videos failed: {e}")
-        return jsonify({'error': '영상 목록을 가져올 수 없습니다.'}), 500
+        return api_error('영상 목록을 가져올 수 없습니다.', 500)
 
 
 @blog_bp.route('/api/recommend-sources', methods=['POST'])
@@ -92,7 +92,7 @@ def api_recommend_sources():
         data = request.get_json(silent=True) or {}
         topic = data.get('topic', '').strip()
         if not topic:
-            return jsonify({'error': '주제를 입력해주세요.'}), 400
+            return api_error('주제를 입력해주세요.', 400)
 
         from services.content.source_recommender_service import recommend_sources
         sources = recommend_sources(topic)
@@ -102,7 +102,7 @@ def api_recommend_sources():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Source recommendation failed: {e}")
-        return jsonify({'error': '소스 추천에 실패했습니다.'}), 500
+        return api_error('소스 추천에 실패했습니다.', 500)
 
 
 @blog_bp.route('/api/wordcloud', methods=['POST'])
@@ -115,7 +115,7 @@ def api_wordcloud():
         max_words = min(int(data.get('max_words', 60)), 100)
 
         if not text:
-            return jsonify({'error': '텍스트가 필요합니다.'}), 400
+            return api_error('텍스트가 필요합니다.', 400)
 
         from services.media.wordcloud_service import generate_wordcloud
         svg = generate_wordcloud(text, max_words=max_words)
@@ -125,7 +125,7 @@ def api_wordcloud():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Wordcloud failed: {e}")
-        return jsonify({'error': '워드클라우드 생성에 실패했습니다.'}), 500
+        return api_error('워드클라우드 생성에 실패했습니다.', 500)
 
 
 @blog_bp.route('/api/schema', methods=['GET'])

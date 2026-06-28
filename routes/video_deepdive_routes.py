@@ -19,6 +19,7 @@ from services.media.video_deepdive_service import (
     transcript_segments_to_text,
 )
 from src.contexts.identity.interface.auth_decorators import require_auth
+from utils.responses import api_error
 
 
 def _library() -> VideoDeepDiveLibrary:
@@ -26,7 +27,7 @@ def _library() -> VideoDeepDiveLibrary:
 
 
 def _json_error(message: str, status: int):
-    return jsonify({"error": message}), status
+    return api_error(message, status)
 
 
 def _slides_from_payload(raw_slides) -> list[VideoSlide | dict]:

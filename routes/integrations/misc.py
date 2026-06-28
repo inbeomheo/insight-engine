@@ -1,5 +1,6 @@
 """기타 통합 — OpenAPI 문서, 앱 피드백, OAuth 2.0 공급자."""
 from flask import request, jsonify, current_app, g
+from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
@@ -59,13 +60,13 @@ def submit_feedback():
     page = data.get('page', '/')
 
     if not comment:
-        return jsonify({'error': '코멘트가 필요합니다.'}), 400
+        return api_error('코멘트가 필요합니다.', 400)
     if not (1 <= int(rating) <= 5):
-        return jsonify({'error': '별점은 1~5 사이여야 합니다.'}), 400
+        return api_error('별점은 1~5 사이여야 합니다.', 400)
 
     valid_types = {'bug', 'feature', 'general'}
     if feedback_type not in valid_types:
-        return jsonify({'error': f'유효하지 않은 피드백 유형: {feedback_type}'}), 400
+        return api_error(f'유효하지 않은 피드백 유형: {feedback_type}', 400)
 
     # 실제 운영 시 DB 저장 / Slack 알림 등으로 연결
     current_app.logger.info(
@@ -88,15 +89,15 @@ def oauth_register_client():
     scopes = data.get('scopes', ['read'])
 
     if not name:
-        return jsonify({'error': 'client_name이 필요합니다.'}), 400
+        return api_error('client_name이 필요합니다.', 400)
     if not redirect_uris:
-        return jsonify({'error': 'redirect_uris가 필요합니다.'}), 400
+        return api_error('redirect_uris가 필요합니다.', 400)
 
     try:
         result = oauth_provider_service.register_client(name, redirect_uris, scopes)
     except Exception as e:
         current_app.logger.error('OAuth client registration failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] OAuth 클라이언트 등록 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] OAuth 클라이언트 등록 중 문제가 발생했습니다.', 500)
     return jsonify(result), 201
 
 
@@ -119,7 +120,7 @@ def oauth_authorize():
         # 인증된 사용자 ID 사용
         user_id = getattr(g, 'user_id', None)
         if not user_id:
-            return jsonify({'error': '인증이 필요합니다.'}), 401
+            return api_error('인증이 필요합니다.', 401)
         try:
             code = oauth_provider_service.create_authorization_code(
                 client_id=client_id,
@@ -131,17 +132,17 @@ def oauth_authorize():
             )
         except Exception as e:
             current_app.logger.error('OAuth authorize failed: %s', e, exc_info=True)
-            return jsonify({'error': '[인증 실패] OAuth 인가 처리 중 문제가 발생했습니다.'}), 500
+            return api_error('[인증 실패] OAuth 인가 처리 중 문제가 발생했습니다.', 500)
 
         if not code:
-            return jsonify({'error': '인가 실패 — 클라이언트 또는 redirect_uri 검증 오류'}), 400
+            return api_error('인가 실패 — 클라이언트 또는 redirect_uri 검증 오류', 400)
 
         params = {'code': code}
         if state:
             params['state'] = state
         return jsonify({'redirect_to': f'{redirect_uri}?{urlencode(params)}'})
 
-    return jsonify({'error': 'GET 메서드를 사용하세요.'}), 405
+    return api_error('GET 메서드를 사용하세요.', 405)
 
 
 @blog_bp.route('/oauth/token', methods=['POST'])
@@ -190,13 +191,13 @@ def oauth_revoke():
     data = request.get_json(silent=True) or {}
     token = data.get('token', '')
     if not token:
-        return jsonify({'error': 'token이 필요합니다.'}), 400
+        return api_error('token이 필요합니다.', 400)
 
     try:
         oauth_provider_service.revoke_token(token)
     except Exception as e:
         current_app.logger.error('OAuth revoke failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] OAuth 토큰 폐기 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] OAuth 토큰 폐기 중 문제가 발생했습니다.', 500)
     return jsonify({'success': True})
 
 
@@ -208,5 +209,5 @@ def oauth_list_clients():
         clients = oauth_provider_service.list_clients()
     except Exception as e:
         current_app.logger.error('OAuth client list failed: %s', e, exc_info=True)
-        return jsonify({'error': '[서버 오류] OAuth 클라이언트 목록 조회 중 문제가 발생했습니다.'}), 500
+        return api_error('[서버 오류] OAuth 클라이언트 목록 조회 중 문제가 발생했습니다.', 500)
     return jsonify({'clients': clients})

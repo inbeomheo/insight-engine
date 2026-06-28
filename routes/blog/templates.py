@@ -7,7 +7,7 @@ from flask import request, jsonify, g
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 @blog_bp.route('/api/templates', methods=['GET'])
@@ -44,13 +44,13 @@ def create_template():
     prompt_text = (data.get('prompt_text') or '').strip()
 
     if not name:
-        return jsonify({'error': '템플릿 이름을 입력하세요.'}), 400
+        return api_error('템플릿 이름을 입력하세요.', 400)
     if not prompt_text:
-        return jsonify({'error': '프롬프트를 입력하세요.'}), 400
+        return api_error('프롬프트를 입력하세요.', 400)
     if len(name) > 50:
-        return jsonify({'error': '이름은 50자 이내로 입력하세요.'}), 400
+        return api_error('이름은 50자 이내로 입력하세요.', 400)
     if len(prompt_text) > 5000:
-        return jsonify({'error': '프롬프트는 5000자 이내로 입력하세요.'}), 400
+        return api_error('프롬프트는 5000자 이내로 입력하세요.', 400)
 
     try:
         template = svc_create(user_id=user_id, data={
@@ -64,7 +64,7 @@ def create_template():
         return handle_error(str(e))
 
     if template is None:
-        return jsonify({'error': '템플릿 저장에 실패했습니다.'}), 500
+        return api_error('템플릿 저장에 실패했습니다.', 500)
 
     return jsonify(template), 201
 
@@ -83,9 +83,9 @@ def update_template(template_id: str):
     if 'name' in data:
         name = (data['name'] or '').strip()
         if not name:
-            return jsonify({'error': '이름을 입력하세요.'}), 400
+            return api_error('이름을 입력하세요.', 400)
         if len(name) > 50:
-            return jsonify({'error': '이름은 50자 이내로 입력하세요.'}), 400
+            return api_error('이름은 50자 이내로 입력하세요.', 400)
         update_data['name'] = name
 
     if 'description' in data:
@@ -94,9 +94,9 @@ def update_template(template_id: str):
     if 'prompt_text' in data:
         prompt_text = (data['prompt_text'] or '').strip()
         if not prompt_text:
-            return jsonify({'error': '프롬프트를 입력하세요.'}), 400
+            return api_error('프롬프트를 입력하세요.', 400)
         if len(prompt_text) > 5000:
-            return jsonify({'error': '프롬프트는 5000자 이내로 입력하세요.'}), 400
+            return api_error('프롬프트는 5000자 이내로 입력하세요.', 400)
         update_data['prompt_text'] = prompt_text
 
     if 'style_base' in data:
@@ -107,7 +107,7 @@ def update_template(template_id: str):
 
     result = svc_update(template_id=template_id, user_id=user_id, data=update_data)
     if result is None:
-        return jsonify({'error': '템플릿을 찾을 수 없거나 수정 권한이 없습니다.'}), 404
+        return api_error('템플릿을 찾을 수 없거나 수정 권한이 없습니다.', 404)
 
     return jsonify(result)
 
@@ -122,7 +122,7 @@ def delete_template(template_id: str):
     success = svc_delete(template_id=template_id, user_id=user_id)
 
     if not success:
-        return jsonify({'error': '템플릿을 찾을 수 없거나 삭제 권한이 없습니다.'}), 404
+        return api_error('템플릿을 찾을 수 없거나 삭제 권한이 없습니다.', 404)
 
     return jsonify({'success': True})
 
@@ -137,7 +137,7 @@ def use_template(template_id: str):
     template = get_template_by_id(template_id=template_id, user_id=user_id)
 
     if template is None:
-        return jsonify({'error': '템플릿을 찾을 수 없습니다.'}), 404
+        return api_error('템플릿을 찾을 수 없습니다.', 404)
 
     # 비동기적으로 사용 횟수 증가 (실패해도 무방)
     try:

@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, jsonify, request, send_file
 
 from services.notebooklm.notebooklm_service import NotebookLmService
+from utils.responses import api_error, api_error_from_exception
 
 notebooklm_bp = Blueprint('notebooklm', __name__, url_prefix='/api/notebooklm')
 
@@ -22,27 +23,27 @@ def generate():
     """NotebookLM 콘텐츠 생성 요청."""
     data = request.get_json()
     if not data:
-        return jsonify({'error': '요청 본문이 비어있습니다.'}), 400
+        return api_error('요청 본문이 비어있습니다.', 400)
 
     content_type = data.get('type')
     url = data.get('url')
     source_text = data.get('source_text')
 
     if not content_type or not url or not source_text:
-        return jsonify({'error': 'type, url, source_text 필드가 필요합니다.'}), 400
+        return api_error('type, url, source_text 필드가 필요합니다.', 400)
 
     # 인증 확인
     auth = _service.check_auth()
     if not auth.get('valid'):
-        return jsonify({'error': auth.get('message', '인증이 필요합니다.')}), 401
+        return api_error(auth.get('message', '인증이 필요합니다.'), 401)
 
     try:
         result = _service.generate(content_type, url, source_text)
         return jsonify(result), 202
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return api_error(str(e), 400)
     except RuntimeError as e:
-        return jsonify({'error': str(e)}), 500
+        return api_error_from_exception(e, '[서버 오류] NotebookLM 콘텐츠 생성 중 문제가 발생했습니다.')
 
 
 @notebooklm_bp.route('/status/<artifact_id>', methods=['GET'])
@@ -63,4 +64,4 @@ def download(artifact_id):
             download_name=os.path.basename(file_path),
         )
     except RuntimeError as e:
-        return jsonify({'error': str(e)}), 400
+        return api_error_from_exception(e, '[서버 오류] 파일 다운로드 중 문제가 발생했습니다.')

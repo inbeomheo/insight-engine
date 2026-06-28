@@ -12,6 +12,7 @@ import re
 from hashlib import sha256
 
 from flask import Blueprint, g, jsonify, request
+from utils.responses import api_error
 
 from extensions import limiter
 
@@ -85,7 +86,7 @@ def support_chat():
         )
         return jsonify(result)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return api_error(str(exc), 400)
 
 
 @support_bp.route("/api/support/tickets", methods=["GET"])
@@ -104,9 +105,9 @@ def get_support_ticket(ticket_id: str):
     try:
         ticket = get_feedback_store().get_ticket(ticket_id)
     except KeyError:
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     if not _owns(ticket):
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     return jsonify({"ticket": ticket, "github": github_config_status()})
 
 
@@ -119,9 +120,9 @@ def create_support_github_issue(ticket_id: str):
     try:
         ticket = store.get_ticket(ticket_id)
     except KeyError:
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     if not _owns(ticket):
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     if ticket.get("github_issue_url"):
         return jsonify({"ticket": ticket, "issue": {"html_url": ticket["github_issue_url"], "number": ticket.get("github_issue_number")}})
     try:
@@ -139,9 +140,9 @@ def create_support_draft_pr(ticket_id: str):
     try:
         ticket = store.get_ticket(ticket_id)
     except KeyError:
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     if not _owns(ticket):
-        return jsonify({"error": "피드백을 찾을 수 없습니다."}), 404
+        return api_error("피드백을 찾을 수 없습니다.", 404)
     if ticket.get("github_pr_url"):
         return jsonify({"ticket": ticket, "pull_request": {"html_url": ticket["github_pr_url"], "number": ticket.get("github_pr_number")}})
     try:

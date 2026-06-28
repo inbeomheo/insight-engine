@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import handle_error, safe_error_or_fallback, sanitize_path, clamp_query_int, validate_content_length
+from utils.responses import api_error, handle_error, safe_error_or_fallback, sanitize_path, clamp_query_int, validate_content_length
 
 
 @blog_bp.route('/api/generate-multi', methods=['POST'])
@@ -36,23 +36,23 @@ def generate_multi():
         styles = data.get('styles', [])
 
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
         if not styles or not isinstance(styles, list) or len(styles) < 1:
-            return jsonify({'error': '최소 1개 이상의 스타일을 선택해주세요.'}), 400
+            return api_error('최소 1개 이상의 스타일을 선택해주세요.', 400)
         if len(styles) > 5:
-            return jsonify({'error': '최대 5개 스타일까지 선택할 수 있습니다.'}), 400
+            return api_error('최대 5개 스타일까지 선택할 수 있습니다.', 400)
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+            return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
         transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
         if error:
-            return jsonify({'error': error}), 400
+            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(model)
         main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
@@ -62,7 +62,7 @@ def generate_multi():
         style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
         valid_styles = [s for s in styles if s in style_prompts_dict]
         if not valid_styles:
-            return jsonify({'error': '유효한 스타일이 없습니다.'}), 400
+            return api_error('유효한 스타일이 없습니다.', 400)
 
         # 병렬 생성
         app = current_app._get_current_object()
@@ -156,25 +156,25 @@ def generate_campaign():
         modifiers = data.get('modifiers', {})
 
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
         if not pack_id or pack_id not in CAMPAIGN_PACKS:
-            return jsonify({'error': f'유효하지 않은 캠페인 팩: {pack_id}'}), 400
+            return api_error(f'유효하지 않은 캠페인 팩: {pack_id}', 400)
 
         pack = CAMPAIGN_PACKS[pack_id]
         styles = pack['styles']
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+            return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
         # YouTube 콘텐츠 1회 가져오기
         transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
         if error:
-            return jsonify({'error': error}), 400
+            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(model)
         main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
@@ -184,7 +184,7 @@ def generate_campaign():
         style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
         valid_styles = [s for s in styles if s in style_prompts_dict]
         if not valid_styles:
-            return jsonify({'error': '캠페인 팩에 유효한 스타일이 없습니다.'}), 400
+            return api_error('캠페인 팩에 유효한 스타일이 없습니다.', 400)
 
         # 병렬 생성 (generate_multi 패턴 동일)
         app = current_app._get_current_object()
@@ -274,13 +274,13 @@ def run_pipeline():
         pipeline_id = data.get('pipeline_id', 'blog_automation')
 
         if pipeline_id not in PIPELINE_PRESETS:
-            return jsonify({'error': f'알 수 없는 파이프라인: {pipeline_id}'}), 400
+            return api_error(f'알 수 없는 파이프라인: {pipeline_id}', 400)
 
         url = params['url']
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
 
         # 사용량 체크
         user_id = getattr(g, 'user_id', None)
@@ -346,7 +346,7 @@ def channel_analysis():
         channel_url = data.get('url', '').strip()
 
         if not channel_url:
-            return jsonify({'error': '채널 URL이 필요합니다.'}), 400
+            return api_error('채널 URL이 필요합니다.', 400)
 
         from services.content.channel_analysis_service import analyze_channel
         result = analyze_channel(channel_url)
@@ -370,7 +370,7 @@ def generate_thumbnail():
         size = data.get('size', '1792x1024')
 
         if not title:
-            return jsonify({'error': '제목이 필요합니다.'}), 400
+            return api_error('제목이 필요합니다.', 400)
 
         from services.media.thumbnail_service import generate_thumbnail as _gen_thumb
         result = _gen_thumb(title, keywords, size)
@@ -402,9 +402,9 @@ def generate_clips():
         clips = data.get('clips', [])
 
         if not video_url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not clips:
-            return jsonify({'error': '추출할 클립 목록이 필요합니다.'}), 400
+            return api_error('추출할 클립 목록이 필요합니다.', 400)
 
         from services.media.video_clip_service import extract_clips
         clip_paths = extract_clips(video_url, clips)
@@ -450,7 +450,7 @@ def generate_podcast():
         model = data.get('model', DEFAULT_MODEL)
 
         if not content:
-            return jsonify({'error': '팟캐스트로 변환할 콘텐츠가 필요합니다.'}), 400
+            return api_error('팟캐스트로 변환할 콘텐츠가 필요합니다.', 400)
 
         from services.media.podcast_service import generate_podcast_episode
         result = generate_podcast_episode(content, title, model)
@@ -483,19 +483,19 @@ def generate_multilang():
         languages = data.get('languages', ['ko', 'en', 'ja'])
 
         if not url:
-            return jsonify({'error': 'YouTube URL이 필요합니다.'}), 400
+            return api_error('YouTube URL이 필요합니다.', 400)
         if not content_service.is_youtube_url(url):
-            return jsonify({'error': '유효한 YouTube URL을 입력해주세요.'}), 400
+            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
 
         video_id = content_service.get_video_id(url)
         if not video_id:
-            return jsonify({'error': '유효하지 않은 YouTube URL입니다.'}), 400
+            return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
 
         transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
         if error:
-            return jsonify({'error': error}), 400
+            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(model)
         main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
@@ -504,7 +504,7 @@ def generate_multilang():
         style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
         sp = style_prompts_dict.get(style, '')
         if not sp:
-            return jsonify({'error': f'유효하지 않은 스타일: {style}'}), 400
+            return api_error(f'유효하지 않은 스타일: {style}', 400)
         from prompts import compose_style_prompt
         sp = compose_style_prompt(style, sp)
 
@@ -579,12 +579,12 @@ def inline_edit_content():
         model = data.get('model', DEFAULT_MODEL)
 
         if not content or not selection:
-            return jsonify({'error': '콘텐츠와 선택 영역이 필요합니다.'}), 400
+            return api_error('콘텐츠와 선택 영역이 필요합니다.', 400)
         length_error = validate_content_length(content)
         if length_error:
-            return jsonify({'error': length_error}), 400
+            return api_error(length_error, 400)
         if not instruction:
-            return jsonify({'error': '편집 지시가 필요합니다.'}), 400
+            return api_error('편집 지시가 필요합니다.', 400)
 
         result = ai_service.inline_edit(content, selection, instruction, model)
         return jsonify({
@@ -619,7 +619,7 @@ def agent_research():
         max_sources = clamp_query_int(data.get('max_sources'), default=5, min_val=1, max_val=10)
 
         if not topic:
-            return jsonify({'error': '리서치 주제가 필요합니다.'}), 400
+            return api_error('리서치 주제가 필요합니다.', 400)
 
         from services.agents.web_research_agent import ResearchAgent
 
@@ -707,7 +707,7 @@ def agent_pipeline():
         skip_research = data.get('skip_research', False)
 
         if not topic:
-            return jsonify({'error': '콘텐츠 주제가 필요합니다.'}), 400
+            return api_error('콘텐츠 주제가 필요합니다.', 400)
 
         from services.agents.web_research_agent import ResearchAgent
         from services.agents.content_pipeline_agent import WriterAgent, EditorAgent, SeoAgent
@@ -774,7 +774,7 @@ def update_user_memory():
         value = data.get('value')
 
         if not key:
-            return jsonify({'error': '메모리 키가 필요합니다.'}), 400
+            return api_error('메모리 키가 필요합니다.', 400)
 
         memory_service.update_memory(user_id, key, value)
         return jsonify({'success': True, 'memory': memory_service.get_memory(user_id)})
@@ -810,7 +810,7 @@ def auto_tags():
         content = data.get('content', '')
 
         if not content:
-            return jsonify({'error': '태그를 추출할 콘텐츠가 필요합니다.'}), 400
+            return api_error('태그를 추출할 콘텐츠가 필요합니다.', 400)
 
         from services.data.auto_tag_service import generate_tags
         result = generate_tags(content)
@@ -836,7 +836,7 @@ def content_brief():
         keywords = data.get('keywords')
 
         if not topic:
-            return jsonify({'error': '주제를 입력해주세요.'}), 400
+            return api_error('주제를 입력해주세요.', 400)
 
         from services.content.brief_service import generate_brief
         result = generate_brief(topic, keywords)
@@ -863,7 +863,7 @@ def competitor_analysis():
         my_content = data.get('my_content')
 
         if not keyword:
-            return jsonify({'error': '분석할 키워드를 입력해주세요.'}), 400
+            return api_error('분석할 키워드를 입력해주세요.', 400)
 
         from services.seo.competitor_analysis_service import analyze_competitors
         result = analyze_competitors(keyword, my_content)
@@ -889,7 +889,7 @@ def content_score():
         content = data.get('content', '')
 
         if not content:
-            return jsonify({'error': '점수를 계산할 콘텐츠가 필요합니다.'}), 400
+            return api_error('점수를 계산할 콘텐츠가 필요합니다.', 400)
 
         from services.quality.quality_service import calculate_comprehensive_score
         result = calculate_comprehensive_score(content)
@@ -915,7 +915,7 @@ def add_commentary():
         model = data.get('model')
 
         if not content:
-            return jsonify({'error': '해설을 추가할 콘텐츠가 필요합니다.'}), 400
+            return api_error('해설을 추가할 콘텐츠가 필요합니다.', 400)
 
         from services.content.commentary_service import add_commentary as _add_commentary
         result = _add_commentary(content, model)
@@ -943,7 +943,7 @@ def progressive_summary():
         model = data.get('model')
 
         if not content:
-            return jsonify({'error': '요약할 콘텐츠가 필요합니다.'}), 400
+            return api_error('요약할 콘텐츠가 필요합니다.', 400)
 
         from services.content.progressive_summary_service import generate_progressive_summary
         result = generate_progressive_summary(content, model)
@@ -976,7 +976,7 @@ def finetune_collect():
             data.get('output_dir', 'finetune'), './data'
         )
     except ValueError:
-        return jsonify({'error': '출력 경로가 허용 범위를 벗어났습니다.'}), 400
+        return api_error('출력 경로가 허용 범위를 벗어났습니다.', 400)
 
     try:
         collector = AutoDataCollector(
@@ -987,7 +987,7 @@ def finetune_collect():
         result = collector.collect_from_supabase(days_back=days_back, limit=limit)
 
         if 'error' in result:
-            return jsonify({'error': result['error']}), 400
+            return api_error(result['error'], 400)
 
         return jsonify({'success': True, **result})
     except Exception as e:
@@ -1004,20 +1004,20 @@ def finetune_collect_local():
     data = request.get_json(silent=True) or {}
     cache_db_path = data.get('cache_db_path', '')
     if not cache_db_path:
-        return jsonify({'error': '캐시 DB 경로가 필요합니다.'}), 400
+        return api_error('캐시 DB 경로가 필요합니다.', 400)
 
     # 경로 순회 방어: cache_db_path와 output_dir을 허용 범위 내로 제한
     try:
         safe_cache_path = sanitize_path(cache_db_path, './data')
     except ValueError:
-        return jsonify({'error': '캐시 DB 경로가 허용 범위를 벗어났습니다.'}), 400
+        return api_error('캐시 DB 경로가 허용 범위를 벗어났습니다.', 400)
 
     try:
         safe_output_dir = sanitize_path(
             data.get('output_dir', 'finetune'), './data'
         )
     except ValueError:
-        return jsonify({'error': '출력 경로가 허용 범위를 벗어났습니다.'}), 400
+        return api_error('출력 경로가 허용 범위를 벗어났습니다.', 400)
 
     try:
         collector = AutoDataCollector(
@@ -1028,7 +1028,7 @@ def finetune_collect_local():
         result = collector.collect_from_local_cache(safe_cache_path)
 
         if 'error' in result:
-            return jsonify({'error': result['error']}), 400
+            return api_error(result['error'], 400)
 
         return jsonify({'success': True, **result})
     except Exception as e:

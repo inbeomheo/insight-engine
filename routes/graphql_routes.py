@@ -9,6 +9,7 @@ import re
 from typing import Any, Optional
 
 from flask import Blueprint, request, jsonify, current_app, g
+from utils.responses import api_error
 
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage.usage_service import UsageService
@@ -192,7 +193,7 @@ def graphql_endpoint():
     if request.method == 'GET':
         # GraphiQL UI는 개발 모드에서만 허용
         if not current_app.debug:
-            return jsonify({'error': 'GraphiQL은 개발 모드에서만 사용 가능합니다.'}), 403
+            return api_error('GraphiQL은 개발 모드에서만 사용 가능합니다.', 403)
         return _graphiql_html(), 200, {'Content-Type': 'text/html'}
 
     body = request.get_json(silent=True)

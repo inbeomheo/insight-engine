@@ -5,7 +5,7 @@ from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 # ── Notion 연동 ──────────────────────────────────────
@@ -19,16 +19,16 @@ def notion_import():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     page_url = data.get('url', '').strip()
     if not page_url:
-        return jsonify({'error': 'Notion 페이지 URL이 필요합니다.'}), 400
+        return api_error('Notion 페이지 URL이 필요합니다.', 400)
 
     # API 키: 요청 본문 > 환경변수
     api_key = data.get('api_key') or os.getenv('NOTION_API_KEY', '')
     if not api_key:
-        return jsonify({'error': 'Notion API 키가 설정되지 않았습니다.'}), 400
+        return api_error('Notion API 키가 설정되지 않았습니다.', 400)
 
     try:
         result = extract_notion_page(page_url, api_key)
@@ -37,7 +37,7 @@ def notion_import():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Notion import failed: {e}')
-        return jsonify({'error': 'Notion 페이지 가져오기 중 오류가 발생했습니다.'}), 500
+        return api_error('Notion 페이지 가져오기 중 오류가 발생했습니다.', 500)
 
 
 @blog_bp.route('/api/notion/status', methods=['GET'])
@@ -58,11 +58,11 @@ def gdocs_import():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     doc_url = data.get('url', '').strip()
     if not doc_url:
-        return jsonify({'error': 'Google Docs URL이 필요합니다.'}), 400
+        return api_error('Google Docs URL이 필요합니다.', 400)
 
     api_key = data.get('api_key') or os.getenv('GOOGLE_API_KEY', '')
 
@@ -73,7 +73,7 @@ def gdocs_import():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Google Docs import failed: {e}')
-        return jsonify({'error': 'Google Docs 가져오기 중 오류가 발생했습니다.'}), 500
+        return api_error('Google Docs 가져오기 중 오류가 발생했습니다.', 500)
 
 
 # ── RSS 구독 ──────────────────────────────────────
@@ -87,11 +87,11 @@ def rss_subscribe():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '요청 데이터가 없습니다.'}), 400
+        return api_error('요청 데이터가 없습니다.', 400)
 
     feed_url = data.get('feed_url')
     if not feed_url:
-        return jsonify({'error': 'feed_url은 필수입니다.'}), 400
+        return api_error('feed_url은 필수입니다.', 400)
 
     title = data.get('title', '')
     user_id = getattr(g, 'user_id', None) or 'anonymous'
@@ -123,7 +123,7 @@ def rss_unsubscribe(feed_id: str):
     user_id = getattr(g, 'user_id', None) or 'anonymous'
     success = unsubscribe(user_id, feed_id)
     if not success:
-        return jsonify({'error': '해당 구독을 찾을 수 없습니다.'}), 404
+        return api_error('해당 구독을 찾을 수 없습니다.', 404)
     return jsonify({'success': True})
 
 
@@ -137,15 +137,15 @@ def bookmarks_parse():
     from services.data.bookmark_import_service import parse_bookmarks
 
     if 'file' not in request.files:
-        return jsonify({'error': '파일이 필요합니다.'}), 400
+        return api_error('파일이 필요합니다.', 400)
 
     file = request.files['file']
     if not file.filename:
-        return jsonify({'error': '파일명이 비어 있습니다.'}), 400
+        return api_error('파일명이 비어 있습니다.', 400)
 
     # HTML 파일 검증
     if not file.filename.lower().endswith(('.html', '.htm')):
-        return jsonify({'error': 'HTML 파일만 지원합니다.'}), 400
+        return api_error('HTML 파일만 지원합니다.', 400)
 
     try:
         html_content = file.read().decode('utf-8', errors='replace')
@@ -155,7 +155,7 @@ def bookmarks_parse():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Bookmark parse failed: {e}")
-        return jsonify({'error': '북마크 파싱 중 오류가 발생했습니다.'}), 500
+        return api_error('북마크 파싱 중 오류가 발생했습니다.', 500)
 
 
 # ── 이메일 뉴스레터 인제스트 ──────────────────────────────────────
@@ -175,9 +175,9 @@ def email_ingest():
     if 'file' in request.files:
         file = request.files['file']
         if not file.filename:
-            return jsonify({'error': '파일명이 비어 있습니다.'}), 400
+            return api_error('파일명이 비어 있습니다.', 400)
         if not file.filename.lower().endswith('.eml'):
-            return jsonify({'error': '.eml 파일만 지원합니다.'}), 400
+            return api_error('.eml 파일만 지원합니다.', 400)
 
         try:
             result = parse_email_file(file)
@@ -186,16 +186,16 @@ def email_ingest():
             return handle_error(str(e))
         except Exception as e:
             current_app.logger.error(f'Email ingest failed: {e}')
-            return jsonify({'error': '이메일 파싱 중 오류가 발생했습니다.'}), 500
+            return api_error('이메일 파싱 중 오류가 발생했습니다.', 500)
 
     # 텍스트 모드 (포워딩된 이메일)
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({'error': '.eml 파일 또는 raw_text가 필요합니다.'}), 400
+        return api_error('.eml 파일 또는 raw_text가 필요합니다.', 400)
 
     raw_text = data.get('raw_text', '').strip()
     if not raw_text:
-        return jsonify({'error': 'raw_text가 비어 있습니다.'}), 400
+        return api_error('raw_text가 비어 있습니다.', 400)
 
     try:
         result = parse_forwarded_email(raw_text)
@@ -204,4 +204,4 @@ def email_ingest():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f'Email ingest (text) failed: {e}')
-        return jsonify({'error': '이메일 텍스트 파싱 중 오류가 발생했습니다.'}), 500
+        return api_error('이메일 텍스트 파싱 중 오류가 발생했습니다.', 500)

@@ -4,7 +4,7 @@ import time
 from flask import current_app, jsonify, request
 
 from routes.blog_routes import blog_bp
-from utils.responses import handle_error
+from utils.responses import api_error, handle_error
 
 
 @blog_bp.route('/api/qa-check', methods=['POST'])
@@ -16,7 +16,7 @@ def qa_check():
         rules = data.get('rules')
 
         if not content:
-            return jsonify({'error': '검증할 콘텐츠가 필요합니다.'}), 400
+            return api_error('검증할 콘텐츠가 필요합니다.', 400)
 
         from services.quality.qa_gate_service import check_quality
         t0 = time.monotonic()
