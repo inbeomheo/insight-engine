@@ -572,15 +572,37 @@ def get_youtube_title(video_id: str) -> Optional[str]:
         return None
 
 
+def get_youtube_oembed_title(url: str) -> Optional[str]:
+    """YouTube oEmbed에서 API 키 없이 영상 제목을 가져옵니다."""
+    try:
+        resp = requests.get(
+            'https://www.youtube.com/oembed',
+            params={'url': url, 'format': 'json'},
+            headers={'User-Agent': USER_AGENT},
+            timeout=(TIMEOUT_CONNECT, TIMEOUT_READ_SHORT),
+        )
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        title = (resp.json().get('title') or '').strip()
+        return title or None
+    except Exception as e:
+        _log_warning(f"Error getting YouTube oEmbed title: {e}")
+        return None
+
+
 def get_content_title(url: str) -> Optional[str]:
     """URL에서 콘텐츠 제목을 가져옵니다."""
     if not is_youtube_url(url):
         return None
 
     video_id = get_video_id(url)
-    if video_id:
-        return get_youtube_title(video_id)
-    return None
+    if not video_id:
+        return None
+
+    # YouTube Data API 키가 없거나 할당량/권한 문제로 실패해도, 공개 oEmbed로
+    # 제목을 가져와 결과 카드가 'YouTube 영상' 같은 일반 제목에 머물지 않게 한다.
+    return get_youtube_title(video_id) or get_youtube_oembed_title(url)
 
 
 def get_top_comments(video_id: str) -> List[str]:

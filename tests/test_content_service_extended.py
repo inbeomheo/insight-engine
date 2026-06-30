@@ -246,6 +246,36 @@ class TestCreateHttpSession(unittest.TestCase):
             self.assertIn('http', session.proxies)
 
 
+class TestContentTitle(unittest.TestCase):
+    """YouTube 제목 조회 폴백 테스트"""
+
+    @patch('services.core.content_service.get_youtube_title', return_value=None)
+    @patch('services.core.content_service.get_youtube_oembed_title', return_value='oEmbed 제목')
+    def test_get_content_title_falls_back_to_oembed(self, mock_oembed, mock_api_title):
+        from services.core.content_service import get_content_title
+
+        result = get_content_title('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+
+        self.assertEqual(result, 'oEmbed 제목')
+        mock_api_title.assert_called_once_with('dQw4w9WgXcQ')
+        mock_oembed.assert_called_once()
+
+    @patch('services.core.content_service.requests.get')
+    def test_get_youtube_oembed_title_parses_title(self, mock_get):
+        from services.core.content_service import get_youtube_oembed_title
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {'title': ' 테스트 제목 '}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        result = get_youtube_oembed_title('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+
+        self.assertEqual(result, '테스트 제목')
+        mock_resp.raise_for_status.assert_called_once()
+
+
 class TestGetProxyConfig(unittest.TestCase):
     """_get_proxy_config 테스트"""
 
