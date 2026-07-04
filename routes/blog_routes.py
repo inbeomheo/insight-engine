@@ -1194,7 +1194,5 @@ def extract_events_endpoint():
 # ============================================================
 # 분리된 라우트 패키지 — 부수효과 import로 자동 등록
 # - routes/blog/templates.py: 프롬프트 템플릿 5개
-# - routes/blog/transcript_workspace.py: F13 자막 워크스페이스
-# - routes/blog/voice_capture.py: 핸즈프리 음성 캡처
 # ============================================================
 from routes import blog as _blog_subroutes  # noqa: E402,F401

@@ -83,7 +83,6 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/core/fusion_service.py` | 다중 소스 퓨전 콘텐츠 생성 |
 | 서비스 | `services/transcript/whisper_service.py` | faster-whisper 로컬 음성인식 (yt-dlp 오디오 다운로드) |
 | 서비스 | `services/transcript/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
-| 서비스 | `services/transcript/transcript_workspace_service.py` | 자막 문장 분리 + 편집 적용 |
 | 서비스 | `services/platform/webhook_service.py` | 웹훅 알림 (SSRF 검증 + 재시도) |
 | 서비스 | `services/platform/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
 | 서비스 | `services/data/schedule_service.py` | 예약 발행 CRUD |
@@ -233,8 +232,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **운영 대시보드**: `GET /api/admin/dashboard` — 7일 집계 (생성 수, 성공률, 스타일 분포, 일별 사용량)
 
 **다중 내보내기 포맷**: `POST /api/export/markdown`, `/api/export/txt`, `/api/export/zip` (DOCX+MD+TXT+meta.json 패키지)
-
-**자막 워크스페이스**: `GET /api/transcript/<video_id>` — 문장 단위 분리 + 편집 → 수정된 자막으로 재생성
 
 **콘텐츠 승인 플로우**: `ContentApprovalService` — 상태 머신 (draft→review→approved→published/rejected)
 
