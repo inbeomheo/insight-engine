@@ -44,6 +44,11 @@ DEFAULT_STYLE = 'blog_seo'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5
 BATCH_CONTENT_TOKEN_LIMIT = 3000
+DOCUMENT_MAGIC_BYTES = {
+    '.pdf': b'%PDF',
+    '.docx': b'PK\x03\x04',
+    '.pptx': b'PK\x03\x04',
+}
 MAX_MERGED_URLS = 5
 
 # 에러 응답 헬퍼 (기존 호출 호환)
@@ -65,7 +70,7 @@ def _format_byte_limit(size_bytes: int) -> str:
 
 
 def _normalize_extracted_text(text: str) -> str:
-    """Normalize extracted PDF text while preserving paragraph breaks."""
+    """Normalize extracted document text while preserving paragraph breaks."""
     import re
 
     normalized = re.sub(r"\r\n?", "\n", text or "")
@@ -74,15 +79,25 @@ def _normalize_extracted_text(text: str) -> str:
     return normalized.strip()
 
 
-def _is_pdf_upload(uploaded_file, file_bytes: bytes) -> bool:
-    """Validate extension, MIME type, and PDF magic bytes."""
+def _get_document_extension(uploaded_file) -> str:
     filename = (uploaded_file.filename or "").lower()
-    content_type = (uploaded_file.content_type or "").split(";", 1)[0].strip().lower()
-    return (
-        filename.endswith(".pdf")
-        and content_type == "application/pdf"
-        and file_bytes.startswith(b"%PDF")
-    )
+    for extension in DOCUMENT_MAGIC_BYTES:
+        if filename.endswith(extension):
+            return extension
+    return ""
+
+
+def _is_supported_document_upload(uploaded_file, file_bytes: bytes) -> bool:
+    """Validate extension and magic bytes for supported document uploads."""
+    extension = _get_document_extension(uploaded_file)
+    return bool(extension and file_bytes.startswith(DOCUMENT_MAGIC_BYTES[extension]))
+
+
+def _document_read_error_message(message: str) -> str:
+    for label in ('PDF', 'DOCX', 'PPTX'):
+        if message.startswith(f'{label} 파일을 읽을 수 없습니다'):
+            return f'{label} 파일을 읽을 수 없습니다. 파일이 손상되었을 수 있습니다.'
+    return message
 
 
 def _get_upload_size(uploaded_file) -> int | None:
@@ -101,8 +116,8 @@ def _get_upload_size(uploaded_file) -> int | None:
         return getattr(uploaded_file, "content_length", None) or None
 
 
-def _read_pdf_magic(uploaded_file) -> bytes:
-    """Read PDF magic bytes and rewind so extract_from_upload can save the full file."""
+def _read_upload_magic(uploaded_file) -> bytes:
+    """Read document magic bytes and rewind so extract_from_upload can save the full file."""
     stream = uploaded_file.stream
     try:
         stream.seek(0)
@@ -348,7 +363,7 @@ from routes.generation_helpers import (
     _call_ai_with_comments, _save_and_respond, _persist_generation_result,
     _process_single_url,
     _get_style_prompt, _handle_direct_text, _handle_audio_upload,
-    _handle_document_upload, _handle_web_source,
+    _handle_web_source,
     _get_style_label, _apply_output_format,
     _generate_comment_summary, _combine_results,
     _validate_direct_text_content,
@@ -358,50 +373,55 @@ from routes.generation_helpers import (
 # ── 핵심 생성 엔드포인트 ──────────────────────────────────────
 
 
-@blog_bp.route('/api/extract-pdf', methods=['POST'])
+@blog_bp.route('/api/extract-document', methods=['POST'])
 @limiter.limit("15/minute")
 @require_auth
-def extract_pdf():
-    """PDF 파일에서 텍스트를 추출해 직접 텍스트 입력 경로에 재사용합니다."""
-    from config import DIRECT_TEXT_MAX_CHARS, DIRECT_TEXT_MIN_CHARS, PDF_MAX_BYTES
+def extract_document():
+    """문서 파일에서 텍스트를 추출해 직접 텍스트 입력 경로에 재사용합니다."""
+    from config import (
+        DIRECT_TEXT_MAX_CHARS,
+        DIRECT_TEXT_MIN_CHARS,
+        DOCUMENT_UPLOAD_MAX_BYTES,
+        DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES,
+    )
     from services.content.document_ingest_service import extract_from_upload
 
-    if request.content_length and request.content_length > PDF_MAX_BYTES + 1024 * 1024:
+    if (
+        request.content_length
+        and request.content_length > DOCUMENT_UPLOAD_MAX_BYTES + DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES
+    ):
         return api_error(
-            f'PDF 파일 크기는 최대 {_format_byte_limit(PDF_MAX_BYTES)}까지 업로드할 수 있습니다.',
+            f'문서 파일 크기는 최대 {_format_byte_limit(DOCUMENT_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
             400,
         )
 
     uploaded_file = request.files.get('file')
     if not uploaded_file or not uploaded_file.filename:
-        return api_error('PDF 파일을 업로드해 주세요.', 400)
+        return api_error('문서 파일을 업로드해 주세요.', 400)
 
     try:
         upload_size = _get_upload_size(uploaded_file)
-        if upload_size is not None and upload_size > PDF_MAX_BYTES:
+        if upload_size is not None and upload_size > DOCUMENT_UPLOAD_MAX_BYTES:
             return api_error(
-                f'PDF 파일 크기는 최대 {_format_byte_limit(PDF_MAX_BYTES)}까지 업로드할 수 있습니다.',
+                f'문서 파일 크기는 최대 {_format_byte_limit(DOCUMENT_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
                 400,
             )
 
-        magic = _read_pdf_magic(uploaded_file)
-        if not magic or not _is_pdf_upload(uploaded_file, magic):
-            return api_error('PDF 파일만 업로드할 수 있습니다.', 400)
+        magic = _read_upload_magic(uploaded_file)
+        if not magic or not _is_supported_document_upload(uploaded_file, magic):
+            return api_error('PDF, DOCX, PPTX 파일만 업로드할 수 있습니다.', 400)
 
         try:
             doc = extract_from_upload(uploaded_file)
         except ValueError as exc:
-            message = str(exc)
-            if message.startswith('PDF 파일을 읽을 수 없습니다'):
-                message = 'PDF 파일을 읽을 수 없습니다. 파일이 손상되었을 수 있습니다.'
-            return api_error(message, 400)
+            return api_error(_document_read_error_message(str(exc)), 400)
 
         text = _normalize_extracted_text(doc.get('content', ''))
         pages = int(doc.get('page_count') or 0)
 
         if len(text) < DIRECT_TEXT_MIN_CHARS:
             return api_error(
-                'PDF에서 충분한 텍스트를 추출하지 못했습니다 (스캔 이미지 PDF는 지원하지 않습니다)',
+                '문서에서 충분한 텍스트를 추출하지 못했습니다 (스캔 이미지 문서는 지원하지 않습니다)',
                 400,
             )
 
@@ -415,8 +435,8 @@ def extract_pdf():
             'pages': pages,
         })
     except Exception as exc:
-        current_app.logger.error('Unexpected PDF extraction error: %s', exc, exc_info=True)
-        return api_error('PDF 처리 중 오류가 발생했습니다. 다시 시도해 주세요.', 500)
+        current_app.logger.error('Unexpected document extraction error: %s', exc, exc_info=True)
+        return api_error('문서 처리 중 오류가 발생했습니다. 다시 시도해 주세요.', 500)
 
 
 @blog_bp.route('/generate', methods=['POST'])
@@ -451,7 +471,7 @@ def generate():
                 return api_error(validation_error, 400)
             return _handle_direct_text(params, start_time)
 
-        # ── 파일 업로드 모드 (오디오 / 문서) ──
+        # ── 파일 업로드 모드 (오디오) ──
         uploaded_file = request.files.get('file')
         if uploaded_file and not url:
             filename = (uploaded_file.filename or '').lower()
@@ -459,11 +479,6 @@ def generate():
 
             if filename.endswith(_audio_extensions) or (uploaded_file.content_type or '').startswith('audio/'):
                 return _handle_audio_upload(params, uploaded_file, start_time)
-
-            try:
-                return _handle_document_upload(params, uploaded_file, start_time)
-            except ValueError as e:
-                return handle_error(str(e))
 
         if not url:
             return api_error('URL이 필요합니다.', 400)

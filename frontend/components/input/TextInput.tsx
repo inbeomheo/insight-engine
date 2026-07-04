@@ -6,7 +6,7 @@ import { ArrowUp, FileText, Loader2, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import InputWrapper from '@/components/ui/InputWrapper';
-import { extractPdf } from '@/lib/api';
+import { extractDocument } from '@/lib/api';
 
 // 최소/최대 길이는 서버 config.DIRECT_TEXT_MIN_CHARS / DIRECT_TEXT_MAX_CHARS와 맞춘다.
 const MIN_CHARS = 50;
@@ -21,9 +21,9 @@ interface TextInputProps {
 
 export default function TextInput({ value, onChange, onGenerate, isLoading }: TextInputProps) {
   const [focused, setFocused] = useState(false);
-  const [isExtractingPdf, setIsExtractingPdf] = useState(false);
-  const [pdfNotice, setPdfNotice] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isExtractingDocument, setIsExtractingDocument] = useState(false);
+  const [documentNotice, setDocumentNotice] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const charCount = value.length;
@@ -36,38 +36,38 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
   }, [value, isValid, isLoading, onGenerate]);
 
   const handleTextChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-    setPdfError(null);
-    setPdfNotice(null);
+    setDocumentError(null);
+    setDocumentNotice(null);
     onChange(e.target.value);
   }, [onChange]);
 
-  const handlePdfClick = useCallback(() => {
-    if (isLoading || isExtractingPdf) return;
+  const handleDocumentClick = useCallback(() => {
+    if (isLoading || isExtractingDocument) return;
     fileInputRef.current?.click();
-  }, [isLoading, isExtractingPdf]);
+  }, [isLoading, isExtractingDocument]);
 
-  const handlePdfChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleDocumentChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
-    if (value.trim() && !window.confirm('기존 입력 내용을 PDF 추출 텍스트로 교체할까요?')) {
+    if (value.trim() && !window.confirm('기존 입력 내용을 문서 추출 텍스트로 교체할까요?')) {
       return;
     }
 
-    setIsExtractingPdf(true);
-    setPdfError(null);
-    setPdfNotice(null);
+    setIsExtractingDocument(true);
+    setDocumentError(null);
+    setDocumentNotice(null);
     try {
-      const result = await extractPdf(file);
+      const result = await extractDocument(file);
       onChange(result.text.slice(0, MAX_CHARS));
       if (result.truncated) {
-        setPdfNotice('PDF 내용이 최대 길이에 맞춰 일부 잘렸습니다.');
+        setDocumentNotice('문서 내용이 최대 길이에 맞춰 일부 잘렸습니다.');
       }
     } catch (err) {
-      setPdfError(err instanceof Error ? err.message : 'PDF를 불러오지 못했습니다.');
+      setDocumentError(err instanceof Error ? err.message : '문서를 불러오지 못했습니다.');
     } finally {
-      setIsExtractingPdf(false);
+      setIsExtractingDocument(false);
     }
   }, [onChange, value]);
 
@@ -95,37 +95,37 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               {charCount.toLocaleString()}자 / {MAX_CHARS.toLocaleString()}자
               {!isValid && charCount > 0 && charCount < MIN_CHARS && ` (최소 ${MIN_CHARS}자)`}
             </span>
-            {pdfNotice && (
-              <p className="mt-1 text-[11px] text-amber-600">{pdfNotice}</p>
+            {documentNotice && (
+              <p className="mt-1 text-[11px] text-amber-600">{documentNotice}</p>
             )}
-            {pdfError && (
-              <p className="mt-1 text-[11px] text-destructive" role="alert">{pdfError}</p>
+            {documentError && (
+              <p className="mt-1 text-[11px] text-destructive" role="alert">{documentError}</p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,application/pdf"
+              accept=".pdf,.docx,.pptx"
               className="hidden"
-              onChange={handlePdfChange}
-              disabled={isLoading || isExtractingPdf}
+              onChange={handleDocumentChange}
+              disabled={isLoading || isExtractingDocument}
             />
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="h-9 gap-1.5 rounded-sm text-xs"
-              onClick={handlePdfClick}
-              disabled={isLoading || isExtractingPdf}
-              aria-label="PDF 불러오기"
+              onClick={handleDocumentClick}
+              disabled={isLoading || isExtractingDocument}
+              aria-label="문서 불러오기"
             >
-              {isExtractingPdf ? (
+              {isExtractingDocument ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <FileText className="h-3.5 w-3.5" />
               )}
-              PDF 불러오기
+              문서 불러오기
             </Button>
             <Button
               size="icon"
