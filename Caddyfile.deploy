@@ -18,7 +18,7 @@
             inbeom $2a$14$3/yyohmMHJwLiyM8j7CLDevjysvIJ150X96SGUralxmFXJ9rtFy4K
         }
 
-        @backend path /api/* /generate /generate-stream /generate-batch /regenerate /feed.xml /version /metrics /openapi.json /oauth/*
+        @backend path /api/* /generate /generate-stream /generate-batch /feed.xml /version /metrics /openapi.json /oauth/*
         reverse_proxy @backend backend:5001
 
         reverse_proxy frontend:3000

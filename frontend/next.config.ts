@@ -18,7 +18,6 @@ const nextConfig: NextConfig = {
       { source: '/generate', destination: `${backend}/generate` },
       { source: '/generate-stream', destination: `${backend}/generate-stream` },
       { source: '/generate-batch', destination: `${backend}/generate-batch` },
-      { source: '/regenerate', destination: `${backend}/regenerate` },
     ];
   },
   async headers() {
