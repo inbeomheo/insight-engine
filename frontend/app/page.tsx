@@ -15,6 +15,7 @@ import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
+import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 
 const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 
@@ -345,7 +346,10 @@ export default function Home() {
               {/* 캘린더 뷰 */}
               {PUBLISHING_ENABLED && activeView === 'calendar' && (
                 <div className="max-w-3xl mx-auto">
-                  <h2 className="text-xl font-semibold mb-6">{t('calendar.title')}</h2>
+                  <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                    {t('calendar.title')}
+                    <DeprecatedBadge />
+                  </h2>
                   <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
                 </div>
               )}
@@ -596,6 +600,7 @@ export default function Home() {
         >
           <CalendarDays className="h-3.5 w-3.5" />
           캘린더
+          <DeprecatedBadge />
         </button>
         <button
           type="button"

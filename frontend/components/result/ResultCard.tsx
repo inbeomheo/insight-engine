@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -1132,6 +1133,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
                     <DropdownMenuItem key={plugin.id} onClick={() => handlePublish(plugin.id)}>
                       <Send className="h-3.5 w-3.5 mr-2" />
                       {t('result.publish', { name: plugin.name })}
+                      <DeprecatedBadge />
                     </DropdownMenuItem>
                   ))}
                 </>
@@ -1142,6 +1144,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
                   <DropdownMenuItem onClick={() => onSchedule(report)}>
                     <Calendar className="h-3.5 w-3.5 mr-2" />
                     {t('result.schedule')}
+                    <DeprecatedBadge />
                   </DropdownMenuItem>
                 </>
               )}
