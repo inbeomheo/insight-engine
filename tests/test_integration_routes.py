@@ -1,6 +1,6 @@
 """integration_routes.py 라우트 커버리지 테스트.
 
-Notion, Google Docs, RSS, 북마크, MCP, 발행 큐, 예약, RAG, 이메일,
+Notion, RSS, 북마크, MCP, 발행 큐, 예약, RAG,
 버전, 검색, 폴더 엔드포인트 커버.
 """
 import io
@@ -72,33 +72,6 @@ class TestNotionRoutes(_Base):
                                       'api_key': 'ntn_test_key'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 500)
-
-
-# ── Google Docs ──────────────────────────────────────
-
-
-class TestGDocsRoutes(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_gdocs_import_missing_data(self, _):
-        resp = self.client.post('/api/gdocs/import', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_gdocs_import_missing_url(self, _):
-        resp = self.client.post('/api/gdocs/import',
-                                json={'url': ''},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.export.gdocs_service.extract_google_doc')
-    def test_gdocs_import_success(self, mock_extract, _):
-        mock_extract.return_value = {'title': 'Docs 제목', 'content': '내용'}
-        resp = self.client.post('/api/gdocs/import',
-                                json={'url': 'https://docs.google.com/document/d/abc'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
 
 
 # ── RSS ──────────────────────────────────────
@@ -436,42 +409,6 @@ class TestKnowledgeRoutes(_Base):
     def test_knowledge_delete_rag_disabled(self, _):
         resp = self.client.delete('/api/knowledge/doc1', headers=_H)
         self.assertEqual(resp.status_code, 400)
-
-
-# ── 이메일 인제스트 ──────────────────────────────────────
-
-
-class TestEmailIngest(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_email_ingest_no_file_no_json(self, _):
-        resp = self.client.post('/api/email/ingest', headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_email_ingest_wrong_ext(self, _):
-        data = {'file': (io.BytesIO(b'data'), 'email.txt')}
-        resp = self.client.post('/api/email/ingest',
-                                data=data,
-                                content_type='multipart/form-data',
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_email_ingest_empty_raw_text(self, _):
-        resp = self.client.post('/api/email/ingest',
-                                json={'raw_text': ''},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.content.email_ingest_service.parse_forwarded_email')
-    def test_email_ingest_text_mode(self, mock_parse, _):
-        mock_parse.return_value = {'subject': '뉴스레터', 'body': '내용'}
-        resp = self.client.post('/api/email/ingest',
-                                json={'raw_text': 'Subject: 테스트\n\n내용'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
 
 
 # ── 버전 히스토리 ──────────────────────────────────────

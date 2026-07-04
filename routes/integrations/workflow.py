@@ -1,9 +1,8 @@
-"""발행 큐, 예약 발행, CMS 통합 허브 워크플로우."""
-from flask import request, jsonify, current_app, g
+"""발행 큐, 예약 발행 워크플로우."""
+from flask import request, jsonify, g
 from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
-from routes.integrations._shared import sanitize_result_message
 from src.contexts.identity.interface.auth_decorators import require_auth
 
 
@@ -141,64 +140,3 @@ def schedule_delete(post_id):
         return api_error('삭제할 예약을 찾을 수 없습니다.', 404)
 
     return jsonify({'success': True})
-
-
-# ── CMS 통합 허브 (F7-23) ──────────────────────────────────────
-
-
-@blog_bp.route('/api/cms/publish-all', methods=['POST'])
-def cms_publish_all():
-    """여러 CMS에 동시에 콘텐츠를 발행합니다."""
-    from services.mcp.cms_hub import cms_hub
-
-    data = request.get_json(silent=True) or {}
-    plugin_ids = data.get('plugin_ids', [])
-    title = data.get('title', '')
-    content = data.get('content', '')
-    plugin_configs = data.get('plugin_configs', {})
-
-    if not plugin_ids:
-        return api_error('plugin_ids 목록이 필요합니다.', 400)
-    if not title or not content:
-        return api_error('title과 content가 필요합니다.', 400)
-
-    try:
-        result = cms_hub.publish_to_all(plugin_ids, title, content, plugin_configs)
-    except Exception as e:
-        current_app.logger.error('CMS publish-all failed: %s', e, exc_info=True)
-        return api_error('[서버 오류] CMS 발행 중 문제가 발생했습니다.', 500)
-
-    sanitized_results = {}
-    for plugin_id, plugin_result in (result.get('results') or {}).items():
-        sanitized_results[plugin_id] = sanitize_result_message(
-            plugin_result,
-            'message',
-            '[서버 오류] CMS 발행에 실패했습니다.'
-        )
-    if sanitized_results:
-        result = {**result, 'results': sanitized_results}
-
-    return jsonify(result)
-
-
-@blog_bp.route('/api/cms/plugins', methods=['GET'])
-def cms_list_plugins():
-    """CMS 허브에서 사용 가능한 플러그인 목록"""
-    from services.mcp.cms_hub import cms_hub
-    return jsonify({'plugins': cms_hub.get_available_plugins()})
-
-
-@blog_bp.route('/api/cms/validate-config', methods=['POST'])
-def cms_validate_config():
-    """플러그인 설정 유효성 검사"""
-    from services.mcp.cms_hub import cms_hub
-
-    data = request.get_json(silent=True) or {}
-    plugin_id = data.get('plugin_id', '')
-    config = data.get('config', {})
-
-    if not plugin_id:
-        return api_error('plugin_id가 필요합니다.', 400)
-
-    result = cms_hub.validate_plugin_config(plugin_id, config)
-    return jsonify(result)

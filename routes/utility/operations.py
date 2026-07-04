@@ -84,16 +84,6 @@ def api_heartbeat():
     return jsonify({'ok': True})
 
 
-@blog_bp.route('/api/close', methods=['POST'])
-def api_close():
-    """클라이언트 연결 종료를 처리합니다."""
-    client_id = _extract_client_id(request)
-    if not client_id:
-        return jsonify({'ok': False, 'error': 'clientId required'}), 400
-    _CLIENT_TRACKER.pop(client_id, None)
-    return jsonify({'ok': True})
-
-
 def _fetch_ollama_models(base_url=None):
     """Ollama 서버(/api/tags)에서 실제 설치된 모델을 조회해 동적 모델 목록을 만든다.
 

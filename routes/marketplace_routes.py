@@ -29,16 +29,6 @@ def list_templates():
     return jsonify({'templates': templates})
 
 
-@marketplace_bp.route('/api/marketplace/<template_id>', methods=['GET'])
-def get_template(template_id):
-    """템플릿 상세"""
-    from services.platform.marketplace_service import marketplace_service
-    template = marketplace_service.get_template(template_id)
-    if not template:
-        return error_response('템플릿을 찾을 수 없습니다.', 404)
-    return jsonify(template)
-
-
 @marketplace_bp.route('/api/marketplace', methods=['POST'])
 @require_auth
 def publish_template():
@@ -87,25 +77,3 @@ def download_template(template_id):
     except Exception as e:
         logger.error('Marketplace download failed: %s', e, exc_info=True)
         return error_response('[서버 오류] 템플릿 다운로드 중 문제가 발생했습니다.', 500)
-
-
-@marketplace_bp.route('/api/marketplace/<template_id>/rate', methods=['POST'])
-@require_auth
-def rate_template(template_id):
-    """템플릿 평점"""
-    from services.platform.marketplace_service import marketplace_service
-    data = request.get_json(silent=True) or {}
-    rating = float(data.get('rating', 0))
-    try:
-        result = marketplace_service.rate_template(template_id, g.user_id, rating)
-        if 'error' in result:
-            return error_response(
-                _safe_marketplace_error(
-                    result['error'],
-                    '[서버 오류] 템플릿 평점 처리에 실패했습니다.'
-                )
-            )
-        return jsonify(result)
-    except Exception as e:
-        logger.error('Marketplace rating failed: %s', e, exc_info=True)
-        return error_response('[서버 오류] 템플릿 평점 처리 중 문제가 발생했습니다.', 500)

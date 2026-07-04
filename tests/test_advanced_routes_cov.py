@@ -1,7 +1,7 @@
 """advanced_routes.py 라우트 커버리지 테스트.
 
 마인드맵, 멀티스타일, 캠페인, 퓨전, 리라이트, QA, 파이프라인,
-채널 분석, 썸네일, 클립, 팟캐스트, 다국어, 인라인 편집, 에이전트 커버.
+썸네일, 인라인 편집, 에이전트 커버.
 """
 import unittest
 from unittest.mock import patch, MagicMock
@@ -222,11 +222,6 @@ class TestGenerateFusion(_Base):
 @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
 class TestRewrite(_Base):
 
-    def test_rewrite_platforms(self, _):
-        resp = self.client.get('/api/rewrite/platforms', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('available_platforms', resp.get_json())
-
     def test_rewrite_no_content(self, _):
         resp = self.client.post('/api/rewrite',
                                 json={'platform': 'twitter'},
@@ -293,41 +288,6 @@ class TestQACheck(_Base):
         self.assertIn(resp.status_code, [400, 500])
 
 
-# ── 채널 분석 ─────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestChannelAnalysis(_Base):
-
-    def test_channel_analysis_no_url(self, _):
-        resp = self.client.post('/api/channel-analysis', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.content.channel_analysis_service.analyze_channel',
-           return_value={'videos': [], 'stats': {}})
-    def test_channel_analysis_success(self, _ch, _):
-        resp = self.client.post('/api/channel-analysis',
-                                json={'url': 'https://youtube.com/@channel'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.content.channel_analysis_service.analyze_channel',
-           side_effect=ValueError('bad url'))
-    def test_channel_analysis_value_error(self, _ch, _):
-        resp = self.client.post('/api/channel-analysis',
-                                json={'url': 'bad'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 500])
-
-    @patch('services.content.channel_analysis_service.analyze_channel',
-           side_effect=Exception('boom'))
-    def test_channel_analysis_exception(self, _ch, _):
-        resp = self.client.post('/api/channel-analysis',
-                                json={'url': 'https://youtube.com/@ch'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 500])
-
-
 # ── 썸네일 ───────────────────────────────────────────
 
 
@@ -353,86 +313,6 @@ class TestThumbnail(_Base):
                                 json={'title': 'Test Title'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
-
-
-# ── 클립 ─────────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestClips(_Base):
-
-    def test_clips_no_url(self, _):
-        resp = self.client.post('/api/generate-clips', json={}, headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_clips_no_clips(self, _):
-        resp = self.client.post('/api/generate-clips',
-                                json={'url': 'https://youtube.com/watch?v=a'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-
-# ── 팟캐스트 ─────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestPodcast(_Base):
-
-    def test_podcast_no_content(self, _):
-        resp = self.client.post('/api/generate-podcast', json={}, headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    @patch('services.media.podcast_service.generate_podcast_episode',
-           return_value={'script': 'podcast script', 'duration': '5:00'})
-    def test_podcast_success(self, _pod, _):
-        resp = self.client.post('/api/generate-podcast',
-                                json={'content': 'some content', 'title': 'Ep1'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [200, 429])
-
-    @patch('services.media.podcast_service.generate_podcast_episode',
-           side_effect=Exception('boom'))
-    def test_podcast_exception(self, _pod, _):
-        resp = self.client.post('/api/generate-podcast',
-                                json={'content': 'some content'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429, 500])
-
-
-# ── 다국어 ───────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestMultilang(_Base):
-
-    def test_multilang_no_url(self, _):
-        resp = self.client.post('/api/generate-multilang', json={}, headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_multilang_invalid_url(self, _):
-        resp = self.client.post('/api/generate-multilang',
-                                json={'url': 'https://example.com'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    @patch('routes.advanced_routes._fetch_youtube_content',
-           return_value=('transcript', [], None, [], 'api', None))
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    @patch('services.core.content_service.get_video_id', return_value='vid1')
-    @patch('services.core.content_service.get_content_title', return_value='Title')
-    @patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t)
-    @patch('services.core.ai_service.create_content',
-           return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}})
-    def test_multilang_success(self, _ai, _trunc, _title, _vid, _yt, _fetch, _):
-        self.app.config['STYLE_PROMPTS'] = {'blog_seo': 'prompt'}
-        resp = self.client.post('/api/generate-multilang',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=test123',
-                                    'style': 'blog_seo',
-                                    'languages': ['ko', 'en']
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [200, 429])
 
 
 # ── 인라인 편집 ──────────────────────────────────────

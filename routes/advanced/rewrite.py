@@ -10,22 +10,6 @@ from services.usage.usage_decorator import get_usage_for_response
 from utils.responses import api_error, handle_error, safe_error_or_fallback, validate_content_length
 
 
-@blog_bp.route('/api/rewrite/platforms')
-def rewrite_platforms():
-    """지원하는 리라이트 플랫폼 목록을 반환합니다."""
-    from config import PLATFORM_PRESETS
-    platforms = []
-    for name, preset in PLATFORM_PRESETS.items():
-        platforms.append({
-            'name': name,
-            'max_chars': preset['max_chars'],
-            'tone': preset['tone'],
-            'format': preset['format'],
-            'icon_emoji': preset.get('icon_emoji', ''),
-        })
-    return jsonify({'available_platforms': platforms})
-
-
 @blog_bp.route('/api/rewrite', methods=['POST'])
 @require_auth
 @require_usage
