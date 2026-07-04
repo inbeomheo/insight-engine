@@ -37,6 +37,14 @@ export const LANGUAGE_OPTIONS = [
   { value: 'ja' as const, label: '日本語' },
 ];
 
+/** 자막 추출 언어 선택 옵션 — null=자동(기존 우선순위 폴백) */
+export const TRANSCRIPT_LANGUAGE_OPTIONS = [
+  { value: null, label: '자동' },
+  { value: 'ko' as const, label: '한국어' },
+  { value: 'en' as const, label: '영어' },
+  { value: 'ja' as const, label: '일본어' },
+];
+
 export const STORAGE_KEYS = {
   REPORTS: 'insight-engine-reports',
   PROVIDER: 'insight-engine-selected-provider',

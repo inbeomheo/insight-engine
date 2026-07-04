@@ -1,7 +1,7 @@
 // === API 요청/응답 타입 ===
 
 import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSchema, NlpAnalysis, InsertedLink, Citation, WebSource } from './report';
-import type { Modifiers } from './settings';
+import type { Modifiers, TranscriptLanguage } from './settings';
 
 export interface GenerateRequest {
   url: string;
@@ -15,6 +15,8 @@ export interface GenerateRequest {
   agent_mode?: boolean;
   /** 생성 깊이: brief | standard | deep */
   detail_level?: 'brief' | 'standard' | 'deep';
+  /** 자막 추출 언어 지정 (YouTube 다국어 자막 대상). null/undefined=자동 */
+  transcript_language?: TranscriptLanguage;
 }
 
 export interface GenerateResponse {

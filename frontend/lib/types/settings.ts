@@ -10,6 +10,9 @@ export interface Modifiers {
   language?: 'ko' | 'en' | 'ja';
 }
 
+/** 자막 추출 언어 — null/undefined=자동(기존 우선순위 폴백) */
+export type TranscriptLanguage = 'ko' | 'en' | 'ja' | null;
+
 export interface StyleOption {
   id: string;
   label: string;

@@ -82,7 +82,7 @@ def test_generate_youtube_url_still_uses_transcript_path():
         resp = client.post("/generate", json={"url": url, "style": "summary"}, headers=_H)
 
     assert resp.status_code == 200
-    mock_transcript.assert_called_once_with("dQw4w9WgXcQ")
+    mock_transcript.assert_called_once_with("dQw4w9WgXcQ", None)
     mock_article.assert_not_called()
 
 

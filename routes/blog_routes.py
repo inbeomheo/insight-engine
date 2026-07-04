@@ -146,6 +146,9 @@ def _get_request_data(req):
         # enable_citations 검증 (인용 타임스탬프 모드)
         enable_citations = bool(data.get('enable_citations', False))
 
+        # transcript_language 검증 (자막 추출 언어 지정 — None이면 기존 기본 동작)
+        transcript_language, transcript_language_error = _validate_transcript_language(data.get('transcript_language'))
+
         return {
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
             'urls': urls,
@@ -161,6 +164,8 @@ def _get_request_data(req):
             'max_chars': max_chars,
             'include_transcript': include_transcript,
             'enable_citations': enable_citations,
+            'transcript_language': transcript_language,
+            'transcript_language_error': transcript_language_error,
         }
 
     # form 데이터에서 modifiers JSON 파싱 (파일 업로드 시 FormData로 전송)
@@ -176,6 +181,7 @@ def _get_request_data(req):
 
     custom_prompt, _ = _validate_custom_prompt(req.form.get('customPrompt'))
     style = _validate_style(req.form.get('style', DEFAULT_STYLE), custom_prompt)
+    transcript_language, transcript_language_error = _validate_transcript_language(req.form.get('transcript_language'))
 
     return {
         'url': req.form.get('url'),
@@ -192,6 +198,8 @@ def _get_request_data(req):
         'max_chars': None,
         'include_transcript': False,
         'enable_citations': False,
+        'transcript_language': transcript_language,
+        'transcript_language_error': transcript_language_error,
     }
 
 
@@ -230,6 +238,29 @@ def _validate_modifiers(modifiers):
         validated[key] = value[:50]  # 길이 제한
 
     return validated, None
+
+
+_ALLOWED_TRANSCRIPT_LANGUAGES = {'ko', 'en', 'ja'}
+
+
+def _validate_transcript_language(transcript_language):
+    """transcript_language 파라미터의 유효성을 검증합니다.
+
+    Args:
+        transcript_language: None 또는 언어 코드 문자열('ko'/'en'/'ja')
+
+    Returns:
+        tuple: (validated_language, error_message)
+        - validated_language: None(자동/미지정) 또는 검증된 언어 코드
+        - error_message: 유효하지 않은 값이면 한국어 에러 메시지, 아니면 None
+    """
+    if transcript_language is None or transcript_language == '':
+        return None, None
+
+    if not isinstance(transcript_language, str) or transcript_language not in _ALLOWED_TRANSCRIPT_LANGUAGES:
+        return None, '지원하지 않는 자막 언어입니다. (ko, en, ja 중 선택)'
+
+    return transcript_language, None
 
 
 def _validate_custom_prompt(custom_prompt):
@@ -276,6 +307,11 @@ def generate():
     try:
         start_time = time.time()
         params = _get_request_data(request)
+
+        # transcript_language 유효성 검증 (지원하지 않는 값이면 400)
+        if params.get('transcript_language_error'):
+            return api_error(params['transcript_language_error'], 400)
+
         url = params['url']
         direct_content = params.get('content')
 
@@ -341,7 +377,9 @@ def generate():
         # 제목 조회와 자막/댓글 추출을 병렬 실행 (700-1500ms 절감)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             title_future = executor.submit(content_service.get_content_title, url)
-            content_future = executor.submit(_fetch_youtube_content, video_id)
+            content_future = executor.submit(
+                _fetch_youtube_content, video_id, params.get('transcript_language')
+            )
             youtube_title = title_future.result() or 'YouTube 영상'
             transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = content_future.result()
         if error:
@@ -838,7 +876,9 @@ def generate_stream():
                 }), 429
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
+        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
+            video_id, params.get('transcript_language')
+        )
         if error:
             return api_error(error, 400)
 
