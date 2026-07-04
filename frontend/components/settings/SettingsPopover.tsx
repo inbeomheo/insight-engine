@@ -14,6 +14,7 @@ import {
 import { cn, formatModelSize } from '@/lib/utils';
 import { testWebhook } from '@/lib/api';
 import KnowledgeManager from './KnowledgeManager';
+import type { StyleOption } from '@/lib/types';
 
 export default function SettingsPopover() {
   const { settingsPopoverOpen, setSettingsPopoverOpen } = useUIStore();
@@ -76,7 +77,7 @@ export default function SettingsPopover() {
   const currentModels = selectedProvider ? providers[selectedProvider]?.models || [] : [];
 
   // 내장 + 커스텀 스타일
-  const allStyles = [
+  const allStyles: StyleOption[] = [
     ...STYLE_OPTIONS,
     ...customStyles.map((c) => ({ id: c.id, label: c.name, emoji: c.icon || '✨' })),
   ];
@@ -144,8 +145,9 @@ export default function SettingsPopover() {
             <button
               key={s.id}
               onClick={() => setSelectedStyle(s.id)}
-              aria-label={`${s.label} 스타일 선택`}
+              aria-label={`${s.label} 스타일 선택${s.description ? `: ${s.description}` : ''}`}
               aria-pressed={selectedStyle === s.id}
+              title={s.description}
               className={cn(
                 'rounded-sm border px-3 py-2 text-left text-xs transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
                 selectedStyle === s.id
@@ -153,7 +155,12 @@ export default function SettingsPopover() {
                   : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
               )}
             >
-              {s.label}
+              <div className="font-semibold">{s.emoji} {s.label}</div>
+              {s.description && (
+                <div className={cn('mt-0.5 text-[10px]', selectedStyle === s.id ? 'text-background/70' : 'text-muted-foreground/70')}>
+                  {s.description}
+                </div>
+              )}
             </button>
           ))}
         </div>

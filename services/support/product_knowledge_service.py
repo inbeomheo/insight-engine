@@ -26,9 +26,9 @@ FAQ_ITEMS = [
         "answer": "모델 목록은 백엔드 `/api/providers` 응답과 환경변수/API 키 상태에 따라 달라져. GPT 계열은 ChatMock 또는 OpenAI/OpenRouter 설정이 연결돼야 보이고, Kimi는 OpenRouter 모델로 노출되는 구조가 일반적이야.",
     },
     {
-        "keywords": ["스타일", "출력", "blog", "seo", "shorts", "geo"],
+        "keywords": ["스타일", "출력", "blog", "seo", "shorts", "geo", "퀴즈", "quiz"],
         "title": "출력 스타일",
-        "answer": "출력 스타일은 Blog+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버, SNS, 뉴스레터, 쇼노트, Shorts, GEO, AI 코스 같은 목적별 프롬프트 프리셋이야.",
+        "answer": "출력 스타일은 블로그+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버, SNS 포스트, 뉴스레터, 쇼노트, 쇼츠 클립, GEO 검색, AI 코스, 퀴즈 같은 목적별 프롬프트 프리셋이야.",
     },
     {
         "keywords": ["공유", "링크", "복사", "url"],

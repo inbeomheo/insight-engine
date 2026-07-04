@@ -17,9 +17,10 @@ const STYLE_LABELS: Record<string, string> = {
   sns_post: 'SNS',
   newsletter: '뉴스레터',
   show_notes: '쇼노트',
-  shorts_script: 'Shorts',
-  geo_seo: 'GEO',
+  shorts_script: '쇼츠',
+  geo_seo: 'GEO 검색',
   course: 'AI 코스',
+  quiz: '퀴즈',
 };
 
 // 팩 ID → 아이콘 컴포넌트

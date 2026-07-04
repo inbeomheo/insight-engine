@@ -2,6 +2,7 @@
 
 import { Trash2, Zap, FileText, Search, RefreshCw, ShieldCheck, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { STYLE_OPTIONS } from '@/lib/constants';
 import type { PipelineStepDef } from './PipelineBuilder';
 
 const STEP_ICONS: Record<string, typeof Zap> = {
@@ -56,12 +57,9 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
             onChange={(e) => onConfigChange({ style: e.target.value })}
             className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white dark:bg-zinc-800"
           >
-            <option value="blog_seo">블로그 SEO</option>
-            <option value="summary">요약</option>
-            <option value="tutorial">튜토리얼</option>
-            <option value="newsletter">뉴스레터</option>
-            <option value="sns_post">SNS 포스트</option>
-            <option value="shorts_script">Shorts 스크립트</option>
+            {STYLE_OPTIONS.map((style) => (
+              <option key={style.id} value={style.id}>{style.label}</option>
+            ))}
           </select>
         </div>
       )}

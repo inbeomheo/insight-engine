@@ -31,8 +31,10 @@ const STYLE_LABELS: Record<string, string> = {
   sns_post: 'SNS 게시글',
   newsletter: '뉴스레터',
   show_notes: '쇼 노트',
-  shorts_script: 'Shorts 스크립트',
-  geo_seo: 'GEO SEO',
+  shorts_script: '쇼츠 클립',
+  geo_seo: 'GEO 검색',
+  course: 'AI 코스',
+  quiz: '퀴즈',
 };
 
 const LENGTH_LABELS: Record<string, string> = {

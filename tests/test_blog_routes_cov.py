@@ -101,6 +101,29 @@ class TestValidateCustomPrompt(_Base):
         self.assertIsNotNone(err)
 
 
+class TestValidateStyle(_Base):
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_validate_style_accepts_quiz(self, _):
+        from routes.blog_routes import _validate_style
+        self.assertEqual(_validate_style('quiz'), 'quiz')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_validate_style_unknown_passes_through(self, _):
+        from routes.blog_routes import _validate_style
+        self.assertEqual(_validate_style('unknown_style'), 'unknown_style')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_validate_style_preserves_custom_prompt_style(self, _):
+        from routes.blog_routes import _validate_style
+        self.assertEqual(_validate_style('my_custom', '프롬프트'), 'my_custom')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_validate_style_empty_defaults(self, _):
+        from routes.blog_routes import _validate_style
+        self.assertEqual(_validate_style('   '), 'blog_seo')
+
+
 class TestGetRequestData(_Base):
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
