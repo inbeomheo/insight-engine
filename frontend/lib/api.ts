@@ -1007,3 +1007,56 @@ export async function askResultChat(req: {
     body: JSON.stringify(req),
   });
 }
+
+// ── 지식 노트 (학습 엔진) ──
+
+export interface NoteSource {
+  type: 'youtube' | 'article' | (string & {});
+  url: string;
+  title: string;
+}
+
+export interface NoteListItem {
+  id: string;
+  title: string;
+  tags: string[];
+  created_at: string;
+  source: NoteSource;
+}
+
+export interface NoteQuote {
+  text: string;
+  ref: string;
+}
+
+export interface NoteDetail {
+  id: string;
+  source: NoteSource;
+  key_concepts: string[];
+  summary: string;
+  quotes: NoteQuote[];
+  tags: string[];
+  language: string;
+  created_at: string;
+}
+
+export interface NoteSearchResult {
+  id: string;
+  title: string;
+  score: number;
+  snippet: string;
+}
+
+export async function getNotes(): Promise<{ notes: NoteListItem[] }> {
+  return request('/api/notes');
+}
+
+export async function getNote(noteId: string): Promise<NoteDetail> {
+  return request(`/api/notes/${encodeURIComponent(noteId)}`);
+}
+
+export async function searchNotes(query: string, limit?: number): Promise<{ notes: NoteSearchResult[] }> {
+  const params = new URLSearchParams({ q: query });
+  if (limit) params.set('limit', String(limit));
+  return request(`/api/notes/search?${params}`);
+}
