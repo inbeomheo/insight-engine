@@ -1,7 +1,6 @@
 """Product knowledge answers for the in-app support assistant."""
 from __future__ import annotations
 
-import os
 from typing import Any
 
 FAQ_ITEMS = [
@@ -18,7 +17,7 @@ FAQ_ITEMS = [
     {
         "keywords": ["캘린더", "예약", "발행", "안 보여"],
         "title": "캘린더/예약 발행",
-        "answer": "캘린더는 발행 기능 플래그가 켜져 있을 때만 보여. 현재 환경에서 `NEXT_PUBLIC_PUBLISHING_ENABLED=true`가 아니면 UI에서 숨겨지고, 백엔드 발행 API도 비활성 상태로 두는 게 안전해.",
+        "answer": "예약 발행과 캘린더 기능은 학습 엔진으로의 방향 전환 과정에서 제거됐어. 지금은 URL/텍스트를 넣어 바로 콘텐츠를 생성하고 학습하는 흐름에 집중하고 있어.",
     },
     {
         "keywords": ["모델", "openrouter", "gpt", "키미", "kimi", "프로바이더"],
@@ -55,12 +54,10 @@ def answer_product_question(message: str, context: dict[str, Any] | None = None)
             "confidence": min(0.95, 0.55 + 0.15 * matched[0][0]),
         }
 
-    publishing = os.getenv("NEXT_PUBLIC_PUBLISHING_ENABLED", "false").lower() == "true"
     return {
         "answer": (
             "인사이트 엔진 기능에 대한 질문이면 내가 바로 설명해줄게. "
-            "버그나 불편사항이면 접수해서 GitHub 이슈로 넘길 수 있어. "
-            f"참고로 현재 예약 발행 UI는 {'켜져 있어' if publishing else '비활성화되어 있어'}."
+            "버그나 불편사항이면 접수해서 GitHub 이슈로 넘길 수 있어."
         ),
         "matched_topic": "general",
         "confidence": 0.35,

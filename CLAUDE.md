@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, 예약 캘린더, 팀 워크스페이스 지원.
+**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, 팀 워크스페이스 지원.
 
 ## Commands
 
@@ -72,7 +72,7 @@ JSON 응답 {title, content, html, usage}
 
 | 레이어 | 파일 | 역할 |
 |-------|------|-----|
-| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 예약, 지식 업로드, Ollama 헬스체크 |
+| 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 지식 업로드, Ollama 헬스체크 |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
 | 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 인라인 편집, QA |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
@@ -85,8 +85,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/transcript/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
 | 서비스 | `services/platform/webhook_service.py` | 웹훅 알림 (SSRF 검증 + 재시도) |
 | 서비스 | `services/platform/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
-| 서비스 | `services/data/schedule_service.py` | 예약 발행 CRUD |
-| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
+| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (채널 모니터링/RSS 구독, 30분 간격) |
 | 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
 | 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
@@ -202,8 +201,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **Whisper 자막 폴백**: `WHISPER_ENABLED=true` 시 faster-whisper로 로컬 음성인식 (4번째 폴백)
 
 **파이프라인 자동화**: `POST /api/pipeline` — 자막→생성→SEO 자동 진행 (SSE 실시간 진행률)
-
-**예약 발행**: `POST /api/schedule` — APScheduler 기반 예약 + ContentCalendar UI
 
 **팀 워크스페이스**: `services/workspace_service.py` — 워크스페이스 생성/초대/역할 관리 (Owner/Editor/Viewer)
 

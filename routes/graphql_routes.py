@@ -2,7 +2,7 @@
 GraphQL API 라우트 (F7-09)
 
 순수 Python으로 구현한 최소 GraphQL 엔드포인트.
-주요 쿼리: schedules, generateContent (mutation)
+주요 쿼리: ping, generateContent (mutation)
 """
 import logging
 import re
@@ -28,16 +28,7 @@ type GenerateResult {
   commentSummaryIncluded: Boolean
 }
 
-type Schedule {
-  id: String!
-  title: String!
-  targetPlugin: String!
-  scheduledAt: String!
-  status: String!
-}
-
 type Query {
-  schedules: [Schedule!]!
   ping: String!
 }
 
@@ -48,16 +39,6 @@ type Mutation {
 
 
 # ── 리졸버 ──────────────────────────────────────
-
-def resolve_schedules() -> list:
-    try:
-        from services.data.schedule_service import schedule_service
-        # 모든 예약 조회 (관리자 용도)
-        return schedule_service._store if hasattr(schedule_service, '_store') else []
-    except Exception as e:
-        logger.error(f"GraphQL schedules 리졸버 오류: {e}")
-        return []
-
 
 def resolve_generate_content(url: str, style_id: str, language: str = 'ko') -> Optional[dict]:
     """콘텐츠 생성 뮤테이션 리졸버"""
@@ -101,7 +82,6 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
     """GraphQL 쿼리 실행
 
     지원 쿼리:
-    - { schedules { id title ... } }
     - { ping }
     - mutation { generateContent(url: "...", styleId: "...") { title content } }
     """
@@ -114,7 +94,7 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
                 '__schema': {
                     'types': [
                         {'name': 'Query'}, {'name': 'Mutation'},
-                        {'name': 'GenerateResult'}, {'name': 'Schedule'},
+                        {'name': 'GenerateResult'},
                     ]
                 }
             }
@@ -138,10 +118,6 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
             data['generateContent'] = result
     else:
         # Query 처리
-        if 'schedules' in query:
-            schedules = resolve_schedules()
-            data['schedules'] = schedules if isinstance(schedules, list) else []
-
         if 'ping' in query:
             data['ping'] = 'pong'
 

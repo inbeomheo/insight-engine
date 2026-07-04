@@ -1,9 +1,8 @@
 """
-예약 발행 + 채널 모니터링 백그라운드 워커
+채널 모니터링 + RSS 구독 확인 백그라운드 워커
 
-APScheduler로 매분 예약된 포스트를 확인합니다. 발행 플러그인 시스템은
-제거됨(Dep-5) — 대기 포스트는 실패 처리로 남습니다.
-채널 모니터링은 30분 간격으로 신규 업로드를 감지합니다.
+예약 발행 기능은 제거됨(Dep-6). 채널 모니터링/RSS 구독 확인은
+30분 간격으로 신규 업로드·새 글을 감지합니다.
 
 apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스타트업의
 약 31%를 차지하므로, 스케줄러 인스턴스는 PEP 562 __getattr__로 지연 생성한다.
@@ -87,32 +86,6 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def check_and_publish():
-    """매분 실행: 예약된 포스트 확인
-
-    발행 플러그인 시스템은 제거됨(Dep-5) — 대기 중인 예약은 발행하지 않고
-    실패 처리로 남겨 사용자가 상태를 확인할 수 있게 한다.
-    """
-    try:
-        from services.data.schedule_service import schedule_service
-
-        due_posts = schedule_service.get_due_posts()
-        if not due_posts:
-            return
-
-        logger.info(f"발행 대기 포스트 {len(due_posts)}건 — 발행 기능 종료로 처리 불가")
-
-        for post in due_posts:
-            schedule_service.update_status(
-                post["id"],
-                "failed",
-                error_message="발행 기능이 종료되었습니다.",
-            )
-    except Exception as e:
-        logger.error("check_and_publish 실패: %s", e, exc_info=True)
-        return None
-
-
 def _check_channel_monitors():
     """30분 간격: 채널 모니터링 → 신규 영상 감지 시 로깅"""
     from services.data.supabase_service import get_supabase, is_supabase_enabled
@@ -186,13 +159,6 @@ def start_scheduler(app):
             return wrapper
 
         scheduler.add_job(
-            _with_context(check_and_publish),
-            "interval",
-            minutes=1,
-            id="publish_checker",
-            replace_existing=True,
-        )
-        scheduler.add_job(
             _with_context(_check_channel_monitors),
             "interval",
             minutes=30,
@@ -208,7 +174,7 @@ def start_scheduler(app):
         )
         scheduler.start()
         logger.info(
-            "스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, RSS 구독: 30분)"
+            "스케줄러 시작됨 (채널 모니터링: 30분, RSS 구독: 30분)"
         )
     except Exception as e:
         logger.error("start_scheduler 실패: %s", e, exc_info=True)
@@ -227,7 +193,7 @@ def stop_scheduler():
         scheduler = _self.scheduler
         if scheduler.running:
             scheduler.shutdown(wait=False)
-            logger.info("예약 발행 스케줄러 종료됨")
+            logger.info("스케줄러 종료됨")
         _release_scheduler_leader_lock()
     except Exception as e:
         logger.error("stop_scheduler 실패: %s", e, exc_info=True)

@@ -139,55 +139,6 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                         },
                     }
                 },
-                '/api/schedule': {
-                    'get': {
-                        'summary': '예약 발행 목록 조회',
-                        'operationId': 'listSchedules',
-                        'tags': ['Schedule'],
-                        'responses': {
-                            '200': {
-                                'description': '예약 목록',
-                                'content': {
-                                    'application/json': {
-                                        'schema': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'schedules': {'type': 'array', 'items': {'type': 'object'}}
-                                            },
-                                        }
-                                    }
-                                },
-                            }
-                        },
-                    },
-                    'post': {
-                        'summary': '예약 발행 생성',
-                        'operationId': 'createSchedule',
-                        'tags': ['Schedule'],
-                        'requestBody': {
-                            'required': True,
-                            'content': {
-                                'application/json': {
-                                    'schema': {
-                                        'type': 'object',
-                                        'required': ['title', 'content', 'target_plugin', 'scheduled_at'],
-                                        'properties': {
-                                            'title': {'type': 'string'},
-                                            'content': {'type': 'string'},
-                                            'html': {'type': 'string'},
-                                            'target_plugin': {'type': 'string'},
-                                            'scheduled_at': {'type': 'string', 'format': 'date-time'},
-                                        },
-                                    }
-                                }
-                            },
-                        },
-                        'responses': {
-                            '201': {'description': '예약 생성 성공'},
-                            '400': {'description': '잘못된 요청'},
-                        },
-                    },
-                },
                 '/api/zapier/trigger': {
                     'post': {
                         'summary': 'Zapier 트리거 — 콘텐츠 생성 완료 이벤트',
@@ -241,7 +192,6 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
             },
             'tags': [
                 {'name': 'Content', 'description': 'AI 콘텐츠 생성'},
-                {'name': 'Schedule', 'description': '예약 발행'},
                 {'name': 'Integrations', 'description': '외부 서비스 통합'},
             ],
         }

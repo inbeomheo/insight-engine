@@ -15,7 +15,6 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import TextInput from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -42,7 +41,6 @@ interface MobileAppShellProps {
   textValue: string;
   onTextChange: (text: string) => void;
   onGenerateText: (text: string) => void;
-  onSchedule: (report: Report) => void;
 }
 
 const TAB_META: Record<MobileTab, { label: string; icon: typeof PlusCircle }> = {
@@ -57,7 +55,6 @@ const MODE_LABELS: Record<GenerationMode, string> = {
   combined: '통합',
   fusion: '퓨전',
 };
-const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 
 function MobileBottomNav({ activeTab, onChange }: { activeTab: MobileTab; onChange: (tab: MobileTab) => void }) {
   return (
@@ -420,7 +417,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
   );
 }
 
-function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBack: () => void; onSchedule: (report: Report) => void }) {
+function MobileDetailView({ report, onBack }: { report: Report; onBack: () => void }) {
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const [chatOpen, setChatOpen] = useState(false);
   return (
@@ -434,13 +431,6 @@ function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBa
           <h1 className="truncate text-sm font-black tracking-[-0.02em]">{report.title}</h1>
           <p className="signal-meta mt-0.5 truncate text-[9px] text-muted-foreground/50">{getStyleLabel(report.style)} · {report.time}</p>
         </div>
-        {PUBLISHING_ENABLED && (
-          <Button size="sm" className="h-9 rounded-sm bg-primary px-4 text-xs font-black" onClick={() => onSchedule(report)}>
-            발행
-            {/* primary 채움 배경 위 대비 확보용 오버라이드 */}
-            <DeprecatedBadge className="text-primary-foreground/80 border-primary-foreground/40" />
-          </Button>
-        )}
       </div>
 
       <article className="px-6 pt-6">
@@ -502,7 +492,6 @@ export default function MobileAppShell({
   textValue,
   onTextChange,
   onGenerateText,
-  onSchedule,
 }: MobileAppShellProps) {
   const [activeTab, setActiveTab] = useState<MobileTab>('create');
   const [activeReport, setActiveReport] = useState<Report | null>(null);
@@ -510,7 +499,7 @@ export default function MobileAppShell({
   if (activeReport) {
     return (
       <div className="min-h-dvh bg-background text-foreground xl:hidden">
-        <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} onSchedule={onSchedule} />
+        <MobileDetailView report={activeReport} onBack={() => setActiveReport(null)} />
         <MobileBottomNav activeTab="library" onChange={(tab) => { setActiveReport(null); setActiveTab(tab); }} />
       </div>
     );

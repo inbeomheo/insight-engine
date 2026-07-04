@@ -12,7 +12,6 @@ import type {
   FusionSections,
   PipelineRequest,
   PipelineEvent,
-  ScheduledPost,
   Workspace,
   WorkspaceMember,
   KnowledgeItem,
@@ -442,28 +441,6 @@ export async function testWebhook(url: string): Promise<{ success: boolean; erro
     method: 'POST',
     body: JSON.stringify({ url }),
   });
-}
-
-// 예약 발행 CRUD
-export async function createSchedule(data: {
-  title: string;
-  content: string;
-  html?: string;
-  target_plugin: string;
-  scheduled_at: string;
-}): Promise<ScheduledPost> {
-  return request('/api/schedule', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-export async function getSchedules(): Promise<{ schedules: ScheduledPost[] }> {
-  return request('/api/schedule');
-}
-
-export async function deleteSchedule(postId: string): Promise<{ success: boolean }> {
-  return request(`/api/schedule/${postId}`, { method: 'DELETE' });
 }
 
 // 파이프라인 실행 (SSE)

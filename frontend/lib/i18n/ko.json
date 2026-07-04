@@ -20,16 +20,13 @@
     "next": "다음",
     "previous": "이전",
     "skip": "건너뛰기",
-    "done": "완료",
-    "deprecated": "지원 종료 예정",
-    "deprecatedTooltip": "학습 엔진 전환으로 발행 기능은 단계적으로 정리됩니다"
+    "done": "완료"
   },
   "sidebar": {
     "newAnalysis": "새 분석",
     "historySearch": "히스토리 검색...",
     "noHistory": "분석 히스토리가 없습니다",
     "noSearchResults": "검색 결과가 없습니다",
-    "calendar": "예약 캘린더",
     "notes": "노트",
     "poweredBy": "Powered by AI",
     "help": "도움말"
@@ -49,9 +46,6 @@
   "emptyState": {
     "title": "영상·텍스트·PDF를 분석해보세요",
     "description": "URL을 붙여넣거나 텍스트/PDF를 넣으면 AI가 요약, 튜토리얼 등\n다양한 형식의 학습 콘텐츠를 자동 생성합니다"
-  },
-  "calendar": {
-    "title": "예약 캘린더"
   },
   "styles": {
     "blog_seo": "블로그+SEO",
@@ -84,7 +78,6 @@
     "share": "공유",
     "promptView": "프롬프트 보기",
     "mindmap": "마인드맵",
-    "schedule": "예약 발행",
     "delete": "삭제",
     "merged": "통합",
     "fusion": "퓨전",

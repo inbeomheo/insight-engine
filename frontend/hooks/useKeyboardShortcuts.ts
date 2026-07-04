@@ -19,17 +19,13 @@ export function useKeyboardShortcuts() {
   const {
     setSettingsModalOpen,
     toggleSidebar,
-    setActiveView,
   } = useUIStore();
 
   const shortcuts: ShortcutDef[] = useMemo(() => [
     // 설정
     { key: ',', ctrl: true, label: '설정 열기', category: '일반', action: () => setSettingsModalOpen(true) },
     { key: 'b', ctrl: true, label: '사이드바 토글', category: '일반', action: () => toggleSidebar() },
-    // 탐색
-    { key: '1', alt: true, label: '메인 뷰', category: '탐색', action: () => setActiveView('main') },
-    { key: '2', alt: true, label: '캘린더 뷰', category: '탐색', action: () => setActiveView('calendar') },
-  ], [setSettingsModalOpen, toggleSidebar, setActiveView]);
+  ], [setSettingsModalOpen, toggleSidebar]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

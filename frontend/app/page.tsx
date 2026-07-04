@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Plus, CalendarDays, Settings } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Sidebar from '@/components/layout/Sidebar';
@@ -16,21 +16,14 @@ import ViewModeSelector from '@/components/result/ViewModeSelector';
 import FilterBar from '@/components/result/FilterBar';
 import LoadingSkeleton from '@/components/result/LoadingSkeleton';
 import FusionProgress from '@/components/result/FusionProgress';
-import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 
-const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
-
-const DisabledPublishingComponent = () => null;
-
-// Phase 1: 모달 + 캘린더 dynamic import (초기 번들 축소)
+// Phase 1: 모달 dynamic import (초기 번들 축소)
 const PromptModal = dynamic(() => import('@/components/modals/PromptModal'), { ssr: false });
 const MindmapModal = dynamic(() => import('@/components/modals/MindmapModal'), { ssr: false });
 const OnboardingModal = dynamic(() => import('@/components/modals/OnboardingModal'), { ssr: false });
 const CustomStyleModal = dynamic(() => import('@/components/modals/CustomStyleModal'), { ssr: false });
 const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/WorkspaceSettingsModal'), { ssr: false });
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
-const ScheduleModal = PUBLISHING_ENABLED ? dynamic(() => import('@/components/modals/ScheduleModal'), { ssr: false }) : DisabledPublishingComponent;
-const ContentCalendar = PUBLISHING_ENABLED ? dynamic(() => import('@/components/schedule/ContentCalendar'), { ssr: false }) : DisabledPublishingComponent;
 const SupportAssistant = dynamic(() => import('@/components/support/SupportAssistant'), { ssr: false });
 
 
@@ -41,11 +34,10 @@ import { cn } from '@/lib/utils';
 import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
-import { useSchedule } from '@/hooks/useSchedule';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import { STYLE_OPTIONS } from '@/lib/constants';
-import type { GenerationMode, Report, ViewMode } from '@/lib/types';
+import type { GenerationMode, ViewMode } from '@/lib/types';
 
 export default function Home() {
   const hydrateSettings = useSettingsStore((s) => s.hydrate);
@@ -58,8 +50,6 @@ export default function Home() {
   const setSettingsPopoverOpen = useUIStore((s) => s.setSettingsPopoverOpen);
   const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
   const activeReportId = useUIStore((s) => s.activeReportId);
-  const activeView = useUIStore((s) => s.activeView);
-  const setActiveView = useUIStore((s) => s.setActiveView);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
@@ -73,16 +63,8 @@ export default function Home() {
   const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls, generateFromText } = useGenerate();
   const [inputTab, setInputTab] = useState<'url' | 'text'>('url');
   const [pastedText, setPastedText] = useState('');
-  const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(PUBLISHING_ENABLED && activeView === 'calendar');
 
   const { t } = useTranslation();
-
-  // 발행 기능이 꺼진 환경에서는 예약 캘린더 뷰로 진입하지 않음
-  useEffect(() => {
-    if (!PUBLISHING_ENABLED && activeView === 'calendar') {
-      setActiveView('main');
-    }
-  }, [activeView, setActiveView]);
 
   // 뷰 모드 — localStorage 연동
   const [viewMode, setViewMode] = useState<ViewMode>('full');
@@ -96,12 +78,6 @@ export default function Home() {
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem('ie_view_mode', mode);
-  }, []);
-
-  // 예약 발행 모달 — 페이지 레벨 1개 (카드마다 마운트 X)
-  const [scheduleTarget, setScheduleTarget] = useState<Report | null>(null);
-  const handleScheduleOpen = useCallback((report: Report) => {
-    setScheduleTarget(report);
   }, []);
 
   // onExpandToFull — 안정 참조 (인라인 화살표 함수 방지 → memo 유지)
@@ -141,23 +117,6 @@ export default function Home() {
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
   }, [deferredFiltered.length]);
-
-  // ScheduleModal 핸들러 — 안정 참조
-  const handleScheduleOpenChange = useCallback((open: boolean) => {
-    if (!open) setScheduleTarget(null);
-  }, []);
-
-  const handleScheduleSubmit = useCallback(async (data: { target_plugin: string; scheduled_at: string }) => {
-    const target = scheduleTarget;
-    if (!target) return;
-    const ok = await addSchedule({
-      title: target.title,
-      content: target.content,
-      html: target.html,
-      ...data,
-    });
-    if (ok) setScheduleTarget(null);
-  }, [scheduleTarget, addSchedule]);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -280,7 +239,6 @@ export default function Home() {
         textValue={pastedText}
         onTextChange={setPastedText}
         onGenerateText={handleGenerateFromText}
-        onSchedule={handleScheduleOpen}
       />
       <div
         className="relative hidden h-screen overflow-hidden xl:flex"
@@ -315,11 +273,7 @@ export default function Home() {
           <nav className="flex h-full items-center gap-7" aria-label="데스크톱 주요 탭">
             <button
               type="button"
-              className={cn(
-                'signal-meta relative h-full text-[11px] font-bold transition-colors',
-                activeView === 'main' ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:bg-primary' : 'text-muted-foreground/55 hover:text-foreground'
-              )}
-              onClick={() => setActiveView('main')}
+              className="signal-meta relative h-full text-[11px] font-bold text-foreground transition-colors after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:bg-primary"
             >
               생성
             </button>
@@ -329,19 +283,6 @@ export default function Home() {
             <button type="button" className="signal-meta h-full text-[11px] font-bold text-muted-foreground/55 hover:text-foreground">
               대시보드
             </button>
-            {PUBLISHING_ENABLED && (
-              <button
-                type="button"
-                className={cn(
-                  'signal-meta relative h-full text-[11px] font-bold transition-colors',
-                  activeView === 'calendar' ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:bg-primary' : 'text-muted-foreground/55 hover:text-foreground'
-                )}
-                onClick={() => setActiveView('calendar')}
-              >
-                캘린더
-                <DeprecatedBadge />
-              </button>
-            )}
           </nav>
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-foreground text-background hover:bg-foreground/90" onClick={() => setSettingsModalOpen(true)} aria-label="설정 열기">
@@ -355,19 +296,6 @@ export default function Home() {
           <ScrollArea className="h-full">
             <div className="px-4 pb-24 pt-5 sm:px-8 sm:pt-10 xl:px-14 xl:pb-10">
 
-              {/* 캘린더 뷰 */}
-              {PUBLISHING_ENABLED && activeView === 'calendar' && (
-                <div className="max-w-3xl mx-auto">
-                  <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                    {t('calendar.title')}
-                    <DeprecatedBadge />
-                  </h2>
-                  <ContentCalendar schedules={schedules} onDelete={removeSchedule} />
-                </div>
-              )}
-
-              {/* 메인 뷰 (콘텐츠 생성) */}
-              {activeView === 'main' && <>
               {/* URL 입력 영역 */}
               <section className="relative mb-12 max-w-[880px]">
                 <div className="mb-6 space-y-3">
@@ -582,7 +510,6 @@ export default function Home() {
                     <ResultCard
                       report={r}
                       searchQuery={searchQuery}
-                      onSchedule={handleScheduleOpen}
                       viewMode={viewMode}
                       onExpandToFull={handleExpandToFull}
                     />
@@ -617,7 +544,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              </>}
             </div>
           </ScrollArea>
         </main>
@@ -630,25 +556,11 @@ export default function Home() {
       >
         <button
           type="button"
-          className={cn(
-            'signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold transition-colors',
-            activeView === 'main' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => { setActiveView('main'); setSidebarOpen(false); }}
+          className="signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground text-[10px] font-semibold text-background transition-colors"
+          onClick={() => setSidebarOpen(false)}
         >
           <Plus className="h-3.5 w-3.5" />
           새 분석
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold transition-colors',
-            activeView === 'calendar' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
-          )}
-          onClick={() => { setActiveView('calendar'); setSidebarOpen(false); }}
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          캘린더
         </button>
         <button
           type="button"
@@ -668,19 +580,6 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
-
-      {/* 예약 발행 모달 — 페이지 레벨 1개 */}
-      {PUBLISHING_ENABLED && (
-        <ScheduleModal
-          open={!!scheduleTarget}
-          onOpenChange={handleScheduleOpenChange}
-          title={scheduleTarget?.title || ''}
-          content={scheduleTarget?.content || ''}
-          html={scheduleTarget?.html}
-          isLoading={scheduleLoading}
-          onSchedule={handleScheduleSubmit}
-        />
-      )}
       </div>
       <SupportAssistant />
     </>

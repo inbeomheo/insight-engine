@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 
-type ActiveView = 'main' | 'calendar';
-
 /** 동시에 하나만 열리는 모달 종류 */
 type ModalType =
   | 'settings'
@@ -26,10 +24,6 @@ interface UIState {
   activeMindmapReportId: string;
   editingCustomStyleId: string | null;
 
-  // 메인 뷰 전환
-  activeView: ActiveView;
-  setActiveView: (v: ActiveView) => void;
-
   // 사이드바 히스토리에서 선택된 리포트
   activeReportId: string | null;
   setActiveReportId: (id: string | null) => void;
@@ -51,13 +45,11 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
   settingsPopoverOpen: false,
   activeModal: null,
-  activeView: 'main',
   activePrompt: '',
   activeMindmapReportId: '',
   editingCustomStyleId: null,
   activeReportId: null,
 
-  setActiveView: (v) => set({ activeView: v }),
   setActiveReportId: (id) => set({ activeReportId: id }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),

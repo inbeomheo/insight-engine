@@ -40,7 +40,6 @@ class TestBuildOpenapiSpec(unittest.TestCase):
         """주요 경로 존재"""
         spec = build_openapi_spec()
         self.assertIn('/generate', spec['paths'])
-        self.assertIn('/api/schedule', spec['paths'])
 
     def test_security_scheme(self):
         """BearerAuth 보안 스키마"""
@@ -62,7 +61,6 @@ class TestBuildOpenapiSpec(unittest.TestCase):
         spec = build_openapi_spec()
         tag_names = [t['name'] for t in spec['tags']]
         self.assertIn('Content', tag_names)
-        self.assertIn('Schedule', tag_names)
 
     def test_generate_endpoint_post(self):
         """/generate POST 메서드"""

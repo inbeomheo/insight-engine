@@ -1,30 +1,6 @@
-"""scheduler_worker 단위 테스트 — check_and_publish, start/stop_scheduler"""
+"""scheduler_worker 단위 테스트 — start/stop_scheduler"""
 import unittest
 from unittest.mock import patch, MagicMock
-
-
-class TestCheckAndPublish(unittest.TestCase):
-    """check_and_publish: 예약 포스트 확인 — 발행 플러그인 제거(Dep-5) 후 실패 처리"""
-
-    @patch('services.data.scheduler_worker.logger')
-    @patch('services.data.schedule_service.schedule_service')
-    def test_no_due_posts(self, mock_schedule, mock_logger):
-        mock_schedule.get_due_posts.return_value = []
-        from services.data.scheduler_worker import check_and_publish
-        check_and_publish()
-        mock_schedule.update_status.assert_not_called()
-
-    @patch('services.data.scheduler_worker.logger')
-    @patch('services.data.schedule_service.schedule_service')
-    def test_due_posts_marked_failed(self, mock_schedule, mock_logger):
-        mock_schedule.get_due_posts.return_value = [
-            {'id': 'p1', 'target_plugin': 'naver', 'content': 'body', 'title': 'title'}
-        ]
-        from services.data.scheduler_worker import check_and_publish
-        check_and_publish()
-        mock_schedule.update_status.assert_called_once_with(
-            'p1', 'failed', error_message='발행 기능이 종료되었습니다.'
-        )
 
 
 class TestStartSchedulerLeaderLock(unittest.TestCase):
