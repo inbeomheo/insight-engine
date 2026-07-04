@@ -283,7 +283,7 @@ def _validate_custom_prompt(custom_prompt):
 from routes.generation_helpers import (
     _fetch_youtube_content,
     _handle_short_content_bypass, _handle_cache_hit,
-    _call_ai_with_comments, _save_and_respond,
+    _call_ai_with_comments, _save_and_respond, _persist_generation_result,
     _process_single_url,
     _get_style_prompt, _handle_direct_text, _handle_audio_upload,
     _handle_document_upload, _handle_web_source,
@@ -880,6 +880,17 @@ def generate_stream():
         if not video_id:
             return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
+        request_data_all = request.get_json(silent=True) or {}
+
+        def _sse(payload):
+            data = json.dumps(payload, ensure_ascii=False)
+            return f"data: {data}\n\n"
+
+        sse_headers = {
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+        }
+
         # 사용량 체크 (수동)
         user_id = getattr(g, 'user_id', None)
         if is_supabase_enabled() and user_id:
@@ -890,6 +901,38 @@ def generate_stream():
                     'code': 'USAGE_LIMIT_EXCEEDED',
                     'usage': usage
                 }), 429
+            g.usage = usage
+
+        # 캐시 체크 — /generate와 동일한 키/force 의미론
+        from services.core.cache_service import AICacheService
+        force = request_data_all.get('force', False)
+        modifiers = params['modifiers'] or {}
+        cache_key = AICacheService.make_key(
+            video_id, params['style'], params['model'],
+            modifiers.get('length', 'medium'),
+            modifiers.get('writing_style', 'conversational'),
+            transcript_language=params.get('transcript_language'),
+        )
+        cache_resp = _handle_cache_hit(
+            cache_key, force, video_id, url, start_time,
+            transcript_language=params.get('transcript_language'),
+        )
+        if cache_resp:
+            cached_payload = cache_resp.get_json() or {}
+
+            def cached_sse():
+                yield _sse({
+                    'type': 'meta',
+                    'youtube_title': cached_payload.get('youtube_title'),
+                    'transcript_source': cached_payload.get('transcript_source'),
+                })
+                yield _sse({'type': 'result', **cached_payload})
+
+            return Response(
+                stream_with_context(cached_sse()),
+                mimetype='text/event-stream',
+                headers=sse_headers,
+            )
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
         transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
@@ -904,13 +947,9 @@ def generate_stream():
 
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
         model = params['model']
-        web_search = bool((request.get_json(silent=True) or {}).get('web_search', False))
+        web_search = bool(request_data_all.get('web_search', False))
 
         app = current_app._get_current_object()
-
-        def _sse(payload):
-            data = json.dumps(payload, ensure_ascii=False)
-            return f"data: {data}\n\n"
 
         def generate_sse():
             with app.app_context():
@@ -1059,6 +1098,14 @@ def generate_stream():
                         'total_duration_seconds': 0,
                         'quota': get_usage_for_response(),
                     }
+                    _persist_generation_result(
+                        cache_key, video_id, params, url, youtube_title,
+                        base_result, prompt, comment_result,
+                        raw_transcript, transcript_source, comments,
+                        result_event['elapsed_time'], result_event['id'],
+                        user_id=user_id,
+                        background=True,
+                    )
                     yield _sse(result_event)
 
                 except Exception as e:
@@ -1078,10 +1125,7 @@ def generate_stream():
         return Response(
             stream_with_context(generate_sse()),
             mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'X-Accel-Buffering': 'no',
-            }
+            headers=sse_headers,
         )
 
     except Exception as e:
