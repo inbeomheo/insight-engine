@@ -491,5 +491,157 @@ class TestGenerateStreamRouteTranscriptLanguage(unittest.TestCase):
         mock_fetch.assert_called_once_with('dQw4w9WgXcQ', None)
 
 
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._fetch_youtube_content')
+    @patch('routes.blog_routes.content_service.get_content_title', return_value='YT')
+    def test_invalid_transcript_language_returns_400_korean_error(
+        self, mock_title, mock_fetch, mock_auth_supabase, mock_usage_supabase,
+    ):
+        resp = self.client.post(
+            '/generate-stream',
+            json={
+                'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'style': 'summary',
+                'transcript_language': 'fr',
+            },
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('언어', resp.get_json()['error'])
+        mock_fetch.assert_not_called()
+
+
+class TestGenerateRouteAICacheTranscriptLanguage(unittest.TestCase):
+    """AI 응답 캐시 키에 transcript_language를 반영."""
+
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._handle_cache_hit', side_effect=lambda *args, **kwargs: ({'cached': True}, 200))
+    @patch('services.core.cache_service.AICacheService.make_key', return_value='cache-key')
+    def test_generate_threads_transcript_language_to_ai_cache_key(
+        self, mock_make_key, mock_cache_hit, mock_auth_supabase, mock_usage_supabase,
+    ):
+        resp = self.client.post(
+            '/generate',
+            json={
+                'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'style': 'summary',
+                'transcript_language': 'en',
+            },
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        mock_make_key.assert_called_once()
+        self.assertEqual(mock_make_key.call_args.kwargs.get('transcript_language'), 'en')
+        mock_cache_hit.assert_called_once()
+        self.assertEqual(mock_cache_hit.call_args.kwargs.get('transcript_language'), 'en')
+
+
+class TestCacheHitTranscriptLanguagePayload(unittest.TestCase):
+    """언어 지정 캐시 히트 응답은 언어 무관 자막 파일 캐시를 우회."""
+
+    @patch('routes.generation_helpers.get_usage_for_response', return_value={})
+    @patch('routes.generation_helpers.content_service.get_transcript')
+    @patch('routes.generation_helpers.content_service.get_cached_transcript')
+    def test_language_cache_hit_reextracts_with_requested_language(
+        self, mock_cached_transcript, mock_get_transcript, mock_usage,
+    ):
+        from app import create_app
+        from flask import current_app
+        from routes.generation_helpers import _handle_cache_hit
+
+        app = create_app()
+        mock_get_transcript.return_value = {'text': '일본어 자막', 'source': 'api'}
+
+        with app.test_request_context():
+            current_app.ai_cache.put(
+                'language_payload_cache_key', 'vid123', 'summary', 'model',
+                'medium', 'conversational',
+                {'title': 'T', 'content': 'C', 'html': '<p>C</p>', 'youtube_title': 'YT'},
+            )
+
+            resp = _handle_cache_hit(
+                'language_payload_cache_key', False, 'vid123', 'https://youtu.be/vid123', 0,
+                transcript_language='ja',
+            )
+
+        mock_cached_transcript.assert_not_called()
+        mock_get_transcript.assert_called_once_with('vid123', transcript_language='ja')
+        body = resp.get_json()
+        self.assertEqual(body['transcript'], '일본어 자막')
+        self.assertEqual(body['transcript_source'], 'api')
+
+
+class TestGenerateMergedRouteTranscriptLanguage(unittest.TestCase):
+    """/api/generate-merged가 transcript_language를 자막 추출에 전달."""
+
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._fetch_youtube_content')
+    def test_invalid_transcript_language_returns_400_korean_error(
+        self, mock_fetch, mock_auth_supabase, mock_usage_supabase,
+    ):
+        resp = self.client.post(
+            '/api/generate-merged',
+            json={
+                'urls': [
+                    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                    'https://www.youtube.com/watch?v=9bZkp7q19f0',
+                ],
+                'style': 'summary',
+                'transcript_language': 'fr',
+            },
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('언어', resp.get_json()['error'])
+        mock_fetch.assert_not_called()
+
+    @patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False)
+    @patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes.ai_service.create_content')
+    @patch('routes.blog_routes.content_service.get_content_title', return_value='YT')
+    @patch('routes.blog_routes._fetch_youtube_content')
+    def test_passes_transcript_language_to_all_fetches(
+        self, mock_fetch, mock_title, mock_create, mock_auth_supabase, mock_usage_supabase,
+    ):
+        mock_fetch.return_value = ('transcript', [], None, 'transcript', 'api', [])
+        mock_create.return_value = ({'title': 'merged', 'content': 'body', 'html': '<p>body</p>'}, 'prompt')
+
+        resp = self.client.post(
+            '/api/generate-merged',
+            json={
+                'urls': [
+                    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                    'https://www.youtube.com/watch?v=9bZkp7q19f0',
+                ],
+                'style': 'summary',
+                'transcript_language': 'ko',
+            },
+            headers=_H,
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        fetch_args = {call.args for call in mock_fetch.call_args_list}
+        self.assertEqual(
+            fetch_args,
+            {('dQw4w9WgXcQ', 'ko'), ('9bZkp7q19f0', 'ko')},
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

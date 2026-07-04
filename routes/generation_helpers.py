@@ -485,12 +485,14 @@ def _handle_short_content_bypass(transcript_text, style, youtube_title,
     })
 
 
-def _handle_cache_hit(cache_key, force, video_id, url, start_time):
+def _handle_cache_hit(cache_key, force, video_id, url, start_time, transcript_language=None):
     """캐시 히트 체크. 히트 시 Response 반환, 아니면 None.
 
     자막/제목 추출 전에 호출된다 — 히트 시 YouTube 왕복(제목 API + 자막
     추출)을 전부 생략한다. 제목은 캐시 페이로드(신규 저장분)에서, 자막은
     video_id 기반 파일 캐시에서 가져오고, 둘 다 없으면 그때만 조회한다.
+    단, transcript_language 지정 시 언어 무관 파일 캐시를 신뢰할 수 없어
+    자막 페이로드는 매번 언어 지정 재추출로 채운다 (의도된 트레이드오프).
     """
     if force:
         return None
@@ -503,14 +505,16 @@ def _handle_cache_hit(cache_key, force, video_id, url, start_time):
     elapsed_time = round(time.time() - start_time, 2)
     cached.pop('_cached_at', None)
 
-    transcript_cache = content_service.get_cached_transcript(video_id) or {}
+    transcript_cache = {} if transcript_language else (content_service.get_cached_transcript(video_id) or {})
     raw_transcript = transcript_cache.get('text', '')
     transcript_source = transcript_cache.get('source', 'cache')
     if not raw_transcript:
         # 자막 파일 캐시가 AI 캐시(TTL 30일)보다 먼저 정리된 경우 재추출 폴백
         # — 캐시 응답에도 transcript 페이로드는 항상 포함돼야 한다
         try:
-            fetched = content_service.get_transcript(video_id)
+            fetched = content_service.get_transcript(
+                video_id, transcript_language=transcript_language
+            )
             if fetched and not fetched.get('error'):
                 raw_transcript = fetched.get('text', '')
                 transcript_source = fetched.get('source', 'cache')

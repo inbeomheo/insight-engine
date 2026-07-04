@@ -1,6 +1,7 @@
 """
 AI 결과 캐시 서비스 테스트
 """
+import hashlib
 import os
 import tempfile
 import time
@@ -40,6 +41,44 @@ class TestAICacheService(unittest.TestCase):
         key1 = AICacheService.make_key('abc', 'summary', 'gemini/flash')
         key2 = AICacheService.make_key('abc', 'blog_seo', 'gemini/flash')
         self.assertNotEqual(key1, key2)
+
+    def test_make_key_without_language_matches_legacy_format(self):
+        """transcript_language 없으면 기존 원문 키 형식을 유지."""
+        expected = hashlib.sha256(
+            b'abc|summary|gemini/flash|medium|conversational'
+        ).hexdigest()
+
+        self.assertEqual(
+            AICacheService.make_key('abc', 'summary', 'gemini/flash', 'medium', 'conversational'),
+            expected,
+        )
+        self.assertEqual(
+            AICacheService.make_key(
+                'abc', 'summary', 'gemini/flash', 'medium', 'conversational',
+                transcript_language=None,
+            ),
+            expected,
+        )
+
+    def test_make_key_differs_by_transcript_language(self):
+        """동일 입력도 자막 언어가 다르면 다른 키를 사용."""
+        en_key = AICacheService.make_key('abc', 'summary', 'gemini/flash', transcript_language='en')
+        ja_key = AICacheService.make_key('abc', 'summary', 'gemini/flash', transcript_language='ja')
+        default_key = AICacheService.make_key('abc', 'summary', 'gemini/flash')
+
+        self.assertNotEqual(en_key, ja_key)
+        self.assertNotEqual(en_key, default_key)
+        self.assertNotEqual(ja_key, default_key)
+
+    def test_language_specific_cache_entries_do_not_cross_hit(self):
+        """언어별 캐시 응답은 서로 교차 히트하지 않음."""
+        en_key = AICacheService.make_key('v1', 'summary', 'model1', transcript_language='en')
+        ja_key = AICacheService.make_key('v1', 'summary', 'model1', transcript_language='ja')
+
+        self.cache.put(en_key, 'v1', 'summary', 'model1', 'medium', 'conversational', {'title': 'EN'})
+
+        self.assertIsNone(self.cache.get(ja_key))
+        self.assertEqual(self.cache.get(en_key)['title'], 'EN')
 
     def test_put_and_get(self):
         """저장 후 조회"""
