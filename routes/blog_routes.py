@@ -1296,7 +1296,6 @@ def generate_stream():
                             raw_transcript, transcript_source, comments,
                             result_event['elapsed_time'], result_event['id'],
                             user_id=user_id,
-                            background=True,
                         )
                     yield _sse(result_event)
 
