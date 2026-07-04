@@ -680,8 +680,7 @@ def _run_chapter_split(app, raw_transcript, model, transcript_segments):
 def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
                                result, used_prompt, comment_result,
                                raw_transcript, transcript_source, comments,
-                               elapsed_time, report_id, user_id=None,
-                               background=True):
+                               elapsed_time, report_id, user_id=None):
     """AI 결과 캐시 저장 + 히스토리 저장을 /generate와 /generate-stream에서 공유."""
     import threading
 
@@ -721,10 +720,7 @@ def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
         if _user_id:
             save_history(_user_id, _history_data)
 
-    if background:
-        threading.Thread(target=_background_save, daemon=True).start()
-    else:
-        _background_save()
+    threading.Thread(target=_background_save, daemon=True).start()
 
 
 def _save_and_respond(result, used_prompt, comment_result, cache_key,
