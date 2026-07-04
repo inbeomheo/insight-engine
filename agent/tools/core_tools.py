@@ -56,9 +56,9 @@ registry.register(
     description=(
         "AI 모델을 사용하여 콘텐츠를 생성합니다. "
         "자막 텍스트와 스타일을 기반으로 블로그, 요약, 튜토리얼 등을 작성합니다. "
-        "14가지 스타일 지원: blog_seo, summary, tutorial, qna, app_ideas, "
+        "15가지 스타일 지원: blog_seo, summary, tutorial, qna, app_ideas, "
         "yozm_it, brunch_essay, naver_popular, sns_post, newsletter, "
-        "show_notes, shorts_script, geo_seo, course"
+        "show_notes, shorts_script, geo_seo, course, quiz"
     ),
     parameters={
         "type": "object",

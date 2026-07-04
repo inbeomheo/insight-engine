@@ -14,6 +14,7 @@ export interface StyleOption {
   id: string;
   label: string;
   emoji: string;
+  description?: string;
 }
 
 export interface ProviderInfo {

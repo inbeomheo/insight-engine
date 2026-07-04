@@ -203,7 +203,8 @@ function MobileCreateView({
                 key={style.id}
                 type="button"
                 aria-pressed={active}
-                title={active && style.id !== 'blog_seo' ? '다시 누르면 Blog+SEO 기본값으로 돌아가요' : undefined}
+                aria-label={`${style.label} 스타일 선택${style.description ? `: ${style.description}` : ''}`}
+                title={active && style.id !== 'blog_seo' ? '다시 누르면 블로그+SEO 기본값으로 돌아가요' : style.description}
                 className={cn(
                   'rounded-full border px-4 py-2 text-xs font-bold transition-colors',
                   active

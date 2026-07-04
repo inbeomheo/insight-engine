@@ -51,6 +51,26 @@ _handle_error_response = handle_error
 _sanitize_error_for_client = sanitize_error_for_client
 
 
+def _validate_style(style, custom_prompt=None):
+    """요청 스타일을 정규화합니다.
+
+    내장 스타일은 공백을 제거한 STYLE_PROMPTS ID로 정규화하고,
+    커스텀 스타일 등 알 수 없는 ID는 기존처럼 그대로 통과시킵니다.
+    """
+    if not isinstance(style, str):
+        return DEFAULT_STYLE
+
+    style_id = style.strip()
+    if not style_id:
+        return DEFAULT_STYLE
+
+    from prompts import STYLE_PROMPTS
+    if style_id in STYLE_PROMPTS:
+        return style_id
+
+    return style
+
+
 def _extract_client_id(req) -> str:
     """요청에서 클라이언트 ID를 추출합니다."""
     data = req.get_json(silent=True)
@@ -83,6 +103,7 @@ def _get_request_data(req):
         modifiers, _ = _validate_modifiers(data.get('modifiers'))
         # custom_prompt 검증
         custom_prompt, _ = _validate_custom_prompt(data.get('customPrompt'))
+        style = _validate_style(data.get('style', DEFAULT_STYLE), custom_prompt)
 
         # urls 검증 (리스트 형식 확인)
         urls = data.get('urls', [])
@@ -130,7 +151,7 @@ def _get_request_data(req):
             'urls': urls,
             'content': data.get('content') if isinstance(data.get('content'), str) else None,
             'model': data.get('model', DEFAULT_MODEL) if isinstance(data.get('model'), str) else DEFAULT_MODEL,
-            'style': data.get('style', DEFAULT_STYLE) if isinstance(data.get('style'), str) else DEFAULT_STYLE,
+            'style': style,
             'modifiers': modifiers,
             'custom_prompt': custom_prompt,
             'analyze': bool(data.get('analyze', False)),
@@ -153,14 +174,17 @@ def _get_request_data(req):
         except (json.JSONDecodeError, ValueError):
             pass
 
+    custom_prompt, _ = _validate_custom_prompt(req.form.get('customPrompt'))
+    style = _validate_style(req.form.get('style', DEFAULT_STYLE), custom_prompt)
+
     return {
         'url': req.form.get('url'),
         'urls': [],
         'content': req.form.get('content'),
         'model': req.form.get('model', DEFAULT_MODEL),
-        'style': req.form.get('style', DEFAULT_STYLE),
+        'style': style,
         'modifiers': form_modifiers,
-        'custom_prompt': req.form.get('customPrompt'),
+        'custom_prompt': custom_prompt,
         'analyze': False,
         'source_type': None,
         'detail_level': req.form.get('detail_level', 'standard'),

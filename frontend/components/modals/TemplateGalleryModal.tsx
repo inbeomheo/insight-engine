@@ -42,14 +42,16 @@ const STYLE_LABELS: Record<string, string> = {
   tutorial: '튜토리얼',
   qna: 'Q&A',
   app_ideas: '앱 아이디어',
-  yozm_it: 'Yozm IT',
+  yozm_it: '요즘IT',
   brunch_essay: '브런치 에세이',
   naver_popular: '네이버 인기',
   sns_post: 'SNS 포스트',
   newsletter: '뉴스레터',
   show_notes: '쇼노트',
-  shorts_script: 'Shorts 스크립트',
-  geo_seo: 'GEO SEO',
+  shorts_script: '쇼츠 클립',
+  geo_seo: 'GEO 검색',
+  course: 'AI 코스',
+  quiz: '퀴즈',
 };
 
 type ViewMode = 'list' | 'create' | 'edit';

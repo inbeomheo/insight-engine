@@ -1,6 +1,6 @@
 # Insight Engine
 
-YouTube 영상 URL 하나로 14가지 스타일의 고품질 콘텐츠를 자동 생성하는 AI 콘텐츠 엔진.
+YouTube 영상 URL 하나로 15가지 스타일의 고품질 콘텐츠를 자동 생성하는 AI 콘텐츠 엔진.
 5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, MCP 자동 발행, 팀 워크스페이스까지.
 
 Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 · 1,659개 테스트(99.94% pass)
@@ -10,7 +10,7 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 ## Features
 
 ### Core
-- **14가지 출력 스타일** — 블로그+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버 인기글, SNS, 뉴스레터, 쇼노트, Shorts 클립, GEO(AI검색 최적화), AI 코스
+- **15가지 출력 스타일** — 블로그+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버 인기글, SNS, 뉴스레터, 쇼노트, Shorts 클립, GEO(AI검색 최적화), AI 코스, 퀴즈
 - **5개 AI 프로바이더** — Gemini, DeepSeek, Zhipu GLM, Ollama(로컬), OpenRouter(2600+ 모델)
 - **다국어 출력** — 한국어, 영어, 일본어
 - **4단계 자막 폴백** — youtube-transcript-api → watch 페이지 파싱 → Supadata API → Whisper 로컬 음성인식
@@ -178,7 +178,7 @@ insight-engine/
 │
 ├── prompts/                       # 프롬프트 시스템 v3.4
 │   ├── base.py                    # 기본 프롬프트 (Chain-of-Thought)
-│   └── styles/                    # 14개 UI 스타일 + 4개 내부 스타일
+│   └── styles/                    # 15개 UI 스타일 + 4개 내부 스타일
 │
 ├── frontend/                      # Next.js 16 + Tailwind v4 + shadcn
 │   ├── app/                       # App Router 페이지
@@ -227,6 +227,7 @@ insight-engine/
 | Shorts Clip | 60초 Shorts 스크립트 (3-5개 클립) |
 | GEO | AI 검색엔진 최적화 (citations, entity tags) |
 | AI Course | 교육 코스 콘텐츠 |
+| Quiz | 객관식 학습 퀴즈 |
 
 각 스타일은 독립 프롬프트 + 최적화된 temperature/max_tokens 설정.
 

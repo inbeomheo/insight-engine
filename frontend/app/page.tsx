@@ -384,7 +384,7 @@ export default function Home() {
                       <h2 className="text-sm font-bold text-foreground">출력 스타일 <span className="text-muted-foreground/45">{STYLE_OPTIONS.length}</span></h2>
                       <span className="signal-meta text-[10px] font-bold text-primary">선택 1 · 다시 누르면 기본값</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 xl:grid-cols-7">
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
                       {STYLE_OPTIONS.map((style) => {
                         const active = selectedStyle === style.id;
                         return (
@@ -392,16 +392,22 @@ export default function Home() {
                             key={style.id}
                             type="button"
                             aria-pressed={active}
-                            title={active && style.id !== 'blog_seo' ? '다시 누르면 Blog+SEO 기본값으로 돌아가요' : undefined}
+                            aria-label={`${style.label} 스타일 선택${style.description ? `: ${style.description}` : ''}`}
+                            title={active && style.id !== 'blog_seo' ? '다시 누르면 블로그+SEO 기본값으로 돌아가요' : style.description}
                             className={cn(
-                              'h-11 border text-xs font-bold transition-colors',
+                              'flex min-h-16 flex-col justify-center border px-2 py-2 text-left transition-colors',
                               active
                                 ? 'border-foreground bg-foreground text-background shadow-[2px_2px_0_var(--primary)]'
                                 : 'border-border bg-card text-foreground/60 hover:border-foreground/50 hover:text-foreground'
                             )}
                             onClick={() => handleStyleSelect(style.id)}
                           >
-                            {style.label}
+                            <span className="text-xs font-bold">{style.emoji} {style.label}</span>
+                            {style.description && (
+                              <span className={cn('mt-1 text-[10px] leading-tight', active ? 'text-background/70' : 'text-muted-foreground/70')}>
+                                {style.description}
+                              </span>
+                            )}
                           </button>
                         );
                       })}

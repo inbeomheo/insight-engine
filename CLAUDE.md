@@ -184,11 +184,11 @@ def generate_batch(): ...
 
 ### 스타일 시스템 (v4.0)
 
-UI에 표시되는 14개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`, `course`
+UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `app_ideas`, `yozm_it`, `brunch_essay`, `naver_popular`, `sns_post`, `newsletter`, `show_notes`, `shorts_script`, `geo_seo`, `course`, `quiz`
 
 내부 전용: `comment_summary` (병렬 댓글 요약용), `cited_summary` (타임스탬프 인용 모드, `enable_citations=true` 시), `chapter_split` (챕터 분할 전용), `mindmap` (마인드맵 변환)
 
-전체 스타일 목록은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict가 단일 소스. `middleware/request_validator.py`의 `VALID_STYLES`와 `config.py`의 `STYLE_OPTIONS`/`STYLE_TEMPERATURE`도 함께 갱신할 것.
+전체 스타일 목록은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict가 단일 소스. 단일 생성 요청은 `routes/blog_routes.py`의 `_validate_style()`에서 내장 스타일을 정규화하고 커스텀 스타일 ID는 통과시킨다. 멀티/캠페인 생성은 `routes/advanced_routes.py`에서 `current_app.config['STYLE_PROMPTS']` 기준으로 유효 스타일을 필터링한다. `config.py`의 `STYLE_OPTIONS`/`STYLE_TEMPERATURE`도 함께 갱신할 것.
 
 ### 추가 기능
 
@@ -254,8 +254,8 @@ UI에 표시되는 14개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
 2. `prompts/styles/__init__.py`에서 import 및 `STYLE_PROMPTS`에 추가
 3. `config.py`의 `STYLE_OPTIONS`에 메타데이터 추가
-4. `templates/index.html`의 스타일 그리드에 UI 추가
-5. `static/js/modules/StyleManager.js`의 `styleLabels`에 라벨 추가
+4. `frontend/lib/constants.ts`의 `STYLE_OPTIONS`에 UI 라벨/이모지/설명 추가
+5. `frontend/app/page.tsx`의 스타일 그리드 렌더링을 확인하고, 필요하면 모바일/설정/필터 등 `STYLE_OPTIONS` 소비 컴포넌트도 갱신
 
 ### 지원 모델 (LiteLLM 형식)
 
@@ -289,7 +289,7 @@ UI에 표시되는 14개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 ### AI 생성 파라미터 튜닝 (`config.py`)
 
 **스타일별 temperature** (`STYLE_TEMPERATURE`):
-- 정밀형 0.5: `summary`, `tutorial`, `qna`, `show_notes`, `comment_summary`
+- 정밀형 0.5: `summary`, `tutorial`, `qna`, `show_notes`, `quiz`, `comment_summary`
 - 균형형 0.7: `blog_seo`, `yozm_it`, `app_ideas`, `newsletter`
 - 창의형 0.8~0.85: `sns_post`(0.8), `brunch_essay`(0.85), `naver_popular`(0.85)
 
