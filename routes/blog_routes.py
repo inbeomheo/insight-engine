@@ -3,7 +3,6 @@
 
 핵심 생성 엔드포인트만 포함:
 - /generate (단일 URL 생성)
-- /regenerate (콘텐츠 재생성)
 - /generate-batch (배치 처리)
 - /api/generate-merged (통합 생성)
 - /generate-stream (SSE 스트리밍)
@@ -454,38 +453,6 @@ def generate():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate failed: {e}")
-        return _handle_error_response(str(e))
-
-
-@blog_bp.route('/regenerate', methods=['POST'])
-@require_auth
-@require_usage
-def regenerate():
-    """기존 콘텐츠를 새로운 스타일로 재생성합니다.
-    API 키는 서버 환경변수에서 자동으로 로드됩니다.
-    로그인 필수, 하루 5회 제한 적용 (관리자는 무제한).
-    """
-    try:
-        params = _get_request_data(request)
-        content = params['content']
-
-        if not content:
-            return api_error('재생성할 콘텐츠가 없습니다', 400)
-
-        style_prompt = _get_style_prompt(params['style'])
-        result, used_prompt = ai_service.create_content(
-            content,
-            params['model'],
-            style_prompt,
-            return_prompt=True
-        )
-
-        return jsonify({**result, "prompt": used_prompt, "quota": get_usage_for_response()})
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Regenerate failed: {e}")
         return _handle_error_response(str(e))
 
 

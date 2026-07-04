@@ -1,6 +1,6 @@
 """blog_routes.py 라우트 커버리지 테스트.
 
-핵심 생성 엔드포인트 (/generate, /regenerate, /generate-batch) +
+핵심 생성 엔드포인트 (/generate, /generate-batch) +
 템플릿, Video QA, TTS, 이벤트 추출, 자막 워크스페이스, 캡처 엔드포인트 커버.
 """
 import unittest
@@ -190,29 +190,6 @@ class TestGenerateRoute(_Base):
                                 json={'content': '충분히 긴 텍스트입니다. ' * 10},
                                 headers=_H)
         self.assertIn(resp.status_code, [200, 400, 500])
-
-
-# ── /regenerate 엔드포인트 ──────────────────────────────────────
-
-
-class TestRegenerateRoute(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_regenerate_missing_content(self, _):
-        resp = self.client.post('/regenerate', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.ai_service.create_content')
-    def test_regenerate_success(self, mock_ai, _):
-        mock_ai.return_value = (
-            {'title': '재생성', 'content': '결과', 'html': '<p>결과</p>'},
-            '사용된 프롬프트'
-        )
-        resp = self.client.post('/regenerate',
-                                json={'content': '원본 콘텐츠', 'style': 'summary'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
 
 
 # ── /generate-batch 엔드포인트 ──────────────────────────────────────

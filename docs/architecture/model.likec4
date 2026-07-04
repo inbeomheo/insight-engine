@@ -73,7 +73,7 @@ model {
       technology 'Flask / Python'
 
       blogRoutes = route 'Blog Routes' {
-        description '/generate, /generate-batch, /regenerate, /api/mindmap'
+        description '/generate, /generate-batch, /api/mindmap'
         technology 'routes/blog_routes.py'
       }
 
