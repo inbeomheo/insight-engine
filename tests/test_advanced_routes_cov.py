@@ -130,6 +130,71 @@ class TestGenerateMulti(_Base):
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
 
+    def test_multi_composes_base_prompt_for_ui_style(self, _):
+        from prompts.base import BASE_PROMPT
+
+        self.app.config['STYLE_PROMPTS'] = {'summary': 'SUMMARY_ONLY'}
+        with (
+            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
+            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
+            patch('routes.advanced_routes._fetch_youtube_content',
+                  return_value=('transcript', [], None, [], 'api', None)),
+            patch('services.core.content_service.is_youtube_url', return_value=True),
+            patch('services.core.content_service.get_video_id', return_value='vid1'),
+            patch('services.core.content_service.get_content_title', return_value='Title'),
+            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
+            patch('services.core.ai_service.create_content',
+                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
+        ):
+            resp = self.client.post(
+                '/api/generate-multi',
+                json={
+                    'url': 'https://www.youtube.com/watch?v=test123',
+                    'styles': ['summary'],
+                    'model': 'zhipuai/test',
+                },
+                headers=_H,
+                environ_overrides={'REMOTE_ADDR': '127.0.10.1'},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        style_prompt = create_content.call_args[0][2]
+        self.assertTrue(style_prompt.startswith(BASE_PROMPT))
+        self.assertEqual(style_prompt.count(BASE_PROMPT), 1)
+        self.assertTrue(style_prompt.endswith('SUMMARY_ONLY'))
+
+    def test_multi_transform_style_does_not_get_base_prompt(self, _):
+        from prompts.base import BASE_PROMPT
+
+        self.app.config['STYLE_PROMPTS'] = {'mindmap': 'TRANSFORM_ONLY'}
+        with (
+            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
+            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
+            patch('routes.advanced_routes._fetch_youtube_content',
+                  return_value=('transcript', [], None, [], 'api', None)),
+            patch('services.core.content_service.is_youtube_url', return_value=True),
+            patch('services.core.content_service.get_video_id', return_value='vid1'),
+            patch('services.core.content_service.get_content_title', return_value='Title'),
+            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
+            patch('services.core.ai_service.create_content',
+                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
+        ):
+            resp = self.client.post(
+                '/api/generate-multi',
+                json={
+                    'url': 'https://www.youtube.com/watch?v=test123',
+                    'styles': ['mindmap'],
+                    'model': 'zhipuai/test',
+                },
+                headers=_H,
+                environ_overrides={'REMOTE_ADDR': '127.0.10.2'},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        style_prompt = create_content.call_args[0][2]
+        self.assertEqual(style_prompt, 'TRANSFORM_ONLY')
+        self.assertFalse(style_prompt.startswith(BASE_PROMPT))
+
 
 # ── 캠페인 ─────────────────────────────────────────────
 
@@ -155,6 +220,39 @@ class TestGenerateCampaign(_Base):
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429])
+
+    def test_campaign_composes_base_prompt_for_ui_style(self, _):
+        from prompts.base import BASE_PROMPT
+
+        self.app.config['STYLE_PROMPTS'] = {'summary': 'SUMMARY_ONLY'}
+        with (
+            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
+            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
+            patch('routes.advanced_routes._fetch_youtube_content',
+                  return_value=('transcript', [], None, [], 'api', None)),
+            patch('services.core.content_service.is_youtube_url', return_value=True),
+            patch('services.core.content_service.get_video_id', return_value='vid1'),
+            patch('services.core.content_service.get_content_title', return_value='Title'),
+            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
+            patch('services.core.ai_service.create_content',
+                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
+        ):
+            resp = self.client.post(
+                '/api/generate-campaign',
+                json={
+                    'url': 'https://www.youtube.com/watch?v=test123',
+                    'pack_id': 'blog_focused',
+                    'model': 'zhipuai/test',
+                },
+                headers=_H,
+                environ_overrides={'REMOTE_ADDR': '127.0.10.3'},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        style_prompt = create_content.call_args[0][2]
+        self.assertTrue(style_prompt.startswith(BASE_PROMPT))
+        self.assertEqual(style_prompt.count(BASE_PROMPT), 1)
+        self.assertTrue(style_prompt.endswith('SUMMARY_ONLY'))
 
 
 # ── 퓨전 ──────────────────────────────────────────────
