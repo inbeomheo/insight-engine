@@ -13,15 +13,27 @@ from services.transcript._shared import (
 )
 
 
-def get_transcript_via_supadata(video_id: str, api_key: str) -> Optional[TranscriptResult]:
-    """Supadata API를 통해 YouTube 자막을 가져옵니다."""
+def get_transcript_via_supadata(
+    video_id: str, api_key: str, preferred_language: Optional[str] = None,
+) -> Optional[TranscriptResult]:
+    """Supadata API를 통해 YouTube 자막을 가져옵니다.
+
+    Args:
+        video_id: YouTube 비디오 ID
+        api_key: Supadata API 키
+        preferred_language: 요청 언어 코드(예: 'ko'). Supadata API의 `lang` 파라미터로 전달.
+            해당 언어 자막이 없으면 Supadata가 자체적으로 기본 자막을 반환한다(요청 실패로 이어지지 않음).
+    """
     if not api_key:
         return None
 
     try:
+        params = {"videoId": video_id, "text": "true"}
+        if preferred_language:
+            params["lang"] = preferred_language
         response = requests.get(
             SUPADATA_API_URL,
-            params={"videoId": video_id, "text": "true"},
+            params=params,
             headers={"x-api-key": api_key},
             timeout=HTTP_TIMEOUT
         )

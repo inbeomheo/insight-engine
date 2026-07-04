@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode } from '@/lib/types';
+import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode, TranscriptLanguage } from '@/lib/types';
 import {
   loadSelectedProvider,
   saveSelectedProvider,
@@ -60,6 +60,10 @@ interface SettingsState {
   detailLevel: 'brief' | 'standard' | 'deep';
   setDetailLevel: (v: 'brief' | 'standard' | 'deep') => void;
 
+  // 자막 추출 언어 (null=자동)
+  transcriptLanguage: TranscriptLanguage;
+  setTranscriptLanguage: (v: TranscriptLanguage) => void;
+
   // 멀티에이전트 파이프라인 모드
   enableAgentMode: boolean;
   setEnableAgentMode: (v: boolean) => void;
@@ -83,6 +87,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   enableWebSearch: false,
   enableAgentMode: false,
   detailLevel: 'standard',
+  transcriptLanguage: null,
 
   setProviders: (p) => set({ providers: p }),
 
@@ -137,6 +142,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setEnableWebSearch: (v) => set({ enableWebSearch: v }),
   setEnableAgentMode: (v) => set({ enableAgentMode: v }),
   setDetailLevel: (v) => set({ detailLevel: v }),
+  setTranscriptLanguage: (v) => set({ transcriptLanguage: v }),
 
   hydrate: () => {
     set({

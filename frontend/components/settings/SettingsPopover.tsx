@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
-import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants';
+import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS, TRANSCRIPT_LANGUAGE_OPTIONS } from '@/lib/constants';
 import {
   Select,
   SelectContent,
@@ -28,6 +28,7 @@ export default function SettingsPopover() {
     ollamaBaseUrl,
     webhookUrl,
     enableWebSearch,
+    transcriptLanguage,
     setSelectedProvider,
     setSelectedModel,
     setSelectedStyle,
@@ -35,6 +36,7 @@ export default function SettingsPopover() {
     setOllamaBaseUrl,
     setWebhookUrl,
     setEnableWebSearch,
+    setTranscriptLanguage,
   } = useSettingsStore();
 
   const ref = useRef<HTMLDivElement>(null);
@@ -234,6 +236,32 @@ export default function SettingsPopover() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* 자막 언어 */}
+      <div>
+        <label className="text-sm font-medium text-muted-foreground mb-2 block">자막 언어</label>
+        <div className="flex gap-2">
+          {TRANSCRIPT_LANGUAGE_OPTIONS.map((o) => (
+            <button
+              key={o.label}
+              onClick={() => setTranscriptLanguage(o.value)}
+              aria-label={`자막 언어 ${o.label} 선택`}
+              aria-pressed={(transcriptLanguage ?? null) === o.value}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-sm border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 active:scale-95',
+                (transcriptLanguage ?? null) === o.value
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-foreground border-border hover:border-primary/50'
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          다국어 자막이 있는 영상에서 추출할 언어를 지정합니다 (없으면 자동 우선순위로 대체).
+        </p>
       </div>
 
       {/* Ollama 설정 — ollama 프로바이더 선택 시만 표시 */}

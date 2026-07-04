@@ -24,7 +24,7 @@ export function useGenerate() {
   const abortRef = useRef<AbortController | null>(null);
   const rafRef = useRef(false);
   // 셀렉터 구독 — 스토어의 무관한 변경(테마, 사이드바 등)에 의한 리렌더 방지
-  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel } = useSettingsStore(
+  const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel, transcriptLanguage } = useSettingsStore(
     useShallow((s) => ({
       selectedModel: s.selectedModel,
       selectedStyle: s.selectedStyle,
@@ -32,6 +32,7 @@ export function useGenerate() {
       enableWebSearch: s.enableWebSearch,
       enableAgentMode: s.enableAgentMode,
       detailLevel: s.detailLevel,
+      transcriptLanguage: s.transcriptLanguage,
     }))
   );
   const addReport = useResultStore((s) => s.addReport);
@@ -50,7 +51,7 @@ export function useGenerate() {
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
-      const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode, detail_level: detailLevel };
+      const req = { url, model: selectedModel, style: selectedStyle, modifiers, web_search: enableWebSearch, agent_mode: enableAgentMode, detail_level: detailLevel, transcript_language: transcriptLanguage };
 
       try {
         if (streaming) {
@@ -120,7 +121,7 @@ export function useGenerate() {
         setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, addReport, updateReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, transcriptLanguage, addReport, updateReport]
   );
 
   const generateBatchUrls = useCallback(

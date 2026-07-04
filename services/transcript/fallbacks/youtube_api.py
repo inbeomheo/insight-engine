@@ -38,12 +38,24 @@ def build_ytt_api() -> YouTubeTranscriptApi:
         return YouTubeTranscriptApi()
 
 
-def order_transcript_tracks(tracks: List[Any]) -> List[Any]:
-    """자막 트랙을 우선순위에 따라 정렬합니다."""
+def order_transcript_tracks(tracks: List[Any], preferred_language: Optional[str] = None) -> List[Any]:
+    """자막 트랙을 우선순위에 따라 정렬합니다.
+
+    Args:
+        tracks: 자막 트랙 목록
+        preferred_language: 사용자가 요청한 언어 코드(예: 'ko'). 지정 시 해당
+            언어 트랙을 최우선으로 배치하고, 없으면 기존 PREFERRED_LANGUAGES 순서로 폴백.
+    """
+    languages = PREFERRED_LANGUAGES
+    if preferred_language:
+        languages = (preferred_language,) + tuple(
+            lang for lang in PREFERRED_LANGUAGES if lang != preferred_language
+        )
+
     ordered: List[Any] = []
     seen: set = set()
     for is_generated in [False, True]:
-        for lang in PREFERRED_LANGUAGES:
+        for lang in languages:
             for t in tracks:
                 tid = id(t)
                 if tid not in seen and getattr(t, 'is_generated', False) == is_generated and getattr(t, 'language_code', '') == lang:
@@ -57,16 +69,28 @@ def order_transcript_tracks(tracks: List[Any]) -> List[Any]:
     return ordered
 
 
-def fetch_transcript_with_api(ytt_api: YouTubeTranscriptApi, video_id: str) -> Optional[Any]:
-    """youtube-transcript-api를 사용하여 자막을 가져옵니다."""
+def fetch_transcript_with_api(
+    ytt_api: YouTubeTranscriptApi, video_id: str, preferred_language: Optional[str] = None,
+) -> Optional[Any]:
+    """youtube-transcript-api를 사용하여 자막을 가져옵니다.
+
+    Args:
+        ytt_api: YouTubeTranscriptApi 인스턴스
+        video_id: YouTube 비디오 ID
+        preferred_language: 사용자가 지정한 자막 언어(예: 'ko'). None이면 기존 기본 순서(PREFERRED_LANGUAGES) 사용.
+            지정 언어 트랙이 없으면 기존 순서로 자동 폴백한다(생성 실패로 이어지지 않음).
+    """
     fetched = None
+    languages = (preferred_language,) + tuple(
+        lang for lang in PREFERRED_LANGUAGES if lang != preferred_language
+    ) if preferred_language else PREFERRED_LANGUAGES
 
     if hasattr(ytt_api, "fetch") and hasattr(ytt_api, "list"):
         try:
-            fetched = ytt_api.fetch(video_id, languages=PREFERRED_LANGUAGES)
+            fetched = ytt_api.fetch(video_id, languages=languages)
         except (NoTranscriptFound, PoTokenRequired, YouTubeRequestFailed, CouldNotRetrieveTranscript):
             transcript_list = ytt_api.list(video_id)
-            ordered_tracks = order_transcript_tracks(list(transcript_list))
+            ordered_tracks = order_transcript_tracks(list(transcript_list), preferred_language)
 
             for track in ordered_tracks:
                 try:
@@ -78,7 +102,7 @@ def fetch_transcript_with_api(ytt_api: YouTubeTranscriptApi, video_id: str) -> O
         # 구버전 폴백
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            ordered_tracks = order_transcript_tracks(list(transcript_list))
+            ordered_tracks = order_transcript_tracks(list(transcript_list), preferred_language)
 
             for track in ordered_tracks:
                 try:
@@ -88,7 +112,7 @@ def fetch_transcript_with_api(ytt_api: YouTubeTranscriptApi, video_id: str) -> O
                     continue
         except Exception:
             try:
-                fetched = YouTubeTranscriptApi.get_transcript(video_id, languages=PREFERRED_LANGUAGES)
+                fetched = YouTubeTranscriptApi.get_transcript(video_id, languages=languages)
             except Exception:
                 fetched = None
 

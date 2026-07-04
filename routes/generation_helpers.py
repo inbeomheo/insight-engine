@@ -314,9 +314,13 @@ def _apply_output_format(result: dict, output_format: str, max_chars: int = None
     return result
 
 
-def _fetch_youtube_content(video_id):
+def _fetch_youtube_content(video_id, transcript_language=None):
     """YouTube 영상의 자막과 댓글을 분리하여 가져옵니다.
     Supadata API 키는 환경변수에서 자동으로 로드됩니다.
+
+    Args:
+        video_id: YouTube 비디오 ID
+        transcript_language: 사용자가 지정한 자막 언어 코드('ko'/'en'/'ja' 등). None이면 기존 기본 동작.
 
     Returns:
         tuple: (transcript_text, comments_list, error, raw_transcript, transcript_source, transcript_segments)
@@ -324,7 +328,7 @@ def _fetch_youtube_content(video_id):
         - transcript_source: 'api' | 'watch' | 'supadata' | 'cache'
         - transcript_segments: 타임스탬프 포함 세그먼트 목록 [{'start': float, 'text': str}, ...]
     """
-    transcript_result = content_service.get_transcript(video_id)
+    transcript_result = content_service.get_transcript(video_id, transcript_language=transcript_language)
     if isinstance(transcript_result, dict) and transcript_result.get('error'):
         return None, [], _sanitize_transcript_error(transcript_result['error']), None, None, []
 

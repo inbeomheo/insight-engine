@@ -356,8 +356,15 @@ def _try_nlm_fallback(video_id: str):
     return None
 
 
-def _run_parallel_fallbacks(video_id: str, overall_start: float) -> Optional[dict]:
-    """watch_page + yt-dlp + NLM을 병렬 실행하여 첫 성공 결과를 반환."""
+def _run_parallel_fallbacks(
+    video_id: str, overall_start: float, requested_language: Optional[str] = None,
+) -> Optional[dict]:
+    """watch_page + yt-dlp + NLM을 병렬 실행하여 첫 성공 결과를 반환.
+
+    이 3개 폴백은 언어 선택 파라미터를 지원하지 않아(watch 페이지 파싱은 트랙
+    자체가 언어 무관, yt-dlp/NLM은 자동 추출) requested_language는 결과의
+    source_meta 기록용으로만 전달되고 실제 추출 동작에는 영향을 주지 않는다.
+    """
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     _log_info(f"Starting parallel fallback (watch_page + yt-dlp + NLM) for video_id={video_id}")
@@ -381,6 +388,7 @@ def _run_parallel_fallbacks(video_id: str, overall_start: float) -> Optional[dic
                     executor.shutdown(wait=False, cancel_futures=True)
                     return _build_transcript_result(
                         text, source_name, quality, is_auto, overall_start, video_id,
+                        requested_language=requested_language,
                     )
             except Exception as e:
                 _log_warning(f"Parallel fallback {futures[future]} error: {str(e)[:100]}")
@@ -395,14 +403,19 @@ def _run_parallel_fallbacks(video_id: str, overall_start: float) -> Optional[dic
 def _build_transcript_result(
     text: str, source: str, quality: float, is_auto: bool,
     start_time: float, video_id: str, segments: list = None,
+    requested_language: Optional[str] = None,
 ) -> dict:
     """자막 결과 딕셔너리를 생성하고 캐시에 저장한다."""
+    detected_language = _detect_language_from_text(text)
     source_meta = {
         'source_type': source,
         'quality_score': quality,
         'is_auto': is_auto,
-        'language': _detect_language_from_text(text),
+        'language': detected_language,
     }
+    if requested_language:
+        source_meta['requested_language'] = requested_language
+        source_meta['language_matched'] = requested_language == detected_language
     elapsed_ms = round((time.time() - start_time) * 1000, 1)
     result = {
         'text': text,
@@ -416,13 +429,16 @@ def _build_transcript_result(
     return result
 
 
-def get_transcript(video_id: str) -> TranscriptResult:
+def get_transcript(video_id: str, transcript_language: Optional[str] = None) -> TranscriptResult:
     """
     YouTube 자막을 가져옵니다.
     Supadata API 키는 환경변수(SUPADATA_API_KEY)에서 로드됩니다.
 
     Args:
         video_id: YouTube 비디오 ID
+        transcript_language: 사용자가 지정한 자막 언어 코드(예: 'ko', 'en', 'ja').
+            None이면 기존 기본 동작(PREFERRED_LANGUAGES 순서)과 동일하게 처리한다.
+            지정 언어의 자막이 없어도 생성 실패로 이어지지 않고 기존 우선순위로 자동 폴백한다.
 
     Returns:
         성공: {'text': '자막 내용', 'source': 'api'|'watch'|'supadata'|'cache'}
@@ -430,16 +446,18 @@ def get_transcript(video_id: str) -> TranscriptResult:
 
     우선순위:
     0. 캐시 (있으면 바로 반환)
-    1. youtube-transcript-api 라이브러리 (무료)
-    2. watch 페이지 직접 파싱 (무료)
-    2.5. yt-dlp 자막 직접 추출 (무료, 음성인식 없이)
-    3. Supadata API (유료)
-    4. Whisper 음성 인식 (로컬, 느림)
+    1. youtube-transcript-api 라이브러리 (무료) — transcript_language 반영
+    2. watch 페이지 직접 파싱 (무료) — 언어 파라미터 미지원
+    2.5. yt-dlp 자막 직접 추출 (무료, 음성인식 없이) — 언어 파라미터 미지원
+    3. Supadata API (유료) — transcript_language 반영
+    4. Whisper 음성 인식 (로컬, 느림) — 자동 감지라 언어 파라미터 미지원
     """
     overall_start = time.time()
 
     # 0순위: 캐시 확인
-    cached = _load_cache(video_id, 'transcript')
+    # 언어를 지정한 요청은 언어 무관 캐시를 그대로 재사용하지 않고 재추출한다
+    # (기존 캐시가 다른 언어 자막일 수 있음 — 캐시 키 자체는 이번 스코프 밖).
+    cached = None if transcript_language else _load_cache(video_id, 'transcript')
     if cached:
         _log_info(f"Transcript loaded from cache for video_id={video_id}")
         elapsed_ms = round((time.time() - overall_start) * 1000, 1)
@@ -458,7 +476,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
         fetched = None
 
         for attempt in range(MAX_RETRY_ATTEMPTS):
-            fetched = _fetch_transcript_with_api(ytt_api, video_id)
+            fetched = _fetch_transcript_with_api(ytt_api, video_id, preferred_language=transcript_language)
             if fetched:
                 break
             # 마지막 시도 후에는 폴백으로 바로 넘어간다 (불필요한 대기 제거)
@@ -474,6 +492,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
                 return _build_transcript_result(
                     text, 'api', 0.95 if not is_auto else 0.85, is_auto,
                     overall_start, video_id, segments=segments,
+                    requested_language=transcript_language,
                 )
 
     except (TranscriptsDisabled, NoTranscriptFound) as e:
@@ -499,7 +518,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
         _log_warning(f"youtube-transcript-api unexpected error for video_id={video_id}: {last_error}")
 
     # ── 병렬 폴백: watch_page + yt-dlp + NLM 동시 실행 ──
-    parallel_result = _run_parallel_fallbacks(video_id, overall_start)
+    parallel_result = _run_parallel_fallbacks(video_id, overall_start, requested_language=transcript_language)
     if parallel_result:
         return parallel_result
 
@@ -518,6 +537,7 @@ def get_transcript(video_id: str) -> TranscriptResult:
                 _log_info(f"Transcript extracted via Whisper for video_id={video_id}")
                 return _build_transcript_result(
                     whisper_text, 'whisper', 0.75, True, overall_start, video_id,
+                    requested_language=transcript_language,
                 )
         except Exception as e:
             _log_warning(f"Whisper fallback failed for video_id={video_id}: {str(e)}")
@@ -525,11 +545,12 @@ def get_transcript(video_id: str) -> TranscriptResult:
     # Supadata API (유료 - 마지막 폴백)
     if supadata_api_key:
         _log_info(f"Trying Supadata API fallback for video_id={video_id}")
-        supadata_result = get_transcript_via_supadata(video_id, supadata_api_key)
+        supadata_result = get_transcript_via_supadata(video_id, supadata_api_key, preferred_language=transcript_language)
         if isinstance(supadata_result, str) and supadata_result.strip():
             _log_info(f"Transcript fetched via Supadata for video_id={video_id}")
             return _build_transcript_result(
                 supadata_result, 'supadata', 0.8, False, overall_start, video_id,
+                requested_language=transcript_language,
             )
         if isinstance(supadata_result, dict) and supadata_result.get('error'):
             return supadata_result
