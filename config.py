@@ -155,7 +155,7 @@ STYLE_TEMPERATURE: Dict[str, float] = {
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.35,
     # 엄격한 출력 형식이 필요한 변환계 — 창의성보다 형식 준수 우선
-    'mindmap': 0.3, 'cited_summary': 0.4, 'chapter_split': 0.3,
+    'mindmap': 0.3, 'cited_summary': 0.4, 'chapter_split': 0.3, 'knowledge_note': 0.4,
 }
 
 # 길이별 max_tokens (한국어 2~3토큰/자 + 마크다운 오버헤드 ~40% 감안)

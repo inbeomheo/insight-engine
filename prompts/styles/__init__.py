@@ -24,6 +24,7 @@ from .shorts_script import SHORTS_SCRIPT_PROMPT
 from .geo_seo import GEO_SEO_PROMPT
 from .course import COURSE_PROMPT
 from .cited_summary import CITED_SUMMARY_PROMPT
+from .knowledge_note import KNOWLEDGE_NOTE_PROMPT
 
 # 스타일 프롬프트 매핑
 STYLE_PROMPTS = {
@@ -44,11 +45,12 @@ STYLE_PROMPTS = {
     'cited_summary': CITED_SUMMARY_PROMPT,
     # 내부 전용 (UI 비노출)
     'mindmap': MINDMAP_PROMPT,
+    'knowledge_note': KNOWLEDGE_NOTE_PROMPT,
 }
 
 # 변환계 프롬프트 — 글쓰기 베이스 규칙(BASE_PROMPT)을 결합하지 않는 스타일
 # (댓글 요약/마인드맵/챕터 분할은 콘텐츠 작성이 아니라 입력 변환 작업이므로)
-TRANSFORM_STYLE_IDS = frozenset({'comment_summary', 'mindmap', 'chapter_split'})
+TRANSFORM_STYLE_IDS = frozenset({'comment_summary', 'mindmap', 'chapter_split', 'knowledge_note'})
 
 
 @functools.lru_cache(maxsize=32)
@@ -86,4 +88,5 @@ __all__ = [
     'GEO_SEO_PROMPT',
     'COURSE_PROMPT',
     'CITED_SUMMARY_PROMPT',
+    'KNOWLEDGE_NOTE_PROMPT',
 ]
