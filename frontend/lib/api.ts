@@ -23,8 +23,6 @@ import type {
   EventSummary,
   RewriteResponse,
   QaCheckResponse,
-  CampaignPack,
-  CampaignResult,
   ProviderValidateResponse,
   FactCheckResponse,
   SeoOptimizeResponse,
@@ -790,24 +788,6 @@ export async function validateProvider(
   return request('/api/providers/validate', {
     method: 'POST',
     body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
-  });
-}
-
-// === 캠페인 팩 (F20) ===
-
-export async function fetchCampaignPacks(): Promise<{ packs: Record<string, CampaignPack> }> {
-  return request('/api/providers/campaign-packs');
-}
-
-export async function generateCampaign(req: {
-  url: string;
-  model: string;
-  pack_id: string;
-  modifiers?: Modifiers;
-}): Promise<CampaignResult> {
-  return request('/api/generate-campaign', {
-    method: 'POST',
-    body: JSON.stringify(req),
   });
 }
 

@@ -225,14 +225,3 @@ def api_validate_provider():
         return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
     except Exception as e:
         return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
-
-
-@blog_bp.route('/api/providers/campaign-packs', methods=['GET'])
-def api_campaign_packs():
-    """사용 가능한 캠페인 팩 목록을 반환합니다."""
-    from config import CAMPAIGN_PACKS
-    packs = {
-        pack_id: {**pack, 'id': pack_id}
-        for pack_id, pack in CAMPAIGN_PACKS.items()
-    }
-    return jsonify({'packs': packs})

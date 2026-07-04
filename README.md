@@ -18,7 +18,6 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 ### Content Generation
 - **배치 처리** — 최대 10개 URL 동시 분석
 - **멀티스타일** — 1 URL × N 스타일 동시 생성 (사용량 1회 차감)
-- **캠페인 팩** — 블로그+SNS+뉴스레터 묶음 자동 생성
 - **퓨전 분석** — 다중 소스 교차 분석 콘텐츠
 - **파이프라인 자동화** — 자막 추출 → 생성 → SEO 최적화 (SSE 실시간 진행률)
 - **소스 인용 모드** — 모든 주장에 [MM:SS] 타임스탬프 인용 + YouTube 링크 변환
@@ -242,7 +241,6 @@ insight-engine/
 | `/generate` | POST | 단일 URL 콘텐츠 생성 |
 | `/generate-batch` | POST | 다중 URL 배치 (최대 10개) |
 | `/api/generate-multi` | POST | 1 URL × N 스타일 동시 생성 |
-| `/api/generate-campaign` | POST | 캠페인 팩 생성 |
 | `/api/pipeline` | POST | 파이프라인 자동화 (SSE) |
 | `/api/rewrite` | POST | 플랫폼별 리라이트 |
 | `/api/inline-edit` | POST | 인라인 AI 편집 |

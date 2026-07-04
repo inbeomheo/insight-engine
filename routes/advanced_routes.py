@@ -12,7 +12,7 @@ from routes.generation_helpers import (
     _fetch_youtube_content, _build_combined_content
 )
 from extensions import limiter
-from config import get_model_max_tokens, CAMPAIGN_PACKS
+from config import get_model_max_tokens
 from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
@@ -139,120 +139,6 @@ def generate_multi():
         return handle_error(str(e))
     except Exception as e:
         current_app.logger.error(f"Generate multi failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/generate-campaign', methods=['POST'])
-@limiter.limit("5/minute")
-@require_auth
-@require_usage
-def generate_campaign():
-    """캠페인 팩으로 1 URL × N 스타일 동시 생성 (사용량 1회 차감)"""
-    try:
-        start_time = time.time()
-        data = request.get_json(silent=True) or {}
-        url = data.get('url')
-        model = data.get('model', DEFAULT_MODEL)
-        pack_id = data.get('pack_id')
-        modifiers = data.get('modifiers', {})
-
-        if not url:
-            return api_error('YouTube URL이 필요합니다.', 400)
-        if not content_service.is_youtube_url(url):
-            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
-        if not pack_id or pack_id not in CAMPAIGN_PACKS:
-            return api_error(f'유효하지 않은 캠페인 팩: {pack_id}', 400)
-
-        pack = CAMPAIGN_PACKS[pack_id]
-        styles = pack['styles']
-
-        video_id = content_service.get_video_id(url)
-        if not video_id:
-            return api_error('유효하지 않은 YouTube URL입니다.', 400)
-
-        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-
-        # YouTube 콘텐츠 1회 가져오기
-        transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
-        if error:
-            return api_error(error, 400)
-
-        max_tokens = get_model_max_tokens(model)
-        main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
-        truncated_content = content_service.truncate_text(main_content, max_tokens)
-
-        # 유효 스타일 필터링
-        style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
-        valid_styles = [s for s in styles if s in style_prompts_dict]
-        if not valid_styles:
-            return api_error('캠페인 팩에 유효한 스타일이 없습니다.', 400)
-
-        # 병렬 생성 (generate_multi 패턴 동일)
-        app = current_app._get_current_object()
-        results = []
-
-        def _gen_for_style(style_id):
-            with app.app_context():
-                try:
-                    style_start = time.time()
-                    sp = compose_style_prompt(style_id, style_prompts_dict.get(style_id, ''))
-                    result = ai_service.create_content(
-                        truncated_content, model, sp,
-                        style_id=style_id, modifiers=modifiers
-                    )
-                    result['style'] = style_id
-                    result['elapsed_time'] = round(time.time() - style_start, 2)
-                    return result
-                except Exception as e:
-                    return {
-                        'style': style_id,
-                        'error': safe_error_or_fallback(
-                            e,
-                            '[서버 오류] 캠페인 스타일 생성 중 문제가 발생했습니다.'
-                        )
-                    }
-
-        is_glm = model.startswith('zhipuai/')
-        if is_glm:
-            for style_id in valid_styles:
-                results.append(_gen_for_style(style_id))
-        else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(valid_styles))) as executor:
-                futures = {executor.submit(_gen_for_style, s): s for s in valid_styles}
-                for future in concurrent.futures.as_completed(futures):
-                    results.append(future.result())
-
-        # 팩 스타일 순서대로 정렬
-        style_order = {s: i for i, s in enumerate(valid_styles)}
-        results.sort(key=lambda r: style_order.get(r.get('style', ''), 99))
-
-        # 전체 토큰 사용량 합산
-        total_usage = {'total_tokens': 0, 'input_tokens': 0, 'output_tokens': 0}
-        for r in results:
-            u = r.get('usage', {})
-            total_usage['total_tokens'] += u.get('total_tokens', 0)
-            total_usage['input_tokens'] += u.get('input_tokens', u.get('prompt_tokens', 0))
-            total_usage['output_tokens'] += u.get('output_tokens', u.get('completion_tokens', 0))
-
-        total_elapsed_time = round(time.time() - start_time, 2)
-
-        return jsonify({
-            'success': True,
-            'pack_id': pack_id,
-            'pack_name': pack['name'],
-            'results': results,
-            'total_usage': total_usage,
-            'youtube_title': youtube_title,
-            'transcript_source': transcript_source,
-            'elapsed_time': total_elapsed_time,
-            'total_elapsed_time': total_elapsed_time,
-            'quota': get_usage_for_response()
-        })
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Campaign generation failed: {e}")
         return handle_error(str(e))
 
 

@@ -2,7 +2,6 @@
 
 import type { GenerateResponse } from './api';
 import type { Modifiers } from './settings';
-import type { TokenUsage } from './report';
 
 export interface PipelineStep {
   id: string;
@@ -155,22 +154,6 @@ export interface PublishQueueItem {
   error_message?: string;
   created_at: string;
   updated_at: string;
-}
-
-// === 캠페인 팩 ===
-
-export interface CampaignPack {
-  id: string;
-  name: string;
-  description: string;
-  styles: string[];
-}
-
-export interface CampaignResult {
-  pack_id: string;
-  pack_name: string;
-  results: GenerateResponse[];
-  total_usage: TokenUsage;
 }
 
 // === 이벤트 추출 ===

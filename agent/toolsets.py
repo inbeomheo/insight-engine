@@ -169,7 +169,6 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
     "rewrite": {
         "tools": [
             "rewrite_for_platform", "inline_edit",
-            "generate_campaign",
         ],
         "includes": [],
         "description": "플랫폼별 리라이트 (Twitter/LinkedIn/Instagram)",
