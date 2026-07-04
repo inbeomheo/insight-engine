@@ -105,6 +105,16 @@ describe('resultStore — localStorage 용량 초과 경고', () => {
     expect(useResultStore.getState().reports).toHaveLength(1);
   });
 
+  it('removeReport: 대기 중인 addReport 저장을 취소해 삭제 상태를 유지한다', () => {
+    useResultStore.getState().addReport(makeReport());
+    useResultStore.getState().removeReport('r1');
+
+    vi.advanceTimersByTime(500);
+
+    expect(useResultStore.getState().reports).toHaveLength(0);
+    expect(loadReports()).toHaveLength(0);
+  });
+
   it('updateReport: 용량 초과 시 toast.warning이 호출된다', () => {
     // 먼저 정상 저장으로 리포트 1건을 만든다
     useResultStore.getState().addReport(makeReport());
