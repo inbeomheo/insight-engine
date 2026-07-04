@@ -64,6 +64,8 @@ class TestGenerateStreamDelta(unittest.TestCase):
                 return_value=False,
             ),
             'route_supabase_enabled': patch('routes.blog_routes.is_supabase_enabled', return_value=False),
+            'data_supabase_enabled': patch('services.data.supabase_service.is_supabase_enabled', return_value=False),
+            'usage_supabase_enabled': patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
             'is_youtube_url': patch('routes.blog_routes.content_service.is_youtube_url', return_value=True),
             'get_video_id': patch('routes.blog_routes.content_service.get_video_id', return_value='dQw4w9WgXcQ'),
             'get_content_title': patch('routes.blog_routes.content_service.get_content_title', return_value='YT'),
@@ -408,6 +410,80 @@ class TestGenerateStreamDelta(unittest.TestCase):
         self.assertEqual(events[-1]['title'], 'GLM 제목')
         self.assertEqual(events[-1]['content'], 'GLM 본문')
         self.assertEqual(events[-1]['usage']['total_tokens'], 18)
+
+    def test_direct_text_stream_emits_meta_delta_and_text_result(self):
+        text = '직접 붙여넣은 학습 텍스트입니다. 충분한 길이의 본문을 넣어 스트리밍 생성을 검증합니다. ' * 2
+
+        def fake_stream(*args, **kwargs):
+            yield '텍스트 '
+            yield '결과'
+            return {
+                'prompt': '직접 텍스트 프롬프트',
+                'usage': {'prompt_tokens': 4, 'completion_tokens': 2, 'total_tokens': 6},
+            }
+
+        with self._patched(
+            create_stream=patch('routes.blog_routes.ai_service.create_content_stream', side_effect=fake_stream),
+        ) as mocks:
+            resp = self._post(payload={'url': '', 'content': text})
+            body = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        events = _parse_sse(body)
+        self.assertEqual([e['type'] for e in events], ['meta', 'delta', 'delta', 'result'])
+        self.assertEqual(events[0]['source_type'], 'text')
+        self.assertEqual(events[0]['transcript_source'], 'direct_input')
+
+        result = events[-1]
+        self.assertEqual(result['content'], '텍스트 결과')
+        self.assertEqual(result['source_type'], 'text')
+        self.assertEqual(result['source_meta']['source_type'], 'text')
+        self.assertEqual(result['source_meta']['chars'], len(text))
+        self.assertEqual(result['source_meta']['quality_score'], 1.0)
+        self.assertEqual(result['transcript_source'], 'direct_input')
+        self.assertFalse(result['comment_summary_included'])
+        self.assertEqual(result['usage']['total_tokens'], 6)
+        self.assertEqual(result['prompt'], '직접 텍스트 프롬프트')
+        mocks['is_youtube_url'].assert_not_called()
+        mocks['get_video_id'].assert_not_called()
+        mocks['get_content_title'].assert_not_called()
+        mocks['fetch_youtube'].assert_not_called()
+
+    def test_direct_text_stream_rejects_url_and_content_before_sse(self):
+        text = 'URL과 함께 보내면 안 되는 충분히 긴 직접 입력 텍스트입니다. ' * 3
+
+        with self._patched(
+            create_stream=patch('routes.blog_routes.ai_service.create_content_stream'),
+        ) as mocks:
+            resp = self._post(payload={'content': text})
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotEqual(resp.mimetype, 'text/event-stream')
+        self.assertIn('동시에 입력할 수 없습니다', resp.get_json()['error'])
+        mocks['create_stream'].assert_not_called()
+
+    def test_direct_text_stream_rejects_short_content_before_sse(self):
+        with self._patched(
+            create_stream=patch('routes.blog_routes.ai_service.create_content_stream'),
+        ) as mocks:
+            resp = self._post(payload={'url': '', 'content': '짧음'})
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotEqual(resp.mimetype, 'text/event-stream')
+        self.assertIn('50자 이상', resp.get_json()['error'])
+        mocks['create_stream'].assert_not_called()
+
+    def test_direct_text_stream_rejects_too_long_content_before_sse(self):
+        with self._patched(
+            max_chars=patch('config.DIRECT_TEXT_MAX_CHARS', 50),
+            create_stream=patch('routes.blog_routes.ai_service.create_content_stream'),
+        ) as mocks:
+            resp = self._post(payload={'url': '', 'content': '가' * 51})
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotEqual(resp.mimetype, 'text/event-stream')
+        self.assertIn('텍스트가 너무 깁니다', resp.get_json()['error'])
+        mocks['create_stream'].assert_not_called()
 
 
 if __name__ == '__main__':

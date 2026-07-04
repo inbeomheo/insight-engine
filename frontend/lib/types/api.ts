@@ -4,6 +4,7 @@ import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSc
 import type { Modifiers, TranscriptLanguage } from './settings';
 
 export interface GenerateRequest {
+  /** URL 입력. 직접 텍스트 생성은 빈 문자열과 content를 함께 보낸다. */
   url: string;
   model: string;
   style: string;
@@ -38,6 +39,14 @@ export interface GenerateResponse {
   cta?: CtaData;
   json_ld_schemas?: JsonLdSchema[];
   youtube_title?: string;
+  source_type?: 'text' | 'document' | 'voice' | 'article' | string;
+  source_title?: string;
+  source_meta?: {
+    source_type: string;
+    chars?: number;
+    quality_score?: number;
+    is_auto?: boolean;
+  };
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
   inserted_links?: InsertedLink[];
@@ -96,6 +105,9 @@ export interface StreamEvent {
   content?: string;
   html?: string;
   youtube_title?: string;
+  source_type?: 'text' | 'document' | 'voice' | 'article' | string;
+  source_title?: string;
+  source_meta?: GenerateResponse['source_meta'];
   transcript?: string;
   transcript_source?: string;
   usage?: TokenUsage;

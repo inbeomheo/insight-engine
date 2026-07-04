@@ -154,8 +154,8 @@ def test_generate_direct_text_exactly_at_max_chars_passes():
     assert resp.status_code == 200
 
 
-def test_generate_url_and_content_together_url_path_wins():
-    """url과 content가 동시에 오면 URL(웹소스) 경로가 우선한다 (direct-text 아님)."""
+def test_generate_url_and_blank_content_url_path_wins():
+    """url과 빈 content가 동시에 오면 URL(웹소스) 경로가 우선한다."""
     _, client = _app_client()
 
     p1, p2 = _no_auth_patches()
@@ -170,12 +170,36 @@ def test_generate_url_and_content_together_url_path_wins():
     ):
         client.post(
             "/generate",
-            json={"url": "https://example.com/a", "content": "충분히 긴 텍스트입니다. " * 10},
+            json={"url": "https://example.com/a", "content": "   "},
             headers=_H,
         )
 
     mock_direct.assert_not_called()
     mock_web.assert_called_once()
+
+
+def test_generate_url_and_content_together_returns_400():
+    """url과 content가 동시에 오면 스트리밍 경로와 동일하게 400을 반환한다."""
+    _, client = _app_client()
+    text = "URL과 함께 보내면 안 되는 충분히 긴 직접 입력 텍스트입니다. " * 3
+
+    p1, p2 = _no_auth_patches()
+    with (
+        p1,
+        p2,
+        patch("routes.blog_routes._handle_direct_text") as mock_direct,
+        patch("routes.blog_routes._handle_web_source") as mock_web,
+    ):
+        resp = client.post(
+            "/generate",
+            json={"url": "https://example.com/a", "content": text},
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    assert "동시에 입력할 수 없습니다" in resp.get_json()["error"]
+    mock_direct.assert_not_called()
+    mock_web.assert_not_called()
 
 
 def test_generate_direct_text_source_meta_quality_score_is_one():

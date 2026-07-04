@@ -59,6 +59,22 @@ def _generate_from_source(params: dict, truncated_content: str):
     )
 
 
+def _validate_direct_text_content(direct_content: str) -> str | None:
+    """직접 텍스트 입력값을 검증하고, 클라이언트용 한국어 오류를 반환합니다."""
+    from config import DIRECT_TEXT_MAX_CHARS, DIRECT_TEXT_MIN_CHARS
+
+    if len((direct_content or '').strip()) < DIRECT_TEXT_MIN_CHARS:
+        return f'텍스트를 {DIRECT_TEXT_MIN_CHARS}자 이상 입력해주세요.'
+
+    if len(direct_content or '') > DIRECT_TEXT_MAX_CHARS:
+        return (
+            f'텍스트가 너무 깁니다. 최대 {DIRECT_TEXT_MAX_CHARS:,}자까지 '
+            '입력할 수 있습니다.'
+        )
+
+    return None
+
+
 def _base_generation_response(result: dict, params: dict, start_time: float,
                               used_prompt: str) -> dict:
     """소스 핸들러(직접 텍스트/음성/문서) 공통 응답 필드를 구성합니다.
@@ -80,14 +96,10 @@ def _base_generation_response(result: dict, params: dict, start_time: float,
 
 def _handle_direct_text(params: dict, start_time: float):
     """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
-    from config import DIRECT_TEXT_MAX_CHARS
-
     direct_content = params.get('content', '')
-    if len(direct_content) > DIRECT_TEXT_MAX_CHARS:
-        return api_error(
-            f'텍스트가 너무 깁니다. 최대 {DIRECT_TEXT_MAX_CHARS:,}자까지 입력할 수 있습니다.',
-            400,
-        )
+    validation_error = _validate_direct_text_content(direct_content)
+    if validation_error:
+        return api_error(validation_error, 400)
 
     truncated_content = _truncate_for_model(params['model'], '사용자 입력 텍스트', direct_content)
     result, used_prompt = _generate_from_source(params, truncated_content)

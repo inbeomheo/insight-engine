@@ -351,6 +351,7 @@ from routes.generation_helpers import (
     _handle_document_upload, _handle_web_source,
     _get_style_label, _apply_output_format,
     _generate_comment_summary, _combine_results,
+    _validate_direct_text_content,
 )
 
 
@@ -440,11 +441,14 @@ def generate():
         url = params['url']
         direct_content = params.get('content')
 
+        if url and direct_content is not None and direct_content.strip():
+            return api_error('URL과 텍스트는 동시에 입력할 수 없습니다.', 400)
+
         # ── 직접 텍스트 입력 모드 ──
         if not url and direct_content is not None:
-            from config import DIRECT_TEXT_MIN_CHARS
-            if len(direct_content.strip()) < DIRECT_TEXT_MIN_CHARS:
-                return api_error(f'텍스트를 {DIRECT_TEXT_MIN_CHARS}자 이상 입력해주세요.', 400)
+            validation_error = _validate_direct_text_content(direct_content)
+            if validation_error:
+                return api_error(validation_error, 400)
             return _handle_direct_text(params, start_time)
 
         # ── 파일 업로드 모드 (오디오 / 문서) ──
@@ -995,18 +999,30 @@ def generate_stream():
         if params.get('transcript_language_error'):
             return api_error(params['transcript_language_error'], 400)
 
-        url = params['url']
-
-        if not url:
-            return api_error('YouTube URL이 필요합니다.', 400)
-        if not content_service.is_youtube_url(url):
-            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
-
-        video_id = content_service.get_video_id(url)
-        if not video_id:
-            return api_error('유효하지 않은 YouTube URL입니다.', 400)
-
+        url = (params['url'] or '').strip()
+        direct_content = params.get('content')
+        has_direct_content = direct_content is not None and bool(direct_content.strip())
         request_data_all = request.get_json(silent=True) or {}
+
+        if url and has_direct_content:
+            return api_error('URL과 텍스트는 동시에 입력할 수 없습니다.', 400)
+
+        is_direct_text = not url and direct_content is not None
+        if is_direct_text:
+            validation_error = _validate_direct_text_content(direct_content)
+            if validation_error:
+                return api_error(validation_error, 400)
+        else:
+            if not url:
+                return api_error('YouTube URL이 필요합니다.', 400)
+            if not content_service.is_youtube_url(url):
+                return api_error('유효한 YouTube URL을 입력해주세요.', 400)
+
+        video_id = None
+        if not is_direct_text:
+            video_id = content_service.get_video_id(url)
+            if not video_id:
+                return api_error('유효하지 않은 YouTube URL입니다.', 400)
 
         def _sse(payload):
             data = json.dumps(payload, ensure_ascii=False)
@@ -1029,47 +1045,70 @@ def generate_stream():
                 }), 429
             g.usage = usage
 
-        # 캐시 체크 — /generate와 동일한 키/force 의미론
-        from services.core.cache_service import AICacheService
         force = request_data_all.get('force', False)
         modifiers = params['modifiers'] or {}
-        cache_key = AICacheService.make_key(
-            video_id, params['style'], params['model'],
-            modifiers.get('length', 'medium'),
-            modifiers.get('writing_style', 'conversational'),
-            transcript_language=params.get('transcript_language'),
-        )
-        cache_resp = _handle_cache_hit(
-            cache_key, force, video_id, url, start_time,
-            transcript_language=params.get('transcript_language'),
-        )
-        if cache_resp:
-            cached_payload = cache_resp.get_json() or {}
-
-            def cached_sse():
-                yield _sse({
-                    'type': 'meta',
-                    'youtube_title': cached_payload.get('youtube_title'),
-                    'transcript_source': cached_payload.get('transcript_source'),
-                })
-                yield _sse({'type': 'result', **cached_payload})
-
-            return Response(
-                stream_with_context(cached_sse()),
-                mimetype='text/event-stream',
-                headers=sse_headers,
-            )
-
-        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
-            video_id, params.get('transcript_language')
-        )
-        if error:
-            return api_error(error, 400)
 
         max_tokens = get_model_max_tokens(params['model'])
-        main_content = f"[영상 자막]\n{transcript_text}"
-        truncated_content = content_service.truncate_text(main_content, max_tokens)
+        cache_key = None
+        source_type = None
+        source_title = None
+        source_meta = None
+
+        if is_direct_text:
+            source_type = 'text'
+            source_title = '직접 입력 텍스트'
+            comments = []
+            raw_transcript = direct_content[:5000]
+            transcript_source = 'direct_input'
+            transcript_segments = []
+            youtube_title = ''
+            main_content = f"[사용자 입력 텍스트]\n{direct_content}"
+            truncated_content = content_service.truncate_text(main_content, max_tokens)
+            source_meta = {
+                'source_type': 'text',
+                'chars': len(direct_content),
+                'quality_score': 1.0,
+                'is_auto': False,
+            }
+        else:
+            # 캐시 체크 — /generate와 동일한 키/force 의미론
+            from services.core.cache_service import AICacheService
+            cache_key = AICacheService.make_key(
+                video_id, params['style'], params['model'],
+                modifiers.get('length', 'medium'),
+                modifiers.get('writing_style', 'conversational'),
+                transcript_language=params.get('transcript_language'),
+            )
+            cache_resp = _handle_cache_hit(
+                cache_key, force, video_id, url, start_time,
+                transcript_language=params.get('transcript_language'),
+            )
+            if cache_resp:
+                cached_payload = cache_resp.get_json() or {}
+
+                def cached_sse():
+                    yield _sse({
+                        'type': 'meta',
+                        'youtube_title': cached_payload.get('youtube_title'),
+                        'transcript_source': cached_payload.get('transcript_source'),
+                    })
+                    yield _sse({'type': 'result', **cached_payload})
+
+                return Response(
+                    stream_with_context(cached_sse()),
+                    mimetype='text/event-stream',
+                    headers=sse_headers,
+                )
+
+            youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
+            transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
+                video_id, params.get('transcript_language')
+            )
+            if error:
+                return api_error(error, 400)
+
+            main_content = f"[영상 자막]\n{transcript_text}"
+            truncated_content = content_service.truncate_text(main_content, max_tokens)
 
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
         model = params['model']
@@ -1079,15 +1118,22 @@ def generate_stream():
 
         def generate_sse():
             with app.app_context():
+                comment_future = None
                 try:
                     # meta 이벤트
-                    yield _sse({
+                    meta_event = {
                         'type': 'meta',
-                        'youtube_title': youtube_title,
-                        'transcript_source': transcript_source
-                    })
+                        'transcript_source': transcript_source,
+                    }
+                    if is_direct_text:
+                        meta_event.update({
+                            'source_type': source_type,
+                            'source_title': source_title,
+                        })
+                    else:
+                        meta_event['youtube_title'] = youtube_title
+                    yield _sse(meta_event)
 
-                    comment_future = None
                     if comments and not str(model).startswith('zhipuai/'):
                         # 비GLM 댓글 요약은 메인 스트림과 병렬 실행해 result 전 공백을 줄입니다.
                         comment_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
@@ -1124,7 +1170,7 @@ def generate_stream():
                         })
 
                     # 완료: 제목/본문 분리 + HTML 변환
-                    title = youtube_title
+                    title = source_title if is_direct_text else youtube_title
                     body = full_content
                     lines = full_content.split('\n')
                     if lines and lines[0].startswith('#'):
@@ -1224,14 +1270,34 @@ def generate_stream():
                         'total_duration_seconds': 0,
                         'quota': get_usage_for_response(),
                     }
-                    _persist_generation_result(
-                        cache_key, video_id, params, url, youtube_title,
-                        base_result, prompt, comment_result,
-                        raw_transcript, transcript_source, comments,
-                        result_event['elapsed_time'], result_event['id'],
-                        user_id=user_id,
-                        background=True,
-                    )
+                    if is_direct_text:
+                        result_event.update({
+                            'source_type': source_type,
+                            'source_title': source_title,
+                            'source_meta': source_meta,
+                        })
+                        if user_id:
+                            save_history(user_id, {
+                                'id': result_event['id'],
+                                'url': '',
+                                'title': result.get('title') or source_title,
+                                'style': params['style'],
+                                'content': result.get('content', ''),
+                                'html': result.get('html', ''),
+                                'transcript': raw_transcript,
+                                'transcript_source': 'direct_input',
+                                'usage': result.get('usage'),
+                                'elapsed_time': result_event['elapsed_time'],
+                            })
+                    else:
+                        _persist_generation_result(
+                            cache_key, video_id, params, url, youtube_title,
+                            base_result, prompt, comment_result,
+                            raw_transcript, transcript_source, comments,
+                            result_event['elapsed_time'], result_event['id'],
+                            user_id=user_id,
+                            background=True,
+                        )
                     yield _sse(result_event)
 
                 except Exception as e:

@@ -35,8 +35,8 @@
     "help": "Help"
   },
   "urlInput": {
-    "placeholder": "Enter or paste a YouTube URL",
-    "dragDrop": "Drop YouTube URL here"
+    "placeholder": "Enter or paste a URL",
+    "dragDrop": "Drop a URL here"
   },
   "generateButton": {
     "loading": "Generating...",
@@ -47,8 +47,8 @@
     "fusion": "Fusion analyze {count} URLs"
   },
   "emptyState": {
-    "title": "Analyze a YouTube video",
-    "description": "Paste a URL and AI will automatically generate\nblog posts, summaries, tutorials and more"
+    "title": "Analyze videos, text, and PDFs",
+    "description": "Paste a URL or add text/PDF content and AI will generate\nsummaries, tutorials, and learning-ready drafts"
   },
   "calendar": {
     "title": "Content Calendar"
