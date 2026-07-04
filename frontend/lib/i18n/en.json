@@ -20,7 +20,9 @@
     "next": "Next",
     "previous": "Previous",
     "skip": "Skip",
-    "done": "Done"
+    "done": "Done",
+    "deprecated": "Deprecated",
+    "deprecatedTooltip": "Publishing features are being phased out as part of the shift to a learning engine"
   },
   "sidebar": {
     "newAnalysis": "New Analysis",

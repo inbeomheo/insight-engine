@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
@@ -390,6 +391,8 @@ function MobileDetailView({ report, onBack, onSchedule }: { report: Report; onBa
         {PUBLISHING_ENABLED && (
           <Button size="sm" className="h-9 rounded-sm bg-primary px-4 text-xs font-black" onClick={() => onSchedule(report)}>
             발행
+            {/* primary 채움 배경 위 대비 확보용 오버라이드 */}
+            <DeprecatedBadge className="text-primary-foreground/80 border-primary-foreground/40" />
           </Button>
         )}
       </div>

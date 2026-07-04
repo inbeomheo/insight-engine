@@ -20,7 +20,9 @@
     "next": "다음",
     "previous": "이전",
     "skip": "건너뛰기",
-    "done": "완료"
+    "done": "완료",
+    "deprecated": "지원 종료 예정",
+    "deprecatedTooltip": "학습 엔진 전환으로 발행 기능은 단계적으로 정리됩니다"
   },
   "sidebar": {
     "newAnalysis": "새 분석",

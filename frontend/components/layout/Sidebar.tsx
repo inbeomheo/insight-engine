@@ -14,6 +14,7 @@ import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useIsClient } from '@/hooks/useIsClient';
+import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import WorkspaceSelector from './WorkspaceSelector';
 
 /** 히스토리 항목 — memo로 불필요한 리렌더 방지 */
@@ -232,6 +233,7 @@ export default function Sidebar() {
           >
             <CalendarDays className="h-4 w-4" />
             {t('sidebar.calendar')}
+            <DeprecatedBadge />
           </Button>
           <Button
             asChild
