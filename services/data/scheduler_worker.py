@@ -8,6 +8,7 @@ apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스
 약 31%를 차지하므로, 스케줄러 인스턴스는 PEP 562 __getattr__로 지연 생성한다.
 (외부에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
 """
+
 import os
 from pathlib import Path
 
@@ -18,7 +19,7 @@ except ImportError:  # Windows 등 fcntl 미지원 환경 (단일 프로세스 �
 
 from services.core.logging_config import get_logger
 
-logger = get_logger('scheduler_worker')
+logger = get_logger("scheduler_worker")
 
 _scheduler = None
 _scheduler_lock_file = None
@@ -35,9 +36,11 @@ def _acquire_scheduler_leader_lock() -> bool:
         _scheduler_lock_file = True
         return True
 
-    lock_path = Path(os.getenv('SCHEDULER_LOCK_FILE', '/tmp/insight-engine-scheduler.lock'))
+    lock_path = Path(
+        os.getenv("SCHEDULER_LOCK_FILE", "/tmp/insight-engine-scheduler.lock")
+    )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_file = lock_path.open('w')
+    lock_file = lock_path.open("w")
     try:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -72,12 +75,13 @@ def _get_scheduler():
     global _scheduler
     if _scheduler is None:
         from apscheduler.schedulers.background import BackgroundScheduler
+
         _scheduler = BackgroundScheduler()
     return _scheduler
 
 
 def __getattr__(name):
-    if name == 'scheduler':
+    if name == "scheduler":
         return _get_scheduler()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
@@ -95,27 +99,29 @@ def check_and_publish():
         logger.info(f"발행 대기 포스트 {len(due_posts)}건 처리 시작")
 
         for post in due_posts:
-            post_id = post['id']
+            post_id = post["id"]
             try:
                 result = plugin_registry.execute(
-                    post['target_plugin'],
-                    post['content'],
-                    post['title'],
+                    post["target_plugin"],
+                    post["content"],
+                    post["title"],
                 )
-                if result.get('success'):
+                if result.get("success"):
                     schedule_service.update_status(
-                        post_id, 'published',
-                        published_url=result.get('url'),
+                        post_id,
+                        "published",
+                        published_url=result.get("url"),
                     )
                     logger.info(f"발행 완료: {post_id}")
                 else:
                     schedule_service.update_status(
-                        post_id, 'failed',
-                        error_message=result.get('message', '발행 실패'),
+                        post_id,
+                        "failed",
+                        error_message=result.get("message", "발행 실패"),
                     )
                     logger.warning(f"발행 실패: {post_id} - {result.get('message')}")
             except Exception as e:
-                schedule_service.update_status(post_id, 'failed', error_message=str(e))
+                schedule_service.update_status(post_id, "failed", error_message=str(e))
                 logger.error(f"발행 예외: {post_id} - {e}")
     except Exception as e:
         logger.error("check_and_publish 실패: %s", e, exc_info=True)
@@ -164,9 +170,11 @@ def _check_rss_subscriptions():
         results = check_all_subscriptions()
         if results:
             for r in results:
-                feed_title = r['subscription'].get('title', '알 수 없음')
-                count = len(r['new_entries'])
-                logger.info(f"RSS 새 글 감지: {feed_title} — {count}건 (user={r['user_id']})")
+                feed_title = r["subscription"].get("title", "알 수 없음")
+                count = len(r["new_entries"])
+                logger.info(
+                    f"RSS 새 글 감지: {feed_title} — {count}건 (user={r['user_id']})"
+                )
     except Exception as e:
         logger.error(f"RSS 구독 확인 실패: {e}")
 
@@ -175,18 +183,19 @@ def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     try:
         # 테스트/스크립트 등에서 스케줄러 기동을 끌 수 있는 게이트
-        if os.getenv('SCHEDULER_ENABLED', 'true').lower() not in ('true', '1', 'yes'):
+        if os.getenv("SCHEDULER_ENABLED", "true").lower() not in ("true", "1", "yes"):
             logger.info("SCHEDULER_ENABLED=false — 스케줄러 기동 생략")
             return
 
         # gunicorn --workers=2 이상에서는 각 worker가 app.py를 import하므로
         # APScheduler도 worker 수만큼 뜰 수 있다. 파일락으로 컨테이너 내 1개만 실행한다.
         if not _acquire_scheduler_leader_lock():
-            logger.info('다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략')
+            logger.info("다른 worker가 스케줄러 리더락을 보유 중 — 스케줄러 기동 생략")
             return
 
         # 모듈 자기참조로 접근해야 테스트의 scheduler patch와 지연 생성이 모두 동작한다
         import services.data.scheduler_worker as _self
+
         scheduler = _self.scheduler
         if scheduler.running:
             return
@@ -195,42 +204,46 @@ def start_scheduler(app):
 
         def _with_context(func):
             """Flask 앱 컨텍스트 내에서 job 함수를 실행하는 래퍼"""
+
             def wrapper():
                 with _app.app_context():
                     func()
+
             wrapper.__name__ = func.__name__
             return wrapper
 
         scheduler.add_job(
             _with_context(check_and_publish),
-            'interval',
+            "interval",
             minutes=1,
-            id='publish_checker',
+            id="publish_checker",
             replace_existing=True,
         )
         scheduler.add_job(
             _with_context(_check_channel_monitors),
-            'interval',
+            "interval",
             minutes=30,
-            id='channel_monitor_checker',
+            id="channel_monitor_checker",
             replace_existing=True,
         )
         scheduler.add_job(
             _with_context(_process_publish_queue),
-            'interval',
+            "interval",
             minutes=2,
-            id='publish_queue_processor',
+            id="publish_queue_processor",
             replace_existing=True,
         )
         scheduler.add_job(
             _with_context(_check_rss_subscriptions),
-            'interval',
+            "interval",
             minutes=30,
-            id='rss_subscription_checker',
+            id="rss_subscription_checker",
             replace_existing=True,
         )
         scheduler.start()
-        logger.info("스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)")
+        logger.info(
+            "스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)"
+        )
     except Exception as e:
         logger.error("start_scheduler 실패: %s", e, exc_info=True)
         return None
@@ -241,7 +254,8 @@ def stop_scheduler():
     try:
         # 생성된 적이 없으면 종료할 것도 없다 (불필요한 지연 생성 방지)
         import services.data.scheduler_worker as _self
-        if _self._scheduler is None and 'scheduler' not in _self.__dict__:
+
+        if _self._scheduler is None and "scheduler" not in _self.__dict__:
             _release_scheduler_leader_lock()
             return
         scheduler = _self.scheduler

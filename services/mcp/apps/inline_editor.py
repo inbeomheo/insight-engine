@@ -4,13 +4,14 @@
 콘텐츠를 단락 단위로 분리하여 발행 전 인라인 편집 기능을 제공합니다.
 편집 이력을 메모리에 보관하여 실행 취소(undo)를 지원합니다.
 """
+
 import html as html_lib
 import re
 
 from ..mcp_apps import BaseMCPApp
 from services.core.logging_config import get_logger
 
-logger = get_logger('inline_editor')
+logger = get_logger("inline_editor")
 
 _MAX_HISTORY = 20  # 편집 이력 최대 보관 수
 
@@ -96,9 +97,9 @@ class InlineEditorApp(BaseMCPApp):
 """
 
         actions = [
-            {"action": "save_edit",  "label": "편집 저장",    "style": "primary"},
-            {"action": "undo",       "label": "실행 취소",    "style": "secondary"},
-            {"action": "reset",      "label": "원본으로 복원", "style": "danger"},
+            {"action": "save_edit", "label": "편집 저장", "style": "primary"},
+            {"action": "undo", "label": "실행 취소", "style": "secondary"},
+            {"action": "reset", "label": "원본으로 복원", "style": "danger"},
             {"action": "get_result", "label": "편집 결과 가져오기", "style": "success"},
         ]
 
@@ -116,7 +117,7 @@ class InlineEditorApp(BaseMCPApp):
         try:
             return self._handle_action_internal(action, data)
         except Exception as e:
-            logger.error('인라인 편집 액션 처리 실패 (action=%s): %s', action, e)
+            logger.error("인라인 편집 액션 처리 실패 (action=%s): %s", action, e)
             return {
                 "success": False,
                 "message": f"액션 처리 중 오류: {e}",
@@ -243,5 +244,6 @@ def _split_sections(text: str) -> list:
 def _make_session_id(content: dict) -> str:
     """콘텐츠 기반 결정적 세션 ID를 생성합니다."""
     import hashlib
+
     key = (content.get("title") or "") + (content.get("content") or "")[:200]
     return hashlib.md5(key.encode()).hexdigest()[:12]

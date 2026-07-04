@@ -39,9 +39,7 @@ class SupabaseHistoryRepository(IHistoryRepository):
 
     def save(self, entry: HistoryEntry) -> dict | None:
         from services.data.supabase_service import save_history as _save
-        # 기존 함수는 dict 입력. HistoryEntry → dict 역변환은 to_row 사용.
-        # 다만 frontend dict 형식과 to_row 결과가 다르므로 from_dict 입력 dict로 fallback.
-        data = entry.to_row()
+        # 기존 함수는 frontend dict 형식 입력을 받는다.
         # `_save`는 user_id를 별도 인자로 받고 자신이 row 조립. 기존 호환을 위해
         # dict에 keys 그대로 매핑된 형식으로 전달.
         legacy_data = {

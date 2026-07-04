@@ -2,10 +2,9 @@
 스마트 콘텐츠 생성기 - Flask 애플리케이션 팩토리
 """
 import os
-import sys
 from urllib.parse import urlparse
 
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from utils.responses import api_error
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -25,8 +24,6 @@ except ModuleNotFoundError:
 def create_app(test_config=None):
     """Flask 애플리케이션 인스턴스를 생성하고 설정합니다."""
     load_dotenv()
-
-    base_dir = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
     app = Flask(
         __name__,
