@@ -18,6 +18,7 @@ from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
 from utils.responses import api_error, handle_error, safe_error_or_fallback, clamp_query_int, validate_content_length
+from prompts import compose_style_prompt
 
 
 @blog_bp.route('/api/generate-multi', methods=['POST'])
@@ -72,7 +73,7 @@ def generate_multi():
             with app.app_context():
                 style_start = time.time()
                 try:
-                    sp = style_prompts_dict.get(style_id, '')
+                    sp = compose_style_prompt(style_id, style_prompts_dict.get(style_id, ''))
                     result = ai_service.create_content(
                         truncated_content, model, sp,
                         style_id=style_id
@@ -194,7 +195,7 @@ def generate_campaign():
             with app.app_context():
                 try:
                     style_start = time.time()
-                    sp = style_prompts_dict.get(style_id, '')
+                    sp = compose_style_prompt(style_id, style_prompts_dict.get(style_id, ''))
                     result = ai_service.create_content(
                         truncated_content, model, sp,
                         style_id=style_id, modifiers=modifiers
