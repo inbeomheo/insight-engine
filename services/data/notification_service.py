@@ -15,16 +15,6 @@ _notifications: dict[str, list[dict]] = {}
 
 MAX_NOTIFICATIONS_PER_USER = 100
 
-# 알림 타입
-NOTIFICATION_TYPES = {
-    'generation_complete': '콘텐츠 생성 완료',
-    'workspace_invite': '워크스페이스 초대',
-    'content_approved': '콘텐츠 승인',
-    'content_rejected': '콘텐츠 반려',
-    'usage_warning': '사용량 경고',
-    'system': '시스템 알림',
-}
-
 
 def create_notification(user_id: str, type: str, title: str,
                         message: str, link: Optional[str] = None,
