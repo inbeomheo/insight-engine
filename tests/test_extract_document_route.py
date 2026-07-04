@@ -203,6 +203,7 @@ def test_extract_document_rejects_text_too_short_with_korean_message():
 
     assert resp.status_code == 400
     assert "\ucda9\ubd84\ud55c \ud14d\uc2a4\ud2b8" in resp.get_json()["error"]
+    assert "\uc2a4\uce94 \uc774\ubbf8\uc9c0 \ubb38\uc11c" in resp.get_json()["error"]
 
 
 def test_extract_document_encrypted_pdf_service_error_passthrough():
@@ -256,6 +257,24 @@ def test_extract_document_docx_read_error_sanitizes_internal_detail():
     assert resp.status_code == 400
     assert resp.get_json()["error"] == generic
     assert "bad zip" not in resp.get_json()["error"]
+
+
+def test_extract_document_pptx_read_error_sanitizes_internal_detail():
+    _, client = _app_client()
+    generic = "PPTX \ud30c\uc77c\uc744 \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \ud30c\uc77c\uc774 \uc190\uc0c1\ub418\uc5c8\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4."
+
+    with (
+        _no_auth_patch(),
+        patch(
+            "services.content.document_ingest_service.extract_from_upload",
+            side_effect=ValueError("PPTX \ud30c\uc77c\uc744 \uc77d\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4: missing presentation part"),
+        ),
+    ):
+        resp = _upload(client, _minimal_zip_bytes(), "slides.pptx", PPTX_MIME)
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == generic
+    assert "missing presentation part" not in resp.get_json()["error"]
 
 
 def test_extract_document_normalizes_text_while_preserving_paragraphs():

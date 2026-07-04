@@ -216,10 +216,10 @@ def extract_from_upload(file_storage: Any) -> Dict:
     filename = file_storage.filename or ''
     ext = os.path.splitext(filename)[1].lower()
 
-    # MIME 타입 결정 (Content-Type 우선, 확장자 폴백)
-    mime_type = file_storage.content_type
+    # 라우트의 확장자 기반 검증과 동일하게 파일명 확장자를 우선합니다.
+    mime_type = EXTENSION_TO_MIME.get(ext)
     if mime_type not in ALLOWED_MIME_TYPES:
-        mime_type = EXTENSION_TO_MIME.get(ext)
+        mime_type = file_storage.content_type
 
     if not mime_type or mime_type not in ALLOWED_MIME_TYPES:
         raise ValueError(f'지원하지 않는 파일 형식입니다. PDF, DOCX, PPTX 파일만 업로드 가능합니다.')

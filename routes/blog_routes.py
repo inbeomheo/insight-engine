@@ -421,7 +421,7 @@ def extract_document():
 
         if len(text) < DIRECT_TEXT_MIN_CHARS:
             return api_error(
-                '문서에서 충분한 텍스트를 추출하지 못했습니다.',
+                '문서에서 충분한 텍스트를 추출하지 못했습니다 (스캔 이미지 문서는 지원하지 않습니다)',
                 400,
             )
 

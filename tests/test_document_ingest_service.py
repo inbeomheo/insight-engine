@@ -99,6 +99,41 @@ class TestExtractFromUpload(unittest.TestCase):
         result = extract_from_upload(mock_file)
         self.assertEqual(result['title'], '보고서')
 
+    @patch('services.content.document_ingest_service.extract_text')
+    @patch('os.path.exists', return_value=True)
+    @patch('os.path.getsize', return_value=1024)
+    @patch('os.close')
+    @patch('os.unlink')
+    @patch('tempfile.mkstemp', return_value=(5, '/tmp/test.docx'))
+    def test_upload_prefers_extension_over_content_type(
+        self,
+        mock_mkstemp,
+        mock_unlink,
+        mock_close,
+        mock_size,
+        mock_exists,
+        mock_extract,
+    ):
+        """DOCX 확장자는 클라이언트 Content-Type이 PDF여도 DOCX 파서로 보냄"""
+        from services.content.document_ingest_service import extract_from_upload
+
+        docx_mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        mock_extract.return_value = {
+            'title': 'test',
+            'content': '테스트 내용',
+            'source_type': 'document',
+            'page_count': 3
+        }
+        mock_file = MagicMock()
+        mock_file.filename = 'sample.docx'
+        mock_file.content_type = 'application/pdf'
+        mock_file.save = MagicMock()
+
+        result = extract_from_upload(mock_file)
+
+        mock_extract.assert_called_once_with('/tmp/test.docx', docx_mime)
+        self.assertEqual(result['title'], 'sample')
+
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=20 * 1024 * 1024)
     @patch('os.close')
