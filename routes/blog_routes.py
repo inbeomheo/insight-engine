@@ -147,7 +147,7 @@ def _get_request_data(req):
         enable_citations = bool(data.get('enable_citations', False))
 
         # transcript_language 검증 (자막 추출 언어 지정 — None이면 기존 기본 동작)
-        transcript_language, _ = _validate_transcript_language(data.get('transcript_language'))
+        transcript_language, transcript_language_error = _validate_transcript_language(data.get('transcript_language'))
 
         return {
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
@@ -165,6 +165,7 @@ def _get_request_data(req):
             'include_transcript': include_transcript,
             'enable_citations': enable_citations,
             'transcript_language': transcript_language,
+            'transcript_language_error': transcript_language_error,
         }
 
     # form 데이터에서 modifiers JSON 파싱 (파일 업로드 시 FormData로 전송)
@@ -180,7 +181,7 @@ def _get_request_data(req):
 
     custom_prompt, _ = _validate_custom_prompt(req.form.get('customPrompt'))
     style = _validate_style(req.form.get('style', DEFAULT_STYLE), custom_prompt)
-    transcript_language, _ = _validate_transcript_language(req.form.get('transcript_language'))
+    transcript_language, transcript_language_error = _validate_transcript_language(req.form.get('transcript_language'))
 
     return {
         'url': req.form.get('url'),
@@ -198,6 +199,7 @@ def _get_request_data(req):
         'include_transcript': False,
         'enable_citations': False,
         'transcript_language': transcript_language,
+        'transcript_language_error': transcript_language_error,
     }
 
 
@@ -307,14 +309,8 @@ def generate():
         params = _get_request_data(request)
 
         # transcript_language 유효성 검증 (지원하지 않는 값이면 400)
-        raw_json = request.get_json(silent=True)
-        raw_transcript_language = (
-            raw_json.get('transcript_language') if isinstance(raw_json, dict)
-            else request.form.get('transcript_language')
-        )
-        _, transcript_language_error = _validate_transcript_language(raw_transcript_language)
-        if transcript_language_error:
-            return api_error(transcript_language_error, 400)
+        if params.get('transcript_language_error'):
+            return api_error(params['transcript_language_error'], 400)
 
         url = params['url']
         direct_content = params.get('content')
@@ -880,7 +876,9 @@ def generate_stream():
                 }), 429
 
         youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(video_id)
+        transcript_text, comments, error, raw_transcript, transcript_source, transcript_segments = _fetch_youtube_content(
+            video_id, params.get('transcript_language')
+        )
         if error:
             return api_error(error, 400)
 

@@ -7,7 +7,6 @@
 - /generate 요청 파라미터 검증 (허용값/기본값/오류)
 - 회귀: transcript_language 생략 시 기존 동작과 동일
 """
-import time
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -166,7 +165,7 @@ class TestGetTranscriptLanguageParam(unittest.TestCase):
         """transcript_language 지정 시 기존 캐시(언어 무관)를 재사용하지 않고 재추출한다."""
         from services.core.content_service import get_transcript
         cached = {'text': '캐시된 자막', 'source': 'api'}
-        with patch('services.core.content_service._load_cache', return_value=cached) as mock_load, \
+        with patch('services.core.content_service._load_cache', return_value=cached), \
              patch('services.core.content_service._build_ytt_api'), \
              patch('services.core.content_service._fetch_transcript_with_api', return_value=None), \
              patch('services.core.content_service._run_parallel_fallbacks', return_value=None), \
@@ -174,6 +173,69 @@ class TestGetTranscriptLanguageParam(unittest.TestCase):
             result = get_transcript('dQw4w9WgXcQ', transcript_language='en')
             # 캐시를 사용하지 않고 재추출을 시도했으므로 캐시된 텍스트가 반환되지 않음
             self.assertNotEqual(result.get('text'), '캐시된 자막')
+
+    def test_language_tagged_result_not_written_to_cache(self):
+        """B1 회귀: transcript_language 지정 요청은 _save_cache를 호출하지 않는다 —
+        캐시 키에 언어 차원이 없어, 쓰면 이후 언어 미지정(기본) 요청이 이 언어별
+        결과(및 requested_language/language_matched 메타)를 그대로 재사용하는
+        오염이 발생한다."""
+        from services.core.content_service import get_transcript
+        with patch('services.core.content_service._load_cache', return_value=None), \
+             patch('services.core.content_service._build_ytt_api'), \
+             patch('services.core.content_service._fetch_transcript_with_api') as mock_fetch, \
+             patch('services.core.content_service._extract_text_from_transcript', return_value='English text here'), \
+             patch('services.core.content_service._extract_segments_from_transcript', return_value=[]), \
+             patch('services.core.content_service._save_cache') as mock_save:
+            mock_fetch.return_value = MagicMock(is_generated=False)
+            get_transcript('dQw4w9WgXcQ', transcript_language='en')
+            mock_save.assert_not_called()
+
+    def test_no_language_result_still_written_to_cache(self):
+        """대조군: transcript_language 미지정 시엔 기존처럼 _save_cache가 호출된다."""
+        from services.core.content_service import get_transcript
+        with patch('services.core.content_service._load_cache', return_value=None), \
+             patch('services.core.content_service._build_ytt_api'), \
+             patch('services.core.content_service._fetch_transcript_with_api') as mock_fetch, \
+             patch('services.core.content_service._extract_text_from_transcript', return_value='자막 텍스트'), \
+             patch('services.core.content_service._extract_segments_from_transcript', return_value=[]), \
+             patch('services.core.content_service._save_cache') as mock_save:
+            mock_fetch.return_value = MagicMock(is_generated=False)
+            get_transcript('dQw4w9WgXcQ')
+            mock_save.assert_called_once()
+
+    def test_language_tagged_request_does_not_pollute_default_request_cache(self):
+        """B1 종단 재현: 실제 파일 캐시(_load_cache/_save_cache)를 그대로 사용해
+        (1) transcript_language='en' 요청 → 캐시 미기록 확인
+        (2) 이어서 언어 미지정 요청 → (1)의 잔재가 아닌 정상 재추출 결과를 받는지 확인.
+        """
+        from services.core import content_service
+
+        # _load_cache/_save_cache는 patch하지 않고 실제 파일 캐시를 그대로 사용한다
+        # (이 테스트의 목적이 실제 캐시 계층의 오염 여부를 검증하는 것이므로).
+        with patch('services.core.content_service._build_ytt_api'), \
+             patch('services.core.content_service._fetch_transcript_with_api') as mock_fetch, \
+             patch('services.core.content_service._extract_segments_from_transcript', return_value=[]), \
+             patch('services.core.content_service._extract_text_from_transcript') as mock_extract:
+
+            video_id = 'zzLangPoll0'  # 11자 영숫자 — VIDEO_ID_PATTERN 형식 충족
+            try:
+                # 사전 조건: 이 video_id의 실제 캐시 파일이 없어야 함
+                content_service.clear_cache(video_id)
+
+                mock_fetch.return_value = MagicMock(is_generated=False)
+                mock_extract.return_value = 'English transcript text'
+                en_result = content_service.get_transcript(video_id, transcript_language='en')
+                self.assertEqual(en_result['source_meta']['requested_language'], 'en')
+                # (1) 언어 지정 요청은 실제 캐시 파일에 기록되지 않아야 한다
+                self.assertIsNone(content_service._load_cache(video_id, 'transcript'))
+
+                mock_extract.return_value = '한국어 자막 텍스트입니다'
+                ko_result = content_service.get_transcript(video_id)
+                # (2) 언어 미지정 요청은 (1)의 영어 결과가 아니라 새로 추출한 결과를 반환해야 한다
+                self.assertEqual(ko_result['text'], '한국어 자막 텍스트입니다')
+                self.assertNotIn('requested_language', ko_result['source_meta'])
+            finally:
+                content_service.clear_cache(video_id)
 
 
 class TestGetTranscriptRegressionOmittedParam(unittest.TestCase):
@@ -285,6 +347,43 @@ class TestGetRequestDataTranscriptLanguage(unittest.TestCase):
             params = _get_request_data(flask_req)
             self.assertIsNone(params['transcript_language'])
 
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_invalid_language_sets_error_field(self, _):
+        """I2: _get_request_data가 원본 에러 메시지를 transcript_language_error에 직접 담아
+        반환한다 — generate()가 요청 데이터를 재파싱하지 않고 이 필드만 확인하면 된다."""
+        from routes.blog_routes import _get_request_data
+        with self.app.test_request_context(
+            json={'url': 'https://youtube.com/watch?v=abc', 'transcript_language': 'fr'},
+            content_type='application/json',
+        ):
+            from flask import request as flask_req
+            params = _get_request_data(flask_req)
+            self.assertIsNotNone(params.get('transcript_language_error'))
+            self.assertIn('언어', params['transcript_language_error'])
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_valid_language_has_no_error_field(self, _):
+        from routes.blog_routes import _get_request_data
+        with self.app.test_request_context(
+            json={'url': 'https://youtube.com/watch?v=abc', 'transcript_language': 'ko'},
+            content_type='application/json',
+        ):
+            from flask import request as flask_req
+            params = _get_request_data(flask_req)
+            self.assertIsNone(params.get('transcript_language_error'))
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_form_data_invalid_language_sets_error_field(self, _):
+        """form-data 경로(파일 업로드)도 동일하게 transcript_language_error를 채운다."""
+        from routes.blog_routes import _get_request_data
+        with self.app.test_request_context(
+            data={'url': 'https://youtube.com/watch?v=abc', 'transcript_language': 'fr'},
+            content_type='multipart/form-data',
+        ):
+            from flask import request as flask_req
+            params = _get_request_data(flask_req)
+            self.assertIsNotNone(params.get('transcript_language_error'))
+
 
 _H = {'Origin': 'http://localhost:3000'}
 
@@ -337,6 +436,59 @@ class TestFetchYoutubeContentLanguage(unittest.TestCase):
             mock_get.return_value = {'text': '자막', 'source': 'api', 'segments': []}
             _fetch_youtube_content('dQw4w9WgXcQ')
             mock_get.assert_called_once_with('dQw4w9WgXcQ', transcript_language=None)
+
+
+# ==================== I1: /generate-stream 언어 전달 ====================
+
+class TestGenerateStreamRouteTranscriptLanguage(unittest.TestCase):
+    """POST /generate-stream이 transcript_language를 _fetch_youtube_content에 전달하는지 확인.
+
+    Ollama 모델은 프론트엔드에서 강제로 스트리밍 경로를 타므로, 이 경로가
+    언어 파라미터를 무시하면 Ollama 사용자에게는 설정이 완전히 no-op이 된다.
+    """
+
+    def setUp(self):
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._get_style_prompt', return_value='프롬프트')
+    @patch('routes.blog_routes._fetch_youtube_content')
+    @patch('services.core.content_service.get_content_title', return_value='YT')
+    def test_passes_transcript_language_to_fetch(
+        self, mock_title, mock_fetch, mock_style, mock_supabase,
+    ):
+        mock_fetch.return_value = ('자막 본문', [], None, '자막 본문', 'api', [])
+
+        self.client.post(
+            '/generate-stream',
+            json={
+                'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'style': 'summary',
+                'transcript_language': 'ja',
+            },
+            headers=_H,
+        )
+
+        mock_fetch.assert_called_once_with('dQw4w9WgXcQ', 'ja')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('routes.blog_routes._get_style_prompt', return_value='프롬프트')
+    @patch('routes.blog_routes._fetch_youtube_content')
+    @patch('services.core.content_service.get_content_title', return_value='YT')
+    def test_omitted_language_passes_none(
+        self, mock_title, mock_fetch, mock_style, mock_supabase,
+    ):
+        mock_fetch.return_value = ('자막 본문', [], None, '자막 본문', 'api', [])
+
+        self.client.post(
+            '/generate-stream',
+            json={'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'style': 'summary'},
+            headers=_H,
+        )
+
+        mock_fetch.assert_called_once_with('dQw4w9WgXcQ', None)
 
 
 if __name__ == '__main__':

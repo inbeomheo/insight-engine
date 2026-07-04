@@ -425,7 +425,11 @@ def _build_transcript_result(
     }
     if segments:
         result['segments'] = segments
-    _save_cache(video_id, 'transcript', result)
+    # 언어 지정 요청은 캐시에 쓰지 않는다 — 캐시 키에 언어 차원이 없어
+    # 이후 언어 미지정(기본) 요청이 이 언어별 결과를 그대로 재사용하게 되는
+    # 오염(cache pollution)을 방지한다. 읽기 측 우회(get_transcript 캐시 스킵)와 대칭.
+    if not requested_language:
+        _save_cache(video_id, 'transcript', result)
     return result
 
 

@@ -81,9 +81,10 @@ def fetch_transcript_with_api(
             지정 언어 트랙이 없으면 기존 순서로 자동 폴백한다(생성 실패로 이어지지 않음).
     """
     fetched = None
-    languages = (preferred_language,) + tuple(
-        lang for lang in PREFERRED_LANGUAGES if lang != preferred_language
-    ) if preferred_language else PREFERRED_LANGUAGES
+    languages = (
+        (preferred_language,) + tuple(lang for lang in PREFERRED_LANGUAGES if lang != preferred_language)
+        if preferred_language else PREFERRED_LANGUAGES
+    )
 
     if hasattr(ytt_api, "fetch") and hasattr(ytt_api, "list"):
         try:
