@@ -53,7 +53,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/chat': 60_000,
   '/api/support/chat': 30_000,
   '/api/video-deepdives/extract': 660_000,
-  '/api/extract-pdf': 60_000,
+  '/api/extract-document': 60_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -152,16 +152,16 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
   });
 }
 
-export interface ExtractPdfResponse {
+export interface ExtractDocumentResponse {
   text: string;
   truncated: boolean;
   pages: number;
 }
 
-export async function extractPdf(file: File): Promise<ExtractPdfResponse> {
+export async function extractDocument(file: File): Promise<ExtractDocumentResponse> {
   const formData = new FormData();
   formData.append('file', file);
-  return request('/api/extract-pdf', {
+  return request('/api/extract-document', {
     method: 'POST',
     body: formData,
   });
@@ -265,7 +265,7 @@ export async function updateVideoDeepDiveSlides(
   });
 }
 
-/** 파일 업로드용 FormData 빌더 (generateFromFile/Audio 공용) */
+/** 오디오 업로드용 FormData 빌더 */
 function buildFileFormData(
   file: File,
   opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
@@ -278,14 +278,6 @@ function buildFileFormData(
   if (opts.customPrompt) fd.append('customPrompt', opts.customPrompt);
   if (opts.detail_level) fd.append('detail_level', opts.detail_level);
   return fd;
-}
-
-// 파일 업로드 생성 (PDF/DOCX)
-export async function generateFromFile(
-  file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
-): Promise<GenerateResponse> {
-  return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
 
 // 오디오 파일 업로드 생성 (음성 메모, 팟캐스트 녹음)

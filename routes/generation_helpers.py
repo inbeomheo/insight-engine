@@ -174,26 +174,6 @@ def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
     return jsonify(response)
 
 
-def _handle_document_upload(params: dict, uploaded_file, start_time: float):
-    """PDF/DOCX 문서 → 콘텐츠 생성."""
-    from services.content.document_ingest_service import extract_from_upload
-
-    doc = extract_from_upload(uploaded_file)
-    source_title = doc.get('title') or uploaded_file.filename or '업로드 문서'
-    source_content = doc['content']
-
-    truncated_content = _truncate_for_model(params['model'], '문서 본문', source_content)
-    result, used_prompt = _generate_from_source(params, truncated_content)
-
-    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
-
-    response = _base_generation_response(result, params, start_time, used_prompt)
-    response['source_type'] = 'document'
-    response['source_title'] = source_title
-    response['page_count'] = doc.get('page_count', 0)
-    return jsonify(response)
-
-
 def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
     """비YouTube URL (웹페이지/RSS/arXiv) → 콘텐츠 생성."""
     from services.content.multi_source_collector import SOURCE_WEBPAGE
