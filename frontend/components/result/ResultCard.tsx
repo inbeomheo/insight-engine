@@ -54,6 +54,7 @@ const PlatformRewriteModal = dynamic(() => import('./PlatformRewriteModal'), { s
 const AnalysisDashboard = dynamic(() => import('./AnalysisDashboard'), { ssr: false });
 const TranscriptPanel = dynamic(() => import('./TranscriptPanel'), { ssr: false });
 const ChapterTimeline = dynamic(() => import('./ChapterTimeline'), { ssr: false });
+const ResultChatPanel = dynamic(() => import('./ResultChatPanel'), { ssr: false });
 
 // KaTeX 수식 렌더링 — 콘텐츠에 수식 패턴이 있을 때만 로드
 const MathMarkdown = dynamic(() => import('./MathMarkdown'), { ssr: false });
@@ -625,6 +626,10 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
     ),
     [isStreaming, processedContent, hasMath],
   );
+  const chatContext = useMemo(
+    () => report.transcript || report.content,
+    [report.transcript, report.content],
+  );
 
   // --- Compact 모드: 요약 카드 ---
   if (viewMode === 'compact') {
@@ -922,6 +927,12 @@ variant={report.share_url ? 'secondary' : 'outline'}
               )}
             </>
           )}
+
+          <ResultChatPanel
+            context={chatContext}
+            model={selectedModel || undefined}
+            language="ko"
+          />
 
           {/* NotebookLM 섹션 */}
           {report.notebooklm?.artifacts && (

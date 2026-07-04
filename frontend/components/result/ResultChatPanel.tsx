@@ -1,0 +1,168 @@
+'use client';
+
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Bot, ChevronDown, ChevronUp, Loader2, Send, User } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { askResultChat, type ResultChatMessage } from '@/lib/api';
+
+interface ResultChatPanelProps {
+  context: string;
+  model?: string;
+  language?: string;
+}
+
+const MAX_CONTEXT_CHARS = 50_000;
+
+export default function ResultChatPanel({ context, model, language = 'ko' }: ResultChatPanelProps) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ResultChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { requestContext, hasContext, isContextSliced } = useMemo(() => {
+    const trimmed = context.trim();
+    return {
+      requestContext: trimmed.slice(0, MAX_CONTEXT_CHARS),
+      hasContext: trimmed.length > 0,
+      isContextSliced: trimmed.length > MAX_CONTEXT_CHARS,
+    };
+  }, [context]);
+
+  useEffect(() => {
+    setMessages([]);
+    setInput('');
+    setError(null);
+  }, [context]);
+
+  const helperText = useMemo(() => {
+    if (!hasContext) return '질문할 자막/본문이 없습니다.';
+    if (isContextSliced) return '자막이 길어 앞부분 50,000자를 기준으로 답변합니다.';
+    return '현재 결과의 자막/본문과 관련 지식 노트만 근거로 답합니다.';
+  }, [hasContext, isContextSliced]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = input.trim();
+    if (!question || loading) return;
+    if (question.length > 500) {
+      setError('[채팅 실패] 질문은 최대 500자까지 입력할 수 있습니다.');
+      return;
+    }
+    if (!hasContext) {
+      setError('[채팅 실패] 답변할 자막/본문이 없습니다.');
+      return;
+    }
+
+    const history = messages.slice(-10);
+    const userMessage: ResultChatMessage = { role: 'user', content: question };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setError(null);
+    setLoading(true);
+
+    try {
+      const result = await askResultChat({
+        question,
+        context: requestContext,
+        history,
+        model,
+        language,
+      });
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: result.answer || '답변을 받지 못했습니다.' },
+      ]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '채팅 요청에 실패했습니다.';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="mt-5 overflow-hidden rounded-lg border border-border/50 bg-muted/20">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold hover:bg-muted/40"
+      >
+        <span className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-primary" />
+          콘텐츠 Q&A
+        </span>
+        <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+          {messages.length > 0 ? `${messages.length}개 메시지` : '질문하기'}
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-border/40 p-4">
+          <p className="mb-3 text-xs text-muted-foreground">{helperText}</p>
+
+          <div className="mb-3 max-h-72 space-y-3 overflow-y-auto rounded-md bg-background/70 p-3">
+            {messages.length === 0 ? (
+              <p className="py-5 text-center text-sm text-muted-foreground">
+                궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.
+              </p>
+            ) : (
+              messages.map((message, index) => (
+                <div
+                  key={`${message.role}-${index}`}
+                  className={`flex gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.role === 'assistant' && <Bot className="mt-1 h-4 w-4 shrink-0 text-primary" />}
+                  <div
+                    className={`max-w-[85%] whitespace-pre-wrap rounded-md px-3 py-2 text-sm leading-6 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-border/60 bg-card text-foreground'
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                  {message.role === 'user' && <User className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />}
+                </div>
+              ))
+            )}
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                답변 생성 중...
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <Textarea
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="예: 이 영상의 핵심 실행 단계는?"
+              maxLength={500}
+              disabled={loading || !hasContext}
+              className="min-h-20 resize-y"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">{input.length}/500</span>
+              <Button type="submit" size="sm" disabled={loading || !input.trim() || !hasContext}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                보내기
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
+  );
+}

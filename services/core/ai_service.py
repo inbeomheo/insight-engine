@@ -209,6 +209,35 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     return kwargs
 
 
+def _call_completion_with_model_retry(model: str, completion_kwargs: Dict[str, Any]) -> Any:
+    """Call LiteLLM completion, preserving the global GLM concurrency guard."""
+    is_glm = model.startswith("zhipuai/")
+
+    # GLM 모델은 동시성 제한으로 순차 처리 (락은 호출 시만, sleep은 밖에서)
+    if is_glm:
+        last_error = None
+        for attempt in range(GLM_RETRY_COUNT):
+            with _glm_lock:
+                try:
+                    response = _get_completion()(**completion_kwargs)
+                    current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
+                    return response
+                except Exception as e:
+                    last_error = e
+                    error_str = str(e)
+                    if '1302' not in error_str or attempt >= GLM_RETRY_COUNT - 1:
+                        raise
+                    current_app.logger.warning(
+                        f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
+                        f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
+                    )
+            # sleep은 락 밖에서 (다른 요청 블로킹 방지)
+            time.sleep(GLM_RETRY_DELAY)
+        raise last_error
+
+    return _get_completion()(**completion_kwargs)
+
+
 def _extract_title_and_content(markdown_content):
     """마크다운에서 제목과 본문을 분리합니다."""
     title = "AI 생성 결과"
@@ -367,32 +396,7 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                                memory_context=memory_context)
         completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers,
                                                      detail_level=detail_level)
-        is_glm = model.startswith("zhipuai/")
-
-        # GLM 모델은 동시성 제한으로 순차 처리 (락은 호출 시만, sleep은 밖에서)
-        if is_glm:
-            last_error = None
-            for attempt in range(GLM_RETRY_COUNT):
-                with _glm_lock:
-                    try:
-                        response = _get_completion()(**completion_kwargs)
-                        current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
-                        break
-                    except Exception as e:
-                        last_error = e
-                        error_str = str(e)
-                        if '1302' not in error_str or attempt >= GLM_RETRY_COUNT - 1:
-                            raise
-                        current_app.logger.warning(
-                            f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
-                            f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
-                        )
-                # sleep은 락 밖에서 (다른 요청 블로킹 방지)
-                time.sleep(GLM_RETRY_DELAY)
-            else:
-                raise last_error
-        else:
-            response = _get_completion()(**completion_kwargs)
+        response = _call_completion_with_model_retry(model, completion_kwargs)
 
         markdown_content = response.choices[0].message.content
         title, body = _extract_title_and_content(markdown_content)
@@ -471,6 +475,42 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
 
     except Exception as e:
         current_app.logger.error(f"Streaming failed: model={model}, error={e}")
+        raise Exception(_convert_error_message(str(e), model)) from e
+
+
+def create_chat_response(
+    messages: List[Dict[str, str]],
+    model: str,
+    max_tokens: int = 1200,
+    temperature: float = 0.2,
+) -> Dict[str, Any]:
+    """LiteLLM chat completion thin wrapper."""
+    try:
+        completion_kwargs = _build_completion_kwargs(
+            model,
+            "",
+            style_id="summary",
+            modifiers={"length": "short", "language": "ko"},
+        )
+        completion_kwargs["messages"] = messages
+        completion_kwargs["max_tokens"] = max_tokens
+        completion_kwargs["temperature"] = temperature
+
+        response = _call_completion_with_model_retry(model, completion_kwargs)
+        answer = response.choices[0].message.content or ""
+
+        usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        usage = getattr(response, "usage", None)
+        if usage:
+            usage_data = {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                "completion_tokens": getattr(usage, "completion_tokens", 0),
+                "total_tokens": getattr(usage, "total_tokens", 0),
+            }
+
+        return {"answer": answer.strip(), "usage": usage_data}
+    except Exception as e:
+        current_app.logger.error(f"AI chat failed: model={model}, error={e}")
         raise Exception(_convert_error_message(str(e), model)) from e
 
 
