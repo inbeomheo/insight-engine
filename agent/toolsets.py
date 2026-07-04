@@ -165,15 +165,6 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
         "description": "이벤트 트래킹, A/B 테스트, 성과 대시보드",
     },
 
-    # ── 리라이트/리퍼포징 ──
-    "rewrite": {
-        "tools": [
-            "rewrite_for_platform", "inline_edit",
-        ],
-        "includes": [],
-        "description": "플랫폼별 리라이트 (Twitter/LinkedIn/Instagram)",
-    },
-
     # ── NotebookLM ──
     "notebooklm": {
         "tools": [
@@ -212,7 +203,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
     # Publisher 역할: 내보내기 + 연동 + MCP
     "role_publisher": {
         "tools": [],
-        "includes": ["export", "integrations", "mcp", "schedule", "rewrite", "agent_control"],
+        "includes": ["export", "integrations", "mcp", "schedule", "agent_control"],
         "description": "콘텐츠 발행 역할",
     },
 
@@ -230,7 +221,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
             "collector", "analysis", "seo", "content", "core",
             "quality", "media", "transcript", "platform", "rag",
             "export", "integrations", "mcp", "schedule",
-            "agent_control", "finetune", "analytics", "rewrite",
+            "agent_control", "finetune", "analytics",
             "notebooklm",
         ],
         "description": "모든 도구 (Supervisor용)",

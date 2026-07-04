@@ -101,7 +101,6 @@
     "docxError": "DOCXのエクスポートに失敗しました",
     "htmlSuccess": "HTMLをダウンロードしました",
     "publishError": "投稿中にエラーが発生しました。",
-    "rewrite": "プラットフォームリライト",
     "tts": "テキスト読み上げ",
     "factCheck": "ファクトチェック",
     "qaCheck": "品質チェック",

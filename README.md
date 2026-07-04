@@ -25,7 +25,6 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 - **댓글 병렬 분석** — 메인 콘텐츠와 댓글 요약 동시 생성
 
 ### Post-Processing
-- **플랫폼 리라이트** — Twitter/LinkedIn/Instagram/Threads 형식 변환
 - **인라인 AI 편집** — 텍스트 선택 영역 부분 재생성 (축약/확장/톤변경/번역)
 - **마인드맵** — 콘텐츠 → 마인드맵 마크다운 변환
 - **QA 게이트** — 발행 전 금칙어/구조/중복/링크 품질 검증
@@ -145,7 +144,7 @@ insight-engine/
 ├── routes/                        # API 라우트 (13개 모듈)
 │   ├── blog_routes.py             # 콘텐츠 생성, 파이프라인, MCP, 예약
 │   ├── auth_routes.py             # 인증, API 키, 사용량, 워크스페이스
-│   ├── advanced_routes.py         # 멀티스타일, 퓨전, 리라이트, QA
+│   ├── advanced_routes.py         # 멀티스타일, 퓨전, QA
 │   ├── export_routes.py           # DOCX/MD/TXT/ZIP 내보내기
 │   ├── utility_routes.py          # 헬스체크, 프로바이더, 캐시
 │   ├── analytics_routes.py        # 분석 대시보드
@@ -158,7 +157,7 @@ insight-engine/
 │   ├── analysis/                  # 텍스트/NLP 분석 (95개)
 │   ├── seo/                       # SEO 최적화 (28개)
 │   ├── quality/                   # QA 검증 (14개)
-│   ├── content/                   # 인용, 리라이트, FAQ (27개)
+│   ├── content/                   # 인용, FAQ (26개)
 │   ├── media/                     # 이미지, TTS, 썸네일 (15개)
 │   ├── transcript/                # Whisper, 챕터, 번역 (6개)
 │   ├── agents/                    # 멀티에이전트 파이프라인 (12개)
@@ -242,7 +241,6 @@ insight-engine/
 | `/generate-batch` | POST | 다중 URL 배치 (최대 10개) |
 | `/api/generate-multi` | POST | 1 URL × N 스타일 동시 생성 |
 | `/api/pipeline` | POST | 파이프라인 자동화 (SSE) |
-| `/api/rewrite` | POST | 플랫폼별 리라이트 |
 | `/api/inline-edit` | POST | 인라인 AI 편집 |
 
 ### Content Management

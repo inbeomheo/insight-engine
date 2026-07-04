@@ -69,5 +69,5 @@ def _build_params_schema(sig):
         required = ["content"]
     return {"type": "object", "properties": props, "required": required}
 
-_SKIP_MODULES = {"multi_source_collector", "rewrite_service"}
+_SKIP_MODULES = {"multi_source_collector"}
 _register_tools()

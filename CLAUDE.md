@@ -74,7 +74,7 @@ JSON 응답 {title, content, html, usage}
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 예약, 지식 업로드, Ollama 헬스체크 |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
-| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA |
+| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 인라인 편집, QA |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
 | 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증 |
 | 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
@@ -90,7 +90,6 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
 | 서비스 | `services/data/publish_queue_service.py` | 발행 큐 + 재시도 정책 (3회, 지수 백오프) |
 | 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
-| 서비스 | `services/content/rewrite_service.py` | 플랫폼별 카피 리라이트 (Twitter/LinkedIn/Instagram/Threads) |
 | 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
 | 서비스 | `services/quality/qa_gate_service.py` | 발행 전 QA 게이트 (금칙어/구조/중복/링크 검증) |
 | 서비스 | `services/agents/` | 멀티에이전트 파이프라인 (Research → Writer → Editor → SEO) |
@@ -133,7 +132,7 @@ services/
 ├── analysis/       # 텍스트/NLP 분석 — 가독성, 구조, 문장, 감정 (95개)
 ├── seo/            # 검색 최적화 — 키워드, 메타, SERP, E-E-A-T (28개)
 ├── quality/        # 품질 검증 — QA, 표절, 팩트체크 (14개)
-├── content/        # 콘텐츠 관리 — 인용, 리라이트, FAQ, 요약 (27개)
+├── content/        # 콘텐츠 관리 — 인용, FAQ, 요약 (26개)
 ├── media/          # 미디어 — 썸네일, 이미지, 비디오, TTS (15개)
 ├── transcript/     # 자막/음성 — Whisper, 챕터, 번역 (6개)
 ├── export/         # 내보내기 — DOCX, EPUB, Google Docs (5개)
@@ -222,8 +221,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **상세도 프리셋**: `detail_level` 파라미터 (brief/standard/deep) — temperature 오프셋 + max_tokens 배율 적용 (`config.DETAIL_PRESETS`)
 
 **챕터 자동 분할**: `/generate` 응답의 `chapters[]` 필드 — AI가 자막을 주제별 챕터로 분할 (`chapter_service.py`)
-
-**플랫폼 리라이트**: `POST /api/rewrite` — 콘텐츠를 Twitter/LinkedIn/Instagram/Threads 형식으로 변환 (`rewrite_service.py`)
 
 **인라인 AI 편집**: `POST /api/inline-edit` — 텍스트 선택 영역만 부분 재생성 (축약/확장/톤변경/번역)
 

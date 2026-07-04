@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } f
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, RefreshCw, Loader2, Image as ImageIcon,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -51,7 +51,6 @@ const QaGateBadge = dynamic(() => import('./QaGateBadge'), { ssr: false });
 
 // 무거운 서브컴포넌트 dynamic import
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
-const PlatformRewriteModal = dynamic(() => import('./PlatformRewriteModal'), { ssr: false });
 const AnalysisDashboard = dynamic(() => import('./AnalysisDashboard'), { ssr: false });
 const TranscriptPanel = dynamic(() => import('./TranscriptPanel'), { ssr: false });
 const ChapterTimeline = dynamic(() => import('./ChapterTimeline'), { ssr: false });
@@ -235,7 +234,6 @@ interface PanelState {
   eventLoading: boolean;
   extractedEvents: VideoEvent[] | null;
   eventSummary: EventSummary | null;
-  rewriteOpen: boolean;
 }
 type PanelAction =
   | { type: 'SET'; key: keyof PanelState; value: PanelState[keyof PanelState] }
@@ -245,7 +243,6 @@ const panelInitial: PanelState = {
   collapsed: false, hasExpanded: true, copiedField: null,
   chatOpen: false, showTranscript: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
-  rewriteOpen: false,
 };
 
 function panelReducer(state: PanelState, action: PanelAction): PanelState {
@@ -266,7 +263,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary, rewriteOpen } = panel;
+  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -672,11 +669,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
         onClose={() => setPanel('chatOpen', false)}
       />
     )}
-    <PlatformRewriteModal
-      open={rewriteOpen}
-      onOpenChange={(open) => setPanel('rewriteOpen', open)}
-      content={report.content}
-    />
     <Card className="mx-auto max-w-[920px] overflow-hidden rounded-sm border-border bg-card shadow-none transition-colors hover:border-primary/40">
       {/* 헤더 */}
       <div className="px-6 pt-6 pb-3 lg:px-8 xl:px-10">
@@ -1043,10 +1035,6 @@ variant={report.share_url ? 'secondary' : 'outline'}
               <DropdownMenuItem onClick={() => setPromptModalOpen(true, report.prompt)}>
                 <Code className="h-3.5 w-3.5 mr-2" />
                 {t('result.promptView')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPanel('rewriteOpen', true)}>
-                <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                플랫폼 변환
               </DropdownMenuItem>
               {NOTEBOOKLM_ENABLED && (
                 <>

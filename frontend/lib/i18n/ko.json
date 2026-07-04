@@ -101,7 +101,6 @@
     "docxError": "DOCX 내보내기 실패",
     "htmlSuccess": "HTML 다운로드 완료",
     "publishError": "발행 중 오류가 발생했습니다.",
-    "rewrite": "플랫폼 리라이트",
     "tts": "음성 변환",
     "factCheck": "팩트체크",
     "qaCheck": "품질 검사",

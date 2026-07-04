@@ -18,7 +18,6 @@ const STEP_TYPES = [
   { type: 'transcript', label: '자막 추출', description: 'URL에서 자막을 추출합니다' },
   { type: 'generate', label: 'AI 생성', description: '선택한 스타일로 콘텐츠를 생성합니다' },
   { type: 'seo', label: 'SEO 최적화', description: 'SEO 메타데이터를 생성합니다' },
-  { type: 'rewrite', label: '플랫폼 리라이트', description: '플랫폼별로 변환합니다' },
   { type: 'qa', label: 'QA 검증', description: '품질 게이트를 통과합니다' },
   { type: 'publish', label: '발행', description: 'MCP 플러그인으로 발행합니다' },
 ];

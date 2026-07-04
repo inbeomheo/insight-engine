@@ -101,7 +101,6 @@
     "docxError": "DOCX export failed",
     "htmlSuccess": "HTML downloaded",
     "publishError": "An error occurred while publishing.",
-    "rewrite": "Platform rewrite",
     "tts": "Text to speech",
     "factCheck": "Fact check",
     "qaCheck": "Quality check",
