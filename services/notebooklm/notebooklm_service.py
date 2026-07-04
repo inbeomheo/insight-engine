@@ -12,6 +12,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+ARTIFACT_NOT_READY_MESSAGE = '아직 완료되지 않은 artifact입니다.'
 STATE_FILE = os.path.join('data', 'notebooklm_state.json')
 
 # nlm CLI 명령 타임아웃 (초)
@@ -221,7 +222,7 @@ class NotebookLmService:
         # artifact 타입 확인
         status = self.check_status(artifact_id)
         if status.get('status') != 'completed':
-            raise RuntimeError(f'아직 완료되지 않은 artifact입니다. 상태: {status.get("status")}')
+            raise RuntimeError(f'{ARTIFACT_NOT_READY_MESSAGE} 상태: {status.get("status")}')
 
         artifact_type = status.get('type', 'report')
         download_type = self.DOWNLOAD_COMMANDS.get(artifact_type, 'report')
