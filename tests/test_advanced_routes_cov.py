@@ -1,6 +1,6 @@
 """advanced_routes.py 라우트 커버리지 테스트.
 
-마인드맵, 멀티스타일, 캠페인, 퓨전, 리라이트, QA, 파이프라인,
+마인드맵, 멀티스타일, 퓨전, 리라이트, QA, 파이프라인,
 썸네일, 인라인 편집, 에이전트 커버.
 """
 import unittest
@@ -194,65 +194,6 @@ class TestGenerateMulti(_Base):
         style_prompt = create_content.call_args[0][2]
         self.assertEqual(style_prompt, 'TRANSFORM_ONLY')
         self.assertFalse(style_prompt.startswith(BASE_PROMPT))
-
-
-# ── 캠페인 ─────────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestGenerateCampaign(_Base):
-
-    def test_campaign_no_url(self, _):
-        resp = self.client.post('/api/generate-campaign', json={}, headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_campaign_invalid_url(self, _):
-        resp = self.client.post('/api/generate-campaign',
-                                json={'url': 'https://example.com', 'pack_id': 'full'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_campaign_invalid_pack(self, _):
-        resp = self.client.post('/api/generate-campaign',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=test',
-                                    'pack_id': 'nonexistent'
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_campaign_composes_base_prompt_for_ui_style(self, _):
-        from prompts.base import BASE_PROMPT
-
-        self.app.config['STYLE_PROMPTS'] = {'summary': 'SUMMARY_ONLY'}
-        with (
-            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
-            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
-            patch('routes.advanced_routes._fetch_youtube_content',
-                  return_value=('transcript', [], None, [], 'api', None)),
-            patch('services.core.content_service.is_youtube_url', return_value=True),
-            patch('services.core.content_service.get_video_id', return_value='vid1'),
-            patch('services.core.content_service.get_content_title', return_value='Title'),
-            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
-            patch('services.core.ai_service.create_content',
-                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
-        ):
-            resp = self.client.post(
-                '/api/generate-campaign',
-                json={
-                    'url': 'https://www.youtube.com/watch?v=test123',
-                    'pack_id': 'blog_focused',
-                    'model': 'zhipuai/test',
-                },
-                headers=_H,
-                environ_overrides={'REMOTE_ADDR': '127.0.10.3'},
-            )
-
-        self.assertEqual(resp.status_code, 200)
-        style_prompt = create_content.call_args[0][2]
-        self.assertTrue(style_prompt.startswith(BASE_PROMPT))
-        self.assertEqual(style_prompt.count(BASE_PROMPT), 1)
-        self.assertTrue(style_prompt.endswith('SUMMARY_ONLY'))
 
 
 # ── 퓨전 ──────────────────────────────────────────────

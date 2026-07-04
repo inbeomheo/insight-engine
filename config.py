@@ -201,26 +201,6 @@ QA_FORBIDDEN_WORDS: List[str] = [
 QA_MIN_SECTIONS: int = 2
 QA_MIN_CHARS: int = 200
 
-# === 캠페인 팩 (1 URL × N 스타일 원클릭 세트) ===
-
-CAMPAIGN_PACKS: Dict[str, Dict[str, Any]] = {
-    'full': {
-        'name': '풀 캠페인',
-        'description': '블로그 + 뉴스레터 + 숏츠 + SNS 4종 세트',
-        'styles': ['blog_seo', 'newsletter', 'shorts_script', 'sns_post'],
-    },
-    'blog_focused': {
-        'name': '블로그 집중',
-        'description': '블로그 SEO + 요약 + 튜토리얼 3종',
-        'styles': ['blog_seo', 'summary', 'tutorial'],
-    },
-    'social': {
-        'name': '소셜 미디어',
-        'description': 'SNS + 숏츠 + 뉴스레터 3종',
-        'styles': ['sns_post', 'shorts_script', 'newsletter'],
-    },
-}
-
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
@@ -475,9 +455,6 @@ __all__ = [
     'QA_FORBIDDEN_WORDS',
     'QA_MIN_SECTIONS',
     'QA_MIN_CHARS',
-
-    # Campaign Packs
-    'CAMPAIGN_PACKS',
 
     # Providers
     'SUPPORTED_PROVIDERS',

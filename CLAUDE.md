@@ -74,7 +74,7 @@ JSON 응답 {title, content, html, usage}
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 예약, 지식 업로드, Ollama 헬스체크 |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
-| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA, 캠페인 |
+| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
 | 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증 |
 | 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
@@ -187,7 +187,7 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 내부 전용: `comment_summary` (병렬 댓글 요약용), `cited_summary` (타임스탬프 인용 모드, `enable_citations=true` 시), `chapter_split` (챕터 분할 전용), `mindmap` (마인드맵 변환)
 
-전체 스타일 목록은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict가 단일 소스. 단일 생성 요청은 `routes/blog_routes.py`의 `_validate_style()`에서 내장 스타일을 정규화하고 커스텀 스타일 ID는 통과시킨다. 멀티/캠페인 생성은 `routes/advanced_routes.py`에서 `current_app.config['STYLE_PROMPTS']` 기준으로 유효 스타일을 필터링한다. `config.py`의 `STYLE_OPTIONS`/`STYLE_TEMPERATURE`도 함께 갱신할 것.
+전체 스타일 목록은 `prompts/styles/__init__.py`의 `STYLE_PROMPTS` dict가 단일 소스. 단일 생성 요청은 `routes/blog_routes.py`의 `_validate_style()`에서 내장 스타일을 정규화하고 커스텀 스타일 ID는 통과시킨다. 멀티 생성은 `routes/advanced_routes.py`에서 `current_app.config['STYLE_PROMPTS']` 기준으로 유효 스타일을 필터링한다. `config.py`의 `STYLE_OPTIONS`/`STYLE_TEMPERATURE`도 함께 갱신할 것.
 
 ### 추가 기능
 
@@ -244,8 +244,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **프로바이더 검증**: `POST /api/providers/validate` — API 키 소량 토큰 호출 유효성 테스트
 
 **소스 인용 모드**: `enable_citations=true` → 모든 주장에 [MM:SS] 타임스탬프 인용 + YouTube 링크 변환
-
-**캠페인 팩**: `POST /api/generate-campaign` — 1 URL × N 스타일 팩 (full/blog_focused/social), 사용량 1회 차감
 
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)

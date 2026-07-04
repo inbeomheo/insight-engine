@@ -215,14 +215,6 @@ class TestProviderRoutes(_BaseTestCase):
         # api_key 없으면 400
         self.assertIn(resp.status_code, [200, 400])
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_campaign_packs(self, _):
-        resp = self.client.get('/api/providers/campaign-packs')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertIn('packs', data)
-
-
 # ── 캐시 관련 ──────────────────────────────────────
 
 
