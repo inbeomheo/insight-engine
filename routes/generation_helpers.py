@@ -150,8 +150,12 @@ def _handle_document_upload(params: dict, uploaded_file, start_time: float):
 
 def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
     """비YouTube URL (웹페이지/RSS/arXiv) → 콘텐츠 생성."""
-    from services.content.multi_source_collector import collect_content
+    from services.content.multi_source_collector import SOURCE_WEBPAGE
 
+    if source_type in {SOURCE_WEBPAGE, 'article'}:
+        return _handle_article_source(params, url, start_time)
+
+    from services.content.multi_source_collector import collect_content
     collected = collect_content(url, source_type=source_type)
     source_title = collected.get('title') or url
     source_content = collected.get('content', '')
@@ -198,6 +202,76 @@ def _handle_web_source(params: dict, url: str, source_type: str, start_time: flo
         response_data['transcript'] = source_content[:5000]
 
     return jsonify(response_data)
+
+
+def _handle_article_source(params: dict, url: str, start_time: float):
+    """일반 웹 아티클 → YouTube와 같은 메인 생성 경로로 콘텐츠 생성."""
+    from flask import request
+    from services.content.article_service import fetch_article
+
+    article = fetch_article(url)
+    source_title = article.get('title') or url
+    source_content = article.get('text', '')
+    source_meta = article.get('source_meta') or {}
+
+    if not source_content.strip():
+        return api_error('[아티클 추출 실패] 본문을 찾을 수 없습니다.', 400)
+
+    max_tokens = get_model_max_tokens(params['model'])
+    truncated_content = content_service.truncate_text(
+        f"[아티클 본문]\n{source_content}",
+        max_tokens,
+    )
+    style_prompt = _get_style_prompt(params['style'], params.get('custom_prompt'))
+    request_data = request.get_json(silent=True) or {}
+    result, used_prompt, comment_result = _call_ai_with_comments(
+        truncated_content,
+        params['model'],
+        style_prompt,
+        params,
+        [],
+        source_content,
+        max_tokens,
+        web_search=bool(request_data.get('web_search', False)),
+    )
+
+    result = _apply_output_format(
+        result,
+        params.get('output_format', 'html'),
+        params.get('max_chars'),
+    )
+
+    elapsed_time = round(time.time() - start_time, 2)
+    report_id = str(uuid.uuid4())
+    if g.user_id:
+        save_history(g.user_id, {
+            'id': report_id,
+            'url': url,
+            'title': result.get('title') or source_title,
+            'style': params['style'],
+            'content': result.get('content', ''),
+            'html': result.get('html', ''),
+            'transcript': source_content[:5000],
+            'transcript_source': 'article',
+            'usage': result.get('usage'),
+            'elapsed_time': elapsed_time,
+        })
+
+    response = _base_generation_response(result, params, start_time, used_prompt)
+    response.update({
+        'id': report_id,
+        'prompt_length': len(used_prompt) if used_prompt else 0,
+        'elapsed_time': elapsed_time,
+        'source_type': 'article',
+        'source_title': source_title,
+        'source_meta': {**source_meta, 'source_type': 'article'},
+        'transcript_source': 'article',
+        'comment_summary_included': bool(comment_result),
+    })
+    if params.get('include_transcript'):
+        response['transcript'] = source_content[:5000]
+
+    return jsonify(response)
 
 
 def _has_code_blocks(result: dict) -> bool:
