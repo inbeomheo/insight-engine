@@ -266,22 +266,90 @@ export function useGenerate() {
   );
 
   const generateFromText = useCallback(
-    async (text: string): Promise<boolean> => {
+    async (text: string, useStreaming = false): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
         return false;
       }
 
+      const streaming = useStreaming || selectedModel.startsWith('ollama');
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
+      const req = {
+        url: '',
+        model: selectedModel,
+        style: selectedStyle,
+        modifiers,
+        content: text,
+        detail_level: detailLevel,
+      };
 
       try {
-        const res = await generate({
-          url: '',
-          model: selectedModel,
-          style: selectedStyle,
-          modifiers,
-          content: text,
-        });
+        if (streaming) {
+          const tempId = crypto.randomUUID();
+          const tempReport: Report = createReport({
+            id: tempId,
+            url: '',
+            title: '생성 중...',
+            content: '',
+            html: '',
+            style: selectedStyle,
+          });
+          addReport(tempReport);
+
+          let content = '';
+          let succeeded = false;
+          let finished = false;
+          const controller = new AbortController();
+          abortRef.current = controller;
+
+          const finish = (errorMessage?: string) => {
+            if (finished) return;
+            finished = true;
+            setState((s) => {
+              const c = Math.max(0, s.activeCount - 1);
+              return { ...s, activeCount: c, isLoading: c > 0, error: errorMessage || null };
+            });
+          };
+
+          await generateStream(
+            req,
+            (event: StreamEvent) => {
+              if (event.type === 'meta') {
+                updateReport(tempId, {
+                  title: event.source_title || event.title || '생성 중...',
+                  transcript_source: event.transcript_source || '',
+                });
+              } else if (event.type === 'delta' || event.type === 'token') {
+                content += event.delta || event.data || '';
+                if (!rafRef.current) {
+                  rafRef.current = true;
+                  requestAnimationFrame(() => {
+                    updateReport(tempId, { content });
+                    rafRef.current = false;
+                  });
+                }
+              } else if (event.type === 'result') {
+                content = event.content || content;
+                rafRef.current = false;
+                const finalReport = responseToReport(event as unknown as Parameters<typeof responseToReport>[0], '', selectedStyle, {
+                  id: tempId,
+                });
+                updateReport(tempId, finalReport);
+                succeeded = true;
+                finish();
+              } else if (event.type === 'error') {
+                rafRef.current = false;
+                finish(event.error || event.message || '생성 실패');
+              }
+            },
+            controller.signal,
+          );
+
+          if (!finished) finish(succeeded ? undefined : '생성 결과를 받지 못했습니다.');
+          return succeeded;
+        }
+
+        const res = await generate(req);
         const report = responseToReport(res, '', selectedStyle);
         addReport(report);
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
@@ -292,7 +360,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, addReport],
+    [selectedModel, selectedStyle, modifiers, detailLevel, addReport, updateReport],
   );
 
   const abort = useCallback(() => {

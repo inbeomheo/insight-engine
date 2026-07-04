@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
+import TextInput from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
@@ -26,6 +27,7 @@ import type { GenerationMode, Report } from '@/lib/types';
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
 
 type MobileTab = 'create' | 'library' | 'dashboard';
+type SourceInputTab = 'url' | 'text';
 
 interface MobileAppShellProps {
   reports: Report[];
@@ -35,6 +37,11 @@ interface MobileAppShellProps {
   onAddUrl: (url: string) => string | null;
   onRemoveUrl: (url: string) => void;
   onGenerate: (draftUrl?: string) => void;
+  inputTab: SourceInputTab;
+  onInputTabChange: (tab: SourceInputTab) => void;
+  textValue: string;
+  onTextChange: (text: string) => void;
+  onGenerateText: (text: string) => void;
   onSchedule: (report: Report) => void;
 }
 
@@ -86,7 +93,12 @@ function MobileCreateView({
   onAddUrl,
   onRemoveUrl,
   onGenerate,
-}: Pick<MobileAppShellProps, 'urls' | 'isLoading' | 'error' | 'onAddUrl' | 'onRemoveUrl' | 'onGenerate'>) {
+  inputTab,
+  onInputTabChange,
+  textValue,
+  onTextChange,
+  onGenerateText,
+}: Pick<MobileAppShellProps, 'urls' | 'isLoading' | 'error' | 'onAddUrl' | 'onRemoveUrl' | 'onGenerate' | 'inputTab' | 'onInputTabChange' | 'textValue' | 'onTextChange' | 'onGenerateText'>) {
   const [draftUrl, setDraftUrl] = useState('');
   const selectedStyle = useSettingsStore((s) => s.selectedStyle);
   const setSelectedStyle = useSettingsStore((s) => s.setSelectedStyle);
@@ -141,42 +153,72 @@ function MobileCreateView({
 
       <p className="signal-meta mb-2 text-[10px] font-bold text-primary">새 분석 · STEP 01</p>
       <h1 className="mb-5 text-[32px] font-black leading-[1.05] tracking-[-0.04em] text-foreground">
-        어떤 영상을<br />콘텐츠로?
+        어떤 자료를<br />콘텐츠로?
       </h1>
 
-      <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_var(--foreground)]">
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
-        <input
-          className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
-          value={draftUrl}
-          type="url"
-          inputMode="url"
-          placeholder="URL 붙여넣기"
-          onChange={(e) => setDraftUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              submitDraft();
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_var(--foreground)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-          onClick={submitDraft}
-          aria-label="URL 추가"
-        >
-          <ArrowUp className="h-5 w-5" />
-        </button>
+      <div className="mb-3 flex gap-1" role="group" aria-label="입력 방식 선택">
+        {(['url', 'text'] as SourceInputTab[]).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            aria-pressed={inputTab === tab}
+            className={cn(
+              'signal-meta rounded-sm px-3 py-1.5 text-[11px] font-bold transition-colors',
+              inputTab === tab ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            )}
+            onClick={() => onInputTabChange(tab)}
+          >
+            {tab === 'url' ? 'URL 입력' : '텍스트 붙여넣기'}
+          </button>
+        ))}
       </div>
-      <div className="signal-meta mb-3 flex gap-2 text-[10px] text-muted-foreground/50">
-        <span>YouTube</span><span>·</span><span>웹</span><span>·</span><span>RSS</span><span>·</span><span>arXiv</span><span>·</span><span>Podcast</span>
-      </div>
+
+      {inputTab === 'url' ? (
+        <>
+          <div className="mb-2 flex min-h-[58px] items-center gap-2 border-[1.5px] border-foreground bg-card px-3 shadow-[3px_3px_0_var(--foreground)]">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#E90043]" />
+            <input
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/45"
+              value={draftUrl}
+              type="url"
+              inputMode="url"
+              placeholder="URL 붙여넣기"
+              onChange={(e) => setDraftUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  submitDraft();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[2px_2px_0_var(--foreground)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+              onClick={submitDraft}
+              aria-label="URL 추가"
+            >
+              <ArrowUp className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="signal-meta mb-3 flex gap-2 text-[10px] text-muted-foreground/50">
+            <span>YouTube</span><span>·</span><span>웹</span><span>·</span><span>RSS</span><span>·</span><span>arXiv</span><span>·</span><span>Podcast</span>
+          </div>
+        </>
+      ) : (
+        <div className="mb-3">
+          <TextInput
+            value={textValue}
+            onChange={onTextChange}
+            onGenerate={onGenerateText}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
       {(inputError || error) && (
         <p className="mb-3 rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">{inputError || error}</p>
       )}
 
-      {urls.length > 0 && (
+      {inputTab === 'url' && urls.length > 0 && (
         <div className="mb-5 space-y-2">
           {urls.map((url) => (
             <div key={url} className="flex h-12 items-center gap-2 border border-border/60 bg-card px-3 text-xs text-muted-foreground">
@@ -221,33 +263,37 @@ function MobileCreateView({
         </div>
       </div>
 
-      <div className="mb-7">
-        <h2 className="mb-3 text-sm font-bold">생성 모드</h2>
-        <div className="grid grid-cols-3 bg-muted p-1">
-          {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={cn(
-                'h-11 text-sm font-bold transition-colors',
-                generationMode === mode ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground/55'
-              )}
-              onClick={() => setGenerationMode(mode)}
-            >
-              {MODE_LABELS[mode]}
-            </button>
-          ))}
-        </div>
-      </div>
+      {inputTab === 'url' && (
+        <>
+          <div className="mb-7">
+            <h2 className="mb-3 text-sm font-bold">생성 모드</h2>
+            <div className="grid grid-cols-3 bg-muted p-1">
+              {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn(
+                    'h-11 text-sm font-bold transition-colors',
+                    generationMode === mode ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground/55'
+                  )}
+                  onClick={() => setGenerationMode(mode)}
+                >
+                  {MODE_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <Button
-        className="h-14 w-full rounded-sm bg-primary text-base font-black text-primary-foreground shadow-[0_8px_18px_rgba(47,84,235,0.22)] hover:bg-primary/95"
-        disabled={isLoading || (urls.length === 0 && !draftUrl.trim())}
-        onClick={handleGenerateClick}
-      >
-        {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-        콘텐츠 생성 <span className="ml-1 text-xs opacity-80">×{Math.max(1, urls.length || (draftUrl.trim() ? 1 : 0))}</span>
-      </Button>
+          <Button
+            className="h-14 w-full rounded-sm bg-primary text-base font-black text-primary-foreground shadow-[0_8px_18px_rgba(47,84,235,0.22)] hover:bg-primary/95"
+            disabled={isLoading || (urls.length === 0 && !draftUrl.trim())}
+            onClick={handleGenerateClick}
+          >
+            {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+            콘텐츠 생성 <span className="ml-1 text-xs opacity-80">×{Math.max(1, urls.length || (draftUrl.trim() ? 1 : 0))}</span>
+          </Button>
+        </>
+      )}
     </section>
   );
 }
@@ -451,6 +497,11 @@ export default function MobileAppShell({
   onAddUrl,
   onRemoveUrl,
   onGenerate,
+  inputTab,
+  onInputTabChange,
+  textValue,
+  onTextChange,
+  onGenerateText,
   onSchedule,
 }: MobileAppShellProps) {
   const [activeTab, setActiveTab] = useState<MobileTab>('create');
@@ -475,6 +526,11 @@ export default function MobileAppShell({
           onAddUrl={onAddUrl}
           onRemoveUrl={onRemoveUrl}
           onGenerate={onGenerate}
+          inputTab={inputTab}
+          onInputTabChange={onInputTabChange}
+          textValue={textValue}
+          onTextChange={onTextChange}
+          onGenerateText={onGenerateText}
         />
       )}
       {activeTab === 'library' && <MobileLibraryView reports={reports} onOpen={setActiveReport} />}

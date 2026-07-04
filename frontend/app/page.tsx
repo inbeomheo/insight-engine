@@ -275,6 +275,11 @@ export default function Home() {
         onAddUrl={addUrl}
         onRemoveUrl={removeUrl}
         onGenerate={handleMobileGenerate}
+        inputTab={inputTab}
+        onInputTabChange={setInputTab}
+        textValue={pastedText}
+        onTextChange={setPastedText}
+        onGenerateText={handleGenerateFromText}
         onSchedule={handleScheduleOpen}
       />
       <div
@@ -368,19 +373,18 @@ export default function Home() {
                 <div className="mb-6 space-y-3">
                   <p className="signal-meta text-[11px] font-semibold text-primary">새 분석 · STEP 01</p>
                   <h1 className="max-w-[720px] text-[30px] font-bold leading-[1.08] tracking-[-0.025em] text-foreground sm:text-[38px]">
-                    어떤 영상을<br className="hidden sm:block" /> 콘텐츠로 만들까요?
+                    어떤 자료를<br className="hidden sm:block" /> 콘텐츠로 만들까요?
                   </h1>
                   <p className="max-w-[560px] text-sm leading-6 text-muted-foreground">
-                    YouTube, 웹페이지, RSS, arXiv, Podcast를 한 번에 모아 요약·글쓰기·발행-ready 문서로 변환해요.
+                    영상, 텍스트, PDF와 웹 자료를 한 번에 모아 요약·글쓰기·학습용 문서로 변환해요.
                   </p>
                 </div>
 
                 <div className="relative max-w-[720px]">
-                  <div className="mb-3 flex gap-1" role="tablist" aria-label="입력 방식 선택">
+                  <div className="mb-3 flex gap-1" role="group" aria-label="입력 방식 선택">
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={inputTab === 'url'}
+                      aria-pressed={inputTab === 'url'}
                       className={cn(
                         'signal-meta rounded-sm px-3 py-1.5 text-[11px] font-bold transition-colors',
                         inputTab === 'url' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
@@ -391,8 +395,7 @@ export default function Home() {
                     </button>
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={inputTab === 'text'}
+                      aria-pressed={inputTab === 'text'}
                       className={cn(
                         'signal-meta rounded-sm px-3 py-1.5 text-[11px] font-bold transition-colors',
                         inputTab === 'text' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'

@@ -297,7 +297,7 @@ export async function generateFromAudio(
   return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
 
-// 스트리밍 생성
+// 스트리밍 생성 (url 또는 content 중 하나를 전송)
 export async function generateStream(
   req: GenerateRequest,
   onEvent: (event: StreamEvent) => void,

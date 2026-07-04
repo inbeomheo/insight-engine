@@ -35,8 +35,8 @@
     "help": "ヘルプ"
   },
   "urlInput": {
-    "placeholder": "YouTube URLを入力または貼り付けてください",
-    "dragDrop": "YouTube URLをここにドロップ"
+    "placeholder": "URLを入力または貼り付けてください",
+    "dragDrop": "URLをここにドロップ"
   },
   "generateButton": {
     "loading": "生成中...",
@@ -47,8 +47,8 @@
     "fusion": "{count}件のURLをフュージョン分析"
   },
   "emptyState": {
-    "title": "YouTubeの動画を分析しましょう",
-    "description": "URLを貼り付けると、AIがブログ、要約、チュートリアルなど\nさまざまな形式のコンテンツを自動生成します"
+    "title": "動画・テキスト・PDFを分析しましょう",
+    "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やチュートリアルなど\n学習向けコンテンツを自動生成します"
   },
   "calendar": {
     "title": "予約カレンダー"
