@@ -17,7 +17,6 @@ const DEFAULT_WIDGETS: DashboardWidget[] = [
   { id: 'recent', type: 'recent_content', title: '최근 생성', x: 0, y: 0, w: 2, h: 1, visible: true },
   { id: 'stats', type: 'usage_stats', title: '사용 통계', x: 2, y: 0, w: 1, h: 1, visible: true },
   { id: 'quick', type: 'quick_actions', title: '빠른 작업', x: 0, y: 1, w: 1, h: 1, visible: true },
-  { id: 'schedule', type: 'upcoming_schedule', title: '예약 발행', x: 1, y: 1, w: 1, h: 1, visible: true },
   { id: 'quality', type: 'quality_overview', title: '품질 현황', x: 2, y: 1, w: 1, h: 1, visible: true },
 ];
 

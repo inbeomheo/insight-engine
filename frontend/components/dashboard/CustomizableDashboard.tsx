@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Settings, RotateCcw, Eye, EyeOff, FileText, BarChart3, Zap, Calendar, Star } from 'lucide-react';
+import { Settings, RotateCcw, Eye, EyeOff, FileText, BarChart3, Zap, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDashboardStore, type DashboardWidget } from '@/stores/dashboardStore';
 
@@ -10,7 +10,6 @@ const WIDGET_ICONS: Record<string, typeof FileText> = {
   recent_content: FileText,
   usage_stats: BarChart3,
   quick_actions: Zap,
-  upcoming_schedule: Calendar,
   quality_overview: Star,
 };
 
