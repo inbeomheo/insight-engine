@@ -20,16 +20,13 @@
     "next": "次へ",
     "previous": "前へ",
     "skip": "スキップ",
-    "done": "完了",
-    "deprecated": "サポート終了予定",
-    "deprecatedTooltip": "学習エンジンへの転換に伴い、公開機能は段階的に整理されます"
+    "done": "完了"
   },
   "sidebar": {
     "newAnalysis": "新しい分析",
     "historySearch": "履歴を検索...",
     "noHistory": "分析履歴がありません",
     "noSearchResults": "検索結果がありません",
-    "calendar": "予約カレンダー",
     "notes": "ノート",
     "poweredBy": "Powered by AI",
     "help": "ヘルプ"
@@ -49,9 +46,6 @@
   "emptyState": {
     "title": "動画・テキスト・PDFを分析しましょう",
     "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やチュートリアルなど\n学習向けコンテンツを自動生成します"
-  },
-  "calendar": {
-    "title": "予約カレンダー"
   },
   "styles": {
     "blog_seo": "ブログ+SEO",
@@ -84,7 +78,6 @@
     "share": "共有",
     "promptView": "プロンプトを見る",
     "mindmap": "マインドマップ",
-    "schedule": "予約投稿",
     "delete": "削除",
     "merged": "統合",
     "fusion": "フュージョン",

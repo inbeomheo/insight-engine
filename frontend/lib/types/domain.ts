@@ -39,21 +39,6 @@ export interface PipelineRequest {
   customPrompt?: string;
 }
 
-// === 예약 발행 ===
-
-export interface ScheduledPost {
-  id: string;
-  title: string;
-  content: string;
-  html?: string;
-  target_plugin: string;
-  scheduled_at: string;
-  status: 'pending' | 'published' | 'failed' | 'cancelled';
-  error_message?: string;
-  published_url?: string;
-  created_at: string;
-}
-
 // === 자막 관련 ===
 
 export type TranscriptSourceType = 'youtube_api' | 'watch_page' | 'supadata' | 'whisper';

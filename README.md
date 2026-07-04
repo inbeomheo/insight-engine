@@ -1,7 +1,7 @@
 # Insight Engine
 
 YouTube 영상 URL 하나로 15가지 스타일의 고품질 콘텐츠를 자동 생성하는 AI 콘텐츠 엔진.
-5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, 예약 캘린더, 팀 워크스페이스까지.
+5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
 
 Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 · 5,300+ 테스트(pass)
 
@@ -30,7 +30,6 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 - **QA 게이트** — 발행 전 금칙어/구조/중복/링크 품질 검증
 
 ### Publishing & Collaboration
-- **예약 캘린더** — APScheduler 기반 예약 발행 + 캘린더 UI
 - **팀 워크스페이스** — 멤버 관리 (Owner/Editor/Viewer) + 콘텐츠 승인 플로우
 - **채널 모니터링** — YouTube 채널 신규 업로드 자동 감지 (30분 폴링)
 
@@ -140,7 +139,7 @@ insight-engine/
 ├── .env.example                   # 환경변수 템플릿
 │
 ├── routes/                        # API 라우트 (13개 모듈)
-│   ├── blog_routes.py             # 콘텐츠 생성, 파이프라인, MCP, 예약
+│   ├── blog_routes.py             # 콘텐츠 생성, 파이프라인, MCP
 │   ├── auth_routes.py             # 인증, API 키, 사용량, 워크스페이스
 │   ├── advanced_routes.py         # 멀티스타일, 퓨전, QA
 │   ├── export_routes.py           # DOCX/MD/TXT/ZIP 내보내기
@@ -255,7 +254,6 @@ insight-engine/
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/schedule` | POST/GET/DELETE | 예약 발행 관리 |
 | `/api/workspaces` | GET/POST | 워크스페이스 관리 |
 
 ### System

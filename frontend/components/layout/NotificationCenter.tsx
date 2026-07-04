@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, CheckCheck, X, FileText, Calendar, Users, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCheck, X, FileText, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 
@@ -18,7 +18,6 @@ interface Notification {
 /** 알림 타입별 아이콘 */
 const TYPE_ICONS: Record<string, typeof Bell> = {
   generation_complete: FileText,
-  schedule_published: Calendar,
   workspace_invite: Users,
   usage_warning: AlertTriangle,
   system: Bell,

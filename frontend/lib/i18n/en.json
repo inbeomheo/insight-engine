@@ -20,16 +20,13 @@
     "next": "Next",
     "previous": "Previous",
     "skip": "Skip",
-    "done": "Done",
-    "deprecated": "Deprecated",
-    "deprecatedTooltip": "Publishing features are being phased out as part of the shift to a learning engine"
+    "done": "Done"
   },
   "sidebar": {
     "newAnalysis": "New Analysis",
     "historySearch": "Search history...",
     "noHistory": "No analysis history",
     "noSearchResults": "No results found",
-    "calendar": "Content Calendar",
     "notes": "Notes",
     "poweredBy": "Powered by AI",
     "help": "Help"
@@ -49,9 +46,6 @@
   "emptyState": {
     "title": "Analyze videos, text, and PDFs",
     "description": "Paste a URL or add text/PDF content and AI will generate\nsummaries, tutorials, and learning-ready drafts"
-  },
-  "calendar": {
-    "title": "Content Calendar"
   },
   "styles": {
     "blog_seo": "Blog+SEO",
@@ -84,7 +78,6 @@
     "share": "Share",
     "promptView": "View prompt",
     "mindmap": "Mindmap",
-    "schedule": "Schedule",
     "delete": "Delete",
     "merged": "Merged",
     "fusion": "Fusion",

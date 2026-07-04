@@ -1,6 +1,6 @@
 """integration_routes.py 라우트 커버리지 테스트.
 
-Notion, RSS, 북마크, MCP Apps, 예약, RAG,
+Notion, RSS, 북마크, MCP Apps, RAG,
 버전, 검색, 폴더 엔드포인트 커버.
 """
 import io
@@ -196,72 +196,6 @@ class TestMCPApps(_Base):
         resp = self.client.post('/api/mcp-apps/nonexistent/action',
                                 json={'action': 'click'},
                                 headers=_H)
-        self.assertEqual(resp.status_code, 404)
-
-
-# ── 예약 발행 ──────────────────────────────────────
-
-
-class TestScheduleRoutes(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_schedule_create_missing_data(self, _):
-        resp = self.client.post('/api/schedule', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_schedule_create_missing_fields(self, _):
-        resp = self.client.post('/api/schedule',
-                                json={'title': '제목'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.schedule_service.schedule_service')
-    def test_schedule_create_success(self, mock_sched, _):
-        mock_sched.create.return_value = {'id': 's1', 'status': 'pending'}
-        resp = self.client.post('/api/schedule',
-                                json={'title': '제목', 'content': '내용',
-                                      'target_plugin': 'naver',
-                                      'scheduled_at': '2026-04-15T10:00:00Z'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 201)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.schedule_service.schedule_service')
-    def test_schedule_create_returns_none(self, mock_sched, _):
-        mock_sched.create.return_value = None
-        resp = self.client.post('/api/schedule',
-                                json={'title': '제목', 'content': '내용',
-                                      'target_plugin': 'naver',
-                                      'scheduled_at': '2026-04-15T10:00:00Z'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 500)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.schedule_service.schedule_service')
-    def test_schedule_list(self, mock_sched, _):
-        mock_sched.list_by_user.return_value = [
-            {'id': 's1', 'status': 'pending', 'scheduled_at': '2026-04-15T10:00:00Z'}
-        ]
-        resp = self.client.get('/api/schedule')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertIn('schedules', data)
-        self.assertEqual(data['pending_count'], 1)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.schedule_service.schedule_service')
-    def test_schedule_delete_success(self, mock_sched, _):
-        mock_sched.delete.return_value = True
-        resp = self.client.delete('/api/schedule/s1', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.schedule_service.schedule_service')
-    def test_schedule_delete_not_found(self, mock_sched, _):
-        mock_sched.delete.return_value = False
-        resp = self.client.delete('/api/schedule/s999', headers=_H)
         self.assertEqual(resp.status_code, 404)
 
 

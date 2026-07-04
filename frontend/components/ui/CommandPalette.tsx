@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Search, FileText, Settings, Download, Plus, Calendar,
+  Search, FileText, Settings, Download, Plus,
   Zap, BarChart3, Globe
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
@@ -27,7 +27,6 @@ export default function CommandPalette() {
 
   const {
     setSettingsModalOpen,
-    setActiveView,
     setPlaylistModalOpen,
     setTemplateGalleryOpen,
   } = useUIStore();
@@ -48,14 +47,6 @@ export default function CommandPalette() {
       category: '설정',
       action: () => { setOpen(false); setSettingsModalOpen(true); },
       keywords: ['설정', 'settings', 'config'],
-    },
-    {
-      id: 'open-calendar',
-      label: '예약 캘린더',
-      icon: Calendar,
-      category: '탐색',
-      action: () => { setOpen(false); setActiveView('calendar'); },
-      keywords: ['캘린더', 'calendar', 'schedule'],
     },
     {
       id: 'open-playlist',

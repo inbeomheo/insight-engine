@@ -18,7 +18,6 @@ MAX_NOTIFICATIONS_PER_USER = 100
 # 알림 타입
 NOTIFICATION_TYPES = {
     'generation_complete': '콘텐츠 생성 완료',
-    'schedule_published': '예약 발행 완료',
     'schedule_failed': '예약 발행 실패',
     'workspace_invite': '워크스페이스 초대',
     'content_approved': '콘텐츠 승인',

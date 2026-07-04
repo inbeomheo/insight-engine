@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Trash2, Clock, Sparkles, CalendarDays, Eraser, BookOpen } from 'lucide-react';
+import { Plus, Search, Trash2, Clock, Sparkles, Eraser, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,7 +14,6 @@ import { getStyleLabel, getStyleEmoji } from '@/lib/helpers';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useIsClient } from '@/hooks/useIsClient';
-import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import WorkspaceSelector from './WorkspaceSelector';
 
 /** 히스토리 항목 — memo로 불필요한 리렌더 방지 */
@@ -71,7 +70,7 @@ const HistoryItem = memo(function HistoryItem({
 });
 
 export default function Sidebar() {
-  const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId, activeView, setActiveView } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, activeReportId, setActiveReportId } = useUIStore();
   const reports = useResultStore((s) => s.reports);
   const removeReport = useResultStore((s) => s.removeReport);
   const clearReports = useResultStore((s) => s.clearReports);
@@ -221,20 +220,8 @@ export default function Sidebar() {
           )}
         </ScrollArea>
 
-        {/* 전체 삭제 + 캘린더 + 노트 */}
+        {/* 전체 삭제 + 노트 */}
         <div className="px-3 pb-2 flex flex-col gap-1">
-          <Button
-            variant={activeView === 'calendar' ? 'secondary' : 'ghost'}
-            className="signal-meta h-9 w-full justify-start gap-2 rounded-sm text-[10px]"
-            onClick={() => {
-              setActiveView(activeView === 'calendar' ? 'main' : 'calendar');
-              if (isMobile) setSidebarOpen(false);
-            }}
-          >
-            <CalendarDays className="h-4 w-4" />
-            {t('sidebar.calendar')}
-            <DeprecatedBadge />
-          </Button>
           <Button
             asChild
             variant="ghost"

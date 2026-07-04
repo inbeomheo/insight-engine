@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } f
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DeprecatedBadge } from '@/components/ui/DeprecatedBadge';
 import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -73,7 +72,6 @@ function sanitizeHtml(html: string): string {
 interface ResultCardProps {
   report: Report;
   searchQuery?: string;
-  onSchedule: (report: Report) => void;
   viewMode?: ViewMode;
   /** compact 모드에서 카드 클릭 시 full 전환 콜백 */
   onExpandToFull?: () => void;
@@ -81,7 +79,6 @@ interface ResultCardProps {
 
 const remarkPlugins = [remarkGfm];
 const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true';
-const PUBLISHING_ENABLED = process.env.NEXT_PUBLIC_PUBLISHING_ENABLED === 'true';
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
 
@@ -253,7 +250,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
   return { ...state, ...action.updates };
 }
 
-const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
+const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingDeepDive, setIsSavingDeepDive] = useState(false);
@@ -1095,16 +1092,6 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <Printer className="h-3.5 w-3.5 mr-2" />
                 {t('result.printPdf')}
               </DropdownMenuItem>
-              {PUBLISHING_ENABLED && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onSchedule(report)}>
-                    <Calendar className="h-3.5 w-3.5 mr-2" />
-                    {t('result.schedule')}
-                    <DeprecatedBadge />
-                  </DropdownMenuItem>
-                </>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
