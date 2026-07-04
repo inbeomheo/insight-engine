@@ -328,6 +328,7 @@ export default function Home() {
                 onClick={() => setActiveView('calendar')}
               >
                 캘린더
+                <DeprecatedBadge />
               </button>
             )}
           </nav>
@@ -600,7 +601,6 @@ export default function Home() {
         >
           <CalendarDays className="h-3.5 w-3.5" />
           캘린더
-          <DeprecatedBadge />
         </button>
         <button
           type="button"

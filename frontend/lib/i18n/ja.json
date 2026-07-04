@@ -20,7 +20,9 @@
     "next": "次へ",
     "previous": "前へ",
     "skip": "スキップ",
-    "done": "完了"
+    "done": "完了",
+    "deprecated": "サポート終了予定",
+    "deprecatedTooltip": "学習エンジンへの転換に伴い、公開機能は段階的に整理されます"
   },
   "sidebar": {
     "newAnalysis": "新しい分析",
