@@ -140,23 +140,6 @@ class TestHealthAndHome(_BaseTestCase):
         resp = self.client.post('/api/heartbeat', json={}, headers=_H)
         self.assertEqual(resp.status_code, 400)
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_close_success(self, _):
-        # 먼저 heartbeat로 등록
-        self.client.post('/api/heartbeat',
-                         json={'clientId': 'close-test'},
-                         headers=_H)
-        resp = self.client.post('/api/close',
-                                json={'clientId': 'close-test'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.get_json()['ok'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_close_missing_client_id(self, _):
-        resp = self.client.post('/api/close', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
 
 # ── 프로바이더 관련 ──────────────────────────────────────
 
@@ -365,41 +348,6 @@ class TestRecommendSources(_BaseTestCase):
         self.assertEqual(len(data['sources']), 1)
 
 
-# ── 워드클라우드 ──────────────────────────────────────
-
-
-class TestWordcloud(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_wordcloud_missing_text(self, _):
-        resp = self.client.post('/api/wordcloud', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.media.wordcloud_service.generate_wordcloud')
-    def test_wordcloud_success(self, mock_wc, _):
-        mock_wc.return_value = '<svg>...</svg>'
-        resp = self.client.post('/api/wordcloud',
-                                json={'text': '테스트 텍스트 입니다 반복 텍스트'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('svg', resp.get_json())
-
-
-# ── 스키마 엔드포인트 ──────────────────────────────────────
-
-
-class TestSchema(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_schema_returns_openapi(self, _):
-        resp = self.client.get('/api/schema')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data['openapi'], '3.0.0')
-        self.assertIn('paths', data)
-
-
 # ── NPS 피드백 ──────────────────────────────────────
 
 
@@ -430,17 +378,6 @@ class TestNPSFeedback(_BaseTestCase):
         self.assertEqual(resp.status_code, 400)
 
 
-# ── AI 캐시 삭제 ──────────────────────────────────────
-
-
-class TestAICacheDelete(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_clear_ai_cache(self, _):
-        resp = self.client.delete('/api/cache/ai', json={}, headers=_H)
-        # AI 캐시 삭제 성공 또는 기능 존재 확인
-        self.assertIn(resp.status_code, [200, 500])
-
 
 # ── 피드백 ──────────────────────────────────────
 
@@ -463,13 +400,6 @@ class TestFeedback(_BaseTestCase):
                                 json={'style_id': 'blog_seo'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.prompt_optimizer_service.get_feedback_stats')
-    def test_feedback_stats(self, mock_stats, _):
-        mock_stats.return_value = {'count': 10, 'avg_rating': 4.2}
-        resp = self.client.get('/api/feedback/stats/blog_seo')
-        self.assertEqual(resp.status_code, 200)
 
 
 # ── 콘텐츠 분석 엔드포인트 (반복 패턴) ──────────────────────────────

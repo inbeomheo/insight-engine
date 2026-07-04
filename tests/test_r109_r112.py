@@ -1,9 +1,8 @@
-"""R109~R112 autoresearch 테스트
+"""R109~R111 autoresearch 테스트
 
 R109: /api/mindmap 응답에 usage 필드 포함
 R110: /api/rewrite 응답에 elapsed_time 포함
 R111: analytics_routes에서 int() → clamp_query_int 안전 변환
-R112: /api/generate-multilang 응답에 language_count, succeeded, failed 포함
 """
 import json
 import unittest
@@ -91,43 +90,6 @@ class TestR111ClampQueryInt(unittest.TestCase):
     def test_float_string_returns_default(self):
         """float 형식 문자열도 안전하게 기본값 반환"""
         self.assertEqual(clamp_query_int('3.5', default=30, min_val=1, max_val=365), 30)
-
-
-class TestR112MultilangCounts(unittest.TestCase):
-    """R112: /api/generate-multilang 응답에 language_count, succeeded, failed 필드 포함"""
-
-    def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.app.config['STYLE_PROMPTS'] = {'blog_seo': 'Write SEO blog'}
-        self.client = self.app.test_client()
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('routes.advanced_routes._fetch_youtube_content')
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    @patch('services.core.content_service.get_video_id', return_value='test123')
-    @patch('services.core.content_service.get_content_title', return_value='Test Video')
-    @patch('services.core.content_service.truncate_text', side_effect=lambda t, m: t)
-    @patch('services.core.ai_service.create_content')
-    def test_multilang_includes_counts(self, mock_create, mock_trunc, mock_title,
-                                        mock_vid, mock_yt, mock_fetch, mock_sb):
-        mock_fetch.return_value = ('transcript text', [], None, 'transcript text', 'api', [])
-        mock_create.return_value = {
-            'content': 'Generated content',
-            'html': '<p>Generated</p>',
-            'usage': {'prompt_tokens': 50, 'completion_tokens': 30, 'total_tokens': 80},
-        }
-        resp = self.client.post('/api/generate-multilang',
-                                json={'url': 'https://youtube.com/watch?v=test123',
-                                      'model': 'gemini/gemini-2.5-flash',
-                                      'languages': ['ko', 'en']},
-                                headers={'X-User-Id': 'test-user'})
-        data = resp.get_json()
-        self.assertTrue(data.get('success'))
-        self.assertEqual(data['language_count'], 2)
-        self.assertEqual(data['succeeded'], 2)
-        self.assertEqual(data['failed'], 0)
-        self.assertIn('elapsed_time', data)
 
 
 if __name__ == '__main__':

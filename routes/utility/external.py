@@ -1,4 +1,4 @@
-"""외부 통신 라우트 — 웹훅 / 재생목록 / 소스 추천 / 워드클라우드 / 스키마 / RSS.
+"""외부 통신 라우트 — 웹훅 / 재생목록 / 소스 추천 / RSS.
 
 utility_routes.py에서 분리됨. playlist 캐시는 utility_routes에서 가져와 공유.
 """
@@ -103,75 +103,6 @@ def api_recommend_sources():
     except Exception as e:
         current_app.logger.error(f"Source recommendation failed: {e}")
         return api_error('소스 추천에 실패했습니다.', 500)
-
-
-@blog_bp.route('/api/wordcloud', methods=['POST'])
-@require_auth
-def api_wordcloud():
-    """텍스트에서 워드클라우드 SVG를 생성합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        text = data.get('text', '')
-        max_words = min(int(data.get('max_words', 60)), 100)
-
-        if not text:
-            return api_error('텍스트가 필요합니다.', 400)
-
-        from services.media.wordcloud_service import generate_wordcloud
-        svg = generate_wordcloud(text, max_words=max_words)
-        return jsonify({'svg': svg})
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Wordcloud failed: {e}")
-        return api_error('워드클라우드 생성에 실패했습니다.', 500)
-
-
-@blog_bp.route('/api/schema', methods=['GET'])
-def api_schema():
-    """API 파라미터 OpenAPI 스키마를 반환합니다."""
-    schema = {
-        'openapi': '3.0.0',
-        'info': {'title': 'Insight Engine API', 'version': '1.0.0'},
-        'paths': {
-            '/generate': {
-                'post': {
-                    'summary': 'AI 콘텐츠 생성',
-                    'requestBody': {
-                        'content': {
-                            'application/json': {
-                                'schema': {
-                                    'type': 'object',
-                                    'required': ['url', 'model', 'style'],
-                                    'properties': {
-                                        'url': {'type': 'string', 'description': 'YouTube 영상 URL'},
-                                        'model': {'type': 'string', 'description': 'AI 모델 ID'},
-                                        'style': {'type': 'string', 'description': '콘텐츠 스타일 ID'},
-                                        'modifiers': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'length': {'type': 'string', 'enum': ['short', 'medium', 'long']},
-                                                'writing_style': {'type': 'string', 'enum': ['conversational', 'explanatory', 'casual', 'expert']},
-                                                'language': {'type': 'string', 'enum': ['ko', 'en', 'ja']},
-                                            },
-                                        },
-                                        'detail_level': {'type': 'string', 'enum': ['brief', 'standard', 'deep'], 'default': 'standard'},
-                                        'output_format': {'type': 'string', 'enum': ['html', 'markdown', 'plain'], 'default': 'html'},
-                                        'max_chars': {'type': 'integer', 'minimum': 100, 'maximum': 50000},
-                                        'include_transcript': {'type': 'boolean', 'default': False},
-                                        'web_search': {'type': 'boolean', 'default': False},
-                                        'agent_mode': {'type': 'boolean', 'default': False},
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        },
-    }
-    return jsonify(schema)
 
 
 @blog_bp.route('/feed.xml', methods=['GET'])

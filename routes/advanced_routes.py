@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import api_error, handle_error, safe_error_or_fallback, sanitize_path, clamp_query_int, validate_content_length
+from utils.responses import api_error, handle_error, safe_error_or_fallback, clamp_query_int, validate_content_length
 
 
 @blog_bp.route('/api/generate-multi', methods=['POST'])
@@ -337,28 +337,6 @@ def run_pipeline():
         return handle_error(str(e))
 
 
-@blog_bp.route('/api/channel-analysis', methods=['POST'])
-@require_auth
-def channel_analysis():
-    """YouTube 채널 전체 분석 (영상 목록, 주제 클러스터, 통계)"""
-    try:
-        data = request.get_json(silent=True) or {}
-        channel_url = data.get('url', '').strip()
-
-        if not channel_url:
-            return api_error('채널 URL이 필요합니다.', 400)
-
-        from services.content.channel_analysis_service import analyze_channel
-        result = analyze_channel(channel_url)
-        return jsonify({'success': True, **result})
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Channel analysis failed: {e}")
-        return handle_error(str(e))
-
-
 @blog_bp.route('/api/generate-thumbnail', methods=['POST'])
 @require_auth
 def generate_thumbnail():
@@ -387,182 +365,6 @@ def generate_thumbnail():
 
     except Exception as e:
         current_app.logger.error(f"Thumbnail generation failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/generate-clips', methods=['POST'])
-@limiter.limit("3/minute")
-@require_auth
-@require_usage
-def generate_clips():
-    """YouTube 영상에서 Shorts 클립을 추출합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        video_url = data.get('url', '')
-        clips = data.get('clips', [])
-
-        if not video_url:
-            return api_error('YouTube URL이 필요합니다.', 400)
-        if not clips:
-            return api_error('추출할 클립 목록이 필요합니다.', 400)
-
-        from services.media.video_clip_service import extract_clips
-        clip_paths = extract_clips(video_url, clips)
-
-        import base64
-        results = []
-        for i, path in enumerate(clip_paths):
-            with open(path, 'rb') as f:
-                video_b64 = base64.b64encode(f.read()).decode('ascii')
-            results.append({
-                'index': i,
-                'video_base64': video_b64,
-                'start': clips[i].get('start', ''),
-                'end': clips[i].get('end', ''),
-            })
-
-        from services.media.video_clip_service import cleanup_clips
-        cleanup_clips(clip_paths)
-
-        return jsonify({
-            'success': True,
-            'clips': results,
-            'quota': get_usage_for_response(),
-        })
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Clip extraction failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/generate-podcast', methods=['POST'])
-@limiter.limit("3/minute")
-@require_auth
-@require_usage
-def generate_podcast():
-    """콘텐츠로 팟캐스트 에피소드를 생성합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        title = data.get('title', '팟캐스트 에피소드')
-        model = data.get('model', DEFAULT_MODEL)
-
-        if not content:
-            return api_error('팟캐스트로 변환할 콘텐츠가 필요합니다.', 400)
-
-        from services.media.podcast_service import generate_podcast_episode
-        result = generate_podcast_episode(content, title, model)
-
-        return jsonify({
-            'success': True,
-            **result,
-            'quota': get_usage_for_response(),
-        })
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Podcast generation failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/generate-multilang', methods=['POST'])
-@limiter.limit("5/minute")
-@require_auth
-@require_usage
-def generate_multilang():
-    """한/영/일 3개 언어로 동시 생성합니다."""
-    try:
-        start_time = time.time()
-        data = request.get_json(silent=True) or {}
-        url = data.get('url')
-        model = data.get('model', DEFAULT_MODEL)
-        style = data.get('style', 'blog_seo')
-        languages = data.get('languages', ['ko', 'en', 'ja'])
-
-        if not url:
-            return api_error('YouTube URL이 필요합니다.', 400)
-        if not content_service.is_youtube_url(url):
-            return api_error('유효한 YouTube URL을 입력해주세요.', 400)
-
-        video_id = content_service.get_video_id(url)
-        if not video_id:
-            return api_error('유효하지 않은 YouTube URL입니다.', 400)
-
-        youtube_title = content_service.get_content_title(url) or 'YouTube 영상'
-
-        transcript_text, comments, error, raw_transcript, transcript_source, _ = _fetch_youtube_content(video_id)
-        if error:
-            return api_error(error, 400)
-
-        max_tokens = get_model_max_tokens(model)
-        main_content = _build_combined_content(transcript_text, comments) if comments else f"[영상 자막]\n{transcript_text}"
-        truncated_content = content_service.truncate_text(main_content, max_tokens)
-
-        style_prompts_dict = current_app.config.get('STYLE_PROMPTS', {})
-        sp = style_prompts_dict.get(style, '')
-        if not sp:
-            return api_error(f'유효하지 않은 스타일: {style}', 400)
-        from prompts import compose_style_prompt
-        sp = compose_style_prompt(style, sp)
-
-        app = current_app._get_current_object()
-        results = {}
-
-        def _gen_for_lang(lang):
-            with app.app_context():
-                try:
-                    modifiers = {'language': lang}
-                    result = ai_service.create_content(
-                        truncated_content, model, sp,
-                        style_id=style, modifiers=modifiers,
-                    )
-                    result['language'] = lang
-                    return lang, result
-                except Exception as e:
-                    return lang, {
-                        'language': lang,
-                        'error': safe_error_or_fallback(
-                            e,
-                            '[서버 오류] 다국어 콘텐츠 생성 중 문제가 발생했습니다.'
-                        )
-                    }
-
-        is_glm = model.startswith('zhipuai/')
-        if is_glm:
-            for lang in languages:
-                l, r = _gen_for_lang(lang)
-                results[l] = r
-        else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                futures = {executor.submit(_gen_for_lang, lang): lang for lang in languages}
-                for future in concurrent.futures.as_completed(futures):
-                    lang, result = future.result()
-                    results[lang] = result
-
-        elapsed_time = round(time.time() - start_time, 2)
-
-        succeeded = sum(1 for r in results.values() if 'error' not in r)
-        failed = len(results) - succeeded
-
-        return jsonify({
-            'success': True,
-            'results': results,
-            'youtube_title': youtube_title,
-            'transcript_source': transcript_source,
-            'language_count': len(results),
-            'succeeded': succeeded,
-            'failed': failed,
-            'elapsed_time': elapsed_time,
-            'quota': get_usage_for_response(),
-        })
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Multilang generation failed: {e}")
         return handle_error(str(e))
 
 
@@ -822,61 +624,6 @@ def auto_tags():
 
 
 # =============================================
-# F3-21: 콘텐츠 브리프 생성
-# =============================================
-
-@blog_bp.route('/api/content-brief', methods=['POST'])
-@require_auth
-@require_usage
-def content_brief():
-    """주제에 대한 콘텐츠 브리프를 생성합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        topic = data.get('topic', '')
-        keywords = data.get('keywords')
-
-        if not topic:
-            return api_error('주제를 입력해주세요.', 400)
-
-        from services.content.brief_service import generate_brief
-        result = generate_brief(topic, keywords)
-        return jsonify(result)
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Content brief failed: {e}")
-        return handle_error(str(e))
-
-
-# =============================================
-# F3-22: 경쟁 콘텐츠 분석
-# =============================================
-
-@blog_bp.route('/api/competitor-analysis', methods=['POST'])
-@require_auth
-def competitor_analysis():
-    """키워드로 경쟁 콘텐츠를 분석합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        keyword = data.get('keyword', '')
-        my_content = data.get('my_content')
-
-        if not keyword:
-            return api_error('분석할 키워드를 입력해주세요.', 400)
-
-        from services.seo.competitor_analysis_service import analyze_competitors
-        result = analyze_competitors(keyword, my_content)
-        return jsonify(result)
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Competitor analysis failed: {e}")
-        return handle_error(str(e))
-
-
-# =============================================
 # F3-23: 콘텐츠 점수 카드
 # =============================================
 
@@ -897,34 +644,6 @@ def content_score():
 
     except Exception as e:
         current_app.logger.error(f"Content score failed: {e}")
-        return handle_error(str(e))
-
-
-# =============================================
-# F3-24: AI 코멘터리
-# =============================================
-
-@blog_bp.route('/api/commentary', methods=['POST'])
-@require_auth
-@require_usage
-def add_commentary():
-    """콘텐츠에 AI 해설 주석을 추가합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-        model = data.get('model')
-
-        if not content:
-            return api_error('해설을 추가할 콘텐츠가 필요합니다.', 400)
-
-        from services.content.commentary_service import add_commentary as _add_commentary
-        result = _add_commentary(content, model)
-        return jsonify(result)
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Commentary failed: {e}")
         return handle_error(str(e))
 
 
@@ -955,85 +674,6 @@ def progressive_summary():
         current_app.logger.error(f"Progressive summary failed: {e}")
         return handle_error(str(e))
 
-
-# =============================================
-# 파인튜닝 데이터 수집 API (F10-15)
-# =============================================
-
-@blog_bp.route('/api/finetune/collect', methods=['POST'])
-@require_auth
-def finetune_collect():
-    """Supabase 히스토리에서 학습 데이터 수집"""
-    from services.finetune.data_collector import AutoDataCollector
-
-    data = request.get_json(silent=True) or {}
-    days_back = clamp_query_int(data.get('days_back'), default=30, min_val=1, max_val=365)
-    limit = clamp_query_int(data.get('limit'), default=1000, min_val=1, max_val=5000)
-
-    # 경로 순회 방어: output_dir을 허용 범위 내로 제한
-    try:
-        safe_output_dir = sanitize_path(
-            data.get('output_dir', 'finetune'), './data'
-        )
-    except ValueError:
-        return api_error('출력 경로가 허용 범위를 벗어났습니다.', 400)
-
-    try:
-        collector = AutoDataCollector(
-            output_dir=safe_output_dir,
-            min_quality_score=float(data.get('min_quality_score', 0.6)),
-            min_content_length=clamp_query_int(data.get('min_content_length'), default=500, min_val=50, max_val=100000),
-        )
-        result = collector.collect_from_supabase(days_back=days_back, limit=limit)
-
-        if 'error' in result:
-            return api_error(result['error'], 400)
-
-        return jsonify({'success': True, **result})
-    except Exception as e:
-        current_app.logger.error(f"Finetune collect failed: {e}")
-        return handle_error(str(e))
-
-
-@blog_bp.route('/api/finetune/collect-local', methods=['POST'])
-@require_auth
-def finetune_collect_local():
-    """로컬 SQLite 캐시에서 학습 데이터 수집"""
-    from services.finetune.data_collector import AutoDataCollector
-
-    data = request.get_json(silent=True) or {}
-    cache_db_path = data.get('cache_db_path', '')
-    if not cache_db_path:
-        return api_error('캐시 DB 경로가 필요합니다.', 400)
-
-    # 경로 순회 방어: cache_db_path와 output_dir을 허용 범위 내로 제한
-    try:
-        safe_cache_path = sanitize_path(cache_db_path, './data')
-    except ValueError:
-        return api_error('캐시 DB 경로가 허용 범위를 벗어났습니다.', 400)
-
-    try:
-        safe_output_dir = sanitize_path(
-            data.get('output_dir', 'finetune'), './data'
-        )
-    except ValueError:
-        return api_error('출력 경로가 허용 범위를 벗어났습니다.', 400)
-
-    try:
-        collector = AutoDataCollector(
-            output_dir=safe_output_dir,
-            min_quality_score=float(data.get('min_quality_score', 0.6)),
-            min_content_length=clamp_query_int(data.get('min_content_length'), default=500, min_val=50, max_val=100000),
-        )
-        result = collector.collect_from_local_cache(safe_cache_path)
-
-        if 'error' in result:
-            return api_error(result['error'], 400)
-
-        return jsonify({'success': True, **result})
-    except Exception as e:
-        current_app.logger.error(f"Finetune collect-local failed: {e}")
-        return handle_error(str(e))
 
 # ============================================================
 # 분리된 라우트 패키지 — 부수효과 import로 자동 등록

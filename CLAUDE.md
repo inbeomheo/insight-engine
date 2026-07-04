@@ -76,7 +76,7 @@ JSON 응답 {title, content, html, usage}
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
 | 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 리라이트, 인라인 편집, QA, 캠페인 |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
-| 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증, 스키마 |
+| 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증 |
 | 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
 | 서비스 | `services/core/content_service.py` | YouTube 자막/댓글 추출, 4단계 폴백 (Whisper 포함) |
 | 서비스 | `services/core/pipeline_service.py` | 파이프라인 자동화 엔진 (SSE 이벤트 스트리밍) |

@@ -1,25 +1,13 @@
 """사용자 피드백 + 콘텐츠 품질 분석 라우트.
 
 utility_routes.py에서 분리됨:
-- AI 캐시 삭제
-- 피드백/통계/NPS
+- 피드백/NPS
 - 팩트체크 / SEO 최적화 / 표절 / 가독성 / 감정 흐름
 """
-from flask import current_app, g, jsonify, request
+from flask import g, jsonify, request
 from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
-from src.contexts.identity.interface.auth_decorators import require_auth
-
-
-@blog_bp.route('/api/cache/ai', methods=['DELETE'])
-@require_auth
-def api_clear_ai_cache():
-    """AI 결과 캐시를 삭제합니다. videoId가 있으면 해당 영상만."""
-    data = request.get_json(silent=True) or {}
-    video_id = data.get('videoId')
-    deleted = current_app.ai_cache.clear(video_id)
-    return jsonify({'success': True, 'deleted': deleted})
 
 
 # === 피드백 (F3-06) ===
@@ -44,13 +32,6 @@ def api_feedback():
         comment=comment,
     )
     return jsonify(result)
-
-
-@blog_bp.route('/api/feedback/stats/<style_id>', methods=['GET'])
-def api_feedback_stats(style_id: str):
-    """스타일별 피드백 통계를 반환합니다."""
-    from services.data.prompt_optimizer_service import get_feedback_stats
-    return jsonify(get_feedback_stats(style_id))
 
 
 # === 팩트체크 (F3-07) ===

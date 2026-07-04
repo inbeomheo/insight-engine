@@ -1,4 +1,4 @@
-"""외부 소스 임포트 — Notion, Google Docs, 북마크, RSS, 이메일."""
+"""외부 소스 임포트 — Notion, 북마크, RSS."""
 import os
 
 from flask import request, jsonify, current_app, g
@@ -45,35 +45,6 @@ def notion_status():
     """Notion API 키 설정 여부 확인"""
     configured = bool(os.getenv('NOTION_API_KEY', ''))
     return jsonify({'configured': configured})
-
-
-# ── Google Docs 연동 ──────────────────────────────────────
-
-
-@blog_bp.route('/api/gdocs/import', methods=['POST'])
-@require_auth
-def gdocs_import():
-    """Google Docs URL → 콘텐츠 추출"""
-    from services.export.gdocs_service import extract_google_doc
-
-    data = request.get_json(silent=True)
-    if not data:
-        return api_error('요청 데이터가 없습니다.', 400)
-
-    doc_url = data.get('url', '').strip()
-    if not doc_url:
-        return api_error('Google Docs URL이 필요합니다.', 400)
-
-    api_key = data.get('api_key') or os.getenv('GOOGLE_API_KEY', '')
-
-    try:
-        result = extract_google_doc(doc_url, api_key or None)
-        return jsonify(result)
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f'Google Docs import failed: {e}')
-        return api_error('Google Docs 가져오기 중 오류가 발생했습니다.', 500)
 
 
 # ── RSS 구독 ──────────────────────────────────────
@@ -156,52 +127,3 @@ def bookmarks_parse():
     except Exception as e:
         current_app.logger.error(f"Bookmark parse failed: {e}")
         return api_error('북마크 파싱 중 오류가 발생했습니다.', 500)
-
-
-# ── 이메일 뉴스레터 인제스트 ──────────────────────────────────────
-
-
-@blog_bp.route('/api/email/ingest', methods=['POST'])
-@require_auth
-def email_ingest():
-    """이메일 뉴스레터에서 콘텐츠를 추출합니다.
-
-    - .eml 파일 업로드: multipart/form-data의 'file' 필드
-    - 포워딩 텍스트: JSON의 'raw_text' 필드
-    """
-    from services.content.email_ingest_service import parse_email_file, parse_forwarded_email
-
-    # 파일 업로드 모드
-    if 'file' in request.files:
-        file = request.files['file']
-        if not file.filename:
-            return api_error('파일명이 비어 있습니다.', 400)
-        if not file.filename.lower().endswith('.eml'):
-            return api_error('.eml 파일만 지원합니다.', 400)
-
-        try:
-            result = parse_email_file(file)
-            return jsonify(result)
-        except ValueError as e:
-            return handle_error(str(e))
-        except Exception as e:
-            current_app.logger.error(f'Email ingest failed: {e}')
-            return api_error('이메일 파싱 중 오류가 발생했습니다.', 500)
-
-    # 텍스트 모드 (포워딩된 이메일)
-    data = request.get_json(silent=True)
-    if not data:
-        return api_error('.eml 파일 또는 raw_text가 필요합니다.', 400)
-
-    raw_text = data.get('raw_text', '').strip()
-    if not raw_text:
-        return api_error('raw_text가 비어 있습니다.', 400)
-
-    try:
-        result = parse_forwarded_email(raw_text)
-        return jsonify(result)
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f'Email ingest (text) failed: {e}')
-        return api_error('이메일 텍스트 파싱 중 오류가 발생했습니다.', 500)

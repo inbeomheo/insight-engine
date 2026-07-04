@@ -142,17 +142,6 @@ def list_folder_content_ids(folder_id):
     return jsonify({'content_ids': list_folder_contents(folder_id)})
 
 
-@blog_bp.route('/api/content/<content_id>/folder', methods=['PUT'])
-def move_content_to_folder(content_id):
-    """콘텐츠를 폴더로 이동합니다."""
-    from services.data.folder_service import move_content
-    data = request.get_json(silent=True) or {}
-    folder_id = data.get('folder_id')  # None이면 미분류
-    if not move_content(content_id, folder_id):
-        return api_error('폴더를 찾을 수 없습니다.', 404)
-    return jsonify({'success': True})
-
-
 # ── 알림 센터 (F5-13) ────────────────────────────────
 
 
