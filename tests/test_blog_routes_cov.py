@@ -475,46 +475,5 @@ class TestExtractEventsRoute(_Base):
         self.assertIn('events', data)
 
 
-# ── 자막 워크스페이스 ──────────────────────────────────────
-
-
-class TestTranscriptRoute(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_transcript_invalid_video_id(self, _):
-        resp = self.client.get('/api/transcript/invalid!!')
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.transcript.transcript_workspace_service.parse_transcript_sentences')
-    @patch('services.core.content_service.get_transcript')
-    def test_transcript_success(self, mock_get, mock_parse, _):
-        mock_get.return_value = {
-            'text': '자막 내용입니다.',
-            'source': 'api',
-            'segments': []
-        }
-        mock_parse.return_value = [{'index': 0, 'text': '자막 내용입니다.'}]
-        resp = self.client.get('/api/transcript/dQw4w9WgXcQ')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(data['video_id'], 'dQw4w9WgXcQ')
-        self.assertEqual(data['sentence_count'], 1)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.content_service.get_transcript')
-    def test_transcript_error(self, mock_get, _):
-        mock_get.return_value = {'error': '자막 없음'}
-        resp = self.client.get('/api/transcript/dQw4w9WgXcQ')
-        self.assertEqual(resp.status_code, 422)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.core.content_service.get_transcript')
-    def test_transcript_empty(self, mock_get, _):
-        mock_get.return_value = {'text': '', 'source': 'api'}
-        resp = self.client.get('/api/transcript/dQw4w9WgXcQ')
-        self.assertEqual(resp.status_code, 422)
-
-
 if __name__ == '__main__':
     unittest.main()

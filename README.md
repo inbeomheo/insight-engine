@@ -253,7 +253,6 @@ insight-engine/
 |----------|--------|-------------|
 | `/api/mindmap` | POST | 마인드맵 생성 |
 | `/api/qa-check` | POST | QA 게이트 검증 |
-| `/api/transcript/<id>` | GET | 자막 워크스페이스 |
 | `/api/export/docx` | POST | DOCX 내보내기 |
 | `/api/export/markdown` | POST | Markdown 내보내기 |
 | `/api/export/zip` | POST | ZIP 패키지 (전체 포맷) |
