@@ -6,7 +6,6 @@
 """
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 from src.contexts.identity.application.ports import IApiKeyVault
 from src.contexts.identity.domain.user_account import ApiKey
 from src.contexts.identity.domain.exceptions import InvalidApiKey
@@ -78,7 +77,7 @@ class SupabaseApiKeyVault(IApiKeyVault):
             encrypted = self._encrypt(plaintext_key)
             # on_conflict 지정 — (user_id, provider, label) 유니크 인덱스 기준으로
             # 동일 키 재저장 시 충돌 에러 대신 기존 행을 갱신(키 회전)한다.
-            res = client.table('ie_user_api_keys').upsert({
+            client.table('ie_user_api_keys').upsert({
                 'user_id': str(account_id),
                 'provider': provider,
                 'label': label,

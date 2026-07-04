@@ -8,8 +8,6 @@ from services.core.logging_config import (
     get_logger,
     ServiceLogger,
     with_flask_context,
-    LOG_FORMAT,
-    DATE_FORMAT,
     _ensure_utf8_stdout,
 )
 
