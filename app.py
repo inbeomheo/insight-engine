@@ -202,6 +202,10 @@ def create_app(test_config=None):
     from routes.notes_routes import notes_bp
     app.register_blueprint(notes_bp)
 
+    # Processed content Q&A chat API
+    from routes.chat_routes import chat_bp
+    app.register_blueprint(chat_bp)
+
     # 제품 지원/피드백 챗봇 라우트
     from routes.support_routes import support_bp
     app.register_blueprint(support_bp)

@@ -57,6 +57,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/shares': 15_000,
   '/api/providers': 10_000,
   '/api/playlist-videos': 30_000,
+  '/api/chat': 60_000,
   '/api/support/chat': 30_000,
   '/api/video-deepdives/extract': 660_000,
 };
@@ -972,4 +973,37 @@ export async function createSupportGithubIssue(ticketId: string): Promise<{ tick
 
 export async function createSupportDraftPr(ticketId: string): Promise<{ ticket: SupportTicket; pull_request?: { html_url?: string; number?: number } }> {
   return request(`/api/support/tickets/${ticketId}/create-draft-pr`, { method: 'POST', headers: supportHeaders() });
+}
+
+// === 결과 Q&A 채팅 ===
+
+export interface ResultChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ResultChatNote {
+  id?: string;
+  title?: string;
+  score?: number;
+  snippet?: string;
+}
+
+export interface ResultChatResponse {
+  answer: string;
+  notes?: ResultChatNote[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+}
+
+export async function askResultChat(req: {
+  question: string;
+  context: string;
+  history?: ResultChatMessage[];
+  model?: string;
+  language?: string;
+}): Promise<ResultChatResponse> {
+  return request('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
 }
