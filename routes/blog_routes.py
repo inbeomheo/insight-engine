@@ -51,6 +51,68 @@ _handle_error_response = handle_error
 _sanitize_error_for_client = sanitize_error_for_client
 
 
+def _format_byte_limit(size_bytes: int) -> str:
+    """Return a compact Korean byte limit label for upload errors."""
+    mb = 1024 * 1024
+    kb = 1024
+    if size_bytes >= mb:
+        value = size_bytes / mb
+        return f"{int(value) if value.is_integer() else round(value, 1)}MB"
+    if size_bytes >= kb:
+        value = size_bytes / kb
+        return f"{int(value) if value.is_integer() else round(value, 1)}KB"
+    return f"{size_bytes}바이트"
+
+
+def _normalize_extracted_text(text: str) -> str:
+    """Normalize extracted PDF text while preserving paragraph breaks."""
+    import re
+
+    normalized = re.sub(r"\r\n?", "\n", text or "")
+    normalized = re.sub(r"[ \t]+", " ", normalized)
+    normalized = re.sub(r"\n{3,}", "\n\n", normalized)
+    return normalized.strip()
+
+
+def _is_pdf_upload(uploaded_file, file_bytes: bytes) -> bool:
+    """Validate extension, MIME type, and PDF magic bytes."""
+    filename = (uploaded_file.filename or "").lower()
+    content_type = (uploaded_file.content_type or "").split(";", 1)[0].strip().lower()
+    return (
+        filename.endswith(".pdf")
+        and content_type == "application/pdf"
+        and file_bytes.startswith(b"%PDF")
+    )
+
+
+def _get_upload_size(uploaded_file) -> int | None:
+    """Return FileStorage payload size without consuming the stream."""
+    stream = getattr(uploaded_file, "stream", None)
+    if stream is None:
+        return getattr(uploaded_file, "content_length", None) or None
+
+    try:
+        pos = stream.tell()
+        stream.seek(0, 2)
+        size = stream.tell()
+        stream.seek(pos)
+        return size
+    except (AttributeError, OSError):
+        return getattr(uploaded_file, "content_length", None) or None
+
+
+def _read_pdf_magic(uploaded_file) -> bytes:
+    """Read PDF magic bytes and rewind so extract_from_upload can save the full file."""
+    stream = uploaded_file.stream
+    try:
+        stream.seek(0)
+        magic = stream.read(4)
+        stream.seek(0)
+        return magic
+    except (AttributeError, OSError):
+        return b""
+
+
 def _validate_style(style, custom_prompt=None):
     """요청 스타일을 정규화합니다.
 
@@ -293,6 +355,67 @@ from routes.generation_helpers import (
 
 
 # ── 핵심 생성 엔드포인트 ──────────────────────────────────────
+
+
+@blog_bp.route('/api/extract-pdf', methods=['POST'])
+@limiter.limit("15/minute")
+@require_auth
+def extract_pdf():
+    """PDF 파일에서 텍스트를 추출해 직접 텍스트 입력 경로에 재사용합니다."""
+    from config import DIRECT_TEXT_MAX_CHARS, DIRECT_TEXT_MIN_CHARS, PDF_MAX_BYTES
+    from services.content.document_ingest_service import extract_from_upload
+
+    if request.content_length and request.content_length > PDF_MAX_BYTES + 1024 * 1024:
+        return api_error(
+            f'PDF 파일 크기는 최대 {_format_byte_limit(PDF_MAX_BYTES)}까지 업로드할 수 있습니다.',
+            400,
+        )
+
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or not uploaded_file.filename:
+        return api_error('PDF 파일을 업로드해 주세요.', 400)
+
+    try:
+        upload_size = _get_upload_size(uploaded_file)
+        if upload_size is not None and upload_size > PDF_MAX_BYTES:
+            return api_error(
+                f'PDF 파일 크기는 최대 {_format_byte_limit(PDF_MAX_BYTES)}까지 업로드할 수 있습니다.',
+                400,
+            )
+
+        magic = _read_pdf_magic(uploaded_file)
+        if not magic or not _is_pdf_upload(uploaded_file, magic):
+            return api_error('PDF 파일만 업로드할 수 있습니다.', 400)
+
+        try:
+            doc = extract_from_upload(uploaded_file)
+        except ValueError as exc:
+            message = str(exc)
+            if message.startswith('PDF 파일을 읽을 수 없습니다'):
+                message = 'PDF 파일을 읽을 수 없습니다. 파일이 손상되었을 수 있습니다.'
+            return api_error(message, 400)
+
+        text = _normalize_extracted_text(doc.get('content', ''))
+        pages = int(doc.get('page_count') or 0)
+
+        if len(text) < DIRECT_TEXT_MIN_CHARS:
+            return api_error(
+                'PDF에서 충분한 텍스트를 추출하지 못했습니다 (스캔 이미지 PDF는 지원하지 않습니다)',
+                400,
+            )
+
+        truncated = len(text) > DIRECT_TEXT_MAX_CHARS
+        if truncated:
+            text = text[:DIRECT_TEXT_MAX_CHARS]
+
+        return jsonify({
+            'text': text,
+            'truncated': truncated,
+            'pages': pages,
+        })
+    except Exception as exc:
+        current_app.logger.error('Unexpected PDF extraction error: %s', exc, exc_info=True)
+        return api_error('PDF 처리 중 오류가 발생했습니다. 다시 시도해 주세요.', 500)
 
 
 @blog_bp.route('/generate', methods=['POST'])

@@ -91,6 +91,11 @@ TTS_MAX_CHARS: int = 5000
 DIRECT_TEXT_MIN_CHARS: int = int(os.getenv('DIRECT_TEXT_MIN_CHARS', '50'))
 DIRECT_TEXT_MAX_CHARS: int = int(os.getenv('DIRECT_TEXT_MAX_CHARS', '200000'))
 
+# === PDF 텍스트 추출 업로드 ===
+
+# services.content.document_ingest_service.MAX_FILE_SIZE is a separate 10MB hard cap.
+PDF_MAX_BYTES: int = int(os.getenv('PDF_MAX_BYTES', str(10 * 1024 * 1024)))
+
 # === 이미지 생성 ===
 
 IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')
@@ -490,6 +495,7 @@ __all__ = [
     'TTS_BACKEND',
     'TTS_DEFAULT_VOICE',
     'TTS_MAX_CHARS',
+    'PDF_MAX_BYTES',
 
     # Phase 9: 인프라 & 성능
     'REDIS_URL',
