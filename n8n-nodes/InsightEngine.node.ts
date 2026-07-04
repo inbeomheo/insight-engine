@@ -34,7 +34,7 @@ export class InsightEngine implements INodeType {
         name: 'insightEngineApi',
         required: false,
         displayOptions: {
-          show: { operation: ['generate', 'publish'] },
+          show: { operation: ['generate'] },
         },
       },
     ],
@@ -58,18 +58,6 @@ export class InsightEngine implements INodeType {
             value: 'generate',
             description: 'YouTube URL로 AI 콘텐츠를 생성합니다.',
             action: 'Generate content from YouTube URL',
-          },
-          {
-            name: '플러그인 목록',
-            value: 'listPlugins',
-            description: '사용 가능한 MCP 플러그인 목록을 가져옵니다.',
-            action: 'List available MCP plugins',
-          },
-          {
-            name: '콘텐츠 발행',
-            value: 'publish',
-            description: 'MCP 플러그인으로 콘텐츠를 발행합니다.',
-            action: 'Publish content via MCP plugin',
           },
         ],
         default: 'generate',
@@ -124,32 +112,6 @@ export class InsightEngine implements INodeType {
         ],
         default: 'medium',
       },
-
-      // publish 작업 파라미터
-      {
-        displayName: '플러그인 ID',
-        name: 'pluginId',
-        type: 'string',
-        default: '',
-        required: true,
-        displayOptions: { show: { operation: ['publish'] } },
-        description: '사용할 MCP 플러그인 ID',
-      },
-      {
-        displayName: '제목',
-        name: 'title',
-        type: 'string',
-        default: '',
-        displayOptions: { show: { operation: ['publish'] } },
-      },
-      {
-        displayName: '콘텐츠',
-        name: 'content',
-        type: 'string',
-        typeOptions: { rows: 4 },
-        default: '',
-        displayOptions: { show: { operation: ['publish'] } },
-      },
     ],
   };
 
@@ -178,27 +140,6 @@ export class InsightEngine implements INodeType {
               style_id: styleId,
               modifiers: { language, length },
             },
-            json: true,
-          });
-          result = response;
-
-        } else if (operation === 'listPlugins') {
-          const response = await this.helpers.request({
-            method: 'GET',
-            url: `${serverUrl}/api/mcp/plugins`,
-            json: true,
-          });
-          result = response;
-
-        } else if (operation === 'publish') {
-          const pluginId = this.getNodeParameter('pluginId', i) as string;
-          const title = this.getNodeParameter('title', i) as string;
-          const content = this.getNodeParameter('content', i) as string;
-
-          const response = await this.helpers.request({
-            method: 'POST',
-            url: `${serverUrl}/api/mcp/publish`,
-            body: { plugin_id: pluginId, title, content },
             json: true,
           });
           result = response;

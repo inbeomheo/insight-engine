@@ -32,7 +32,6 @@ def test_readiness_check_passes_with_safe_minimum_production_env():
         'AUTO_BACKUP_INTERVAL_HOURS': '6',
         'MAX_BACKUPS': '30',
         'APP_DATA_BACKUP_DIR': '/mnt/backups/insight-engine',
-        'PUBLISH_QUEUE_BACKEND': 'redis',
     })
 
     assert result.returncode == 0
@@ -158,25 +157,6 @@ def test_readiness_check_rejects_app_data_backup_dir_inside_app_data():
     assert result.returncode == 1
     assert 'APP_DATA_BACKUP_DIR' in output
     assert 'outside APP_DATA_DIR' in output
-
-
-def test_readiness_check_requires_distributed_publish_queue_backend():
-    result = _run_readiness_check({
-        'FLASK_ENV': 'production',
-        'CORS_ORIGINS': 'https://app.example.com',
-        'METRICS_AUTH_TOKEN': 'metrics-token',
-        'ENCRYPTION_SECRET': 'x' * 32,
-        'REDIS_URL': 'redis://redis:6379/0',
-        'AUTO_BACKUP_INTERVAL_HOURS': '6',
-        'MAX_BACKUPS': '30',
-        'APP_DATA_BACKUP_DIR': '/mnt/backups/insight-engine',
-        'PUBLISH_QUEUE_BACKEND': 'file',
-    })
-
-    output = result.stdout + result.stderr
-    assert result.returncode == 1
-    assert 'PUBLISH_QUEUE_BACKEND' in output
-    assert 'redis' in output
 
 
 def test_package_json_exposes_verify_production_script():

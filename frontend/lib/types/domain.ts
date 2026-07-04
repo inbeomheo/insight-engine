@@ -39,26 +39,6 @@ export interface PipelineRequest {
   customPrompt?: string;
 }
 
-// === MCP 플러그인 ===
-
-export interface McpPlugin {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface McpPublishRequest {
-  plugin_id: string;
-  title: string;
-  content: string;
-}
-
-export interface McpPublishResponse {
-  success: boolean;
-  message: string;
-  url?: string;
-}
-
 // === 예약 발행 ===
 
 export interface ScheduledPost {
@@ -137,21 +117,6 @@ export interface WorkspaceContent {
   author_id: string;
   reviewer_id?: string;
   review_note?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// === 발행 큐 ===
-
-export interface PublishQueueItem {
-  id: string;
-  content_id: string;
-  title: string;
-  plugin_id: string;
-  status: 'queued' | 'publishing' | 'success' | 'failed';
-  retry_count: number;
-  published_url?: string;
-  error_message?: string;
   created_at: string;
   updated_at: string;
 }

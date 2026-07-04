@@ -50,7 +50,6 @@ CODE_REVIEW.html
 /data/
 *.sqlite3
 *.jsonl
-publish_queue.json
 
 # Logs & debug
 *.log

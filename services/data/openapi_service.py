@@ -101,14 +101,6 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                             'error': {'type': 'string', 'description': '오류 메시지'},
                         },
                     },
-                    'PluginInfo': {
-                        'type': 'object',
-                        'properties': {
-                            'id': {'type': 'string'},
-                            'name': {'type': 'string'},
-                            'description': {'type': 'string'},
-                        },
-                    },
                 },
             },
             'paths': {
@@ -144,72 +136,6 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
                             },
                             '401': {'description': '인증 실패'},
                             '429': {'description': '사용량 초과'},
-                        },
-                    }
-                },
-                '/api/mcp/plugins': {
-                    'get': {
-                        'summary': 'MCP 플러그인 목록',
-                        'operationId': 'listPlugins',
-                        'tags': ['Plugins'],
-                        'security': [],
-                        'responses': {
-                            '200': {
-                                'description': '플러그인 목록',
-                                'content': {
-                                    'application/json': {
-                                        'schema': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'plugins': {
-                                                    'type': 'array',
-                                                    'items': {'$ref': '#/components/schemas/PluginInfo'},
-                                                }
-                                            },
-                                        }
-                                    }
-                                },
-                            }
-                        },
-                    }
-                },
-                '/api/mcp/publish': {
-                    'post': {
-                        'summary': 'MCP 플러그인으로 콘텐츠 발행',
-                        'operationId': 'publishContent',
-                        'tags': ['Plugins'],
-                        'requestBody': {
-                            'required': True,
-                            'content': {
-                                'application/json': {
-                                    'schema': {
-                                        'type': 'object',
-                                        'required': ['plugin_id', 'title', 'content'],
-                                        'properties': {
-                                            'plugin_id': {'type': 'string'},
-                                            'title': {'type': 'string'},
-                                            'content': {'type': 'string'},
-                                        },
-                                    }
-                                }
-                            },
-                        },
-                        'responses': {
-                            '200': {
-                                'description': '발행 성공',
-                                'content': {
-                                    'application/json': {
-                                        'schema': {
-                                            'type': 'object',
-                                            'properties': {
-                                                'success': {'type': 'boolean'},
-                                                'message': {'type': 'string'},
-                                                'url': {'type': 'string', 'nullable': True},
-                                            },
-                                        }
-                                    }
-                                },
-                            }
                         },
                     }
                 },
@@ -315,7 +241,6 @@ def build_openapi_spec(app_title: str = 'Insight Engine API',
             },
             'tags': [
                 {'name': 'Content', 'description': 'AI 콘텐츠 생성'},
-                {'name': 'Plugins', 'description': 'MCP 플러그인 발행'},
                 {'name': 'Schedule', 'description': '예약 발행'},
                 {'name': 'Integrations', 'description': '외부 서비스 통합'},
             ],

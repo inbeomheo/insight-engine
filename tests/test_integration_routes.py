@@ -1,6 +1,6 @@
 """integration_routes.py 라우트 커버리지 테스트.
 
-Notion, RSS, 북마크, MCP, 발행 큐, 예약, RAG,
+Notion, RSS, 북마크, MCP Apps, 예약, RAG,
 버전, 검색, 폴더 엔드포인트 커버.
 """
 import io
@@ -155,54 +155,6 @@ class TestBookmarkRoutes(_Base):
         self.assertEqual(resp.get_json()['count'], 1)
 
 
-# ── MCP 플러그인 ──────────────────────────────────────
-
-
-class TestMCPRoutes(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.mcp.plugin_registry.list_plugins')
-    def test_mcp_list_plugins(self, mock_list, _):
-        mock_list.return_value = [{'id': 'naver', 'name': 'Naver Blog'}]
-        resp = self.client.get('/api/mcp/plugins')
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('plugins', resp.get_json())
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_mcp_publish_missing_data(self, _):
-        resp = self.client.post('/api/mcp/publish', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_mcp_publish_missing_fields(self, _):
-        resp = self.client.post('/api/mcp/publish',
-                                json={'plugin_id': 'naver'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.mcp.plugin_registry.execute')
-    def test_mcp_publish_success(self, mock_exec, _):
-        mock_exec.return_value = {'success': True, 'url': 'https://blog.naver.com/123'}
-        resp = self.client.post('/api/mcp/publish',
-                                json={'plugin_id': 'naver',
-                                      'title': '테스트',
-                                      'content': '콘텐츠'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.mcp.plugin_registry.execute',
-           side_effect=Exception('plugin error'))
-    def test_mcp_publish_exception(self, mock_exec, _):
-        resp = self.client.post('/api/mcp/publish',
-                                json={'plugin_id': 'naver',
-                                      'title': '테스트',
-                                      'content': '콘텐츠'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 500)
-
-
 # ── MCP Apps ──────────────────────────────────────
 
 
@@ -245,57 +197,6 @@ class TestMCPApps(_Base):
                                 json={'action': 'click'},
                                 headers=_H)
         self.assertEqual(resp.status_code, 404)
-
-
-# ── 발행 큐 ──────────────────────────────────────
-
-
-class TestPublishQueue(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.publish_queue_service.publish_queue_service')
-    def test_publish_queue_list(self, mock_pq, _):
-        mock_pq.get_queue_status.return_value = []
-        mock_pq.get_status_summary.return_value = {'pending': 0}
-        resp = self.client.get('/api/publish-queue')
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('items', resp.get_json())
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_publish_queue_enqueue_missing_data(self, _):
-        resp = self.client.post('/api/publish-queue', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_publish_queue_enqueue_missing_fields(self, _):
-        resp = self.client.post('/api/publish-queue',
-                                json={'content_id': 'c1'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.publish_queue_service.publish_queue_service')
-    def test_publish_queue_enqueue_success(self, mock_pq, _):
-        mock_pq.enqueue.return_value = {'id': 'item1', 'status': 'pending'}
-        resp = self.client.post('/api/publish-queue',
-                                json={'content_id': 'c1', 'title': '제목',
-                                      'content': '내용', 'plugin_id': 'naver'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 201)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.publish_queue_service.publish_queue_service')
-    def test_publish_queue_cancel(self, mock_pq, _):
-        mock_pq.cancel_item.return_value = {'success': True}
-        resp = self.client.post('/api/publish-queue/item1/cancel', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.publish_queue_service.publish_queue_service')
-    def test_publish_queue_retry(self, mock_pq, _):
-        mock_pq.retry_item.return_value = {'success': True}
-        resp = self.client.post('/api/publish-queue/item1/retry', headers=_H)
-        self.assertEqual(resp.status_code, 200)
 
 
 # ── 예약 발행 ──────────────────────────────────────

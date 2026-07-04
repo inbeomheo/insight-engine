@@ -1,7 +1,8 @@
 """
 예약 발행 + 채널 모니터링 백그라운드 워커
 
-APScheduler로 매분 예약된 포스트를 확인하고 MCP 플러그인으로 발행합니다.
+APScheduler로 매분 예약된 포스트를 확인합니다. 발행 플러그인 시스템은
+제거됨(Dep-5) — 대기 포스트는 실패 처리로 남습니다.
 채널 모니터링은 30분 간격으로 신규 업로드를 감지합니다.
 
 apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스타트업의
@@ -87,42 +88,26 @@ def __getattr__(name):
 
 
 def check_and_publish():
-    """매분 실행: 예약된 포스트 확인 → MCP 발행"""
+    """매분 실행: 예약된 포스트 확인
+
+    발행 플러그인 시스템은 제거됨(Dep-5) — 대기 중인 예약은 발행하지 않고
+    실패 처리로 남겨 사용자가 상태를 확인할 수 있게 한다.
+    """
     try:
         from services.data.schedule_service import schedule_service
-        from services.mcp import plugin_registry
 
         due_posts = schedule_service.get_due_posts()
         if not due_posts:
             return
 
-        logger.info(f"발행 대기 포스트 {len(due_posts)}건 처리 시작")
+        logger.info(f"발행 대기 포스트 {len(due_posts)}건 — 발행 기능 종료로 처리 불가")
 
         for post in due_posts:
-            post_id = post["id"]
-            try:
-                result = plugin_registry.execute(
-                    post["target_plugin"],
-                    post["content"],
-                    post["title"],
-                )
-                if result.get("success"):
-                    schedule_service.update_status(
-                        post_id,
-                        "published",
-                        published_url=result.get("url"),
-                    )
-                    logger.info(f"발행 완료: {post_id}")
-                else:
-                    schedule_service.update_status(
-                        post_id,
-                        "failed",
-                        error_message=result.get("message", "발행 실패"),
-                    )
-                    logger.warning(f"발행 실패: {post_id} - {result.get('message')}")
-            except Exception as e:
-                schedule_service.update_status(post_id, "failed", error_message=str(e))
-                logger.error(f"발행 예외: {post_id} - {e}")
+            schedule_service.update_status(
+                post["id"],
+                "failed",
+                error_message="발행 기능이 종료되었습니다.",
+            )
     except Exception as e:
         logger.error("check_and_publish 실패: %s", e, exc_info=True)
         return None
@@ -148,18 +133,6 @@ def _check_channel_monitors():
                 )
     except Exception as e:
         logger.error(f"채널 모니터링 실패: {e}")
-
-
-def _process_publish_queue():
-    """2분 간격: 발행 큐 대기 항목 처리"""
-    from services.data.publish_queue_service import publish_queue_service
-
-    try:
-        results = publish_queue_service.process_queue()
-        if results:
-            logger.info(f"발행 큐 처리 완료: {len(results)}건")
-    except Exception as e:
-        logger.error(f"발행 큐 처리 실패: {e}")
 
 
 def _check_rss_subscriptions():
@@ -227,13 +200,6 @@ def start_scheduler(app):
             replace_existing=True,
         )
         scheduler.add_job(
-            _with_context(_process_publish_queue),
-            "interval",
-            minutes=2,
-            id="publish_queue_processor",
-            replace_existing=True,
-        )
-        scheduler.add_job(
             _with_context(_check_rss_subscriptions),
             "interval",
             minutes=30,
@@ -242,7 +208,7 @@ def start_scheduler(app):
         )
         scheduler.start()
         logger.info(
-            "스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, 발행 큐: 2분, RSS 구독: 30분)"
+            "스케줄러 시작됨 (예약 발행: 1분, 채널 모니터링: 30분, RSS 구독: 30분)"
         )
     except Exception as e:
         logger.error("start_scheduler 실패: %s", e, exc_info=True)

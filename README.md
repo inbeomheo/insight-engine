@@ -1,9 +1,9 @@
 # Insight Engine
 
 YouTube 영상 URL 하나로 15가지 스타일의 고품질 콘텐츠를 자동 생성하는 AI 콘텐츠 엔진.
-5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, MCP 자동 발행, 팀 워크스페이스까지.
+5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, 예약 캘린더, 팀 워크스페이스까지.
 
-Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 · 1,659개 테스트(99.94% pass)
+Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 · 5,300+ 테스트(pass)
 
 ---
 
@@ -30,9 +30,7 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 - **QA 게이트** — 발행 전 금칙어/구조/중복/링크 품질 검증
 
 ### Publishing & Collaboration
-- **MCP 자동 발행** — Naver Blog, WordPress 플러그인
 - **예약 캘린더** — APScheduler 기반 예약 발행 + 캘린더 UI
-- **발행 큐** — 인메모리 큐 + 재시도 정책 (3회, 지수 백오프)
 - **팀 워크스페이스** — 멤버 관리 (Owner/Editor/Viewer) + 콘텐츠 승인 플로우
 - **채널 모니터링** — YouTube 채널 신규 업로드 자동 감지 (30분 폴링)
 
@@ -163,7 +161,7 @@ insight-engine/
 │   ├── agents/                    # 멀티에이전트 파이프라인 (12개)
 │   ├── analytics/                 # 분석 대시보드 (17개)
 │   ├── rag/                       # ChromaDB 벡터 스토어 (9개)
-│   ├── mcp/                       # MCP 플러그인 (6개)
+│   ├── mcp/                       # MCP Apps SDK + MCP 서버 (3개)
 │   ├── platform/                  # 웹훅, RSS, 채널 모니터링 (11개)
 │   ├── data/                      # Supabase, 스케줄, 알림 (33개)
 │   ├── integrations/              # Slack, Discord (7개)
@@ -257,10 +255,7 @@ insight-engine/
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/mcp/plugins` | GET | MCP 플러그인 목록 |
-| `/api/mcp/publish` | POST | MCP 플러그인 발행 |
 | `/api/schedule` | POST/GET/DELETE | 예약 발행 관리 |
-| `/api/publish-queue` | POST/GET | 발행 큐 관리 |
 | `/api/workspaces` | GET/POST | 워크스페이스 관리 |
 
 ### System

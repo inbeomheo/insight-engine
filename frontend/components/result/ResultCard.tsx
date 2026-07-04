@@ -4,7 +4,7 @@ import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } f
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
   FileText, Code, Brain, Download, Share2, Printer,
-  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Send, Calendar, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
+  Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Calendar, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,13 @@ import remarkGfm from 'remark-gfm';
 // KaTeX는 수식 감지 시에만 동적 로드 (초기 번들 ~280KB 절감)
 // remark-math + rehype-katex는 MathMarkdown 컴포넌트에서 조건부 import
 import { toast } from 'sonner';
-import type { Report, McpPlugin, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
+import type { Report, QualityScore, NlpAnalysis, ViewMode } from '@/lib/types';
 import { getStyleLabel } from '@/lib/helpers';
 import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, publishToMcp, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
+import { exportDocx, exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -73,7 +73,6 @@ function sanitizeHtml(html: string): string {
 interface ResultCardProps {
   report: Report;
   searchQuery?: string;
-  mcpPlugins: McpPlugin[];
   onSchedule: (report: Report) => void;
   viewMode?: ViewMode;
   /** compact 모드에서 카드 클릭 시 full 전환 콜백 */
@@ -254,8 +253,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
   return { ...state, ...action.updates };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
+const ResultCard = memo(function ResultCard({ report, searchQuery, onSchedule, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingDeepDive, setIsSavingDeepDive] = useState(false);
@@ -471,23 +469,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, mcpPlugins, o
       pollIdsRef.current.add(poll);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'NotebookLM 생성에 실패했습니다.');
-    }
-  }
-
-  async function handlePublish(pluginId: string) {
-    try {
-      const res = await publishToMcp({
-        plugin_id: pluginId,
-        title: report.title,
-        content: report.content,
-      });
-      if (res.success) {
-        toast.success(res.message);
-      } else {
-        toast.error(res.message);
-      }
-    } catch {
-      toast.error(t('result.publishError'));
     }
   }
 
@@ -1114,18 +1095,6 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <Printer className="h-3.5 w-3.5 mr-2" />
                 {t('result.printPdf')}
               </DropdownMenuItem>
-              {PUBLISHING_ENABLED && mcpPlugins.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  {mcpPlugins.map((plugin) => (
-                    <DropdownMenuItem key={plugin.id} onClick={() => handlePublish(plugin.id)}>
-                      <Send className="h-3.5 w-3.5 mr-2" />
-                      {t('result.publish', { name: plugin.name })}
-                      <DeprecatedBadge />
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
               {PUBLISHING_ENABLED && (
                 <>
                   <DropdownMenuSeparator />

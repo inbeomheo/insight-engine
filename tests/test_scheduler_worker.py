@@ -4,56 +4,27 @@ from unittest.mock import patch, MagicMock
 
 
 class TestCheckAndPublish(unittest.TestCase):
-    """check_and_publish: 예약 포스트 발행 로직"""
+    """check_and_publish: 예약 포스트 확인 — 발행 플러그인 제거(Dep-5) 후 실패 처리"""
 
     @patch('services.data.scheduler_worker.logger')
     @patch('services.data.schedule_service.schedule_service')
-    @patch('services.mcp.plugin_registry')
-    def test_no_due_posts(self, mock_registry, mock_schedule, mock_logger):
+    def test_no_due_posts(self, mock_schedule, mock_logger):
         mock_schedule.get_due_posts.return_value = []
         from services.data.scheduler_worker import check_and_publish
         check_and_publish()
-        mock_registry.execute.assert_not_called()
+        mock_schedule.update_status.assert_not_called()
 
     @patch('services.data.scheduler_worker.logger')
     @patch('services.data.schedule_service.schedule_service')
-    @patch('services.mcp.plugin_registry')
-    def test_successful_publish(self, mock_registry, mock_schedule, mock_logger):
+    def test_due_posts_marked_failed(self, mock_schedule, mock_logger):
         mock_schedule.get_due_posts.return_value = [
             {'id': 'p1', 'target_plugin': 'naver', 'content': 'body', 'title': 'title'}
         ]
-        mock_registry.execute.return_value = {'success': True, 'url': 'https://blog.naver.com/1'}
         from services.data.scheduler_worker import check_and_publish
         check_and_publish()
         mock_schedule.update_status.assert_called_once_with(
-            'p1', 'published', published_url='https://blog.naver.com/1'
+            'p1', 'failed', error_message='발행 기능이 종료되었습니다.'
         )
-
-    @patch('services.data.scheduler_worker.logger')
-    @patch('services.data.schedule_service.schedule_service')
-    @patch('services.mcp.plugin_registry')
-    def test_failed_publish(self, mock_registry, mock_schedule, mock_logger):
-        mock_schedule.get_due_posts.return_value = [
-            {'id': 'p2', 'target_plugin': 'wp', 'content': 'c', 'title': 't'}
-        ]
-        mock_registry.execute.return_value = {'success': False, 'message': 'auth error'}
-        from services.data.scheduler_worker import check_and_publish
-        check_and_publish()
-        mock_schedule.update_status.assert_called_once_with(
-            'p2', 'failed', error_message='auth error'
-        )
-
-    @patch('services.data.scheduler_worker.logger')
-    @patch('services.data.schedule_service.schedule_service')
-    @patch('services.mcp.plugin_registry')
-    def test_exception_during_publish(self, mock_registry, mock_schedule, mock_logger):
-        mock_schedule.get_due_posts.return_value = [
-            {'id': 'p3', 'target_plugin': 'x', 'content': 'c', 'title': 't'}
-        ]
-        mock_registry.execute.side_effect = RuntimeError("network")
-        from services.data.scheduler_worker import check_and_publish
-        check_and_publish()
-        mock_schedule.update_status.assert_called_once_with('p3', 'failed', error_message='network')
 
 
 class TestStartSchedulerLeaderLock(unittest.TestCase):
