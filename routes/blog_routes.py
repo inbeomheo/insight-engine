@@ -22,7 +22,13 @@ import uuid
 
 from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context
 from extensions import limiter
-from utils.responses import api_error, handle_error, sanitize_error_for_client, api_error_from_exception
+from utils.responses import (
+    api_error,
+    handle_error,
+    sanitize_error_for_client,
+    api_error_from_exception,
+    safe_error_or_fallback,
+)
 
 from config import get_model_max_tokens
 from services.core import ai_service, content_service
@@ -86,7 +92,10 @@ def _get_request_data(req):
         urls = [u for u in urls if isinstance(u, str)][:MAX_BATCH_URLS]
 
         # source_type 검증
-        _allowed_source_types = {'youtube', 'webpage', 'rss', 'arxiv', 'twitter', 'reddit', 'github', 'hackernews', 'podcast'}
+        _allowed_source_types = {
+            'youtube', 'webpage', 'article', 'rss', 'arxiv', 'twitter',
+            'reddit', 'github', 'hackernews', 'podcast',
+        }
         raw_source_type = data.get('source_type')
         source_type = raw_source_type if raw_source_type in _allowed_source_types else None
 
@@ -269,12 +278,21 @@ def generate():
             return api_error('URL이 필요합니다.', 400)
 
         # ── 비YouTube 소스 (웹페이지 / RSS / arXiv) ──
-        source_type = params.get('source_type') or detect_source_type(url)
+        detected_source_type = detect_source_type(url)
+        source_type = (
+            SOURCE_YOUTUBE
+            if detected_source_type == SOURCE_YOUTUBE
+            else params.get('source_type') or detected_source_type
+        )
         if source_type != SOURCE_YOUTUBE:
             try:
                 return _handle_web_source(params, url, source_type, start_time)
             except ValueError as e:
-                return handle_error(str(e))
+                safe_message = safe_error_or_fallback(
+                    str(e),
+                    '[생성 실패] 콘텐츠를 가져올 수 없습니다.',
+                )
+                return api_error(safe_message, 400)
 
         # ── YouTube 흐름 ──
         if not content_service.is_youtube_url(url):
