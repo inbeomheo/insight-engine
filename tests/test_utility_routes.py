@@ -378,8 +378,6 @@ class TestNPSFeedback(_BaseTestCase):
         self.assertEqual(resp.status_code, 400)
 
 
-# ── AI 캐시 삭제 ──────────────────────────────────────
-
 
 # ── 피드백 ──────────────────────────────────────
 
