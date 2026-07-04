@@ -198,6 +198,10 @@ def create_app(test_config=None):
     from routes.notebooklm_routes import notebooklm_bp
     app.register_blueprint(notebooklm_bp)
 
+    # Knowledge notes API
+    from routes.notes_routes import notes_bp
+    app.register_blueprint(notes_bp)
+
     # 제품 지원/피드백 챗봇 라우트
     from routes.support_routes import support_bp
     app.register_blueprint(support_bp)
