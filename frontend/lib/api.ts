@@ -57,6 +57,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/chat': 60_000,
   '/api/support/chat': 30_000,
   '/api/video-deepdives/extract': 660_000,
+  '/api/extract-pdf': 60_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -152,6 +153,21 @@ export async function generate(req: GenerateRequest): Promise<GenerateResponse> 
   return request('/generate', {
     method: 'POST',
     body: JSON.stringify(req),
+  });
+}
+
+export interface ExtractPdfResponse {
+  text: string;
+  truncated: boolean;
+  pages: number;
+}
+
+export async function extractPdf(file: File): Promise<ExtractPdfResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request('/api/extract-pdf', {
+    method: 'POST',
+    body: formData,
   });
 }
 

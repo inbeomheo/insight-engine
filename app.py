@@ -85,6 +85,19 @@ def create_app(test_config=None):
     _perf_logger = _logging.getLogger('api.perf')
 
     @app.before_request
+    def _set_extract_pdf_upload_limit():
+        if request.path != '/api/extract-pdf':
+            return None
+        limit = int(getattr(config_module, 'PDF_MAX_BYTES', 10 * 1024 * 1024)) + 1024 * 1024
+        try:
+            request.max_content_length = limit
+        except AttributeError:
+            app.logger.warning(
+                'Flask <3.1: per-request upload limit unavailable — /api/extract-pdf uploads stay capped at the global limit'
+            )
+        return None
+
+    @app.before_request
     def _start_timer():
         request._start_time = _time.perf_counter()
 
