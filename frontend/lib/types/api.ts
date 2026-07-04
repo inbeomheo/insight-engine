@@ -13,6 +13,8 @@ export interface GenerateRequest {
   content?: string;
   /** Research → Writer → Editor → SEO 멀티에이전트 파이프라인 사용 */
   agent_mode?: boolean;
+  /** 웹 검색 보강 사용 */
+  web_search?: boolean;
   /** 생성 깊이: brief | standard | deep */
   detail_level?: 'brief' | 'standard' | 'deep';
   /** 자막 추출 언어 지정 (YouTube 다국어 자막 대상). null/undefined=자동 */
@@ -82,24 +84,35 @@ export interface JobResponse {
 
 // === 스트리밍 이벤트 ===
 
-export type StreamEventType = 'meta' | 'token' | 'done' | 'error';
+export type StreamEventType = 'meta' | 'status' | 'delta' | 'result' | 'token' | 'done' | 'error';
 
 export interface StreamEvent {
   type: StreamEventType;
+  id?: string;
   data?: string;
+  delta?: string;
+  stage?: string;
   title?: string;
+  content?: string;
+  html?: string;
   youtube_title?: string;
+  transcript?: string;
   transcript_source?: string;
   usage?: TokenUsage;
   elapsed_time?: number;
   prompt?: string;
+  prompt_length?: number;
   cached?: boolean;
   comment_summary_included?: boolean;
   seo?: SeoMetadata;
   geo?: GeoMetadata;
   faq_schema?: FaqSchema;
   cta?: CtaData;
+  web_sources?: WebSource[];
+  transcript_segments?: Array<{ start: number; text: string }>;
+  chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   error?: string;
+  message?: string;
 }
 
 // === 마인드맵 ===

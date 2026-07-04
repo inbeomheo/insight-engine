@@ -281,12 +281,14 @@ def _validate_custom_prompt(custom_prompt):
 
 # ── 생성 헬퍼 (분리된 모듈에서 import) ──────────────────────────
 from routes.generation_helpers import (
-    _fetch_youtube_content, _build_combined_content,
+    _fetch_youtube_content,
     _handle_short_content_bypass, _handle_cache_hit,
     _call_ai_with_comments, _save_and_respond,
     _process_single_url,
     _get_style_prompt, _handle_direct_text, _handle_audio_upload,
     _handle_document_upload, _handle_web_source,
+    _get_style_label, _apply_output_format,
+    _generate_comment_summary, _combine_results,
 )
 
 
@@ -856,12 +858,13 @@ def generate_merged():
 def generate_stream():
     """SSE 스트리밍으로 콘텐츠를 생성합니다.
     @require_usage 데코레이터 사용 불가 (generator 응답) → 수동 사용량 관리.
-    GLM/auto 모델은 스트리밍 미지원 → 비스트리밍 /generate 사용 권장.
+    GLM 모델은 ai_service에서 non-streaming 폴백으로 처리합니다.
     """
     from services.usage.usage_service import UsageService
     import markdown as md_lib
 
     try:
+        start_time = time.time()
         params = _get_request_data(request)
         if params.get('transcript_language_error'):
             return api_error(params['transcript_language_error'], 400)
@@ -897,41 +900,63 @@ def generate_stream():
 
         max_tokens = get_model_max_tokens(params['model'])
         main_content = f"[영상 자막]\n{transcript_text}"
-        if comments:
-            main_content = _build_combined_content(transcript_text, comments)
         truncated_content = content_service.truncate_text(main_content, max_tokens)
 
         style_prompt = _get_style_prompt(params['style'], params['custom_prompt'])
         model = params['model']
+        web_search = bool((request.get_json(silent=True) or {}).get('web_search', False))
 
         app = current_app._get_current_object()
+
+        def _sse(payload):
+            data = json.dumps(payload, ensure_ascii=False)
+            return f"data: {data}\n\n"
 
         def generate_sse():
             with app.app_context():
                 try:
                     # meta 이벤트
-                    meta = json.dumps({
+                    yield _sse({
                         'type': 'meta',
                         'youtube_title': youtube_title,
                         'transcript_source': transcript_source
-                    }, ensure_ascii=False)
-                    yield f"data: {meta}\n\n"
+                    })
 
-                    # 토큰 스트리밍
+                    comment_future = None
+                    if comments and not str(model).startswith('zhipuai/'):
+                        # 비GLM 댓글 요약은 메인 스트림과 병렬 실행해 result 전 공백을 줄입니다.
+                        comment_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                        comment_future = comment_executor.submit(
+                            _generate_comment_summary, app, comments, model
+                        )
+                        comment_executor.shutdown(wait=False)
+
+                    # AI 본문 delta만 실시간 전송합니다.
                     full_content = ''
-                    for token in ai_service.create_content_stream(
+                    stream_meta = {}
+                    stream_iter = iter(ai_service.create_content_stream(
                         truncated_content, model, style_prompt,
                         modifiers=params['modifiers'], style_id=params['style'],
                         detail_level=params.get('detail_level'),
-                    ):
-                        if token is None:
+                        user_id=user_id,
+                        web_search=web_search,
+                    ))
+                    while True:
+                        try:
+                            token = next(stream_iter)
+                        except StopIteration as stop:
+                            if isinstance(stop.value, dict):
+                                stream_meta = stop.value
                             break
+                        if token is None:
+                            # 구버전 generator 호환
+                            break
+
                         full_content += token
-                        token_event = json.dumps({
-                            'type': 'token',
-                            'data': token
-                        }, ensure_ascii=False)
-                        yield f"data: {token_event}\n\n"
+                        yield _sse({
+                            'type': 'delta',
+                            'delta': token,
+                        })
 
                     # 완료: 제목/본문 분리 + HTML 변환
                     title = youtube_title
@@ -946,6 +971,48 @@ def generate_stream():
                     except Exception:
                         html = f"<pre>{html_lib.escape(body)}</pre>"
 
+                    usage = stream_meta.get('usage') or {
+                        'prompt_tokens': 0,
+                        'completion_tokens': 0,
+                        'total_tokens': 0,
+                    }
+                    prompt = stream_meta.get('prompt') or ''
+                    web_sources = stream_meta.get('web_sources')
+                    comment_result = None
+
+                    # GLM 폴백처럼 ai_service가 완성 result를 돌려준 경우 그 값을 우선 사용
+                    meta_result = stream_meta.get('result')
+                    if isinstance(meta_result, dict):
+                        title = meta_result.get('title') or title
+                        body = meta_result.get('content') or body
+                        html = meta_result.get('html') or html
+                        usage = meta_result.get('usage') or usage
+                        web_sources = meta_result.get('web_sources') or web_sources
+
+                    base_result = {
+                        'title': title,
+                        'content': body,
+                        'html': html,
+                        'usage': usage,
+                    }
+                    if comments:
+                        # 댓글 요약은 스트리밍하지 않고, 메인 본문 완료 후 기존 방식으로 병합
+                        yield _sse({'type': 'status', 'stage': 'comment_summary'})
+                        if comment_future is not None:
+                            try:
+                                comment_result = comment_future.result()
+                            except Exception as comment_err:
+                                current_app.logger.warning(f"댓글 요약 생성 실패 (무시): {comment_err}")
+                                comment_result = None
+                        else:
+                            # GLM은 전역 락 규칙에 맞춰 메인 생성 후 순차 실행
+                            comment_result = _generate_comment_summary(app, comments, model)
+                        base_result, prompt = _combine_results(base_result, prompt, comment_result)
+                        title = base_result.get('title') or title
+                        body = base_result.get('content') or body
+                        html = base_result.get('html') or html
+                        usage = base_result.get('usage') or usage
+
                     # 사용량 차감 (성공 시)
                     if is_supabase_enabled() and user_id:
                         UsageService.decrement(user_id)
@@ -959,24 +1026,54 @@ def generate_stream():
                     )
                     cta = ai_service.extract_cta(body) if style == 'geo_seo' else None
 
-                    done_event = json.dumps({
-                        'type': 'done',
-                        'title': title,
-                        'data': html,
+                    result = _apply_output_format(
+                        base_result,
+                        params.get('output_format', 'html'),
+                        params.get('max_chars'),
+                    )
+
+                    result_event = {
+                        'type': 'result',
+                        **result,
+                        'id': str(uuid.uuid4()),
+                        'data': result.get('html', ''),
+                        'prompt': prompt,
+                        'prompt_length': len(prompt) if prompt else 0,
+                        'elapsed_time': round(time.time() - start_time, 2),
                         'youtube_title': youtube_title,
+                        'transcript': raw_transcript,
                         'transcript_source': transcript_source,
+                        'style_label': _get_style_label(params['style']),
+                        'cached': False,
+                        'comment_summary_included': bool(comments and comment_result),
                         'seo': seo,
+                        'geo': ai_service.extract_geo_metadata(body) if style == 'geo_seo' else None,
                         'faq_schema': faq_schema,
                         'cta': cta,
-                    }, ensure_ascii=False)
-                    yield f"data: {done_event}\n\n"
+                        'json_ld_schemas': None,
+                        'quality_score': None,
+                        'web_sources': web_sources,
+                        'analysis': None,
+                        'transcript_segments': transcript_segments or [],
+                        'chapters': [],
+                        'total_duration_seconds': 0,
+                        'quota': get_usage_for_response(),
+                    }
+                    yield _sse(result_event)
 
                 except Exception as e:
-                    error_event = json.dumps({
+                    # 스트림 실패 시 미시작 댓글 요약은 취소해 불필요한 AI 호출 방지
+                    if comment_future is not None:
+                        comment_future.cancel()
+                    safe_message = safe_error_or_fallback(
+                        e,
+                        '생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+                    )
+                    yield _sse({
                         'type': 'error',
-                        'message': _sanitize_error_for_client(str(e))
-                    }, ensure_ascii=False)
-                    yield f"data: {error_event}\n\n"
+                        'error': safe_message,
+                        'message': safe_message,
+                    })
 
         return Response(
             stream_with_context(generate_sse()),

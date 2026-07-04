@@ -163,6 +163,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     }
     if stream:
         kwargs["stream"] = True
+        kwargs["stream_options"] = {"include_usage": True}
 
     detail = DETAIL_PRESETS.get(detail_level, DETAIL_PRESETS['standard'])
     base_temp = STYLE_TEMPERATURE.get(style_id, 0.7)
@@ -326,68 +327,10 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
     """
     try:
         # 독립적인 컨텍스트 빌드들을 병렬 실행 (150-600ms 절감)
-        import concurrent.futures
-        from config import RAG_ENABLED, RAG_TOP_K, WEB_SEARCH_ENABLED
-
-        rag_context = None
-        web_context = None
-        web_sources = []
-        style_memory_context = None
-        memory_context = None
-
-        def _build_rag():
-            if not (RAG_ENABLED and user_id):
-                return None
-            from services.rag import context_builder
-            return context_builder.build_context(user_id, content[:500], top_k=RAG_TOP_K)
-
-        def _build_web():
-            if not (web_search or WEB_SEARCH_ENABLED):
-                return None, []
-            from services.data.web_search_service import extract_grounding_context
-            grounding = extract_grounding_context(content[:300])
-            if grounding['enabled']:
-                return grounding['context_text'], grounding['results']
-            return None, []
-
-        def _build_style_memory():
-            if not user_id:
-                return None
-            from services.data.style_memory_service import get_profile, build_style_context
-            profile = get_profile(user_id)
-            return build_style_context(profile) or None
-
-        def _build_ai_memory():
-            if not user_id:
-                return None
-            from services.data.memory_service import memory_service as _mem_svc
-            return _mem_svc.build_prompt_context(user_id) or None
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ctx_executor:
-            rag_f = ctx_executor.submit(_build_rag)
-            web_f = ctx_executor.submit(_build_web)
-            sm_f = ctx_executor.submit(_build_style_memory)
-            mem_f = ctx_executor.submit(_build_ai_memory)
-
-            try:
-                rag_context = rag_f.result()
-            except Exception as rag_err:
-                current_app.logger.warning(f"RAG 컨텍스트 빌드 실패 (무시): {rag_err}")
-            try:
-                web_result = web_f.result()
-                web_context, web_sources = web_result
-                if web_sources:
-                    current_app.logger.info(f"웹 검색 보강: {len(web_sources)}개 결과 주입")
-            except Exception as ws_err:
-                current_app.logger.warning(f"웹 검색 보강 실패 (무시): {ws_err}")
-            try:
-                style_memory_context = sm_f.result()
-            except Exception as sm_err:
-                current_app.logger.warning(f"스타일 메모리 컨텍스트 빌드 실패 (무시): {sm_err}")
-            try:
-                memory_context = mem_f.result()
-            except Exception as mem_err:
-                current_app.logger.warning(f"메모리 컨텍스트 빌드 실패 (무시): {mem_err}")
+        from services.core.ai_prompt_context import build_optional_prompt_contexts
+        rag_context, web_context, web_sources, style_memory_context, memory_context = (
+            build_optional_prompt_contexts(content, user_id=user_id, web_search=web_search)
+        )
 
         prompt = _build_prompt(content, style_prompt, modifiers, rag_context=rag_context,
                                segments=segments, web_context=web_context,
@@ -444,39 +387,18 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
 
 def create_content_stream(content: str, model: str, style_prompt: Optional[str] = None,
                           modifiers: Optional[Dict[str, Any]] = None, style_id: Optional[str] = None,
-                          detail_level: Optional[str] = None) -> Generator[Optional[str], None, None]:
-    """
-    LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
-    각 토큰을 yield하고, 마지막에 None을 yield합니다.
-    GLM 모델은 스트리밍 미지원 → 일반 호출 후 전체 텍스트 한 번에 yield.
+                          detail_level: Optional[str] = None,
+                          user_id: Optional[str] = None,
+                          segments: Optional[List[Dict[str, Any]]] = None,
+                          web_search: bool = False) -> Generator[str, None, Dict[str, Any]]:
+    """LiteLLM 스트리밍 콘텐츠 생성 래퍼. 실제 구현은 ai_streaming 모듈에 위임합니다."""
+    from services.core.ai_streaming import create_content_stream as _create_content_stream
 
-    Yields:
-        str: 토큰 텍스트 또는 None(종료)
-    """
-    # GLM 모델: 스트리밍 미지원, 일반 호출 후 전체 yield (프롬프트는 create_content가 빌드)
-    if model.startswith("zhipuai/"):
-        result = create_content(content, model, style_prompt, modifiers=modifiers, style_id=style_id, detail_level=detail_level)
-        full_text = f"# {result.get('title', '')}\n\n{result.get('content', '')}"
-        yield full_text
-        yield None
-        return
-
-    try:
-        prompt = _build_prompt(content, style_prompt, modifiers, detail_level=detail_level)
-        completion_kwargs = _build_completion_kwargs(model, prompt, style_id, modifiers, stream=True, detail_level=detail_level)
-        response = _get_completion()(**completion_kwargs)
-
-        for chunk in response:
-            delta = chunk.choices[0].delta if chunk.choices else None
-            if delta and delta.content:
-                yield delta.content
-
-        yield None  # 스트림 종료 신호
-
-    except Exception as e:
-        current_app.logger.error(f"Streaming failed: model={model}, error={e}")
-        raise Exception(_convert_error_message(str(e), model)) from e
-
+    return _create_content_stream(
+        content, model, style_prompt,
+        modifiers=modifiers, style_id=style_id, detail_level=detail_level,
+        user_id=user_id, segments=segments, web_search=web_search,
+    )
 
 def create_chat_response(
     messages: List[Dict[str, str]],
