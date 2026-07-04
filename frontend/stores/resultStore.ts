@@ -10,9 +10,17 @@ const warnStorageFull = () => toast.warning(STORAGE_FULL_WARNING);
 // 저장은 비동기로 예약되므로 결과를 동기 반환할 수 없다. 실패(QuotaExceededError 등으로
 // saveReports가 false 반환)는 onError 콜백으로 비동기 전파한다.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+function cancelPendingSave(): void {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+}
+
 function debouncedSave(reports: Report[], onError?: () => void): void {
-  if (saveTimer) clearTimeout(saveTimer);
+  cancelPendingSave();
   saveTimer = setTimeout(() => {
+    saveTimer = null;
     // idle 시점에 JSON.stringify 수행 (메인 스레드 블로킹 방지)
     const run = () => {
       if (!saveReports(reports)) onError?.();
@@ -88,11 +96,13 @@ export const useResultStore = create<ResultState>((set, get) => ({
 
   removeReport: (id) => {
     const next = get().reports.filter((r) => r.id !== id);
+    cancelPendingSave();
     saveReports(next); // 삭제는 즉시 저장
     set({ reports: next });
   },
 
   clearReports: () => {
+    cancelPendingSave();
     saveReports([]); // 전체 삭제도 즉시 저장
     set({ reports: [] });
   },

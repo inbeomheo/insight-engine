@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { generate, generateStream, generateBatch, generateMerged, generateFusion } from '@/lib/api';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -15,6 +15,173 @@ interface GenerateState {
   error: string | null;
 }
 
+const LOADING_TITLE = '생성 중...';
+const FAILED_TITLE = '생성 실패';
+const NO_RESULT_MESSAGE = '생성 결과를 받지 못했습니다.';
+const UNKNOWN_ERROR_MESSAGE = '알 수 없는 오류';
+
+type GenerateStreamRequest = Parameters<typeof generateStream>[0];
+type GenerateResponseForReport = Parameters<typeof responseToReport>[0];
+
+interface StreamRunnerOptions {
+  req: GenerateStreamRequest;
+  url: string;
+  style: string;
+  addReport: (report: Report) => void;
+  updateReport: (id: string, partial: Partial<Report>) => void;
+  removeReport: (id: string) => void;
+  setState: Dispatch<SetStateAction<GenerateState>>;
+  abortRef: { current: AbortController | null };
+  buildMetaPatch: (event: StreamEvent) => Partial<Report>;
+  buildResultReport: (event: StreamEvent, tempId: string, content: string) => Report;
+}
+
+async function runGenerateStream({
+  req,
+  url,
+  style,
+  addReport,
+  updateReport,
+  removeReport,
+  setState,
+  abortRef,
+  buildMetaPatch,
+  buildResultReport,
+}: StreamRunnerOptions): Promise<boolean> {
+  const tempId = crypto.randomUUID();
+  addReport(createReport({
+    id: tempId,
+    url,
+    title: LOADING_TITLE,
+    content: '',
+    html: '',
+    style,
+  }));
+
+  let content = '';
+  let succeeded = false;
+  let finished = false;
+  let rafId: number | null = null;
+  const controller = new AbortController();
+  abortRef.current = controller;
+
+  const finish = (errorMessage?: string) => {
+    if (finished) return;
+    finished = true;
+    setState((s) => {
+      const c = Math.max(0, s.activeCount - 1);
+      return { ...s, activeCount: c, isLoading: c > 0, error: errorMessage || null };
+    });
+  };
+
+  const clearScheduledContentUpdate = () => {
+    if (rafId !== null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(rafId);
+    }
+    rafId = null;
+  };
+
+  const scheduleContentUpdate = () => {
+    if (rafId !== null) return;
+    if (typeof requestAnimationFrame === 'undefined') {
+      updateReport(tempId, { content });
+      return;
+    }
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      updateReport(tempId, { content });
+    });
+  };
+
+  const hasMeaningfulContent = () => content.trim().length > 0;
+
+  const fail = (message: string): false => {
+    if (finished) return false;
+    clearScheduledContentUpdate();
+    if (hasMeaningfulContent()) {
+      updateReport(tempId, { title: FAILED_TITLE, content });
+    } else {
+      removeReport(tempId);
+    }
+    finish(message);
+    return false;
+  };
+
+  const cancel = (): boolean => {
+    if (finished) return succeeded;
+    clearScheduledContentUpdate();
+    if (hasMeaningfulContent()) {
+      updateReport(tempId, { content });
+    } else {
+      removeReport(tempId);
+    }
+    finish();
+    return succeeded;
+  };
+
+  const succeed = (): true => {
+    if (finished) return true;
+    succeeded = true;
+    finish();
+    return true;
+  };
+
+  try {
+    await generateStream(
+      req,
+      (event: StreamEvent) => {
+        if (finished) return;
+
+        if (event.type === 'meta') {
+          updateReport(tempId, buildMetaPatch(event));
+        } else if (event.type === 'delta' || event.type === 'token') {
+          content += event.delta || event.data || '';
+          scheduleContentUpdate();
+        } else if (event.type === 'result') {
+          content = event.content || content;
+          clearScheduledContentUpdate();
+          updateReport(tempId, buildResultReport(event, tempId, content));
+          succeed();
+        } else if (event.type === 'done') {
+          content = event.content || content;
+          clearScheduledContentUpdate();
+          updateReport(tempId, {
+            title: event.title || '생성 완료',
+            content,
+            html: event.html || event.data || '',
+            usage: event.usage || { total_tokens: 0 },
+            elapsed_time: event.elapsed_time || 0,
+            prompt: event.prompt || '',
+            cached: event.cached || false,
+            comment_summary_included: event.comment_summary_included || false,
+            seo: event.seo,
+            faq_schema: event.faq_schema,
+            cta: event.cta,
+          });
+          succeed();
+        } else if (event.type === 'error') {
+          fail(event.error || event.message || FAILED_TITLE);
+        }
+      },
+      controller.signal,
+    );
+
+    if (!finished) {
+      if (controller.signal.aborted) return cancel();
+      return fail(NO_RESULT_MESSAGE);
+    }
+    return succeeded;
+  } catch (err) {
+    if (finished) return succeeded;
+    if (controller.signal.aborted) return cancel();
+    const message = err instanceof Error ? err.message : UNKNOWN_ERROR_MESSAGE;
+    return fail(message);
+  } finally {
+    clearScheduledContentUpdate();
+    if (abortRef.current === controller) abortRef.current = null;
+  }
+}
+
 export function useGenerate() {
   const [state, setState] = useState<GenerateState>({
     activeCount: 0,
@@ -22,7 +189,6 @@ export function useGenerate() {
     error: null,
   });
   const abortRef = useRef<AbortController | null>(null);
-  const rafRef = useRef(false);
   // 셀렉터 구독 — 스토어의 무관한 변경(테마, 사이드바 등)에 의한 리렌더 방지
   const { selectedModel, selectedStyle, modifiers, enableWebSearch, enableAgentMode, detailLevel, transcriptLanguage } = useSettingsStore(
     useShallow((s) => ({
@@ -37,6 +203,7 @@ export function useGenerate() {
   );
   const addReport = useResultStore((s) => s.addReport);
   const updateReport = useResultStore((s) => s.updateReport);
+  const removeReport = useResultStore((s) => s.removeReport);
 
   const generateSingle = useCallback(
     async (url: string, useStreaming = false) => {
@@ -55,69 +222,27 @@ export function useGenerate() {
 
       try {
         if (streaming) {
-          // 스트리밍 모드
-          const tempId = crypto.randomUUID();
-          const tempReport: Report = createReport({
-            id: tempId, url, title: '생성 중...', content: '', html: '', style: selectedStyle,
-          });
-          addReport(tempReport);
-
-          let content = '';
-          const controller = new AbortController();
-          abortRef.current = controller;
-
-          await generateStream(
+          await runGenerateStream({
             req,
-            (event: StreamEvent) => {
-              if (event.type === 'meta') {
-                updateReport(tempId, {
-                  title: event.title || '생성 중...',
-                  youtube_title: event.youtube_title || '',
-                  transcript_source: event.transcript_source || '',
-                });
-              } else if (event.type === 'delta' || event.type === 'token') {
-                content += event.delta || event.data || '';
-                // rAF throttle: 프레임당 1회만 store 업데이트 (메인 스레드 블로킹 방지)
-                if (!rafRef.current) {
-                  rafRef.current = true;
-                  requestAnimationFrame(() => {
-                    updateReport(tempId, { content });
-                    rafRef.current = false;
-                  });
-                }
-              } else if (event.type === 'result') {
-                // 최종 파싱 결과로 교체해 비스트리밍 경로와 동일한 Report 형태를 유지
-                content = event.content || content;
-                rafRef.current = false;
-                const finalReport = responseToReport(event as unknown as Parameters<typeof responseToReport>[0], url, selectedStyle, {
-                  id: tempId,
-                });
-                updateReport(tempId, finalReport);
-                setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
-              } else if (event.type === 'done') {
-                // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
-                rafRef.current = false;
-                updateReport(tempId, {
-                  title: event.title || '생성 완료',
-                  content,
-                  html: event.data || '',
-                  usage: event.usage || { total_tokens: 0 },
-                  elapsed_time: event.elapsed_time || 0,
-                  prompt: event.prompt || '',
-                  cached: event.cached || false,
-                  comment_summary_included: event.comment_summary_included || false,
-                  seo: event.seo,
-                  faq_schema: event.faq_schema,
-                  cta: event.cta,
-                });
-                setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
-              } else if (event.type === 'error') {
-                rafRef.current = false;
-                setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: event.error || event.message || '생성 실패' }; });
-              }
-            },
-            controller.signal
-          );
+            url,
+            style: selectedStyle,
+            addReport,
+            updateReport,
+            removeReport,
+            setState,
+            abortRef,
+            buildMetaPatch: (event) => ({
+              title: event.youtube_title || event.title || LOADING_TITLE,
+              youtube_title: event.youtube_title || '',
+              transcript_source: event.transcript_source || '',
+            }),
+            buildResultReport: (event, tempId, content) => responseToReport(
+              { ...event, content: event.content || content } as GenerateResponseForReport,
+              url,
+              selectedStyle,
+              { id: tempId },
+            ),
+          });
         } else {
           // 비스트리밍 모드
           const res = await generate(req);
@@ -130,7 +255,7 @@ export function useGenerate() {
         setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, transcriptLanguage, addReport, updateReport]
+    [selectedModel, selectedStyle, modifiers, detailLevel, enableWebSearch, enableAgentMode, transcriptLanguage, addReport, updateReport, removeReport]
   );
 
   const generateBatchUrls = useCallback(
@@ -285,68 +410,26 @@ export function useGenerate() {
 
       try {
         if (streaming) {
-          const tempId = crypto.randomUUID();
-          const tempReport: Report = createReport({
-            id: tempId,
-            url: '',
-            title: '생성 중...',
-            content: '',
-            html: '',
-            style: selectedStyle,
-          });
-          addReport(tempReport);
-
-          let content = '';
-          let succeeded = false;
-          let finished = false;
-          const controller = new AbortController();
-          abortRef.current = controller;
-
-          const finish = (errorMessage?: string) => {
-            if (finished) return;
-            finished = true;
-            setState((s) => {
-              const c = Math.max(0, s.activeCount - 1);
-              return { ...s, activeCount: c, isLoading: c > 0, error: errorMessage || null };
-            });
-          };
-
-          await generateStream(
+          return await runGenerateStream({
             req,
-            (event: StreamEvent) => {
-              if (event.type === 'meta') {
-                updateReport(tempId, {
-                  title: event.source_title || event.title || '생성 중...',
-                  transcript_source: event.transcript_source || '',
-                });
-              } else if (event.type === 'delta' || event.type === 'token') {
-                content += event.delta || event.data || '';
-                if (!rafRef.current) {
-                  rafRef.current = true;
-                  requestAnimationFrame(() => {
-                    updateReport(tempId, { content });
-                    rafRef.current = false;
-                  });
-                }
-              } else if (event.type === 'result') {
-                content = event.content || content;
-                rafRef.current = false;
-                const finalReport = responseToReport(event as unknown as Parameters<typeof responseToReport>[0], '', selectedStyle, {
-                  id: tempId,
-                });
-                updateReport(tempId, finalReport);
-                succeeded = true;
-                finish();
-              } else if (event.type === 'error') {
-                rafRef.current = false;
-                finish(event.error || event.message || '생성 실패');
-              }
-            },
-            controller.signal,
-          );
-
-          if (!finished) finish(succeeded ? undefined : '생성 결과를 받지 못했습니다.');
-          return succeeded;
+            url: '',
+            style: selectedStyle,
+            addReport,
+            updateReport,
+            removeReport,
+            setState,
+            abortRef,
+            buildMetaPatch: (event) => ({
+              title: event.source_title || event.title || LOADING_TITLE,
+              transcript_source: event.transcript_source || '',
+            }),
+            buildResultReport: (event, tempId, content) => responseToReport(
+              { ...event, content: event.content || content } as GenerateResponseForReport,
+              '',
+              selectedStyle,
+              { id: tempId },
+            ),
+          });
         }
 
         const res = await generate(req);
@@ -360,7 +443,7 @@ export function useGenerate() {
         return false;
       }
     },
-    [selectedModel, selectedStyle, modifiers, detailLevel, addReport, updateReport],
+    [selectedModel, selectedStyle, modifiers, detailLevel, addReport, updateReport, removeReport],
   );
 
   const abort = useCallback(() => {
