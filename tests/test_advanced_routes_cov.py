@@ -1,6 +1,6 @@
 """advanced_routes.py 라우트 커버리지 테스트.
 
-마인드맵, 멀티스타일, 퓨전, 리라이트, QA, 파이프라인,
+마인드맵, 멀티스타일, 퓨전, QA, 파이프라인,
 썸네일, 인라인 편집, 에이전트 커버.
 """
 import unittest
@@ -253,49 +253,6 @@ class TestGenerateFusion(_Base):
                                 },
                                 headers=_H)
         self.assertIn(resp.status_code, [429, 500])
-
-
-# ── 리라이트 ──────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestRewrite(_Base):
-
-    def test_rewrite_no_content(self, _):
-        resp = self.client.post('/api/rewrite',
-                                json={'platform': 'twitter'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    def test_rewrite_no_platform(self, _):
-        resp = self.client.post('/api/rewrite',
-                                json={'content': 'hello'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.content.rewrite_service.rewrite_for_platform',
-           return_value={'content': 'rewritten', 'platform': 'twitter'})
-    def test_rewrite_success(self, _rw, _):
-        resp = self.client.post('/api/rewrite',
-                                json={'content': 'hello world test', 'platform': 'twitter'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.content.rewrite_service.rewrite_for_platform',
-           return_value={'error': 'unsupported platform'})
-    def test_rewrite_error_result(self, _rw, _):
-        resp = self.client.post('/api/rewrite',
-                                json={'content': 'hello world test', 'platform': 'bad'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.content.rewrite_service.rewrite_for_platform',
-           side_effect=Exception('boom'))
-    def test_rewrite_exception(self, _rw, _):
-        resp = self.client.post('/api/rewrite',
-                                json={'content': 'hello world test', 'platform': 'twitter'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 500])
 
 
 # ── QA 체크 ──────────────────────────────────────────

@@ -21,7 +21,6 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
-  RewriteResponse,
   QaCheckResponse,
   ProviderValidateResponse,
   FactCheckResponse,
@@ -751,19 +750,6 @@ export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractE
   return request('/api/extract-events', {
     method: 'POST',
     body: JSON.stringify(req),
-  });
-}
-
-// === 플랫폼 리라이트 ===
-
-export async function rewriteForPlatform(
-  content: string,
-  platform: string,
-  model?: string,
-): Promise<RewriteResponse> {
-  return request('/api/rewrite', {
-    method: 'POST',
-    body: JSON.stringify({ content, platform, model }),
   });
 }
 

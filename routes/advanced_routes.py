@@ -566,7 +566,6 @@ def progressive_summary():
 # 분리된 라우트 패키지 — 부수효과 import로 자동 등록
 # - routes/advanced/mindmap.py
 # - routes/advanced/fusion.py
-# - routes/advanced/rewrite.py
 # - routes/advanced/qa.py
 # ============================================================
 from routes import advanced as _advanced_subroutes  # noqa: E402,F401

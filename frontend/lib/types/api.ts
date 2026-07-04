@@ -238,15 +238,6 @@ export interface SentimentFlowResponse {
   dominant_emotion: string;
 }
 
-// === 플랫폼 리라이트 ===
-
-export interface RewriteResponse {
-  platform: string;
-  text: string;
-  char_count: number;
-  max_chars: number;
-}
-
 // === QA 게이트 ===
 
 export interface QaIssue {

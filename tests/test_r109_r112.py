@@ -1,7 +1,6 @@
 """R109~R111 autoresearch 테스트
 
 R109: /api/mindmap 응답에 usage 필드 포함
-R110: /api/rewrite 응답에 elapsed_time 포함
 R111: analytics_routes에서 int() → clamp_query_int 안전 변환
 """
 import json
@@ -37,32 +36,6 @@ class TestR109MindmapUsage(unittest.TestCase):
         self.assertIn('usage', data)
         self.assertEqual(data['usage']['total_tokens'], 150)
         self.assertIn('elapsed_time', data)
-
-
-class TestR110RewriteElapsedTime(unittest.TestCase):
-    """R110: /api/rewrite 응답에 elapsed_time이 포함되는지 검증"""
-
-    def setUp(self):
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.content.rewrite_service.rewrite_for_platform')
-    def test_rewrite_includes_elapsed_time(self, mock_rewrite, mock_sb):
-        mock_rewrite.return_value = {
-            'content': 'Rewritten for Twitter',
-            'platform': 'twitter',
-            'char_count': 42,
-        }
-        resp = self.client.post('/api/rewrite',
-                                json={'content': 'Original content', 'platform': 'twitter',
-                                      'model': 'gemini/gemini-2.5-flash'},
-                                headers={'X-User-Id': 'test-user'})
-        data = resp.get_json()
-        self.assertIn('elapsed_time', data)
-        self.assertIsInstance(data['elapsed_time'], float)
-        self.assertGreaterEqual(data['elapsed_time'], 0)
 
 
 class TestR111ClampQueryInt(unittest.TestCase):

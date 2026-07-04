@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, Zap, FileText, Search, RefreshCw, ShieldCheck, Send } from 'lucide-react';
+import { Trash2, Zap, FileText, Search, ShieldCheck, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import type { PipelineStepDef } from './PipelineBuilder';
@@ -9,7 +9,6 @@ const STEP_ICONS: Record<string, typeof Zap> = {
   transcript: FileText,
   generate: Zap,
   seo: Search,
-  rewrite: RefreshCw,
   qa: ShieldCheck,
   publish: Send,
 };
@@ -64,21 +63,6 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
         </div>
       )}
 
-      {step.type === 'rewrite' && (
-        <div className="mt-2 pt-2 border-t border-border/30">
-          <label className="text-[11px] text-muted-foreground/60">플랫폼</label>
-          <select
-            value={step.config.platform || 'twitter'}
-            onChange={(e) => onConfigChange({ platform: e.target.value })}
-            className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white dark:bg-zinc-800"
-          >
-            <option value="twitter">Twitter</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="instagram">Instagram</option>
-            <option value="threads">Threads</option>
-          </select>
-        </div>
-      )}
     </div>
   );
 }
