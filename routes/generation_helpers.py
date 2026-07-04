@@ -631,23 +631,18 @@ def _run_chapter_split(app, raw_transcript, model, transcript_segments):
         return split_chapters(raw_transcript, model, transcript_segments)
 
 
-def _save_and_respond(result, used_prompt, comment_result, cache_key,
-                       video_id, params, url, youtube_title,
-                       raw_transcript, transcript_source, comments, start_time,
-                       quality_score=None, agent_meta=None,
-                       transcript_segments=None, chapter_future=None):
-    """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
+def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
+                               result, used_prompt, comment_result,
+                               raw_transcript, transcript_source, comments,
+                               elapsed_time, report_id, user_id=None,
+                               background=True):
+    """AI 결과 캐시 저장 + 히스토리 저장을 /generate와 /generate-stream에서 공유."""
     import threading
 
     model = params['model']
     modifiers = params['modifiers'] or {}
-
-    elapsed_time = round(time.time() - start_time, 2)
-    report_id = str(uuid.uuid4())
-
-    # 캐시 저장 + 히스토리 저장을 백그라운드로 이동 (100-500ms 응답 단축)
     _cache = current_app.ai_cache
-    _user_id = g.user_id
+    _user_id = user_id if user_id is not None else getattr(g, 'user_id', None)
     _cache_data = {
         'title': result.get('title', ''),
         'content': result.get('content', ''),
@@ -680,7 +675,32 @@ def _save_and_respond(result, used_prompt, comment_result, cache_key,
         if _user_id:
             save_history(_user_id, _history_data)
 
-    threading.Thread(target=_background_save, daemon=True).start()
+    if background:
+        threading.Thread(target=_background_save, daemon=True).start()
+    else:
+        _background_save()
+
+
+def _save_and_respond(result, used_prompt, comment_result, cache_key,
+                       video_id, params, url, youtube_title,
+                       raw_transcript, transcript_source, comments, start_time,
+                       quality_score=None, agent_meta=None,
+                       transcript_segments=None, chapter_future=None):
+    """캐시 저장 + 히스토리 저장 + JSON 응답 반환."""
+    import threading
+
+    model = params['model']
+
+    elapsed_time = round(time.time() - start_time, 2)
+    report_id = str(uuid.uuid4())
+
+    # 스트리밍 경로와 동일한 캐시/히스토리 저장 헬퍼 사용
+    _persist_generation_result(
+        cache_key, video_id, params, url, youtube_title,
+        result, used_prompt, comment_result,
+        raw_transcript, transcript_source, comments,
+        elapsed_time, report_id,
+    )
 
     # SEO 메타데이터 추출 (blog_seo 스타일만)
     seo = None
