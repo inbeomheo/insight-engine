@@ -176,5 +176,38 @@ class TestCreateContent(unittest.TestCase):
         self.assertIn("테스트", prompt)
 
 
+class TestStreamingUsage(unittest.TestCase):
+    """스트리밍 final chunk usage 추출 테스트"""
+
+    def test_stream_kwargs_include_usage_option(self):
+        from services.core.ai_service import _build_completion_kwargs
+
+        kwargs = _build_completion_kwargs(
+            'gpt-4o-mini',
+            '프롬프트',
+            stream=True,
+        )
+
+        self.assertTrue(kwargs['stream'])
+        self.assertEqual(kwargs['stream_options'], {'include_usage': True})
+
+    def test_extract_stream_usage_from_include_usage_chunk(self):
+        from services.core.ai_streaming import _extract_stream_usage
+
+        chunk = {
+            'choices': [],
+            'usage': {
+                'prompt_tokens': 12,
+                'completion_tokens': 8,
+                'total_tokens': 20,
+            },
+        }
+
+        self.assertEqual(
+            _extract_stream_usage(chunk),
+            {'prompt_tokens': 12, 'completion_tokens': 8, 'total_tokens': 20},
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

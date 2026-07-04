@@ -75,8 +75,8 @@ export function useGenerate() {
                   youtube_title: event.youtube_title || '',
                   transcript_source: event.transcript_source || '',
                 });
-              } else if (event.type === 'token') {
-                content += event.data || '';
+              } else if (event.type === 'delta' || event.type === 'token') {
+                content += event.delta || event.data || '';
                 // rAF throttle: 프레임당 1회만 store 업데이트 (메인 스레드 블로킹 방지)
                 if (!rafRef.current) {
                   rafRef.current = true;
@@ -85,6 +85,15 @@ export function useGenerate() {
                     rafRef.current = false;
                   });
                 }
+              } else if (event.type === 'result') {
+                // 최종 파싱 결과로 교체해 비스트리밍 경로와 동일한 Report 형태를 유지
+                content = event.content || content;
+                rafRef.current = false;
+                const finalReport = responseToReport(event as unknown as Parameters<typeof responseToReport>[0], url, selectedStyle, {
+                  id: tempId,
+                });
+                updateReport(tempId, finalReport);
+                setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
               } else if (event.type === 'done') {
                 // rAF 대기 중인 업데이트 취소 — done에서 최종 content 반영
                 rafRef.current = false;
@@ -104,7 +113,7 @@ export function useGenerate() {
                 setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
               } else if (event.type === 'error') {
                 rafRef.current = false;
-                setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: event.error || '생성 실패' }; });
+                setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: event.error || event.message || '생성 실패' }; });
               }
             },
             controller.signal
