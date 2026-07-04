@@ -64,9 +64,18 @@ class AICacheService:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_ai_cache_accessed ON ai_cache(accessed_at)")
 
     @staticmethod
-    def make_key(video_id: str, style_id: str, model: str, length: str = 'medium', writing_style: str = 'conversational') -> str:
-        """캐시 키 생성 (SHA256)"""
+    def make_key(
+        video_id: str,
+        style_id: str,
+        model: str,
+        length: str = 'medium',
+        writing_style: str = 'conversational',
+        transcript_language: Optional[str] = None,
+    ) -> str:
+        """캐시 키 생성 (SHA256). transcript_language 지정 시 키에 언어 차원 추가."""
         raw = f"{video_id}|{style_id}|{model}|{length}|{writing_style}"
+        if transcript_language:
+            raw = f"{raw}|lang={transcript_language}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:

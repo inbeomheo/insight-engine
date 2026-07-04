@@ -368,9 +368,13 @@ def generate():
         cache_key = AICacheService.make_key(
             video_id, params['style'], params['model'],
             modifiers.get('length', 'medium'),
-            modifiers.get('writing_style', 'conversational')
+            modifiers.get('writing_style', 'conversational'),
+            transcript_language=params.get('transcript_language'),
         )
-        cache_resp = _handle_cache_hit(cache_key, force, video_id, url, start_time)
+        cache_resp = _handle_cache_hit(
+            cache_key, force, video_id, url, start_time,
+            transcript_language=params.get('transcript_language'),
+        )
         if cache_resp:
             return cache_resp
 
@@ -703,6 +707,9 @@ def generate_merged():
     try:
         start_time = time.time()
         params = _get_request_data(request)
+        if params.get('transcript_language_error'):
+            return api_error(params['transcript_language_error'], 400)
+
         urls = params['urls']
 
         if len(urls) < 2:
@@ -717,6 +724,7 @@ def generate_merged():
 
         # 병렬로 자막+댓글 추출
         app = current_app._get_current_object()
+        transcript_language = params.get('transcript_language')
         video_data = []  # (url, video_id, title, transcript, comments, source)
 
         def _fetch_one(url):
@@ -726,7 +734,9 @@ def generate_merged():
                     if not vid:
                         return {'url': url, 'error': '유효하지 않은 YouTube URL'}
                     title = content_service.get_content_title(url) or 'YouTube 영상'
-                    transcript_text, comments, error, _, source, _ = _fetch_youtube_content(vid)
+                    transcript_text, comments, error, _, source, _ = _fetch_youtube_content(
+                        vid, transcript_language
+                    )
                     if error:
                         return {'url': url, 'error': error, 'title': title}
                     return {
@@ -853,6 +863,9 @@ def generate_stream():
 
     try:
         params = _get_request_data(request)
+        if params.get('transcript_language_error'):
+            return api_error(params['transcript_language_error'], 400)
+
         url = params['url']
 
         if not url:
