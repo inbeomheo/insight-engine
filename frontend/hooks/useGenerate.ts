@@ -266,10 +266,10 @@ export function useGenerate() {
   );
 
   const generateFromText = useCallback(
-    async (text: string) => {
+    async (text: string): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
-        return;
+        return false;
       }
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
@@ -285,9 +285,11 @@ export function useGenerate() {
         const report = responseToReport(res, '', selectedStyle);
         addReport(report);
         setState((s) => { const c = s.activeCount - 1; return { ...s, activeCount: c, isLoading: c > 0, error: null }; });
+        return true;
       } catch (err) {
         const message = err instanceof Error ? err.message : '알 수 없는 오류';
         setState((s) => { const c = Math.max(0, s.activeCount - 1); return { ...s, activeCount: c, isLoading: c > 0, error: message }; });
+        return false;
       }
     },
     [selectedModel, selectedStyle, modifiers, addReport],

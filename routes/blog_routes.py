@@ -318,7 +318,10 @@ def generate():
         direct_content = params.get('content')
 
         # ── 직접 텍스트 입력 모드 ──
-        if not url and direct_content and len(direct_content.strip()) >= 50:
+        if not url and direct_content is not None:
+            from config import DIRECT_TEXT_MIN_CHARS
+            if len(direct_content.strip()) < DIRECT_TEXT_MIN_CHARS:
+                return api_error(f'텍스트를 {DIRECT_TEXT_MIN_CHARS}자 이상 입력해주세요.', 400)
             return _handle_direct_text(params, start_time)
 
         # ── 파일 업로드 모드 (오디오 / 문서) ──
