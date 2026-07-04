@@ -242,6 +242,8 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 **소스 인용 모드**: `enable_citations=true` → 모든 주장에 [MM:SS] 타임스탬프 인용 + YouTube 링크 변환
 
+**텍스트 붙여넣기 학습**: URL 없이 `content` 필드로 텍스트 직접 입력 → 동일 생성 파이프라인 (`config.DIRECT_TEXT_MAX_CHARS` 상한, `source_type: 'text'`)
+
 ### 새 스타일 추가 방법
 1. `prompts/styles/` 디렉토리에 새 파일 생성 (예: `new_style.py`)
 2. `prompts/styles/__init__.py`에서 import 및 `STYLE_PROMPTS`에 추가

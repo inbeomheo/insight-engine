@@ -86,6 +86,11 @@ TTS_BACKEND: str = os.getenv('TTS_BACKEND', 'auto')   # 'openai', 'edge', 'auto'
 TTS_DEFAULT_VOICE: str = os.getenv('TTS_DEFAULT_VOICE', 'alloy')
 TTS_MAX_CHARS: int = 5000
 
+# === 직접 텍스트 입력 (붙여넣기 학습 소스) ===
+
+DIRECT_TEXT_MIN_CHARS: int = int(os.getenv('DIRECT_TEXT_MIN_CHARS', '50'))
+DIRECT_TEXT_MAX_CHARS: int = int(os.getenv('DIRECT_TEXT_MAX_CHARS', '200000'))
+
 # === 이미지 생성 ===
 
 IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')

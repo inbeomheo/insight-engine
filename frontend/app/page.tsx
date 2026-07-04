@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
+import TextInput from '@/components/input/TextInput';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 const ResultCard = dynamic(() => import('@/components/result/ResultCard'), { ssr: false });
@@ -70,7 +71,9 @@ export default function Home() {
   const enableAgentMode = useSettingsStore((s) => s.enableAgentMode);
   const setEnableAgentMode = useSettingsStore((s) => s.setEnableAgentMode);
   const { urls, addUrl, addUrls, removeUrl } = useUrls();
-  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls } = useGenerate();
+  const { isLoading, error, generateBatchUrls, generateMergedUrls, generateFusionUrls, generateFromText } = useGenerate();
+  const [inputTab, setInputTab] = useState<'url' | 'text'>('url');
+  const [pastedText, setPastedText] = useState('');
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(PUBLISHING_ENABLED && activeView === 'calendar');
 
   // MCP 발행 플러그인 — 발행 기능이 켜진 환경에서만 로드
@@ -225,6 +228,12 @@ export default function Home() {
     if (ok) startTransition(() => submitted.forEach(removeUrl));
   }, [urls, generateBatchUrls, removeUrl]);
 
+  // 직접 텍스트 입력 → 생성
+  const handleGenerateFromText = useCallback(async (text: string) => {
+    const ok = await generateFromText(text);
+    if (ok) setPastedText('');
+  }, [generateFromText]);
+
   // 합쳐서 생성 (여러 URL → 1개 통합 카드)
   const handleGenerateMerged = useCallback(async () => {
     if (urls.length < 2) return;
@@ -370,15 +379,52 @@ export default function Home() {
                 </div>
 
                 <div className="relative max-w-[720px]">
-                  <UrlInput
-                    urls={urls}
-                    onAddUrl={addUrl}
-                    onAddUrls={addUrls}
-                    onRemoveUrl={removeUrl}
-                    onToggleSettings={handleToggleSettings}
-                    isLoading={isLoading}
-                    onGenerate={handleGenerate}
-                  />
+                  <div className="mb-3 flex gap-1" role="tablist" aria-label="입력 방식 선택">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={inputTab === 'url'}
+                      className={cn(
+                        'signal-meta rounded-sm px-3 py-1.5 text-[11px] font-bold transition-colors',
+                        inputTab === 'url' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      onClick={() => setInputTab('url')}
+                    >
+                      URL 입력
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={inputTab === 'text'}
+                      className={cn(
+                        'signal-meta rounded-sm px-3 py-1.5 text-[11px] font-bold transition-colors',
+                        inputTab === 'text' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      onClick={() => setInputTab('text')}
+                    >
+                      텍스트 붙여넣기
+                    </button>
+                  </div>
+                  {/* 두 입력 모두 마운트 유지 — 탭 전환 시 입력 상태(URL 큐/붙여넣은 텍스트) 보존 */}
+                  <div className={cn(inputTab !== 'url' && 'hidden')}>
+                    <UrlInput
+                      urls={urls}
+                      onAddUrl={addUrl}
+                      onAddUrls={addUrls}
+                      onRemoveUrl={removeUrl}
+                      onToggleSettings={handleToggleSettings}
+                      isLoading={isLoading}
+                      onGenerate={handleGenerate}
+                    />
+                  </div>
+                  <div className={cn(inputTab !== 'text' && 'hidden')}>
+                    <TextInput
+                      value={pastedText}
+                      onChange={setPastedText}
+                      onGenerate={handleGenerateFromText}
+                      isLoading={isLoading}
+                    />
+                  </div>
                   <SettingsPopover />
                 </div>
 
@@ -419,56 +465,59 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    {generationMode === 'individual' && (
-                      <Button
-                        onClick={handleGenerate}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
-                        size="lg"
-                        disabled={urls.length === 0 || isLoading}
-                      >
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        콘텐츠 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
-                      </Button>
-                    )}
-                    {generationMode === 'combined' && (
-                      <Button
-                        onClick={handleGenerateMerged}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
-                        size="lg"
-                        disabled={urls.length < 2 || isLoading}
-                      >
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
-                        통합 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
-                      </Button>
-                    )}
-                    {generationMode === 'fusion' && (
-                      <Button
-                        onClick={handleGenerateFusion}
-                        className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
-                        size="lg"
-                        disabled={urls.length < 2 || isLoading}
-                      >
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
-                        퓨전 분석 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
-                      </Button>
-                    )}
-                    {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        className={cn(
-                          'signal-meta h-10 border px-5 text-[11px] font-bold transition-colors',
-                          generationMode === mode
-                            ? 'border-foreground bg-card text-foreground'
-                            : 'border-border bg-card/50 text-muted-foreground/60 hover:text-foreground'
-                        )}
-                        onClick={() => setGenerationMode(mode)}
-                      >
-                        {mode === 'individual' ? '개별' : mode === 'combined' ? '통합' : '퓨전'}
-                      </button>
-                    ))}
-                  </div>
+                  {/* URL 전용 CTA/생성 모드 — 텍스트 붙여넣기 탭에서는 숨김 (제출은 TextInput 자체 버튼 사용) */}
+                  {inputTab === 'url' && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {generationMode === 'individual' && (
+                        <Button
+                          onClick={handleGenerate}
+                          className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
+                          size="lg"
+                          disabled={urls.length === 0 || isLoading}
+                        >
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          콘텐츠 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                        </Button>
+                      )}
+                      {generationMode === 'combined' && (
+                        <Button
+                          onClick={handleGenerateMerged}
+                          className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
+                          size="lg"
+                          disabled={urls.length < 2 || isLoading}
+                        >
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+                          통합 생성 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                        </Button>
+                      )}
+                      {generationMode === 'fusion' && (
+                        <Button
+                          onClick={handleGenerateFusion}
+                          className="h-[54px] min-w-[156px] gap-2 rounded-sm bg-primary px-7 text-sm font-black shadow-[3px_3px_0_var(--foreground)]"
+                          size="lg"
+                          disabled={urls.length < 2 || isLoading}
+                        >
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Combine className="h-4 w-4" />}
+                          퓨전 분석 <span className="text-xs opacity-75">×{Math.max(1, urls.length)}</span>
+                        </Button>
+                      )}
+                      {(['individual', 'combined', 'fusion'] as GenerationMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          className={cn(
+                            'signal-meta h-10 border px-5 text-[11px] font-bold transition-colors',
+                            generationMode === mode
+                              ? 'border-foreground bg-card text-foreground'
+                              : 'border-border bg-card/50 text-muted-foreground/60 hover:text-foreground'
+                          )}
+                          onClick={() => setGenerationMode(mode)}
+                        >
+                          {mode === 'individual' ? '개별' : mode === 'combined' ? '통합' : '퓨전'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
 

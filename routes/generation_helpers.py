@@ -80,13 +80,47 @@ def _base_generation_response(result: dict, params: dict, start_time: float,
 
 def _handle_direct_text(params: dict, start_time: float):
     """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
+    from config import DIRECT_TEXT_MAX_CHARS
+
     direct_content = params.get('content', '')
+    if len(direct_content) > DIRECT_TEXT_MAX_CHARS:
+        return api_error(
+            f'텍스트가 너무 깁니다. 최대 {DIRECT_TEXT_MAX_CHARS:,}자까지 입력할 수 있습니다.',
+            400,
+        )
+
     truncated_content = _truncate_for_model(params['model'], '사용자 입력 텍스트', direct_content)
     result, used_prompt = _generate_from_source(params, truncated_content)
 
+    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
+
+    elapsed_time = round(time.time() - start_time, 2)
+    report_id = str(uuid.uuid4())
+    if g.user_id:
+        save_history(g.user_id, {
+            'id': report_id,
+            'url': '',
+            'title': result.get('title') or '직접 입력 텍스트',
+            'style': params['style'],
+            'content': result.get('content', ''),
+            'html': result.get('html', ''),
+            'transcript': direct_content[:5000],
+            'transcript_source': 'direct_input',
+            'usage': result.get('usage'),
+            'elapsed_time': elapsed_time,
+        })
+
     response = _base_generation_response(result, params, start_time, used_prompt)
+    response['id'] = report_id
     response['prompt_length'] = len(used_prompt) if used_prompt else 0
     response['transcript_source'] = 'direct_input'
+    response['source_type'] = 'text'
+    response['source_meta'] = {
+        'source_type': 'text',
+        'chars': len(direct_content),
+        'quality_score': 1.0,
+        'is_auto': False,
+    }
     return jsonify(response)
 
 
