@@ -2,7 +2,7 @@
 import os
 from flask import Blueprint, jsonify, request, send_file
 
-from services.notebooklm.notebooklm_service import NotebookLmService
+from services.notebooklm.notebooklm_service import ARTIFACT_NOT_READY_MESSAGE, NotebookLmService
 from utils.responses import api_error, api_error_from_exception
 
 notebooklm_bp = Blueprint('notebooklm', __name__, url_prefix='/api/notebooklm')
@@ -64,4 +64,7 @@ def download(artifact_id):
             download_name=os.path.basename(file_path),
         )
     except RuntimeError as e:
+        # 생성이 끝나지 않은 artifact 다운로드 요청은 클라이언트 오류다.
+        if str(e).startswith(ARTIFACT_NOT_READY_MESSAGE):
+            return api_error(ARTIFACT_NOT_READY_MESSAGE, 400)
         return api_error_from_exception(e, '[서버 오류] 파일 다운로드 중 문제가 발생했습니다.')
