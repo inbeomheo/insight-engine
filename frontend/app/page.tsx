@@ -42,7 +42,6 @@ import { useProviders } from '@/hooks/useProviders';
 import { useGenerate } from '@/hooks/useGenerate';
 import { useUrls } from '@/hooks/useUrls';
 import { useSchedule } from '@/hooks/useSchedule';
-import { useMcpPlugins } from '@/hooks/useMcpPlugins';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import { STYLE_OPTIONS } from '@/lib/constants';
@@ -76,8 +75,6 @@ export default function Home() {
   const [pastedText, setPastedText] = useState('');
   const { schedules, removeSchedule, addSchedule, isLoading: scheduleLoading } = useSchedule(PUBLISHING_ENABLED && activeView === 'calendar');
 
-  // MCP 발행 플러그인 — 발행 기능이 켜진 환경에서만 로드
-  const mcpPlugins = useMcpPlugins(PUBLISHING_ENABLED);
   const { t } = useTranslation();
 
   // 발행 기능이 꺼진 환경에서는 예약 캘린더 뷰로 진입하지 않음
@@ -582,7 +579,6 @@ export default function Home() {
                     <ResultCard
                       report={r}
                       searchQuery={searchQuery}
-                      mcpPlugins={mcpPlugins}
                       onSchedule={handleScheduleOpen}
                       viewMode={viewMode}
                       onExpandToFull={handleExpandToFull}

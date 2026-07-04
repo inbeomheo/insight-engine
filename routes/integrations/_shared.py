@@ -12,10 +12,3 @@ def sanitize_integration_error(message, fallback_message):
     if safe_message.startswith('[서버 오류]'):
         return fallback_message
     return safe_message
-
-
-def sanitize_result_message(result, field_name, fallback_message):
-    sanitized = dict(result or {})
-    if sanitized.get(field_name):
-        sanitized[field_name] = sanitize_integration_error(sanitized[field_name], fallback_message)
-    return sanitized

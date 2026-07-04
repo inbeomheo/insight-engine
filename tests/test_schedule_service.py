@@ -106,14 +106,13 @@ class TestScheduleServiceMemory(unittest.TestCase):
 
 
 class TestCheckAndPublish(unittest.TestCase):
-    """워커 check_and_publish 모크 테스트"""
+    """워커 check_and_publish 테스트 — 발행 플러그인 제거(Dep-5) 후 대기 포스트는 실패 처리"""
 
     def setUp(self):
         _memory_store.clear()
 
     @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
-    @patch('services.mcp.plugin_registry')
-    def test_check_and_publish_success(self, mock_registry, _):
+    def test_check_and_publish_marks_due_posts_failed(self, _):
         from services.data.scheduler_worker import check_and_publish
         from services.data.schedule_service import schedule_service
 
@@ -121,29 +120,10 @@ class TestCheckAndPublish(unittest.TestCase):
         past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
         post = schedule_service.create('user1', '제목', '내용', None, 'wp', past)
 
-        mock_registry.execute.return_value = {'success': True, 'url': 'https://example.com/1'}
-
-        check_and_publish()
-
-        # 상태가 published로 변경됨
-        self.assertEqual(_memory_store[post['id']]['status'], 'published')
-        self.assertEqual(_memory_store[post['id']]['published_url'], 'https://example.com/1')
-
-    @patch('services.data.schedule_service.is_supabase_enabled', return_value=False)
-    @patch('services.mcp.plugin_registry')
-    def test_check_and_publish_failure(self, mock_registry, _):
-        from services.data.scheduler_worker import check_and_publish
-        from services.data.schedule_service import schedule_service
-
-        past = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
-        post = schedule_service.create('user1', '제목', '내용', None, 'wp', past)
-
-        mock_registry.execute.side_effect = Exception('플러그인 오류')
-
         check_and_publish()
 
         self.assertEqual(_memory_store[post['id']]['status'], 'failed')
-        self.assertIn('플러그인 오류', _memory_store[post['id']]['error_message'])
+        self.assertEqual(_memory_store[post['id']]['error_message'], '발행 기능이 종료되었습니다.')
 
 
 if __name__ == '__main__':

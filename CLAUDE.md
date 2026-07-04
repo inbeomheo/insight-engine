@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, MCP 플러그인 발행, 예약 캘린더, 팀 워크스페이스 지원.
+**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, 예약 캘린더, 팀 워크스페이스 지원.
 
 ## Commands
 
@@ -88,12 +88,11 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/data/schedule_service.py` | 예약 발행 CRUD |
 | 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (1분 간격) |
 | 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
-| 서비스 | `services/data/publish_queue_service.py` | 발행 큐 + 재시도 정책 (3회, 지수 백오프) |
 | 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
 | 서비스 | `services/quality/qa_gate_service.py` | 발행 전 QA 게이트 (금칙어/구조/중복/링크 검증) |
 | 서비스 | `services/agents/` | 멀티에이전트 파이프라인 (Research → Writer → Editor → SEO) |
-| 서비스 | `services/mcp/` | MCP 플러그인 시스템 (인터페이스 + 레지스트리 + Naver Blog/WordPress) |
+| 서비스 | `services/mcp/` | MCP Apps SDK (인라인 편집 등 인터랙티브 앱) + MCP 서버(외부 AI 에이전트용 도구). 발행 플러그인 시스템은 제거됨(Dep-5) |
 | 서비스 | `services/rag/` | RAG: ChromaDB 벡터 스토어, 텍스트 청킹, 컨텍스트 빌더 |
 | 서비스 | `services/usage/` | 사용량 관리 패키지 (`require_usage`, `check_usage`, `UsageService`) |
 | 설정 | `config.py` | 토큰 제한, 프로바이더/모델/가격, 스타일별 temperature/max_tokens, RAG 설정 |
@@ -142,7 +141,7 @@ services/
 ├── analytics/      # 분석 대시보드 (17개)
 ├── auth/           # 인증/OAuth (2개)
 ├── integrations/   # 외부 서비스 연동 — Slack, Discord (7개)
-├── mcp/            # MCP 플러그인 (6개)
+├── mcp/            # MCP Apps SDK + MCP 서버 (3개)
 ├── payment/        # 결제/구독 (9개)
 ├── rag/            # RAG 벡터 스토어 (9개)
 ├── usage/          # 사용량 관리 (5개)
@@ -204,8 +203,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 **파이프라인 자동화**: `POST /api/pipeline` — 자막→생성→SEO 자동 진행 (SSE 실시간 진행률)
 
-**MCP 플러그인**: `services/mcp/` — Naver Blog, WordPress 자동 발행 (추상 인터페이스 + 레지스트리)
-
 **예약 발행**: `POST /api/schedule` — APScheduler 기반 예약 + ContentCalendar UI
 
 **팀 워크스페이스**: `services/workspace_service.py` — 워크스페이스 생성/초대/역할 관리 (Owner/Editor/Viewer)
@@ -235,8 +232,6 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **자막 소스 품질 메타**: `source_meta` (source_type, quality_score, is_auto) — 4단계 폴백별 품질 정보
 
 **3단 뷰 모드**: ViewModeSelector — Compact(100자 미리보기)/Full(기존)/Timeline(챕터 연동)
-
-**발행 큐**: `POST/GET /api/publish-queue` — 인메모리 큐 + 재시도 정책 (3회, 지수 백오프 1m/5m/30m)
 
 **프로바이더 검증**: `POST /api/providers/validate` — API 키 소량 토큰 호출 유효성 테스트
 

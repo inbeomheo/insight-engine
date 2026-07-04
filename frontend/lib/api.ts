@@ -10,9 +10,6 @@ import type {
   SourceVideo,
   FusionMeta,
   FusionSections,
-  McpPlugin,
-  McpPublishRequest,
-  McpPublishResponse,
   PipelineRequest,
   PipelineEvent,
   ScheduledPost,
@@ -444,19 +441,6 @@ export async function testWebhook(url: string): Promise<{ success: boolean; erro
   return request('/api/webhook/test', {
     method: 'POST',
     body: JSON.stringify({ url }),
-  });
-}
-
-// MCP 플러그인 목록
-export async function getMcpPlugins(): Promise<{ plugins: McpPlugin[] }> {
-  return request('/api/mcp/plugins');
-}
-
-// MCP 플러그인 발행
-export async function publishToMcp(req: McpPublishRequest): Promise<McpPublishResponse> {
-  return request('/api/mcp/publish', {
-    method: 'POST',
-    body: JSON.stringify(req),
   });
 }
 

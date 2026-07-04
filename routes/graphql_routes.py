@@ -2,7 +2,7 @@
 GraphQL API 라우트 (F7-09)
 
 순수 Python으로 구현한 최소 GraphQL 엔드포인트.
-주요 쿼리: plugins, schedules, generateContent (mutation)
+주요 쿼리: schedules, generateContent (mutation)
 """
 import logging
 import re
@@ -21,12 +21,6 @@ logger = logging.getLogger(__name__)
 # ── GraphQL 스키마 정의 ──────────────────────────────────────
 
 SCHEMA = """
-type Plugin {
-  id: String!
-  name: String!
-  description: String!
-}
-
 type GenerateResult {
   title: String!
   content: String!
@@ -43,7 +37,6 @@ type Schedule {
 }
 
 type Query {
-  plugins: [Plugin!]!
   schedules: [Schedule!]!
   ping: String!
 }
@@ -55,15 +48,6 @@ type Mutation {
 
 
 # ── 리졸버 ──────────────────────────────────────
-
-def resolve_plugins() -> list:
-    try:
-        from services.mcp import plugin_registry
-        return plugin_registry.list_plugins()
-    except Exception as e:
-        logger.error(f"GraphQL plugins 리졸버 오류: {e}")
-        return []
-
 
 def resolve_schedules() -> list:
     try:
@@ -113,16 +97,10 @@ def _parse_arguments(arg_str: str) -> dict:
     return args
 
 
-def _parse_fields(field_str: str) -> list:
-    """중첩 없는 필드 목록 파싱"""
-    return re.findall(r'\b(\w+)\b', field_str)
-
-
 def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
     """GraphQL 쿼리 실행
 
     지원 쿼리:
-    - { plugins { id name description } }
     - { schedules { id title ... } }
     - { ping }
     - mutation { generateContent(url: "...", styleId: "...") { title content } }
@@ -136,8 +114,7 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
                 '__schema': {
                     'types': [
                         {'name': 'Query'}, {'name': 'Mutation'},
-                        {'name': 'Plugin'}, {'name': 'GenerateResult'},
-                        {'name': 'Schedule'},
+                        {'name': 'GenerateResult'}, {'name': 'Schedule'},
                     ]
                 }
             }
@@ -161,16 +138,6 @@ def execute_graphql(query: str, variables: Optional[dict] = None) -> dict:
             data['generateContent'] = result
     else:
         # Query 처리
-        if 'plugins' in query:
-            plugins = resolve_plugins()
-            m = re.search(r'plugins\s*\{([^}]+)\}', query)
-            if m:
-                fields = _parse_fields(m.group(1))
-                data['plugins'] = [
-                    {f: p.get(f) for f in fields if f in p}
-                    for p in plugins
-                ]
-
         if 'schedules' in query:
             schedules = resolve_schedules()
             data['schedules'] = schedules if isinstance(schedules, list) else []
