@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 from app import create_app
-from services.content import note_service
+from services.content import note_index_service, note_service
 
 _H = {"Origin": "http://localhost:3000"}
 
@@ -53,6 +53,7 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     with (
         patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
         patch("services.core.ai_service.create_content", return_value=_ai_response()) as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
     ):
         resp = client.post(
             "/api/notes",
@@ -69,6 +70,9 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     assert create_content.call_args.kwargs["style_id"] == "knowledge_note"
     assert create_content.call_args.kwargs["modifiers"]["language"] == "ko"
     assert "length" not in create_content.call_args.kwargs["modifiers"]
+    indexed_note = index_note.call_args.args[0]
+    assert indexed_note["id"] == data["id"]
+    assert indexed_note["summary"] == "생성된 요약"
 
 
 def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
@@ -96,6 +100,97 @@ def test_get_missing_note_returns_korean_404(tmp_path, monkeypatch):
 
     assert resp.status_code == 404
     assert resp.get_json()["error"].startswith("[노트 조회 실패]")
+
+
+def test_search_notes_returns_results(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+    expected = [{"id": "n1", "title": "글", "score": 0.9, "snippet": "요약"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=expected) as search_notes,
+    ):
+        resp = client.get(
+            "/api/notes/search",
+            query_string={"q": "AI", "limit": "2"},
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["notes"] == expected
+    search_notes.assert_called_once_with("AI", limit=2)
+
+
+def test_search_notes_empty_query_returns_korean_400(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False):
+        resp = client.get(
+            "/api/notes/search",
+            query_string={"q": "   "},
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"].startswith("[검색 실패]")
+
+
+def test_search_notes_clamps_large_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=[]) as search_notes,
+    ):
+        resp = client.get(
+            "/api/notes/search",
+            query_string={"q": "AI", "limit": "9999"},
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    search_notes.assert_called_once_with("AI", limit=note_index_service.MAX_SEARCH_LIMIT)
+
+
+def test_search_notes_long_query_returns_korean_400(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False):
+        resp = client.get(
+            "/api/notes/search",
+            query_string={"q": "가" * 201},
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"].startswith("[검색 실패]")
+
+
+def test_search_notes_service_error_hides_internal_text(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch(
+            "services.content.note_index_service.search_notes",
+            side_effect=Exception("secret chroma stack detail"),
+        ),
+    ):
+        resp = client.get(
+            "/api/notes/search",
+            query_string={"q": "AI"},
+            headers=_H,
+        )
+
+    body = resp.get_json()
+    assert resp.status_code == 500
+    assert body["error"].startswith("[검색 실패]")
+    assert "secret chroma stack detail" not in body["error"]
 
 
 def test_get_note_path_traversal_attempt_returns_404(tmp_path, monkeypatch):
@@ -137,6 +232,27 @@ def test_post_notes_bad_ai_response_returns_korean_error(tmp_path, monkeypatch):
 
     assert resp.status_code == 400
     assert resp.get_json()["error"].startswith("[노트 생성 실패]")
+
+
+def test_post_notes_index_failure_still_returns_note(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.core.ai_service.create_content", return_value=_ai_response()),
+        patch("services.content.note_index_service.index_note", side_effect=Exception("boom")),
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={"content": "원문 콘텐츠", "source": _source()},
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["summary"] == "생성된 요약"
+    assert (tmp_path / f"{data['id']}.json").exists()
 
 
 def test_post_notes_provider_prefixed_exception_uses_handle_error(tmp_path, monkeypatch):

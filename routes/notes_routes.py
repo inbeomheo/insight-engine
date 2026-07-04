@@ -7,11 +7,12 @@ from flask import Blueprint, current_app, jsonify, request
 
 from extensions import limiter
 from routes.blog_routes import DEFAULT_MODEL
-from services.content import note_service
+from services.content import note_index_service, note_service
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import api_error, handle_error, validate_content_length
+from utils.responses import api_error, clamp_query_int, handle_error, validate_content_length
 
 notes_bp = Blueprint("notes", __name__, url_prefix="/api/notes")
+MAX_SEARCH_QUERY_CHARS = 200
 
 
 @notes_bp.route("", methods=["POST"])
@@ -41,6 +42,13 @@ def create_note():
             model=model,
             style_prompt=style_prompt,
         )
+        try:
+            note_index_service.index_note(note)
+        except Exception as index_exc:
+            current_app.logger.warning(
+                "Knowledge note indexing failed (ignored): %s",
+                index_exc,
+            )
         return jsonify(note)
     except ValueError as exc:
         message = str(exc)
@@ -56,6 +64,32 @@ def create_note():
 @require_auth
 def list_notes():
     return jsonify({"notes": note_service.list_notes()})
+
+
+@notes_bp.route("/search", methods=["GET"])
+@limiter.limit("30/minute")
+@require_auth
+def search_notes():
+    query = (request.args.get("q") or "").strip()
+    if not query:
+        return api_error("[검색 실패] 검색어가 필요합니다.", 400)
+    if len(query) > MAX_SEARCH_QUERY_CHARS:
+        return api_error(
+            f"[검색 실패] 검색어는 최대 {MAX_SEARCH_QUERY_CHARS}자까지 입력할 수 있습니다.",
+            400,
+        )
+
+    limit = clamp_query_int(
+        request.args.get("limit"),
+        default=note_index_service.DEFAULT_SEARCH_LIMIT,
+        min_val=1,
+        max_val=note_index_service.MAX_SEARCH_LIMIT,
+    )
+    try:
+        return jsonify({"notes": note_index_service.search_notes(query, limit=limit)})
+    except Exception as exc:
+        current_app.logger.error("Knowledge note search failed: %s", exc, exc_info=True)
+        return api_error("[검색 실패] 노트 검색 중 오류가 발생했습니다.", 500)
 
 
 @notes_bp.route("/<note_id>", methods=["GET"])
