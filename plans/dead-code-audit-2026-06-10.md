@@ -51,6 +51,21 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - **범위 밖(손대지 않음)**: `src/contexts/content_library/` BC 자체의 `list_history_entries`/`delete_history_entry`/`update_history_entry`/`toggle_favorite` export가 이제 이 BC 밖에서는 미사용이지만, 지시서 캐스케이드 맵에 없는 도메인 계층이라 그대로 둠 — 별도 배치에서 재검토 필요.
 - 검증: `pytest tests/` 4931 passed, 1 skipped / `npx tsc --noEmit` 0 errors / `npx next build` 성공 / `create_app()` 로드 확인 + url_map에서 삭제 대상 경로 전부 부재 확인.
 
+## 2026-07-05 갱신 4 (dev-loop cycle 30b, batch 5) — payment/marketplace 그룹 완료, 이 문서의 마지막 남은 잔여 그룹
+
+`plans/dead-code-audit-2026-06-10.md`에서 유일하게 미처리로 남아있던 payment/marketplace 그룹(2026-07-05 갱신 2, 라인 28)을 엔드포인트 단위로 전수 재검증 후 제거:
+
+- **소비자 맵 방법론**: 프론트엔드(`frontend/lib/api.ts`, 컴포넌트, hooks, stores) 전수 grep + 해당 컴포넌트가 실제로 앱 페이지 트리(`frontend/app/**`)에서 import되는지 재귀 확인 + 백엔드 교차 호출(`services/usage/*`가 payment/subscription을 참조하는지 — 참조 없음, usage 도메인은 payment와 완전 독립) + `agent/tools/`의 pkgutil 동적 로드 루프(payment/marketplace 무관) + `services/mcp/mcp_server.py`(무관) + `services/data/scheduler_worker.py`(RSS 구독만, 결제 구독 아님 — grep 오탐 확인) + `services/platform/webhook_service.py`(무관) + `.env.example`/`README.md`의 Stripe/Paddle/Coinbase 설정 문서화 여부.
+- **판정**: `frontend/components/billing/*`(CreditBalance, PricingPage, ReferralCard, SubscriptionManager, UsageDashboard, CouponInput, UsageAlert), `frontend/components/marketplace/MarketplaceBrowser.tsx`, `frontend/components/settings/ApiKeyManager.tsx`가 각 엔드포인트를 호출하는 코드를 담고 있었으나, 이 컴포넌트들 자체가 `frontend/app/**` 어디에서도 import되지 않는 고아 컴포넌트임을 확인(결제/마켓플레이스 페이지 라우트 자체가 앱에 없음). Stripe/Paddle/Coinbase Webhook 3개(`/api/payment/webhook`, `/api/crypto/webhook`, `/api/paddle/webhook`)는 이론상 외부 프로바이더가 호출자이나, `.env.example`에 `STRIPE_*`/`PADDLE_*`/`COINBASE_*` 설정이 전혀 문서화되지 않았고 체크아웃 진입 플로우 자체가 죽어있어 실질적으로 트리거 불가능 — 전량 삭제 판정.
+- **재검증 결과 실제 라우트 수가 감사 목록과 상이**(1개월 경과로 코드 재구성): `routes/payment_routes.py`는 목록 17건이 아닌 실제 29건(고유 경로 26개), `routes/payment/crypto.py`/`routes/payment/paddle.py`는 각 목록 2건이 아닌 실제 3건(webhook 라우트가 목록에 누락되어 있었음), `routes/marketplace_routes.py`는 목록의 `GET /api/marketplace/<template_id>`/`POST /api/marketplace/<template_id>/rate`가 이미 사라지고 `GET/POST /api/marketplace`, `POST /api/marketplace/<template_id>/download`로 재구성되어 있었음 — 전부 소비자 0 재확인 후 삭제.
+- **제거된 파일**: `routes/payment_routes.py`, `routes/payment/`(crypto.py, paddle.py, _shared.py, __init__.py) 전체, `routes/marketplace_routes.py`, `services/payment/` 패키지 전체(stripe/subscription/trial/coupon/invoice/paddle/crypto/team_billing/hybrid_billing_service.py + __init__.py, 9개+1), `services/platform/marketplace_service.py`, `services/platform/referral_service.py`(오직 `/api/referral/*`에서만 소비), `services/data/api_key_service.py`(오직 `/api/keys*`에서만 소비)
+- **제거된 프론트엔드**: `frontend/components/billing/` 디렉토리 전체(7개 파일), `frontend/components/marketplace/` 디렉토리 전체(1개 파일), `frontend/components/settings/ApiKeyManager.tsx` — 전부 import 0 확인(BulkActions.tsx 고아 정리 선례, c29b 따름)
+- **제거된 테스트**: `tests/test_{coupon,crypto,hybrid_billing,invoice,marketplace,paddle,stripe,subscription,team_billing,trial,api_key,referral}_service.py`, `tests/test_crypto_routes.py`, `tests/test_paddle_routes.py`, `tests/test_hybrid_billing_routes.py`, `tests/test_payment_routes_cov.py` (16개)
+- **`app.py`**: `routes.payment_routes` import 제거, `marketplace_bp` 블루프린트 등록 제거
+- **의도적 유지(범위 밖, 손대지 않음)**: `services/usage/credit_service.py`, `services/usage/credit_plan.py` — usage 도메인 소속이라 이번 배치(payment/marketplace) 범위 밖. `get_plan_credits`/`get_plan_features`가 이제 사실상 미사용이지만 usage 패키지 내부 문제라 별도 배치에서 재검토 필요.
+- 검증: `pytest tests/` 4725 passed, 1 skipped, 17 subtests / `npx tsc --noEmit` 0 errors / `npx next build` 성공 / `create_app()` 로드 확인 + url_map에서 삭제 대상 경로(credits/payment/subscription/trial/referral/keys/invoices/coupons/team-billing/billing/crypto/paddle/marketplace 패턴) 전부 부재 확인.
+- **이 감사 문서의 처리 대상 그룹은 이번 배치로 전량 완료** — 남은 항목은 "삭제 안전 판정이지만 보류한 엔드포인트 (343건)" 섹션(제품 결정 필요, 별도 트랙)뿐.
+
 ## 삭제 안전 판정이지만 보류한 엔드포인트 (343건) — 제품 결정 필요
 
 전부 "호출자 0" 확인됨. 단, 분석 대시보드/콘텐츠 관리/결제 등 기능군 전체가 포함되므로
@@ -264,19 +279,19 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - GET /api/cms/plugins
 - POST /api/cms/validate-config
 
-### routes/marketplace_routes.py (2건)
+### routes/marketplace_routes.py (2건) — [완료: 2026-07-05 cycle 30b, batch 5 삭제. 재검증 결과 실제 라우트는 목록과 달랐음(rate 없음, download 신규) — GET/POST /api/marketplace, POST /api/marketplace/<template_id>/download 3건 전부 소비자 0 확인 후 삭제, services/platform/marketplace_service.py 함께 삭제]
 - GET /api/marketplace/<template_id>
 - POST /api/marketplace/<template_id>/rate
 
-### routes/payment/crypto.py (2건)
+### routes/payment/crypto.py (2건) — [완료: 2026-07-05 cycle 30b, batch 5 삭제. 실제 3건(charge, charge/<id>, webhook) 전부 소비자 0]
 - POST /api/crypto/charge
 - GET /api/crypto/charge/<charge_id>
 
-### routes/payment/paddle.py (2건)
+### routes/payment/paddle.py (2건) — [완료: 2026-07-05 cycle 30b, batch 5 삭제. 실제 3건(status, webhook, subscription/<id>) 전부 소비자 0]
 - GET /api/paddle/status
 - GET /api/paddle/subscription/<subscription_id>
 
-### routes/payment_routes.py (17건)
+### routes/payment_routes.py (17건) — [완료: 2026-07-05 cycle 30b, batch 5 삭제. 재검증 결과 실제 29개 라우트 전부 소비자 0 확인(목록 17건 대비 credits/balance·plans, payment/checkout·webhook, subscription(GET)·cancel, usage/my-usage, keys*, team-billing* 등 누락분 포함). 상세는 CLAUDE.md "dead-code 제거 batch 5" 참조]
 - POST /api/credits/purchase
 - POST /api/subscription/upgrade
 - POST /api/trial/start

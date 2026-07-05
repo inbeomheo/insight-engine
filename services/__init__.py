@@ -16,7 +16,6 @@
 - analytics/: 분석 대시보드
 - integrations/: 외부 서비스 연동 (Slack, Discord, Telegram)
 - mcp/: MCP 플러그인
-- payment/: 결제/구독
 - rag/: RAG 벡터 스토어
 - usage/: 사용량 관리
 - exceptions/: 에러 처리

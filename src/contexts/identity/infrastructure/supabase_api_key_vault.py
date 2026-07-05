@@ -1,8 +1,8 @@
 """IApiKeyVault의 Supabase + Fernet 구현 어댑터.
 
-기존 services/data/api_key_service.py와 services/data/supabase_service.py의
-암호화 헬퍼를 lazy import하여 재사용. Phase 2 마이그레이션 완료 후
-기존 api_key_service는 deprecation shim으로 남기고 단계적으로 본 어댑터로 대체 예정.
+src/shared/infrastructure/supabase_client의 암호화 헬퍼를 lazy import하여 재사용.
+(과거 services/data/api_key_service.py 병행 체제였으나 2026-07-05 batch 5에서
+해당 서비스가 제거되어 본 어댑터가 API 키 저장의 단일 구현.)
 """
 import logging
 from datetime import datetime, timezone
