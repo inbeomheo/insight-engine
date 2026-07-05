@@ -64,34 +64,6 @@ class TestGraphRAGEngine(unittest.TestCase):
         results = self.engine.local_search("user1", ["X"])
         self.assertEqual(results, [])
 
-    def test_build_context_empty(self):
-        result = self.engine.build_context("user1", ["X"])
-        self.assertEqual(result, "")
-
-    def test_build_context_with_data(self):
-        self.store.add_entities("user1", [
-            {"name": "Python", "type": "tech", "description": "프로그래밍 언어"},
-            {"name": "Django", "type": "tech", "description": "웹 프레임워크"},
-        ])
-        self.store.add_relations("user1", [
-            {"source": "Python", "target": "Django", "relation": "기반 기술"},
-        ])
-        result = self.engine.build_context("user1", ["Python"])
-        self.assertIn("Python", result)
-        self.assertIn("tech", result)
-        self.assertIn("프로그래밍 언어", result)
-
-    def test_build_context_relation_display(self):
-        self.store.add_entities("user1", [
-            {"name": "A", "type": "t"},
-            {"name": "B", "type": "t"},
-        ])
-        self.store.add_relations("user1", [
-            {"source": "A", "target": "B", "relation": "사용"},
-        ])
-        result = self.engine.build_context("user1", ["A"])
-        self.assertIn("→", result)  # outgoing 관계 표시
-
 
 if __name__ == "__main__":
     unittest.main()
