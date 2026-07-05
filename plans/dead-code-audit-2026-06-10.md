@@ -9,6 +9,24 @@
 - 파일 존재 재검사 결과 아래 그룹은 파일 자체가 트리에서 사라져 이미 삭제 완료된 것으로 확인(이후 사이클에서 처리됨). 목록은 이력 보존을 위해 남기되 "완료" 표기만 추가: `routes/advanced/rewrite.py`, `routes/analytics_routes.py`, `routes/blog/voice_capture.py`, `routes/content_mgmt/trash_pin.py`, `routes/integrations/workflow.py`, `routes/utility/content_evaluation.py`, `routes/utility/content_meta.py`, `routes/utility/generation.py`, `routes/utility/seo_aeo.py`, `routes/utility/text_quality.py`, `routes/utility/text_structure.py`.
 - 그 외 그룹(auth/*, content_mgmt*, integrations/automation·content_workspace·imports·knowledge·misc, marketplace_routes.py, payment*, utility/external·feedback_quality·operations 등)은 파일이 여전히 존재하며 개별 엔드포인트 재검증은 이번 배치 범위 밖 — 다음 배치에서 재확인 필요.
 
+## 2026-07-05 갱신 2 (dev-loop cycle 28b, batch 3)
+
+payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 엔드포인트 단위로 재검증(약 1개월 경과로 코드가 이미 크게 재구성됨):
+
+- **routes/content_mgmt_routes.py + routes/content_mgmt/backup_io.py (실제 54건, 목록 45건 대비 `GET/PATCH/DELETE /api/content/<item_id>` 3건 + `POST /api/content/bulk` 1건 누락 확인 — 전부 소비자 0 재확인)**: 전 엔드포인트 삭제, 파일 자체 삭제(라우트가 파일의 전부였음), app.py의 `content_mgmt_bp` 등록 제거. 연쇄 orphan 서비스 15개 삭제: `services/data/{content_library,archive,lock,expiry,custom_field,workflow,rbac,backup,data_migration,trash}_service.py`, `services/media/media_library_service.py`, `services/seo/{link_manager,seo_checklist}_service.py`, `services/platform/share_service.py`, `services/content/comment_service.py`. 전용 테스트 16개 삭제. `POST /api/content/bulk`의 유일한 프론트 참조는 `frontend/components/library/BulkActions.tsx`인데 이 컴포넌트 자체가 어디에서도 import되지 않는 죽은 컴포넌트임을 확인(참고로만 기록, 프론트 정리는 이번 배치 범위 밖이라 손대지 않음).
+- **routes/integrations/knowledge.py (5건 중 4건)**: `POST /api/rag/graph/search/local`, `GET /api/rag/graph/search/global`, `POST /api/rag/multimodal/{detect-type,ingest,query}` 제거(5건 목록이었으나 detect-type/ingest/query 3개가 1그룹이라 실질 4개 라우트). `POST /api/rag/graph/ingest`는 기존 유지 판정 그대로 보존. `GraphRAGEngine.global_search` 메서드 제거(local_search는 build_context가 내부 호출하므로 유지), `services/rag/multimodal_rag.py` 전체 삭제(오직 이 3개 라우트만 사용). 관련 테스트 정리: `tests/test_multimodal_rag_routes.py` 삭제, `tests/test_graph_rag_routes.py`/`tests/test_graph_rag_engine.py`에서 제거된 라우트/메서드 테스트만 삭제.
+- **[완료: 재검증 결과 이미 삭제됨]** 아래 그룹은 감사 당시(2026-06-10) 존재했던 특정 엔드포인트가 현재 코드에 없음을 확인(파일 자체는 남아있으나 내용이 다른 활성 기능으로 대체됨 — 별도 조치 불필요):
+  - `routes/auth_routes.py`의 `GET /api/auth/status`, `GET /api/auth/config` — 이 2건은 여전히 존재. **[미처리, 다음 배치]** (auth/* 그룹은 캐스케이드가 supabase_service.py 대형 파일까지 번져 이번 배치 40파일 가드 초과로 보류. `routes/auth/admin.py`(6건), `routes/auth/history_account.py`(4건), `routes/auth/misc.py`(8건), `routes/auth/user_settings.py`(6건) 모두 재검증 결과 소비자 0 재확인 완료 — 삭제 로직만 다음 배치로 이월. cascade 참고: admin.py→`services/data/{content_admin_facade,usage_admin_facade 일부}.py`+`services/data/supabase_admin/admin_queries.py` 5개 함수, user_settings.py→`api_key_storage_facade.py`+`custom_style_facade.py`+`supabase_service.py` 5개 함수, history_account.py→`account_admin_facade.py`+`supabase_service.py` 3개 함수, misc.py→`services/usage/usage_alert_service.py`+`services/auth/sso_service.py`+`services/data/audit_log_service.py` 전체)
+  - `routes/integrations/automation.py`의 8건(`/api/sync/airtable`, `/api/sync/gsheets`, `/api/integrations/discord/*`, `/api/integrations/slack/*`) — 모두 삭제됨, 파일은 현재 Slack/Discord/Telegram 봇 웹훅 + Zapier/Make/IFTTT 연동(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/integrations/content_workspace.py`의 `PUT /api/content/<content_id>/folder` — 삭제됨, 파일은 현재 버전 히스토리(`VersionHistory.tsx` 소비)/검색/폴더/알림/협업 세션(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/integrations/imports.py`의 `POST /api/gdocs/import`, `POST /api/email/ingest` — 삭제됨, 파일은 현재 Notion/RSS/북마크 임포트(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — 삭제됨, 파일은 현재 앱 피드백 + OAuth 2.0 프로바이더(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/blog_routes.py`의 `POST /regenerate` — 삭제 확인. **[완료: 삭제 확인]**
+  - `routes/utility/external.py`의 `POST /api/wordcloud`, `GET /api/schema` — 삭제됨, 파일은 현재 webhook-test/playlist-videos/recommend-sources/feed.xml(활성+유지판정 혼재)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/utility/feedback_quality.py`의 `DELETE /api/cache/ai`, `GET /api/feedback/stats/<style_id>` — 삭제됨, 파일은 현재 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/utility/operations.py`의 `POST /api/close` — 삭제됨, 파일은 헬스체크/heartbeat/providers/ollama-health(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+- **routes/marketplace_routes.py, routes/payment/*, routes/payment_routes.py** — 이번 배치 범위 밖(지시에 따라 제외), 미처리.
+
 ## 이번에 삭제 완료
 - services/mcp/plugin_sdk.py + plugins/{linkedin,tistory,twitter,velog}.py (+테스트 4개) — 레지스트리 미등록 죽은 모듈
 - static/ 잔여 7개 파일, 루트 postcss/tailwind 설정, 깨진 CSS 빌드 스크립트
@@ -84,7 +102,7 @@
 - GET /api/admin/trends/cached
 - POST /api/admin/trends/rising
 
-### routes/auth/admin.py (6건)
+### routes/auth/admin.py (6건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
 - GET /api/admin/check
 - GET /api/admin/users
 - POST /api/admin/users/<user_id>/reset
@@ -92,13 +110,13 @@
 - GET /api/admin/contents
 - GET /api/admin/contents/<report_id>
 
-### routes/auth/history_account.py (4건)
+### routes/auth/history_account.py (4건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
 - GET /api/user/history
 - PUT /api/user/profile
 - PUT /api/user/password
 - DELETE /api/user/account
 
-### routes/auth/misc.py (8건)
+### routes/auth/misc.py (8건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
 - GET /api/admin/audit-logs
 - GET /api/user/usage-alerts
 - POST /api/user/usage-alerts/check
@@ -108,7 +126,7 @@
 - POST /api/sso/<workspace_id>/login
 - POST /api/sso/<workspace_id>/disable
 
-### routes/auth/user_settings.py (6건)
+### routes/auth/user_settings.py (6건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
 - GET /api/user/keys
 - POST /api/user/keys
 - GET /api/user/styles
@@ -116,7 +134,7 @@
 - DELETE /api/user/styles/<style_id>
 - GET /api/user/usage
 
-### routes/auth_routes.py (2건)
+### routes/auth_routes.py (2건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 auth/* 캐스케이드와 함께 다음 배치로 이월]
 - GET /api/auth/status
 - GET /api/auth/config
 
@@ -124,10 +142,10 @@
 - POST /api/capture/speech
 - POST /api/capture/merge
 
-### routes/blog_routes.py (1건)
+### routes/blog_routes.py (1건) — [완료: 재검증 결과 이미 삭제됨]
 - POST /regenerate
 
-### routes/content_mgmt/backup_io.py (5건)
+### routes/content_mgmt/backup_io.py (5건) — [완료: 2026-07-05 삭제, content_mgmt_routes.py와 함께 파일 삭제]
 - POST /api/content/backup
 - GET /api/content/backup
 - POST /api/content/backup/<filename>/restore
@@ -143,7 +161,7 @@
 - DELETE /api/content/<item_id>/pin
 - GET /api/content/pinned
 
-### routes/content_mgmt_routes.py (45건)
+### routes/content_mgmt_routes.py (45건, 실제 51건 확인) — [완료: 2026-07-05 전체 삭제, 파일 자체 삭제 + 15개 orphan 서비스 삭제]
 - POST /api/content
 - GET /api/content
 - POST /api/content/<item_id>/clone
@@ -190,7 +208,7 @@
 - POST /api/content/roles/assign
 - POST /api/content/roles/check
 
-### routes/integrations/automation.py (8건)
+### routes/integrations/automation.py (8건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 봇/자동화 연동으로 재구성]
 - POST /api/sync/airtable
 - POST /api/sync/gsheets
 - GET /api/integrations/discord/status
@@ -200,21 +218,21 @@
 - POST /api/integrations/slack/send
 - POST /api/integrations/slack/send-blocks
 
-### routes/integrations/content_workspace.py (1건)
+### routes/integrations/content_workspace.py (1건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 버전 히스토리/검색/폴더/알림/협업 기능으로 재구성]
 - PUT /api/content/<content_id>/folder
 
-### routes/integrations/imports.py (2건)
+### routes/integrations/imports.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 Notion/RSS/북마크 임포트로 재구성]
 - POST /api/gdocs/import
 - POST /api/email/ingest
 
-### routes/integrations/knowledge.py (5건)
+### routes/integrations/knowledge.py (5건) — [완료: 2026-07-05 삭제, ingest는 기존 유지판정대로 보존]
 - POST /api/rag/graph/search/local
 - GET /api/rag/graph/search/global
 - POST /api/rag/multimodal/detect-type
 - POST /api/rag/multimodal/ingest
 - POST /api/rag/multimodal/query
 
-### routes/integrations/misc.py (2건)
+### routes/integrations/misc.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 앱 피드백/OAuth 2.0 프로바이더로 재구성]
 - GET /api/openapi.json
 - GET /api/docs
 
@@ -307,11 +325,11 @@
 - POST /api/check-methodology-transparency
 - GET /api/scheduler/status
 
-### routes/utility/external.py (2건)
+### routes/utility/external.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 webhook-test/playlist-videos/recommend-sources/feed.xml로 재구성]
 - POST /api/wordcloud
 - GET /api/schema
 
-### routes/utility/feedback_quality.py (2건)
+### routes/utility/feedback_quality.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS로 재구성]
 - DELETE /api/cache/ai
 - GET /api/feedback/stats/<style_id>
 
@@ -319,7 +337,7 @@
 - POST /api/recommend-style
 - POST /api/generate-style
 
-### routes/utility/operations.py (1건)
+### routes/utility/operations.py (1건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 헬스체크/heartbeat/providers/ollama-health로 재구성]
 - POST /api/close
 
 ### routes/utility/seo_aeo.py (31건) — [완료: 파일 삭제 확인]

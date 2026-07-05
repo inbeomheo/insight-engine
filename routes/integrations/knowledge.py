@@ -1,11 +1,11 @@
-"""RAG 지식 베이스 — 벡터 스토어, GraphRAG, 멀티모달."""
+"""RAG 지식 베이스 — 벡터 스토어, GraphRAG."""
 import uuid
 
 from flask import request, jsonify, current_app, g
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-from utils.responses import api_error, handle_error, clamp_query_int
+from utils.responses import api_error, handle_error
 
 
 # ── 지식 베이스 (RAG) ──────────────────────────────────────
@@ -122,108 +122,3 @@ def graph_rag_ingest():
         return jsonify(result)
     except Exception as e:
         return handle_error(e, 'GraphRAG 인제스트')
-
-
-@blog_bp.route('/api/rag/graph/search/local', methods=['POST'])
-@require_auth
-def graph_rag_local_search():
-    """엔티티 중심 로컬 검색 (BFS 탐색)"""
-    from services.rag.graph_rag_engine import GraphRAGEngine
-
-    data = request.get_json(silent=True) or {}
-    entities = data.get('entities', [])
-    if not entities:
-        return api_error('entities 목록은 필수입니다.', 400)
-
-    try:
-        engine = GraphRAGEngine()
-        results = engine.local_search(
-            g.user_id,
-            entities,
-            max_depth=clamp_query_int(data.get('max_depth'), default=2, min_val=1, max_val=10),
-            max_results=clamp_query_int(data.get('max_results'), default=20, min_val=1, max_val=100),
-        )
-        return jsonify({'results': results})
-    except Exception as e:
-        return handle_error(e, 'GraphRAG 로컬 검색')
-
-
-@blog_bp.route('/api/rag/graph/search/global', methods=['GET'])
-@require_auth
-def graph_rag_global_search():
-    """전체 그래프 요약 — 연결이 많은 상위 노드 반환"""
-    from services.rag.graph_rag_engine import GraphRAGEngine
-
-    top_n = clamp_query_int(request.args.get('top_n'), default=10, min_val=1, max_val=100)
-    try:
-        engine = GraphRAGEngine()
-        result = engine.global_search(g.user_id, top_n=top_n)
-        return jsonify(result)
-    except Exception as e:
-        return handle_error(e, 'GraphRAG 글로벌 검색')
-
-
-# ── 멀티모달 RAG ──────────────────────────────────────
-
-
-@blog_bp.route('/api/rag/multimodal/detect-type', methods=['POST'])
-@require_auth
-def multimodal_detect_type():
-    """파일 경로의 타입을 감지합니다."""
-    from services.rag.multimodal_rag import MultimodalRAG
-
-    data = request.get_json(silent=True) or {}
-    file_path = data.get('file_path', '').strip()
-    if not file_path:
-        return api_error('file_path는 필수입니다.', 400)
-
-    rag = MultimodalRAG()
-    file_type = rag.detect_file_type(file_path)
-    return jsonify({'file_path': file_path, 'file_type': file_type})
-
-
-@blog_bp.route('/api/rag/multimodal/ingest', methods=['POST'])
-@require_auth
-def multimodal_ingest():
-    """파일을 RAG 시스템에 통합합니다."""
-    from services.rag.multimodal_rag import MultimodalRAG
-
-    data = request.get_json(silent=True) or {}
-    file_path = data.get('file_path', '').strip()
-    if not file_path:
-        return api_error('file_path는 필수입니다.', 400)
-
-    try:
-        rag = MultimodalRAG()
-        result = rag.ingest_file(
-            file_path,
-            metadata=data.get('metadata'),
-            file_type=data.get('file_type'),
-        )
-        status = 200 if result.get('success') else 400
-        return jsonify(result), status
-    except Exception as e:
-        return handle_error(e, '멀티모달 RAG 인제스트')
-
-
-@blog_bp.route('/api/rag/multimodal/query', methods=['POST'])
-@require_auth
-def multimodal_query():
-    """멀티모달 쿼리 (텍스트 + 이미지)"""
-    from services.rag.multimodal_rag import MultimodalRAG
-
-    data = request.get_json(silent=True) or {}
-    query = data.get('query', '').strip()
-    if not query:
-        return api_error('query는 필수입니다.', 400)
-
-    try:
-        rag = MultimodalRAG()
-        result = rag.query_multimodal(
-            query=query,
-            image_path=data.get('image_path'),
-            top_k=clamp_query_int(data.get('top_k'), default=5, min_val=1, max_val=50),
-        )
-        return jsonify(result)
-    except Exception as e:
-        return handle_error(e, '멀티모달 RAG 쿼리')

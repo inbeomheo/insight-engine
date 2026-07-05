@@ -361,3 +361,15 @@ SELECT decrement_usage_safe('user-uuid');
 `plans/dead-code-audit-2026-06-10.md`의 `routes/advanced_routes.py` 9건은 이미 PR #81(Dep-2 batch 1)에서 라우트 자체가 제거되어 있었음(재검증 완료). 이번 배치는 그 라우트들이 유일하게 호출하던 백엔드 서비스 `services/finetune/`(data_collector, dataset_builder, reward_model)가 완전히 고아 상태임을 확인하고 제거:
 - 제거된 서비스: `services/finetune/` 패키지 전체 (data_collector.py, dataset_builder.py, reward_model.py)
 - 제거된 테스트: `tests/test_data_collector.py`, `tests/test_dataset_builder.py`, `tests/test_reward_model.py`
+
+### dead-code 제거 batch 3 (2026-07-05)
+
+`plans/dead-code-audit-2026-06-10.md` 잔여 그룹(payment/marketplace 제외)을 엔드포인트 단위 재검증 후 제거:
+- 제거된 엔드포인트: `POST/GET /api/content`(create/list), `GET/PATCH/DELETE /api/content/<item_id>`, `/api/content/bulk`, `/api/content/<item_id>/{clone,archive,unarchive,lock*,expiry,fields*,links,seo-check,share,comments*}`, `/api/content/{archive,media*,fields,links/<id>,share/<token>,workflows*,roles*}`, `/api/content/{backup,export/<fmt>,import/<fmt>}` (F8 콘텐츠 관리/라이브러리 기능군 전체), `POST /api/rag/graph/search/local`, `GET /api/rag/graph/search/global`, `POST /api/rag/multimodal/{detect-type,ingest,query}`
+- 제거된 파일: `routes/content_mgmt_routes.py`, `routes/content_mgmt/`(backup_io.py, _shared.py, __init__.py) 전체, `services/rag/multimodal_rag.py`
+- 제거된 서비스: `services/data/{content_library,archive,lock,expiry,custom_field,workflow,rbac,backup,data_migration,trash}_service.py`, `services/media/media_library_service.py`, `services/seo/{link_manager,seo_checklist}_service.py`, `services/platform/share_service.py`, `services/content/comment_service.py`
+- 제거된 메서드: `GraphRAGEngine.global_search` (`services/rag/graph_rag_engine.py`) — `local_search`/`ingest`/`build_context`는 여전히 사용 중이라 유지
+- 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
+- `app.py`에서 `content_mgmt_bp` 블루프린트 등록 제거
+- 재검증 중 `routes/integrations/{automation,content_workspace,imports,misc}.py`, `routes/utility/{external,feedback_quality,operations}.py`, `routes/blog_routes.py`의 감사 목록 대상 엔드포인트는 이미 다른 사이클에서 삭제되어 있었음(파일 자체는 다른 활성 기능으로 재구성됨) — 코드 변경 없음, 문서만 갱신
+- 남은 항목(다음 배치 필요): `routes/auth/{admin,history_account,misc,user_settings}.py` + `routes/auth_routes.py`의 `/api/auth/status`,`/api/auth/config` — 재검증 결과 소비자 0 재확인되었으나, 캐스케이드가 `services/data/supabase_service.py`(대형 공용 파일) 내부 함수 8개 + facade 모듈 4개 + `services/usage/usage_alert_service.py` + `services/auth/sso_service.py` + `services/data/audit_log_service.py`까지 번져 이번 배치 규모 가드(약 40파일)를 초과 — 삭제 실행은 다음 배치로 이월

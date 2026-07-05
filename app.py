@@ -206,10 +206,6 @@ def create_app(test_config=None):
     from routes.marketplace_routes import marketplace_bp
     app.register_blueprint(marketplace_bp)
 
-    # Phase 8: 콘텐츠 관리 & 라이브러리 라우트
-    from routes.content_mgmt_routes import content_mgmt_bp
-    app.register_blueprint(content_mgmt_bp)
-
     # Phase 7: GraphQL API (F7-09)
     from routes.graphql_routes import graphql_bp
     app.register_blueprint(graphql_bp)
