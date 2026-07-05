@@ -372,9 +372,18 @@ SELECT decrement_usage_safe('user-uuid');
 - 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
 - `app.py`에서 `content_mgmt_bp` 블루프린트 등록 제거
 - 재검증 중 `routes/integrations/{automation,content_workspace,imports,misc}.py`, `routes/utility/{external,feedback_quality,operations}.py`, `routes/blog_routes.py`의 감사 목록 대상 엔드포인트는 이미 다른 사이클에서 삭제되어 있었음(파일 자체는 다른 활성 기능으로 재구성됨) — 코드 변경 없음, 문서만 갱신
-- 남은 항목(다음 배치 필요): `routes/auth/{admin,history_account,misc,user_settings}.py` + `routes/auth_routes.py`의 `/api/auth/status`,`/api/auth/config` — 재검증 결과 소비자 0 재확인되었으나, 캐스케이드가 `services/data/supabase_service.py`(대형 공용 파일) 내부 함수 8개 + facade 모듈 4개 + `services/usage/usage_alert_service.py` + `services/auth/sso_service.py` + `services/data/audit_log_service.py`까지 번져 이번 배치 규모 가드(약 40파일)를 초과 — 삭제 실행은 다음 배치로 이월
+- 남은 항목이었던 auth 그룹 + openapi는 batch 4(아래, 2026-07-05)에서 제거 완료
 
 ### 고아 정리 c29b (2026-07-05)
 
 - 제거: `frontend/components/library/BulkActions.tsx` (import 0, 소비 대상 `/api/content/bulk`는 batch 3에서 백엔드 제거됨), `GraphRAGEngine.build_context` (외부 호출자 0 — 유일 소비처였던 graph/search 라우트가 batch 3에서 제거됨) + 전용 테스트 3건
 - 의도적 유지: `GraphRAGEngine.local_search` — 이 제거로 프로덕션 소비자 0이 되지만, `graph/ingest` 라우트 유지판정 + 제품 비전 기둥 2(위키 그래프)의 소비 예정 경로라 보존 (다음 정리 사이클에서 재판정)
+
+### dead-code 제거 batch 4 (2026-07-05, dev-loop cycle 29a)
+
+`plans/dead-code-audit-2026-06-10.md`의 auth 그룹 + openapi를 캐스케이드 포함 일괄 제거:
+- 제거된 엔드포인트: `GET /api/admin/{check,users,stats,contents,contents/<report_id>}`, `POST /api/admin/users/<user_id>/reset` (admin.py 6건), `GET/PUT/DELETE /api/user/history*`, `PUT /api/user/{profile,password}`, `DELETE /api/user/account` (history_account.py 7건), `GET /api/admin/audit-logs`, `GET/POST /api/user/usage-alerts*`, `POST/GET /api/sso/<workspace_id>/{config,login,disable,callback}` (misc.py 9건), `GET/POST/DELETE /api/user/{keys,styles}*`, `GET /api/user/usage` (user_settings.py 6건), `GET /api/auth/{status,config}` (auth_routes.py 2건), `GET /api/openapi.json`, `GET /api/docs` (integrations/misc.py 2건)
+- 제거된 파일: `routes/auth/{admin,history_account,user_settings}.py`, `services/usage/usage_alert_service.py`, `services/auth/sso_service.py`, `services/data/audit_log_service.py`, `services/data/openapi_service.py`, `services/data/{content_admin_facade,account_admin_facade,api_key_storage_facade,custom_style_facade}.py`
+- 제거된 함수: `services/data/supabase_admin/admin_queries.py`의 `get_admin_permissions`/`get_all_users_usage`/`reset_user_usage`/`get_usage_stats`/`get_all_contents`/`get_content_detail` (is_admin은 usage_service.py가 계속 사용하므로 유지), `services/data/supabase_service.py`의 `delete_user_account`/`update_user_profile`/`update_user_password`/`save_api_keys`/`get_api_keys`/`save_custom_style`/`get_custom_styles`/`delete_custom_style`
+- `routes/auth/misc.py`는 스타일 메모리/스니펫/활동피드 라우트만 남기고 유지(프론트 소비자 있음), `routes/integrations/misc.py`는 앱 피드백/OAuth 2.0 라우트만 남기고 유지
+- 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것

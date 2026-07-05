@@ -9,25 +9,9 @@ from flask import Blueprint, request, jsonify, g
 from utils.responses import api_error, success_response, error_response, sanitize_error_for_client
 from src.contexts.identity.interface.auth_decorators import require_auth
 from src.shared.infrastructure.supabase_client import get_supabase, is_supabase_enabled
-from src.contexts.content_library import (
-    list_history_entries as get_histories,
-    delete_history_entry as delete_history,
-    update_history_entry as update_history,
-    toggle_favorite,
-)
 # Phase 5-e: supabase_service 다중 import를 도메인별 facade로 분리.
 # 각 facade는 services/data/ 내부이므로 베이스라인에서 자연스럽게 제외.
-from services.data.api_key_storage_facade import save_api_keys, get_api_keys
-from services.data.custom_style_facade import (
-    save_custom_style, get_custom_styles, delete_custom_style,
-)
-from services.data.usage_admin_facade import (
-    get_usage, is_admin, get_all_users_usage, reset_user_usage, get_usage_stats,
-)
-from services.data.content_admin_facade import get_all_contents, get_content_detail
-from services.data.account_admin_facade import (
-    delete_user_account, update_user_profile, update_user_password,
-)
+from services.data.usage_admin_facade import is_admin
 from services.data.snippet_facade import (
     get_user_snippets, create_snippet, delete_snippet,
 )
@@ -68,23 +52,6 @@ def _safe_service_error_response(message, fallback_message, status_code=400):
 def _exception_error_response(log_context, error, fallback_message, status_code=500):
     logger.error('%s: %s', log_context, error, exc_info=True)
     return _error_response(fallback_message, status_code)
-
-
-@auth_bp.route('/api/auth/status', methods=['GET'])
-def auth_status():
-    """Supabase 활성화 상태 확인"""
-    return jsonify({'enabled': is_supabase_enabled()})
-
-
-@auth_bp.route('/api/auth/config', methods=['GET'])
-def auth_config():
-    """프론트엔드용 Supabase 설정 반환 (JS SDK 초기화용)"""
-    import os
-    return jsonify({
-        'enabled': is_supabase_enabled(),
-        'url': os.getenv('SUPABASE_URL'),
-        'anonKey': os.getenv('SUPABASE_ANON_KEY')
-    })
 
 
 def _validate_email_password(data):
@@ -326,9 +293,8 @@ def get_current_user():
         )
 
 
-# 관리자 권한 헬퍼 — 단일 정의 (admin.py와 channel_monitoring.py에서 공유).
+# 관리자 권한 헬퍼 — 단일 정의 (channel_monitoring.py에서 사용).
 # is_admin은 namespace 호출이므로 `@patch('routes.auth_routes.is_admin')` 그대로 동작.
-# 서브패키지 import 전에 미리 정의해 admin.py가 `_ar._require_admin`을 안전하게 참조 가능.
 def _require_admin():
     """관리자 권한 확인."""
     if not is_admin(g.user_id):
@@ -336,14 +302,8 @@ def _require_admin():
     return None
 
 
-# 사용자 설정(API 키/커스텀 스타일/사용량) 라우트는 routes/auth/user_settings.py로 분리됨.
-# 테스트가 import하는 _mask_api_key 헬퍼는 호환성 위해 여기서 re-export.
-# (이 import가 routes.auth 패키지 __init__을 트리거해 admin/channel_monitoring 등을 로드)
-from routes.auth.user_settings import _mask_api_key  # noqa: E402,F401
-
-
 # ============================================================
-# 분리된 auth 서브 라우트 — 부수효과 import (이미 위 import로 로드되었음)
-# - routes/auth/admin.py: 관리자 라우트 (6개)
+# 분리된 auth 서브 라우트 — 부수효과 import
+# - routes/auth/workspace.py, channel_monitoring.py, misc.py
 # ============================================================
 from routes import auth as _auth_subroutes  # noqa: E402,F401
