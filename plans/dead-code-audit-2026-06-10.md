@@ -20,7 +20,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
   - `routes/integrations/automation.py`의 8건(`/api/sync/airtable`, `/api/sync/gsheets`, `/api/integrations/discord/*`, `/api/integrations/slack/*`) — 모두 삭제됨, 파일은 현재 Slack/Discord/Telegram 봇 웹훅 + Zapier/Make/IFTTT 연동(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
   - `routes/integrations/content_workspace.py`의 `PUT /api/content/<content_id>/folder` — 삭제됨, 파일은 현재 버전 히스토리(`VersionHistory.tsx` 소비)/검색/폴더/알림/협업 세션(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
   - `routes/integrations/imports.py`의 `POST /api/gdocs/import`, `POST /api/email/ingest` — 삭제됨, 파일은 현재 Notion/RSS/북마크 임포트(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
-  - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — 삭제됨, 파일은 현재 앱 피드백 + OAuth 2.0 프로바이더(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — **[미처리, 다음 배치]** 재검증 정정(2026-07-05 리뷰 지적): 두 라우트 모두 현존(misc.py:12, :21). 소비자 0 재확인 완료. 삭제 시 cascade: `services/data/openapi_service.py`의 `build_openapi_spec`
   - `routes/blog_routes.py`의 `POST /regenerate` — 삭제 확인. **[완료: 삭제 확인]**
   - `routes/utility/external.py`의 `POST /api/wordcloud`, `GET /api/schema` — 삭제됨, 파일은 현재 webhook-test/playlist-videos/recommend-sources/feed.xml(활성+유지판정 혼재)로 재구성됨. **[완료: 삭제 확인]**
   - `routes/utility/feedback_quality.py`의 `DELETE /api/cache/ai`, `GET /api/feedback/stats/<style_id>` — 삭제됨, 파일은 현재 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
@@ -232,7 +232,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - POST /api/rag/multimodal/ingest
 - POST /api/rag/multimodal/query
 
-### routes/integrations/misc.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 앱 피드백/OAuth 2.0 프로바이더로 재구성]
+### routes/integrations/misc.py (2건) — [미처리, 다음 배치 — 2026-07-05 리뷰 정정: 두 라우트 현존(misc.py:12, :21), 소비자 0 재확인. cascade: services/data/openapi_service.py build_openapi_spec]
 - GET /api/openapi.json
 - GET /api/docs
 
