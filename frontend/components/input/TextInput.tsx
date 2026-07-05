@@ -28,8 +28,8 @@ interface TextInputProps {
 export default function TextInput({ value, onChange, onGenerate, isLoading }: TextInputProps) {
   const [focused, setFocused] = useState(false);
   const [isExtractingFile, setIsExtractingFile] = useState(false);
-  const [documentNotice, setDocumentNotice] = useState<string | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const charCount = value.length;
@@ -42,17 +42,17 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
   }, [value, isValid, isLoading, onGenerate]);
 
   const handleTextChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-    setDocumentError(null);
-    setDocumentNotice(null);
+    setFileError(null);
+    setFileNotice(null);
     onChange(e.target.value);
   }, [onChange]);
 
-  const handleDocumentClick = useCallback(() => {
+  const handleFileClick = useCallback(() => {
     if (isLoading || isExtractingFile) return;
     fileInputRef.current?.click();
   }, [isLoading, isExtractingFile]);
 
-  const handleDocumentChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
@@ -62,17 +62,17 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
     }
 
     setIsExtractingFile(true);
-    setDocumentError(null);
-    setDocumentNotice(null);
+    setFileError(null);
+    setFileNotice(null);
     try {
       const isAudio = AUDIO_EXTENSIONS.has(getFileExtension(file));
       const result = isAudio ? await extractAudio(file) : await extractDocument(file);
       onChange(result.text.slice(0, MAX_CHARS));
       if (result.truncated) {
-        setDocumentNotice(`${isAudio ? '음성 전사' : '문서'} 내용이 최대 길이에 맞춰 일부 잘렸습니다.`);
+        setFileNotice(`${isAudio ? '음성 전사' : '문서'} 내용이 최대 길이에 맞춰 일부 잘렸습니다.`);
       }
     } catch (err) {
-      setDocumentError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
+      setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
     } finally {
       setIsExtractingFile(false);
     }
@@ -102,11 +102,11 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               {charCount.toLocaleString()}자 / {MAX_CHARS.toLocaleString()}자
               {!isValid && charCount > 0 && charCount < MIN_CHARS && ` (최소 ${MIN_CHARS}자)`}
             </span>
-            {documentNotice && (
-              <p className="mt-1 text-[11px] text-amber-600">{documentNotice}</p>
+            {fileNotice && (
+              <p className="mt-1 text-[11px] text-amber-600">{fileNotice}</p>
             )}
-            {documentError && (
-              <p className="mt-1 text-[11px] text-destructive" role="alert">{documentError}</p>
+            {fileError && (
+              <p className="mt-1 text-[11px] text-destructive" role="alert">{fileError}</p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -115,7 +115,7 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               type="file"
               accept=".pdf,.docx,.pptx,.mp3,.wav,.m4a,.ogg,.flac,.aac"
               className="hidden"
-              onChange={handleDocumentChange}
+              onChange={handleFileChange}
               disabled={isLoading || isExtractingFile}
             />
             <Button
@@ -123,7 +123,7 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               variant="outline"
               size="sm"
               className="h-9 gap-1.5 rounded-sm text-xs"
-              onClick={handleDocumentClick}
+              onClick={handleFileClick}
               disabled={isLoading || isExtractingFile}
               aria-label="파일 불러오기"
             >

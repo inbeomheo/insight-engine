@@ -113,7 +113,7 @@ def _is_supported_audio_upload(uploaded_file, file_bytes: bytes) -> bool:
         return False
 
     if extension == '.wav':
-        return file_bytes.startswith(b'RIFF')
+        return file_bytes.startswith(b'RIFF') and file_bytes[8:12] == b'WAVE'
     if extension == '.mp3':
         return file_bytes.startswith(b'ID3') or _has_mp3_sync(file_bytes)
     if extension == '.m4a':
@@ -482,6 +482,7 @@ def extract_document():
 @require_auth
 def extract_audio():
     """오디오 파일을 Whisper로 전사해 직접 텍스트 입력 경로에 재사용합니다."""
+    import importlib.util
     import os
     import tempfile
     from config import (
@@ -492,6 +493,9 @@ def extract_audio():
 
     if os.getenv('WHISPER_ENABLED', 'false').lower() != 'true':
         return api_error('음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
+
+    if importlib.util.find_spec('faster_whisper') is None:
+        return api_error('음성 인식 모듈이 서버에 설치되어 있지 않습니다. 관리자에게 문의해 주세요.', 500)
 
     if (
         request.content_length
@@ -523,7 +527,7 @@ def extract_audio():
         from services.transcript import whisper_service as _whisper_service
         whisper_service = _whisper_service
 
-        suffix = _get_audio_extension(uploaded_file) or '.wav'
+        suffix = _get_audio_extension(uploaded_file)
         fd, audio_path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
         uploaded_file.save(audio_path)

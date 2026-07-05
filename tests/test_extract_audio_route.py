@@ -12,7 +12,9 @@ _H = {"Origin": "http://localhost:3000"}
 MP3_MIME = "audio/mpeg"
 AUDIO_ONLY_ERROR = "MP3, WAV, M4A, OGG, FLAC, AAC 파일만 업로드할 수 있습니다."
 WHISPER_DISABLED_ERROR = "음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다."
+WHISPER_MODULE_MISSING_ERROR = "음성 인식 모듈이 서버에 설치되어 있지 않습니다. 관리자에게 문의해 주세요."
 EMPTY_TRANSCRIPT_ERROR = "음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요."
+AUDIO_SERVER_ERROR = "오디오 처리 중 오류가 발생했습니다. 다시 시도해 주세요."
 
 
 def _app_client():
@@ -25,6 +27,10 @@ def _no_auth_patch():
         "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
         return_value=False,
     )
+
+
+def _faster_whisper_installed_patch():
+    return patch("importlib.util.find_spec", return_value=object())
 
 
 def _minimal_mp3_bytes() -> bytes:
@@ -54,6 +60,20 @@ def test_extract_audio_whisper_disabled_returns_400_korean_message():
     assert resp.get_json()["error"] == WHISPER_DISABLED_ERROR
 
 
+def test_extract_audio_faster_whisper_missing_returns_500_korean_message():
+    _, client = _app_client()
+
+    with (
+        _no_auth_patch(),
+        patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        patch("importlib.util.find_spec", return_value=None),
+    ):
+        resp = _upload(client, _minimal_mp3_bytes())
+
+    assert resp.status_code == 500
+    assert resp.get_json()["error"] == WHISPER_MODULE_MISSING_ERROR
+
+
 def test_extract_audio_happy_path_returns_text_and_truncation_false():
     _, client = _app_client()
     transcript = "This is a readable audio transcript for direct text reuse. " * 2
@@ -61,6 +81,7 @@ def test_extract_audio_happy_path_returns_text_and_truncation_false():
     with (
         _no_auth_patch(),
         patch.dict(os.environ, {"WHISPER_ENABLED": "true", "WHISPER_MODEL_SIZE": "small"}),
+        _faster_whisper_installed_patch(),
         patch("services.transcript.whisper_service.transcribe_audio", return_value=transcript) as mock_transcribe,
         patch("services.transcript.whisper_service._cleanup_file", side_effect=_remove_temp_file) as mock_cleanup,
     ):
@@ -81,9 +102,26 @@ def test_extract_audio_rejects_non_audio_extension_with_korean_message():
     with (
         _no_auth_patch(),
         patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
         patch("services.transcript.whisper_service.transcribe_audio") as mock_transcribe,
     ):
         resp = _upload(client, b"not audio", filename="note.txt", content_type="text/plain")
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == AUDIO_ONLY_ERROR
+    mock_transcribe.assert_not_called()
+
+
+def test_extract_audio_rejects_audio_extension_with_mismatched_magic():
+    _, client = _app_client()
+
+    with (
+        _no_auth_patch(),
+        patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
+        patch("services.transcript.whisper_service.transcribe_audio") as mock_transcribe,
+    ):
+        resp = _upload(client, b"not an mp3", filename="sample.mp3", content_type=MP3_MIME)
 
     assert resp.status_code == 400
     assert resp.get_json()["error"] == AUDIO_ONLY_ERROR
@@ -97,6 +135,7 @@ def test_extract_audio_rejects_oversized_file_with_limit_message():
     with (
         _no_auth_patch(),
         patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
         patch("config.AUDIO_UPLOAD_MAX_BYTES", 20),
         patch("services.transcript.whisper_service.transcribe_audio") as mock_transcribe,
     ):
@@ -113,6 +152,7 @@ def test_extract_audio_empty_transcript_returns_400_korean_message():
     with (
         _no_auth_patch(),
         patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
         patch("services.transcript.whisper_service.transcribe_audio", return_value="   "),
     ):
         resp = _upload(client, _minimal_mp3_bytes())
@@ -128,6 +168,7 @@ def test_extract_audio_truncates_at_direct_text_max_chars():
     with (
         _no_auth_patch(),
         patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
         patch("config.DIRECT_TEXT_MAX_CHARS", 80),
         patch("services.transcript.whisper_service.transcribe_audio", return_value=transcript),
     ):
@@ -137,3 +178,21 @@ def test_extract_audio_truncates_at_direct_text_max_chars():
     data = resp.get_json()
     assert data["truncated"] is True
     assert len(data["text"]) == 80
+
+
+def test_extract_audio_transcribe_exception_returns_500_and_cleans_temp_file():
+    _, client = _app_client()
+
+    with (
+        _no_auth_patch(),
+        patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        _faster_whisper_installed_patch(),
+        patch("services.transcript.whisper_service.transcribe_audio", side_effect=RuntimeError("boom")) as mock_transcribe,
+        patch("services.transcript.whisper_service._cleanup_file", side_effect=_remove_temp_file) as mock_cleanup,
+    ):
+        resp = _upload(client, _minimal_mp3_bytes())
+
+    assert resp.status_code == 500
+    assert resp.get_json()["error"] == AUDIO_SERVER_ERROR
+    mock_transcribe.assert_called_once()
+    mock_cleanup.assert_called_once()
