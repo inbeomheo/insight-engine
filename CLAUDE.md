@@ -141,7 +141,6 @@ services/
 ├── auth/           # 인증/OAuth (2개)
 ├── integrations/   # 외부 서비스 연동 — Slack, Discord (7개)
 ├── mcp/            # MCP Apps SDK + MCP 서버 (3개)
-├── payment/        # 결제/구독 (9개)
 ├── rag/            # RAG 벡터 스토어 (9개)
 ├── usage/          # 사용량 관리 (5개)
 └── exceptions/     # 에러 처리
@@ -387,3 +386,14 @@ SELECT decrement_usage_safe('user-uuid');
 - 제거된 함수: `services/data/supabase_admin/admin_queries.py`의 `get_admin_permissions`/`get_all_users_usage`/`reset_user_usage`/`get_usage_stats`/`get_all_contents`/`get_content_detail` (is_admin은 usage_service.py가 계속 사용하므로 유지), `services/data/supabase_service.py`의 `delete_user_account`/`update_user_profile`/`update_user_password`/`save_api_keys`/`get_api_keys`/`save_custom_style`/`get_custom_styles`/`delete_custom_style`
 - `routes/auth/misc.py`는 스타일 메모리/스니펫/활동피드 라우트만 남기고 유지(프론트 소비자 있음), `routes/integrations/misc.py`는 앱 피드백/OAuth 2.0 라우트만 남기고 유지
 - 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
+
+### dead-code 제거 batch 5 — payment/marketplace (2026-07-05, dev-loop cycle 30b)
+
+`plans/dead-code-audit-2026-06-10.md`에서 유일하게 남아있던 payment/marketplace 그룹을 엔드포인트 단위로 재검증(1개월 경과로 실제 라우트 수가 감사 시점과 달라짐: payment_routes.py는 34개 라우트, crypto.py/paddle.py는 각 3개, marketplace_routes.py는 3개)한 뒤 전량 제거. 프론트엔드에 `frontend/components/billing/*`, `frontend/components/marketplace/*`, `ApiKeyManager.tsx`가 각 엔드포인트를 호출하는 코드는 있었으나, 이 컴포넌트들 자체가 앱의 어느 페이지에서도 import되지 않는 고아였음(진입점 없음, `.env.example`에 Stripe/Paddle/Coinbase 설정 문서화도 없음) — Stripe/Coinbase/Paddle webhook 3개도 프로바이더가 미설정이라 트리거 불가능한 죽은 코드로 판정.
+- 제거된 엔드포인트: `/api/credits/{balance,purchase,plans}`, `/api/payment/{checkout,webhook}`, `/api/subscription`, `/api/subscription/{upgrade,cancel}`, `/api/trial/{start,status}`, `/api/usage/my-usage`, `/api/referral/{info,apply}`, `/api/keys`, `/api/keys/<key_id>`, `/api/invoices`, `/api/invoices/<invoice_id>/pay`, `/api/coupons`, `/api/coupons/{validate,redeem}`, `/api/team-billing/<team_id>`, `/api/team-billing/<team_id>/members`, `/api/billing/{setup,consume,summary,reset-monthly}` (payment_routes.py 34건), `/api/crypto/charge`, `/api/crypto/charge/<charge_id>`, `/api/crypto/webhook` (crypto.py 3건), `/api/paddle/{status,webhook}`, `/api/paddle/subscription/<subscription_id>` (paddle.py 3건), `GET/POST /api/marketplace`, `POST /api/marketplace/<template_id>/download` (marketplace_routes.py 3건)
+- 제거된 파일: `routes/payment_routes.py`, `routes/payment/`(crypto.py, paddle.py, _shared.py, __init__.py) 전체, `routes/marketplace_routes.py`, `services/payment/` 패키지 전체(stripe/subscription/trial/coupon/invoice/paddle/crypto/team_billing/hybrid_billing_service.py + __init__.py), `services/platform/marketplace_service.py`, `services/platform/referral_service.py`, `services/data/api_key_service.py`
+- 제거된 프론트엔드: `frontend/components/billing/`(CreditBalance, PricingPage, ReferralCard, SubscriptionManager, UsageDashboard, CouponInput, UsageAlert) 전체, `frontend/components/marketplace/MarketplaceBrowser.tsx`, `frontend/components/settings/ApiKeyManager.tsx` — 전부 import 0
+- 제거된 테스트: `tests/test_{coupon,crypto,hybrid_billing,invoice,marketplace,paddle,stripe,subscription,team_billing,trial,api_key,referral}_service.py`, `tests/test_{crypto,paddle,hybrid_billing,payment}_routes*.py`
+- `app.py`에서 `routes.payment_routes` import + `marketplace_bp` 블루프린트 등록 제거
+- 서비스 도메인 구조 표에서 `payment/` 행 제거(디렉토리 자체 삭제)
+- 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드(결제 진입 페이지)와 `.env.example` 설정 문서화를 함께 작성할 것
