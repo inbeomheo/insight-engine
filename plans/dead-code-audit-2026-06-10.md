@@ -16,11 +16,11 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - **routes/content_mgmt_routes.py + routes/content_mgmt/backup_io.py (실제 54건, 목록 45건 대비 `GET/PATCH/DELETE /api/content/<item_id>` 3건 + `POST /api/content/bulk` 1건 누락 확인 — 전부 소비자 0 재확인)**: 전 엔드포인트 삭제, 파일 자체 삭제(라우트가 파일의 전부였음), app.py의 `content_mgmt_bp` 등록 제거. 연쇄 orphan 서비스 15개 삭제: `services/data/{content_library,archive,lock,expiry,custom_field,workflow,rbac,backup,data_migration,trash}_service.py`, `services/media/media_library_service.py`, `services/seo/{link_manager,seo_checklist}_service.py`, `services/platform/share_service.py`, `services/content/comment_service.py`. 전용 테스트 16개 삭제. `POST /api/content/bulk`의 유일한 프론트 참조는 `frontend/components/library/BulkActions.tsx`인데 이 컴포넌트 자체가 어디에서도 import되지 않는 죽은 컴포넌트임을 확인(참고로만 기록, 프론트 정리는 이번 배치 범위 밖이라 손대지 않음).
 - **routes/integrations/knowledge.py (5건 중 4건)**: `POST /api/rag/graph/search/local`, `GET /api/rag/graph/search/global`, `POST /api/rag/multimodal/{detect-type,ingest,query}` 제거(5건 목록이었으나 detect-type/ingest/query 3개가 1그룹이라 실질 4개 라우트). `POST /api/rag/graph/ingest`는 기존 유지 판정 그대로 보존. `GraphRAGEngine.global_search` 메서드 제거(local_search는 build_context가 내부 호출하므로 유지), `services/rag/multimodal_rag.py` 전체 삭제(오직 이 3개 라우트만 사용). 관련 테스트 정리: `tests/test_multimodal_rag_routes.py` 삭제, `tests/test_graph_rag_routes.py`/`tests/test_graph_rag_engine.py`에서 제거된 라우트/메서드 테스트만 삭제.
 - **[완료: 재검증 결과 이미 삭제됨]** 아래 그룹은 감사 당시(2026-06-10) 존재했던 특정 엔드포인트가 현재 코드에 없음을 확인(파일 자체는 남아있으나 내용이 다른 활성 기능으로 대체됨 — 별도 조치 불필요):
-  - `routes/auth_routes.py`의 `GET /api/auth/status`, `GET /api/auth/config` — 이 2건은 여전히 존재. **[미처리, 다음 배치]** (auth/* 그룹은 캐스케이드가 supabase_service.py 대형 파일까지 번져 이번 배치 40파일 가드 초과로 보류. `routes/auth/admin.py`(6건), `routes/auth/history_account.py`(4건), `routes/auth/misc.py`(8건), `routes/auth/user_settings.py`(6건) 모두 재검증 결과 소비자 0 재확인 완료 — 삭제 로직만 다음 배치로 이월. cascade 참고: admin.py→`services/data/{content_admin_facade,usage_admin_facade 일부}.py`+`services/data/supabase_admin/admin_queries.py` 5개 함수, user_settings.py→`api_key_storage_facade.py`+`custom_style_facade.py`+`supabase_service.py` 5개 함수, history_account.py→`account_admin_facade.py`+`supabase_service.py` 3개 함수, misc.py→`services/usage/usage_alert_service.py`+`services/auth/sso_service.py`+`services/data/audit_log_service.py` 전체)
+  - `routes/auth_routes.py`의 `GET /api/auth/status`, `GET /api/auth/config` — **[완료: 2026-07-05 cycle 29a 삭제]** (auth/* 그룹 전체는 dev-loop cycle 29a에서 일괄 삭제 완료. 상세는 아래 개별 섹션 참조)
   - `routes/integrations/automation.py`의 8건(`/api/sync/airtable`, `/api/sync/gsheets`, `/api/integrations/discord/*`, `/api/integrations/slack/*`) — 모두 삭제됨, 파일은 현재 Slack/Discord/Telegram 봇 웹훅 + Zapier/Make/IFTTT 연동(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
   - `routes/integrations/content_workspace.py`의 `PUT /api/content/<content_id>/folder` — 삭제됨, 파일은 현재 버전 히스토리(`VersionHistory.tsx` 소비)/검색/폴더/알림/협업 세션(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
   - `routes/integrations/imports.py`의 `POST /api/gdocs/import`, `POST /api/email/ingest` — 삭제됨, 파일은 현재 Notion/RSS/북마크 임포트(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
-  - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — **[미처리, 다음 배치]** 재검증 정정(2026-07-05 리뷰 지적): 두 라우트 모두 현존(misc.py:12, :21). 소비자 0 재확인 완료. 삭제 시 cascade: `services/data/openapi_service.py`의 `build_openapi_spec`
+  - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — **[완료: 2026-07-05 cycle 29a 삭제]** `services/data/openapi_service.py`(`build_openapi_spec` 포함 모듈 전체) 함께 삭제. `misc.py`의 앱 피드백/OAuth 2.0 라우트는 그대로 유지.
   - `routes/blog_routes.py`의 `POST /regenerate` — 삭제 확인. **[완료: 삭제 확인]**
   - `routes/utility/external.py`의 `POST /api/wordcloud`, `GET /api/schema` — 삭제됨, 파일은 현재 webhook-test/playlist-videos/recommend-sources/feed.xml(활성+유지판정 혼재)로 재구성됨. **[완료: 삭제 확인]**
   - `routes/utility/feedback_quality.py`의 `DELETE /api/cache/ai`, `GET /api/feedback/stats/<style_id>` — 삭제됨, 파일은 현재 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
@@ -31,6 +31,25 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - services/mcp/plugin_sdk.py + plugins/{linkedin,tistory,twitter,velog}.py (+테스트 4개) — 레지스트리 미등록 죽은 모듈
 - static/ 잔여 7개 파일, 루트 postcss/tailwind 설정, 깨진 CSS 빌드 스크립트
 - frontend devDeps: jsdom, @types/dompurify (락파일 재생성 완료)
+
+## 2026-07-05 갱신 3 (dev-loop cycle 29a, batch [Dep-2e]) — auth 그룹 + openapi 완료
+
+`plans/dead-code-audit-2026-06-10.md` "2026-07-05 갱신 2"에서 캐스케이드 규모로 이월됐던 auth/* 그룹 + integrations/misc.py의 openapi/docs를 일괄 삭제:
+
+- **routes/auth/admin.py (6건)** — 파일 삭제.
+- **routes/auth/history_account.py (실제 7건 확인 — 목록 4건에 없던 `DELETE /api/user/history/<report_id>`, `POST .../favorite`, `PUT /api/user/history/<report_id>` 3건도 소비자 0 재확인)** — 파일 삭제.
+- **routes/auth/misc.py (8건 + 목록에 없던 `POST /api/sso/<workspace_id>/callback` 1건, sso_service 전체 orphan이라 함께 삭제)** — 해당 라우트만 제거, 스타일 메모리/스니펫/활동피드 라우트는 잔존(소비자 있음: `frontend/lib/api.ts`의 style-memory, `frontend/hooks/useSnippets.ts` 등, `frontend/components/workspace/ActivityFeed.tsx`).
+- **routes/auth/user_settings.py (6건)** — 파일 삭제.
+- **routes/auth_routes.py의 GET /api/auth/status, GET /api/auth/config (2건)** — 공유 라이브 파일이라 해당 2개 라우트만 제거, signup/login/oauth/refresh/me 등 기존 유지 판정 라우트는 그대로.
+- **routes/integrations/misc.py의 GET /api/openapi.json, GET /api/docs (2건)** — 앱 피드백(`/api/app-feedback`)/OAuth 2.0 공급자(`/oauth/*`) 라우트는 그대로 유지.
+- **routes/auth/__init__.py** — admin/history_account/user_settings 서브모듈 import 제거, 남은 서브모듈(workspace, channel_monitoring, misc) 로드로 갱신.
+- **cascade 삭제**: `services/data/supabase_admin/admin_queries.py`의 `get_admin_permissions`, `get_all_users_usage`, `reset_user_usage`, `get_usage_stats`, `get_all_contents`, `get_content_detail` (6개 함수, `is_admin`은 `services/usage/usage_service.py`가 계속 사용하므로 유지) + `services/data/supabase_admin/__init__.py`/`services/data/usage_admin_facade.py`/`services/data/supabase_service.py`의 관련 re-export 정리.
+- **cascade 삭제**: `services/data/content_admin_facade.py`, `account_admin_facade.py`, `api_key_storage_facade.py`, `custom_style_facade.py` 전체 삭제(전부 삭제된 라우트에서만 소비).
+- **cascade 삭제**: `services/data/supabase_service.py`의 `delete_user_account`, `update_user_profile`, `update_user_password`, `save_api_keys`, `get_api_keys`, `save_custom_style`, `get_custom_styles`, `delete_custom_style` 8개 함수 + `_API_KEY_FIELDS` (facade를 통해서만 호출되던 함수, `get_histories`/`delete_history`/`update_history`/`toggle_favorite`는 `src/contexts/content_library/infrastructure/supabase_history_repository.py`가 계속 사용하므로 유지).
+- **cascade 삭제**: `services/usage/usage_alert_service.py`, `services/auth/sso_service.py`, `services/data/audit_log_service.py`, `services/data/openapi_service.py` — 전부 whole-orphan 확인.
+- **테스트 정리**: `tests/test_openapi_service.py`, `tests/test_sso_service.py`, `tests/test_sso_routes.py`, `tests/test_usage_alert_routes.py`, `tests/test_usage_alert_service.py`, `tests/test_audit_log_service.py` 삭제. `tests/test_auth_routes_cov.py`에서 `TestAuthStatusDisabled`의 auth_status/auth_config, `TestAuthEndpointsNoSupabase`의 user_settings 계열(키/스타일/사용량) 테스트, `TestHistoryRoutes`/`TestProfileRoutes`/`TestAdminRoutes` 클래스 전체, `TestMaskApiKey` 클래스(헬퍼 자체 삭제) 제거. `tests/test_supabase_service_extended.py`에서 `TestDeleteUserAccount`/`TestUpdateUserProfile`/`TestUpdateUserPassword`/`TestSaveApiKeys`/`TestGetApiKeys`/`TestCustomStyles`/`TestGetAdminPermissions`/`TestGetAllUsersUsage`/`TestResetUserUsage`/`TestGetUsageStats`/`TestGetAllContents`/`TestGetContentDetail` 제거.
+- **범위 밖(손대지 않음)**: `src/contexts/content_library/` BC 자체의 `list_history_entries`/`delete_history_entry`/`update_history_entry`/`toggle_favorite` export가 이제 이 BC 밖에서는 미사용이지만, 지시서 캐스케이드 맵에 없는 도메인 계층이라 그대로 둠 — 별도 배치에서 재검토 필요.
+- 검증: `pytest tests/` 4931 passed, 1 skipped / `npx tsc --noEmit` 0 errors / `npx next build` 성공 / `create_app()` 로드 확인 + url_map에서 삭제 대상 경로 전부 부재 확인.
 
 ## 삭제 안전 판정이지만 보류한 엔드포인트 (343건) — 제품 결정 필요
 
@@ -102,7 +121,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - GET /api/admin/trends/cached
 - POST /api/admin/trends/rising
 
-### routes/auth/admin.py (6건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
+### routes/auth/admin.py (6건) — [완료: 2026-07-05 cycle 29a 삭제, 파일 자체 삭제]
 - GET /api/admin/check
 - GET /api/admin/users
 - POST /api/admin/users/<user_id>/reset
@@ -110,13 +129,16 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - GET /api/admin/contents
 - GET /api/admin/contents/<report_id>
 
-### routes/auth/history_account.py (4건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
+### routes/auth/history_account.py (실제 7건, 목록 4건 대비 `DELETE/PUT/POST /api/user/history/<report_id>` 계열 3건 누락 확인 — 전부 소비자 0 재확인) — [완료: 2026-07-05 cycle 29a 삭제, 파일 자체 삭제]
 - GET /api/user/history
+- DELETE /api/user/history/<report_id>
+- POST /api/user/history/<report_id>/favorite
+- PUT /api/user/history/<report_id>
 - PUT /api/user/profile
 - PUT /api/user/password
 - DELETE /api/user/account
 
-### routes/auth/misc.py (8건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
+### routes/auth/misc.py (8건) — [완료: 2026-07-05 cycle 29a 삭제, 파일은 스타일 메모리/스니펫/활동피드(활성 기능)로 잔존]
 - GET /api/admin/audit-logs
 - GET /api/user/usage-alerts
 - POST /api/user/usage-alerts/check
@@ -125,8 +147,9 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - GET /api/sso/<workspace_id>/config
 - POST /api/sso/<workspace_id>/login
 - POST /api/sso/<workspace_id>/disable
+- (연쇄 확인) POST /api/sso/<workspace_id>/callback — 목록에 없었으나 sso_service 전체 orphan이라 함께 삭제
 
-### routes/auth/user_settings.py (6건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 캐스케이드 규모로 다음 배치로 이월]
+### routes/auth/user_settings.py (6건) — [완료: 2026-07-05 cycle 29a 삭제, 파일 자체 삭제]
 - GET /api/user/keys
 - POST /api/user/keys
 - GET /api/user/styles
@@ -134,7 +157,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - DELETE /api/user/styles/<style_id>
 - GET /api/user/usage
 
-### routes/auth_routes.py (2건) — [2026-07-05 재검증: 소비자 0 재확인, 삭제는 auth/* 캐스케이드와 함께 다음 배치로 이월]
+### routes/auth_routes.py (2건) — [완료: 2026-07-05 cycle 29a 삭제, auth_routes.py 자체는 공유 라이브 파일이라 해당 2개 라우트만 제거]
 - GET /api/auth/status
 - GET /api/auth/config
 
@@ -232,7 +255,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - POST /api/rag/multimodal/ingest
 - POST /api/rag/multimodal/query
 
-### routes/integrations/misc.py (2건) — [미처리, 다음 배치 — 2026-07-05 리뷰 정정: 두 라우트 현존(misc.py:12, :21), 소비자 0 재확인. cascade: services/data/openapi_service.py build_openapi_spec]
+### routes/integrations/misc.py (2건) — [완료: 2026-07-05 cycle 29a 삭제, services/data/openapi_service.py 모듈 전체 함께 삭제, 앱 피드백/OAuth 2.0 라우트는 파일에 잔존]
 - GET /api/openapi.json
 - GET /api/docs
 

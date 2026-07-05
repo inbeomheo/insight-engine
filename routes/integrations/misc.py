@@ -1,48 +1,9 @@
-"""기타 통합 — OpenAPI 문서, 앱 피드백, OAuth 2.0 공급자."""
+"""기타 통합 — 앱 피드백, OAuth 2.0 공급자."""
 from flask import request, jsonify, current_app, g
 from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
 from src.contexts.identity.interface.auth_decorators import require_auth
-
-
-# ── OpenAPI 문서 (F7-08) ──────────────────────────────────────
-
-
-@blog_bp.route('/api/openapi.json', methods=['GET'])
-def openapi_spec():
-    """OpenAPI 3.0 스펙 JSON 반환"""
-    from services.data.openapi_service import build_openapi_spec
-    server_url = request.host_url.rstrip('/')
-    spec = build_openapi_spec(server_url=server_url)
-    return jsonify(spec)
-
-
-@blog_bp.route('/api/docs', methods=['GET'])
-def api_docs():
-    """Swagger UI 렌더링"""
-    spec_url = '/api/openapi.json'
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-  <title>Insight Engine API 문서</title>
-  <meta charset="utf-8"/>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
-  <script>
-    SwaggerUIBundle({{
-      url: '{spec_url}',
-      dom_id: '#swagger-ui',
-      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-      layout: 'BaseLayout'
-    }});
-  </script>
-</body>
-</html>"""
-    return html, 200, {'Content-Type': 'text/html'}
 
 
 # ── 앱 피드백 (F7-24) ──────────────────────────────────────
