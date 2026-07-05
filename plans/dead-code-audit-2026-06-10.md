@@ -3,6 +3,12 @@
 멀티에이전트 감사(에이전트 52개)로 소비자 없는 엔드포인트/모듈/의존성 354건을 발굴하고,
 각 후보를 적대적 검증(동적 import, url_for, 프론트엔드/확장/n8n/문서/배포설정/OpenAPI 전수 grep)했다.
 
+## 2026-07-05 갱신 (dev-loop cycle 27b)
+
+- `routes/advanced_routes.py` 9건은 재검증 결과 이미 PR #81(Dep-2 batch 1, 2026-07-04)에서 라우트 자체가 제거되어 있었음. 이번 배치는 해당 라우트가 유일하게 호출하던 orphan 서비스 `services/finetune/`(data_collector, dataset_builder, reward_model) + 전용 테스트 3개를 제거.
+- 파일 존재 재검사 결과 아래 그룹은 파일 자체가 트리에서 사라져 이미 삭제 완료된 것으로 확인(이후 사이클에서 처리됨). 목록은 이력 보존을 위해 남기되 "완료" 표기만 추가: `routes/advanced/rewrite.py`, `routes/analytics_routes.py`, `routes/blog/voice_capture.py`, `routes/content_mgmt/trash_pin.py`, `routes/integrations/workflow.py`, `routes/utility/content_evaluation.py`, `routes/utility/content_meta.py`, `routes/utility/generation.py`, `routes/utility/seo_aeo.py`, `routes/utility/text_quality.py`, `routes/utility/text_structure.py`.
+- 그 외 그룹(auth/*, content_mgmt*, integrations/automation·content_workspace·imports·knowledge·misc, marketplace_routes.py, payment*, utility/external·feedback_quality·operations 등)은 파일이 여전히 존재하며 개별 엔드포인트 재검증은 이번 배치 범위 밖 — 다음 배치에서 재확인 필요.
+
 ## 이번에 삭제 완료
 - services/mcp/plugin_sdk.py + plugins/{linkedin,tistory,twitter,velog}.py (+테스트 4개) — 레지스트리 미등록 죽은 모듈
 - static/ 잔여 7개 파일, 루트 postcss/tailwind 설정, 깨진 CSS 빌드 스크립트
@@ -14,10 +20,10 @@
 기능 폐기 여부를 결정한 뒤 일괄 제거할 것. 각 항목의 blocking_refs(같이 지워야 할 테스트 목록)는
 감사 원본 JSON 참조.
 
-### routes/advanced/rewrite.py (1건)
+### routes/advanced/rewrite.py (1건) — [완료: 파일 삭제 확인, PR #96 Dep-4로 추정]
 - GET /api/rewrite/platforms
 
-### routes/advanced_routes.py (9건)
+### routes/advanced_routes.py (9건) — [완료: 라우트는 PR #81(Dep-2 batch 1)에서 제거, 잔존 orphan 서비스 services/finetune/ 는 2026-07-05 배치에서 제거]
 - POST /api/channel-analysis
 - POST /api/generate-clips
 - POST /api/generate-podcast
@@ -28,7 +34,7 @@
 - POST /api/finetune/collect
 - POST /api/finetune/collect-local
 
-### routes/analytics_routes.py (48건)
+### routes/analytics_routes.py (48건) — [완료: 파일 삭제 확인]
 - GET /api/admin/dashboard/extended
 - POST /api/admin/dashboard/record
 - GET /api/performance/<content_id>
@@ -114,7 +120,7 @@
 - GET /api/auth/status
 - GET /api/auth/config
 
-### routes/blog/voice_capture.py (2건)
+### routes/blog/voice_capture.py (2건) — [완료: 파일 삭제 확인]
 - POST /api/capture/speech
 - POST /api/capture/merge
 
@@ -128,7 +134,7 @@
 - GET /api/content/export/<fmt>
 - POST /api/content/import/<fmt>
 
-### routes/content_mgmt/trash_pin.py (7건)
+### routes/content_mgmt/trash_pin.py (7건) — [완료: 파일 삭제 확인]
 - GET /api/content/trash
 - POST /api/content/trash/<item_id>/restore
 - DELETE /api/content/trash/<item_id>
@@ -212,7 +218,7 @@
 - GET /api/openapi.json
 - GET /api/docs
 
-### routes/integrations/workflow.py (3건)
+### routes/integrations/workflow.py (3건) — [완료: 파일 삭제 확인]
 - POST /api/cms/publish-all
 - GET /api/cms/plugins
 - POST /api/cms/validate-config
@@ -248,7 +254,7 @@
 - GET /api/billing/summary
 - POST /api/billing/reset-monthly
 
-### routes/utility/content_evaluation.py (18건)
+### routes/utility/content_evaluation.py (18건) — [완료: 파일 삭제 확인]
 - POST /api/grade-content
 - POST /api/optimize-headline
 - POST /api/freshness-check
@@ -268,7 +274,7 @@
 - POST /api/check-content-freshness
 - POST /api/score-content-scanability
 
-### routes/utility/content_meta.py (31건)
+### routes/utility/content_meta.py (31건) — [완료: 파일 삭제 확인]
 - POST /api/extract-acronyms
 - POST /api/brand-voice
 - POST /api/audience-persona
@@ -309,14 +315,14 @@
 - DELETE /api/cache/ai
 - GET /api/feedback/stats/<style_id>
 
-### routes/utility/generation.py (2건)
+### routes/utility/generation.py (2건) — [완료: 파일 삭제 확인]
 - POST /api/recommend-style
 - POST /api/generate-style
 
 ### routes/utility/operations.py (1건)
 - POST /api/close
 
-### routes/utility/seo_aeo.py (31건)
+### routes/utility/seo_aeo.py (31건) — [완료: 파일 삭제 확인]
 - POST /api/generate-faq
 - POST /api/analyze-aeo
 - POST /api/search-intent
@@ -349,7 +355,7 @@
 - POST /api/check-qa-closure
 - POST /api/analyze-example-coverage
 
-### routes/utility/text_quality.py (30건)
+### routes/utility/text_quality.py (30건) — [완료: 파일 삭제 확인]
 - POST /api/power-words
 - POST /api/emotional-tone
 - POST /api/engagement-score
@@ -381,7 +387,7 @@
 - POST /api/analyze-terminology-drift
 - POST /api/analyze-concept-load
 
-### routes/utility/text_structure.py (31건)
+### routes/utility/text_structure.py (31건) — [완료: 파일 삭제 확인]
 - POST /api/keyword-density
 - POST /api/analyze-transitions
 - POST /api/paragraph-balance

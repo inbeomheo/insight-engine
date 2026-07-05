@@ -144,7 +144,6 @@ services/
 ├── payment/        # 결제/구독 (9개)
 ├── rag/            # RAG 벡터 스토어 (9개)
 ├── usage/          # 사용량 관리 (5개)
-├── finetune/       # AI 파인튜닝 (3개)
 └── exceptions/     # 에러 처리
 ```
 
@@ -356,3 +355,9 @@ SELECT decrement_usage_safe('user-uuid');
 - 제거된 엔드포인트: `/api/arxiv/*`, `/api/health/detailed`, `/api/github/readme`, `/api/styles`, `/api/cache/stats`, `/api/cache/purge`, `/api/content/stats`, `/api/version`, `/api/prompts/info`, `/api/rate-limit/status`, `/api/admin/system-info`
 - 제거된 함수: `get_citation_stats`, `generate_numbered_toc`, `generate_ab_hooks`, `suggest_fixes`, `get_citation_density_grade`, `generate_themed_card`, `shuffle_quiz`, `generate_mixed_difficulty_quiz`, `analyze_debate_balance`
 - 이 엔드포인트/함수를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
+
+### dead-code 제거 batch 2 (2026-07-05)
+
+`plans/dead-code-audit-2026-06-10.md`의 `routes/advanced_routes.py` 9건은 이미 PR #81(Dep-2 batch 1)에서 라우트 자체가 제거되어 있었음(재검증 완료). 이번 배치는 그 라우트들이 유일하게 호출하던 백엔드 서비스 `services/finetune/`(data_collector, dataset_builder, reward_model)가 완전히 고아 상태임을 확인하고 제거:
+- 제거된 서비스: `services/finetune/` 패키지 전체 (data_collector.py, dataset_builder.py, reward_model.py)
+- 제거된 테스트: `tests/test_data_collector.py`, `tests/test_dataset_builder.py`, `tests/test_reward_model.py`
