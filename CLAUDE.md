@@ -406,3 +406,12 @@ SELECT decrement_usage_safe('user-uuid');
 - 제거: `config.py`의 `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` 설정 블록 — config 소비자 0.
 - 변경: `app.py` CSRF 우회 조건에서 `X-API-Key` 헤더만 제거, `Authorization` 우회는 유지 — `/api/keys` 발급 라우트 삭제로 IE 발급 API 키 경로 없음.
 - 스킵: 없음.
+
+### dead-code 제거 batch 6 — Dep-7 배치 A (2026-07-05)
+
+`plans/dep7-seo-geo-split-plan.md` §4 배치 A에 따라 프로덕션 import 0으로 재검증된 `services/seo/` 고아 분석 서비스 24개와 전용 테스트 24개를 제거.
+- 제거된 서비스: `aeo_optimizer_service`, `anchor_text_service`, `cannibalization_service`, `competitor_analysis_service`, `content_freshness_indicator_service`, `content_performance_predictor_service`, `cta_optimizer_service`, `eeat_analyzer_service`, `engagement_scorer_service`, `entity_coverage_service`, `freshness_monitor_service`, `headline_optimizer_service`, `image_seo_auditor_service`, `internal_link_service`, `keyword_density_service`, `keyword_stuffing_detector_service`, `meta_description_quality_service`, `schema_opportunity_service`, `search_intent_service`, `serp_feature_service`, `title_tag_length_service`, `topic_cluster_service`, `topic_gap_service`, `url_health_checker_service`.
+- 제거된 테스트: 위 24개 서비스의 `tests/test_<name>.py` 전용 테스트 전체.
+- agent 계층 정리: `agent/prompts/roles.py`의 SEO_PROMPT에서 삭제된 도구명(`analyze_density`, `analyze_search_intent`, `analyze_eeat`, `analyze_aeo`, `analyze_serp_features`, `find_link_opportunities`, `cluster_contents`)을 제거하고, `agent/core.py`의 `PARALLEL_SAFE_TOOLS`에서 `check_keyword_density`를 제거(이 이름은 실제 등록된 적 없는 유령 항목 — keyword_density_service의 실제 도구명은 `analyze_density`였음. 무해한 스테일 항목 정리).
+- 스킵: 없음. `agent/tools/seo_tools.py`는 `services/seo/` 디렉터리 pkgutil 스캔 방식이라 하드코딩 수정 없음.
+- `search_service.py`, `seo_metadata_service.py`, SEO/GEO 스타일 계열은 사람-gated 배치 C/D 대상으로 유지.

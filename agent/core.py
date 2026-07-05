@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 PARALLEL_SAFE_TOOLS = frozenset([
     # 분석 도구 (전부 읽기 전용)
     "analyze_readability", "analyze_sentiment", "analyze_complexity",
-    "check_keyword_density", "check_heading_hierarchy",
+    "check_heading_hierarchy",
     # 수집 도구
     "collect_webpage", "collect_youtube", "detect_source_type",
     # 검색
