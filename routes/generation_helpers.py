@@ -136,44 +136,6 @@ def _handle_direct_text(params: dict, start_time: float):
     return jsonify(response)
 
 
-def _handle_audio_upload(params: dict, uploaded_file, start_time: float):
-    """오디오 파일 → Whisper 전사 → 콘텐츠 생성."""
-    import os
-    import tempfile
-    from services.transcript.whisper_service import transcribe_audio, _cleanup_file
-
-    whisper_enabled = os.getenv('WHISPER_ENABLED', 'false').lower() == 'true'
-    if not whisper_enabled:
-        return api_error('음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
-
-    filename = (uploaded_file.filename or '').lower()
-    audio_path = None
-    try:
-        suffix = os.path.splitext(filename)[1] or '.wav'
-        fd, audio_path = tempfile.mkstemp(suffix=suffix)
-        os.close(fd)
-        uploaded_file.save(audio_path)
-
-        whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
-        transcript_text = transcribe_audio(audio_path, whisper_model)
-        if not transcript_text or not transcript_text.strip():
-            return api_error('음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.', 400)
-    finally:
-        if audio_path:
-            _cleanup_file(audio_path)
-
-    source_title = uploaded_file.filename or '음성 메모'
-    truncated_content = _truncate_for_model(params['model'], '음성 전사', transcript_text)
-    result, used_prompt = _generate_from_source(params, truncated_content)
-
-    result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
-
-    response = _base_generation_response(result, params, start_time, used_prompt)
-    response['source_type'] = 'voice'
-    response['source_title'] = source_title
-    return jsonify(response)
-
-
 def _handle_web_source(params: dict, url: str, source_type: str, start_time: float):
     """비YouTube URL (웹페이지/RSS/arXiv) → 콘텐츠 생성."""
     from services.content.multi_source_collector import SOURCE_WEBPAGE

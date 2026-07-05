@@ -246,6 +246,7 @@ insight-engine/
 |----------|--------|-------------|
 | `/api/mindmap` | POST | 마인드맵 생성 |
 | `/api/extract-document` | POST | PDF/DOCX/PPTX 텍스트 추출 |
+| `/api/extract-audio` | POST | MP3/WAV/M4A/OGG/FLAC/AAC 음성 전사 |
 | `/api/qa-check` | POST | QA 게이트 검증 |
 | `/api/export/docx` | POST | DOCX 내보내기 |
 | `/api/export/markdown` | POST | Markdown 내보내기 |
@@ -293,6 +294,7 @@ insight-engine/
 | `SUPABASE_URL` + `SUPABASE_ANON_KEY` | 클라우드 DB/인증 |
 | `WHISPER_ENABLED` | Whisper 자막 폴백 (`true`/`false`) |
 | `DOCUMENT_UPLOAD_MAX_BYTES` | 문서 텍스트 추출 업로드 최대 바이트 |
+| `AUDIO_UPLOAD_MAX_BYTES` | 오디오 전사 업로드 최대 바이트 |
 | `RAG_ENABLED` | RAG 지식 참조 (`true`/`false`) |
 | `WEBHOOK_URL` + `WEBHOOK_ENABLED` | 웹훅 알림 |
 | `REDIS_URL` | Rate Limiter 저장소 |

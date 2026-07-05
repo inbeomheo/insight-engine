@@ -85,18 +85,22 @@ def create_app(test_config=None):
     _perf_logger = _logging.getLogger('api.perf')
 
     @app.before_request
-    def _set_extract_document_upload_limit():
-        if request.path != '/api/extract-document':
+    def _set_extract_upload_limit():
+        if request.path == '/api/extract-document':
+            upload_limit = int(config_module.DOCUMENT_UPLOAD_MAX_BYTES)
+        elif request.path == '/api/extract-audio':
+            upload_limit = int(config_module.AUDIO_UPLOAD_MAX_BYTES)
+        else:
             return None
         limit = (
-            int(config_module.DOCUMENT_UPLOAD_MAX_BYTES)
+            upload_limit
             + int(config_module.DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES)
         )
         try:
             request.max_content_length = limit
         except AttributeError:
             app.logger.warning(
-                'Flask <3.1: per-request upload limit unavailable — /api/extract-document uploads stay capped at the global limit'
+                'Flask <3.1: per-request upload limit unavailable — extract uploads stay capped at the global limit'
             )
         return None
 

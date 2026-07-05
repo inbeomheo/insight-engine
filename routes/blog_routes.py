@@ -49,6 +49,7 @@ DOCUMENT_MAGIC_BYTES = {
     '.docx': b'PK\x03\x04',
     '.pptx': b'PK\x03\x04',
 }
+AUDIO_UPLOAD_EXTENSIONS = ('.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac')
 MAX_MERGED_URLS = 5
 
 # 에러 응답 헬퍼 (기존 호출 호환)
@@ -93,6 +94,43 @@ def _is_supported_document_upload(uploaded_file, file_bytes: bytes) -> bool:
     return bool(extension and file_bytes.startswith(DOCUMENT_MAGIC_BYTES[extension]))
 
 
+def _get_audio_extension(uploaded_file) -> str:
+    filename = (uploaded_file.filename or "").lower()
+    for extension in AUDIO_UPLOAD_EXTENSIONS:
+        if filename.endswith(extension):
+            return extension
+    return ""
+
+
+def _has_mp3_sync(file_bytes: bytes) -> bool:
+    return len(file_bytes) >= 2 and file_bytes[0] == 0xFF and (file_bytes[1] & 0xE0) == 0xE0
+
+
+def _is_supported_audio_upload(uploaded_file, file_bytes: bytes) -> bool:
+    """Best-effort audio signature validation; Whisper remains the decode backstop."""
+    extension = _get_audio_extension(uploaded_file)
+    if not extension:
+        return False
+
+    if extension == '.wav':
+        return file_bytes.startswith(b'RIFF') and file_bytes[8:12] == b'WAVE'
+    if extension == '.mp3':
+        return file_bytes.startswith(b'ID3') or _has_mp3_sync(file_bytes)
+    if extension == '.m4a':
+        return b'ftyp' in file_bytes[:16]
+    if extension == '.ogg':
+        return file_bytes.startswith(b'OggS')
+    if extension == '.flac':
+        return file_bytes.startswith(b'fLaC')
+
+    # Raw AAC can be ADTS/ADIF/LOAS, so keep validation to extension allow-list
+    # and rely on Whisper failure/empty transcript handling for final rejection.
+    if extension == '.aac':
+        return True
+
+    return False
+
+
 def _document_read_error_message(message: str) -> str:
     for label in ('PDF', 'DOCX', 'PPTX'):
         if message.startswith(f'{label} 파일을 읽을 수 없습니다'):
@@ -116,12 +154,12 @@ def _get_upload_size(uploaded_file) -> int | None:
         return getattr(uploaded_file, "content_length", None) or None
 
 
-def _read_upload_magic(uploaded_file) -> bytes:
-    """Read document magic bytes and rewind so extract_from_upload can save the full file."""
+def _read_upload_magic(uploaded_file, length: int = 16) -> bytes:
+    """Read upload magic bytes and rewind so downstream consumers can save the full file."""
     stream = uploaded_file.stream
     try:
         stream.seek(0)
-        magic = stream.read(4)
+        magic = stream.read(length)
         stream.seek(0)
         return magic
     except (AttributeError, OSError):
@@ -362,7 +400,7 @@ from routes.generation_helpers import (
     _handle_short_content_bypass, _handle_cache_hit,
     _call_ai_with_comments, _save_and_respond, _persist_generation_result,
     _process_single_url,
-    _get_style_prompt, _handle_direct_text, _handle_audio_upload,
+    _get_style_prompt, _handle_direct_text,
     _handle_web_source,
     _get_style_label, _apply_output_format,
     _generate_comment_summary, _combine_results,
@@ -439,6 +477,83 @@ def extract_document():
         return api_error('문서 처리 중 오류가 발생했습니다. 다시 시도해 주세요.', 500)
 
 
+@blog_bp.route('/api/extract-audio', methods=['POST'])
+@limiter.limit("5/minute")
+@require_auth
+def extract_audio():
+    """오디오 파일을 Whisper로 전사해 직접 텍스트 입력 경로에 재사용합니다."""
+    import importlib.util
+    import os
+    import tempfile
+    from config import (
+        AUDIO_UPLOAD_MAX_BYTES,
+        DIRECT_TEXT_MAX_CHARS,
+        DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES,
+    )
+
+    if os.getenv('WHISPER_ENABLED', 'false').lower() != 'true':
+        return api_error('음성 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
+
+    if importlib.util.find_spec('faster_whisper') is None:
+        return api_error('음성 인식 모듈이 서버에 설치되어 있지 않습니다. 관리자에게 문의해 주세요.', 500)
+
+    if (
+        request.content_length
+        and request.content_length > AUDIO_UPLOAD_MAX_BYTES + DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES
+    ):
+        return api_error(
+            f'오디오 파일 크기는 최대 {_format_byte_limit(AUDIO_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
+            400,
+        )
+
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or not uploaded_file.filename:
+        return api_error('오디오 파일을 업로드해 주세요.', 400)
+
+    audio_path = None
+    whisper_service = None
+    try:
+        upload_size = _get_upload_size(uploaded_file)
+        if upload_size is not None and upload_size > AUDIO_UPLOAD_MAX_BYTES:
+            return api_error(
+                f'오디오 파일 크기는 최대 {_format_byte_limit(AUDIO_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
+                400,
+            )
+
+        magic = _read_upload_magic(uploaded_file)
+        if not magic or not _is_supported_audio_upload(uploaded_file, magic):
+            return api_error('MP3, WAV, M4A, OGG, FLAC, AAC 파일만 업로드할 수 있습니다.', 400)
+
+        from services.transcript import whisper_service as _whisper_service
+        whisper_service = _whisper_service
+
+        suffix = _get_audio_extension(uploaded_file)
+        fd, audio_path = tempfile.mkstemp(suffix=suffix)
+        os.close(fd)
+        uploaded_file.save(audio_path)
+
+        whisper_model = os.getenv('WHISPER_MODEL_SIZE', 'base')
+        transcript_text = whisper_service.transcribe_audio(audio_path, whisper_model)
+        text = _normalize_extracted_text(transcript_text or '')
+        if not text:
+            return api_error('음성 인식 결과가 비어 있습니다. 오디오 파일을 확인해주세요.', 400)
+
+        truncated = len(text) > DIRECT_TEXT_MAX_CHARS
+        if truncated:
+            text = text[:DIRECT_TEXT_MAX_CHARS]
+
+        return jsonify({
+            'text': text,
+            'truncated': truncated,
+        })
+    except Exception as exc:
+        current_app.logger.error('Unexpected audio extraction error: %s', exc, exc_info=True)
+        return api_error('오디오 처리 중 오류가 발생했습니다. 다시 시도해 주세요.', 500)
+    finally:
+        if audio_path and whisper_service:
+            whisper_service._cleanup_file(audio_path)
+
+
 @blog_bp.route('/generate', methods=['POST'])
 @limiter.limit("15/minute")
 @require_auth
@@ -470,15 +585,6 @@ def generate():
             if validation_error:
                 return api_error(validation_error, 400)
             return _handle_direct_text(params, start_time)
-
-        # ── 파일 업로드 모드 (오디오) ──
-        uploaded_file = request.files.get('file')
-        if uploaded_file and not url:
-            filename = (uploaded_file.filename or '').lower()
-            _audio_extensions = ('.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac', '.webm', '.weba')
-
-            if filename.endswith(_audio_extensions) or (uploaded_file.content_type or '').startswith('audio/'):
-                return _handle_audio_upload(params, uploaded_file, start_time)
 
         if not url:
             return api_error('URL이 필요합니다.', 400)
