@@ -98,24 +98,6 @@ class SupabaseHistoryRepository(IHistoryRepository):
             logger.warning("배치 히스토리 저장 실패: %s", exc)
             return 0
 
-    def list_for_user(
-        self, user_id: str, page: int = 1, per_page: int = 20
-    ) -> dict:
-        from services.data.supabase_service import get_histories as _list
-        return _list(user_id, page, per_page)
-
-    def update(self, user_id: str, report_id: str, updates: dict) -> bool:
-        from services.data.supabase_service import update_history as _update
-        return _update(user_id, report_id, updates)
-
-    def toggle_favorite(self, user_id: str, report_id: str) -> dict:
-        from services.data.supabase_service import toggle_favorite as _toggle
-        return _toggle(user_id, report_id)
-
-    def delete(self, user_id: str, report_id: str) -> bool:
-        from services.data.supabase_service import delete_history as _delete
-        return _delete(user_id, report_id)
-
     def fetch_recent_for_admin(self, days: int = 7) -> list[dict]:
         """모든 사용자의 최근 N일 히스토리 raw 조회 (admin 대시보드용).
 

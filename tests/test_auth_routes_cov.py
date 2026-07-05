@@ -3,7 +3,7 @@
 인증, 사용량, 워크스페이스, 스타일 메모리, 스니펫, 채널 모니터, 대시보드 커버.
 """
 import unittest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 from app import create_app
 

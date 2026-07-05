@@ -95,7 +95,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
     "rag": {
         "tools": [
             "rag_query", "rag_upload", "rag_list_documents",
-            "chunk_text", "build_context",
+            "chunk_text",
         ],
         "includes": [],
         "description": "벡터 검색, 문서 업로드, 컨텍스트 빌드",

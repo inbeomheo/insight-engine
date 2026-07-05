@@ -27,69 +27,6 @@ class SaveHistoryEntryUseCase:
         return self.repository.save(entry)
 
 
-@dataclass(slots=True)
-class ListHistoryEntriesUseCase:
-    """사용자 히스토리 조회 (페이지네이션)."""
-
-    repository: IHistoryRepository
-
-    def execute(
-        self, user_id: str | None, page: int = 1, per_page: int = 20
-    ) -> dict:
-        if not user_id:
-            return {
-                "histories": [],
-                "total": 0,
-                "page": 1,
-                "per_page": per_page,
-                "total_pages": 0,
-                "has_more": False,
-            }
-        return self.repository.list_for_user(user_id, page, per_page)
-
-
-@dataclass(slots=True)
-class UpdateHistoryEntryUseCase:
-    """부분 갱신."""
-
-    repository: IHistoryRepository
-
-    def execute(
-        self, user_id: str | None, report_id: str, updates: dict
-    ) -> bool:
-        if not user_id or not report_id:
-            return False
-        return self.repository.update(user_id, report_id, updates)
-
-
-@dataclass(slots=True)
-class ToggleFavoriteUseCase:
-    """즐겨찾기 토글."""
-
-    repository: IHistoryRepository
-
-    def execute(self, user_id: str | None, report_id: str) -> dict:
-        if not user_id or not report_id:
-            return {"success": False, "error": "Not authenticated"}
-        return self.repository.toggle_favorite(user_id, report_id)
-
-
-@dataclass(slots=True)
-class DeleteHistoryEntryUseCase:
-    """삭제."""
-
-    repository: IHistoryRepository
-
-    def execute(self, user_id: str | None, report_id: str) -> bool:
-        if not user_id or not report_id:
-            return False
-        return self.repository.delete(user_id, report_id)
-
-
 __all__ = [
     "SaveHistoryEntryUseCase",
-    "ListHistoryEntriesUseCase",
-    "UpdateHistoryEntryUseCase",
-    "ToggleFavoriteUseCase",
-    "DeleteHistoryEntryUseCase",
 ]
