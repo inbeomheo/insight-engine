@@ -408,7 +408,7 @@ class TestAnalysisEndpoints(_BaseTestCase):
     # 빈 content/text 400 테스트 대상 (엔드포인트 경로, 필드명) 튜플
     # 'content' 필드를 사용하는 엔드포인트
     _CONTENT_ENDPOINTS = [
-        '/api/fact-check', '/api/seo-optimize', '/api/plagiarism-check',
+        '/api/fact-check', '/api/plagiarism-check',
         '/api/sentiment-flow',
     ]
     # 'text' 필드를 사용하는 엔드포인트
@@ -451,8 +451,6 @@ class TestAnalysisEndpoints(_BaseTestCase):
             with self.subTest(path=path):
                 with patch(service_path, return_value={'score': 0.8, 'result': 'ok'}) as mock_svc:
                     payload = {field_name: '테스트용 콘텐츠입니다. 충분히 긴 텍스트.'}
-                    if path == '/api/seo-optimize':
-                        payload['keywords'] = ['테스트']
                     resp = self.client.post(path, json=payload, headers=_H)
                     self.assertEqual(resp.status_code, 200,
                                      f'{path}: 200 기대, {resp.status_code} 반환 — {resp.get_json()}')

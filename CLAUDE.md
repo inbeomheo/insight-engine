@@ -405,6 +405,16 @@ SELECT decrement_usage_safe('user-uuid');
 - 제거: `services/usage/credit_plan.py`의 `get_plan_credits`/`get_plan_features` 및 export/전용 테스트 — PR #114 이후 결제 라우트 소비자 0, 사용량/크레딧 핵심 로직은 유지.
 - 제거: `config.py`의 `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` 설정 블록 — config 소비자 0.
 - 변경: `app.py` CSRF 우회 조건에서 `X-API-Key` 헤더만 제거, `Authorization` 우회는 유지 — `/api/keys` 발급 라우트 삭제로 IE 발급 API 키 경로 없음.
+
+### dead-code 제거 batch 6 — Dep-7 배치 B (2026-07-05)
+
+`plans/dep7-seo-geo-split-plan.md` §4 배치 B 실행. 이미 생성된 콘텐츠의 SEO 점수/제안을 반환하는 3단 죽은 체인(서비스→라우트→프론트 래퍼)을 재검증 후 제거:
+- 제거된 서비스: `services/agents/seo_optimize_agent.py`(`optimize_seo()`) 전체
+- 제거된 라우트: `routes/utility/feedback_quality.py`의 `POST /api/seo-optimize`(`api_seo_optimize`) — 파일 내 다른 라우트(피드백/팩트체크/표절/가독성/감정흐름/NPS)는 그대로 유지
+- 제거된 프론트: `frontend/lib/api.ts`의 `seoOptimize()` 래퍼 + `SeoOptimizeResponse` import, `frontend/lib/types/api.ts`의 `SeoOptimizeResponse` 타입
+- 제거된 테스트: `tests/test_seo_optimize_agent.py`(파일 전체), `tests/test_utility_routes.py`의 `_CONTENT_ENDPOINTS` 목록·`simple_services` 서브테스트 중 `/api/seo-optimize` 케이스만 삭제(파일 자체는 다른 분석 엔드포인트 테스트가 있어 유지)
+- 이 3단 모두 재검증 결과 프로덕션/프론트 어디서도 호출자가 없었음(`services/agents/seo_agent.py`의 활성 `SEOAgent`와는 다른 파일이며, `services/seo/`(Dep-7 배치 A 대상)와도 무관)
+- 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
 - 스킵: 없음.
 
 ### dead-code 제거 batch 6 — Dep-7 배치 A (2026-07-05)
