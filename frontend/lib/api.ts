@@ -20,7 +20,6 @@ import type {
   QaCheckResponse,
   ProviderValidateResponse,
   FactCheckResponse,
-  SeoOptimizeResponse,
   PlagiarismResponse,
   ReadabilityResponse,
   SentimentFlowResponse,
@@ -772,18 +771,6 @@ export async function factCheck(content: string): Promise<FactCheckResponse> {
   return request('/api/fact-check', {
     method: 'POST',
     body: JSON.stringify({ content }),
-  });
-}
-
-// === SEO 최적화 (F3-08) ===
-
-export async function seoOptimize(
-  content: string,
-  keywords?: string[],
-): Promise<SeoOptimizeResponse> {
-  return request('/api/seo-optimize', {
-    method: 'POST',
-    body: JSON.stringify({ content, keywords }),
   });
 }
 

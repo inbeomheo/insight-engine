@@ -198,16 +198,6 @@ export interface FactCheckResponse {
   };
 }
 
-// === SEO 최적화 (F3-08) ===
-
-export interface SeoOptimizeResponse {
-  score: number;
-  keyword_density: Record<string, { count: number; density_percent: number }>;
-  heading_structure: { h2: number; h3: number; h2_texts?: string[] };
-  suggestions: string[];
-  meta_length: { char_count: number; word_count: number };
-}
-
 // === 표절 감지 (F3-09) ===
 
 export interface PlagiarismResponse {

@@ -2,7 +2,7 @@
 
 utility_routes.py에서 분리됨:
 - 피드백/NPS
-- 팩트체크 / SEO 최적화 / 표절 / 가독성 / 감정 흐름
+- 팩트체크 / 표절 / 가독성 / 감정 흐름
 """
 from flask import g, jsonify, request
 from utils.responses import api_error
@@ -46,22 +46,6 @@ def api_fact_check():
 
     from services.agents.fact_check_agent import fact_check
     result = fact_check(content)
-    return jsonify(result)
-
-
-# === SEO 최적화 (F3-08) ===
-
-@blog_bp.route('/api/seo-optimize', methods=['POST'])
-def api_seo_optimize():
-    """콘텐츠의 SEO를 분석하고 최적화 제안을 반환합니다."""
-    data = request.get_json(silent=True) or {}
-    content = data.get('content', '')
-    keywords = data.get('keywords', [])
-    if not content:
-        return api_error('content 필수', 400)
-
-    from services.agents.seo_optimize_agent import optimize_seo
-    result = optimize_seo(content, keywords)
     return jsonify(result)
 
 
