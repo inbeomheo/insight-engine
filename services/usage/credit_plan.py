@@ -51,18 +51,6 @@ CREDIT_PLANS: dict[str, dict[str, Any]] = {
 }
 
 
-def get_plan_credits(plan_name: str) -> int:
-    """플랜별 일일 크레딧 수 반환"""
-    plan = CREDIT_PLANS.get(plan_name, CREDIT_PLANS['free'])
-    return plan['credits_per_day']
-
-
-def get_plan_features(plan_name: str) -> list[str]:
-    """플랜별 기능 목록 반환"""
-    plan = CREDIT_PLANS.get(plan_name, CREDIT_PLANS['free'])
-    return plan['features']
-
-
 def get_plan_price(plan_name: str, period: str = 'monthly') -> int:
     """플랜 가격 반환 (KRW)"""
     plan = CREDIT_PLANS.get(plan_name, CREDIT_PLANS['free'])

@@ -1,4 +1,4 @@
-"""콘텐츠 워크스페이스 — 버전 히스토리, 검색, 폴더, 알림 센터, 협업 세션."""
+"""콘텐츠 워크스페이스 — 버전 히스토리, 검색, 알림 센터, 협업 세션."""
 from flask import request, jsonify, current_app
 
 from routes.blog_routes import blog_bp
@@ -89,57 +89,6 @@ def search_content():
 
     result = search(query, style_filter=style, limit=limit, offset=offset)
     return jsonify(result)
-
-
-# ── 폴더/카테고리 (F5-11) ────────────────────────────
-
-
-@blog_bp.route('/api/folders', methods=['GET'])
-def list_content_folders():
-    """폴더 목록을 반환합니다."""
-    from services.data.folder_service import list_folders
-    parent_id = request.args.get('parent_id', None)
-    return jsonify({'folders': list_folders(parent_id=parent_id)})
-
-
-@blog_bp.route('/api/folders', methods=['POST'])
-def create_content_folder():
-    """폴더를 생성합니다."""
-    from services.data.folder_service import create_folder
-    data = request.get_json(silent=True) or {}
-    name = data.get('name', '').strip()
-    if not name:
-        return api_error('폴더 이름이 필요합니다.', 400)
-
-    folder = create_folder(name=name, parent_id=data.get('parent_id'))
-    return jsonify(folder), 201
-
-
-@blog_bp.route('/api/folders/<folder_id>', methods=['PUT'])
-def update_content_folder(folder_id):
-    """폴더를 수정합니다."""
-    from services.data.folder_service import update_folder
-    data = request.get_json(silent=True) or {}
-    folder = update_folder(folder_id, name=data.get('name'))
-    if not folder:
-        return api_error('폴더를 찾을 수 없습니다.', 404)
-    return jsonify(folder)
-
-
-@blog_bp.route('/api/folders/<folder_id>', methods=['DELETE'])
-def delete_content_folder(folder_id):
-    """폴더를 삭제합니다."""
-    from services.data.folder_service import delete_folder
-    if not delete_folder(folder_id):
-        return api_error('폴더를 찾을 수 없습니다.', 404)
-    return jsonify({'success': True})
-
-
-@blog_bp.route('/api/folders/<folder_id>/contents', methods=['GET'])
-def list_folder_content_ids(folder_id):
-    """폴더의 콘텐츠 ID 목록을 반환합니다."""
-    from services.data.folder_service import list_folder_contents
-    return jsonify({'content_ids': list_folder_contents(folder_id)})
 
 
 # ── 알림 센터 (F5-13) ────────────────────────────────

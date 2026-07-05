@@ -397,3 +397,12 @@ SELECT decrement_usage_safe('user-uuid');
 - `app.py`에서 `routes.payment_routes` import + `marketplace_bp` 블루프린트 등록 제거
 - 서비스 도메인 구조 표에서 `payment/` 행 제거(디렉토리 자체 삭제)
 - 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드(결제 진입 페이지)와 `.env.example` 설정 문서화를 함께 작성할 것
+
+### 고아 정리 c31a (2026-07-05)
+
+- 제거: `services/data/supabase_service.py`의 legacy history 조회/수정/즐겨찾기/삭제 헬퍼(`get_histories`/`update_history`/`toggle_favorite`/`delete_history`)와 전용 테스트 — PR #113 이후 프로덕션 호출자 0.
+- 제거: `/api/folders*` 백엔드 라우트와 인메모리 `services/data/folder_service.py`, 전용 라우트/서비스 테스트 — 유일 프론트 소비자 `FolderTree.tsx` 삭제 이후 `frontend/` 호출 0.
+- 제거: `services/usage/credit_plan.py`의 `get_plan_credits`/`get_plan_features` 및 export/전용 테스트 — PR #114 이후 결제 라우트 소비자 0, 사용량/크레딧 핵심 로직은 유지.
+- 제거: `config.py`의 `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` 설정 블록 — config 소비자 0.
+- 변경: `app.py` CSRF 우회 조건에서 `X-API-Key` 헤더만 제거, `Authorization` 우회는 유지 — `/api/keys` 발급 라우트 삭제로 IE 발급 API 키 경로 없음.
+- 스킵: 없음.
