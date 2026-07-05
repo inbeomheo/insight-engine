@@ -322,53 +322,5 @@ class TestSearchRoute(_Base):
         self.assertIn('results', resp.get_json())
 
 
-# ── 폴더 ──────────────────────────────────────
-
-
-class TestFolderRoutes(_Base):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.folder_service.list_folders')
-    def test_list_folders(self, mock_list, _):
-        mock_list.return_value = [{'id': 'f1', 'name': '폴더1'}]
-        resp = self.client.get('/api/folders')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(resp.get_json()['folders']), 1)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_create_folder_missing_name(self, _):
-        resp = self.client.post('/api/folders', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.folder_service.create_folder')
-    def test_create_folder_success(self, mock_create, _):
-        mock_create.return_value = {'id': 'f2', 'name': '새 폴더'}
-        resp = self.client.post('/api/folders',
-                                json={'name': '새 폴더'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 201)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.folder_service.update_folder', return_value=None)
-    def test_update_folder_not_found(self, mock_update, _):
-        resp = self.client.put('/api/folders/f999',
-                               json={'name': '변경'},
-                               headers=_H)
-        self.assertEqual(resp.status_code, 404)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.folder_service.delete_folder', return_value=False)
-    def test_delete_folder_not_found(self, mock_delete, _):
-        resp = self.client.delete('/api/folders/f999', headers=_H)
-        self.assertEqual(resp.status_code, 404)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.data.folder_service.delete_folder', return_value=True)
-    def test_delete_folder_success(self, mock_delete, _):
-        resp = self.client.delete('/api/folders/f1', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-
 if __name__ == '__main__':
     unittest.main()

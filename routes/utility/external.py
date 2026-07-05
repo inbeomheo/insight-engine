@@ -123,7 +123,7 @@ def rss_feed():
     SubElement(channel, 'language').text = 'ko'
 
     # RSS 피드: 공개 히스토리 조회 미구현 — Phase 5+에서 공개 콘텐츠 BC 도입 시 연결 예정.
-    # 기존 `SupabaseService.get_histories(limit=20)` 호출은 클래스 자체가 존재하지 않아
+    # 기존 legacy history 조회 호출은 대상 클래스 자체가 존재하지 않아
     # 항상 빈 결과였음 (dead code, try/except로 silent fail). 명시적 빈 리스트로 단순화.
     items: list = []
     _ = is_supabase_enabled  # noqa: F841 — 후속 PR에서 공개 콘텐츠 BC 도입 시 사용 예정

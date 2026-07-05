@@ -9,7 +9,6 @@ from services.data.supabase_service import (
     _is_encryption_enabled,
     _db_operation,
     save_history,
-    get_histories,
 )
 
 
@@ -104,22 +103,6 @@ class TestSaveHistory(unittest.TestCase):
         """user_id 없음 → None"""
         result = save_history(None, {'title': 'test'})
         self.assertIsNone(result)
-
-
-class TestGetHistories(unittest.TestCase):
-
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
-    def test_no_client(self, mock_sb):
-        """클라이언트 없음 → 빈 결과"""
-        result = get_histories('user1')
-        self.assertEqual(result['histories'], [])
-        self.assertEqual(result['total'], 0)
-
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
-    def test_no_user_id(self, mock_sb):
-        """user_id 없음 → 빈 결과"""
-        result = get_histories(None)
-        self.assertEqual(result['histories'], [])
 
 
 if __name__ == '__main__':

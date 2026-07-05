@@ -103,11 +103,6 @@ AUDIO_UPLOAD_MAX_BYTES: int = int(os.getenv('AUDIO_UPLOAD_MAX_BYTES', str(50 * 1
 IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')
 IMAGE_GEN_API_KEY: str = os.getenv('IMAGE_GEN_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
 
-# === Stripe 결제 ===
-
-STRIPE_SECRET_KEY: str = os.getenv('STRIPE_SECRET_KEY', '')
-STRIPE_WEBHOOK_SECRET: str = os.getenv('STRIPE_WEBHOOK_SECRET', '')
-
 # === 화이트라벨 (F4-15) ===
 
 WHITELABEL_ENABLED: bool = os.getenv('WHITELABEL_ENABLED', 'false').lower() == 'true'

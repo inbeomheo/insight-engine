@@ -119,7 +119,7 @@ def test_flask_current_app_not_in_domain_modules():
 #   편의 함수 도입. routes/generation_helpers.py가 새 BC를 경유하도록 마이그레이션.
 #   추가로 routes/advanced_routes.py + routes/utility/external.py의 lazy
 #   `is_supabase_enabled` import를 `src.shared.infrastructure.supabase_client`로
-#   직접 치환. utility/external.py의 `SupabaseService.get_histories(...)` 호출은
+#   직접 치환. utility/external.py의 legacy history 조회 호출은
 #   클래스 자체가 존재하지 않는 dead code였음 (try/except로 silent fail) — 명시적
 #   빈 리스트로 단순화. → 3 파일.
 # 2026-05-22 Issue #19 Phase 5-b: routes/blog_routes.py의 history import를

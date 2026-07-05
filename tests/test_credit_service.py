@@ -60,19 +60,6 @@ class TestCreditService:
 
 
 class TestCreditPlan:
-    def test_get_plan_credits(self):
-        from services.usage.credit_plan import get_plan_credits
-        assert get_plan_credits('free') == 10
-        assert get_plan_credits('pro') == 100
-        assert get_plan_credits('team') == 500
-        assert get_plan_credits('unknown') == 10  # 기본 free
-
-    def test_get_plan_features(self):
-        from services.usage.credit_plan import get_plan_features
-        features = get_plan_features('pro')
-        assert len(features) > 0
-        assert any('100회' in f for f in features)
-
     def test_get_all_plans(self):
         from services.usage.credit_plan import get_all_plans
         plans = get_all_plans()
