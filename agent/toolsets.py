@@ -148,13 +148,6 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
         "description": "서브에이전트 위임, 메모리 관리, 사용자 질문",
     },
 
-    # ── 파인튜닝 ──
-    "finetune": {
-        "tools": [],  # 동적 등록
-        "includes": [],
-        "description": "데이터셋 빌드, 학습 데이터 수집",
-    },
-
     # ── 분석 대시보드 ──
     "analytics": {
         "tools": [
@@ -221,7 +214,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
             "collector", "analysis", "seo", "content", "core",
             "quality", "media", "transcript", "platform", "rag",
             "export", "integrations", "mcp", "schedule",
-            "agent_control", "finetune", "analytics",
+            "agent_control", "analytics",
             "notebooklm",
         ],
         "description": "모든 도구 (Supervisor용)",
