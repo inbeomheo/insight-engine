@@ -64,28 +64,6 @@ class TestGraphRAGEngine(unittest.TestCase):
         results = self.engine.local_search("user1", ["X"])
         self.assertEqual(results, [])
 
-    def test_global_search_empty(self):
-        result = self.engine.global_search("user1")
-        self.assertEqual(result["nodes"], [])
-        self.assertEqual(result["stats"]["node_count"], 0)
-
-    def test_global_search_returns_top_nodes(self):
-        self.store.add_entities("user1", [
-            {"name": "Hub", "type": "concept"},
-            {"name": "Leaf1", "type": "concept"},
-            {"name": "Leaf2", "type": "concept"},
-            {"name": "Leaf3", "type": "concept"},
-        ])
-        self.store.add_relations("user1", [
-            {"source": "Hub", "target": "Leaf1", "relation": "r"},
-            {"source": "Hub", "target": "Leaf2", "relation": "r"},
-            {"source": "Hub", "target": "Leaf3", "relation": "r"},
-        ])
-        result = self.engine.global_search("user1", top_n=2)
-        self.assertEqual(len(result["nodes"]), 2)
-        # Hub는 degree 3으로 최상위
-        self.assertEqual(result["nodes"][0]["name"], "Hub")
-
     def test_build_context_empty(self):
         result = self.engine.build_context("user1", ["X"])
         self.assertEqual(result, "")

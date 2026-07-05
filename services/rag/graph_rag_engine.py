@@ -1,5 +1,5 @@
 """
-GraphRAG 엔진 — 엔티티/관계 자동 추출 + 글로벌/로컬 검색
+GraphRAG 엔진 — 엔티티/관계 자동 추출 + 로컬 검색
 graph_store(저장소)와 graph_builder(추출기)를 활용하여
 텍스트에서 지식 그래프를 자동 구축하고 검색합니다.
 """
@@ -13,11 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class GraphRAGEngine:
-    """GraphRAG 엔진 — 자동 엔티티 추출 + 글로벌/로컬 검색.
+    """GraphRAG 엔진 — 자동 엔티티 추출 + 로컬 검색.
 
     - ingest: 텍스트 → LLM으로 엔티티/관계 추출 → 그래프 저장
     - local_search: 특정 엔티티 중심 BFS 탐색
-    - global_search: 전체 그래프 요약 (주요 노드 기반)
     """
 
     def __init__(self, store: Optional[GraphStore] = None, model: str = None):
@@ -71,37 +70,6 @@ class GraphRAGEngine:
         return self.store.search_related(
             user_id, query_entities, max_depth=max_depth, max_results=max_results
         )
-
-    def global_search(self, user_id: str, top_n: int = 10) -> Dict[str, Any]:
-        """전체 그래프 요약 — 연결이 많은 상위 노드를 반환합니다.
-
-        Args:
-            user_id: 사용자 ID
-            top_n: 상위 노드 수
-
-        Returns:
-            {"nodes": [...], "stats": {...}}
-        """
-        g = self.store._load_graph(user_id)
-        if g.number_of_nodes() == 0:
-            return {"nodes": [], "stats": self.store.get_stats(user_id)}
-
-        # 연결 수(degree) 기준 상위 노드
-        degree_list = sorted(g.degree(), key=lambda x: x[1], reverse=True)
-        top_nodes = []
-        for name, degree in degree_list[:top_n]:
-            attrs = g.nodes[name]
-            top_nodes.append({
-                "name": name,
-                "type": attrs.get("type", "concept"),
-                "description": attrs.get("description", ""),
-                "degree": degree,
-            })
-
-        return {
-            "nodes": top_nodes,
-            "stats": self.store.get_stats(user_id),
-        }
 
     def build_context(
         self,
