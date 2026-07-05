@@ -57,9 +57,10 @@ MCP_TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "검색 쿼리"},
+                "user_id": {"type": "string", "description": "검색할 사용자 ID"},
                 "top_k": {"type": "integer", "description": "결과 수", "default": 5}
             },
-            "required": ["query"]
+            "required": ["query", "user_id"]
         }
     },
     {
@@ -125,11 +126,18 @@ async def handle_generate_content(args: Dict[str, Any]) -> str:
 
 async def handle_search_knowledge(args: Dict[str, Any]) -> str:
     """search_knowledge 도구 핸들러"""
+    user_id = args.get('user_id')
+    if not user_id:
+        return "검색 실패: 사용자 ID(user_id)가 필요합니다."
+
     try:
-        from services.rag.context_builder import ContextBuilder
-        builder = ContextBuilder()
-        results = builder.build_context(args['query'], top_k=args.get('top_k', 5))
-        return results.get('context', '검색 결과 없음')
+        from services.rag import context_builder
+        context = context_builder.build_context(
+            user_id,
+            args['query'],
+            top_k=args.get('top_k', 5),
+        )
+        return context or '검색 결과 없음'
     except Exception as e:
         return f"검색 실패: {e}"
 

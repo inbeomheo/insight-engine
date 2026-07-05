@@ -1,6 +1,9 @@
 """MCP 서버 상태/도구 라우트 테스트."""
+import asyncio
+import sys
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app import create_app
 
@@ -38,6 +41,29 @@ class TestMCPServerRoutes(unittest.TestCase):
         tool = data['tools'][0]
         self.assertIn('name', tool)
         self.assertIn('inputSchema', tool)
+
+    def test_search_knowledge_uses_shared_rag_context_builder(self):
+        """MCP 검색 핸들러가 user_id와 query를 넘겨 RAG 컨텍스트 문자열을 반환."""
+        from services.mcp.mcp_server import handle_search_knowledge
+
+        mock_builder = MagicMock()
+        mock_builder.build_context.return_value = "관련 문서 컨텍스트"
+        fake_rag_module = SimpleNamespace(context_builder=mock_builder)
+
+        with patch.dict(sys.modules, {"services.rag": fake_rag_module}):
+            result = asyncio.run(handle_search_knowledge({
+                "user_id": "user-1",
+                "query": "테스트 검색",
+                "top_k": 3,
+            }))
+
+        self.assertEqual(result, "관련 문서 컨텍스트")
+        self.assertNotIn("검색 실패", result)
+        mock_builder.build_context.assert_called_once_with(
+            "user-1",
+            "테스트 검색",
+            top_k=3,
+        )
 
 
 if __name__ == '__main__':

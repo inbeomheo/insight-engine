@@ -3,7 +3,7 @@ GraphRAGEngine 단위 테스트
 """
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from services.rag.graph_store import GraphStore
 from services.rag.graph_rag_engine import GraphRAGEngine

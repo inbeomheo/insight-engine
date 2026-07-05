@@ -14,11 +14,7 @@ Issue #17 (소PR B-1): 인증 데코레이터(`require_auth` 등)는
     )
     from src.contexts.identity.interface.auth_decorators import require_auth
 """
-import os
-from flask import request, g
-
 from services.core.logging_config import supabase_logger as logger
-from services.exceptions import ConfigurationError
 
 # 인프라 헬퍼 re-export (호환 shim) — 신규 호출처는 src.shared.infrastructure 사용 권장
 from src.shared.infrastructure.supabase_client import (  # noqa: F401
