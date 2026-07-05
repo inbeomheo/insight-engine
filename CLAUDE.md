@@ -368,8 +368,13 @@ SELECT decrement_usage_safe('user-uuid');
 - 제거된 엔드포인트: `POST/GET /api/content`(create/list), `GET/PATCH/DELETE /api/content/<item_id>`, `/api/content/bulk`, `/api/content/<item_id>/{clone,archive,unarchive,lock*,expiry,fields*,links,seo-check,share,comments*}`, `/api/content/{archive,media*,fields,links/<id>,share/<token>,workflows*,roles*}`, `/api/content/{backup,export/<fmt>,import/<fmt>}` (F8 콘텐츠 관리/라이브러리 기능군 전체), `POST /api/rag/graph/search/local`, `GET /api/rag/graph/search/global`, `POST /api/rag/multimodal/{detect-type,ingest,query}`
 - 제거된 파일: `routes/content_mgmt_routes.py`, `routes/content_mgmt/`(backup_io.py, _shared.py, __init__.py) 전체, `services/rag/multimodal_rag.py`
 - 제거된 서비스: `services/data/{content_library,archive,lock,expiry,custom_field,workflow,rbac,backup,data_migration,trash}_service.py`, `services/media/media_library_service.py`, `services/seo/{link_manager,seo_checklist}_service.py`, `services/platform/share_service.py`, `services/content/comment_service.py`
-- 제거된 메서드: `GraphRAGEngine.global_search` (`services/rag/graph_rag_engine.py`) — `local_search`/`ingest`/`build_context`는 여전히 사용 중이라 유지
+- 제거된 메서드: `GraphRAGEngine.global_search` (`services/rag/graph_rag_engine.py`) — `local_search`/`ingest`는 유지 (build_context는 2026-07-05 고아 정리 c29b에서 후속 제거)
 - 이 엔드포인트/서비스를 다시 추가하려면 프론트엔드 소비 코드도 함께 작성할 것
 - `app.py`에서 `content_mgmt_bp` 블루프린트 등록 제거
 - 재검증 중 `routes/integrations/{automation,content_workspace,imports,misc}.py`, `routes/utility/{external,feedback_quality,operations}.py`, `routes/blog_routes.py`의 감사 목록 대상 엔드포인트는 이미 다른 사이클에서 삭제되어 있었음(파일 자체는 다른 활성 기능으로 재구성됨) — 코드 변경 없음, 문서만 갱신
 - 남은 항목(다음 배치 필요): `routes/auth/{admin,history_account,misc,user_settings}.py` + `routes/auth_routes.py`의 `/api/auth/status`,`/api/auth/config` — 재검증 결과 소비자 0 재확인되었으나, 캐스케이드가 `services/data/supabase_service.py`(대형 공용 파일) 내부 함수 8개 + facade 모듈 4개 + `services/usage/usage_alert_service.py` + `services/auth/sso_service.py` + `services/data/audit_log_service.py`까지 번져 이번 배치 규모 가드(약 40파일)를 초과 — 삭제 실행은 다음 배치로 이월
+
+### 고아 정리 c29b (2026-07-05)
+
+- 제거: `frontend/components/library/BulkActions.tsx` (import 0, 소비 대상 `/api/content/bulk`는 batch 3에서 백엔드 제거됨), `GraphRAGEngine.build_context` (외부 호출자 0 — 유일 소비처였던 graph/search 라우트가 batch 3에서 제거됨) + 전용 테스트 3건
+- 의도적 유지: `GraphRAGEngine.local_search` — 이 제거로 프로덕션 소비자 0이 되지만, `graph/ingest` 라우트 유지판정 + 제품 비전 기둥 2(위키 그래프)의 소비 예정 경로라 보존 (다음 정리 사이클에서 재판정)
