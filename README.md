@@ -168,7 +168,6 @@ insight-engine/
 │   ├── export/                    # DOCX, EPUB (5개)
 │   ├── auth/                      # 인증/OAuth (2개)
 │   ├── usage/                     # 사용량 관리 (5개)
-│   ├── finetune/                  # AI 파인튜닝 (3개)
 │   └── exceptions/                # 에러 처리
 │
 ├── prompts/                       # 프롬프트 시스템 v3.4

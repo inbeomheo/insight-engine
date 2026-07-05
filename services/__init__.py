@@ -19,6 +19,5 @@
 - payment/: 결제/구독
 - rag/: RAG 벡터 스토어
 - usage/: 사용량 관리
-- finetune/: AI 파인튜닝
 - exceptions/: 에러 처리
 """
