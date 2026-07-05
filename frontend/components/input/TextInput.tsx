@@ -6,11 +6,17 @@ import { ArrowUp, FileText, Loader2, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import InputWrapper from '@/components/ui/InputWrapper';
-import { extractDocument } from '@/lib/api';
+import { extractAudio, extractDocument } from '@/lib/api';
 
 // 최소/최대 길이는 서버 config.DIRECT_TEXT_MIN_CHARS / DIRECT_TEXT_MAX_CHARS와 맞춘다.
 const MIN_CHARS = 50;
 const MAX_CHARS = 200000;
+const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac']);
+
+function getFileExtension(file: File): string {
+  const dotIndex = file.name.lastIndexOf('.');
+  return dotIndex >= 0 ? file.name.slice(dotIndex).toLowerCase() : '';
+}
 
 interface TextInputProps {
   value: string;
@@ -21,7 +27,7 @@ interface TextInputProps {
 
 export default function TextInput({ value, onChange, onGenerate, isLoading }: TextInputProps) {
   const [focused, setFocused] = useState(false);
-  const [isExtractingDocument, setIsExtractingDocument] = useState(false);
+  const [isExtractingFile, setIsExtractingFile] = useState(false);
   const [documentNotice, setDocumentNotice] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -42,32 +48,33 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
   }, [onChange]);
 
   const handleDocumentClick = useCallback(() => {
-    if (isLoading || isExtractingDocument) return;
+    if (isLoading || isExtractingFile) return;
     fileInputRef.current?.click();
-  }, [isLoading, isExtractingDocument]);
+  }, [isLoading, isExtractingFile]);
 
   const handleDocumentChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
-    if (value.trim() && !window.confirm('기존 입력 내용을 문서 추출 텍스트로 교체할까요?')) {
+    if (value.trim() && !window.confirm('기존 입력 내용을 파일 추출 텍스트로 교체할까요?')) {
       return;
     }
 
-    setIsExtractingDocument(true);
+    setIsExtractingFile(true);
     setDocumentError(null);
     setDocumentNotice(null);
     try {
-      const result = await extractDocument(file);
+      const isAudio = AUDIO_EXTENSIONS.has(getFileExtension(file));
+      const result = isAudio ? await extractAudio(file) : await extractDocument(file);
       onChange(result.text.slice(0, MAX_CHARS));
       if (result.truncated) {
-        setDocumentNotice('문서 내용이 최대 길이에 맞춰 일부 잘렸습니다.');
+        setDocumentNotice(`${isAudio ? '음성 전사' : '문서'} 내용이 최대 길이에 맞춰 일부 잘렸습니다.`);
       }
     } catch (err) {
-      setDocumentError(err instanceof Error ? err.message : '문서를 불러오지 못했습니다.');
+      setDocumentError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
     } finally {
-      setIsExtractingDocument(false);
+      setIsExtractingFile(false);
     }
   }, [onChange, value]);
 
@@ -106,10 +113,10 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.pptx"
+              accept=".pdf,.docx,.pptx,.mp3,.wav,.m4a,.ogg,.flac,.aac"
               className="hidden"
               onChange={handleDocumentChange}
-              disabled={isLoading || isExtractingDocument}
+              disabled={isLoading || isExtractingFile}
             />
             <Button
               type="button"
@@ -117,15 +124,15 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               size="sm"
               className="h-9 gap-1.5 rounded-sm text-xs"
               onClick={handleDocumentClick}
-              disabled={isLoading || isExtractingDocument}
-              aria-label="문서 불러오기"
+              disabled={isLoading || isExtractingFile}
+              aria-label="파일 불러오기"
             >
-              {isExtractingDocument ? (
+              {isExtractingFile ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <FileText className="h-3.5 w-3.5" />
               )}
-              문서 불러오기
+              파일 불러오기
             </Button>
             <Button
               size="icon"

@@ -96,6 +96,7 @@ DIRECT_TEXT_MAX_CHARS: int = int(os.getenv('DIRECT_TEXT_MAX_CHARS', '200000'))
 # services.content.document_ingest_service.MAX_FILE_SIZE is a separate 10MB hard cap.
 DOCUMENT_UPLOAD_MAX_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_MAX_BYTES', str(10 * 1024 * 1024)))
 DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES', str(1024 * 1024)))
+AUDIO_UPLOAD_MAX_BYTES: int = int(os.getenv('AUDIO_UPLOAD_MAX_BYTES', str(50 * 1024 * 1024)))
 
 # === 이미지 생성 ===
 
@@ -498,6 +499,7 @@ __all__ = [
     'TTS_MAX_CHARS',
     'DOCUMENT_UPLOAD_MAX_BYTES',
     'DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES',
+    'AUDIO_UPLOAD_MAX_BYTES',
 
     # Phase 9: 인프라 & 성능
     'REDIS_URL',

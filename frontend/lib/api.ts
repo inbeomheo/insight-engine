@@ -54,6 +54,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/support/chat': 30_000,
   '/api/video-deepdives/extract': 660_000,
   '/api/extract-document': 60_000,
+  '/api/extract-audio': 600_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -167,6 +168,20 @@ export async function extractDocument(file: File): Promise<ExtractDocumentRespon
   });
 }
 
+export interface ExtractAudioResponse {
+  text: string;
+  truncated: boolean;
+}
+
+export async function extractAudio(file: File): Promise<ExtractAudioResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request('/api/extract-audio', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 export async function getJob(jobId: string): Promise<JobResponse> {
   return request(`/api/jobs/${jobId}`);
 }
@@ -263,29 +278,6 @@ export async function updateVideoDeepDiveSlides(
     method: 'PATCH',
     body: JSON.stringify({ slides }),
   });
-}
-
-/** 오디오 업로드용 FormData 빌더 */
-function buildFileFormData(
-  file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
-): FormData {
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('model', opts.model);
-  fd.append('style', opts.style);
-  if (opts.modifiers) fd.append('modifiers', JSON.stringify(opts.modifiers));
-  if (opts.customPrompt) fd.append('customPrompt', opts.customPrompt);
-  if (opts.detail_level) fd.append('detail_level', opts.detail_level);
-  return fd;
-}
-
-// 오디오 파일 업로드 생성 (음성 메모, 팟캐스트 녹음)
-export async function generateFromAudio(
-  file: File,
-  opts: { model: string; style: string; modifiers?: Modifiers; customPrompt?: string; detail_level?: string },
-): Promise<GenerateResponse> {
-  return request('/generate', { method: 'POST', body: buildFileFormData(file, opts) });
 }
 
 // 스트리밍 생성 (url 또는 content 중 하나를 전송)
