@@ -410,10 +410,6 @@ TRANSLATION_MODEL: str = os.getenv(
 # 임베딩 모델 (RAG)
 EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
 
-# 파인튜닝
-FINETUNE_OUTPUT_DIR: str = os.getenv('FINETUNE_OUTPUT_DIR', './data/finetune')
-FINETUNE_MIN_QUALITY_SCORE: float = float(os.getenv('FINETUNE_MIN_QUALITY_SCORE', '0.6'))
-
 # 모델 라우터 기본 모드
 MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balanced')
 
@@ -511,6 +507,5 @@ __all__ = [
     'RUNWAY_API_KEY',
     'DEEPL_API_KEY',
     'TRANSLATION_MODEL',
-    'FINETUNE_OUTPUT_DIR',
     'EMBEDDING_MODEL',
 ]
