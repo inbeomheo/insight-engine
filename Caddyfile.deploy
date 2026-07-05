@@ -15,7 +15,7 @@
 
     handle {
         basicauth {
-            inbeom $2a$14$3/yyohmMHJwLiyM8j7CLDevjysvIJ150X96SGUralxmFXJ9rtFy4K
+            inbeom $2a$14$2eRC3ysAzH9h1uIdUx0W.uuWpfDGYU2LhAJWtsV1ylsVhqtsGroRm
         }
 
         @backend path /api/* /generate /generate-stream /generate-batch /feed.xml /version /metrics /openapi.json /oauth/*

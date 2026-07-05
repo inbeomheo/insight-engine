@@ -97,15 +97,24 @@ services:
     image: python:3.11-slim
     container_name: insight-chatmock
     restart: unless-stopped
+    # ~/.codex/auth.json is 0600 on the host. Run as the host user so ChatMock
+    # can read/refresh the mounted Codex ChatGPT credentials without loosening
+    # secret file permissions.
+    user: "${CHATMOCK_UID:-1000}:${CHATMOCK_GID:-1000}"
     environment:
       CODEX_HOME: /codex
+      HOME: /tmp/chatmock-home
+      PYTHONUSERBASE: /tmp/chatmock-userbase
+      PIP_CACHE_DIR: /tmp/pip-cache
+      PATH: /tmp/chatmock-userbase/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       CHATGPT_LOCAL_REASONING_EFFORT: minimal
       CHATGPT_LOCAL_FAST_MODE: "true"
     command:
       - sh
       - -c
       - >
-        pip install --no-cache-dir chatmock >/dev/null &&
+        mkdir -p "$$HOME" "$$PYTHONUSERBASE" "$$PIP_CACHE_DIR" &&
+        python -m pip install --user --no-cache-dir chatmock >/dev/null &&
         chatmock serve --host 0.0.0.0 --port 8000 --reasoning-effort minimal --fast-mode
     volumes:
       - /home/heo/.codex:/codex
