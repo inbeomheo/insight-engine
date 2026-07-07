@@ -27,6 +27,7 @@ from prompts import (
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
 PROVIDER_API_KEYS: Dict[str, str] = {
+    # 이 배포의 기본·유일 프로바이더는 ChatMock 경유 Codex Spark다.
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
 
