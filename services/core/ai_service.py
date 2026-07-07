@@ -164,7 +164,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     # ChatMock → OpenAI 호환 프록시 (ChatGPT 구독 기반)
     if model.startswith("chatmock/") or model.startswith("gpt-"):
         actual_model = model.replace("chatmock/", "", 1)
-        kwargs["model"] = actual_model
+        kwargs["model"] = f"openai/{actual_model}"
         kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
         kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy") or "dummy"
         kwargs["reasoning_effort"] = "medium"

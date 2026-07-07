@@ -239,12 +239,12 @@ class TestAIAgentMocked(unittest.TestCase):
         """에이전트 생성."""
         from agent import AIAgent
         agent = AIAgent(
-            model="chatmock/gpt-5.4",
+            model="chatmock/gpt-5.3-codex-spark",
             toolsets=["role_writer"],
             system_prompt="테스트 에이전트",
             max_iterations=5,
         )
-        self.assertEqual(agent.model, "chatmock/gpt-5.4")
+        self.assertEqual(agent.model, "chatmock/gpt-5.3-codex-spark")
         self.assertEqual(agent._budget.max_iterations, 5)
 
     @patch("litellm.completion")

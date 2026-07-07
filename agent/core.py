@@ -341,7 +341,7 @@ class AIAgent:
                 kwargs["api_key"] = zhipuai_key
 
         elif self.model.startswith("chatmock/"):
-            kwargs["model"] = self.model.replace("chatmock/", "")
+            kwargs["model"] = f"openai/{self.model.replace('chatmock/', '')}"
             kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
             kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy")
             kwargs["drop_params"] = True

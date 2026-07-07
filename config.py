@@ -180,11 +180,8 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
         'name': 'ChatMock (OpenAI 호환)',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
-            {'id': 'chatmock/gpt-5.4-mini', 'name': 'GPT-5.4 Mini', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'chatmock/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
             {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-        ],
+        ]
     },
 }
 
