@@ -94,7 +94,7 @@ def admin_dashboard():
         from config import PROVIDER_API_KEYS, SUPPORTED_PROVIDERS
         provider_distribution = {}
         _provider_labels = {
-            'chatmock': 'ChatMock',
+            'chatmock': 'OPEN AI',
         }
         for prov in SUPPORTED_PROVIDERS:
             key = PROVIDER_API_KEYS.get(prov, '')

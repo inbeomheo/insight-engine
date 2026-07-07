@@ -27,9 +27,13 @@ from prompts import (
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
 PROVIDER_API_KEYS: Dict[str, str] = {
-    # 이 배포의 기본·유일 프로바이더는 ChatMock 경유 Codex Spark다.
+    # Deployment policy: expose only the ChatGPT/Codex-backed ChatMock sidecar.
+    # It is branded as "OPEN AI" in the UI to avoid leaking the internal proxy
+    # name and to prevent DeepSeek/Ollama/etc. from reappearing just because
+    # their env vars happen to exist on the host.
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
+ENABLED_PROVIDER_IDS: Tuple[str, ...] = ('chatmock',)
 
 SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 
@@ -62,7 +66,7 @@ CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '
 
 AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
 AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
-AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.4-mini')
+AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.3-codex-spark')
 
 # === Whisper (음성 인식 자막 폴백) ===
 
@@ -134,10 +138,9 @@ AI_CACHE_MAX_SIZE_MB = 512
 # === AI Model & Fallback ===
 
 FALLBACK_CHAIN = [
-    'chatmock/gpt-5.4-mini',
-    'chatmock/gpt-5.4',
+    'chatmock/gpt-5.3-codex-spark',
 ]
-MAX_FALLBACK_ATTEMPTS = 3
+MAX_FALLBACK_ATTEMPTS = 1
 
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
@@ -178,7 +181,7 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
     'chatmock': {
-        'name': 'ChatMock (OpenAI 호환)',
+        'name': 'OPEN AI',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
             {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
@@ -193,14 +196,21 @@ _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
 
 
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
-    """활성 프로바이더만 반환합니다. 결과를 60초간 캐싱합니다."""
+    """배포에서 허용된 프로바이더만 반환합니다.
+
+    이 배포판은 UI/자동 선택 혼선을 막기 위해 ChatMock-backed OPEN AI만
+    노출한다. DeepSeek/Ollama 등 다른 키나 URL이 환경변수에 있어도
+    `/api/providers`에는 나오지 않는다.
+    결과를 60초간 캐싱합니다.
+    """
     global _providers_cache, _providers_cache_time
     now = time.time()
     if _providers_cache and (now - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
         return _providers_cache
 
     available = {}
-    for provider_id, api_key in PROVIDER_API_KEYS.items():
+    for provider_id in ENABLED_PROVIDER_IDS:
+        api_key = PROVIDER_API_KEYS.get(provider_id, '')
         if api_key and provider_id in SUPPORTED_PROVIDERS:
             available[provider_id] = SUPPORTED_PROVIDERS[provider_id]
 
@@ -322,6 +332,7 @@ __all__ = [
     # API Keys
     'YOUTUBE_API_KEY',
     'PROVIDER_API_KEYS',
+    'ENABLED_PROVIDER_IDS',
     'SUPADATA_API_KEY',
 
     # Webhook

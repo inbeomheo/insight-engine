@@ -106,5 +106,5 @@ def api_providers():
         'providers': enriched,
         'styles': [{'id': s[0], 'name': s[1]} for s in styles],
         'supadataConfigured': bool(SUPADATA_API_KEY),
-        'hasAutoFallback': True
+        'hasAutoFallback': len(enriched) > 1,
     })
