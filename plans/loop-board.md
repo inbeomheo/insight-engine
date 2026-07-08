@@ -10,16 +10,19 @@
 
 ## 백로그
 
-- [ ] [제안] RAG 답변의 “근거 부족” 자동 차단과 출처 경계 검사 — 출처:
-  https://github.com/UnitOneAI/SecuritySkills/issues/669 (n/a). 적합 이유: 낮은 검색 점수 가드만으로
-  환각을 줄이고 자막/문서 기반 원칙을 강화함.
-  완료 기준: 낮은 score 입력 시 LLM 호출 없이 `[근거 부족]` 반환 테스트 통과.
-  새 의존성: 없음
 - [ ] [사람] 데드 엔드포인트 잔여 335건 — 삭제 안전 판정 완료, 제품 결정 대기
   (plans/dead-code-audit-2026-06-10.md 참조)
 
 ## Done
 
+- [x] 2026-07-09 feat(chat): RAG 답변의 “근거 부족” 자동 차단과 출처 경계 검사.
+  `/api/chat`에서 검색 노트가 모두 `score < 0.25`이거나 비숫자/NaN 점수면 LLM(대형 언어 모델) 호출 없이
+  `[근거 부족]` 답변을 반환. 혼합 결과는 낮은 score 출처를 프롬프트/응답에서 제외하고,
+  검색 결과 없음/검색 실패 경로는 기존처럼 답변 생성 유지.
+  검증: `python -m pytest tests/test_chat_routes.py -q -p no:cacheprovider` 18 passed +
+  `npm test -- ResultChatPanel.test.tsx` 2 passed + `cd frontend && npx tsc --noEmit` 통과 +
+  `npm run verify:frontend` 통과 + `npm run verify:e2e` 1 passed.
+  code-reviewer BLOCKER/IMPORTANT 0, NIT 없음. 로컬 커밋: fe0453c. PR/푸시는 사용자 승인 전 보류.
 - [x] 2026-07-09 feat(chat): 생성/채팅 결과 근거 트레이(rag_sources) 표시.
   `/api/chat` 응답에 `rag_sources[]`를 추가하고 기존 `notes[]`는 호환 유지. ResultChatPanel에 지식 노트
   근거 트레이를 표시하며, history(대화 기록)는 role/content만 전송해 근거 스니펫 재전송을 방지.
