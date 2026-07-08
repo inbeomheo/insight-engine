@@ -10,6 +10,26 @@
 
 ## 백로그
 
+- [ ] [제안] 관련 노트 3개 자동 추천 + 백링크 표시 — 출처: https://github.com/khoj-ai/khoj
+  (35.5k stars), https://github.com/AgriciDaniel/claude-obsidian (9,021 stars). 적합 이유:
+  기존 노트 저장/검색 구조에 유사 노트 조회 API와 상세 UI만 추가하면 지식 탐색성이 바로 올라감.
+  완료 기준: `python -m pytest tests/test_notes_routes.py tests/test_note_index_service.py -q` 통과 +
+  `cd frontend && npx tsc --noEmit` 통과 + `/notes/[id]`에서 자기 자신 제외 관련 노트 최대 3개 표시.
+  새 의존성: 없음
+- [ ] [제안] 학습 소스 중복 감지/재학습 경고 — 출처: https://github.com/labring/FastGPT
+  (28,866 stars). 적합 이유: 동일 URL·동일 제목·유사 내용 재학습을 줄여 지식베이스 품질을 높임.
+  완료 기준: 동일 URL 또는 유사도 임계값 초과 노트/소스 저장 시 경고 응답 테스트 통과 + 기존 저장 흐름 회귀 없음.
+  새 의존성: 없음
+- [ ] [제안] 생성/채팅 결과 근거 트레이(rag_sources) 표시 — 출처:
+  https://github.com/Mintplex-Labs/anything-llm (62.9k stars). 적합 이유: RAG 메타데이터와 기존 인용 UI를
+  활용해 답변 신뢰도를 높일 수 있음.
+  완료 기준: `/api/chat` 또는 생성 응답에 `rag_sources[]` 포함 + 근거 트레이 UI 타입체크 통과.
+  새 의존성: 없음
+- [ ] [제안] RAG 답변의 “근거 부족” 자동 차단과 출처 경계 검사 — 출처:
+  https://github.com/UnitOneAI/SecuritySkills/issues/669 (n/a). 적합 이유: 낮은 검색 점수 가드만으로
+  환각을 줄이고 자막/문서 기반 원칙을 강화함.
+  완료 기준: 낮은 score 입력 시 LLM 호출 없이 `[근거 부족]` 반환 테스트 통과.
+  새 의존성: 없음
 - [ ] [사람] 데드 엔드포인트 잔여 335건 — 삭제 안전 판정 완료, 제품 결정 대기
   (plans/dead-code-audit-2026-06-10.md 참조)
 
@@ -55,6 +75,8 @@
 
 ## 학습/메모
 
+- 2026-07-09 기능 탐색 — 후보 4건 적재. 출처: Khoj/claude-obsidian(관련 노트), FastGPT(중복 소스 경고),
+  AnythingLLM(근거 트레이), SecuritySkills issue(RAG 근거 부족 차단). 발행 계열·대형 L/XL 후보 제외.
 - 2026-07-04 [NIT, code-reviewer] Windows + FLASK_DEBUG=true 시 werkzeug 리로더가 부모/자식 프로세스에서
   app.py를 각각 import → Windows 리더 락 우회 경로에서 스케줄러 2개 기동 가능. 필요 시 WERKZEUG_RUN_MAIN
   체크로 해결 — 개발 환경 한정이라 지금은 미적용(Simplicity First).
