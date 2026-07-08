@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from config import get_model_max_tokens
 from prompts.styles.knowledge_note import KNOWLEDGE_NOTE_PROMPT
@@ -161,6 +162,29 @@ def list_notes() -> list[dict[str, Any]]:
     return sorted(items, key=lambda item: item.get("created_at", ""), reverse=True)
 
 
+def find_notes_by_source_url(
+    source: dict[str, Any],
+    notes: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Find existing notes with the same canonical source URL."""
+    normalized = normalize_source(source)
+    target_url = _canonical_url(normalized["url"])
+    duplicates: list[dict[str, Any]] = []
+    source_notes = list_notes() if notes is None else notes
+
+    for item in source_notes:
+        item_source = item.get("source") if isinstance(item.get("source"), dict) else {}
+        if _canonical_url(str(item_source.get("url", ""))) != target_url:
+            continue
+        duplicates.append({
+            "id": item.get("id"),
+            "title": item.get("title", ""),
+            "created_at": item.get("created_at", ""),
+            "source": item_source,
+        })
+    return duplicates
+
+
 def generate_knowledge_note(
     content: str,
     source: dict[str, Any],
@@ -173,7 +197,7 @@ def generate_knowledge_note(
     if not isinstance(model, str) or not model.strip():
         raise ValueError("[노트 생성 실패] 모델이 필요합니다.")
 
-    source = _normalize_source(source)
+    source = normalize_source(source)
     model = model.strip()
     language = str(language or "ko").strip() or "ko"
     prompt = style_prompt or KNOWLEDGE_NOTE_PROMPT
@@ -220,6 +244,54 @@ def _normalize_source(source: dict[str, Any]) -> dict[str, str]:
     if not url or not title:
         raise ValueError("[노트 생성 실패] source.url과 source.title이 필요합니다.")
     return {"type": source_type, "url": url, "title": title}
+
+
+def normalize_source(source: dict[str, Any]) -> dict[str, str]:
+    return _normalize_source(source)
+
+
+def _canonical_url(url: str) -> str:
+    raw_url = str(url or "").strip()
+    if not raw_url:
+        return ""
+    try:
+        parsed = urlsplit(raw_url)
+    except ValueError:
+        return raw_url.rstrip("/")
+
+    host = parsed.netloc.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    query_pairs = _canonical_query_pairs(parsed.query)
+    query = urlencode(query_pairs)
+
+    if host in {"youtube.com", "m.youtube.com"} and parsed.path.rstrip("/") == "/watch":
+        video_id = next((value for key, value in query_pairs if key == "v"), "")
+        if video_id:
+            return f"https://youtube.com/watch?v={video_id}"
+    if host == "youtu.be":
+        video_id = parsed.path.strip("/")
+        if video_id:
+            return f"https://youtube.com/watch?v={video_id}"
+
+    return urlunsplit((
+        parsed.scheme.lower(),
+        host,
+        parsed.path.rstrip("/"),
+        "",
+        query,
+    ))
+
+
+def _canonical_query_pairs(query: str) -> list[tuple[str, str]]:
+    tracking_keys = {"fbclid", "gclid"}
+    pairs = []
+    for key, value in parse_qsl(query, keep_blank_values=True):
+        lowered = key.lower()
+        if lowered.startswith("utm_") or lowered in tracking_keys:
+            continue
+        pairs.append((key, value))
+    return sorted(pairs)
 
 
 def _build_ai_input(content: str, source: dict[str, str], language: str) -> str:

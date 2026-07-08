@@ -1,6 +1,8 @@
 import json
 from unittest.mock import patch
 
+import pytest
+
 from app import create_app
 from services.content import note_index_service, note_service
 
@@ -52,6 +54,7 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
 
     with (
         patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes") as search_notes,
         patch("services.core.ai_service.create_content", return_value=_ai_response()) as create_content,
         patch("services.content.note_index_service.index_note") as index_note,
     ):
@@ -73,6 +76,176 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     indexed_note = index_note.call_args.args[0]
     assert indexed_note["id"] == data["id"]
     assert indexed_note["summary"] == "생성된 요약"
+    search_notes.assert_not_called()
+
+
+def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note_service.save_note(_note("existing", "2026-07-04T12:00:00Z"))
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes") as search_notes,
+        patch("services.core.ai_service.create_content") as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "원문 콘텐츠",
+                "source": {
+                    "type": "youtube",
+                    "url": "https://youtu.be/abc?utm_source=newsletter",
+                    "title": "영상 제목",
+                },
+                "language": "ko",
+                "model": "gemini/test",
+            },
+            headers=_H,
+        )
+
+    body = resp.get_json()
+    assert resp.status_code == 409
+    assert body["error"].startswith("[재학습 경고]")
+    assert body["duplicate_reason"] == "same_url"
+    assert body["duplicate_notes"][0]["id"] == "existing"
+    search_notes.assert_not_called()
+    create_content.assert_not_called()
+    index_note.assert_not_called()
+
+
+def test_post_notes_similar_content_returns_warning_without_ai(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    existing = _note("similar", "2026-07-04T12:00:00Z")
+    existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
+    note_service.save_note(existing)
+    client = _client()
+    similar = [{"id": "similar", "title": "기존 글", "score": 0.94, "snippet": "비슷한 요약"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=similar) as search_notes,
+        patch("services.core.ai_service.create_content") as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "유사한 원문 콘텐츠",
+                "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
+                "language": "ko",
+                "model": "gemini/test",
+            },
+            headers=_H,
+        )
+
+    body = resp.get_json()
+    assert resp.status_code == 409
+    assert body["duplicate_reason"] == "similar_content"
+    assert body["duplicate_notes"] == similar
+    search_notes.assert_called_once()
+    create_content.assert_not_called()
+    index_note.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("score", "expected_status"),
+    [
+        (0.91, 200),
+        (0.92, 200),
+        (0.93, 409),
+    ],
+)
+def test_post_notes_similarity_threshold_boundaries(tmp_path, monkeypatch, score, expected_status):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    existing = _note("similar", "2026-07-04T12:00:00Z")
+    existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
+    note_service.save_note(existing)
+    client = _client()
+    similar = [{"id": "similar", "title": "기존 글", "score": score, "snippet": "비슷한 요약"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=similar),
+        patch("services.core.ai_service.create_content", return_value=_ai_response()) as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "유사한 원문 콘텐츠",
+                "source": {"type": "article", "url": f"https://example.com/new-{score}", "title": "새 글"},
+                "language": "ko",
+                "model": "gemini/test",
+            },
+            headers=_H,
+        )
+
+    assert resp.status_code == expected_status
+    if expected_status == 409:
+        assert create_content.call_count == 0
+        assert index_note.call_count == 0
+    else:
+        assert create_content.call_count == 1
+        assert index_note.call_count == 1
+
+
+def test_post_notes_similarity_lookup_failure_still_generates(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    existing = _note("existing", "2026-07-04T12:00:00Z")
+    existing["source"] = {"type": "article", "url": "https://example.com/old", "title": "기존 글"}
+    note_service.save_note(existing)
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", side_effect=Exception("chroma down")),
+        patch("services.core.ai_service.create_content", return_value=_ai_response()) as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "새 원문 콘텐츠",
+                "source": {"type": "article", "url": "https://example.com/new", "title": "새 글"},
+                "language": "ko",
+                "model": "gemini/test",
+            },
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["summary"] == "생성된 요약"
+    create_content.assert_called_once()
+    index_note.assert_called_once()
+
+
+def test_post_notes_invalid_source_keeps_korean_400_without_ai_or_chroma(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_service.list_notes") as list_notes,
+        patch("services.content.note_index_service.search_notes") as search_notes,
+        patch("services.core.ai_service.create_content") as create_content,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={
+                "content": "원문 콘텐츠",
+                "source": {"type": "pdf", "url": "https://example.com/a", "title": "문서"},
+            },
+            headers=_H,
+        )
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"].startswith("[노트 생성 실패]")
+    list_notes.assert_not_called()
+    search_notes.assert_not_called()
+    create_content.assert_not_called()
 
 
 def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
