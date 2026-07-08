@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import re
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -50,7 +51,7 @@ def fetch_article(url: str) -> dict[str, Any]:
 
     try:
         html, final_url = _fetch_html(safe_url)
-        title, text = _extract_article(html, final_url)
+        title, text, extraction = _extract_article(html, final_url)
     except ValueError:
         raise
     except requests.RequestException as exc:
@@ -70,7 +71,7 @@ def fetch_article(url: str) -> dict[str, Any]:
             "source_type": "article",
             "url": final_url,
             "bytes": len(html),
-            "extraction": "article_or_largest_p_cluster",
+            "extraction": extraction,
         },
     }
 
@@ -163,9 +164,14 @@ def _read_limited_response(response) -> bytes:
     return b"".join(chunks)
 
 
-def _extract_article(html: bytes, url: str) -> tuple[str, str]:
+def _extract_article(html: bytes, url: str) -> tuple[str, str, str]:
     soup = BeautifulSoup(html, "html.parser")
     title = _extract_title(soup)
+
+    structured_text = _extract_structured_item_list(soup)
+    if structured_text:
+        structured_title = title or url
+        return structured_title, structured_text, "json_ld_item_list"
 
     for tag in soup(_BLOCK_TAGS):
         tag.decompose()
@@ -181,7 +187,131 @@ def _extract_article(html: bytes, url: str) -> tuple[str, str]:
     if len(text) < 50:
         raise ValueError("[아티클 추출 실패] 본문을 충분히 추출하지 못했습니다.")
 
-    return title or url, text
+    return title or url, text, "article_or_largest_p_cluster"
+
+
+def _json_type_matches(value: Any, expected: str) -> bool:
+    raw_type = value.get("@type") if isinstance(value, dict) else None
+    if isinstance(raw_type, list):
+        return expected in raw_type
+    return raw_type == expected
+
+
+def _iter_json_ld_objects(value: Any):
+    if isinstance(value, list):
+        for item in value:
+            yield from _iter_json_ld_objects(item)
+        return
+
+    if not isinstance(value, dict):
+        return
+
+    yield value
+    graph = value.get("@graph")
+    if isinstance(graph, list):
+        for item in graph:
+            yield from _iter_json_ld_objects(item)
+
+
+def _clean_json_scalar(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ", ".join(_clean_json_scalar(item) for item in value if _clean_json_scalar(item))
+    if isinstance(value, dict):
+        return _clean_json_scalar(value.get("name") or value.get("url") or value.get("@id"))
+    return _clean_text(str(value))
+
+
+def _extract_structured_item_list(soup: BeautifulSoup) -> str:
+    """Extract useful lists from JSON-LD before falling back to paragraph text.
+
+    Sites like Trendshift render the visible ranking from Next.js data and expose
+    the same repository list as schema.org ItemList JSON-LD. Paragraph-only
+    extraction sees just a marketing card, so preserve structured list entries
+    for the LLM instead.
+    """
+    for script in soup.find_all("script"):
+        script_type_value = script.get("type") or ""
+        script_type = " ".join(script_type_value) if isinstance(script_type_value, list) else str(script_type_value)
+        if "ld+json" not in script_type.lower():
+            continue
+
+        raw = script.string or script.get_text("", strip=False)
+        if not raw or not raw.strip():
+            continue
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        for obj in _iter_json_ld_objects(parsed):
+            if not _json_type_matches(obj, "ItemList"):
+                continue
+            text = _format_item_list(obj)
+            if text:
+                return text
+
+    return ""
+
+
+def _format_item_list(item_list: dict[str, Any]) -> str:
+    elements = item_list.get("itemListElement")
+    if not isinstance(elements, list) or not elements:
+        return ""
+
+    title = _clean_json_scalar(item_list.get("name"))
+    description = _clean_json_scalar(item_list.get("description"))
+    source_url = _clean_json_scalar(item_list.get("url"))
+
+    lines: list[str] = []
+    if title:
+        lines.append(title)
+    if description:
+        lines.append(description)
+    if source_url:
+        lines.append(f"Source: {source_url}")
+    if lines:
+        lines.append("")
+
+    item_count = 0
+    for raw_entry in elements[:50]:
+        if not isinstance(raw_entry, dict):
+            continue
+        item = raw_entry.get("item") if isinstance(raw_entry.get("item"), dict) else raw_entry
+        if not isinstance(item, dict):
+            continue
+
+        name = _clean_json_scalar(item.get("name"))
+        description = _clean_json_scalar(item.get("description"))
+        if not name and not description:
+            continue
+
+        position = raw_entry.get("position") or item.get("position") or item_count + 1
+        language = _clean_json_scalar(item.get("programmingLanguage"))
+        repo_url = _clean_json_scalar(item.get("codeRepository") or item.get("url"))
+        keywords = _clean_json_scalar(item.get("keywords"))
+
+        detail_parts = []
+        if language:
+            detail_parts.append(f"language: {language}")
+        if repo_url:
+            detail_parts.append(f"repo: {repo_url}")
+        if keywords:
+            detail_parts.append(f"tags: {keywords}")
+
+        line = f"{position}. {name}"
+        if description:
+            line += f" — {description}"
+        if detail_parts:
+            line += f" ({'; '.join(detail_parts)})"
+        lines.append(line)
+        item_count += 1
+
+    if item_count < 2:
+        return ""
+    return "\n".join(lines).strip()
 
 
 def _extract_title(soup: BeautifulSoup) -> str:

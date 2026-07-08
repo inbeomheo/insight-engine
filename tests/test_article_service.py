@@ -63,6 +63,59 @@ def test_fetch_article_extracts_article_tag():
     assert result["source_meta"]["source_type"] == "article"
 
 
+def test_fetch_article_prefers_json_ld_item_list_for_trend_pages():
+    html = b'''
+    <html>
+      <head><title>Trend page</title></head>
+      <body>
+        <p>Small marketing blurb that should not hide the real ranking data.</p>
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          "name": "Live trending GitHub repositories",
+          "description": "Daily momentum ranking",
+          "url": "https://trendshift.io",
+          "itemListElement": [
+            {"@type":"ListItem", "position":1, "item": {
+              "@type":"SoftwareSourceCode",
+              "name":"owner/repo-one",
+              "description":"First repository description",
+              "codeRepository":"https://github.com/owner/repo-one",
+              "programmingLanguage":"TypeScript",
+              "keywords":["AI agent", "workflow"]
+            }},
+            {"@type":"ListItem", "position":2, "item": {
+              "@type":"SoftwareSourceCode",
+              "name":"owner/repo-two",
+              "description":"Second repository description",
+              "codeRepository":"https://github.com/owner/repo-two",
+              "programmingLanguage":"Python"
+            }}
+          ]
+        }
+        </script>
+      </body>
+    </html>
+    '''
+
+    with (
+        patch("services.content.article_service.is_safe_public_url", return_value=True),
+        patch(
+            "services.content.article_service.requests.get",
+            return_value=_FakeResponse(html),
+        ),
+    ):
+        result = fetch_article("https://trendshift.io/")
+
+    assert result["source_meta"]["extraction"] == "json_ld_item_list"
+    assert "Live trending GitHub repositories" in result["text"]
+    assert "1. owner/repo-one" in result["text"]
+    assert "repo: https://github.com/owner/repo-one" in result["text"]
+    assert "2. owner/repo-two" in result["text"]
+    assert "Small marketing blurb" not in result["text"]
+
+
 def test_fetch_article_rejects_file_scheme():
     with pytest.raises(ValueError, match="http 또는 https"):
         fetch_article("file:///etc/passwd")
