@@ -86,6 +86,9 @@
 
 ## 학습/메모
 
+- 2026-07-09 점검 — 비`[사람]` 백로그 0건, 기능 탐색은 2026-07-09 실행 완료로 7일 쿨다운 중.
+  전체 검증: `python -m pytest tests/ -q --tb=no -p no:cacheprovider` 4353 passed, 1 skipped,
+  11 subtests passed + `cd frontend && npx tsc --noEmit` 통과. 열린 PR 없음, 최근 CI 최신 2건 성공.
 - 2026-07-09 기능 탐색 — 후보 4건 적재. 출처: Khoj/claude-obsidian(관련 노트), FastGPT(중복 소스 경고),
   AnythingLLM(근거 트레이), SecuritySkills issue(RAG 근거 부족 차단). 발행 계열·대형 L/XL 후보 제외.
 - 2026-07-04 [NIT, code-reviewer] Windows + FLASK_DEBUG=true 시 werkzeug 리로더가 부모/자식 프로세스에서
