@@ -81,14 +81,38 @@ def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
     note_service.save_note(_note("new", "2026-07-04T12:00:00Z"))
     client = _client()
 
-    with patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False):
+    related = [{"id": "old", "title": "이전 노트", "score": 0.7, "snippet": "요약"}]
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.get_related_notes", return_value=related) as get_related,
+    ):
         list_resp = client.get("/api/notes", headers=_H)
         detail_resp = client.get("/api/notes/new", headers=_H)
 
     assert list_resp.status_code == 200
     assert [item["id"] for item in list_resp.get_json()["notes"]] == ["new", "old"]
     assert detail_resp.status_code == 200
-    assert detail_resp.get_json()["id"] == "new"
+    detail = detail_resp.get_json()
+    assert detail["id"] == "new"
+    assert detail["related_notes"] == related
+    get_related.assert_called_once()
+
+
+def test_get_note_related_lookup_failure_returns_note_with_empty_related(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note_service.save_note(_note("n1", "2026-07-04T12:00:00Z"))
+    client = _client()
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.get_related_notes", side_effect=Exception("chroma down")),
+    ):
+        resp = client.get("/api/notes/n1", headers=_H)
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["id"] == "n1"
+    assert body["related_notes"] == []
 
 
 def test_get_missing_note_returns_korean_404(tmp_path, monkeypatch):

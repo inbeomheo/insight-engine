@@ -952,6 +952,7 @@ export interface NoteDetail {
   tags: string[];
   language: string;
   created_at: string;
+  related_notes?: NoteSearchResult[];
 }
 
 export interface NoteSearchResult {

@@ -11,6 +11,8 @@ from services.rag.chroma_client_factory import get_chroma_client
 NOTES_COLLECTION_NAME = "knowledge_notes"
 DEFAULT_SEARCH_LIMIT = 5
 MAX_SEARCH_LIMIT = 20
+DEFAULT_RELATED_LIMIT = 3
+MAX_RELATED_LIMIT = MAX_SEARCH_LIMIT - 1
 SNIPPET_MAX_CHARS = 180
 
 logger = get_logger(__name__)
@@ -53,6 +55,32 @@ def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str
     n_results = min(_normalize_limit(limit), count)
     results = collection.query(query_texts=[query], n_results=n_results)
     return _map_results(results)
+
+
+def get_related_notes(
+    note: dict[str, Any],
+    limit: int = DEFAULT_RELATED_LIMIT,
+) -> list[dict[str, Any]]:
+    """Return similar notes, excluding the note itself."""
+    note_id = _required_note_id(note)
+    query = _build_searchable_text(note)
+    if not query:
+        return []
+
+    collection = _get_collection()
+    count = collection.count()
+    if count == 0:
+        return []
+
+    normalized_limit = _normalize_related_limit(limit)
+    n_results = min(normalized_limit + 1, count, MAX_SEARCH_LIMIT)
+    results = collection.query(query_texts=[query], n_results=n_results)
+    related = [
+        result
+        for result in _map_results(results)
+        if result.get("id") and result.get("id") != note_id
+    ]
+    return related[:normalized_limit]
 
 
 def _get_collection():
@@ -109,6 +137,14 @@ def _normalize_limit(limit: int) -> int:
     except (TypeError, ValueError):
         value = DEFAULT_SEARCH_LIMIT
     return max(1, min(value, MAX_SEARCH_LIMIT))
+
+
+def _normalize_related_limit(limit: int) -> int:
+    try:
+        value = int(limit)
+    except (TypeError, ValueError):
+        value = DEFAULT_RELATED_LIMIT
+    return max(1, min(value, MAX_RELATED_LIMIT))
 
 
 def _map_results(results: dict[str, Any]) -> list[dict[str, Any]]:

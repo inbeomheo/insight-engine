@@ -98,4 +98,9 @@ def get_note(note_id):
     note = note_service.load_note(note_id)
     if note is None:
         return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
+    try:
+        note["related_notes"] = note_index_service.get_related_notes(note, limit=3)
+    except Exception as exc:
+        current_app.logger.warning("Related note lookup failed (ignored): %s", exc, exc_info=True)
+        note["related_notes"] = []
     return jsonify(note)

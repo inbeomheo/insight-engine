@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Quote } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Link2, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -144,6 +144,42 @@ function NoteBody({ note }: { note: NoteDetail }) {
               </p>
             </CardContent>
           </Card>
+        </section>
+      )}
+
+      {/* 관련 노트 */}
+      {note.related_notes && note.related_notes.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-foreground mb-2.5">관련 노트</h2>
+          <ul className="space-y-2">
+            {note.related_notes.slice(0, 3).map((related) => (
+              <li key={related.id}>
+                <Link
+                  href={`/notes/${encodeURIComponent(related.id)}`}
+                  className="block rounded-lg border border-border bg-card px-3 py-2.5 transition-colors hover:border-primary/40"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {related.title || '제목 없음'}
+                        </p>
+                      </div>
+                      {related.snippet && (
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                          {related.snippet}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {Math.round(related.score * 100)}%
+                    </Badge>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
