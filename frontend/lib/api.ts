@@ -903,9 +903,14 @@ export interface ResultChatNote {
   snippet?: string;
 }
 
+export interface ResultChatSource extends ResultChatNote {
+  type: 'knowledge_note' | (string & {});
+}
+
 export interface ResultChatResponse {
   answer: string;
   notes?: ResultChatNote[];
+  rag_sources?: ResultChatSource[];
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }
 

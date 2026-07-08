@@ -1,6 +1,7 @@
 """Processed content Q&A chat routes."""
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from flask import Blueprint, current_app, jsonify, request
@@ -51,6 +52,7 @@ def chat():
         return jsonify({
             "answer": result.get("answer", ""),
             "notes": notes,
+            "rag_sources": _build_rag_sources(notes),
             "usage": result.get("usage", {}),
         })
     except Exception as exc:
@@ -147,3 +149,30 @@ def _format_notes(notes: list[dict[str, Any]]) -> str:
         score_text = f" (score: {score})" if score is not None else ""
         lines.append(f"{idx}. {title}{score_text}\n{snippet}")
     return "\n\n".join(lines)
+
+
+def _build_rag_sources(notes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for note in notes:
+        note_id = str(note.get("id") or "").strip()
+        title = str(note.get("title") or "").strip()
+        snippet = str(note.get("snippet") or "").strip()
+        source = {
+            "type": "knowledge_note",
+            "id": note_id,
+            "title": title or "지식 노트",
+            "snippet": snippet,
+        }
+        score = _numeric_score(note.get("score"))
+        if score is not None:
+            source["score"] = score
+        sources.append(source)
+    return sources
+
+
+def _numeric_score(value: Any) -> float | None:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    return score if math.isfinite(score) else None

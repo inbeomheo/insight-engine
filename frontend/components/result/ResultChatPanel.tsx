@@ -5,7 +5,7 @@ import { Bot, ChevronDown, ChevronUp, Loader2, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { askResultChat, type ResultChatMessage } from '@/lib/api';
+import { askResultChat, type ResultChatMessage, type ResultChatSource } from '@/lib/api';
 
 interface ResultChatPanelProps {
   context: string;
@@ -13,11 +13,15 @@ interface ResultChatPanelProps {
   language?: string;
 }
 
+interface ChatMessage extends ResultChatMessage {
+  rag_sources?: ResultChatSource[];
+}
+
 const MAX_CONTEXT_CHARS = 50_000;
 
 export default function ResultChatPanel({ context, model, language = 'ko' }: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ResultChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +59,9 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       return;
     }
 
-    const history = messages.slice(-10);
+    const history: ResultChatMessage[] = messages
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content }));
     const userMessage: ResultChatMessage = { role: 'user', content: question };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -72,7 +78,14 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       });
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: result.answer || '답변을 받지 못했습니다.' },
+        {
+          role: 'assistant',
+          content: result.answer || '답변을 받지 못했습니다.',
+          rag_sources: result.rag_sources ?? (result.notes ?? []).map((note) => ({
+            ...note,
+            type: 'knowledge_note' as const,
+          })),
+        },
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : '채팅 요청에 실패했습니다.';
@@ -125,6 +138,31 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
                     }`}
                   >
                     {message.content}
+                    {message.role === 'assistant' && message.rag_sources && message.rag_sources.length > 0 && (
+                      <div className="mt-3 border-t border-border/50 pt-2">
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          근거 {message.rag_sources.length}개
+                        </p>
+                        <div className="space-y-1.5">
+                          {message.rag_sources.map((source, sourceIndex) => (
+                            <div
+                              key={`${source.id ?? 'source'}-${sourceIndex}`}
+                              className="rounded-md border border-border/50 bg-background/70 px-2.5 py-1.5 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2 text-muted-foreground">
+                                <span className="truncate">{source.title || '지식 노트'}</span>
+                                {typeof source.score === 'number' && (
+                                  <span className="shrink-0">{Math.round(source.score * 100)}%</span>
+                                )}
+                              </div>
+                              {source.snippet && (
+                                <p className="mt-1 line-clamp-2 text-foreground/80">{source.snippet}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {message.role === 'user' && <User className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />}
                 </div>

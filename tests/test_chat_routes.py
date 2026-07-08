@@ -43,6 +43,13 @@ def test_chat_happy_path_uses_ai_and_note_search():
     body = resp.get_json()
     assert body["answer"] == "[00:05] 복습 질문이 중요합니다."
     assert body["notes"] == notes
+    assert body["rag_sources"] == [{
+        "type": "knowledge_note",
+        "id": "n1",
+        "title": "학습 노트",
+        "score": 0.9,
+        "snippet": "복습 질문 메모",
+    }]
     search_notes.assert_called_once_with("핵심 결론은 뭐야?", limit=3)
     messages = create_chat.call_args.args[0]
     assert messages[0]["role"] == "system"
@@ -50,6 +57,29 @@ def test_chat_happy_path_uses_ai_and_note_search():
     assert messages[1]["role"] == "user"
     assert "복습 질문 메모" in messages[-1]["content"]
     assert create_chat.call_args.kwargs["model"] == "gemini/test"
+
+
+def test_chat_rag_sources_omit_non_numeric_score():
+    client = _client()
+    notes = [{"id": "n1", "title": "학습 노트", "score": "nan", "snippet": "복습 질문 메모"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=notes),
+        patch(
+            "services.core.ai_service.create_chat_response",
+            return_value={"answer": "ok", "usage": {}},
+        ),
+    ):
+        resp = client.post("/api/chat", json=_payload(), headers=_H)
+
+    assert resp.status_code == 200
+    assert resp.get_json()["rag_sources"] == [{
+        "type": "knowledge_note",
+        "id": "n1",
+        "title": "학습 노트",
+        "snippet": "복습 질문 메모",
+    }]
 
 
 @pytest.mark.parametrize(
@@ -167,5 +197,7 @@ def test_chat_note_search_failure_still_answers():
         resp = client.post("/api/chat", json=_payload(), headers=_H)
 
     assert resp.status_code == 200
-    assert resp.get_json()["answer"] == "자막에 있는 내용만 답변합니다."
+    body = resp.get_json()
+    assert body["answer"] == "자막에 있는 내용만 답변합니다."
+    assert body["rag_sources"] == []
     assert "관련 지식 노트 없음" in create_chat.call_args.args[0][-1]["content"]
