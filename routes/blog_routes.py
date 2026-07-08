@@ -18,6 +18,7 @@ import html as html_lib
 import json
 import time
 import uuid
+from datetime import datetime, timezone
 
 from flask import Blueprint, request, jsonify, current_app, g, Response, stream_with_context
 from extensions import limiter
@@ -623,6 +624,7 @@ def generate():
             modifiers.get('length', 'medium'),
             modifiers.get('writing_style', 'conversational'),
             transcript_language=params.get('transcript_language'),
+            enable_citations=params.get('enable_citations', False),
         )
         cache_resp = _handle_cache_hit(
             cache_key, force, video_id, url, start_time,
@@ -723,6 +725,17 @@ def generate():
                 from services.content.citation_service import (
                     parse_citations, validate_citations,
                     enrich_content_with_links, enrich_html_with_links,
+                    build_source_receipts,
+                )
+                # 인용 목록 파싱 + 검증은 링크 변환 전 원문 기준으로 수행
+                citations = parse_citations(result.get('content', ''))
+                citations = validate_citations(citations, transcript_segments or [])
+                result['citations'] = citations
+                result['source_receipts'] = build_source_receipts(
+                    citations,
+                    video_id,
+                    datetime.now(timezone.utc).isoformat(),
+                    source_title=youtube_title,
                 )
                 # 마크다운 내 [MM:SS] 링크 변환
                 result['content'] = enrich_content_with_links(
@@ -733,10 +746,6 @@ def generate():
                     result['html'] = enrich_html_with_links(
                         result['html'], video_id
                     )
-                # 인용 목록 파싱 + 검증
-                citations = parse_citations(result.get('content', ''))
-                citations = validate_citations(citations, transcript_segments or [])
-                result['citations'] = citations
             except Exception as cite_err:
                 current_app.logger.warning(f"인용 처리 실패 (무시): {cite_err}")
 
@@ -1119,6 +1128,8 @@ def generate_stream():
         params = _get_request_data(request)
         if params.get('transcript_language_error'):
             return api_error(params['transcript_language_error'], 400)
+        if params.get('enable_citations'):
+            return api_error('스트리밍 생성은 인용 모드를 지원하지 않습니다. 일반 생성을 사용하세요.', 400)
 
         url = (params['url'] or '').strip()
         direct_content = params.get('content')

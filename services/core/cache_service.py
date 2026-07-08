@@ -71,11 +71,14 @@ class AICacheService:
         length: str = 'medium',
         writing_style: str = 'conversational',
         transcript_language: Optional[str] = None,
+        enable_citations: bool = False,
     ) -> str:
-        """캐시 키 생성 (SHA256). transcript_language 지정 시 키에 언어 차원 추가."""
+        """캐시 키 생성 (SHA256). 언어/인용 모드별로 캐시를 분리합니다."""
         raw = f"{video_id}|{style_id}|{model}|{length}|{writing_style}"
         if transcript_language:
             raw = f"{raw}|lang={transcript_language}"
+        if enable_citations:
+            raw = f"{raw}|citations=1"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:

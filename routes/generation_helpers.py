@@ -639,6 +639,9 @@ def _persist_generation_result(cache_key, video_id, params, url, youtube_title,
         # 캐시 히트 시 YouTube 제목 API 재호출을 피하기 위해 함께 저장
         'youtube_title': youtube_title,
     }
+    for key in ('citations', 'source_receipts'):
+        if key in result:
+            _cache_data[key] = result.get(key)
     _history_data = {
         'id': report_id,
         'url': url,

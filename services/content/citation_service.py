@@ -6,7 +6,7 @@
 """
 import logging
 import re
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,25 @@ _ALREADY_LINKED_RE = re.compile(
 
 # 이미 <a> 태그 내부의 마커 (모듈 레벨 사전 컴파일)
 _INSIDE_A_TAG_RE = re.compile(r'<a\b[^>]*>.*?</a>', re.DOTALL)
+
+# 마크다운 링크 텍스트만 보존
+_MARKDOWN_LINK_RE = re.compile(r'\[([^\]]+)\]\(https?://[^\)]+\)')
+
+# enrich_content_with_links 결과: [[MM:SS]](url)
+_LINKED_MARKER_RE = re.compile(
+    r'\[\[(\d{1,2}:\d{2}(?::\d{2})?)\]\]\(https?://[^\)]+\)'
+)
+
+
+def _clean_claim_context(context: str, marker: str) -> str:
+    """인용 주변 문맥에서 링크/마커를 제거해 claim 텍스트를 만듭니다."""
+    text = _LINKED_MARKER_RE.sub(lambda m: f'[{m.group(1)}]', context or '')
+    text = _MARKDOWN_LINK_RE.sub(r'\1', text)
+    text = text.replace(marker, ' ')
+    if marker.startswith('[') and marker.endswith(']'):
+        text = text.replace(marker[1:-1], ' ')
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text or marker
 
 
 def _validate_video_id(video_id: str) -> str:
@@ -221,3 +240,52 @@ def enrich_html_with_links(html_content: str, video_id: str) -> str:
         )
 
     return _CITATION_PATTERN.sub(_replace, html_content)
+
+
+def build_source_receipts(
+    citations: List[Dict],
+    video_id: str,
+    collected_at: str,
+    source_title: Optional[str] = None,
+) -> List[Dict]:
+    """인용 목록을 claim + YouTube timestamp link + 수집일 영수증으로 변환합니다.
+
+    Args:
+        citations: validate_citations() 이후의 인용 목록
+        video_id: YouTube 영상 ID
+        collected_at: 소스 수집 시각(ISO 문자열)
+        source_title: 영상 제목(선택)
+
+    Returns:
+        구조화된 출처 영수증 목록
+    """
+    video_id = _validate_video_id(video_id)
+    receipts = []
+    seen = set()
+
+    for citation in citations or []:
+        marker = str(citation.get('marker') or '')
+        seconds = int(citation.get('seconds') or 0)
+        key = (marker, seconds)
+        if not marker or key in seen:
+            continue
+        seen.add(key)
+
+        timestamp_url = f"https://youtube.com/watch?v={video_id}&t={seconds}s"
+        receipt = {
+            'claim': _clean_claim_context(citation.get('context', ''), marker),
+            'marker': marker,
+            'seconds': seconds,
+            'timestamp_url': timestamp_url,
+            'collected_at': collected_at,
+            'valid': citation.get('valid'),
+            'source': {
+                'type': 'youtube',
+                'video_id': video_id,
+            },
+        }
+        if source_title:
+            receipt['source']['title'] = source_title
+        receipts.append(receipt)
+
+    return receipts

@@ -86,6 +86,66 @@ def test_generate_youtube_url_still_uses_transcript_path():
     mock_article.assert_not_called()
 
 
+def test_generate_youtube_citations_add_source_receipts():
+    app, client = _app_client()
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+
+    def fake_save(result, *args, **kwargs):
+        with app.app_context():
+            return jsonify({
+                "citations": result.get("citations"),
+                "source_receipts": result.get("source_receipts"),
+            })
+
+    with (
+        patch(
+            "src.contexts.identity.interface.auth_decorators.is_supabase_enabled",
+            return_value=False,
+        ),
+        patch("services.usage.usage_decorator.is_supabase_enabled", return_value=False),
+        patch("routes.blog_routes._handle_cache_hit", return_value=None) as mock_cache_hit,
+        patch("services.core.content_service.get_content_title", return_value="YT"),
+        patch(
+            "routes.blog_routes._fetch_youtube_content",
+            return_value=(
+                "자막 본문",
+                [],
+                None,
+                "자막 본문",
+                "api",
+                [{"start": 0, "text": "시작"}, {"start": 90, "text": "근거"}],
+            ),
+        ),
+        patch(
+            "routes.blog_routes._call_ai_with_comments",
+            return_value=(
+                {"title": "YT 생성", "content": "주장은 [01:00] 근거가 있습니다.", "html": "<p>[01:00]</p>"},
+                "prompt",
+                None,
+            ),
+        ),
+        patch("routes.blog_routes._save_and_respond", side_effect=fake_save),
+    ):
+        resp = client.post(
+            "/generate",
+            json={"url": url, "style": "qna", "model": "gemini/test", "enable_citations": True},
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["citations"][0]["valid"] is True
+    assert data["source_receipts"][0]["claim"] == "주장은 근거가 있습니다."
+    assert data["source_receipts"][0]["timestamp_url"].endswith("&t=60s")
+    assert data["source_receipts"][0]["source"]["video_id"] == "dQw4w9WgXcQ"
+    from services.core.cache_service import AICacheService
+    expected_key = AICacheService.make_key(
+        "dQw4w9WgXcQ", "qna", "gemini/test",
+        enable_citations=True,
+    )
+    assert mock_cache_hit.call_args.args[0] == expected_key
+
+
 def test_generate_article_value_error_keeps_safe_article_prefix():
     _, client = _app_client()
 

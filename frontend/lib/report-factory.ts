@@ -61,6 +61,8 @@ export function responseToReport(
     web_sources: res.web_sources,
     transcript_segments: res.transcript_segments,
     chapters: res.chapters,
+    citations: res.citations,
+    source_receipts: res.source_receipts,
     ...overrides,
   });
 }

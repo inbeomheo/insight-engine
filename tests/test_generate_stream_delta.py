@@ -99,6 +99,13 @@ class TestGenerateStreamDelta(unittest.TestCase):
             time.sleep(0.01)
         return predicate()
 
+    def test_stream_rejects_enable_citations(self):
+        with self._patched():
+            resp = self._post(payload={'enable_citations': True})
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('스트리밍 생성은 인용 모드를 지원하지 않습니다', resp.get_json()['error'])
+
     def test_delta_events_accumulate_to_final_result_content(self):
         def fake_stream(*args, **kwargs):
             yield '본문 '

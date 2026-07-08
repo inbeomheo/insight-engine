@@ -1,6 +1,6 @@
 // === API 요청/응답 타입 ===
 
-import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSchema, NlpAnalysis, InsertedLink, Citation, WebSource } from './report';
+import type { TokenUsage, SeoMetadata, GeoMetadata, FaqSchema, CtaData, JsonLdSchema, NlpAnalysis, InsertedLink, Citation, SourceReceipt, WebSource } from './report';
 import type { Modifiers, TranscriptLanguage } from './settings';
 
 export interface GenerateRequest {
@@ -18,6 +18,8 @@ export interface GenerateRequest {
   web_search?: boolean;
   /** 생성 깊이: brief | standard | deep */
   detail_level?: 'brief' | 'standard' | 'deep';
+  /** 타임스탬프 인용 링크와 source_receipts 생성 */
+  enable_citations?: boolean;
   /** 자막 추출 언어 지정 (YouTube 다국어 자막 대상). null/undefined=자동 */
   transcript_language?: TranscriptLanguage;
 }
@@ -53,6 +55,7 @@ export interface GenerateResponse {
   transcript_segments?: Array<{ start: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
+  source_receipts?: SourceReceipt[];
   /** agent_mode 요청이 백그라운드 job으로 전환된 경우 */
   async?: boolean;
   job_id?: string;
