@@ -10,12 +10,6 @@
 
 ## 백로그
 
-- [ ] [제안] 관련 노트 3개 자동 추천 + 백링크 표시 — 출처: https://github.com/khoj-ai/khoj
-  (35.5k stars), https://github.com/AgriciDaniel/claude-obsidian (9,021 stars). 적합 이유:
-  기존 노트 저장/검색 구조에 유사 노트 조회 API와 상세 UI만 추가하면 지식 탐색성이 바로 올라감.
-  완료 기준: `python -m pytest tests/test_notes_routes.py tests/test_note_index_service.py -q` 통과 +
-  `cd frontend && npx tsc --noEmit` 통과 + `/notes/[id]`에서 자기 자신 제외 관련 노트 최대 3개 표시.
-  새 의존성: 없음
 - [ ] [제안] 학습 소스 중복 감지/재학습 경고 — 출처: https://github.com/labring/FastGPT
   (28,866 stars). 적합 이유: 동일 URL·동일 제목·유사 내용 재학습을 줄여 지식베이스 품질을 높임.
   완료 기준: 동일 URL 또는 유사도 임계값 초과 노트/소스 저장 시 경고 응답 테스트 통과 + 기존 저장 흐름 회귀 없음.
@@ -35,6 +29,14 @@
 
 ## Done
 
+- [x] 2026-07-09 feat(notes): 관련 노트 3개 자동 추천 + 상세 화면 링크 표시.
+  `services/content/note_index_service.py`에 자기 자신 제외 유사 노트 조회를 추가하고,
+  `routes/notes_routes.py` 상세 응답에 `related_notes[]`를 graceful degradation(부가 기능 실패 시 핵심 응답 유지)으로
+  포함. `frontend/app/notes/[id]/page.tsx`에서 최대 3개 관련 노트를 카드 링크로 표시.
+  검증: `python -m pytest tests/test_notes_routes.py tests/test_note_index_service.py -q -p no:cacheprovider`
+  21 passed + `cd frontend && npx tsc --noEmit` 통과 + `npm run verify:frontend` 통과 +
+  `npm run verify:e2e` 1 passed. code-reviewer BLOCKER/IMPORTANT 0, NIT 반영 완료.
+  로컬 커밋: 4e31768. PR/푸시는 사용자 승인 전 보류.
 - [x] 2026-07-09 feat(input): 전역 Ctrl+V/Cmd+V 붙여넣기 라우팅 활성화. 기존
   `frontend/components/input/ClipboardPaste.tsx`를 `frontend/app/page.tsx`에 연결해
   URL은 URL 탭/큐로, 긴 텍스트는 텍스트 탭으로 전환. 입력 필드 포커스 중에는 기본 붙여넣기 보존.
