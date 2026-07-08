@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 
-const URL_PATTERN = /^https?:\/\/.+/;
+const URL_PATTERN = /^https?:\/\/.+/i;
 
 interface ClipboardPasteProps {
   /** URL이 붙여넣기되면 호출 */
@@ -40,11 +40,15 @@ export default function ClipboardPaste({
       const text = e.clipboardData?.getData('text')?.trim();
       if (!text) return;
 
+      const isUrl = URL_PATTERN.test(text);
+      const isLongText = text.length >= 10;
+      if (!isUrl && !isLongText) return;
+
       e.preventDefault();
 
-      if (URL_PATTERN.test(text)) {
+      if (isUrl) {
         onPasteUrl(text);
-      } else if (text.length >= 10) {
+      } else {
         onPasteText(text);
       }
     },

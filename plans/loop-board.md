@@ -10,29 +10,22 @@
 
 ## 백로그
 
-- [ ] test_notebooklm_routes::test_download_error_when_not_ready 실패 (원격 master 유래, rebase 후 발견) —
-  PR #69 머지로 download의 RuntimeError("생성 완료되지 않은 artifact")가 api_error_from_exception 경유
-  500 반환인데 테스트는 400 기대. 의미상 클라이언트 오류(준비 전 요청)라 400 매핑이 맞아 보임 —
-  routes/notebooklm_routes.py:60 근처에서 이 케이스만 400 처리 또는 테스트 기대값 갱신 중 결정.
-  완료 기준: pytest 전체 0 fail
-
-- [ ] ruff 정리 (기존 위반, 단일 `style:` PR, PR #71/#72/#74 머지 후 안전): scheduler_worker.py format + inline_editor.py format(docstring 빈줄/따옴표) + test_logging_config.py `LOG_FORMAT`/`DATE_FORMAT` 미사용 import(F401) + F841 프로덕션 미사용 변수 4건(app.py base_dir / support_agent forced_feedback / history_repository data / api_key_vault res, 사이클 9 무해 확인). 기존 라인 위반이라 추가 라인은 준수.
-- [ ] [사람] CI 수정 푸시 막힘 — git/gh 토큰에 `workflow` 스코프가 없어 .github/workflows 변경
-  푸시가 원격에서 거부됨. 수정안은 `plans/ci-workflow-fix.patch`에 보존
-  (master 트리거 + flake8 권고화 + RATE_LIMIT_ENABLED=false + 미선언 의존성 테스트 격리).
-  추가(PR #70, 사이클 8): frontend-test 잡에 `npm test --reporter=dot` 스텝 추가(vitest 도입에 따른 CI 연동).
-  - 적용법: `gh auth refresh -h github.com -s workflow` (브라우저 인증) →
-    `git apply plans/ci-workflow-fix.patch` → 커밋 → 푸시
-- [ ] [사람] duckduckgo_search가 requirements.txt에 미선언 — web_research_service.py:7이 톱레벨
-  import라 새 환경에선 퓨전/웹리서치/경쟁분석 기능이 깨짐. 의존성 추가 여부 결정 필요
-  (추가 시 ci-workflow-fix.patch의 테스트 격리 4건도 해제)
-- [ ] [사람] ci.yml의 docker-build/deploy/커버리지 잡이 `refs/heads/main` 게이트 — master로
-  바꾸면 푸시마다 Docker Hub 푸시 + Railway 프로덕션 배포가 켜지므로 운영 결정 필요
 - [ ] [사람] 데드 엔드포인트 잔여 335건 — 삭제 안전 판정 완료, 제품 결정 대기
   (plans/dead-code-audit-2026-06-10.md 참조)
 
 ## Done
 
+- [x] 2026-07-09 feat(input): 전역 Ctrl+V/Cmd+V 붙여넣기 라우팅 활성화. 기존
+  `frontend/components/input/ClipboardPaste.tsx`를 `frontend/app/page.tsx`에 연결해
+  URL은 URL 탭/큐로, 긴 텍스트는 텍스트 탭으로 전환. 입력 필드 포커스 중에는 기본 붙여넣기 보존.
+  검증: `npm test -- ClipboardPaste.test.tsx` 6 passed + `npm run verify:frontend` 통과 +
+  `npm run verify:e2e` 1 passed. code-reviewer BLOCKER/IMPORTANT 0.
+- [x] 2026-07-09 보드 백로그 재검증/정리. NotebookLM download 준비 전 400 매핑은
+  `routes/notebooklm_routes.py`에 반영되어 `tests/test_notebooklm_routes.py` 7 passed.
+  ruff 정리 항목은 현재 dev 의존성/검증 게이트에서 ruff가 빠졌고(`requirements-dev.txt`=pytest/flake8),
+  지정 F401/F841 잔여도 현재 코드에서 재현되지 않아 백로그에서 제거. CI master 트리거/flake8 권고/vitest
+  스텝/duckduckgo-search 의존성은 origin/master PR #119 및 `requirements.txt`로 반영됨.
+  docker/deploy/coverage의 `refs/heads/main` 게이트는 `.github/workflows/ci.yml` 주석상 의도적 유지 결정.
 - [x] 2026-07-04 로컬 master 21커밋 뒤처짐 해소 (사이클 10, Codex 위임 1호). 46개 테스트 컬렉션 에러를
   fcntl 회귀로 오진 → Codex 위임으로 수정·PR #75 생성했으나, 원격 master에는 이미 PR #50(더 완전한
   fcntl 가드)이 머지돼 있었음 — 진짜 원인은 master 푸시 거부로 로컬 master가 원격 대비 21커밋 뒤처진 것.

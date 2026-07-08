@@ -78,7 +78,7 @@
 - [P1-29] routes/integration_routes.py: /api/email/ingest 엔드포인트 | 검증: pytest
 
 ### F1-13. 클립보드 붙여넣기 → 즉시 생성 — 난이도 S
-- [P1-30] frontend/components/input/ClipboardPaste.tsx: Ctrl+V 감지 → 텍스트/URL 자동 판별 | 검증: build
+- [x] [P1-30] frontend/components/input/ClipboardPaste.tsx: Ctrl+V 감지 → 텍스트/URL 자동 판별 | 검증: build
 
 ### F1-14. 북마크 일괄 가져오기 — 난이도 M
 - [P1-31] services/bookmark_import_service.py: Chrome/Firefox 북마크 HTML 파싱 | 검증: pytest

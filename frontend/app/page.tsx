@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
 import TextInput from '@/components/input/TextInput';
+import ClipboardPaste from '@/components/input/ClipboardPaste';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 const ResultCard = dynamic(() => import('@/components/result/ResultCard'), { ssr: false });
@@ -224,8 +225,28 @@ export default function Home() {
     if (ok) startTransition(() => urls.forEach(removeUrl));
   }, [urls, generationMode, generateBatchUrls, generateMergedUrls, generateFusionUrls, removeUrl]);
 
+  const handleClipboardUrl = useCallback((text: string) => {
+    const matches = text.match(/https?:\/\/[^\s]+/g);
+    if (matches && matches.length > 1) {
+      addUrls(matches);
+    } else {
+      addUrl(matches?.[0] ?? text);
+    }
+    setInputTab('url');
+  }, [addUrl, addUrls]);
+
+  const handleClipboardText = useCallback((text: string) => {
+    setPastedText(text);
+    setInputTab('text');
+  }, []);
+
   return (
     <>
+      <ClipboardPaste
+        enabled={!isLoading}
+        onPasteUrl={handleClipboardUrl}
+        onPasteText={handleClipboardText}
+      />
       <MobileAppShell
         reports={reports}
         urls={urls}
