@@ -240,7 +240,7 @@
 - [P3-01] services/agent/research_agent.py: 주제 → 웹검색 → 기사수집 → 요약 → 콘텐츠 생성 자율 루프 | 검증: pytest
 - [P3-02] services/agent/__init__.py: 에이전트 베이스 클래스 (plan→execute→reflect 루프) | 검증: pytest
 - [P3-03] routes/advanced_routes.py: /api/agent/research 엔드포인트 (SSE) | 검증: pytest
-- [P3-04] frontend/components/agent/AgentProgress.tsx: 에이전트 진행 상황 실시간 표시 | 검증: build
+- [P3-04] ~~frontend/components/agent/AgentProgress.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 진입점과 함께 신규 UI 작성 | 검증: build
 
 ### F3-02. GraphRAG 고도화 — 난이도 L
 - **기존**: services/rag/graph_store.py, graph_builder.py (networkx 기반)
@@ -252,7 +252,7 @@
 - [P3-08] services/agent/content_pipeline_agent.py: 리서처→작가→편집자→SEO 4단계 에이전트 체인 | 검증: pytest
 - [P3-09] services/agent/agent_orchestrator.py: 에이전트 오케스트레이터 (순차/병렬 실행) | 검증: pytest
 - [P3-10] config.py: AGENT_MODE_ENABLED, AGENT_MODELS 설정 추가 | 검증: pytest
-- [P3-11] frontend/components/agent/AgentPipeline.tsx: 에이전트 파이프라인 시각화 | 검증: build
+- [P3-11] ~~frontend/components/agent/AgentPipeline.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 진입점과 함께 신규 UI 작성 | 검증: build
 
 ### F3-04. AI 메모리 레이어 (개인화) — 난이도 M
 - **기존**: style_memory_service.py
@@ -329,7 +329,7 @@
 ### F3-23. 콘텐츠 점수 카드 — 난이도 M
 - **기존**: quality_service.py
 - [P3-41] services/quality_service.py: 종합 점수 (SEO + 가독성 + 독창성 + 구조) 통합 | 검증: pytest
-- [P3-42] frontend/components/result/ScoreCard.tsx: 종합 점수 카드 UI | 검증: build
+- [P3-42] ~~frontend/components/result/ScoreCard.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 소비 화면과 함께 신규 UI 작성 | 검증: build
 
 ### F3-24. AI 코멘터리 (해설) — 난이도 M
 - [P3-43] services/commentary_service.py: 원본 콘텐츠에 AI 해설/주석 추가 | 검증: pytest
