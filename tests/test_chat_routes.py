@@ -59,9 +59,54 @@ def test_chat_happy_path_uses_ai_and_note_search():
     assert create_chat.call_args.kwargs["model"] == "gemini/test"
 
 
-def test_chat_rag_sources_omit_non_numeric_score():
+def test_chat_non_numeric_score_returns_insufficient_evidence_without_ai():
     client = _client()
     notes = [{"id": "n1", "title": "학습 노트", "score": "nan", "snippet": "복습 질문 메모"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=notes),
+        patch("services.core.ai_service.create_chat_response") as create_chat,
+    ):
+        resp = client.post("/api/chat", json=_payload(), headers=_H)
+
+    body = resp.get_json()
+    assert resp.status_code == 200
+    assert body["answer"].startswith("[근거 부족]")
+    assert body["rag_sources"] == []
+    create_chat.assert_not_called()
+
+
+def test_chat_low_score_notes_return_insufficient_evidence_without_ai():
+    client = _client()
+    notes = [{"id": "n1", "title": "낮은 노트", "score": 0.1, "snippet": "약한 근거"}]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=notes),
+        patch("services.core.ai_service.create_chat_response") as create_chat,
+    ):
+        resp = client.post("/api/chat", json=_payload(), headers=_H)
+
+    body = resp.get_json()
+    assert resp.status_code == 200
+    assert body["answer"].startswith("[근거 부족]")
+    assert body["notes"] == []
+    assert body["rag_sources"] == []
+    assert body["usage"] == {}
+    create_chat.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("score", "should_call_ai"),
+    [
+        (0.249, False),
+        (0.25, True),
+    ],
+)
+def test_chat_rag_score_threshold_boundary(score, should_call_ai):
+    client = _client()
+    notes = [{"id": "n1", "title": "경계 노트", "score": score, "snippet": "경계 근거"}]
 
     with (
         patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
@@ -69,17 +114,46 @@ def test_chat_rag_sources_omit_non_numeric_score():
         patch(
             "services.core.ai_service.create_chat_response",
             return_value={"answer": "ok", "usage": {}},
-        ),
+        ) as create_chat,
     ):
         resp = client.post("/api/chat", json=_payload(), headers=_H)
 
+    body = resp.get_json()
     assert resp.status_code == 200
-    assert resp.get_json()["rag_sources"] == [{
-        "type": "knowledge_note",
-        "id": "n1",
-        "title": "학습 노트",
-        "snippet": "복습 질문 메모",
-    }]
+    if should_call_ai:
+        assert body["answer"] == "ok"
+        assert body["rag_sources"][0]["id"] == "n1"
+        create_chat.assert_called_once()
+    else:
+        assert body["answer"].startswith("[근거 부족]")
+        assert body["rag_sources"] == []
+        create_chat.assert_not_called()
+
+
+def test_chat_filters_low_score_sources_before_prompting():
+    client = _client()
+    notes = [
+        {"id": "low", "title": "낮은 노트", "score": 0.1, "snippet": "약한 근거"},
+        {"id": "high", "title": "높은 노트", "score": 0.8, "snippet": "강한 근거"},
+    ]
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes", return_value=notes),
+        patch(
+            "services.core.ai_service.create_chat_response",
+            return_value={"answer": "ok", "usage": {}},
+        ) as create_chat,
+    ):
+        resp = client.post("/api/chat", json=_payload(), headers=_H)
+
+    body = resp.get_json()
+    assert resp.status_code == 200
+    assert [note["id"] for note in body["notes"]] == ["high"]
+    assert [source["id"] for source in body["rag_sources"]] == ["high"]
+    prompt = create_chat.call_args.args[0][-1]["content"]
+    assert "강한 근거" in prompt
+    assert "약한 근거" not in prompt
 
 
 @pytest.mark.parametrize(

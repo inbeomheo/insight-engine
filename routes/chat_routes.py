@@ -21,6 +21,7 @@ MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CONTENT_CHARS = 2_000
 CHAT_ERROR_PREFIX = "[채팅 실패]"
 ALLOWED_LANGUAGES = {"ko", "en", "ja"}
+MIN_RAG_SOURCE_SCORE = 0.25
 
 
 @chat_bp.route("/api/chat", methods=["POST"])
@@ -38,7 +39,14 @@ def chat():
     model = payload["model"]
     language = payload["language"]
 
-    notes = _search_related_notes(question)
+    notes = _filter_supported_notes(_search_related_notes(question))
+    if notes is None:
+        return jsonify({
+            "answer": "[근거 부족] 관련 지식 노트의 유사도가 낮아 답변을 생성하지 않았습니다.",
+            "notes": [],
+            "rag_sources": [],
+            "usage": {},
+        })
     messages = _build_messages(
         question=question,
         context=context,
@@ -115,6 +123,17 @@ def _search_related_notes(question: str) -> list[dict[str, Any]]:
     except Exception as exc:
         current_app.logger.warning("Chat note search failed (ignored): %s", exc)
         return []
+
+
+def _filter_supported_notes(notes: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    if not notes:
+        return []
+    supported = [
+        note
+        for note in notes
+        if (_numeric_score(note.get("score")) or 0.0) >= MIN_RAG_SOURCE_SCORE
+    ]
+    return supported if supported else None
 
 
 def _build_messages(
