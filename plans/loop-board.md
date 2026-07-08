@@ -10,11 +10,6 @@
 
 ## 백로그
 
-- [ ] [제안] 생성/채팅 결과 근거 트레이(rag_sources) 표시 — 출처:
-  https://github.com/Mintplex-Labs/anything-llm (62.9k stars). 적합 이유: RAG 메타데이터와 기존 인용 UI를
-  활용해 답변 신뢰도를 높일 수 있음.
-  완료 기준: `/api/chat` 또는 생성 응답에 `rag_sources[]` 포함 + 근거 트레이 UI 타입체크 통과.
-  새 의존성: 없음
 - [ ] [제안] RAG 답변의 “근거 부족” 자동 차단과 출처 경계 검사 — 출처:
   https://github.com/UnitOneAI/SecuritySkills/issues/669 (n/a). 적합 이유: 낮은 검색 점수 가드만으로
   환각을 줄이고 자막/문서 기반 원칙을 강화함.
@@ -25,6 +20,14 @@
 
 ## Done
 
+- [x] 2026-07-09 feat(chat): 생성/채팅 결과 근거 트레이(rag_sources) 표시.
+  `/api/chat` 응답에 `rag_sources[]`를 추가하고 기존 `notes[]`는 호환 유지. ResultChatPanel에 지식 노트
+  근거 트레이를 표시하며, history(대화 기록)는 role/content만 전송해 근거 스니펫 재전송을 방지.
+  score는 유한 숫자일 때만 응답에 포함.
+  검증: `python -m pytest tests/test_chat_routes.py -q -p no:cacheprovider` 14 passed +
+  `npm test -- ResultChatPanel.test.tsx` 2 passed + `cd frontend && npx tsc --noEmit` 통과 +
+  `npm run verify:frontend` 통과 + `npm run verify:e2e` 1 passed.
+  code-reviewer BLOCKER/IMPORTANT 0, NIT 반영 완료. 로컬 커밋: 34708f1. PR/푸시는 사용자 승인 전 보류.
 - [x] 2026-07-09 feat(notes): 학습 소스 중복 감지/재학습 경고 추가.
   `/api/notes` 생성 전에 동일 URL 또는 `score > 0.92` 유사 노트를 탐지하면 AI 호출/저장 전에
   `[재학습 경고]` 409 응답과 `duplicate_notes[]`를 반환. 유사도 조회 실패 시에는 기존 저장 흐름을 유지.
