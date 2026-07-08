@@ -52,6 +52,7 @@ const STYLE_LABELS: Record<string, string> = {
   geo_seo: 'GEO 검색',
   course: 'AI 코스',
   quiz: '퀴즈',
+  retention_cards: '리텐션 카드',
 };
 
 type ViewMode = 'list' | 'create' | 'edit';

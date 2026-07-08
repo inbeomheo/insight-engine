@@ -62,7 +62,9 @@
     "shorts_script": "Shorts Script",
     "geo_seo": "GEO+SEO",
     "comment_summary": "Comment Summary",
-    "course": "Course Notes"
+    "course": "Course Notes",
+    "quiz": "Quiz",
+    "retention_cards": "Retention Cards"
   },
   "result": {
     "copyTitle": "Copy title",

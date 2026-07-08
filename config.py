@@ -157,7 +157,7 @@ MAX_FALLBACK_ATTEMPTS = 3
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
-    'summary': 0.35, 'tutorial': 0.5, 'qna': 0.35, 'show_notes': 0.45, 'geo_seo': 0.4, 'course': 0.5, 'quiz': 0.5,
+    'summary': 0.35, 'tutorial': 0.5, 'qna': 0.35, 'show_notes': 0.45, 'geo_seo': 0.4, 'course': 0.5, 'quiz': 0.5, 'retention_cards': 0.5,
     'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7, 'shorts_script': 0.7,
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.35,
@@ -317,6 +317,7 @@ STYLE_OPTIONS: List[Tuple[str, str]] = [
     ('geo_seo', '🤖 GEO (AI검색)'),
     ('course', '🎓 AI 코스'),
     ('quiz', '🧠 퀴즈'),
+    ('retention_cards', '🧩 리텐션 카드'),
 ]
 
 

@@ -62,7 +62,9 @@
     "shorts_script": "ショートスクリプト",
     "geo_seo": "GEO+SEO",
     "comment_summary": "コメント要約",
-    "course": "講義ノート"
+    "course": "講義ノート",
+    "quiz": "クイズ",
+    "retention_cards": "復習カード"
   },
   "result": {
     "copyTitle": "タイトルをコピー",

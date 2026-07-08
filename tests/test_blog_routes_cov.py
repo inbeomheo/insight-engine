@@ -109,6 +109,11 @@ class TestValidateStyle(_Base):
         self.assertEqual(_validate_style('quiz'), 'quiz')
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    def test_validate_style_accepts_retention_cards(self, _):
+        from routes.blog_routes import _validate_style
+        self.assertEqual(_validate_style('retention_cards'), 'retention_cards')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_validate_style_unknown_passes_through(self, _):
         from routes.blog_routes import _validate_style
         self.assertEqual(_validate_style('unknown_style'), 'unknown_style')

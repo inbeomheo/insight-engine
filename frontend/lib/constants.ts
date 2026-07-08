@@ -16,6 +16,7 @@ export const STYLE_OPTIONS: StyleOption[] = [
   { id: 'geo_seo', label: 'GEO 검색', emoji: '🤖', description: 'AI 검색 최적화' },
   { id: 'course', label: 'AI 코스', emoji: '🎓', description: '강의형 학습 구성' },
   { id: 'quiz', label: '퀴즈', emoji: '🧠', description: '객관식 학습 문제' },
+  { id: 'retention_cards', label: '리텐션 카드', emoji: '🧩', description: '반복 학습 카드' },
 ];
 
 export const LENGTH_OPTIONS = [
