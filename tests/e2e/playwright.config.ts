@@ -1,5 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const backendCommand =
+  process.platform === 'win32'
+    ? '.venv\\Scripts\\python.exe app.py'
+    : 'python scripts/run_local_python.py app.py';
+const frontendCommand = 'node node_modules/next/dist/bin/next dev';
+const backendUrl = 'http://127.0.0.1:5001';
+const frontendUrl = 'http://127.0.0.1:3000';
+
 /**
  * Insight Engine E2E 테스트 설정
  *
@@ -33,7 +41,7 @@ export default defineConfig({
 
   /* 전역 설정 */
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: frontendUrl,
 
     /* 추적 및 디버깅 */
     trace: 'on-first-retry',
@@ -184,17 +192,35 @@ export default defineConfig({
   ],
 
   /* 테스트 서버 자동 실행 */
-  webServer: {
-    command: 'python app.py',
-    url: 'http://localhost:5001',
-    cwd: '../../', // 프로젝트 루트 디렉토리
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    // 테스트 시 Supabase 인증 비활성화 (로그인 없이 모든 기능 사용)
-    env: {
-      ...process.env,
-      SUPABASE_URL: '',
-      SUPABASE_ANON_KEY: '',
-    },
-  },
+  ...(process.env.PLAYWRIGHT_MANAGED_SERVERS === '1'
+    ? {}
+    : {
+        webServer: [
+          {
+            command: backendCommand,
+            url: backendUrl,
+            cwd: '../../', // 프로젝트 루트 디렉토리
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
+            // 테스트 시 Supabase 인증 비활성화 (로그인 없이 모든 기능 사용)
+            env: {
+              ...process.env,
+              SUPABASE_URL: '',
+              SUPABASE_ANON_KEY: '',
+            },
+          },
+          {
+            command: frontendCommand,
+            url: frontendUrl,
+            cwd: '../../frontend',
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
+            env: {
+              ...process.env,
+              NEXT_BACKEND_URL: backendUrl,
+            },
+          },
+        ],
+      }
+  ),
 });
