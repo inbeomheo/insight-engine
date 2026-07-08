@@ -10,10 +10,6 @@
 
 ## 백로그
 
-- [ ] [제안] 학습 소스 중복 감지/재학습 경고 — 출처: https://github.com/labring/FastGPT
-  (28,866 stars). 적합 이유: 동일 URL·동일 제목·유사 내용 재학습을 줄여 지식베이스 품질을 높임.
-  완료 기준: 동일 URL 또는 유사도 임계값 초과 노트/소스 저장 시 경고 응답 테스트 통과 + 기존 저장 흐름 회귀 없음.
-  새 의존성: 없음
 - [ ] [제안] 생성/채팅 결과 근거 트레이(rag_sources) 표시 — 출처:
   https://github.com/Mintplex-Labs/anything-llm (62.9k stars). 적합 이유: RAG 메타데이터와 기존 인용 UI를
   활용해 답변 신뢰도를 높일 수 있음.
@@ -29,6 +25,13 @@
 
 ## Done
 
+- [x] 2026-07-09 feat(notes): 학습 소스 중복 감지/재학습 경고 추가.
+  `/api/notes` 생성 전에 동일 URL 또는 `score > 0.92` 유사 노트를 탐지하면 AI 호출/저장 전에
+  `[재학습 경고]` 409 응답과 `duplicate_notes[]`를 반환. 유사도 조회 실패 시에는 기존 저장 흐름을 유지.
+  YouTube 단축 URL·utm 파라미터 URL 정규화와 invalid source 400 회귀 테스트 포함.
+  검증: `python -m pytest tests/test_notes_routes.py tests/test_note_index_service.py -q -p no:cacheprovider`
+  28 passed + `cd frontend && npx tsc --noEmit` 통과 + `npm run verify:e2e` 1 passed.
+  code-reviewer BLOCKER/IMPORTANT/NIT 0. 로컬 커밋: c55dfb1. PR/푸시는 사용자 승인 전 보류.
 - [x] 2026-07-09 feat(notes): 관련 노트 3개 자동 추천 + 상세 화면 링크 표시.
   `services/content/note_index_service.py`에 자기 자신 제외 유사 노트 조회를 추가하고,
   `routes/notes_routes.py` 상세 응답에 `related_notes[]`를 graceful degradation(부가 기능 실패 시 핵심 응답 유지)으로
