@@ -1594,7 +1594,7 @@ def extract_events_endpoint():
     요청 형식:
         {"url": "https://youtube.com/..."} — URL 제공 시 자막 자동 추출
         {"transcript": "자막 텍스트"} — 자막 직접 제공
-        {"model": "zhipuai/GLM-4.5-Air"} — 선택적 모델 지정
+        {"model": "chatmock/gpt-5.4-mini"} — 선택적 모델 지정
 
     응답 형식:
         {"events": [...], "summary": {...}, "categorized": {...}}

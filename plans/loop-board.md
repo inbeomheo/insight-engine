@@ -16,6 +16,7 @@
   2026-07-09 1차: export/QA 표면 제거 완료. 2차: Ollama 헬스 엔드포인트와 다중 프로바이더 잔여 UI/테스트 제거 완료.
   3차: GraphQL/OAuth 공급자/외부 자동화 웹훅 그룹 제거 완료.
   4차: Agent helper/auth me/content-score 그룹 정리 진행 중. 다음 배치는 남은 감사 목록에서 프론트 소비 0 체인을 재검증해 소형 묶음으로 처리.
+  5차: 최종 라우트 감사 `NO_FRONT_NO_TEST_COUNT 0` 확인 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -30,6 +31,14 @@
 
 ## Done
 
+- [x] 2026-07-09 chore(chatmock): ChatMock 단일 표면 최종 정리.
+  지원 FAQ/피드백 분류/설정 UI 잔여 문구를 ChatMock 기준으로 정리하고,
+  보조 생성·RAG·번역·리퍼포즈 기본 모델을 `chatmock/gpt-5.4-mini`로 통일.
+  내부 레거시 모델 분기(사용자가 직접 구 모델 ID를 넣었을 때의 방어 코드)는 유지.
+  데드 엔드포인트 감사: `NO_FRONT_NO_TEST_COUNT 0`.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  관련 테스트 86 passed, 11 subtests passed +
+  `.venv\Scripts\python.exe -m pytest tests/ -q --tb=no -p no:cacheprovider` 4083 passed, 1 skipped, 11 subtests passed.
 - [x] 2026-07-09 feat(notes): LLMWiki 홈 개념 지도 강화.
   `/notes` 홈에 반복 개념/태그를 집계한 개념 지도와 클릭 검색, 출처 구성, 최근 학습 흐름을 추가.
   “읽고 끝”이 아니라 쌓인 노트를 개념별로 다시 탐색하는 위키 홈 경험을 강화.

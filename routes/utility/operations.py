@@ -176,7 +176,7 @@ def api_validate_provider():
             'max_tokens': 5,
             'api_key': api_key or ('dummy' if provider_id == 'chatmock' else api_key),
         }
-        # api_base가 있는 프로바이더 (zhipuai, openrouter 등)
+        # ChatMock처럼 OpenAI 호환 api_base가 있는 프로바이더
         if provider.get('api_base'):
             kwargs['api_base'] = provider['api_base']
         if provider_id == 'chatmock':

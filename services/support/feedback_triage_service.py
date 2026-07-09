@@ -16,7 +16,7 @@ _FILE_HINTS = [
     (re.compile(r"모바일|아래\s*탭|bottom|앱"), ["frontend/components/mobile/MobileAppShell.tsx", "frontend/app/page.tsx"]),
     (re.compile(r"스타일|출력\s*스타일|취소|선택"), ["frontend/app/page.tsx", "frontend/components/mobile/MobileAppShell.tsx", "frontend/lib/constants.ts"]),
     (re.compile(r"공유|링크|복사"), ["frontend/components/result/ResultCard.tsx", "routes/utility/share_pages.py", "services/content/share_page_service.py"]),
-    (re.compile(r"모델|openrouter|gpt|키미|kimi|provider|프로바이더"), ["config.py", "frontend/hooks/useProviders.ts", "routes/utility/operations.py"]),
+    (re.compile(r"모델|chatmock|gpt|serve|login|provider|프로바이더"), ["config.py", "frontend/hooks/useProviders.ts", "routes/utility/operations.py"]),
     (re.compile(r"챗봇|피드백|문의|불편사항"), ["services/support/", "frontend/components/support/"]),
 ]
 

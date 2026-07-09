@@ -81,10 +81,8 @@ def _get_model() -> str:
     from config import PROVIDER_API_KEYS
 
     candidates = [
-        'gemini/gemini-3-flash-preview',
-        'gemini/gemini-2.5-flash-lite-preview-09-2025',
-        'deepseek/deepseek-chat',
-        'zhipuai/GLM-4.5-Air',
+        'chatmock/gpt-5.4-mini',
+        'chatmock/gpt-5.4',
     ]
     for model_id in candidates:
         provider = model_id.split('/')[0]

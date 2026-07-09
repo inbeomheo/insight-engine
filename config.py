@@ -273,7 +273,7 @@ def get_model_max_tokens(model_id: str) -> int:
 def get_model_display_name(model_id: str) -> str:
     """모델 ID로 사용자 표시용 이름을 반환합니다.
 
-    예: 'zhipuai/GLM-4.5-Air' → 'GLM-4.5 Air (경량)'
+    예: 'chatmock/gpt-5.4-mini' → 'GPT-5.4 Mini'
     매칭 실패 시 모델 ID를 그대로 반환합니다.
     """
     for provider in SUPPORTED_PROVIDERS.values():
@@ -335,7 +335,7 @@ RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
 DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
 TRANSLATION_MODEL: str = os.getenv(
     'TRANSLATION_MODEL',
-    'gemini/gemini-2.5-flash-lite-preview-09-2025'
+    'chatmock/gpt-5.4-mini'
 )
 
 # 임베딩 모델 (RAG)

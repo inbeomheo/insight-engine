@@ -11,8 +11,8 @@ import litellm
 
 logger = logging.getLogger(__name__)
 
-# 기본 추출 모델 (Gemini Flash — 빠르고 저렴)
-_DEFAULT_MODEL = "gemini/gemini-2.5-flash-lite-preview-09-2025"
+# 기본 추출 모델 (ChatMock/OpenAI 호환)
+_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
 
 _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계를 추출하세요.
 

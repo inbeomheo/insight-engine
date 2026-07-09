@@ -558,7 +558,7 @@ def inline_edit(content: str, selection: str, instruction: str, model: str, cont
     }
 
 
-def create_full_blog_post(content: str, model_name: str = 'gemini/gemini-3-flash-preview', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
+def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.4-mini', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.

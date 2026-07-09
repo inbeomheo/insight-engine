@@ -94,9 +94,7 @@ def admin_dashboard():
         from config import PROVIDER_API_KEYS, SUPPORTED_PROVIDERS
         provider_distribution = {}
         _provider_labels = {
-            'gemini': 'Gemini', 'deepseek': 'DeepSeek', 'zhipuai': 'Zhipu AI',
-            'openai': 'OpenAI', 'anthropic': 'Anthropic',
-            'openrouter': 'OpenRouter', 'chatmock': 'ChatMock',
+            'chatmock': 'ChatMock',
         }
         for prov in SUPPORTED_PROVIDERS:
             key = PROVIDER_API_KEYS.get(prov, '')

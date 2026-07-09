@@ -11,12 +11,6 @@ import type { ProviderInfo } from '@/lib/types';
 // 프로바이더별 라벨 (SVG 아이콘 대신 텍스트 약어)
 const PROVIDER_LABELS: Record<string, string> = {
   chatmock: 'CM',
-  gemini: 'G',
-  deepseek: 'DS',
-  zhipuai: 'ZH',
-  openrouter: 'OR',
-  openai: 'AI',
-  anthropic: 'AN',
 };
 
 type ValidationStatus = 'untested' | 'testing' | 'valid' | 'invalid';

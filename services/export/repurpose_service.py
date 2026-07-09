@@ -73,7 +73,7 @@ class RepurposeService:
 
     DEFAULT_MODEL = os.getenv(
         'REPURPOSE_MODEL',
-        'gemini/gemini-2.5-flash-lite-preview-09-2025'
+        'chatmock/gpt-5.4-mini'
     )
 
     def repurpose(
