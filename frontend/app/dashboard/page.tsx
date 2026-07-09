@@ -35,6 +35,27 @@ interface HealthStatus {
   memory_usage_mb?: number | null;
 }
 
+async function writeClipboardText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
+}
+
+function cleanMarkdownLine(value: string | undefined, fallback = '-') {
+  const text = value?.replace(/\s+/g, ' ').trim();
+  return text || fallback;
+}
+
 export default function DashboardPage() {
   const hydrateResults = useResultStore((s) => s.hydrate);
   const reports = useResultStore((s) => s.reports);
@@ -134,19 +155,7 @@ function SystemHealthCard({
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     };
     const text = JSON.stringify(payload, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
+    await writeClipboardText(text);
     setCopied(true);
     toast.success('진단 정보가 복사되었습니다.');
     setTimeout(() => setCopied(false), 1800);
@@ -214,6 +223,7 @@ function SystemHealthCard({
 }
 
 function LocalDashboardSummary({ reports }: { reports: Report[] }) {
+  const [summaryCopied, setSummaryCopied] = useState(false);
   const stats = useMemo(() => {
     const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens ?? 0), 0);
     const avgLength = reports.length
@@ -240,14 +250,61 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
     return { totalTokens, avgLength, topStyles, recent, storagePct, storageStatus };
   }, [reports]);
 
+  async function copyMarkdownSummary() {
+    const styleLines = stats.topStyles.length
+      ? stats.topStyles.map(([style, count]) => `- ${getStyleLabel(style)}: ${count}건`).join('\n')
+      : '- 아직 생성 결과가 없습니다.';
+    const recentLines = stats.recent.length
+      ? stats.recent
+          .map((report, index) =>
+            [
+              `${index + 1}. ${cleanMarkdownLine(report.title || report.youtube_title, '제목 없음')}`,
+              `   - 스타일: ${getStyleLabel(report.style)}`,
+              `   - 생성: ${cleanMarkdownLine(report.time)}`,
+              `   - 길이: ${report.content.length.toLocaleString()}자`,
+              report.url ? `   - 원본: ${report.url}` : null,
+            ]
+              .filter(Boolean)
+              .join('\n')
+          )
+          .join('\n')
+      : '1. 아직 생성 결과가 없습니다.';
+    const text = [
+      '# 내 작업 요약',
+      '',
+      `- 복사 시각: ${new Date().toLocaleString('ko-KR')}`,
+      `- 저장된 결과: ${reports.length}/${MAX_LOCAL_REPORTS}개`,
+      `- 저장 공간: ${stats.storageStatus} · ${stats.storagePct}% 사용 중`,
+      `- 누적 토큰: ${stats.totalTokens.toLocaleString()}`,
+      `- 평균 길이: ${stats.avgLength.toLocaleString()}자`,
+      '',
+      '## 로컬 스타일 분포',
+      styleLines,
+      '',
+      '## 최근 로컬 결과',
+      recentLines,
+    ].join('\n');
+
+    await writeClipboardText(text);
+    setSummaryCopied(true);
+    toast.success('작업 요약 Markdown이 복사되었습니다.');
+    setTimeout(() => setSummaryCopied(false), 1800);
+  }
+
   return (
     <section className="mb-6 space-y-4">
-      <div>
-        <p className="signal-meta mb-2 text-[10px] font-semibold text-primary">LOCAL ACTIVITY</p>
-        <h1 className="text-2xl font-bold tracking-[-0.02em]">내 작업 요약</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          서버 운영 지표와 별개로, 이 브라우저에 저장된 최근 생성 결과를 요약합니다.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="signal-meta mb-2 text-[10px] font-semibold text-primary">LOCAL ACTIVITY</p>
+          <h1 className="text-2xl font-bold tracking-[-0.02em]">내 작업 요약</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            서버 운영 지표와 별개로, 이 브라우저에 저장된 최근 생성 결과를 요약합니다.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={copyMarkdownSummary}>
+          {summaryCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          Markdown 복사
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
