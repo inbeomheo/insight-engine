@@ -26,6 +26,21 @@ export interface NoteStudyCompletionSummary {
   actionLabel: string;
 }
 
+export interface NoteStudyTarget {
+  kind: NoteStudyKind;
+  index: number;
+  label: string;
+  title: string;
+  description: string;
+  targetId: string;
+}
+
+export interface NoteStudyTargetInput {
+  learningPoints?: string[];
+  reviewQuestions?: Array<{ question: string; answer?: string }>;
+  progress: NoteStudyProgress;
+}
+
 export interface NoteStudyMarkdownInput {
   title: string;
   sourceUrl?: string;
@@ -121,6 +136,41 @@ export function getNoteStudyCompletionSummary(
     message: `남은 복습 항목 ${remaining}개`,
     actionLabel: '이어 복습',
   };
+}
+
+export function getNextNoteStudyTarget(input: NoteStudyTargetInput): NoteStudyTarget | null {
+  const learningPoints = input.learningPoints ?? [];
+  const reviewQuestions = input.reviewQuestions ?? [];
+  const progress = normalizeNoteStudyProgress(input.progress, {
+    learning: learningPoints.length,
+    review: reviewQuestions.length,
+  });
+
+  const learningIndex = learningPoints.findIndex((_, index) => !progress.learning.includes(index));
+  if (learningIndex >= 0) {
+    return {
+      kind: 'learning',
+      index: learningIndex,
+      label: `학습 포인트 ${learningIndex + 1}`,
+      title: learningPoints[learningIndex] || `학습 포인트 ${learningIndex + 1}`,
+      description: '먼저 핵심 내용을 확인하고 체크하세요.',
+      targetId: `study-learning-${learningIndex}`,
+    };
+  }
+
+  const reviewIndex = reviewQuestions.findIndex((_, index) => !progress.review.includes(index));
+  if (reviewIndex >= 0) {
+    return {
+      kind: 'review',
+      index: reviewIndex,
+      label: `복습 질문 ${reviewIndex + 1}`,
+      title: reviewQuestions[reviewIndex]?.question || `복습 질문 ${reviewIndex + 1}`,
+      description: '답을 떠올린 뒤 열어보고 체크하세요.',
+      targetId: `study-review-${reviewIndex}`,
+    };
+  }
+
+  return null;
 }
 
 export function getVisibleNoteStudyIndexes(

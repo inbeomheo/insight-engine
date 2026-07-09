@@ -25,6 +25,7 @@ import {
 } from '@/lib/note-wiki-brief';
 import {
   buildNoteStudyMarkdown,
+  getNextNoteStudyTarget,
   getNoteStudyCompletionSummary,
   getNoteStudySummary,
   getVisibleNoteStudyIndexes,
@@ -188,6 +189,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     () => getNoteStudyCompletionSummary(studySummary),
     [studySummary]
   );
+  const nextStudyTarget = useMemo(
+    () => getNextNoteStudyTarget({ learningPoints, reviewQuestions, progress: studyProgress }),
+    [learningPoints, reviewQuestions, studyProgress]
+  );
   const allReviewAnswersVisible = reviewQuestions.length > 0 && reviewAnswerVisible.every(Boolean);
   const visibleLearningIndexes = useMemo(
     () => getVisibleNoteStudyIndexes(learningPoints.length, studyProgress.learning, showCompletedStudyItems),
@@ -231,6 +236,14 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     writeNoteStudyProgress(note.id, next, studyCounts);
     setStudyProgress(next);
   }, [note.id, studyCounts]);
+
+  const scrollToNextStudyTarget = useCallback(() => {
+    if (!nextStudyTarget) return;
+    document.getElementById(nextStudyTarget.targetId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, [nextStudyTarget]);
 
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
@@ -412,6 +425,27 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                 style={{ width: `${studySummary.percent}%` }}
               />
             </div>
+            {nextStudyTarget && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-background/80 px-3 py-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">다음 복습</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{nextStudyTarget.label}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {nextStudyTarget.title}
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground/70">{nextStudyTarget.description}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 text-xs"
+                  onClick={scrollToNextStudyTarget}
+                >
+                  이동
+                </Button>
+              </div>
+            )}
             {studyCompletion.complete && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-background/80 px-3 py-3">
                 <div className="flex min-w-0 items-start gap-2">
@@ -465,7 +499,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                   {visibleLearningIndexes.map((idx) => {
                     const point = learningPoints[idx];
                     return (
-                      <li key={`${point}-${idx}`}>
+                      <li key={`${point}-${idx}`} id={`study-learning-${idx}`} className="scroll-mt-24">
                         <button
                           type="button"
                           onClick={() => toggleStudyProgress('learning', idx)}
@@ -527,7 +561,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
               visibleReviewIndexes.map((idx) => {
                 const item = reviewQuestions[idx];
                 return (
-                  <Card key={`${item.question}-${idx}`} className="py-3">
+                  <Card key={`${item.question}-${idx}`} id={`study-review-${idx}`} className="scroll-mt-24 py-3">
                     <CardContent className="px-4">
                       <div className="flex gap-2">
                         <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />

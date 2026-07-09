@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildNoteStudyMarkdown,
   clearNoteStudyProgress,
+  getNextNoteStudyTarget,
   getNoteStudyCompletionSummary,
   getNoteStudyProgressKey,
   getNoteStudySummary,
@@ -105,6 +106,55 @@ describe('note-study-progress', () => {
       message: '모든 복습 항목을 완료했습니다.',
       actionLabel: '다시 복습',
     });
+  });
+
+  it('finds the next unfinished learning point before review questions', () => {
+    expect(
+      getNextNoteStudyTarget({
+        learningPoints: ['첫 개념', '둘째 개념'],
+        reviewQuestions: [{ question: '첫 질문은?' }],
+        progress: { learning: [0], review: [], updatedAt: null },
+      })
+    ).toEqual({
+      kind: 'learning',
+      index: 1,
+      label: '학습 포인트 2',
+      title: '둘째 개념',
+      description: '먼저 핵심 내용을 확인하고 체크하세요.',
+      targetId: 'study-learning-1',
+    });
+  });
+
+  it('falls back to the first unfinished review question after learning points', () => {
+    expect(
+      getNextNoteStudyTarget({
+        learningPoints: ['첫 개념'],
+        reviewQuestions: [{ question: '첫 질문은?' }, { question: '둘째 질문은?' }],
+        progress: { learning: [0], review: [0], updatedAt: null },
+      })
+    ).toEqual({
+      kind: 'review',
+      index: 1,
+      label: '복습 질문 2',
+      title: '둘째 질문은?',
+      description: '답을 떠올린 뒤 열어보고 체크하세요.',
+      targetId: 'study-review-1',
+    });
+  });
+
+  it('returns no next target when every study item is complete', () => {
+    expect(
+      getNextNoteStudyTarget({
+        learningPoints: ['첫 개념'],
+        reviewQuestions: [{ question: '첫 질문은?' }],
+        progress: { learning: [0, 99], review: [0], updatedAt: null },
+      })
+    ).toBeNull();
+    expect(
+      getNextNoteStudyTarget({
+        progress: { learning: [], review: [], updatedAt: null },
+      })
+    ).toBeNull();
   });
 
   it('persists progress in the provided storage', () => {

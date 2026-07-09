@@ -63,6 +63,7 @@
   8차: `/notes` 홈에 진행률이 낮은 미완료 노트를 우선 노출하는 `복습 필요` 카드를 추가.
   9차: `/notes` 홈에 아직 체크하지 않은 최근 학습 노트를 시작하도록 안내하는 `복습 시작` 카드를 추가.
   10차: `/notes/[id]` 복습 완료 시 세션 완료 요약과 `다시 복습` 버튼을 표시.
+  11차: `/notes/[id]` 복습 진행 카드에 다음 미완료 학습 포인트/복습 질문을 안내하는 `다음 복습` CTA 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -86,6 +87,12 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 다음 복습 CTA 추가.
+  `/notes/[id]` 복습 진행 카드에 첫 미완료 학습 포인트/복습 질문을 자동 안내하는 `다음 복습` CTA를 추가.
+  공용 `note-study-progress` 유틸에 다음 학습 대상 계산을 추가하고, 학습 우선/질문 폴백/전체 완료 상태를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-study-progress.test.ts note-list.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 32 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 위키 인덱스 추가.
   `/notes` 홈의 지식 탐색 패널에 반복 등장하는 핵심 개념별 관련 문서 묶음(`위키 인덱스`)을 추가해 개념→문서 흐름을 바로 탐색할 수 있게 개선.
   공용 `note-list` 유틸에 개념 클러스터 계산을 추가하고, 같은 노트 내 중복 개념 제거·대문자 약어 표시·최근 문서 우선 정렬을 단위 테스트로 검증.
