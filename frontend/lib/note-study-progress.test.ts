@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildNextNoteStudyTargetMarkdown,
   buildNoteStudyMarkdown,
   clearNoteStudyProgress,
   getNextNoteStudyTarget,
@@ -155,6 +156,30 @@ describe('note-study-progress', () => {
         progress: { learning: [], review: [], updatedAt: null },
       })
     ).toBeNull();
+  });
+
+  it('builds markdown for the next study target', () => {
+    const target = getNextNoteStudyTarget({
+      learningPoints: ['  핵심\n개념  '],
+      reviewQuestions: [],
+      progress: { learning: [], review: [], updatedAt: null },
+    });
+
+    expect(buildNextNoteStudyTargetMarkdown({
+      noteTitle: '  노트\n제목  ',
+      target,
+    })).toBe([
+      '# 다음 복습: 노트 제목',
+      '',
+      '- 항목: 학습 포인트 1',
+      '- 내용: 핵심 개념',
+      '- 안내: 먼저 핵심 내용을 확인하고 체크하세요.',
+      '- 위치: #study-learning-0',
+    ].join('\n'));
+
+    expect(buildNextNoteStudyTargetMarkdown({ noteTitle: '', target: null })).toBe(
+      '# 다음 복습: 제목 없음\n\n남은 복습 항목이 없습니다.'
+    );
   });
 
   it('persists progress in the provided storage', () => {

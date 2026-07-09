@@ -27,6 +27,7 @@ import {
   type NoteWikiReadingPathItem,
 } from '@/lib/note-wiki-brief';
 import {
+  buildNextNoteStudyTargetMarkdown,
   buildNoteStudyMarkdown,
   getNextNoteStudyTarget,
   getNoteStudyCompletionSummary,
@@ -181,6 +182,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     normalizeNoteStudyProgress(null, studyCounts)
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
@@ -253,6 +255,23 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     });
   }, [nextStudyTarget]);
 
+  const copyNextStudyTarget = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setNextStudyCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildNextNoteStudyTargetMarkdown({
+        noteTitle: note.source?.title || '제목 없음',
+        target: nextStudyTarget,
+      }));
+      setNextStudyCopyStatus('copied');
+    } catch {
+      setNextStudyCopyStatus('error');
+    }
+  }, [nextStudyTarget, note.source?.title]);
+
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
       toggleReviewAnswerVisibility(current, index, reviewQuestions.length)
@@ -290,6 +309,12 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     const timer = window.setTimeout(() => setStudyCopyStatus('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [studyCopyStatus]);
+
+  useEffect(() => {
+    if (nextStudyCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setNextStudyCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [nextStudyCopyStatus]);
 
   return (
     <div className="space-y-6">
@@ -455,15 +480,34 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                   </p>
                   <p className="mt-1 text-[10px] text-muted-foreground/70">{nextStudyTarget.description}</p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shrink-0 text-xs"
-                  onClick={scrollToNextStudyTarget}
-                >
-                  이동
-                </Button>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={copyNextStudyTarget}
+                    >
+                      <Copy className="mr-1 h-3 w-3" />
+                      복사
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={scrollToNextStudyTarget}
+                    >
+                      이동
+                    </Button>
+                  </div>
+                  {nextStudyCopyStatus !== 'idle' && (
+                    <span className={`text-[10px] ${nextStudyCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                      {nextStudyCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
             {studyCompletion.complete && (

@@ -49,6 +49,11 @@ export interface NoteStudyMarkdownInput {
   progress: NoteStudyProgress;
 }
 
+export interface NextNoteStudyTargetMarkdownInput {
+  noteTitle: string;
+  target: NoteStudyTarget | null;
+}
+
 type NoteStudyStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export function getNoteStudyProgressKey(noteId: string): string {
@@ -254,6 +259,29 @@ export function clearNoteStudyProgress(noteId: string, storage?: NoteStudyStorag
 
 function checkbox(done: boolean): string {
   return done ? '[x]' : '[ ]';
+}
+
+function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
+  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
+  return cleaned || fallback;
+}
+
+export function buildNextNoteStudyTargetMarkdown(
+  input: NextNoteStudyTargetMarkdownInput
+): string {
+  const noteTitle = cleanMarkdownValue(input.noteTitle, '제목 없음');
+  if (!input.target) {
+    return `# 다음 복습: ${noteTitle}\n\n남은 복습 항목이 없습니다.`;
+  }
+
+  return [
+    `# 다음 복습: ${noteTitle}`,
+    '',
+    `- 항목: ${input.target.label}`,
+    `- 내용: ${cleanMarkdownValue(input.target.title)}`,
+    `- 안내: ${cleanMarkdownValue(input.target.description)}`,
+    `- 위치: #${input.target.targetId}`,
+  ].join('\n');
 }
 
 export function buildNoteStudyMarkdown(input: NoteStudyMarkdownInput): string {
