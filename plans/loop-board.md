@@ -18,6 +18,7 @@
   5차: `/dashboard` 최근 로컬 결과에서 홈의 해당 결과 카드로 복귀하는 딥링크 추가.
   6차: `/dashboard`에 `/health` 기반 시스템 건강도 카드 추가.
   7차: 시스템 건강도 카드에 진단 정보 복사 기능 추가.
+  8차: `/dashboard`에 로컬 저장 공간 사용률과 최대 보관 개수 안내 추가.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -40,6 +41,11 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(dashboard): 로컬 저장 공간 상태 표시.
+  결과 저장 한도(`MAX_LOCAL_REPORTS=20`)를 `resultStore` 상수로 노출하고,
+  `/dashboard` 내 작업 요약에 저장 공간 사용률/상태/자동 밀림 안내를 추가.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- resultStore.test.ts` 5 passed.
 - [x] 2026-07-10 feat(dashboard): 시스템 진단 정보 복사 추가.
   `/dashboard` 시스템 건강도 카드에서 현재 `/health` 응답, 에러, API base, user agent, 캡처 시간을
   JSON으로 복사할 수 있게 추가. 지원 요청/디버깅 시 상태 정보를 바로 전달할 수 있음.

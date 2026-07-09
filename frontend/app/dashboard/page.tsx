@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OperationsDashboard from '@/components/dashboard/OperationsDashboard';
-import { useResultStore } from '@/stores/resultStore';
+import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { getStyleLabel } from '@/lib/helpers';
 import { apiUrl } from '@/lib/api';
 import type { Report } from '@/lib/types';
@@ -171,8 +171,15 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
     const recent = [...reports]
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
       .slice(0, 4);
+    const storagePct = Math.round((reports.length / MAX_LOCAL_REPORTS) * 100);
+    const storageStatus =
+      reports.length >= MAX_LOCAL_REPORTS
+        ? '가득 참'
+        : reports.length >= Math.floor(MAX_LOCAL_REPORTS * 0.8)
+          ? '여유 적음'
+          : '여유 있음';
 
-    return { totalTokens, avgLength, topStyles, recent };
+    return { totalTokens, avgLength, topStyles, recent, storagePct, storageStatus };
   }, [reports]);
 
   return (
@@ -185,11 +192,32 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <LocalMetric icon={<FileText className="h-4 w-4" />} label="저장된 결과" value={`${reports.length}개`} />
         <LocalMetric icon={<Zap className="h-4 w-4" />} label="누적 토큰" value={stats.totalTokens.toLocaleString()} />
         <LocalMetric icon={<Hash className="h-4 w-4" />} label="평균 길이" value={`${stats.avgLength.toLocaleString()}자`} />
+        <LocalMetric icon={<Server className="h-4 w-4" />} label="저장 공간" value={`${reports.length}/${MAX_LOCAL_REPORTS}`} />
       </div>
+
+      <Card className="rounded-sm border-border bg-card shadow-none">
+        <CardContent className="px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="signal-meta text-[10px] text-muted-foreground">로컬 저장 공간</p>
+              <p className="mt-1 text-sm text-foreground">
+                {stats.storageStatus} · {stats.storagePct}% 사용 중
+              </p>
+            </div>
+            <p className="max-w-xl text-xs text-muted-foreground">
+              결과는 이 브라우저에 최대 {MAX_LOCAL_REPORTS}개까지 보관됩니다.
+              한도를 넘으면 오래된 결과부터 자동으로 밀려납니다.
+            </p>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(stats.storagePct, 100)}%` }} />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="rounded-sm border-border bg-card shadow-none">

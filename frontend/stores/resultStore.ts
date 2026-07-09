@@ -4,6 +4,7 @@ import type { Report } from '@/lib/types';
 import { loadReports, saveReports } from '@/lib/storage';
 
 const STORAGE_FULL_WARNING = '저장 공간이 부족합니다. 오래된 결과를 삭제해주세요.';
+export const MAX_LOCAL_REPORTS = 20;
 const warnStorageFull = () => toast.warning(STORAGE_FULL_WARNING);
 
 // localStorage 저장을 디바운스 + idle 시점 실행 — 메인 스레드 블로킹 방지.
@@ -85,10 +86,9 @@ export const useResultStore = create<ResultState>((set, get) => ({
   pinnedIds: new Set<string>(),
 
   addReport: (r) => {
-    const MAX_REPORTS = 20;
     let next = [r, ...get().reports];
-    if (next.length > MAX_REPORTS) {
-      next = next.slice(0, MAX_REPORTS);
+    if (next.length > MAX_LOCAL_REPORTS) {
+      next = next.slice(0, MAX_LOCAL_REPORTS);
     }
     debouncedSave(next, warnStorageFull);
     set({ reports: next });
