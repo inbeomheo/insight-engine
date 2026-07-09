@@ -7,19 +7,23 @@ import {
   ArrowLeft,
   ArrowUp,
   BarChart3,
+  BookOpen,
   CheckCircle2,
+  ExternalLink,
   Grid2X2,
   Loader2,
   MessageSquare,
   PlusCircle,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import TextInput from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
+import { createKnowledgeNote, isApiError, type NoteDuplicateWarning } from '@/lib/api';
 import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
@@ -29,6 +33,10 @@ const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'),
 
 type MobileTab = 'create' | 'library' | 'dashboard';
 type SourceInputTab = 'url' | 'text';
+
+function noteSourceTypeFromUrl(url: string): 'youtube' | 'article' {
+  return /(?:youtube\.com|youtu\.be)/i.test(url) ? 'youtube' : 'article';
+}
 
 interface MobileAppShellProps {
   reports: Report[];
@@ -449,7 +457,54 @@ function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (
 
 function MobileDetailView({ report, onBack }: { report: Report; onBack: () => void }) {
   const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const [chatOpen, setChatOpen] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  async function handleSaveKnowledgeNote() {
+    if (isSavingNote || !report.url) return;
+    setIsSavingNote(true);
+    try {
+      const note = await createKnowledgeNote({
+        content: report.transcript?.trim() || report.content,
+        language: noteLanguage,
+        model: selectedModel || undefined,
+        source: {
+          type: noteSourceTypeFromUrl(report.url),
+          url: report.url,
+          title: report.youtube_title || report.title || '학습 소스',
+        },
+      });
+      toast.success('학습 노트로 저장했습니다.', {
+        description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
+        action: {
+          label: '열기',
+          onClick: () => {
+            window.location.href = `/notes/${encodeURIComponent(note.id)}`;
+          },
+        },
+      });
+    } catch (err) {
+      const body = isApiError<NoteDuplicateWarning>(err) ? err.body : undefined;
+      const duplicate = body?.duplicate_notes?.[0];
+      if (isApiError<NoteDuplicateWarning>(err) && err.status === 409 && duplicate?.id) {
+        toast.warning(body?.warning || '이미 학습한 자료와 비슷합니다.', {
+          description: body?.next_action || '기존 노트를 열어 이어서 확인하세요.',
+          action: {
+            label: '기존 노트 열기',
+            onClick: () => {
+              window.location.href = `/notes/${encodeURIComponent(duplicate.id)}`;
+            },
+          },
+        });
+      } else {
+        toast.error(err instanceof Error ? err.message : '학습 노트 저장에 실패했습니다.');
+      }
+    } finally {
+      setIsSavingNote(false);
+    }
+  }
+
   return (
     <>
     <section className="min-h-dvh pb-28">
@@ -470,10 +525,26 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
           <ReactMarkdown>{report.content}</ReactMarkdown>
         </div>
 
-        <div className="mt-7 flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
-          {['요약', '튜토리얼', 'Q&A', '앱 아이디어'].map((label) => (
-            <span key={label} className="shrink-0 rounded-full border border-border/70 bg-card px-4 py-2 text-xs font-bold text-foreground/75">{label} →</span>
-          ))}
+        <div className="mt-7">
+          <p className="signal-meta mb-3 text-[10px] text-muted-foreground/45">지원 스타일</p>
+          <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
+            {STYLE_OPTIONS.map((style) => {
+              const active = style.id === report.style;
+              return (
+                <span
+                  key={style.id}
+                  className={cn(
+                    'shrink-0 rounded-full border px-4 py-2 text-xs font-bold',
+                    active
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border/70 bg-card text-foreground/75',
+                  )}
+                >
+                  {style.emoji} {style.label}{active ? ' · 현재' : ''}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-5 border border-border/70 bg-card p-4">
@@ -485,16 +556,37 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
           </div>
         </div>
 
-        {report.url && (
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-sm border border-foreground bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)] transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+        <div className="mt-6 grid gap-3">
+          {report.url && (
+            <button
+              type="button"
+              onClick={handleSaveKnowledgeNote}
+              disabled={isSavingNote}
+              className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-card px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+              {isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
+            </button>
+          )}
+          <a
+            href="/notes"
+            className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-background px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted"
           >
-            <MessageSquare className="h-4 w-4" />
-            영상에 질문하기
-          </button>
-        )}
+            <BookOpen className="h-4 w-4" />
+            지식위키 열기
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50" />
+          </a>
+          {report.url && (
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-sm border border-foreground bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)] transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+            >
+              <MessageSquare className="h-4 w-4" />
+              영상에 질문하기
+            </button>
+          )}
+        </div>
       </article>
     </section>
     {chatOpen && report.url && (
