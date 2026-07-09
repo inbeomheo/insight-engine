@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Activity, AlertCircle, ArrowLeft, BarChart3, FileText, Hash, Server, Sparkles, Zap } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, BarChart3, Check, Copy, FileText, Hash, Server, Sparkles, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OperationsDashboard from '@/components/dashboard/OperationsDashboard';
@@ -77,16 +78,49 @@ export default function DashboardPage() {
 }
 
 function SystemHealthCard({ health, error }: { health: HealthStatus | null; error: string | null }) {
+  const [copied, setCopied] = useState(false);
   const statusLabel = health?.status === 'healthy' ? '정상' : error ? '확인 필요' : '확인 중';
   const errorRatePct = health ? Math.round((health.error_rate ?? 0) * 1000) / 10 : 0;
+
+  async function copyDiagnostics() {
+    const payload = {
+      captured_at: new Date().toISOString(),
+      page: 'dashboard',
+      api_base: apiUrl('/').replace(/\/$/, ''),
+      health: health ?? null,
+      health_error: error ?? null,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    };
+    const text = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    toast.success('진단 정보가 복사되었습니다.');
+    setTimeout(() => setCopied(false), 1800);
+  }
 
   return (
     <section className="mb-6">
       <Card className="rounded-sm border-border bg-card shadow-none">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
             <Server className="h-4 w-4" /> 시스템 건강도
           </CardTitle>
+          <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={copyDiagnostics}>
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            진단 복사
+          </Button>
         </CardHeader>
         <CardContent>
           {error ? (
