@@ -49,6 +49,7 @@
   2026-07-09 1차: 학습 포인트/복습 질문 스키마, 검색 색인 보강, 중복 경고 next_action 추가 완료.
   2차: 생성 결과 더보기 메뉴에서 URL 기반 결과를 바로 학습 노트로 저장하고, 중복 경고 시 기존 노트 열기로 연결 완료.
   3차: 데스크톱/모바일 결과 상세에 저장 전 학습 노트 미리보기, 태그, 핵심 개념, 학습 포인트를 표시.
+  4차: 노트 상세의 학습 포인트/복습 질문에 브라우저 로컬 복습 체크와 진행률 카드를 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -60,6 +61,11 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 노트 상세 복습 진행 상태 추가.
+  `/notes/[id]`에서 학습 포인트와 복습 질문을 체크하며 학습 진행률을 볼 수 있게 하고, 진행 상태를 브라우저 로컬 저장소에 보존.
+  공용 `note-study-progress` 유틸과 단위 테스트를 추가해 인덱스 정규화, 토글, 저장/초기화 경로를 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-study-progress.test.ts note-outline.test.ts knowledge-note-source.test.ts dashboard-summary.test.ts` 12 passed.
 - [x] 2026-07-10 chore(dead-code): 레거시 운영/피드백/워크스페이스 컴포넌트 8개 제거.
   프론트 소스 전수 grep으로 자기 자신 외 참조 0을 재검증한 뒤 현재 앱 진입점에서 사용하지 않는 운영/피드백/검색/워크스페이스 컴포넌트 8개를 삭제.
   삭제 대상: ReportBuilder, FeedbackWidget, NpsSurvey, NotificationCenter, OnboardingFlow, GlobalSearch, ActivityFeed, ApprovalFlow.

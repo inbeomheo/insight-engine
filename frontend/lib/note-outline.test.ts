@@ -18,6 +18,7 @@ describe('buildNoteOutline', () => {
     expect(outline).toEqual([
       { id: 'source', label: '출처' },
       { id: 'source-result', label: '원본 결과' },
+      { id: 'study-progress', label: '복습 진행', count: 2 },
       { id: 'concepts', label: '핵심 개념', count: 2 },
       { id: 'learning-points', label: '학습 포인트', count: 1 },
       { id: 'review-questions', label: '복습 질문', count: 1 },

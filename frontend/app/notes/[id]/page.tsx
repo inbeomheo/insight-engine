@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Brain, CheckCircle2, ExternalLink, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
@@ -12,6 +12,16 @@ import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
 import { buildNoteOutline, type NoteOutlineItem } from '@/lib/note-outline';
+import {
+  getNoteStudySummary,
+  normalizeNoteStudyProgress,
+  readNoteStudyProgress,
+  toggleNoteStudyItem,
+  writeNoteStudyProgress,
+  type NoteStudyCounts,
+  type NoteStudyKind,
+  type NoteStudyProgress,
+} from '@/lib/note-study-progress';
 import { getStyleLabel } from '@/lib/helpers';
 import type { Report } from '@/lib/types';
 import { useResultStore } from '@/stores/resultStore';
@@ -53,6 +63,18 @@ function buildNoteChatContext(note: NoteDetail): string {
       : '',
   ];
   return lines.filter(Boolean).join('\n\n');
+}
+
+function formatStudyUpdatedAt(iso: string | null): string {
+  if (!iso) return '아직 기록 없음';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '아직 기록 없음';
+  return d.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export default function NoteDetailPage() {
@@ -126,6 +148,33 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const reviewQuestions = note.review_questions ?? [];
   const noteChatContext = buildNoteChatContext(note);
   const outlineItems = buildNoteOutline(note, { hasLinkedReport: Boolean(linkedReport) });
+  const studyCounts: NoteStudyCounts = useMemo(
+    () => ({ learning: learningPoints.length, review: reviewQuestions.length }),
+    [learningPoints.length, reviewQuestions.length]
+  );
+  const [studyProgress, setStudyProgress] = useState<NoteStudyProgress>(() =>
+    normalizeNoteStudyProgress(null, studyCounts)
+  );
+  const studySummary = getNoteStudySummary(studyProgress, studyCounts);
+
+  useEffect(() => {
+    setStudyProgress(readNoteStudyProgress(note.id, studyCounts));
+  }, [note.id, studyCounts]);
+
+  const toggleStudyProgress = useCallback((kind: NoteStudyKind, index: number) => {
+    setStudyProgress((current) => {
+      const next = toggleNoteStudyItem(current, kind, index, studyCounts);
+      writeNoteStudyProgress(note.id, next, studyCounts);
+      return next;
+    });
+  }, [note.id, studyCounts]);
+
+  const resetStudyProgress = useCallback(() => {
+    const next = normalizeNoteStudyProgress(null, studyCounts);
+    writeNoteStudyProgress(note.id, next, studyCounts);
+    setStudyProgress(next);
+  }, [note.id, studyCounts]);
+
   return (
     <div className="space-y-6">
       {/* 헤더: 제목 + 출처 */}
@@ -196,6 +245,49 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       <NoteOutline items={outlineItems} />
 
+      {studySummary.total > 0 && (
+        <Card id="study-progress" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
+          <CardContent className="px-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">복습 진행</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  학습 포인트와 복습 질문을 체크해 이 노트의 학습 상태를 브라우저에 저장합니다.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 shrink-0 text-xs"
+                onClick={resetStudyProgress}
+                disabled={studySummary.completed === 0}
+              >
+                초기화
+              </Button>
+            </div>
+            <div className="mt-4 flex items-end justify-between gap-3">
+              <div>
+                <div className="text-2xl font-semibold text-foreground">{studySummary.percent}%</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {studySummary.completed} / {studySummary.total} 완료 · {formatStudyUpdatedAt(studyProgress.updatedAt)}
+                </div>
+              </div>
+              <div className="text-right text-xs text-muted-foreground">
+                <div>포인트 {studySummary.completedLearning}/{studyCounts.learning}</div>
+                <div>질문 {studySummary.completedReview}/{studyCounts.review}</div>
+              </div>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-background">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${studySummary.percent}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 핵심 개념 */}
       {note.key_concepts.length > 0 && (
         <section id="concepts" className="scroll-mt-24">
@@ -218,9 +310,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
             <CardContent className="px-4">
               <ul className="space-y-2.5">
                 {learningPoints.map((point, idx) => (
-                  <li key={`${point}-${idx}`} className="flex gap-2 text-sm leading-relaxed text-foreground/90">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
-                    <span>{point}</span>
+                  <li key={`${point}-${idx}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggleStudyProgress('learning', idx)}
+                      aria-pressed={studyProgress.learning.includes(idx)}
+                      className="flex w-full gap-2 rounded-lg px-1 py-1 text-left text-sm leading-relaxed text-foreground/90 transition-colors hover:bg-muted/50"
+                    >
+                      <CheckCircle2
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${
+                          studyProgress.learning.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
+                        }`}
+                      />
+                      <span className={studyProgress.learning.includes(idx) ? 'text-muted-foreground line-through' : ''}>
+                        {point}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -242,6 +347,19 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                     <div>
                       <p className="text-sm font-medium text-foreground">{item.question}</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.answer}</p>
+                      <button
+                        type="button"
+                        onClick={() => toggleStudyProgress('review', idx)}
+                        aria-pressed={studyProgress.review.includes(idx)}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                      >
+                        <CheckCircle2
+                          className={`h-3 w-3 ${
+                            studyProgress.review.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
+                          }`}
+                        />
+                        {studyProgress.review.includes(idx) ? '복습 완료' : '복습 체크'}
+                      </button>
                     </div>
                   </div>
                 </CardContent>

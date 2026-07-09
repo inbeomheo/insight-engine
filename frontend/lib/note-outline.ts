@@ -28,6 +28,9 @@ export function buildNoteOutline(
   if (options.hasLinkedReport) {
     items.push({ id: 'source-result', label: '원본 결과' });
   }
+  if (learningPointCount + reviewQuestionCount > 0) {
+    items.push({ id: 'study-progress', label: '복습 진행', count: learningPointCount + reviewQuestionCount });
+  }
   if (keyConceptCount > 0) {
     items.push({ id: 'concepts', label: '핵심 개념', count: keyConceptCount });
   }
