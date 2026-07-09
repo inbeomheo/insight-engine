@@ -56,6 +56,17 @@ function cleanMarkdownLine(value: string | undefined, fallback = '-') {
   return text || fallback;
 }
 
+function formatDayKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayLabel(date: Date) {
+  return date.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+}
+
 export default function DashboardPage() {
   const hydrateResults = useResultStore((s) => s.hydrate);
   const reports = useResultStore((s) => s.reports);
@@ -239,6 +250,23 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
     const recent = [...reports]
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
       .slice(0, 4);
+    const activityDays = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date();
+      day.setHours(0, 0, 0, 0);
+      day.setDate(day.getDate() - (6 - index));
+      return {
+        key: formatDayKey(day),
+        label: formatDayLabel(day),
+        count: 0,
+      };
+    });
+    const activityIndex = new Map(activityDays.map((day, index) => [day.key, index]));
+    for (const report of reports) {
+      if (!report.createdAt) continue;
+      const index = activityIndex.get(formatDayKey(new Date(report.createdAt)));
+      if (index !== undefined) activityDays[index].count += 1;
+    }
+    const maxActivityCount = Math.max(1, ...activityDays.map((day) => day.count));
     const storagePct = Math.round((reports.length / MAX_LOCAL_REPORTS) * 100);
     const storageStatus =
       reports.length >= MAX_LOCAL_REPORTS
@@ -247,7 +275,7 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
           ? '여유 적음'
           : '여유 있음';
 
-    return { totalTokens, avgLength, topStyles, recent, storagePct, storageStatus };
+    return { totalTokens, avgLength, topStyles, recent, activityDays, maxActivityCount, storagePct, storageStatus };
   }, [reports]);
 
   async function copyMarkdownSummary() {
@@ -269,6 +297,7 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
           )
           .join('\n')
       : '1. 아직 생성 결과가 없습니다.';
+    const activityLines = stats.activityDays.map((day) => `- ${day.label}: ${day.count}건`).join('\n');
     const text = [
       '# 내 작업 요약',
       '',
@@ -280,6 +309,9 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
       '',
       '## 로컬 스타일 분포',
       styleLines,
+      '',
+      '## 최근 7일 생성 흐름',
+      activityLines,
       '',
       '## 최근 로컬 결과',
       recentLines,
@@ -330,6 +362,33 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(stats.storagePct, 100)}%` }} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-sm border-border bg-card shadow-none">
+        <CardHeader>
+          <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Activity className="h-4 w-4" /> 최근 7일 생성 흐름
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-7 items-end gap-2">
+            {stats.activityDays.map((day) => (
+              <div key={day.key} className="flex min-w-0 flex-col items-center gap-2">
+                <div className="flex h-20 w-full items-end justify-center rounded-sm bg-muted/40 px-1 py-1">
+                  <div
+                    className={`w-full max-w-8 rounded-sm transition-all ${day.count > 0 ? 'bg-primary' : 'bg-muted'}`}
+                    style={{ height: `${day.count > 0 ? Math.max(10, Math.round((day.count / stats.maxActivityCount) * 72)) : 8}px` }}
+                    aria-label={`${day.label} 생성 ${day.count}건`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="signal-meta text-[10px] text-muted-foreground">{day.label}</p>
+                  <p className="mt-0.5 text-xs font-semibold">{day.count}건</p>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
