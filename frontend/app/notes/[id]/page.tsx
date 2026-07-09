@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
+import { buildNoteOutline, type NoteOutlineItem } from '@/lib/note-outline';
 import { getStyleLabel } from '@/lib/helpers';
 import type { Report } from '@/lib/types';
 import { useResultStore } from '@/stores/resultStore';
@@ -124,10 +125,11 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const learningPoints = note.learning_points ?? [];
   const reviewQuestions = note.review_questions ?? [];
   const noteChatContext = buildNoteChatContext(note);
+  const outlineItems = buildNoteOutline(note, { hasLinkedReport: Boolean(linkedReport) });
   return (
     <div className="space-y-6">
       {/* 헤더: 제목 + 출처 */}
-      <div className="rounded-2xl border border-border bg-card/60 p-5">
+      <div id="source" className="scroll-mt-24 rounded-2xl border border-border bg-card/60 p-5">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary">
           <Brain className="h-3 w-3" />
           지식 노트
@@ -169,7 +171,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       </div>
 
       {linkedReport && (
-        <Card className="border-primary/20 bg-primary/5 py-3">
+        <Card id="source-result" className="scroll-mt-24 border-primary/20 bg-primary/5 py-3">
           <CardContent className="px-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-2.5">
@@ -192,9 +194,11 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         </Card>
       )}
 
+      <NoteOutline items={outlineItems} />
+
       {/* 핵심 개념 */}
       {note.key_concepts.length > 0 && (
-        <section>
+        <section id="concepts" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">핵심 개념</h2>
           <div className="flex flex-wrap gap-2">
             {note.key_concepts.map((concept, idx) => (
@@ -208,7 +212,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       {/* 학습 포인트 */}
       {learningPoints.length > 0 && (
-        <section>
+        <section id="learning-points" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">학습 포인트</h2>
           <Card className="py-4">
             <CardContent className="px-4">
@@ -227,7 +231,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       {/* 복습 질문 */}
       {reviewQuestions.length > 0 && (
-        <section>
+        <section id="review-questions" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">복습 질문</h2>
           <div className="space-y-2">
             {reviewQuestions.map((item, idx) => (
@@ -249,7 +253,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       {/* 요약 */}
       {note.summary && (
-        <section>
+        <section id="summary" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">요약</h2>
           <Card className="py-4">
             <CardContent className="px-4">
@@ -262,7 +266,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       )}
 
       {/* 근거 기반 채팅 진입 */}
-      <section>
+      <section id="chat" className="scroll-mt-24">
         <Card className="border-primary/20 bg-primary/5 py-4">
           <CardContent className="px-4">
             <div className="flex items-start gap-3">
@@ -287,7 +291,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       {/* 관련 노트 */}
       {note.related_notes && note.related_notes.length > 0 && (
-        <section>
+        <section id="related-notes" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">관련 노트</h2>
           <ul className="space-y-2">
             {note.related_notes.slice(0, 3).map((related) => (
@@ -323,7 +327,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       {/* 인용구 */}
       {note.quotes.length > 0 && (
-        <section>
+        <section id="quotes" className="scroll-mt-24">
           <h2 className="text-sm font-semibold text-foreground mb-2.5">근거 인용</h2>
           <ul className="space-y-2.5">
             {note.quotes.map((quote, idx) => (
@@ -341,6 +345,35 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         </section>
       )}
     </div>
+  );
+}
+
+function NoteOutline({ items }: { items: NoteOutlineItem[] }) {
+  return (
+    <Card className="py-3">
+      <CardContent className="px-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">문서 목차</h2>
+          <span className="text-[10px] text-muted-foreground">문서 이동</span>
+        </div>
+        <nav aria-label="노트 문서 목차" className="flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              {item.label}
+              {typeof item.count === 'number' && (
+                <span className="rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">
+                  {item.count}
+                </span>
+              )}
+            </a>
+          ))}
+        </nav>
+      </CardContent>
+    </Card>
   );
 }
 
