@@ -42,6 +42,7 @@
   6차: 결과 카드에서 소비되지 않는 레거시 품질/미디어/미리보기 프론트 컴포넌트 13개 제거 완료.
   7차: 입력 영역에서 소비되지 않는 레거시 북마크/파일/상세도/퓨전/모드/추천 컴포넌트 6개 제거 완료.
   8차: 설정/협업 영역에서 소비되지 않는 레거시 설정·구독·협업 컴포넌트 6개 제거 완료.
+  9차: 운영/피드백/워크스페이스 영역에서 소비되지 않는 레거시 프론트 컴포넌트 8개 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -59,6 +60,11 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 레거시 운영/피드백/워크스페이스 컴포넌트 8개 제거.
+  프론트 소스 전수 grep으로 자기 자신 외 참조 0을 재검증한 뒤 현재 앱 진입점에서 사용하지 않는 운영/피드백/검색/워크스페이스 컴포넌트 8개를 삭제.
+  삭제 대상: ReportBuilder, FeedbackWidget, NpsSurvey, NotificationCenter, OnboardingFlow, GlobalSearch, ActivityFeed, ApprovalFlow.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts knowledge-note-source.test.ts dashboard-summary.test.ts ResultChatPanel.test.tsx` 13 passed.
 - [x] 2026-07-10 chore(dead-code): 레거시 설정/협업 컴포넌트 6개 제거.
   프론트 소스 전수 grep으로 자기 자신 외 참조 0을 재검증한 뒤 설정/협업 영역에서 사용하지 않는 컴포넌트 6개를 삭제.
   삭제 대상: CollaborativeEditor, ChannelMonitorSettings, NotionConnect, ProviderSetup, RssSubscription, TranscriptSourcePriority.
