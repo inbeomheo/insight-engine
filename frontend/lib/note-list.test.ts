@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { NoteListItem } from './api';
 import {
+  filterNotesByStudyStatus,
   filterNotesByFacet,
   getFacetLabel,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
   getNoteStudyCounts,
+  getNoteStudyStatus,
+  getNoteStudyStatusCounts,
+  getNoteStudyStatusLabel,
   sortNotesByRecent,
 } from './note-list';
 
@@ -93,5 +97,26 @@ describe('note-list', () => {
         updatedAt: '2026-07-10T05:00:00Z',
       },
     ]);
+  });
+
+  it('classifies and filters notes by study status', () => {
+    const pending = note({ id: 'pending', learning_point_count: 2, review_question_count: 1 });
+    const ongoing = note({ id: 'ongoing', learning_point_count: 2, review_question_count: 1 });
+    const done = note({ id: 'done', learning_point_count: 1, review_question_count: 1 });
+    const progress = {
+      ongoing: { learning: [0], review: [], updatedAt: '2026-07-10T01:00:00Z' },
+      done: { learning: [0], review: [0], updatedAt: '2026-07-10T02:00:00Z' },
+    };
+
+    expect(getNoteStudyStatus(pending)).toBe('not-started');
+    expect(getNoteStudyStatus(ongoing, progress.ongoing)).toBe('in-progress');
+    expect(getNoteStudyStatus(done, progress.done)).toBe('completed');
+    expect(getNoteStudyStatusLabel('in-progress')).toBe('진행중');
+    expect(getNoteStudyStatusCounts([pending, ongoing, done], progress)).toEqual({
+      'not-started': 1,
+      'in-progress': 1,
+      completed: 1,
+    });
+    expect(filterNotesByStudyStatus([pending, ongoing, done], progress, 'completed').map((n) => n.id)).toEqual(['done']);
   });
 });

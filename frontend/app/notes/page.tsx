@@ -12,11 +12,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
 import {
   filterNotesByFacet,
+  filterNotesByStudyStatus,
   getFacetLabel,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
   getNoteStudyCounts,
+  getNoteStudyStatus,
+  getNoteStudyStatusCounts,
+  getNoteStudyStatusLabel,
   sortNotesByRecent,
+  type NoteStudyStatus,
   type NoteStudyResumeItem,
   type NoteFacet,
 } from '@/lib/note-list';
@@ -52,6 +57,7 @@ export default function NotesPage() {
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
+  const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +90,7 @@ export default function NotesPage() {
     }
     setQuery(q);
     setActiveFacet(null);
+    setActiveStudyStatus(null);
     setSearching(true);
     setError(null);
     try {
@@ -124,10 +131,17 @@ export default function NotesPage() {
   const handleFacetSelect = useCallback((facet: NoteFacet) => {
     setSearchResults(null);
     setActiveFacet(facet);
+    setActiveStudyStatus(null);
   }, []);
 
   const handleFacetClear = useCallback(() => {
     setActiveFacet(null);
+  }, []);
+
+  const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
+    setSearchResults(null);
+    setActiveFacet(null);
+    setActiveStudyStatus((current) => current === status ? null : status);
   }, []);
 
   const isSearchMode = searchResults !== null;
@@ -154,11 +168,21 @@ export default function NotesPage() {
     [notes],
   );
   const visibleNotes = useMemo(
-    () => sortNotesByRecent(filterNotesByFacet(notes, activeFacet)),
-    [notes, activeFacet],
+    () => sortNotesByRecent(
+      filterNotesByStudyStatus(
+        filterNotesByFacet(notes, activeFacet),
+        studyProgressByNote,
+        activeStudyStatus
+      )
+    ),
+    [notes, activeFacet, activeStudyStatus, studyProgressByNote],
   );
   const studyResumeNotes = useMemo(
     () => getNotesWithStudyProgress(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
+  const studyStatusCounts = useMemo(
+    () => getNoteStudyStatusCounts(notes, studyProgressByNote),
     [notes, studyProgressByNote],
   );
 
@@ -242,6 +266,14 @@ export default function NotesPage() {
           <SearchResultsList results={searchResults} />
         ) : (
           <>
+            {notes.length > 0 && (
+              <StudyStatusFilter
+                counts={studyStatusCounts}
+                activeStatus={activeStudyStatus}
+                resultCount={visibleNotes.length}
+                onSelect={handleStudyStatusSelect}
+              />
+            )}
             {activeFacet && (
               <ActiveFacetBar
                 facet={activeFacet}
@@ -252,7 +284,8 @@ export default function NotesPage() {
             )}
             <NotesList
               notes={visibleNotes}
-              emptyText={activeFacet ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
+              studyProgressByNote={studyProgressByNote}
+              emptyText={(activeFacet || activeStudyStatus) ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
             />
           </>
         )}
@@ -269,6 +302,64 @@ function WikiStat({ icon, label, value }: { icon: ReactNode; label: string; valu
         {label}
       </div>
       <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function StudyStatusFilter({
+  counts,
+  activeStatus,
+  resultCount,
+  onSelect,
+}: {
+  counts: Record<NoteStudyStatus, number>;
+  activeStatus: NoteStudyStatus | null;
+  resultCount: number;
+  onSelect: (status: NoteStudyStatus) => void;
+}) {
+  const items: Array<{ status: NoteStudyStatus; description: string }> = [
+    { status: 'in-progress', description: '체크한 항목이 남은 노트' },
+    { status: 'completed', description: '모든 항목을 끝낸 노트' },
+    { status: 'not-started', description: '아직 체크하지 않은 노트' },
+  ];
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-card/60 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+          학습 상태
+        </div>
+        {activeStatus && (
+          <span className="text-[10px] text-muted-foreground">
+            {getNoteStudyStatusLabel(activeStatus)} {resultCount}개 표시
+          </span>
+        )}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {items.map((item) => {
+          const selected = activeStatus === item.status;
+          return (
+            <button
+              key={item.status}
+              type="button"
+              onClick={() => onSelect(item.status)}
+              aria-pressed={selected}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                selected
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground hover:border-primary/40'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold">
+                <span>{getNoteStudyStatusLabel(item.status)}</span>
+                <span>{counts[item.status]}</span>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">{item.description}</p>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -464,7 +555,15 @@ function WikiMap({
   );
 }
 
-function NotesList({ notes, emptyText }: { notes: NoteListItem[]; emptyText?: string }) {
+function NotesList({
+  notes,
+  studyProgressByNote,
+  emptyText,
+}: {
+  notes: NoteListItem[];
+  studyProgressByNote: Record<string, NoteStudyProgress>;
+  emptyText?: string;
+}) {
   if (notes.length === 0) {
     return (
       <div className="text-center py-16">
@@ -478,17 +577,25 @@ function NotesList({ notes, emptyText }: { notes: NoteListItem[]; emptyText?: st
 
   return (
     <ul className="grid gap-3 md:grid-cols-2">
-      {notes.map((note) => (
-        <li key={note.id}>
-          <Link href={`/notes/${encodeURIComponent(note.id)}`}>
-            <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
-              <CardContent className="px-4">
-                <div className="flex items-start gap-2.5">
-                  <SourceIcon type={note.source?.type ?? ''} />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-medium text-foreground truncate">
-                      {note.title || '제목 없음'}
-                    </h2>
+      {notes.map((note) => {
+        const studyStatus = getNoteStudyStatus(note, studyProgressByNote[note.id]);
+        const studyStatusLabel = getNoteStudyStatusLabel(studyStatus);
+        return (
+          <li key={note.id}>
+            <Link href={`/notes/${encodeURIComponent(note.id)}`}>
+              <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
+                <CardContent className="px-4">
+                  <div className="flex items-start gap-2.5">
+                    <SourceIcon type={note.source?.type ?? ''} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="truncate text-sm font-medium text-foreground">
+                          {note.title || '제목 없음'}
+                        </h2>
+                        <Badge variant={studyStatus === 'completed' ? 'default' : 'outline'} className="shrink-0 text-[10px]">
+                          {studyStatusLabel}
+                        </Badge>
+                      </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="text-xs text-muted-foreground/70">
                         {formatDate(note.created_at)}
@@ -534,7 +641,8 @@ function NotesList({ notes, emptyText }: { notes: NoteListItem[]; emptyText?: st
             </Card>
           </Link>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

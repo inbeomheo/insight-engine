@@ -63,11 +63,55 @@ export interface NoteStudyResumeItem {
   updatedAt: string | null;
 }
 
+export type NoteStudyStatus = 'not-started' | 'in-progress' | 'completed';
+
 export function getNoteStudyCounts(note: NoteListItem): NoteStudyCounts {
   return {
     learning: note.learning_point_count ?? 0,
     review: note.review_question_count ?? 0,
   };
+}
+
+export function getNoteStudyStatus(
+  note: NoteListItem,
+  progress?: NoteStudyProgress
+): NoteStudyStatus {
+  const summary = getNoteStudySummary(
+    progress ?? { learning: [], review: [], updatedAt: null },
+    getNoteStudyCounts(note)
+  );
+  if (summary.total === 0 || summary.completed === 0) return 'not-started';
+  if (summary.completed >= summary.total) return 'completed';
+  return 'in-progress';
+}
+
+export function getNoteStudyStatusLabel(status: NoteStudyStatus): string {
+  if (status === 'completed') return '완료';
+  if (status === 'in-progress') return '진행중';
+  return '미시작';
+}
+
+export function getNoteStudyStatusCounts(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>
+): Record<NoteStudyStatus, number> {
+  return notes.reduce<Record<NoteStudyStatus, number>>(
+    (counts, note) => {
+      const status = getNoteStudyStatus(note, progressByNote[note.id]);
+      counts[status] += 1;
+      return counts;
+    },
+    { 'not-started': 0, 'in-progress': 0, completed: 0 }
+  );
+}
+
+export function filterNotesByStudyStatus(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  status: NoteStudyStatus | null
+): NoteListItem[] {
+  if (!status) return notes;
+  return notes.filter((note) => getNoteStudyStatus(note, progressByNote[note.id]) === status);
 }
 
 export function getNotesWithStudyProgress(
