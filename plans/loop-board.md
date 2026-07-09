@@ -46,6 +46,7 @@
   9차: 운영/피드백/워크스페이스 영역에서 소비되지 않는 레거시 프론트 컴포넌트 8개 제거 완료.
   10차: 설정 영역에서 소비되지 않는 레거시 메모리·스니펫·지식그래프 컴포넌트와 전용 훅 제거 완료.
   11차: 프론트에서 소비되지 않는 레거시 훅 7개와 고아 playlist 모달 상태 제거 완료.
+  12차: 프론트에서 소비되지 않는 레거시 결과/입력/위키/파이프라인 컴포넌트 15개 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -81,6 +82,12 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 레거시 프론트 컴포넌트 15개 제거.
+  프론트 앱/테스트 전수 grep으로 실제 참조가 없는 레거시 컴포넌트 15개를 삭제.
+  삭제 대상: PresenceCursors, ModifierPresets, GraphVisualization, PipelineMonitor, AudioPlayer, ChannelAnalysis, CitationLink, CompareView, ContextMenu, FavoriteButton, InlineEditor, MultiLangView, ProgressiveSummary, TranscriptSourceBadge, VersionHistory.
+  검증: 삭제 대상명 grep 0 + `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 28 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 지식 탐색 패널 접기.
   `/notes` 홈의 개념 지도와 출처 구성을 `지식 탐색` 패널로 묶고 접힘/펼침 상태를 브라우저 로컬 저장소에 보존해 홈 화면 밀도를 낮춤.
   공용 `note-list` 유틸의 패널 열림 상태 직렬화/파싱 함수를 재사용하도록 정리하고 단위 테스트로 기본/비정상 저장값 경로를 검증.
