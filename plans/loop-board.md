@@ -81,10 +81,17 @@
   13차: `/notes` 홈 복습 카드 4종을 접을 수 있는 `학습 큐` 패널로 묶어 지식위키 홈을 단순화.
   14차: `학습 큐` 접힘/펼침 상태를 브라우저 로컬 저장소에 보존해 지식위키 홈 단순화 상태를 유지.
   15차: `/notes` 홈의 개념·태그·출처 필터를 접을 수 있는 `지식 탐색` 패널로 묶어 초기 화면 밀도를 낮춤.
+  16차: `/notes` 홈의 지식 탐색 패널에 개념별 관련 문서를 묶어 보여주는 `위키 인덱스`를 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 위키 인덱스 추가.
+  `/notes` 홈의 지식 탐색 패널에 반복 등장하는 핵심 개념별 관련 문서 묶음(`위키 인덱스`)을 추가해 개념→문서 흐름을 바로 탐색할 수 있게 개선.
+  공용 `note-list` 유틸에 개념 클러스터 계산을 추가하고, 같은 노트 내 중복 개념 제거·대문자 약어 표시·최근 문서 우선 정렬을 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 29 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(provider): ChatMock 단일 생성 경로로 단순화.
   `config.py`의 활성 프로바이더 키를 ChatMock으로 축소하고, 생성/스트리밍/에이전트/영상 Q&A 호출부에서 Gemini/Zhipu/OpenRouter 전용 변환·락·폴백 분기를 제거.
   설정 팝오버는 서비스 선택 대신 ChatMock 단일 서비스 안내와 모델 선택만 노출하도록 정리하고, 부하/E2E/단위 테스트 샘플 모델을 ChatMock 기준으로 갱신.

@@ -15,6 +15,7 @@ import {
   filterNotesByStudyStatus,
   getCompletedStudyItems,
   getFacetLabel,
+  getNoteConceptClusters,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -36,6 +37,7 @@ import {
   type NoteStudyResumeItem,
   type NoteStudyCardKind,
   type NoteFacet,
+  type NoteConceptCluster,
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 
@@ -185,6 +187,10 @@ export default function NotesPage() {
     () => topCounts(notes.map((note) => getNoteSourceLabel(note.source?.type)), 4),
     [notes],
   );
+  const conceptClusters = useMemo(
+    () => getNoteConceptClusters(notes, { limit: 4, notesPerCluster: 3 }),
+    [notes],
+  );
   const recentNotes = useMemo(
     () => [...notes]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -302,6 +308,7 @@ export default function NotesPage() {
             topConcepts={topConcepts}
             topTags={topTags}
             sourceGroups={sourceGroups}
+            conceptClusters={conceptClusters}
             recentNotes={recentNotes}
             studyStartNotes={studyStartNotes}
             reviewNeededNotes={reviewNeededNotes}
@@ -452,6 +459,7 @@ function WikiMap({
   topConcepts,
   topTags,
   sourceGroups,
+  conceptClusters,
   recentNotes,
   studyStartNotes,
   reviewNeededNotes,
@@ -463,6 +471,7 @@ function WikiMap({
   topConcepts: Array<{ label: string; count: number }>;
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
+  conceptClusters: NoteConceptCluster[];
   recentNotes: NoteListItem[];
   studyStartNotes: NoteStudyResumeItem[];
   reviewNeededNotes: NoteStudyResumeItem[];
@@ -530,7 +539,7 @@ function WikiMap({
     recent: studyResumeNotes.length,
   };
   const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts);
-  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length;
+  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
     return { order: index >= 0 ? index + 1 : 99 };
@@ -606,6 +615,50 @@ function WikiMap({
                         {item.label}
                         <span className="text-[10px] text-muted-foreground">{item.count}</span>
                       </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {conceptClusters.length > 0 && (
+                <div className="mt-4 rounded-xl border border-border bg-background/70 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                      <BookOpen className="h-3.5 w-3.5 text-primary/70" />
+                      위키 인덱스
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      개념별 문서 묶음
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {conceptClusters.map((cluster) => (
+                      <div key={cluster.concept} className="rounded-lg border border-border bg-card/60 p-3">
+                        <button
+                          type="button"
+                          onClick={() => onFacetSelect({ type: 'concept', value: cluster.concept })}
+                          className="flex w-full items-center justify-between gap-2 text-left"
+                        >
+                          <span className="truncate text-xs font-semibold text-foreground">
+                            {cluster.concept}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-primary">
+                            {cluster.count}개 문서
+                          </span>
+                        </button>
+                        <ul className="mt-2 space-y-1">
+                          {cluster.notes.map((note) => (
+                            <li key={`${cluster.concept}-${note.id}`}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(note.id)}`}
+                                className="block truncate rounded-md px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              >
+                                {note.title || '제목 없음'}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
                   </div>
                 </div>

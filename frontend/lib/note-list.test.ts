@@ -5,6 +5,7 @@ import {
   filterNotesByFacet,
   getCompletedStudyItems,
   getFacetLabel,
+  getNoteConceptClusters,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -68,6 +69,39 @@ describe('note-list', () => {
 
   it('sorts notes by recent created date first', () => {
     expect(sortNotesByRecent([notes[1], notes[0]]).map((n) => n.id)).toEqual(['rag', 'memo']);
+  });
+
+  it('builds wiki concept clusters with recent linked notes', () => {
+    const recent = note({
+      id: 'recent-rag',
+      key_concepts: ['RAG', 'RAG', 'Vector DB'],
+      created_at: '2026-07-10T05:00:00Z',
+    });
+    const older = note({
+      id: 'older-rag',
+      key_concepts: ['rag'],
+      created_at: '2026-07-10T01:00:00Z',
+    });
+    const singleton = note({
+      id: 'solo',
+      key_concepts: ['Only Once'],
+      created_at: '2026-07-10T06:00:00Z',
+    });
+    const vector = note({
+      id: 'vector',
+      key_concepts: ['Vector DB'],
+      created_at: '2026-07-10T04:00:00Z',
+    });
+
+    expect(
+      getNoteConceptClusters([older, singleton, vector, recent], {
+        limit: 2,
+        notesPerCluster: 1,
+      })
+    ).toEqual([
+      { concept: 'RAG', count: 2, notes: [recent] },
+      { concept: 'Vector DB', count: 2, notes: [recent] },
+    ]);
   });
 
   it('builds readable active facet labels', () => {

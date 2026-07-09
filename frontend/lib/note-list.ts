@@ -24,6 +24,11 @@ function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function preferDisplayLabel(current: string, next: string): string {
+  if (current === current.toLowerCase() && next !== next.toLowerCase()) return next;
+  return current;
+}
+
 export function noteMatchesFacet(note: NoteListItem, facet: NoteFacet): boolean {
   const target = normalize(facet.value);
   if (!target) return true;
@@ -49,6 +54,49 @@ export function sortNotesByRecent(notes: NoteListItem[]): NoteListItem[] {
     const timeB = Date.parse(b.created_at);
     return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
   });
+}
+
+export interface NoteConceptCluster {
+  concept: string;
+  count: number;
+  notes: NoteListItem[];
+}
+
+export function getNoteConceptClusters(
+  notes: NoteListItem[],
+  options: { limit?: number; notesPerCluster?: number; minNotes?: number } = {}
+): NoteConceptCluster[] {
+  const limit = options.limit ?? 4;
+  const notesPerCluster = options.notesPerCluster ?? 3;
+  const minNotes = options.minNotes ?? 2;
+  const clusters = new Map<string, { concept: string; notes: NoteListItem[] }>();
+
+  for (const note of notes) {
+    const seenInNote = new Set<string>();
+    for (const rawConcept of note.key_concepts ?? []) {
+      const concept = rawConcept.trim();
+      const key = normalize(concept);
+      if (!concept || seenInNote.has(key)) continue;
+      seenInNote.add(key);
+      const current = clusters.get(key) ?? { concept, notes: [] };
+      current.concept = preferDisplayLabel(current.concept, concept);
+      current.notes.push(note);
+      clusters.set(key, current);
+    }
+  }
+
+  return Array.from(clusters.values())
+    .map((cluster) => ({
+      concept: cluster.concept,
+      count: cluster.notes.length,
+      notes: sortNotesByRecent(cluster.notes).slice(0, notesPerCluster),
+    }))
+    .filter((cluster) => cluster.count >= minNotes)
+    .sort((a, b) => {
+      if (a.count !== b.count) return b.count - a.count;
+      return a.concept.localeCompare(b.concept);
+    })
+    .slice(0, limit);
 }
 
 export function getFacetLabel(facet: NoteFacet): string {
