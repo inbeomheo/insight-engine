@@ -11,6 +11,9 @@ interface ResultChatPanelProps {
   context: string;
   model?: string;
   language?: string;
+  title?: string;
+  emptyText?: string;
+  placeholder?: string;
 }
 
 interface ChatMessage extends ResultChatMessage {
@@ -19,7 +22,14 @@ interface ChatMessage extends ResultChatMessage {
 
 const MAX_CONTEXT_CHARS = 50_000;
 
-export default function ResultChatPanel({ context, model, language = 'ko' }: ResultChatPanelProps) {
+export default function ResultChatPanel({
+  context,
+  model,
+  language = 'ko',
+  title = '콘텐츠 Q&A',
+  emptyText = '궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.',
+  placeholder = '예: 이 영상의 핵심 실행 단계는?',
+}: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -106,7 +116,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       >
         <span className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          콘텐츠 Q&A
+          {title}
         </span>
         <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
           {messages.length > 0 ? `${messages.length}개 메시지` : '질문하기'}
@@ -121,7 +131,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
           <div className="mb-3 max-h-72 space-y-3 overflow-y-auto rounded-md bg-background/70 p-3">
             {messages.length === 0 ? (
               <p className="py-5 text-center text-sm text-muted-foreground">
-                궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.
+                {emptyText}
               </p>
             ) : (
               messages.map((message, index) => (
@@ -186,7 +196,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
             <Textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="예: 이 영상의 핵심 실행 단계는?"
+              placeholder={placeholder}
               maxLength={500}
               disabled={loading || !hasContext}
               className="min-h-20 resize-y"

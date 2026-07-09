@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNote, type NoteDetail } from '@/lib/api';
+import ResultChatPanel from '@/components/result/ResultChatPanel';
 
 function formatDate(iso: string): string {
   if (!iso) return '';
@@ -26,6 +27,27 @@ function safeHttpUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+function buildNoteChatContext(note: NoteDetail): string {
+  const lines = [
+    `[노트 제목]\n${note.source?.title || '제목 없음'}`,
+    note.summary ? `[요약]\n${note.summary}` : '',
+    note.key_concepts.length > 0 ? `[핵심 개념]\n${note.key_concepts.join(', ')}` : '',
+    (note.learning_points ?? []).length > 0
+      ? `[학습 포인트]\n${(note.learning_points ?? []).map((point, idx) => `${idx + 1}. ${point}`).join('\n')}`
+      : '',
+    (note.review_questions ?? []).length > 0
+      ? `[복습 질문]\n${(note.review_questions ?? []).map((item) => `Q. ${item.question}\nA. ${item.answer}`).join('\n')}`
+      : '',
+    note.quotes.length > 0
+      ? `[근거 인용]\n${note.quotes.map((quote) => `- "${quote.text}"${quote.ref ? ` (${quote.ref})` : ''}`).join('\n')}`
+      : '',
+    (note.related_notes ?? []).length > 0
+      ? `[관련 노트]\n${(note.related_notes ?? []).map((related) => `- ${related.title}: ${related.snippet ?? ''}`).join('\n')}`
+      : '',
+  ];
+  return lines.filter(Boolean).join('\n\n');
 }
 
 export default function NoteDetailPage() {
@@ -87,6 +109,7 @@ function NoteBody({ note }: { note: NoteDetail }) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
   const learningPoints = note.learning_points ?? [];
   const reviewQuestions = note.review_questions ?? [];
+  const noteChatContext = buildNoteChatContext(note);
   return (
     <div className="space-y-6">
       {/* 헤더: 제목 + 출처 */}
@@ -210,15 +233,16 @@ function NoteBody({ note }: { note: NoteDetail }) {
                 <h2 className="text-sm font-semibold text-foreground">근거 기반 채팅</h2>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   이 노트의 요약·인용·관련 노트를 질문의 근거로 이어갈 수 있습니다.
-                  관련 노트를 먼저 열어 맥락을 넓힌 뒤 홈 채팅에서 질문하세요.
+                  아래 패널에서 바로 질문하거나, 관련 노트를 열어 맥락을 넓혀보세요.
                 </p>
-                <Button asChild size="sm" variant="outline" className="mt-3 h-8">
-                  <Link href={`/?note=${encodeURIComponent(note.id)}`}>
-                    이 노트로 질문 시작
-                  </Link>
-                </Button>
               </div>
             </div>
+            <ResultChatPanel
+              context={noteChatContext}
+              title="노트 근거 Q&A"
+              emptyText="이 노트의 요약, 학습 포인트, 인용, 관련 노트를 근거로 질문해보세요."
+              placeholder="예: 이 노트에서 바로 실행할 수 있는 행동은?"
+            />
           </CardContent>
         </Card>
       </section>
