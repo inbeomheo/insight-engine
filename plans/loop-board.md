@@ -90,10 +90,17 @@
   17차: `/notes/[id]`의 핵심 개념·태그를 `/notes` 필터 딥링크로 연결해 노트 상세에서 위키 인덱스로 되돌아가는 탐색 흐름 추가.
   18차: `/notes/[id]` 문서 브리핑 아래에 관련 노트를 점수순으로 안내하는 `위키 읽기 경로` 카드 추가.
   19차: `/notes/[id]` 위키 읽기 경로를 Markdown으로 복사하는 빠른 액션 추가.
+  20차: `/notes` 홈 위키 인덱스를 Markdown으로 복사하는 빠른 액션 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 위키 인덱스 Markdown 복사 추가.
+  `/notes` 홈의 `위키 인덱스` 카드에 인덱스 복사 버튼을 추가해 개념별 문서 묶음과 노트 링크를 Markdown으로 저장할 수 있게 개선.
+  공용 `note-list` 유틸에 위키 인덱스 Markdown 생성 함수를 추가하고, 공백 정리·빈 인덱스·노트 링크 인코딩·Markdown 링크 텍스트 이스케이프를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 38 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 오늘의 복습 플랜 Markdown 복사 추가.
   `/notes` 홈의 `오늘의 복습 플랜` 카드에 플랜 복사 버튼을 추가해 복습 순서·행동·남은 항목·진행률·노트 링크를 Markdown으로 저장할 수 있게 개선.
   공용 `note-list` 유틸에 일일 복습 플랜 Markdown 생성 함수를 추가하고, 공백 정리·빈 플랜·노트 링크 인코딩을 단위 테스트로 검증.

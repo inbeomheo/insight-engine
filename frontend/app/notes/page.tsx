@@ -15,6 +15,7 @@ import {
   filterNotesByFacet,
   filterNotesByStudyStatus,
   buildDailyStudyPlanMarkdown,
+  buildWikiIndexMarkdown,
   getCompletedStudyItems,
   getDailyStudyPlanItems,
   getFacetLabel,
@@ -517,6 +518,7 @@ function WikiMap({
   const [studyQueueOpen, setStudyQueueOpen] = useState(true);
   const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
   const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   useEffect(() => {
     try {
       setStudyQueueOpen(
@@ -586,6 +588,26 @@ function WikiMap({
     const timer = window.setTimeout(() => setStudyPlanCopyStatus('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [studyPlanCopyStatus]);
+
+  const copyWikiIndex = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setWikiIndexCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildWikiIndexMarkdown(conceptClusters));
+      setWikiIndexCopyStatus('copied');
+    } catch {
+      setWikiIndexCopyStatus('error');
+    }
+  }, [conceptClusters]);
+
+  useEffect(() => {
+    if (wikiIndexCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setWikiIndexCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [wikiIndexCopyStatus]);
 
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
@@ -682,9 +704,28 @@ function WikiMap({
                       <BookOpen className="h-3.5 w-3.5 text-primary/70" />
                       위키 인덱스
                     </div>
-                    <span className="text-[10px] text-muted-foreground">
-                      개념별 문서 묶음
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-muted-foreground">
+                          개념별 문서 묶음
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 px-2 text-[10px]"
+                          onClick={copyWikiIndex}
+                        >
+                          <Copy className="h-3 w-3" />
+                          인덱스 복사
+                        </Button>
+                      </div>
+                      {wikiIndexCopyStatus !== 'idle' && (
+                        <span className={`text-[10px] ${wikiIndexCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                          {wikiIndexCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-3 grid gap-2">
                     {conceptClusters.map((cluster) => (

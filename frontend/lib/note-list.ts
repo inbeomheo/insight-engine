@@ -118,6 +118,36 @@ export function getNoteConceptClusters(
     .slice(0, limit);
 }
 
+function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
+  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
+  return cleaned || fallback;
+}
+
+function escapeMarkdownLinkText(value: string): string {
+  return value.replace(/([[\]\\])/g, '\\$1');
+}
+
+export function buildWikiIndexMarkdown(
+  clusters: NoteConceptCluster[],
+  title = '위키 인덱스'
+): string {
+  const heading = cleanMarkdownValue(title, '위키 인덱스');
+  if (clusters.length === 0) {
+    return `# ${heading}\n\n묶을 수 있는 반복 개념이 없습니다.`;
+  }
+
+  return [
+    `# ${heading}`,
+    '',
+    ...clusters.flatMap((cluster, index) => [
+      `${index + 1}. ${cleanMarkdownValue(cluster.concept, '개념 없음')} (${cluster.count}개 문서)`,
+      ...cluster.notes.map((note) => (
+        `   - [${escapeMarkdownLinkText(cleanMarkdownValue(note.title, '제목 없음'))}](/notes/${encodeURIComponent(note.id)})`
+      )),
+    ]),
+  ].join('\n');
+}
+
 export function getFacetLabel(facet: NoteFacet): string {
   if (facet.type === 'concept') return `개념: ${facet.value}`;
   if (facet.type === 'tag') return `태그: ${facet.value}`;
@@ -341,11 +371,6 @@ export function getDailyStudyPlanItems(
   }));
 
   return [...continuing, ...starting].slice(0, Math.max(0, limit));
-}
-
-function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
-  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
-  return cleaned || fallback;
 }
 
 export function buildDailyStudyPlanMarkdown(

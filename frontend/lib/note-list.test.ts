@@ -3,6 +3,7 @@ import type { NoteListItem } from './api';
 import {
   buildDailyStudyPlanMarkdown,
   buildNoteFacetHref,
+  buildWikiIndexMarkdown,
   filterNotesByStudyStatus,
   filterNotesByFacet,
   getCompletedStudyItems,
@@ -123,6 +124,32 @@ describe('note-list', () => {
       { concept: 'RAG', count: 2, notes: [recent] },
       { concept: 'Vector DB', count: 2, notes: [recent] },
     ]);
+  });
+
+  it('builds markdown for the wiki concept index', () => {
+    const recent = note({
+      id: 'recent rag',
+      title: '  최신\n[RAG]  ',
+      key_concepts: ['RAG'],
+      created_at: '2026-07-10T05:00:00Z',
+    });
+    const older = note({
+      id: 'older-rag',
+      title: '',
+      key_concepts: ['rag'],
+      created_at: '2026-07-10T01:00:00Z',
+    });
+    const clusters = getNoteConceptClusters([older, recent], { notesPerCluster: 2 });
+
+    expect(buildWikiIndexMarkdown(clusters, '  개념\n지도  ')).toBe([
+      '# 개념 지도',
+      '',
+      '1. RAG (2개 문서)',
+      '   - [최신 \\[RAG\\]](/notes/recent%20rag)',
+      '   - [제목 없음](/notes/older-rag)',
+    ].join('\n'));
+
+    expect(buildWikiIndexMarkdown([], '')).toBe('# 위키 인덱스\n\n묶을 수 있는 반복 개념이 없습니다.');
   });
 
   it('builds readable active facet labels', () => {
