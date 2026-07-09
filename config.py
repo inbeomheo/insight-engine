@@ -87,11 +87,6 @@ DOCUMENT_UPLOAD_MAX_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_MAX_BYTES', str(
 DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES', str(1024 * 1024)))
 AUDIO_UPLOAD_MAX_BYTES: int = int(os.getenv('AUDIO_UPLOAD_MAX_BYTES', str(50 * 1024 * 1024)))
 
-# === 이미지 생성 ===
-
-IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')
-IMAGE_GEN_API_KEY: str = os.getenv('IMAGE_GEN_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
-
 # === 화이트라벨 (F4-15) ===
 
 WHITELABEL_ENABLED: bool = os.getenv('WHITELABEL_ENABLED', 'false').lower() == 'true'

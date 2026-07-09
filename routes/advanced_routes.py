@@ -17,7 +17,7 @@ from services.core import ai_service, content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.usage import require_usage
 from services.usage.usage_decorator import get_usage_for_response
-from utils.responses import api_error, handle_error, safe_error_or_fallback, clamp_query_int, validate_content_length
+from utils.responses import api_error, handle_error, safe_error_or_fallback, validate_content_length
 from prompts import compose_style_prompt
 
 
@@ -218,37 +218,6 @@ def run_pipeline():
         return handle_error(str(e))
 
 
-@blog_bp.route('/api/generate-thumbnail', methods=['POST'])
-@require_auth
-def generate_thumbnail():
-    """제목+키워드로 AI 썸네일 이미지를 생성합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        title = data.get('title', '')
-        keywords = data.get('keywords', [])
-        size = data.get('size', '1792x1024')
-
-        if not title:
-            return api_error('제목이 필요합니다.', 400)
-
-        from services.media.thumbnail_service import generate_thumbnail as _gen_thumb
-        result = _gen_thumb(title, keywords, size)
-
-        if not result.get('success'):
-            return jsonify({
-                'error': safe_error_or_fallback(
-                    result.get('error', '썸네일 생성 실패'),
-                    '[서버 오류] 썸네일 생성 중 문제가 발생했습니다.'
-                )
-            }), 400
-
-        return jsonify(result)
-
-    except Exception as e:
-        current_app.logger.error(f"Thumbnail generation failed: {e}")
-        return handle_error(str(e))
-
-
 @blog_bp.route('/api/inline-edit', methods=['POST'])
 @require_auth
 @require_usage
@@ -276,94 +245,6 @@ def inline_edit_content():
         })
     except Exception as e:
         current_app.logger.error(f"Inline edit failed: {e}")
-        return handle_error(str(e))
-
-
-# === 에이전트 API ===
-
-@blog_bp.route('/api/agent/research', methods=['POST'])
-@require_auth
-@require_usage
-def agent_research():
-    """리서치 에이전트를 실행합니다 (SSE 스트리밍).
-
-    Request body:
-        topic (str): 리서치 주제
-        model (str): AI 모델 ID
-        max_sources (int): 최대 소스 수 (기본 5)
-
-    Returns:
-        SSE 이벤트 스트림 (진행 상황 + 최종 결과)
-    """
-    try:
-        data = request.get_json(silent=True) or {}
-        topic = data.get('topic', '').strip()
-        model = data.get('model', DEFAULT_MODEL)
-        max_sources = clamp_query_int(data.get('max_sources'), default=5, min_val=1, max_val=10)
-
-        if not topic:
-            return api_error('리서치 주제가 필요합니다.', 400)
-
-        from services.agents.web_research_agent import ResearchAgent
-
-        def generate_events():
-            agent = ResearchAgent(model=model, max_sources=max_sources)
-            events = []
-
-            def on_event(event):
-                events.append(event)
-
-            agent.on_event(on_event)
-
-            # SSE 스트리밍
-            import queue
-            import threading
-            event_queue = queue.Queue()
-
-            def event_listener(event):
-                event_queue.put(event)
-
-            agent.on_event(event_listener)
-
-            def run_agent():
-                try:
-                    result = agent.run(topic)
-                    event_queue.put(('result', result))
-                except Exception as e:
-                    event_queue.put((
-                        'error',
-                        safe_error_or_fallback(
-                            e,
-                            '[서버 오류] 리서치 에이전트 실행 중 문제가 발생했습니다.'
-                        )
-                    ))
-
-            thread = threading.Thread(target=run_agent, daemon=True)
-            thread.start()
-
-            while True:
-                try:
-                    item = event_queue.get(timeout=300)
-                    if isinstance(item, tuple):
-                        event_type, data = item
-                        if event_type == 'result':
-                            yield f"data: {json.dumps({'type': 'result', 'data': data}, ensure_ascii=False)}\n\n"
-                            break
-                        elif event_type == 'error':
-                            yield f"data: {json.dumps({'type': 'error', 'message': data}, ensure_ascii=False)}\n\n"
-                            break
-                    else:
-                        yield f"data: {json.dumps({'type': 'progress', 'event': item.to_dict()}, ensure_ascii=False)}\n\n"
-                except Exception:
-                    break
-
-        return Response(
-            stream_with_context(generate_events()),
-            mimetype='text/event-stream',
-            headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
-        )
-    except Exception as e:
-        current_app.logger.error(f"Agent research failed: {e}")
         return handle_error(str(e))
 
 

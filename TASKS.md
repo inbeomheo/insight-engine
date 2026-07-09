@@ -119,13 +119,6 @@
 - [P2-01] frontend/components/result/AudioPlayer.tsx: 다운로드 버튼 + 속도 조절 슬라이더 추가 | 검증: build
 - [P2-02] services/tts_service.py: 배치 TTS (장문 분할 처리) 최적화 | 검증: pytest
 
-### F2-02. AI 썸네일/배너 자동 생성 — 난이도 L
-- [P2-03] services/image_gen_service.py: DALL-E / Stable Diffusion API 연동 래퍼 | 검증: pytest
-- [P2-04] services/thumbnail_service.py: 제목+키워드 → 이미지 프롬프트 자동 생성 → 이미지 API 호출 | 검증: pytest
-- [P2-05] routes/advanced_routes.py: /api/generate-thumbnail 엔드포인트 | 검증: pytest
-- [P2-06] frontend/components/result/ThumbnailPreview.tsx: 썸네일 미리보기 + 재생성 버튼 | 검증: build
-- [P2-07] config.py: IMAGE_GEN_PROVIDER, IMAGE_GEN_API_KEY 설정 추가 | 검증: pytest
-
 ### F2-03. 마크다운 → 슬라이드(PPT) 변환 — 난이도 M
 - [P2-08] services/slide_service.py: 마크다운 → Marp/Reveal.js 슬라이드 HTML 변환 | 검증: pytest
 - [P2-09] routes/export_routes.py: /api/export/slides 엔드포인트 | 검증: pytest
@@ -218,13 +211,6 @@
 ## Phase 3: AI 에이전트 시스템 (25개 기능)
 
 > 단순 1회 AI 호출 → 자율 에이전트 기반 지능형 파이프라인
-
-### F3-01. 자동 리서치 에이전트 — 난이도 L
-- **기존**: web_research_service.py, web_search_service.py
-- [P3-01] services/agent/research_agent.py: 주제 → 웹검색 → 기사수집 → 요약 → 콘텐츠 생성 자율 루프 | 검증: pytest
-- [P3-02] services/agent/__init__.py: 에이전트 베이스 클래스 (plan→execute→reflect 루프) | 검증: pytest
-- [P3-03] routes/advanced_routes.py: /api/agent/research 엔드포인트 (SSE) | 검증: pytest
-- [P3-04] ~~frontend/components/agent/AgentProgress.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 진입점과 함께 신규 UI 작성 | 검증: build
 
 ### F3-02. GraphRAG 고도화 — 난이도 L
 - **기존**: services/rag/graph_store.py, graph_builder.py (networkx 기반)
