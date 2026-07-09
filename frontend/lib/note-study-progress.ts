@@ -19,6 +19,13 @@ export interface NoteStudySummary {
   completedReview: number;
 }
 
+export interface NoteStudyCompletionSummary {
+  complete: boolean;
+  remaining: number;
+  message: string;
+  actionLabel: string;
+}
+
 export interface NoteStudyMarkdownInput {
   title: string;
   sourceUrl?: string;
@@ -71,6 +78,48 @@ export function getNoteStudySummary(
     percent: total > 0 ? Math.round((completed / total) * 100) : 0,
     completedLearning,
     completedReview,
+  };
+}
+
+export function getNoteStudyCompletionSummary(
+  summary: NoteStudySummary
+): NoteStudyCompletionSummary {
+  const total = Math.max(0, summary.total);
+  const completed = Math.min(Math.max(0, summary.completed), total);
+  const remaining = Math.max(0, total - completed);
+
+  if (total === 0) {
+    return {
+      complete: false,
+      remaining: 0,
+      message: '복습 항목이 없습니다.',
+      actionLabel: '복습 시작',
+    };
+  }
+
+  if (remaining === 0) {
+    return {
+      complete: true,
+      remaining: 0,
+      message: '모든 복습 항목을 완료했습니다.',
+      actionLabel: '다시 복습',
+    };
+  }
+
+  if (completed === 0) {
+    return {
+      complete: false,
+      remaining,
+      message: '아직 복습을 시작하지 않았습니다.',
+      actionLabel: '복습 시작',
+    };
+  }
+
+  return {
+    complete: false,
+    remaining,
+    message: `남은 복습 항목 ${remaining}개`,
+    actionLabel: '이어 복습',
   };
 }
 

@@ -25,6 +25,7 @@ import {
 } from '@/lib/note-wiki-brief';
 import {
   buildNoteStudyMarkdown,
+  getNoteStudyCompletionSummary,
   getNoteStudySummary,
   getVisibleNoteStudyIndexes,
   normalizeNoteStudyProgress,
@@ -182,6 +183,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const studySummary = useMemo(
     () => getNoteStudySummary(studyProgress, studyCounts),
     [studyCounts, studyProgress]
+  );
+  const studyCompletion = useMemo(
+    () => getNoteStudyCompletionSummary(studySummary),
+    [studySummary]
   );
   const allReviewAnswersVisible = reviewQuestions.length > 0 && reviewAnswerVisible.every(Boolean);
   const visibleLearningIndexes = useMemo(
@@ -369,16 +374,18 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                   >
                     {showCompletedStudyItems ? '완료 숨기기' : '전체 보기'}
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 text-xs"
-                    onClick={resetStudyProgress}
-                    disabled={studySummary.completed === 0}
-                  >
-                    초기화
-                  </Button>
+                  {!studyCompletion.complete && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs"
+                      onClick={resetStudyProgress}
+                      disabled={studySummary.completed === 0}
+                    >
+                      초기화
+                    </Button>
+                  )}
                 </div>
                 {studyCopyStatus !== 'idle' && (
                   <span className={`text-[10px] ${studyCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
@@ -405,6 +412,28 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                 style={{ width: `${studySummary.percent}%` }}
               />
             </div>
+            {studyCompletion.complete && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-background/80 px-3 py-3">
+                <div className="flex min-w-0 items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">복습 세션 완료</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {studyCompletion.message} Markdown으로 저장하거나 다시 복습해 기억을 확인하세요.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 shrink-0 text-xs"
+                  onClick={resetStudyProgress}
+                >
+                  {studyCompletion.actionLabel}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

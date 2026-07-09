@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildNoteStudyMarkdown,
   clearNoteStudyProgress,
+  getNoteStudyCompletionSummary,
   getNoteStudyProgressKey,
   getNoteStudySummary,
   getVisibleNoteStudyIndexes,
@@ -53,6 +54,57 @@ describe('note-study-progress', () => {
       completedReview: 1,
     });
     expect(toggleNoteStudyItem(second, 'learning', 1, { learning: 3, review: 2 }, 'done').learning).toEqual([]);
+  });
+
+  it('summarizes completion states for review sessions', () => {
+    expect(getNoteStudyCompletionSummary({
+      completed: 0,
+      total: 0,
+      percent: 0,
+      completedLearning: 0,
+      completedReview: 0,
+    })).toEqual({
+      complete: false,
+      remaining: 0,
+      message: '복습 항목이 없습니다.',
+      actionLabel: '복습 시작',
+    });
+    expect(getNoteStudyCompletionSummary({
+      completed: 0,
+      total: 3,
+      percent: 0,
+      completedLearning: 0,
+      completedReview: 0,
+    })).toEqual({
+      complete: false,
+      remaining: 3,
+      message: '아직 복습을 시작하지 않았습니다.',
+      actionLabel: '복습 시작',
+    });
+    expect(getNoteStudyCompletionSummary({
+      completed: 2,
+      total: 3,
+      percent: 67,
+      completedLearning: 1,
+      completedReview: 1,
+    })).toEqual({
+      complete: false,
+      remaining: 1,
+      message: '남은 복습 항목 1개',
+      actionLabel: '이어 복습',
+    });
+    expect(getNoteStudyCompletionSummary({
+      completed: 3,
+      total: 3,
+      percent: 100,
+      completedLearning: 2,
+      completedReview: 1,
+    })).toEqual({
+      complete: true,
+      remaining: 0,
+      message: '모든 복습 항목을 완료했습니다.',
+      actionLabel: '다시 복습',
+    });
   });
 
   it('persists progress in the provided storage', () => {
