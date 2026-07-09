@@ -9,7 +9,9 @@ def _note():
         "source": {"type": "article", "url": "https://example.com/a", "title": "테스트 글"},
         "key_concepts": ["개념 A", "개념 B"],
         "summary": "핵심 요약입니다.",
-        "quotes": [],
+        "learning_points": ["핵심 요약을 실무에 적용한다."],
+        "review_questions": [{"question": "무엇을 적용하나?", "answer": "핵심 요약입니다."}],
+        "quotes": [{"text": "근거 문장", "ref": "p1"}],
         "tags": ["AI", "학습"],
         "language": "ko",
         "created_at": "2026-07-04T12:00:00Z",
@@ -39,6 +41,9 @@ def test_index_note_upserts_searchable_text_and_metadata(mock_get_client):
     assert kwargs["ids"] == ["note-1"]
     assert "개념 A" in kwargs["documents"][0]
     assert "핵심 요약입니다." in kwargs["documents"][0]
+    assert "학습 포인트" in kwargs["documents"][0]
+    assert "복습 질문" in kwargs["documents"][0]
+    assert "근거 문장" in kwargs["documents"][0]
     assert "AI" in kwargs["documents"][0]
     assert kwargs["metadatas"] == [{
         "title": "테스트 글",
@@ -94,7 +99,7 @@ def test_get_related_notes_excludes_self_and_limits(mock_get_client):
     results = note_index_service.get_related_notes(_note(), limit=2)
 
     collection.query.assert_called_once_with(query_texts=[
-        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n태그: AI, 학습"
+        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
     ], n_results=3)
     assert [item["id"] for item in results] == ["note-2", "note-3"]
     assert results[0]["title"] == "관련 글 B"
@@ -114,7 +119,7 @@ def test_get_related_notes_searches_single_other_note_when_self_missing(mock_get
     results = note_index_service.get_related_notes(_note(), limit=3)
 
     collection.query.assert_called_once_with(query_texts=[
-        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n태그: AI, 학습"
+        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
     ], n_results=1)
     assert [item["id"] for item in results] == ["note-2"]
 
@@ -132,13 +137,13 @@ def test_get_related_notes_uses_related_default_and_caps_query_limit(mock_get_cl
 
     note_index_service.get_related_notes(_note(), limit=None)
     collection.query.assert_called_once_with(query_texts=[
-        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n태그: AI, 학습"
+        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
     ], n_results=4)
 
     collection.query.reset_mock()
     capped_results = note_index_service.get_related_notes(_note(), limit=20)
     collection.query.assert_called_once_with(query_texts=[
-        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n태그: AI, 학습"
+        "핵심 개념: 개념 A, 개념 B\n요약: 핵심 요약입니다.\n학습 포인트: 핵심 요약을 실무에 적용한다.\n복습 질문: 무엇을 적용하나? 핵심 요약입니다.\n근거 인용: 근거 문장 p1\n태그: AI, 학습"
     ], n_results=20)
     assert len(capped_results) == 19
 

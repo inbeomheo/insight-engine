@@ -104,6 +104,9 @@ def _required_note_id(note: dict[str, Any]) -> str:
 def _build_searchable_text(note: dict[str, Any]) -> str:
     concepts = _str_list(note.get("key_concepts"))
     tags = _str_list(note.get("tags"))
+    learning_points = _str_list(note.get("learning_points"))
+    review_questions = _review_question_texts(note.get("review_questions"))
+    quotes = _quote_texts(note.get("quotes"))
     summary = str(note.get("summary", "")).strip()
 
     parts: list[str] = []
@@ -111,6 +114,12 @@ def _build_searchable_text(note: dict[str, Any]) -> str:
         parts.append("핵심 개념: " + ", ".join(concepts))
     if summary:
         parts.append("요약: " + summary)
+    if learning_points:
+        parts.append("학습 포인트: " + " ".join(learning_points))
+    if review_questions:
+        parts.append("복습 질문: " + " ".join(review_questions))
+    if quotes:
+        parts.append("근거 인용: " + " ".join(quotes))
     if tags:
         parts.append("태그: " + ", ".join(tags))
     return "\n".join(parts).strip()
@@ -129,6 +138,35 @@ def _str_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _review_question_texts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    texts: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question", "")).strip()
+        answer = str(item.get("answer", "")).strip()
+        if question or answer:
+            texts.append(f"{question} {answer}".strip())
+    return texts
+
+
+def _quote_texts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    texts: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            text = str(item.get("text", "")).strip()
+            ref = str(item.get("ref", "")).strip()
+            if text:
+                texts.append(f"{text} {ref}".strip())
+        elif str(item).strip():
+            texts.append(str(item).strip())
+    return texts
 
 
 def _normalize_limit(limit: int) -> int:

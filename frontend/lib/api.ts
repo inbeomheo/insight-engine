@@ -920,6 +920,10 @@ export interface NoteListItem {
   id: string;
   title: string;
   tags: string[];
+  key_concepts?: string[];
+  summary?: string;
+  quote_count?: number;
+  learning_point_count?: number;
   created_at: string;
   source: NoteSource;
 }
@@ -934,6 +938,8 @@ export interface NoteDetail {
   source: NoteSource;
   key_concepts: string[];
   summary: string;
+  learning_points?: string[];
+  review_questions?: Array<{ question: string; answer: string }>;
   quotes: NoteQuote[];
   tags: string[];
   language: string;

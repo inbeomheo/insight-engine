@@ -56,6 +56,25 @@ def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
         if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
             errors.append(f"{key}는 비어 있지 않은 문자열 배열이어야 합니다.")
 
+    for key in ("learning_points",):
+        value = note.get(key, [])
+        if value and (not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value)):
+            errors.append(f"{key}는 문자열 배열이어야 합니다.")
+
+    review_questions = note.get("review_questions", [])
+    if review_questions:
+        if not isinstance(review_questions, list):
+            errors.append("review_questions는 배열이어야 합니다.")
+        else:
+            for item in review_questions:
+                if not isinstance(item, dict):
+                    errors.append("review_questions 항목은 객체여야 합니다.")
+                    continue
+                if not isinstance(item.get("question"), str) or not item.get("question", "").strip():
+                    errors.append("review_questions.question은 비어 있지 않은 문자열이어야 합니다.")
+                if not isinstance(item.get("answer"), str) or not item.get("answer", "").strip():
+                    errors.append("review_questions.answer는 비어 있지 않은 문자열이어야 합니다.")
+
     if not isinstance(note.get("summary"), str) or not note.get("summary", "").strip():
         errors.append("summary는 비어 있지 않은 문자열이어야 합니다.")
 
@@ -156,6 +175,10 @@ def list_notes() -> list[dict[str, Any]]:
             "id": note.get("id"),
             "title": source.get("title", ""),
             "tags": note.get("tags", []),
+            "key_concepts": note.get("key_concepts", []),
+            "summary": note.get("summary", ""),
+            "quote_count": len(note.get("quotes", []) if isinstance(note.get("quotes"), list) else []),
+            "learning_point_count": len(note.get("learning_points", []) if isinstance(note.get("learning_points"), list) else []),
             "created_at": note.get("created_at", ""),
             "source": source,
         })
@@ -351,6 +374,8 @@ def _normalize_generated_note(note: dict[str, Any]) -> dict[str, Any]:
     note = dict(note or {})
     note["key_concepts"] = _coerce_str_list(note.get("key_concepts"))
     note["tags"] = _coerce_str_list(note.get("tags"))
+    note["learning_points"] = _coerce_str_list(note.get("learning_points"))
+    note["review_questions"] = _coerce_review_questions(note.get("review_questions"))
     note["quotes"] = _coerce_quotes(note.get("quotes"))
     note["summary"] = str(note.get("summary", "")).strip()
     note["language"] = str(note.get("language", "")).strip()
@@ -383,6 +408,27 @@ def _coerce_quotes(value: Any) -> list[dict[str, str]]:
     return quotes
 
 
+def _coerce_review_questions(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    questions: list[dict[str, str]] = []
+    for item in value:
+        if isinstance(item, dict):
+            question = str(item.get("question", "")).strip()
+            answer = str(item.get("answer", "")).strip()
+        else:
+            text = str(item).strip()
+            if "?" in text:
+                question, answer = text.split("?", 1)
+                question = question.strip() + "?"
+                answer = answer.strip(" :-")
+            else:
+                question, answer = text, ""
+        if question and answer:
+            questions.append({"question": question, "answer": answer})
+    return questions
+
+
 def _parse_markdown_note(text: str) -> dict[str, Any] | None:
     summary = _markdown_section(text, "summary")
     concepts = _markdown_list_section(text, "key_concepts")
@@ -392,6 +438,8 @@ def _parse_markdown_note(text: str) -> dict[str, Any] | None:
     return {
         "key_concepts": concepts,
         "summary": summary,
+        "learning_points": [],
+        "review_questions": [],
         "quotes": [],
         "tags": tags,
         "language": "ko",

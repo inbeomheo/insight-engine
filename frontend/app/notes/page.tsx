@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, FileText, Search, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, FileText, Network, Quote, Search, Tags, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -75,20 +76,39 @@ export default function NotesPage() {
   }, []);
 
   const isSearchMode = searchResults !== null;
+  const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;
+  const quoteCount = notes.reduce((sum, note) => sum + (note.quote_count ?? 0), 0);
+  const learningPointCount = notes.reduce((sum, note) => sum + (note.learning_point_count ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* 헤더 */}
-        <div className="flex items-center gap-3 mb-6">
-          <Button asChild variant="ghost" size="icon" className="h-8 w-8 -ml-2">
-            <Link href="/" aria-label="홈으로 돌아가기">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary/70" />
-            <h1 className="text-lg font-semibold text-foreground">노트</h1>
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Button asChild variant="ghost" size="icon" className="h-8 w-8 -ml-2 shrink-0">
+                <Link href="/" aria-label="홈으로 돌아가기">
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary/70" />
+                  <h1 className="text-xl font-semibold text-foreground">LLMWiki 홈</h1>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  학습한 자료가 핵심 개념, 근거 인용, 관련 노트로 쌓이는 지식 베이스입니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-2 sm:grid-cols-4">
+            <WikiStat icon={<BookOpen className="h-4 w-4" />} label="노트" value={notes.length} />
+            <WikiStat icon={<Brain className="h-4 w-4" />} label="핵심 개념" value={conceptCount} />
+            <WikiStat icon={<Quote className="h-4 w-4" />} label="근거 인용" value={quoteCount} />
+            <WikiStat icon={<Network className="h-4 w-4" />} label="학습 포인트" value={learningPointCount} />
           </div>
         </div>
 
@@ -135,6 +155,18 @@ export default function NotesPage() {
   );
 }
 
+function WikiStat({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/70 p-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="text-primary/70">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
 function NotesList({ notes }: { notes: NoteListItem[] }) {
   if (notes.length === 0) {
     return (
@@ -148,11 +180,11 @@ function NotesList({ notes }: { notes: NoteListItem[] }) {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="grid gap-3 md:grid-cols-2">
       {notes.map((note) => (
         <li key={note.id}>
           <Link href={`/notes/${encodeURIComponent(note.id)}`}>
-            <Card className="hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
+            <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
               <CardContent className="px-4">
                 <div className="flex items-start gap-2.5">
                   <SourceIcon type={note.source?.type ?? ''} />
@@ -169,6 +201,31 @@ function NotesList({ notes }: { notes: NoteListItem[] }) {
                           {tag}
                         </Badge>
                       ))}
+                    </div>
+                    {note.summary && (
+                      <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                        {note.summary}
+                      </p>
+                    )}
+                    {(note.key_concepts?.length ?? 0) > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {note.key_concepts?.slice(0, 5).map((concept) => (
+                          <Badge key={concept} variant="outline" className="text-[10px]">
+                            <Brain className="mr-1 h-3 w-3" />
+                            {concept}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Quote className="h-3 w-3" />
+                        인용 {note.quote_count ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Network className="h-3 w-3" />
+                        포인트 {note.learning_point_count ?? 0}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -211,6 +268,10 @@ function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
                     {result.snippet}
                   </p>
                 )}
+                <p className="mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Tags className="h-3 w-3" />
+                  이 노트를 열어 관련 개념과 근거를 이어서 확인하세요.
+                </p>
               </CardContent>
             </Card>
           </Link>

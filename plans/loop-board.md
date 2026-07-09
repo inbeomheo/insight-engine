@@ -18,9 +18,11 @@
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
+  2026-07-09 1차: 학습 포인트/복습 질문 스키마, 검색 색인 보강, 중복 경고 next_action 추가 완료.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
+  2026-07-09 1차: `/notes` 지식위키 홈 통계/카드 강화, `/notes/[id]` 학습 포인트·복습 질문·근거 채팅 CTA 추가 완료.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
@@ -32,6 +34,15 @@
   데이터/DB/마이그레이션은 건드리지 않음.
   소비자 grep: `OLLAMA_BASE_URL|ollama_chat|/api/ollama|api_ollama_health|_fetch_ollama_models` 프로덕션 참조 0.
   검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `.venv\Scripts\python.exe -m pytest tests/ -q --tb=no -p no:cacheprovider` 4198 passed, 1 skipped, 11 subtests passed.
+- [x] 2026-07-09 feat(notes): 학습 노트 구조와 LLMWiki 화면 1차 강화.
+  `knowledge_note` 프롬프트/파서/검증에 `learning_points`와 `review_questions`를 추가하고,
+  노트 검색 색인에 학습 포인트·복습 질문·근거 인용을 포함. 중복 학습 409 응답에 `next_action`을 추가.
+  `/notes`는 지식위키 홈처럼 노트/개념/인용/학습 포인트 통계와 요약 카드로 강화하고,
+  `/notes/[id]`는 학습 포인트·복습 질문·근거 기반 채팅 CTA·관련 노트·근거 인용을 전면 노출.
+  데이터/DB/마이그레이션은 건드리지 않음.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `.venv\Scripts\python.exe -m pytest tests/test_note_service.py tests/test_note_index_service.py tests/test_notes_routes.py -q -p no:cacheprovider` 34 passed +
   `.venv\Scripts\python.exe -m pytest tests/ -q --tb=no -p no:cacheprovider` 4198 passed, 1 skipped, 11 subtests passed.
 - [x] 2026-07-09 chore(dead-code): export/QA 데드 엔드포인트 1차 정리.
   `/api/export/{docx,epub,txt,zip,slides,srt,infographic,card-news,summary-card,code-image,newsletter-html,interactive-report}`와

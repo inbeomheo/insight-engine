@@ -152,6 +152,7 @@ def _duplicate_warning_response(reason: str, duplicate_notes: list[dict]):
     return jsonify({
         "error": "[재학습 경고] 이미 학습한 소스와 중복될 수 있습니다.",
         "warning": f"[재학습 경고] {reason_label}로 보이는 기존 노트가 있습니다.",
+        "next_action": "새 노트를 만들기보다 기존 노트를 열어 관련 개념을 이어서 확인하세요.",
         "duplicate_reason": reason,
         "duplicate_notes": duplicate_notes,
     }), 409

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Link2, Quote } from 'lucide-react';
+import { ArrowLeft, Brain, CheckCircle2, ExternalLink, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -85,10 +85,16 @@ export default function NoteDetailPage() {
 
 function NoteBody({ note }: { note: NoteDetail }) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
+  const learningPoints = note.learning_points ?? [];
+  const reviewQuestions = note.review_questions ?? [];
   return (
     <div className="space-y-6">
       {/* 헤더: 제목 + 출처 */}
-      <div>
+      <div className="rounded-2xl border border-border bg-card/60 p-5">
+        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary">
+          <Brain className="h-3 w-3" />
+          지식 노트
+        </div>
         <h1 className="text-xl font-semibold text-foreground leading-snug">
           {note.source?.title || '제목 없음'}
         </h1>
@@ -107,6 +113,12 @@ function NoteBody({ note }: { note: NoteDetail }) {
           ) : note.source?.url ? (
             <span className="text-xs text-muted-foreground/60">{note.source.url}</span>
           ) : null}
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          <MiniStat label="개념" value={note.key_concepts.length} />
+          <MiniStat label="포인트" value={learningPoints.length} />
+          <MiniStat label="인용" value={note.quotes.length} />
+          <MiniStat label="관련" value={note.related_notes?.length ?? 0} />
         </div>
         {note.tags.length > 0 && (
           <div className="flex items-center gap-1.5 mt-3 flex-wrap">
@@ -133,6 +145,47 @@ function NoteBody({ note }: { note: NoteDetail }) {
         </section>
       )}
 
+      {/* 학습 포인트 */}
+      {learningPoints.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-foreground mb-2.5">학습 포인트</h2>
+          <Card className="py-4">
+            <CardContent className="px-4">
+              <ul className="space-y-2.5">
+                {learningPoints.map((point, idx) => (
+                  <li key={`${point}-${idx}`} className="flex gap-2 text-sm leading-relaxed text-foreground/90">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* 복습 질문 */}
+      {reviewQuestions.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-foreground mb-2.5">복습 질문</h2>
+          <div className="space-y-2">
+            {reviewQuestions.map((item, idx) => (
+              <Card key={`${item.question}-${idx}`} className="py-3">
+                <CardContent className="px-4">
+                  <div className="flex gap-2">
+                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.question}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.answer}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 요약 */}
       {note.summary && (
         <section>
@@ -146,6 +199,29 @@ function NoteBody({ note }: { note: NoteDetail }) {
           </Card>
         </section>
       )}
+
+      {/* 근거 기반 채팅 진입 */}
+      <section>
+        <Card className="border-primary/20 bg-primary/5 py-4">
+          <CardContent className="px-4">
+            <div className="flex items-start gap-3">
+              <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary/80" />
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground">근거 기반 채팅</h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  이 노트의 요약·인용·관련 노트를 질문의 근거로 이어갈 수 있습니다.
+                  관련 노트를 먼저 열어 맥락을 넓힌 뒤 홈 채팅에서 질문하세요.
+                </p>
+                <Button asChild size="sm" variant="outline" className="mt-3 h-8">
+                  <Link href={`/?note=${encodeURIComponent(note.id)}`}>
+                    이 노트로 질문 시작
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* 관련 노트 */}
       {note.related_notes && note.related_notes.length > 0 && (
@@ -186,7 +262,7 @@ function NoteBody({ note }: { note: NoteDetail }) {
       {/* 인용구 */}
       {note.quotes.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-foreground mb-2.5">인용</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-2.5">근거 인용</h2>
           <ul className="space-y-2.5">
             {note.quotes.map((quote, idx) => (
               <li key={idx} className="flex gap-2.5 border-l-2 border-primary/30 pl-3">
@@ -202,6 +278,15 @@ function NoteBody({ note }: { note: NoteDetail }) {
           </ul>
         </section>
       )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/70 px-3 py-2">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-sm font-semibold text-foreground">{value}</div>
     </div>
   );
 }

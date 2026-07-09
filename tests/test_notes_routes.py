@@ -25,6 +25,8 @@ def _ai_response():
             {
                 "key_concepts": ["개념"],
                 "summary": "생성된 요약",
+                "learning_points": ["생성된 요약을 복습한다."],
+                "review_questions": [{"question": "무엇을 복습하나?", "answer": "생성된 요약입니다."}],
                 "quotes": [{"text": "중요 문장", "ref": "00:01"}],
                 "tags": ["학습"],
                 "language": "ko",
@@ -41,6 +43,8 @@ def _note(note_id, created_at):
         "source": _source(),
         "key_concepts": ["개념"],
         "summary": "요약",
+        "learning_points": ["요약을 복습한다."],
+        "review_questions": [{"question": "무엇을 복습하나?", "answer": "요약입니다."}],
         "quotes": [{"text": "인용", "ref": "ref"}],
         "tags": ["학습"],
         "language": "ko",
@@ -69,6 +73,8 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     assert data["id"]
     assert data["source"] == _source()
     assert data["summary"] == "생성된 요약"
+    assert data["learning_points"] == ["생성된 요약을 복습한다."]
+    assert data["review_questions"][0]["question"] == "무엇을 복습하나?"
     assert (tmp_path / f"{data['id']}.json").exists()
     assert create_content.call_args.kwargs["style_id"] == "knowledge_note"
     assert create_content.call_args.kwargs["modifiers"]["language"] == "ko"
@@ -108,6 +114,7 @@ def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypat
     body = resp.get_json()
     assert resp.status_code == 409
     assert body["error"].startswith("[재학습 경고]")
+    assert "기존 노트" in body["next_action"]
     assert body["duplicate_reason"] == "same_url"
     assert body["duplicate_notes"][0]["id"] == "existing"
     search_notes.assert_not_called()
@@ -143,6 +150,7 @@ def test_post_notes_similar_content_returns_warning_without_ai(tmp_path, monkeyp
     body = resp.get_json()
     assert resp.status_code == 409
     assert body["duplicate_reason"] == "similar_content"
+    assert "기존 노트" in body["next_action"]
     assert body["duplicate_notes"] == similar
     search_notes.assert_called_once()
     create_content.assert_not_called()
@@ -263,7 +271,12 @@ def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
         detail_resp = client.get("/api/notes/new", headers=_H)
 
     assert list_resp.status_code == 200
-    assert [item["id"] for item in list_resp.get_json()["notes"]] == ["new", "old"]
+    listed = list_resp.get_json()["notes"]
+    assert [item["id"] for item in listed] == ["new", "old"]
+    assert listed[0]["summary"] == "요약"
+    assert listed[0]["key_concepts"] == ["개념"]
+    assert listed[0]["quote_count"] == 1
+    assert listed[0]["learning_point_count"] == 1
     assert detail_resp.status_code == 200
     detail = detail_resp.get_json()
     assert detail["id"] == "new"
