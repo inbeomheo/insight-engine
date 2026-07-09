@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Brain, CheckCircle2, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import {
   getCompletedStudyItems,
   getFacetLabel,
   getNoteStudyCardOrder,
+  getNoteStudyQueueCount,
   getNotesNeedingReview,
   getNoteSourceLabel,
   getNoteStudyCounts,
@@ -464,6 +465,14 @@ function WikiMap({
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
+  const [studyQueueOpen, setStudyQueueOpen] = useState(true);
+  const studyQueueCounts = {
+    'review-needed': reviewNeededNotes.length,
+    'study-start': studyStartNotes.length,
+    completed: completedStudyNotes.length,
+    recent: studyResumeNotes.length,
+  };
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts);
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
     return { order: index >= 0 ? index + 1 : 99 };
@@ -572,164 +581,195 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {studyStartNotes.length > 0 && (
-          <Card className="py-4" style={studyCardOrderStyle('study-start')}>
+        {studyCardOrder.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground">복습 시작</h2>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                아직 체크하지 않은 최근 학습 노트부터 시작하세요.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {studyStartNotes.map((item) => (
-                  <li key={item.note.id}>
-                    <Link
-                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
-                      className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-xs font-medium text-foreground">
-                          {item.note.title || '제목 없음'}
-                        </p>
-                        <span className="shrink-0 text-[10px] font-semibold text-primary">
-                          학습 {item.summary.total}개
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {formatDate(item.note.created_at)}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+              <button
+                type="button"
+                onClick={() => setStudyQueueOpen((open) => !open)}
+                aria-expanded={studyQueueOpen}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                    학습 큐
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    복습할 노트를 우선순위대로 모았습니다.
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  {totalStudyQueueItems}개 항목
+                  <ChevronDown className={`h-4 w-4 transition-transform ${studyQueueOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
 
-        {reviewNeededNotes.length > 0 && (
-          <Card className="border-primary/20 bg-primary/5 py-4" style={studyCardOrderStyle('review-needed')}>
-            <CardContent className="px-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground">복습 필요</h2>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                진행률이 낮은 미완료 노트부터 우선 이어가세요.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {reviewNeededNotes.map((item) => {
-                  const remaining = item.summary.total - item.summary.completed;
-                  return (
-                    <li key={item.note.id}>
-                      <Link
-                        href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
-                        className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-xs font-medium text-foreground">
-                            {item.note.title || '제목 없음'}
-                          </p>
-                          <span className="shrink-0 text-[10px] font-semibold text-primary">
-                            남은 {remaining}개
-                          </span>
+              {studyQueueOpen && (
+                <div className="mt-3 grid gap-3">
+                  {studyStartNotes.length > 0 && (
+                    <Card className="bg-background/80 py-4" style={studyCardOrderStyle('study-start')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">복습 시작</h2>
                         </div>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary"
-                            style={{ width: `${item.summary.percent}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          {item.summary.completed}/{item.summary.total} 완료 · {item.summary.percent}%
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          아직 체크하지 않은 최근 학습 노트부터 시작하세요.
                         </p>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+                        <ul className="mt-3 space-y-2">
+                          {studyStartNotes.map((item) => (
+                            <li key={item.note.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </p>
+                                  <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                    학습 {item.summary.total}개
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-[10px] text-muted-foreground">
+                                  {formatDate(item.note.created_at)}
+                                </p>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
 
-        {completedStudyNotes.length > 0 && (
-          <Card className="py-4" style={studyCardOrderStyle('completed')}>
-            <CardContent className="px-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground">완료 학습</h2>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                최근 완료한 복습 노트를 따로 모아 성취를 확인하세요.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {completedStudyNotes.map((item) => (
-                  <li key={item.note.id}>
-                    <Link
-                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
-                      className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-xs font-medium text-foreground">
-                          {item.note.title || '제목 없음'}
+                  {reviewNeededNotes.length > 0 && (
+                    <Card className="border-primary/20 bg-background/80 py-4" style={studyCardOrderStyle('review-needed')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">복습 필요</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          진행률이 낮은 미완료 노트부터 우선 이어가세요.
                         </p>
-                        <span className="shrink-0 text-[10px] font-semibold text-primary">
-                          완료
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {item.summary.completed}/{item.summary.total} 완료 · {formatStudyUpdatedAt(item.updatedAt)}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
+                        <ul className="mt-3 space-y-2">
+                          {reviewNeededNotes.map((item) => {
+                            const remaining = item.summary.total - item.summary.completed;
+                            return (
+                              <li key={item.note.id}>
+                                <Link
+                                  href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                  className="block rounded-lg border border-primary/20 bg-background px-3 py-2 transition-colors hover:border-primary/50"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-xs font-medium text-foreground">
+                                      {item.note.title || '제목 없음'}
+                                    </p>
+                                    <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                      남은 {remaining}개
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${item.summary.percent}%` }}
+                                    />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    {item.summary.completed}/{item.summary.total} 완료 · {item.summary.percent}%
+                                  </p>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
 
-        {studyResumeNotes.length > 0 && (
-          <Card className="border-primary/20 bg-primary/5 py-4" style={studyCardOrderStyle('recent')}>
-            <CardContent className="px-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground">최근 복습</h2>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                우선·완료 목록과 겹치지 않는 최근 체크 노트입니다.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {studyResumeNotes.map((item) => {
-                  const completed = item.summary.completed >= item.summary.total;
-                  return (
-                    <li key={item.note.id}>
-                      <Link
-                        href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
-                        className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-xs font-medium text-foreground">
-                            {item.note.title || '제목 없음'}
-                          </p>
-                          <span className="shrink-0 text-[10px] font-semibold text-primary">
-                            {completed ? '완료' : `${item.summary.percent}%`}
-                          </span>
+                  {completedStudyNotes.length > 0 && (
+                    <Card className="bg-background/80 py-4" style={studyCardOrderStyle('completed')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">완료 학습</h2>
                         </div>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary"
-                            style={{ width: `${item.summary.percent}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          {item.summary.completed}/{item.summary.total} 완료
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          최근 완료한 복습 노트를 따로 모아 성취를 확인하세요.
                         </p>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <ul className="mt-3 space-y-2">
+                          {completedStudyNotes.map((item) => (
+                            <li key={item.note.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </p>
+                                  <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                    완료
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-[10px] text-muted-foreground">
+                                  {item.summary.completed}/{item.summary.total} 완료 · {formatStudyUpdatedAt(item.updatedAt)}
+                                </p>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {studyResumeNotes.length > 0 && (
+                    <Card className="border-primary/20 bg-background/80 py-4" style={studyCardOrderStyle('recent')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">최근 복습</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          우선·완료 목록과 겹치지 않는 최근 체크 노트입니다.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {studyResumeNotes.map((item) => {
+                            const completed = item.summary.completed >= item.summary.total;
+                            return (
+                              <li key={item.note.id}>
+                                <Link
+                                  href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                  className="block rounded-lg border border-primary/20 bg-background px-3 py-2 transition-colors hover:border-primary/50"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-xs font-medium text-foreground">
+                                      {item.note.title || '제목 없음'}
+                                    </p>
+                                    <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                      {completed ? '완료' : `${item.summary.percent}%`}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${item.summary.percent}%` }}
+                                    />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    {item.summary.completed}/{item.summary.total} 완료
+                                  </p>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -79,6 +79,10 @@ export function getNoteStudyCardOrder(
   return NOTE_STUDY_CARD_PRIORITY.filter((kind) => counts[kind] > 0);
 }
 
+export function getNoteStudyQueueCount(counts: Record<NoteStudyCardKind, number>): number {
+  return getNoteStudyCardOrder(counts).reduce((sum, kind) => sum + counts[kind], 0);
+}
+
 export function getNoteStudyCounts(note: NoteListItem): NoteStudyCounts {
   return {
     learning: note.learning_point_count ?? 0,

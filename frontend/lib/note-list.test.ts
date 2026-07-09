@@ -6,6 +6,7 @@ import {
   getCompletedStudyItems,
   getFacetLabel,
   getNoteStudyCardOrder,
+  getNoteStudyQueueCount,
   getNotesNeedingReview,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
@@ -212,6 +213,15 @@ describe('note-list', () => {
       completed: 0,
       recent: 1,
     })).toEqual(['review-needed', 'recent']);
+  });
+
+  it('counts visible study queue items only', () => {
+    expect(getNoteStudyQueueCount({
+      'study-start': 0,
+      'review-needed': 2,
+      completed: 0,
+      recent: 1,
+    })).toBe(3);
   });
 
   it('classifies and filters notes by study status', () => {
