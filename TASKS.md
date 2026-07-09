@@ -286,10 +286,6 @@
 ### F3-19. 콘텐츠 유사도 비교 — 난이도 M
 - [P3-36] services/similarity_service.py: 두 콘텐츠 간 의미적 유사도 계산 (임베딩) | 검증: pytest
 
-### F3-20. 자동 태깅 시스템 — 난이도 M
-- [P3-37] services/auto_tag_service.py: 콘텐츠 → 자동 태그/카테고리 분류 | 검증: pytest
-- [P3-38] frontend/components/result/AutoTags.tsx: 태그 표시 + 편집 UI | 검증: build
-
 ### F3-21. 콘텐츠 브리프 생성 — 난이도 M
 - [P3-39] services/brief_service.py: 주제/키워드 → 콘텐츠 브리프 (개요, 타겟, 키워드, 구조) | 검증: pytest
 
@@ -303,10 +299,6 @@
 
 ### F3-24. AI 코멘터리 (해설) — 난이도 M
 - [P3-43] services/commentary_service.py: 원본 콘텐츠에 AI 해설/주석 추가 | 검증: pytest
-
-### F3-25. 스마트 요약 (단계별) — 난이도 M
-- [P3-44] services/progressive_summary_service.py: 1줄 요약 → 3줄 요약 → 전체 요약 단계별 제공 | 검증: pytest
-- [P3-45] frontend/components/result/ProgressiveSummary.tsx: 단계별 요약 토글 UI | 검증: build
 
 ---
 

@@ -54,6 +54,7 @@
   14차: 프론트 소비 0인 Notion 임포트, RSS 구독, 북마크 파싱 라우트와 전용 서비스/테스트, RSS 구독 스케줄러 작업 제거 완료.
   15차: 프론트 소비 0인 `/api/feedback/nps` 라우트와 전용 테스트·재추가 유도 문서 항목 제거 완료.
   16차: 프론트 소비 0인 `/api/generate-thumbnail`, `/api/agent/research`와 전용 이미지 생성·웹 리서치 에이전트 서비스/테스트 제거 완료.
+  17차: 프론트 소비 0인 `/api/memory`, `/api/auto-tags`, `/api/progressive-summary` 라우트와 전용 자동태깅·단계요약 서비스/테스트 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -104,6 +105,12 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 메모리·자동태깅·단계요약 엔드포인트 제거.
+  프론트 소비자가 없는 `GET/PUT/DELETE /api/memory`, `POST /api/auto-tags`, `POST /api/progressive-summary` 라우트를 제거.
+  생성 컨텍스트에서 쓰이는 `memory_service`는 보존하고, 라우트 전용 고아 서비스 `auto_tag_service`, `progressive_summary_service`와 전용 테스트를 삭제.
+  검증: `.venv\Scripts\python.exe -m pytest tests/test_advanced_routes_cov.py tests/test_memory_service.py -q` 41 passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 chore(dead-code): 썸네일·리서치 에이전트 엔드포인트 제거.
   프론트 소비자가 없고 전용 테스트만 남은 `POST /api/generate-thumbnail`, `POST /api/agent/research`를 제거.
   라우트 전용 고아 서비스 `thumbnail_service`, `image_gen_service`, `web_research_agent`와 전용 테스트 3개를 함께 삭제하고, 재추가 유도 문서 항목을 정리.
