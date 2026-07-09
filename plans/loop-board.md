@@ -67,10 +67,16 @@
   6차: `/notes` 홈에 미시작/진행중/완료 학습 상태 필터와 노트별 상태 배지를 추가.
   7차: `/notes/[id]` 문서 브리핑 카드로 출처·문서 구성·학습 상태·근거 연결을 한눈에 요약.
   8차: `/notes/[id]` 문서 브리핑에 다음 행동 카드를 추가해 복습 시작/남은 항목/완료 상태를 바로 안내.
+  9차: `/notes/[id]` 문서 브리핑 빠른 액션을 학습 상태와 맞추고 첫 액션을 추천 CTA로 강조.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 문서 브리핑 추천 액션 강화.
+  `/notes/[id]` 문서 브리핑의 첫 빠른 액션을 `추천:` CTA로 강조하고, 복습이 완료된 노트는 다시 복습으로 보내지 않고 근거 Q&A/관련 노트/인용 확장으로 이어지게 조정.
+  공용 `note-wiki-brief` 테스트에 완료 상태 빠른 액션 경로를 추가해 학습 상태와 추천 액션이 어긋나지 않도록 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 20 passed.
 - [x] 2026-07-10 feat(notes): 문서 브리핑 다음 행동 추가.
   `/notes/[id]` 문서 브리핑에 `다음 행동` 카드를 추가해 미시작이면 복습 시작, 진행 중이면 남은 항목 수, 완료면 전체 완료 상태를 바로 보여줌.
   공용 `note-wiki-brief` 유틸과 테스트를 갱신해 진행 중/미시작/완료/학습 항목 없음 경로를 검증.

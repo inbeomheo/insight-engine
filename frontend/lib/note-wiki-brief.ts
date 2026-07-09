@@ -82,7 +82,7 @@ export function buildNoteWikiBrief(input: NoteWikiBriefInput): NoteWikiBriefItem
 export function buildNoteWikiQuickActions(input: NoteWikiBriefInput): NoteWikiQuickAction[] {
   const actions: NoteWikiQuickAction[] = [];
 
-  if (input.studySummary.total > 0) {
+  if (input.studySummary.total > 0 && input.studySummary.completed < input.studySummary.total) {
     actions.push({
       href: '#study-progress',
       label: input.studySummary.completed > 0 ? '이어 복습' : '복습 시작',

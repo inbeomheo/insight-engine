@@ -669,13 +669,17 @@ function NoteWikiBrief({ items, actions }: { items: NoteWikiBriefItem[]; actions
         </div>
         {actions.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {actions.map((action) => (
+            {actions.map((action, index) => (
               <a
                 key={`${action.href}-${action.label}`}
                 href={action.href}
-                className="inline-flex items-center rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                  index === 0
+                    ? 'border-primary/30 bg-primary/5 font-medium text-primary hover:border-primary/50'
+                    : 'border-border bg-background/80 text-muted-foreground hover:border-primary/40 hover:text-primary'
+                }`}
               >
-                {action.label}
+                {index === 0 ? `추천: ${action.label}` : action.label}
               </a>
             ))}
           </div>

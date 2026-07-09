@@ -55,4 +55,21 @@ describe('note-wiki-brief', () => {
       { href: '#quotes', label: '인용 보기' },
     ]);
   });
+
+  it('moves completed study notes to evidence expansion actions', () => {
+    expect(
+      buildNoteWikiQuickActions({
+        sourceType: 'youtube',
+        outlineItems: [],
+        studySummary: { completed: 3, total: 3, percent: 100 },
+        quoteCount: 1,
+        relatedNoteCount: 1,
+        hasLinkedReport: true,
+      })
+    ).toEqual([
+      { href: '#chat', label: '근거 Q&A' },
+      { href: '#related-notes', label: '관련 노트' },
+      { href: '#quotes', label: '인용 보기' },
+    ]);
+  });
 });
