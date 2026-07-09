@@ -4,6 +4,7 @@ import {
   clearNoteStudyProgress,
   getNoteStudyProgressKey,
   getNoteStudySummary,
+  getVisibleNoteStudyIndexes,
   normalizeNoteStudyProgress,
   readNoteStudyProgress,
   toggleNoteStudyItem,
@@ -73,6 +74,12 @@ describe('note-study-progress', () => {
       review: [],
       updatedAt: null,
     });
+  });
+
+  it('returns visible study indexes for all or unfinished-only mode', () => {
+    expect(getVisibleNoteStudyIndexes(4, [2, 0, 99], true)).toEqual([0, 1, 2, 3]);
+    expect(getVisibleNoteStudyIndexes(4, [2, 0, 99], false)).toEqual([1, 3]);
+    expect(getVisibleNoteStudyIndexes(-1, [0], false)).toEqual([]);
   });
 
   it('builds markdown with checked study items and review answers', () => {

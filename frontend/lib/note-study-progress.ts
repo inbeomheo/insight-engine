@@ -74,6 +74,18 @@ export function getNoteStudySummary(
   };
 }
 
+export function getVisibleNoteStudyIndexes(
+  total: number,
+  completedIndexes: number[],
+  showCompleted: boolean
+): number[] {
+  const count = Math.max(0, total);
+  const completed = new Set(sanitizeIndexes(completedIndexes, count));
+  return Array.from({ length: count }, (_, index) => index).filter(
+    (index) => showCompleted || !completed.has(index)
+  );
+}
+
 export function toggleNoteStudyItem(
   progress: NoteStudyProgress,
   kind: NoteStudyKind,

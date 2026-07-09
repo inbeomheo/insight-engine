@@ -53,6 +53,7 @@
   4차: 노트 상세의 학습 포인트/복습 질문에 브라우저 로컬 복습 체크와 진행률 카드를 추가.
   5차: 노트 상세 복습 진행 상태를 Markdown 체크리스트로 복사하는 기능 추가.
   6차: 노트 상세 복습 질문 답변을 가리고 열어보는 능동 회상 학습 흐름 추가.
+  7차: 노트 상세에서 완료한 학습 포인트/복습 질문을 숨기고 남은 항목에 집중하는 필터 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -67,6 +68,11 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 완료한 복습 항목 숨기기 추가.
+  `/notes/[id]` 복습 진행 카드에 `완료 숨기기/전체 보기` 토글을 추가해 체크 완료한 학습 포인트와 복습 질문을 숨기고 남은 항목에 집중할 수 있게 개선.
+  공용 `note-study-progress` 유틸에 표시 인덱스 계산 함수를 추가하고 단위 테스트로 전체 보기/미완료만 보기 경로를 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts note-list.test.ts` 18 passed.
 - [x] 2026-07-10 feat(notes): 복습 질문 답변 가리기 추가.
   `/notes/[id]` 복습 질문에서 답변을 기본으로 가리고, 사용자가 먼저 떠올린 뒤 개별/전체 답을 열어볼 수 있게 개선.
   공용 `note-review-session` 유틸과 테스트를 추가해 답변 표시 상태 정규화, 개별 토글, 전체 표시 전환을 검증.

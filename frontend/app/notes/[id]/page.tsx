@@ -26,6 +26,7 @@ import {
 import {
   buildNoteStudyMarkdown,
   getNoteStudySummary,
+  getVisibleNoteStudyIndexes,
   normalizeNoteStudyProgress,
   readNoteStudyProgress,
   toggleNoteStudyItem,
@@ -174,6 +175,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     normalizeNoteStudyProgress(null, studyCounts)
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
   );
@@ -182,6 +184,14 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     [studyCounts, studyProgress]
   );
   const allReviewAnswersVisible = reviewQuestions.length > 0 && reviewAnswerVisible.every(Boolean);
+  const visibleLearningIndexes = useMemo(
+    () => getVisibleNoteStudyIndexes(learningPoints.length, studyProgress.learning, showCompletedStudyItems),
+    [learningPoints.length, showCompletedStudyItems, studyProgress.learning]
+  );
+  const visibleReviewIndexes = useMemo(
+    () => getVisibleNoteStudyIndexes(reviewQuestions.length, studyProgress.review, showCompletedStudyItems),
+    [reviewQuestions.length, showCompletedStudyItems, studyProgress.review]
+  );
   const wikiBriefInput = useMemo(() => ({
     sourceType: note.source?.type,
     outlineItems,
@@ -352,6 +362,16 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                   <Button
                     type="button"
                     size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={() => setShowCompletedStudyItems((value) => !value)}
+                    disabled={studySummary.completed === 0}
+                  >
+                    {showCompletedStudyItems ? '완료 숨기기' : '전체 보기'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
                     variant="ghost"
                     className="h-8 text-xs"
                     onClick={resetStudyProgress}
@@ -409,27 +429,34 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
           <h2 className="text-sm font-semibold text-foreground mb-2.5">학습 포인트</h2>
           <Card className="py-4">
             <CardContent className="px-4">
-              <ul className="space-y-2.5">
-                {learningPoints.map((point, idx) => (
-                  <li key={`${point}-${idx}`}>
-                    <button
-                      type="button"
-                      onClick={() => toggleStudyProgress('learning', idx)}
-                      aria-pressed={studyProgress.learning.includes(idx)}
-                      className="flex w-full gap-2 rounded-lg px-1 py-1 text-left text-sm leading-relaxed text-foreground/90 transition-colors hover:bg-muted/50"
-                    >
-                      <CheckCircle2
-                        className={`mt-0.5 h-4 w-4 shrink-0 ${
-                          studyProgress.learning.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
-                        }`}
-                      />
-                      <span className={studyProgress.learning.includes(idx) ? 'text-muted-foreground line-through' : ''}>
-                        {point}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {visibleLearningIndexes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">모든 학습 포인트를 완료했습니다.</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {visibleLearningIndexes.map((idx) => {
+                    const point = learningPoints[idx];
+                    return (
+                      <li key={`${point}-${idx}`}>
+                        <button
+                          type="button"
+                          onClick={() => toggleStudyProgress('learning', idx)}
+                          aria-pressed={studyProgress.learning.includes(idx)}
+                          className="flex w-full gap-2 rounded-lg px-1 py-1 text-left text-sm leading-relaxed text-foreground/90 transition-colors hover:bg-muted/50"
+                        >
+                          <CheckCircle2
+                            className={`mt-0.5 h-4 w-4 shrink-0 ${
+                              studyProgress.learning.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
+                            }`}
+                          />
+                          <span className={studyProgress.learning.includes(idx) ? 'text-muted-foreground line-through' : ''}>
+                            {point}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </section>
@@ -461,49 +488,60 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
             </Button>
           </div>
           <div className="space-y-2">
-            {reviewQuestions.map((item, idx) => (
-              <Card key={`${item.question}-${idx}`} className="py-3">
+            {visibleReviewIndexes.length === 0 ? (
+              <Card className="py-3">
                 <CardContent className="px-4">
-                  <div className="flex gap-2">
-                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.question}</p>
-                      {item.answer?.trim() ? (
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                          {reviewAnswerVisible[idx] ? item.answer : '답을 떠올린 뒤 열어보세요.'}
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">등록된 답변이 없습니다.</p>
-                      )}
-                      {item.answer?.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => toggleReviewAnswer(idx)}
-                          aria-expanded={reviewAnswerVisible[idx]}
-                          className="mt-2 mr-1.5 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                        >
-                          {reviewAnswerVisible[idx] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          {reviewAnswerVisible[idx] ? '답 가리기' : '답 보기'}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => toggleStudyProgress('review', idx)}
-                        aria-pressed={studyProgress.review.includes(idx)}
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                      >
-                        <CheckCircle2
-                          className={`h-3 w-3 ${
-                            studyProgress.review.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
-                          }`}
-                        />
-                        {studyProgress.review.includes(idx) ? '복습 완료' : '복습 체크'}
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-sm text-muted-foreground">모든 복습 질문을 완료했습니다.</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              visibleReviewIndexes.map((idx) => {
+                const item = reviewQuestions[idx];
+                return (
+                  <Card key={`${item.question}-${idx}`} className="py-3">
+                    <CardContent className="px-4">
+                      <div className="flex gap-2">
+                        <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{item.question}</p>
+                          {item.answer?.trim() ? (
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                              {reviewAnswerVisible[idx] ? item.answer : '답을 떠올린 뒤 열어보세요.'}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">등록된 답변이 없습니다.</p>
+                          )}
+                          {item.answer?.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => toggleReviewAnswer(idx)}
+                              aria-expanded={reviewAnswerVisible[idx]}
+                              className="mt-2 mr-1.5 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              {reviewAnswerVisible[idx] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              {reviewAnswerVisible[idx] ? '답 가리기' : '답 보기'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleStudyProgress('review', idx)}
+                            aria-pressed={studyProgress.review.includes(idx)}
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                          >
+                            <CheckCircle2
+                              className={`h-3 w-3 ${
+                                studyProgress.review.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
+                              }`}
+                            />
+                            {studyProgress.review.includes(idx) ? '복습 완료' : '복습 체크'}
+                          </button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </div>
         </section>
       )}
