@@ -913,16 +913,23 @@ function WikiMap({
                                   </p>
                                 </div>
                                 <div className="flex shrink-0 flex-col items-end gap-1">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 gap-1 px-2 text-[10px]"
-                                    onClick={() => copyQnaStudyCard(card)}
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                    카드 복사
-                                  </Button>
+                                  <div className="flex flex-wrap justify-end gap-1.5">
+                                    {card.sourceHref && (
+                                      <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[10px]">
+                                        <Link href={card.sourceHref}>원본 노트</Link>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 gap-1 px-2 text-[10px]"
+                                      onClick={() => copyQnaStudyCard(card)}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                      카드 복사
+                                    </Button>
+                                  </div>
                                   {qnaCardCopyStatus?.id === card.id && (
                                     <span className={`text-[10px] ${qnaCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'}`}>
                                       {qnaCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}

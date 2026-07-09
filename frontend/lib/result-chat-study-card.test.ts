@@ -50,13 +50,28 @@ describe('result-chat-study-card', () => {
       question: '질문',
       answer: '답',
       createdAt: '2026-07-10T00:00:00.000Z',
+      sourceHref: '/notes/note-1',
     })).toMatchObject({
       id: 'qna-2026-07-10T00%3A00%3A00.000Z-%EB%85%B8%ED%8A%B8-%EC%A7%88%EB%AC%B8',
       title: '노트',
       question: '질문',
       answer: '답',
       createdAt: '2026-07-10T00:00:00.000Z',
+      sourceHref: '/notes/note-1',
     });
+  });
+
+  it('adds a source note link only for local note hrefs', () => {
+    expect(buildResultChatStudyCardMarkdown({
+      title: '노트',
+      question: '질문',
+      answer: '답',
+      sourceHref: '/notes/note-1',
+    })).toContain('원본 노트: /notes/note-1');
+
+    expect(buildResultChatStudyCard({
+      sourceHref: 'https://example.com/notes/note-1',
+    }).sourceHref).toBeUndefined();
   });
 
   it('saves and reads local study cards newest first', () => {
@@ -77,10 +92,12 @@ describe('result-chat-study-card', () => {
       question: '최근 질문',
       answer: '최근 답',
       createdAt: '2026-07-10T00:00:00.000Z',
+      sourceHref: '/notes/recent',
     });
 
     expect(JSON.parse(store.get(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY) ?? '[]')).toHaveLength(2);
     expect(readResultChatStudyCards(storage).map((card) => card.title)).toEqual(['최근 카드', '이전 카드']);
+    expect(readResultChatStudyCards(storage)[0].sourceHref).toBe('/notes/recent');
   });
 
   it('ignores malformed local study card storage', () => {

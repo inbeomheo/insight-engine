@@ -20,6 +20,7 @@ interface ResultChatPanelProps {
   placeholder?: string;
   suggestedQuestions?: string[];
   studyCardTitle?: string;
+  studyCardSourceHref?: string;
 }
 
 interface ChatMessage extends ResultChatMessage {
@@ -37,6 +38,7 @@ export default function ResultChatPanel({
   placeholder = '예: 이 영상의 핵심 실행 단계는?',
   suggestedQuestions = [],
   studyCardTitle,
+  studyCardSourceHref,
 }: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,6 +91,7 @@ export default function ResultChatPanel({
         question,
         answer: message.content,
         sources: message.rag_sources,
+        sourceHref: studyCardSourceHref,
       };
       let card = buildResultChatStudyCard(cardInput);
       try {
@@ -103,7 +106,7 @@ export default function ResultChatPanel({
     } catch {
       setStudyCardCopyStatus({ index, status: 'error' });
     }
-  }, [messages, studyCardTitle, title]);
+  }, [messages, studyCardSourceHref, studyCardTitle, title]);
 
   useEffect(() => {
     if (!studyCardCopyStatus) return;

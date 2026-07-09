@@ -8,6 +8,7 @@ export interface ResultChatStudyCardInput {
   answer?: string;
   sources?: Pick<ResultChatSource, 'title' | 'score' | 'snippet'>[];
   createdAt?: string;
+  sourceHref?: string;
 }
 
 export interface ResultChatStudyCard {
@@ -22,6 +23,7 @@ export interface ResultChatStudyCard {
   }>;
   markdown: string;
   createdAt: string;
+  sourceHref?: string;
 }
 
 function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
@@ -41,6 +43,13 @@ function buildCardId(input: Pick<ResultChatStudyCard, 'title' | 'question' | 'cr
   return `qna-${encodeURIComponent(input.createdAt)}-${encodeURIComponent(input.title).slice(0, 24)}-${encodeURIComponent(input.question).slice(0, 24)}`;
 }
 
+function cleanSourceHref(value: string | undefined): string | undefined {
+  const cleaned = value?.trim();
+  if (!cleaned) return undefined;
+  if (cleaned.startsWith('/notes/')) return cleaned;
+  return undefined;
+}
+
 function parseStudyCard(value: unknown): ResultChatStudyCard | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Partial<ResultChatStudyCard>;
@@ -53,6 +62,7 @@ function parseStudyCard(value: unknown): ResultChatStudyCard | null {
     sources: normalizeSources(raw.sources),
     markdown: String(raw.markdown),
     createdAt: String(raw.createdAt),
+    sourceHref: cleanSourceHref(raw.sourceHref),
   };
 }
 
@@ -61,9 +71,11 @@ export function buildResultChatStudyCardMarkdown(input: ResultChatStudyCardInput
   const question = cleanMarkdownValue(input.question, '질문 없음');
   const answer = cleanMarkdownValue(input.answer, '답변 없음');
   const sources = normalizeSources(input.sources);
+  const sourceHref = cleanSourceHref(input.sourceHref);
 
   return [
     `# 근거 Q&A 복습 카드: ${title}`,
+    ...(sourceHref ? ['', `원본 노트: ${sourceHref}`] : []),
     '',
     '## 질문',
     question,
@@ -93,7 +105,8 @@ export function buildResultChatStudyCard(input: ResultChatStudyCardInput): Resul
   const question = cleanMarkdownValue(input.question, '질문 없음');
   const answer = cleanMarkdownValue(input.answer, '답변 없음');
   const sources = normalizeSources(input.sources);
-  const markdown = buildResultChatStudyCardMarkdown({ title, question, answer, sources });
+  const sourceHref = cleanSourceHref(input.sourceHref);
+  const markdown = buildResultChatStudyCardMarkdown({ title, question, answer, sources, sourceHref });
   return {
     id: buildCardId({ title, question, createdAt }),
     title,
@@ -102,6 +115,7 @@ export function buildResultChatStudyCard(input: ResultChatStudyCardInput): Resul
     sources,
     markdown,
     createdAt,
+    sourceHref,
   };
 }
 

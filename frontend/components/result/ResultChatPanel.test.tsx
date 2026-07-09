@@ -155,7 +155,7 @@ describe('ResultChatPanel rag_sources', () => {
       }],
     });
 
-    await renderPanel({ studyCardTitle: '노트 제목' });
+    await renderPanel({ studyCardTitle: '노트 제목', studyCardSourceHref: '/notes/n1' });
     await openPanel();
     await submitQuestion('무엇을 복습할까?');
 
@@ -172,6 +172,8 @@ describe('ResultChatPanel rag_sources', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith([
       '# 근거 Q&A 복습 카드: 노트 제목',
       '',
+      '원본 노트: /notes/n1',
+      '',
       '## 질문',
       '무엇을 복습할까?',
       '',
@@ -185,6 +187,7 @@ describe('ResultChatPanel rag_sources', () => {
       title: '노트 제목',
       question: '무엇을 복습할까?',
       answer: '핵심 답변',
+      sourceHref: '/notes/n1',
     });
     expect(document.body.textContent).toContain('복사+저장 완료');
   });

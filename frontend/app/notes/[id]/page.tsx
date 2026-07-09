@@ -743,6 +743,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
               placeholder="예: 이 노트에서 바로 실행할 수 있는 행동은?"
               suggestedQuestions={chatSuggestedQuestions}
               studyCardTitle={note.source?.title || '제목 없음'}
+              studyCardSourceHref={`/notes/${encodeURIComponent(note.id)}`}
             />
           </CardContent>
         </Card>
