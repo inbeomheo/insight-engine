@@ -3,13 +3,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Brain, FileText, Network, Quote, Search, Tags, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
+import {
+  filterNotesByFacet,
+  getFacetLabel,
+  getNoteSourceLabel,
+  sortNotesByRecent,
+  type NoteFacet,
+} from '@/lib/note-list';
 
 function SourceIcon({ type }: { type: string }) {
   if (type === 'youtube') return <Youtube className="h-4 w-4 text-red-500/80 shrink-0" />;
@@ -35,16 +42,11 @@ function topCounts(items: string[], limit: number): Array<{ label: string; count
     .slice(0, limit);
 }
 
-function sourceLabel(type?: string): string {
-  if (type === 'youtube') return 'YouTube';
-  if (type === 'article') return 'Article';
-  return '기타';
-}
-
 export default function NotesPage() {
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
   const [query, setQuery] = useState('');
+  const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +78,7 @@ export default function NotesPage() {
       return;
     }
     setQuery(q);
+    setActiveFacet(null);
     setSearching(true);
     setError(null);
     try {
@@ -98,6 +101,15 @@ export default function NotesPage() {
     setSearchResults(null);
   }, []);
 
+  const handleFacetSelect = useCallback((facet: NoteFacet) => {
+    setSearchResults(null);
+    setActiveFacet(facet);
+  }, []);
+
+  const handleFacetClear = useCallback(() => {
+    setActiveFacet(null);
+  }, []);
+
   const isSearchMode = searchResults !== null;
   const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;
   const quoteCount = notes.reduce((sum, note) => sum + (note.quote_count ?? 0), 0);
@@ -111,7 +123,7 @@ export default function NotesPage() {
     [notes],
   );
   const sourceGroups = useMemo(
-    () => topCounts(notes.map((note) => sourceLabel(note.source?.type)), 4),
+    () => topCounts(notes.map((note) => getNoteSourceLabel(note.source?.type)), 4),
     [notes],
   );
   const recentNotes = useMemo(
@@ -119,6 +131,10 @@ export default function NotesPage() {
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3),
     [notes],
+  );
+  const visibleNotes = useMemo(
+    () => sortNotesByRecent(filterNotesByFacet(notes, activeFacet)),
+    [notes, activeFacet],
   );
 
   return (
@@ -185,7 +201,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             recentNotes={recentNotes}
-            onSearch={(term) => { void runSearch(term); }}
+            onFacetSelect={handleFacetSelect}
           />
         )}
 
@@ -199,7 +215,20 @@ export default function NotesPage() {
         ) : isSearchMode ? (
           <SearchResultsList results={searchResults} />
         ) : (
-          <NotesList notes={notes} />
+          <>
+            {activeFacet && (
+              <ActiveFacetBar
+                facet={activeFacet}
+                resultCount={visibleNotes.length}
+                totalCount={notes.length}
+                onClear={handleFacetClear}
+              />
+            )}
+            <NotesList
+              notes={visibleNotes}
+              emptyText={activeFacet ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
+            />
+          </>
         )}
       </div>
     </div>
@@ -218,18 +247,45 @@ function WikiStat({ icon, label, value }: { icon: ReactNode; label: string; valu
   );
 }
 
+function ActiveFacetBar({
+  facet,
+  resultCount,
+  totalCount,
+  onClear,
+}: {
+  facet: NoteFacet;
+  resultCount: number;
+  totalCount: number;
+  onClear: () => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-semibold text-primary">{getFacetLabel(facet)}</span>
+        <span className="text-xs text-muted-foreground">
+          {resultCount}/{totalCount}개 노트
+        </span>
+      </div>
+      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
+        <X className="h-3.5 w-3.5" />
+        필터 해제
+      </Button>
+    </div>
+  );
+}
+
 function WikiMap({
   topConcepts,
   topTags,
   sourceGroups,
   recentNotes,
-  onSearch,
+  onFacetSelect,
 }: {
   topConcepts: Array<{ label: string; count: number }>;
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   recentNotes: NoteListItem[];
-  onSearch: (term: string) => void;
+  onFacetSelect: (facet: NoteFacet) => void;
 }) {
   return (
     <section className="mb-6 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
@@ -253,7 +309,7 @@ function WikiMap({
                   <button
                     key={item.label}
                     type="button"
-                    onClick={() => onSearch(item.label)}
+                    onClick={() => onFacetSelect({ type: 'concept', value: item.label })}
                     className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
                   >
                     <Brain className="h-3 w-3" />
@@ -275,7 +331,7 @@ function WikiMap({
                   <button
                     key={item.label}
                     type="button"
-                    onClick={() => onSearch(item.label)}
+                    onClick={() => onFacetSelect({ type: 'tag', value: item.label })}
                     className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40"
                   >
                     <Tags className="h-3 w-3 text-muted-foreground" />
@@ -298,10 +354,15 @@ function WikiMap({
             </div>
             <div className="mt-3 space-y-2">
               {sourceGroups.map((item) => (
-                <div key={item.label} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => onFacetSelect({ type: 'source', value: item.label })}
+                  className="flex w-full items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
+                >
                   <span className="text-muted-foreground">{item.label}</span>
                   <span className="font-medium text-foreground">{item.count}개</span>
-                </div>
+                </button>
               ))}
             </div>
           </CardContent>
@@ -333,13 +394,13 @@ function WikiMap({
   );
 }
 
-function NotesList({ notes }: { notes: NoteListItem[] }) {
+function NotesList({ notes, emptyText }: { notes: NoteListItem[]; emptyText?: string }) {
   if (notes.length === 0) {
     return (
       <div className="text-center py-16">
         <BookOpen className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
         <p className="text-sm text-muted-foreground">
-          아직 노트가 없습니다. 영상이나 아티클을 분석하면 핵심 지식이 노트로 자동 정리됩니다.
+          {emptyText ?? '아직 노트가 없습니다. 영상이나 아티클을 분석하면 핵심 지식이 노트로 자동 정리됩니다.'}
         </p>
       </div>
     );

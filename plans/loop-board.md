@@ -51,10 +51,16 @@
   2026-07-09 1차: `/notes` 지식위키 홈 통계/카드 강화, `/notes/[id]` 학습 포인트·복습 질문·근거 채팅 CTA 추가 완료.
   2차: `/notes` 홈에 개념 지도, 태그 탐색, 출처 구성, 최근 학습 흐름 추가 완료.
   3차: `/notes/[id]`에 문서 목차와 섹션 앵커를 추가해 위키 문서처럼 이동 가능하게 개선 완료.
+  4차: `/notes` 홈의 개념·태그·출처를 로컬 필터로 연결하고 활성 필터 요약/해제 UX를 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 지식위키 로컬 필터 강화.
+  `/notes` 홈의 개념 지도, 태그, 출처 구성을 즉시 적용되는 로컬 필터로 연결하고 활성 필터 요약/해제 바를 추가.
+  `note-list` 유틸로 출처 라벨, 필터 매칭, 최신순 정렬을 분리하고 단위 테스트를 추가해 검색/탐색 흐름을 안정화.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-outline.test.ts knowledge-note-source.test.ts dashboard-summary.test.ts` 13 passed.
 - [x] 2026-07-10 feat(notes): 저장 전 학습 노트 미리보기 추가.
   결과 카드와 모바일 결과 상세에서 학습 노트 저장 전 태그·핵심 개념·학습 포인트·분량을 확인할 수 있게 미리보기 카드를 추가.
   공용 `knowledge-note-source` 유틸이 저장 소스와 콘텐츠에서 미리보기 메타를 계산하도록 확장하고 단위 테스트를 추가.
