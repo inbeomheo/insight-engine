@@ -49,6 +49,7 @@ export interface GenerateResponse {
     quality_score?: number;
     is_auto?: boolean;
   };
+  transcript?: string;
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
   inserted_links?: InsertedLink[];

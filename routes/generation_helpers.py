@@ -125,8 +125,10 @@ def _handle_direct_text(params: dict, start_time: float):
     response = _base_generation_response(result, params, start_time, used_prompt)
     response['id'] = report_id
     response['prompt_length'] = len(used_prompt) if used_prompt else 0
+    response['transcript'] = direct_content[:5000]
     response['transcript_source'] = 'direct_input'
     response['source_type'] = 'text'
+    response['source_title'] = '직접 입력 텍스트'
     response['source_meta'] = {
         'source_type': 'text',
         'chars': len(direct_content),

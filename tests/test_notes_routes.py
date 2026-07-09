@@ -85,6 +85,34 @@ def test_post_notes_generates_saves_and_returns_note(tmp_path, monkeypatch):
     search_notes.assert_not_called()
 
 
+def test_post_notes_generates_from_text_source_without_url(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    client = _client()
+    source = {"type": "text", "url": "", "title": "직접 입력 텍스트"}
+
+    with (
+        patch("src.contexts.identity.interface.auth_decorators.is_supabase_enabled", return_value=False),
+        patch("services.content.note_index_service.search_notes") as search_notes,
+        patch("services.core.ai_service.create_content", return_value=_ai_response()) as create_content,
+        patch("services.content.note_index_service.index_note") as index_note,
+    ):
+        resp = client.post(
+            "/api/notes",
+            json={"content": "붙여넣은 원문 콘텐츠", "source": source, "language": "ko", "model": "gemini/test"},
+            headers=_H,
+        )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["source"] == source
+    ai_input = create_content.call_args.args[0]
+    assert "type: text" in ai_input
+    assert "url:" not in ai_input
+    assert "title: 직접 입력 텍스트" in ai_input
+    assert index_note.call_args.args[0]["source"] == source
+    search_notes.assert_not_called()
+
+
 def test_post_notes_duplicate_url_returns_warning_without_ai(tmp_path, monkeypatch):
     monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
     note_service.save_note(_note("existing", "2026-07-04T12:00:00Z"))

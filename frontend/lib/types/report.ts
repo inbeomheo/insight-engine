@@ -154,6 +154,14 @@ export interface Report {
   id: string;
   url: string;
   youtube_title: string;
+  source_type?: 'text' | 'document' | 'voice' | 'article' | string;
+  source_title?: string;
+  source_meta?: {
+    source_type: string;
+    chars?: number;
+    quality_score?: number;
+    is_auto?: boolean;
+  };
   title: string;
   content: string;
   html: string;

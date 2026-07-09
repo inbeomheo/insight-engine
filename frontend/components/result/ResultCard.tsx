@@ -31,6 +31,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
+import { getKnowledgeNoteContent, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -80,10 +81,6 @@ const remarkPlugins = [remarkGfm];
 const NOTEBOOKLM_ENABLED = process.env.NEXT_PUBLIC_NOTEBOOKLM_ENABLED === 'true';
 // 수식 감지 패턴: $$...$$ 또는 \(...\) 또는 \[...\]
 const MATH_PATTERN = /\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/;
-
-function noteSourceTypeFromUrl(url: string): 'youtube' | 'article' {
-  return /(?:youtube\.com|youtu\.be)/i.test(url) ? 'youtube' : 'article';
-}
 
 // 품질 등급별 스타일 정의
 const GRADE_STYLES: Record<QualityScore['grade'], { badge: string; label: string }> = {
@@ -277,6 +274,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const { t } = useTranslation();
+  const noteSource = getKnowledgeNoteSource(report);
 
   // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
   const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -383,18 +381,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   }
 
   async function handleSaveKnowledgeNote() {
-    if (isSavingNote || !report.url) return;
+    if (isSavingNote || !noteSource) return;
     setIsSavingNote(true);
     try {
       const note = await createKnowledgeNote({
-        content: report.transcript?.trim() || report.content,
+        content: getKnowledgeNoteContent(report),
         language: noteLanguage,
         model: selectedModel || undefined,
-        source: {
-          type: noteSourceTypeFromUrl(report.url),
-          url: report.url,
-          title: report.youtube_title || report.title || '학습 소스',
-        },
+        source: noteSource,
       });
       toast.success('학습 노트로 저장했습니다.', {
         description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
@@ -1036,7 +1030,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <Code className="h-3.5 w-3.5 mr-2" />
                 {t('result.promptView')}
               </DropdownMenuItem>
-              {report.url && (
+              {noteSource && (
                 <DropdownMenuItem onClick={handleSaveKnowledgeNote} disabled={isSavingNote}>
                   {isSavingNote ? (
                     <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />

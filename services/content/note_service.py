@@ -21,7 +21,8 @@ from services.core.logging_config import get_logger
 
 NOTES_DIR = Path(os.getenv("KNOWLEDGE_NOTES_DIR", "data/notes"))
 NOTE_STYLE_ID = "knowledge_note"
-SOURCE_TYPES = {"youtube", "article"}
+SOURCE_TYPES = {"youtube", "article", "text"}
+URL_REQUIRED_SOURCE_TYPES = {"youtube", "article"}
 _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
 logger = get_logger(__name__)
 
@@ -46,10 +47,15 @@ def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
         errors.append("source는 객체여야 합니다.")
     else:
         if source.get("type") not in SOURCE_TYPES:
-            errors.append("source.type은 youtube 또는 article이어야 합니다.")
-        for key in ("url", "title"):
-            if not isinstance(source.get(key), str) or not source.get(key, "").strip():
-                errors.append(f"source.{key}는 비어 있지 않은 문자열이어야 합니다.")
+            errors.append("source.type은 youtube, article 또는 text여야 합니다.")
+        if source.get("type") in URL_REQUIRED_SOURCE_TYPES and (
+            not isinstance(source.get("url"), str) or not source.get("url", "").strip()
+        ):
+            errors.append("source.url은 비어 있지 않은 문자열이어야 합니다.")
+        elif "url" in source and not isinstance(source.get("url"), str):
+            errors.append("source.url은 문자열이어야 합니다.")
+        if not isinstance(source.get("title"), str) or not source.get("title", "").strip():
+            errors.append("source.title은 비어 있지 않은 문자열이어야 합니다.")
 
     for key in ("key_concepts", "tags"):
         value = note.get(key)
@@ -192,6 +198,8 @@ def find_notes_by_source_url(
     """Find existing notes with the same canonical source URL."""
     normalized = normalize_source(source)
     target_url = _canonical_url(normalized["url"])
+    if not target_url:
+        return []
     duplicates: list[dict[str, Any]] = []
     source_notes = list_notes() if notes is None else notes
 
@@ -263,9 +271,13 @@ def _normalize_source(source: dict[str, Any]) -> dict[str, str]:
     url = str(source.get("url", "")).strip()
     title = str(source.get("title", "")).strip()
     if source_type not in SOURCE_TYPES:
-        raise ValueError("[노트 생성 실패] source.type은 youtube 또는 article이어야 합니다.")
-    if not url or not title:
-        raise ValueError("[노트 생성 실패] source.url과 source.title이 필요합니다.")
+        raise ValueError("[노트 생성 실패] source.type은 youtube, article 또는 text여야 합니다.")
+    if source_type in URL_REQUIRED_SOURCE_TYPES and not url:
+        raise ValueError("[노트 생성 실패] source.url이 필요합니다.")
+    if source_type == "text" and not title:
+        title = "직접 입력 텍스트"
+    if not title:
+        raise ValueError("[노트 생성 실패] source.title이 필요합니다.")
     return {"type": source_type, "url": url, "title": title}
 
 
@@ -318,9 +330,10 @@ def _canonical_query_pairs(query: str) -> list[tuple[str, str]]:
 
 
 def _build_ai_input(content: str, source: dict[str, str], language: str) -> str:
+    url_line = f"url: {source['url']}\n" if source.get("url") else ""
     return (
         "[source]\n"
-        f"type: {source['type']}\nurl: {source['url']}\ntitle: {source['title']}\nlanguage: {language}\n\n"
+        f"type: {source['type']}\n{url_line}title: {source['title']}\nlanguage: {language}\n\n"
         "[content]\n"
         f"{content}"
     )

@@ -27,6 +27,16 @@ def test_validate_note_accepts_valid_note():
     assert errors == []
 
 
+def test_validate_note_accepts_text_source_without_url():
+    note = _note()
+    note["source"] = {"type": "text", "url": "", "title": "직접 입력 텍스트"}
+
+    valid, errors = note_service.validate_note(note)
+
+    assert valid is True
+    assert errors == []
+
+
 def test_validate_note_rejects_invalid_cases():
     note = _note()
     note["source"]["type"] = "podcast"
@@ -39,6 +49,17 @@ def test_validate_note_rejects_invalid_cases():
     assert any("source.type" in error for error in errors)
     assert any("quote.text" in error for error in errors)
     assert any("ISO8601" in error for error in errors)
+
+
+def test_find_notes_by_source_url_ignores_text_source_without_url(tmp_path, monkeypatch):
+    monkeypatch.setattr(note_service, "NOTES_DIR", tmp_path)
+    note = _note("text-note")
+    note["source"] = {"type": "text", "url": "", "title": "직접 입력 텍스트"}
+    note_service.save_note(note)
+
+    duplicates = note_service.find_notes_by_source_url({"type": "text", "url": "", "title": "새 텍스트"})
+
+    assert duplicates == []
 
 
 def test_save_load_round_trip_utf8(tmp_path, monkeypatch):

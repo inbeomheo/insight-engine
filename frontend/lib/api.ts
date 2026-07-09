@@ -923,7 +923,7 @@ export async function askResultChat(req: {
 // ── 지식 노트 (학습 엔진) ──
 
 export interface NoteSource {
-  type: 'youtube' | 'article' | (string & {});
+  type: 'youtube' | 'article' | 'text' | (string & {});
   url: string;
   title: string;
 }

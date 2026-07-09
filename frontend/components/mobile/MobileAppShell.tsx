@@ -24,6 +24,7 @@ import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
 import { createKnowledgeNote, isApiError, type NoteDuplicateWarning } from '@/lib/api';
+import { getKnowledgeNoteContent, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
@@ -33,10 +34,6 @@ const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'),
 
 type MobileTab = 'create' | 'library' | 'dashboard';
 type SourceInputTab = 'url' | 'text';
-
-function noteSourceTypeFromUrl(url: string): 'youtube' | 'article' {
-  return /(?:youtube\.com|youtu\.be)/i.test(url) ? 'youtube' : 'article';
-}
 
 interface MobileAppShellProps {
   reports: Report[];
@@ -460,20 +457,17 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const [chatOpen, setChatOpen] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const noteSource = getKnowledgeNoteSource(report);
 
   async function handleSaveKnowledgeNote() {
-    if (isSavingNote || !report.url) return;
+    if (isSavingNote || !noteSource) return;
     setIsSavingNote(true);
     try {
       const note = await createKnowledgeNote({
-        content: report.transcript?.trim() || report.content,
+        content: getKnowledgeNoteContent(report),
         language: noteLanguage,
         model: selectedModel || undefined,
-        source: {
-          type: noteSourceTypeFromUrl(report.url),
-          url: report.url,
-          title: report.youtube_title || report.title || '학습 소스',
-        },
+        source: noteSource,
       });
       toast.success('학습 노트로 저장했습니다.', {
         description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
@@ -557,7 +551,7 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
         </div>
 
         <div className="mt-6 grid gap-3">
-          {report.url && (
+          {noteSource && (
             <button
               type="button"
               onClick={handleSaveKnowledgeNote}
