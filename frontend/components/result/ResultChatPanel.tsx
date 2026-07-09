@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { askResultChat, type ResultChatMessage, type ResultChatSource } from '@/lib/api';
-import { buildResultChatStudyCardMarkdown } from '@/lib/result-chat-study-card';
+import {
+  buildResultChatStudyCard,
+  saveResultChatStudyCard,
+} from '@/lib/result-chat-study-card';
 
 interface ResultChatPanelProps {
   context: string;
@@ -81,12 +84,21 @@ export default function ResultChatPanel({
       .find((item) => item.role === 'user')?.content;
 
     try {
-      await navigator.clipboard.writeText(buildResultChatStudyCardMarkdown({
+      const cardInput = {
         title: studyCardTitle ?? title,
         question,
         answer: message.content,
         sources: message.rag_sources,
-      }));
+      };
+      let card = buildResultChatStudyCard(cardInput);
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          card = saveResultChatStudyCard(window.localStorage, cardInput);
+        }
+      } catch {
+        // Clipboard copy still works even when browser storage is unavailable.
+      }
+      await navigator.clipboard.writeText(card.markdown);
       setStudyCardCopyStatus({ index, status: 'copied' });
     } catch {
       setStudyCardCopyStatus({ index, status: 'error' });
@@ -240,7 +252,7 @@ export default function ResultChatPanel({
                           <span className={`text-[10px] ${
                             studyCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'
                           }`}>
-                            {studyCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}
+                            {studyCardCopyStatus.status === 'copied' ? '복사+저장 완료' : '복사 실패'}
                           </span>
                         )}
                         <button
@@ -249,7 +261,7 @@ export default function ResultChatPanel({
                           className="inline-flex items-center gap-1 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
                         >
                           <Copy className="h-3 w-3" />
-                          복습 카드 복사
+                          복습 카드 저장
                         </button>
                       </div>
                     )}

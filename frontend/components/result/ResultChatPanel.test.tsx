@@ -60,6 +60,7 @@ async function submitQuestion(text: string) {
 describe('ResultChatPanel rag_sources', () => {
   beforeEach(() => {
     vi.mocked(askResultChat).mockReset();
+    window.localStorage.clear();
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -159,7 +160,7 @@ describe('ResultChatPanel rag_sources', () => {
     await submitQuestion('무엇을 복습할까?');
 
     const copyButton = Array.from(document.querySelectorAll('button')).find((el) =>
-      el.textContent?.includes('복습 카드 복사')
+      el.textContent?.includes('복습 카드 저장')
     );
     if (!copyButton) throw new Error('study card copy button not found');
 
@@ -180,6 +181,11 @@ describe('ResultChatPanel rag_sources', () => {
       '## 근거',
       '1. 근거 노트 · 92% — 근거 스니펫',
     ].join('\n'));
-    expect(document.body.textContent).toContain('복사 완료');
+    expect(JSON.parse(window.localStorage.getItem('ie:result-chat-study-cards:v1') ?? '[]')[0]).toMatchObject({
+      title: '노트 제목',
+      question: '무엇을 복습할까?',
+      answer: '핵심 답변',
+    });
+    expect(document.body.textContent).toContain('복사+저장 완료');
   });
 });

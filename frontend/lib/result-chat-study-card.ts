@@ -1,10 +1,27 @@
 import type { ResultChatSource } from './api';
 
+export const RESULT_CHAT_STUDY_CARDS_STORAGE_KEY = 'ie:result-chat-study-cards:v1';
+
 export interface ResultChatStudyCardInput {
   title?: string;
   question?: string;
   answer?: string;
   sources?: Pick<ResultChatSource, 'title' | 'score' | 'snippet'>[];
+  createdAt?: string;
+}
+
+export interface ResultChatStudyCard {
+  id: string;
+  title: string;
+  question: string;
+  answer: string;
+  sources: Array<{
+    title: string;
+    score?: number;
+    snippet?: string;
+  }>;
+  markdown: string;
+  createdAt: string;
 }
 
 function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
@@ -12,11 +29,38 @@ function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
   return cleaned || fallback;
 }
 
+function normalizeSources(sources: ResultChatStudyCardInput['sources'] = []): ResultChatStudyCard['sources'] {
+  return sources.map((source) => ({
+    title: cleanMarkdownValue(source.title, '지식 노트'),
+    score: typeof source.score === 'number' && Number.isFinite(source.score) ? source.score : undefined,
+    snippet: source.snippet?.trim() ? cleanMarkdownValue(source.snippet) : undefined,
+  }));
+}
+
+function buildCardId(input: Pick<ResultChatStudyCard, 'title' | 'question' | 'createdAt'>): string {
+  return `qna-${encodeURIComponent(input.createdAt)}-${encodeURIComponent(input.title).slice(0, 24)}-${encodeURIComponent(input.question).slice(0, 24)}`;
+}
+
+function parseStudyCard(value: unknown): ResultChatStudyCard | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<ResultChatStudyCard>;
+  if (!raw.id || !raw.createdAt || !raw.markdown) return null;
+  return {
+    id: String(raw.id),
+    title: cleanMarkdownValue(raw.title, '근거 Q&A'),
+    question: cleanMarkdownValue(raw.question, '질문 없음'),
+    answer: cleanMarkdownValue(raw.answer, '답변 없음'),
+    sources: normalizeSources(raw.sources),
+    markdown: String(raw.markdown),
+    createdAt: String(raw.createdAt),
+  };
+}
+
 export function buildResultChatStudyCardMarkdown(input: ResultChatStudyCardInput): string {
   const title = cleanMarkdownValue(input.title, '근거 Q&A');
   const question = cleanMarkdownValue(input.question, '질문 없음');
   const answer = cleanMarkdownValue(input.answer, '답변 없음');
-  const sources = input.sources ?? [];
+  const sources = normalizeSources(input.sources);
 
   return [
     `# 근거 Q&A 복습 카드: ${title}`,
@@ -31,17 +75,57 @@ export function buildResultChatStudyCardMarkdown(input: ResultChatStudyCardInput
           '',
           '## 근거',
           ...sources.map((source, index) => {
-            const sourceTitle = cleanMarkdownValue(source.title, '지식 노트');
             const score =
               typeof source.score === 'number' && Number.isFinite(source.score)
                 ? ` · ${Math.round(source.score * 100)}%`
                 : '';
-            const snippet = source.snippet?.trim()
-              ? ` — ${cleanMarkdownValue(source.snippet)}`
-              : '';
-            return `${index + 1}. ${sourceTitle}${score}${snippet}`;
+            const snippet = source.snippet ? ` — ${source.snippet}` : '';
+            return `${index + 1}. ${source.title}${score}${snippet}`;
           }),
         ]
       : []),
   ].join('\n');
+}
+
+export function buildResultChatStudyCard(input: ResultChatStudyCardInput): ResultChatStudyCard {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const title = cleanMarkdownValue(input.title, '근거 Q&A');
+  const question = cleanMarkdownValue(input.question, '질문 없음');
+  const answer = cleanMarkdownValue(input.answer, '답변 없음');
+  const sources = normalizeSources(input.sources);
+  const markdown = buildResultChatStudyCardMarkdown({ title, question, answer, sources });
+  return {
+    id: buildCardId({ title, question, createdAt }),
+    title,
+    question,
+    answer,
+    sources,
+    markdown,
+    createdAt,
+  };
+}
+
+export function readResultChatStudyCards(storage: Pick<Storage, 'getItem'>): ResultChatStudyCard[] {
+  try {
+    const raw = storage.getItem(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(parseStudyCard)
+      .filter((card): card is ResultChatStudyCard => Boolean(card))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  } catch {
+    return [];
+  }
+}
+
+export function saveResultChatStudyCard(
+  storage: Pick<Storage, 'getItem' | 'setItem'>,
+  input: ResultChatStudyCardInput
+): ResultChatStudyCard {
+  const card = buildResultChatStudyCard(input);
+  const existing = readResultChatStudyCards(storage);
+  const next = [card, ...existing.filter((item) => item.id !== card.id)];
+  storage.setItem(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY, JSON.stringify(next));
+  return card;
 }

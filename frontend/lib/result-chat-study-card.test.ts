@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildResultChatStudyCardMarkdown } from './result-chat-study-card';
+import {
+  RESULT_CHAT_STUDY_CARDS_STORAGE_KEY,
+  buildResultChatStudyCard,
+  buildResultChatStudyCardMarkdown,
+  readResultChatStudyCards,
+  saveResultChatStudyCard,
+} from './result-chat-study-card';
 
 describe('result-chat-study-card', () => {
   it('builds markdown for a grounded chat answer', () => {
@@ -36,5 +42,49 @@ describe('result-chat-study-card', () => {
       '## 답변',
       '답변 없음',
     ].join('\n'));
+  });
+
+  it('builds a reusable study card record', () => {
+    expect(buildResultChatStudyCard({
+      title: '노트',
+      question: '질문',
+      answer: '답',
+      createdAt: '2026-07-10T00:00:00.000Z',
+    })).toMatchObject({
+      id: 'qna-2026-07-10T00%3A00%3A00.000Z-%EB%85%B8%ED%8A%B8-%EC%A7%88%EB%AC%B8',
+      title: '노트',
+      question: '질문',
+      answer: '답',
+      createdAt: '2026-07-10T00:00:00.000Z',
+    });
+  });
+
+  it('saves and reads local study cards newest first', () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+    };
+
+    saveResultChatStudyCard(storage, {
+      title: '이전 카드',
+      question: '이전 질문',
+      answer: '이전 답',
+      createdAt: '2026-07-09T00:00:00.000Z',
+    });
+    saveResultChatStudyCard(storage, {
+      title: '최근 카드',
+      question: '최근 질문',
+      answer: '최근 답',
+      createdAt: '2026-07-10T00:00:00.000Z',
+    });
+
+    expect(JSON.parse(store.get(RESULT_CHAT_STUDY_CARDS_STORAGE_KEY) ?? '[]')).toHaveLength(2);
+    expect(readResultChatStudyCards(storage).map((card) => card.title)).toEqual(['최근 카드', '이전 카드']);
+  });
+
+  it('ignores malformed local study card storage', () => {
+    expect(readResultChatStudyCards({ getItem: () => '{bad json' })).toEqual([]);
+    expect(readResultChatStudyCards({ getItem: () => JSON.stringify([{ title: '깨진 카드' }]) })).toEqual([]);
   });
 });

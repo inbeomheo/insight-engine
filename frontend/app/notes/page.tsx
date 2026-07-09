@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, Copy, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, Copy, FileText, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,10 @@ import {
   parseNoteFacetSearchParams,
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
+import {
+  readResultChatStudyCards,
+  type ResultChatStudyCard,
+} from '@/lib/result-chat-study-card';
 
 function SourceIcon({ type }: { type: string }) {
   if (type === 'youtube') return <Youtube className="h-4 w-4 text-red-500/80 shrink-0" />;
@@ -89,6 +93,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
+  const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
   const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
@@ -113,6 +118,24 @@ export default function NotesPage() {
       });
     return () => {
       alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncQnaStudyCards = () => {
+      try {
+        setQnaStudyCards(readResultChatStudyCards(window.localStorage).slice(0, 3));
+      } catch {
+        setQnaStudyCards([]);
+      }
+    };
+
+    syncQnaStudyCards();
+    window.addEventListener('storage', syncQnaStudyCards);
+    window.addEventListener('focus', syncQnaStudyCards);
+    return () => {
+      window.removeEventListener('storage', syncQnaStudyCards);
+      window.removeEventListener('focus', syncQnaStudyCards);
     };
   }, []);
 
@@ -347,6 +370,7 @@ export default function NotesPage() {
             completedStudyNotes={completedStudyNotes}
             studyResumeNotes={studyResumeNotes}
             dailyStudyPlanItems={dailyStudyPlanItems}
+            qnaStudyCards={qnaStudyCards}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
           />
@@ -499,6 +523,7 @@ function WikiMap({
   completedStudyNotes,
   studyResumeNotes,
   dailyStudyPlanItems,
+  qnaStudyCards,
   studyCardOrder,
   onFacetSelect,
 }: {
@@ -512,6 +537,7 @@ function WikiMap({
   completedStudyNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
   dailyStudyPlanItems: NoteStudyPlanItem[];
+  qnaStudyCards: ResultChatStudyCard[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -519,6 +545,10 @@ function WikiMap({
   const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
   const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [qnaCardCopyStatus, setQnaCardCopyStatus] = useState<{
+    id: string;
+    status: 'copied' | 'error';
+  } | null>(null);
   useEffect(() => {
     try {
       setStudyQueueOpen(
@@ -609,13 +639,33 @@ function WikiMap({
     return () => window.clearTimeout(timer);
   }, [wikiIndexCopyStatus]);
 
+  const copyQnaStudyCard = useCallback(async (card: ResultChatStudyCard) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setQnaCardCopyStatus({ id: card.id, status: 'error' });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(card.markdown);
+      setQnaCardCopyStatus({ id: card.id, status: 'copied' });
+    } catch {
+      setQnaCardCopyStatus({ id: card.id, status: 'error' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!qnaCardCopyStatus) return;
+    const timer = window.setTimeout(() => setQnaCardCopyStatus(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [qnaCardCopyStatus]);
+
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
     'study-start': studyStartNotes.length,
     completed: completedStudyNotes.length,
     recent: studyResumeNotes.length,
   };
-  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts);
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length;
   const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
@@ -811,7 +861,7 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {studyCardOrder.length > 0 && (
+        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0) && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
               <button
@@ -837,6 +887,56 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {qnaStudyCards.length > 0 && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">Q&A 복습 카드함</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          근거 Q&A에서 저장한 최근 복습 카드입니다.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {qnaStudyCards.map((card) => (
+                            <li key={card.id} className="rounded-lg border border-border bg-background px-3 py-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-semibold text-foreground">
+                                    {card.title}
+                                  </p>
+                                  <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">
+                                    Q. {card.question}
+                                  </p>
+                                  <p className="mt-1 text-[10px] text-muted-foreground/70">
+                                    {formatStudyUpdatedAt(card.createdAt)} · 근거 {card.sources.length}개
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-end gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 gap-1 px-2 text-[10px]"
+                                    onClick={() => copyQnaStudyCard(card)}
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                    카드 복사
+                                  </Button>
+                                  {qnaCardCopyStatus?.id === card.id && (
+                                    <span className={`text-[10px] ${qnaCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                      {qnaCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {dailyStudyPlanItems.length > 0 && (
                     <Card className="border-primary/30 bg-background/90 py-4">
                       <CardContent className="px-4">
