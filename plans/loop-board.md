@@ -60,10 +60,16 @@
   4차: `/notes` 홈의 개념·태그·출처를 로컬 필터로 연결하고 활성 필터 요약/해제 UX를 추가.
   5차: `/notes` 홈에 브라우저 로컬 복습 기록 기반 이어 복습 카드와 노트별 복습 질문 수 표시를 추가.
   6차: `/notes` 홈에 미시작/진행중/완료 학습 상태 필터와 노트별 상태 배지를 추가.
+  7차: `/notes/[id]` 문서 브리핑 카드로 출처·문서 구성·학습 상태·근거 연결을 한눈에 요약.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 노트 상세 문서 브리핑 추가.
+  `/notes/[id]` 상단 목차 아래에 문서 브리핑 카드를 추가해 출처, 목차 섹션 수, 복습 진행률, 원본 결과·관련 노트·인용 연결 수를 한눈에 표시.
+  문서 목차에 `문서 브리핑` 앵커를 추가하고, 공용 `note-wiki-brief` 유틸/테스트로 브리핑 값과 빠른 액션 구성을 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-list.test.ts` 14 passed.
 - [x] 2026-07-10 feat(notes): 복습 진행 Markdown 복사 추가.
   `/notes/[id]` 복습 진행 카드에서 학습 포인트/복습 질문 체크 상태를 Markdown 체크리스트로 복사 가능하게 연결.
   공용 `note-study-progress` 유틸에 Markdown 생성 함수를 추가하고 단위 테스트로 완료/미완료 체크 출력과 답변 포함 경로를 검증.

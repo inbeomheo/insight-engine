@@ -28,6 +28,7 @@ export function buildNoteOutline(
   if (options.hasLinkedReport) {
     items.push({ id: 'source-result', label: '원본 결과' });
   }
+  items.push({ id: 'wiki-brief', label: '문서 브리핑' });
   if (learningPointCount + reviewQuestionCount > 0) {
     items.push({ id: 'study-progress', label: '복습 진행', count: learningPointCount + reviewQuestionCount });
   }

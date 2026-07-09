@@ -13,6 +13,12 @@ import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
 import { buildNoteOutline, type NoteOutlineItem } from '@/lib/note-outline';
 import {
+  buildNoteWikiBrief,
+  buildNoteWikiQuickActions,
+  type NoteWikiBriefItem,
+  type NoteWikiQuickAction,
+} from '@/lib/note-wiki-brief';
+import {
   buildNoteStudyMarkdown,
   getNoteStudySummary,
   normalizeNoteStudyProgress,
@@ -147,8 +153,14 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
   const learningPoints = note.learning_points ?? [];
   const reviewQuestions = note.review_questions ?? [];
+  const quoteCount = note.quotes.length;
+  const relatedNoteCount = note.related_notes?.length ?? 0;
+  const hasLinkedReport = Boolean(linkedReport);
   const noteChatContext = buildNoteChatContext(note);
-  const outlineItems = buildNoteOutline(note, { hasLinkedReport: Boolean(linkedReport) });
+  const outlineItems = useMemo(
+    () => buildNoteOutline(note, { hasLinkedReport }),
+    [hasLinkedReport, note]
+  );
   const studyCounts: NoteStudyCounts = useMemo(
     () => ({ learning: learningPoints.length, review: reviewQuestions.length }),
     [learningPoints.length, reviewQuestions.length]
@@ -157,7 +169,20 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     normalizeNoteStudyProgress(null, studyCounts)
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const studySummary = getNoteStudySummary(studyProgress, studyCounts);
+  const studySummary = useMemo(
+    () => getNoteStudySummary(studyProgress, studyCounts),
+    [studyCounts, studyProgress]
+  );
+  const wikiBriefInput = useMemo(() => ({
+    sourceType: note.source?.type,
+    outlineItems,
+    studySummary,
+    quoteCount,
+    relatedNoteCount,
+    hasLinkedReport,
+  }), [hasLinkedReport, note.source?.type, outlineItems, quoteCount, relatedNoteCount, studySummary]);
+  const wikiBriefItems = useMemo(() => buildNoteWikiBrief(wikiBriefInput), [wikiBriefInput]);
+  const wikiQuickActions = useMemo(() => buildNoteWikiQuickActions(wikiBriefInput), [wikiBriefInput]);
 
   useEffect(() => {
     setStudyProgress(readNoteStudyProgress(note.id, studyCounts));
@@ -274,6 +299,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       )}
 
       <NoteOutline items={outlineItems} />
+      <NoteWikiBrief items={wikiBriefItems} actions={wikiQuickActions} />
 
       {studySummary.total > 0 && (
         <Card id="study-progress" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
@@ -513,6 +539,48 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         </section>
       )}
     </div>
+  );
+}
+
+function NoteWikiBrief({ items, actions }: { items: NoteWikiBriefItem[]; actions: NoteWikiQuickAction[] }) {
+  return (
+    <Card id="wiki-brief" className="scroll-mt-24 border-primary/10 bg-card/80 py-4">
+      <CardContent className="px-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">문서 브리핑</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              이 지식 노트의 출처, 학습 상태, 근거 연결을 한눈에 확인합니다.
+            </p>
+          </div>
+          <div className="hidden rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary sm:block">
+            LLMWiki
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-4">
+          {items.map((item) => (
+            <div key={item.label} className="rounded-xl border border-border bg-background/70 px-3 py-2.5">
+              <div className="text-[10px] text-muted-foreground">{item.label}</div>
+              <div className="mt-1 text-sm font-semibold text-foreground">{item.value}</div>
+              <div className="mt-1 text-[10px] leading-snug text-muted-foreground/70">{item.description}</div>
+            </div>
+          ))}
+        </div>
+        {actions.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {actions.map((action) => (
+              <a
+                key={`${action.href}-${action.label}`}
+                href={action.href}
+                className="inline-flex items-center rounded-full border border-border bg-background/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                {action.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
