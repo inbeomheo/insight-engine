@@ -52,6 +52,7 @@
   3차: 데스크톱/모바일 결과 상세에 저장 전 학습 노트 미리보기, 태그, 핵심 개념, 학습 포인트를 표시.
   4차: 노트 상세의 학습 포인트/복습 질문에 브라우저 로컬 복습 체크와 진행률 카드를 추가.
   5차: 노트 상세 복습 진행 상태를 Markdown 체크리스트로 복사하는 기능 추가.
+  6차: 노트 상세 복습 질문 답변을 가리고 열어보는 능동 회상 학습 흐름 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -66,6 +67,12 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 복습 질문 답변 가리기 추가.
+  `/notes/[id]` 복습 질문에서 답변을 기본으로 가리고, 사용자가 먼저 떠올린 뒤 개별/전체 답을 열어볼 수 있게 개선.
+  공용 `note-review-session` 유틸과 테스트를 추가해 답변 표시 상태 정규화, 개별 토글, 전체 표시 전환을 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-list.test.ts` 17 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 chore(dead-code): 레거시 설정 고아 컴포넌트 5개 제거.
   프론트 소스 전수 grep으로 현재 앱 진입점에서 소비되지 않는 설정 영역 컴포넌트/훅 5개를 삭제.
   삭제 대상: MemoryManager, SnippetLibrary, KnowledgeGraph, useSnippets, useListManager. 활성 `KnowledgeGraphPanel`은 별도 소비 가능성이 있어 보존.

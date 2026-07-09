@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Brain, CheckCircle2, Copy, ExternalLink, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
+import { ArrowLeft, Brain, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,11 @@ import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
 import { buildNoteOutline, type NoteOutlineItem } from '@/lib/note-outline';
+import {
+  normalizeReviewAnswerVisibility,
+  setAllReviewAnswersVisible,
+  toggleReviewAnswerVisibility,
+} from '@/lib/note-review-session';
 import {
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
@@ -169,10 +174,14 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     normalizeNoteStudyProgress(null, studyCounts)
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
+    normalizeReviewAnswerVisibility(null, reviewQuestions.length)
+  );
   const studySummary = useMemo(
     () => getNoteStudySummary(studyProgress, studyCounts),
     [studyCounts, studyProgress]
   );
+  const allReviewAnswersVisible = reviewQuestions.length > 0 && reviewAnswerVisible.every(Boolean);
   const wikiBriefInput = useMemo(() => ({
     sourceType: note.source?.type,
     outlineItems,
@@ -188,6 +197,12 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     setStudyProgress(readNoteStudyProgress(note.id, studyCounts));
   }, [note.id, studyCounts]);
 
+  useEffect(() => {
+    setReviewAnswerVisible((current) =>
+      normalizeReviewAnswerVisibility(current, reviewQuestions.length)
+    );
+  }, [reviewQuestions.length]);
+
   const toggleStudyProgress = useCallback((kind: NoteStudyKind, index: number) => {
     setStudyProgress((current) => {
       const next = toggleNoteStudyItem(current, kind, index, studyCounts);
@@ -201,6 +216,16 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     writeNoteStudyProgress(note.id, next, studyCounts);
     setStudyProgress(next);
   }, [note.id, studyCounts]);
+
+  const toggleReviewAnswer = useCallback((index: number) => {
+    setReviewAnswerVisible((current) =>
+      toggleReviewAnswerVisibility(current, index, reviewQuestions.length)
+    );
+  }, [reviewQuestions.length]);
+
+  const setAllReviewAnswers = useCallback((visible: boolean) => {
+    setReviewAnswerVisible(setAllReviewAnswersVisible(reviewQuestions.length, visible));
+  }, [reviewQuestions.length]);
 
   const copyStudyMarkdown = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -413,7 +438,28 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       {/* 복습 질문 */}
       {reviewQuestions.length > 0 && (
         <section id="review-questions" className="scroll-mt-24">
-          <h2 className="text-sm font-semibold text-foreground mb-2.5">복습 질문</h2>
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">복습 질문</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                답을 떠올린 뒤 열어보며 능동 회상으로 복습합니다.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 text-xs"
+              onClick={() => setAllReviewAnswers(!allReviewAnswersVisible)}
+            >
+              {allReviewAnswersVisible ? (
+                <EyeOff className="mr-1 h-3 w-3" />
+              ) : (
+                <Eye className="mr-1 h-3 w-3" />
+              )}
+              {allReviewAnswersVisible ? '전체 가리기' : '전체 답 보기'}
+            </Button>
+          </div>
           <div className="space-y-2">
             {reviewQuestions.map((item, idx) => (
               <Card key={`${item.question}-${idx}`} className="py-3">
@@ -422,7 +468,24 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                     <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
                     <div>
                       <p className="text-sm font-medium text-foreground">{item.question}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.answer}</p>
+                      {item.answer?.trim() ? (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {reviewAnswerVisible[idx] ? item.answer : '답을 떠올린 뒤 열어보세요.'}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">등록된 답변이 없습니다.</p>
+                      )}
+                      {item.answer?.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => toggleReviewAnswer(idx)}
+                          aria-expanded={reviewAnswerVisible[idx]}
+                          className="mt-2 mr-1.5 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                        >
+                          {reviewAnswerVisible[idx] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {reviewAnswerVisible[idx] ? '답 가리기' : '답 보기'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => toggleStudyProgress('review', idx)}
