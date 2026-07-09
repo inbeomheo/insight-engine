@@ -16,6 +16,7 @@ import {
   RotateCw,
   Server,
   Sparkles,
+  Star,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -72,6 +73,7 @@ function formatDayLabel(date: Date) {
 export default function DashboardPage() {
   const hydrateResults = useResultStore((s) => s.hydrate);
   const reports = useResultStore((s) => s.reports);
+  const pinnedIds = useResultStore((s) => s.pinnedIds);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
@@ -131,7 +133,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <DashboardQuickActions latestReport={latestReport} />
-        <LocalDashboardSummary reports={reports} />
+        <LocalDashboardSummary reports={reports} pinnedIds={pinnedIds} />
         <SystemHealthCard
           health={health}
           error={healthError}
@@ -307,7 +309,7 @@ function SystemHealthCard({
   );
 }
 
-function LocalDashboardSummary({ reports }: { reports: Report[] }) {
+function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinnedIds: Set<string> }) {
   const [summaryCopied, setSummaryCopied] = useState(false);
   const stats = useMemo(() => {
     const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens ?? 0), 0);
@@ -324,6 +326,7 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
     const recent = [...reports]
       .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
       .slice(0, 4);
+    const pinned = reports.filter((report) => pinnedIds.has(report.id)).slice(0, 4);
     const activityDays = Array.from({ length: 7 }, (_, index) => {
       const day = new Date();
       day.setHours(0, 0, 0, 0);
@@ -349,8 +352,8 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
           ? '여유 적음'
           : '여유 있음';
 
-    return { totalTokens, avgLength, topStyles, recent, activityDays, maxActivityCount, storagePct, storageStatus };
-  }, [reports]);
+    return { totalTokens, avgLength, topStyles, recent, pinned, activityDays, maxActivityCount, storagePct, storageStatus };
+  }, [pinnedIds, reports]);
 
   async function copyMarkdownSummary() {
     const styleLines = stats.topStyles.length
@@ -371,6 +374,14 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
           )
           .join('\n')
       : '1. 아직 생성 결과가 없습니다.';
+    const pinnedLines = stats.pinned.length
+      ? stats.pinned
+          .map((report, index) => {
+            const title = cleanMarkdownLine(report.title || report.youtube_title, '제목 없음');
+            return `${index + 1}. ${title} (${getStyleLabel(report.style)})`;
+          })
+          .join('\n')
+      : '1. 고정한 결과가 없습니다.';
     const activityLines = stats.activityDays.map((day) => `- ${day.label}: ${day.count}건`).join('\n');
     const text = [
       '# 내 작업 요약',
@@ -386,6 +397,9 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
       '',
       '## 최근 7일 생성 흐름',
       activityLines,
+      '',
+      '## 고정 결과',
+      pinnedLines,
       '',
       '## 최근 로컬 결과',
       recentLines,
@@ -467,7 +481,7 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader>
             <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -492,6 +506,40 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
                   );
                 })}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader>
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Star className="h-4 w-4" /> 고정 결과
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.pinned.length === 0 ? (
+              <p className="text-sm text-muted-foreground">중요한 결과를 카드에서 고정하면 여기에 모입니다.</p>
+            ) : (
+              <ul className="space-y-2">
+                {stats.pinned.map((report) => (
+                  <li key={report.id}>
+                    <Link
+                      href={`/?report=${encodeURIComponent(report.id)}`}
+                      className="block rounded-sm border border-border px-3 py-2 transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{report.title || '제목 없음'}</p>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            {getStyleLabel(report.style)} · {report.time}
+                          </p>
+                        </div>
+                        <span className="signal-meta shrink-0 text-[10px] text-primary">열기</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>
