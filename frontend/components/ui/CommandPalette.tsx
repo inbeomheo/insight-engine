@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search, FileText, Settings, Download, Plus,
-  Zap, BarChart3, Globe
+  BarChart3, BookOpen, Globe
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -19,6 +20,7 @@ interface Command {
 
 /** 커맨드 팔레트 (F5-01) — Cmd+K로 열기 */
 export default function CommandPalette() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -37,8 +39,16 @@ export default function CommandPalette() {
       label: '새 콘텐츠 생성',
       icon: Plus,
       category: '생성',
-      action: () => { setOpen(false); },
+      action: () => { setOpen(false); router.push('/'); },
       keywords: ['생성', 'create', 'new'],
+    },
+    {
+      id: 'open-notes',
+      label: 'LLMWiki 열기',
+      icon: BookOpen,
+      category: '탐색',
+      action: () => { setOpen(false); router.push('/notes'); },
+      keywords: ['노트', 'notes', 'wiki', '지식'],
     },
     {
       id: 'open-settings',
@@ -65,28 +75,20 @@ export default function CommandPalette() {
       keywords: ['템플릿', 'template', 'gallery'],
     },
     {
-      id: 'export-all',
-      label: '내보내기',
-      icon: Download,
-      category: '도구',
-      action: () => { setOpen(false); },
-      keywords: ['내보내기', 'export', 'download'],
-    },
-    {
-      id: 'pipeline',
-      label: '파이프라인 빌더',
-      icon: Zap,
-      category: '도구',
-      action: () => { setOpen(false); },
-      keywords: ['파이프라인', 'pipeline', 'automation'],
-    },
-    {
-      id: 'dashboard',
+      id: 'open-dashboard',
       label: '운영 대시보드',
       icon: BarChart3,
       category: '탐색',
-      action: () => { setOpen(false); },
-      keywords: ['대시보드', 'dashboard', 'stats'],
+      action: () => { setOpen(false); router.push('/dashboard'); },
+      keywords: ['대시보드', 'dashboard', 'stats', '운영'],
+    },
+    {
+      id: 'export-help',
+      label: '내보내기 안내',
+      icon: Download,
+      category: '도구',
+      action: () => { setOpen(false); router.push('/'); },
+      keywords: ['내보내기', 'export', 'download', 'html', 'markdown'],
     },
   ];
 
