@@ -64,6 +64,20 @@ export interface NoteStudyResumeItem {
 }
 
 export type NoteStudyStatus = 'not-started' | 'in-progress' | 'completed';
+export type NoteStudyCardKind = 'review-needed' | 'study-start' | 'completed' | 'recent';
+
+const NOTE_STUDY_CARD_PRIORITY: NoteStudyCardKind[] = [
+  'review-needed',
+  'study-start',
+  'completed',
+  'recent',
+];
+
+export function getNoteStudyCardOrder(
+  counts: Record<NoteStudyCardKind, number>
+): NoteStudyCardKind[] {
+  return NOTE_STUDY_CARD_PRIORITY.filter((kind) => counts[kind] > 0);
+}
 
 export function getNoteStudyCounts(note: NoteListItem): NoteStudyCounts {
   return {

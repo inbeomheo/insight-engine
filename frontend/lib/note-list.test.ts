@@ -5,6 +5,7 @@ import {
   filterNotesByFacet,
   getCompletedStudyItems,
   getFacetLabel,
+  getNoteStudyCardOrder,
   getNotesNeedingReview,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
@@ -196,6 +197,21 @@ describe('note-list', () => {
         2
       ).map((item) => item.note.id)
     ).toEqual(['recent-complete', 'older-complete']);
+  });
+
+  it('orders study dashboard cards by action priority', () => {
+    expect(getNoteStudyCardOrder({
+      'study-start': 2,
+      'review-needed': 1,
+      completed: 3,
+      recent: 4,
+    })).toEqual(['review-needed', 'study-start', 'completed', 'recent']);
+    expect(getNoteStudyCardOrder({
+      'study-start': 0,
+      'review-needed': 2,
+      completed: 0,
+      recent: 1,
+    })).toEqual(['review-needed', 'recent']);
   });
 
   it('classifies and filters notes by study status', () => {

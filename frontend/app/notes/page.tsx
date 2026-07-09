@@ -15,6 +15,7 @@ import {
   filterNotesByStudyStatus,
   getCompletedStudyItems,
   getFacetLabel,
+  getNoteStudyCardOrder,
   getNotesNeedingReview,
   getNoteSourceLabel,
   getNoteStudyCounts,
@@ -26,6 +27,7 @@ import {
   sortNotesByRecent,
   type NoteStudyStatus,
   type NoteStudyResumeItem,
+  type NoteStudyCardKind,
   type NoteFacet,
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
@@ -216,6 +218,15 @@ export default function NotesPage() {
     ),
     [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes],
   );
+  const studyCardOrder = useMemo(
+    () => getNoteStudyCardOrder({
+      'review-needed': reviewNeededNotes.length,
+      'study-start': studyStartNotes.length,
+      completed: completedStudyNotes.length,
+      recent: studyResumeNotes.length,
+    }),
+    [completedStudyNotes.length, reviewNeededNotes.length, studyResumeNotes.length, studyStartNotes.length],
+  );
   const studyStatusCounts = useMemo(
     () => getNoteStudyStatusCounts(notes, studyProgressByNote),
     [notes, studyProgressByNote],
@@ -289,6 +300,7 @@ export default function NotesPage() {
             reviewNeededNotes={reviewNeededNotes}
             completedStudyNotes={completedStudyNotes}
             studyResumeNotes={studyResumeNotes}
+            studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
           />
         )}
@@ -438,6 +450,7 @@ function WikiMap({
   reviewNeededNotes,
   completedStudyNotes,
   studyResumeNotes,
+  studyCardOrder,
   onFacetSelect,
 }: {
   topConcepts: Array<{ label: string; count: number }>;
@@ -448,8 +461,14 @@ function WikiMap({
   reviewNeededNotes: NoteStudyResumeItem[];
   completedStudyNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
+  studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
+  const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
+    const index = studyCardOrder.indexOf(kind);
+    return { order: index >= 0 ? index + 1 : 99 };
+  };
+
   return (
     <section className="mb-6 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
       <Card className="py-4">
@@ -554,7 +573,7 @@ function WikiMap({
         </Card>
 
         {studyStartNotes.length > 0 && (
-          <Card className="py-4">
+          <Card className="py-4" style={studyCardOrderStyle('study-start')}>
             <CardContent className="px-4">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-primary/70" />
@@ -590,7 +609,7 @@ function WikiMap({
         )}
 
         {reviewNeededNotes.length > 0 && (
-          <Card className="border-primary/20 bg-primary/5 py-4">
+          <Card className="border-primary/20 bg-primary/5 py-4" style={studyCardOrderStyle('review-needed')}>
             <CardContent className="px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary/70" />
@@ -635,7 +654,7 @@ function WikiMap({
         )}
 
         {completedStudyNotes.length > 0 && (
-          <Card className="py-4">
+          <Card className="py-4" style={studyCardOrderStyle('completed')}>
             <CardContent className="px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary/70" />
@@ -671,7 +690,7 @@ function WikiMap({
         )}
 
         {studyResumeNotes.length > 0 && (
-          <Card className="border-primary/20 bg-primary/5 py-4">
+          <Card className="border-primary/20 bg-primary/5 py-4" style={studyCardOrderStyle('recent')}>
             <CardContent className="px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary/70" />
