@@ -85,7 +85,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/transcript/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
 | 서비스 | `services/platform/webhook_service.py` | 웹훅 알림 (SSRF 검증 + 재시도) |
 | 서비스 | `services/platform/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
-| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (채널 모니터링/RSS 구독, 30분 간격) |
+| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (채널 모니터링, 30분 간격) |
 | 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
 | 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |

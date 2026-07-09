@@ -41,7 +41,7 @@ Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · 4,300+ 테스트(pass
 ### Export & Integration
 - **단순 내보내기** — HTML, Markdown
 - **웹훅 알림** — 생성 완료 시 설정한 Webhook URL로 결과 전송
-- **외부 소스** — RSS, Notion, 북마크 기반 학습 소스 수집
+- **학습 소스** — YouTube URL, 문서 업로드, 직접 텍스트 입력
 
 ---
 

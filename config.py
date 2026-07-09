@@ -38,10 +38,6 @@ TAVILY_API_KEY: str = os.getenv('TAVILY_API_KEY', '')
 WEB_SEARCH_ENABLED: bool = os.getenv('WEB_SEARCH_ENABLED', 'false').lower() == 'true'
 WEB_SEARCH_MAX_RESULTS: int = int(os.getenv('WEB_SEARCH_MAX_RESULTS', '5'))
 
-# === 외부 소스 연동 ===
-
-NOTION_API_KEY: str = os.getenv('NOTION_API_KEY', '')
-
 # === RAG (지식 참조) ===
 
 RAG_ENABLED: bool = os.environ.get('RAG_ENABLED', 'false').lower() == 'true'

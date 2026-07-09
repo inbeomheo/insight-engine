@@ -6,7 +6,6 @@ app.py에서 `import routes.integration_routes`만 호출하면 부수효과로 
 등록된다.
 
 도메인별 모듈:
-- imports: Notion, Google Docs, RSS, 북마크, 이메일 임포트
 - mcp_plugins: MCP 플러그인/앱/SDK/서버 + CMS 발행 플러그인
 - knowledge: RAG 지식 베이스 (벡터, GraphRAG, 멀티모달)
 - misc: 앱 피드백

@@ -51,6 +51,7 @@
   11차: 프론트에서 소비되지 않는 레거시 훅 7개와 고아 playlist 모달 상태 제거 완료.
   12차: 프론트에서 소비되지 않는 레거시 결과/입력/위키/파이프라인 컴포넌트 15개 제거 완료.
   13차: 프론트 소비 0인 `/api/content/<id>/versions*`, `/api/search`, `/api/notifications*`, `/api/collab/session*` 라우트와 전용 인메모리 서비스/테스트 제거 완료.
+  14차: 프론트 소비 0인 Notion 임포트, RSS 구독, 북마크 파싱 라우트와 전용 서비스/테스트, RSS 구독 스케줄러 작업 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -91,6 +92,15 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 외부 임포트 죽은 라우트 그룹 제거.
+  프론트 소비 0·테스트/스케줄러 전용으로 남은 Notion 임포트, RSS 구독, 북마크 파싱 라우트 그룹을 제거.
+  Notion/RSS/북마크 전용 서비스 3종, 전용 테스트, RSS 구독 스케줄러 작업, 미사용 Notion API 키 설정 잔여를 함께 정리하고 단일 RSS URL 파싱 경로는 보존.
+  README/CLAUDE/TASKS/데드코드 감사 문서의 해당 잔여 설명도 현재 상태에 맞게 갱신.
+  검증: 제거 대상 경로/서비스명 grep 0 +
+  `.venv\Scripts\python.exe -m pytest tests/test_integration_routes.py tests/test_scheduler_worker.py tests/test_rss_service.py tests/test_multi_source_collector.py -q -p no:cacheprovider` 37 passed +
+  `.venv\Scripts\python.exe -m py_compile app.py routes\integration_routes.py routes\integrations\__init__.py services\data\scheduler_worker.py config.py` 통과 +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 위키 읽기 경로 추가.
   `/notes/[id]` 문서 브리핑 아래에 관련 노트를 관련도 점수순으로 보여주는 `위키 읽기 경로` 카드를 추가하고, 문서 브리핑 빠른 액션도 해당 카드로 연결.
   공용 `note-wiki-brief` 유틸에 읽기 경로 계산을 추가하고, 빈 ID 제외·점수 정렬·점수 상한 보정·스니펫 설명을 단위 테스트로 검증.

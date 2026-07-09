@@ -39,13 +39,6 @@
 - [P1-09] frontend/components/input/TextInput.tsx: 텍스트 직접 입력 탭 추가 | 검증: build
 - [P1-10] frontend/hooks/useGenerate.ts: generateFromText() 추가 | 검증: tsc
 
-### F1-05. RSS 피드 구독 → 자동 생성 — 난이도 M
-- **기존**: rss_service.py (feedparser), scheduler_worker.py
-- [P1-11] services/rss_subscription_service.py: RSS 구독 CRUD + 새 글 감지 로직 | 검증: pytest
-- [P1-12] routes/integration_routes.py: /api/rss/subscribe, /api/rss/list, /api/rss/unsubscribe 엔드포인트 | 검증: pytest
-- [P1-13] services/scheduler_worker.py: RSS 폴링 잡 추가 (30분 간격) | 검증: pytest
-- [P1-14] frontend/components/settings/RssSubscription.tsx: RSS 구독 관리 UI | 검증: build
-
 ### F1-06. 팟캐스트 오디오 URL → 자막 → 콘텐츠 — 난이도 M
 - **기존**: whisper_service.py, yt-dlp
 - [P1-15] services/content_service.py: 팟캐스트 URL 감지 + yt-dlp 오디오 다운로드 + Whisper 변환 경로 추가 | 검증: pytest
@@ -64,11 +57,6 @@
 - [P1-21] services/social_scraper_service.py: Reddit 포스트+댓글 추출 (JSON API) | 검증: pytest
 - [P1-22] routes/blog_routes.py: source_type='reddit' 분기 추가 | 검증: pytest
 
-### F1-10. Notion 페이지 → 콘텐츠 변환 — 난이도 M
-- [P1-23] services/notion_service.py: Notion API 연동 → 페이지 마크다운 추출 | 검증: pytest
-- [P1-24] routes/integration_routes.py: /api/notion/import 엔드포인트 | 검증: pytest
-- [P1-25] frontend/components/settings/NotionConnect.tsx: Notion 연결 설정 UI | 검증: build
-
 ### F1-11. Google Docs → 콘텐츠 변환 — 난이도 M
 - [P1-26] services/gdocs_service.py: Google Docs API → 마크다운 추출 | 검증: pytest
 - [P1-27] routes/integration_routes.py: /api/gdocs/import 엔드포인트 | 검증: pytest
@@ -79,10 +67,6 @@
 
 ### F1-13. 클립보드 붙여넣기 → 즉시 생성 — 난이도 S
 - [x] [P1-30] frontend/components/input/ClipboardPaste.tsx: Ctrl+V 감지 → 텍스트/URL 자동 판별 | 검증: build
-
-### F1-14. 북마크 일괄 가져오기 — 난이도 M
-- [P1-31] services/bookmark_import_service.py: Chrome/Firefox 북마크 HTML 파싱 | 검증: pytest
-- [P1-32] frontend/components/input/BookmarkImport.tsx: 북마크 파일 업로드 UI | 검증: build
 
 ### F1-15. YouTube 채널 전체 분석 — 난이도 L
 - **기존**: channel_monitor_service.py
