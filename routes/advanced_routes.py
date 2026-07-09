@@ -373,68 +373,6 @@ def agent_research():
         return handle_error(str(e))
 
 
-@blog_bp.route('/api/agent/pipeline', methods=['POST'])
-@require_auth
-@require_usage
-def agent_pipeline():
-    """멀티에이전트 파이프라인을 실행합니다.
-
-    Request body:
-        topic (str): 콘텐츠 주제
-        model (str): AI 모델 ID
-        style_id (str): 출력 스타일 (기본 blog_seo)
-        skip_research (bool): 리서치 단계 건너뛰기
-
-    Returns:
-        파이프라인 실행 결과 (순차 응답)
-    """
-    try:
-        data = request.get_json(silent=True) or {}
-        topic = data.get('topic', '').strip()
-        model = data.get('model', DEFAULT_MODEL)
-        style_id = data.get('style_id', 'blog_seo')
-        skip_research = data.get('skip_research', False)
-
-        if not topic:
-            return api_error('콘텐츠 주제가 필요합니다.', 400)
-
-        from services.agents.web_research_agent import ResearchAgent
-        from services.agents.content_pipeline_agent import WriterAgent, EditorAgent, SeoAgent
-        from services.agents.pipeline_orchestrator import AgentOrchestrator
-
-        # 에이전트 체인 구성
-        agents = []
-        initial_context = {}
-
-        if not skip_research:
-            agents.append(ResearchAgent(model=model, max_sources=5))
-
-        agents.extend([
-            WriterAgent(model=model, style_id=style_id),
-            EditorAgent(model=model),
-            SeoAgent(model=model),
-        ])
-
-        orchestrator = AgentOrchestrator()
-        result = orchestrator.run_pipeline(agents, topic, initial_context=initial_context)
-
-        return jsonify({
-            'pipeline_results': result.get('pipeline_results', []),
-            'final': {
-                'title': result.get('final', {}).get('title', ''),
-                'content': result.get('final', {}).get('edited', result.get('final', {}).get('draft', '')),
-                'seo': result.get('final', {}).get('seo', {}),
-                'sources': result.get('final', {}).get('sources', []),
-            },
-            'elapsed_seconds': result.get('elapsed_seconds', 0),
-            'agent_count': result.get('agent_count', 0),
-            'quota': get_usage_for_response(),
-        })
-    except Exception as e:
-        current_app.logger.error(f"Agent pipeline failed: {e}")
-        return handle_error(str(e))
-
-
 # === 메모리 API ===
 
 @blog_bp.route('/api/memory', methods=['GET'])
@@ -507,30 +445,6 @@ def auto_tags():
 
     except Exception as e:
         current_app.logger.error(f"Auto-tag failed: {e}")
-        return handle_error(str(e))
-
-
-# =============================================
-# F3-23: 콘텐츠 점수 카드
-# =============================================
-
-@blog_bp.route('/api/content-score', methods=['POST'])
-@require_auth
-def content_score():
-    """콘텐츠 종합 점수를 계산합니다."""
-    try:
-        data = request.get_json(silent=True) or {}
-        content = data.get('content', '')
-
-        if not content:
-            return api_error('점수를 계산할 콘텐츠가 필요합니다.', 400)
-
-        from services.quality.quality_service import calculate_comprehensive_score
-        result = calculate_comprehensive_score(content)
-        return jsonify(result)
-
-    except Exception as e:
-        current_app.logger.error(f"Content score failed: {e}")
         return handle_error(str(e))
 
 
