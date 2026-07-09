@@ -342,3 +342,31 @@ export function getDailyStudyPlanItems(
 
   return [...continuing, ...starting].slice(0, Math.max(0, limit));
 }
+
+function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
+  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
+  return cleaned || fallback;
+}
+
+export function buildDailyStudyPlanMarkdown(
+  items: NoteStudyPlanItem[],
+  title = '오늘의 복습 플랜'
+): string {
+  const heading = cleanMarkdownValue(title, '오늘의 복습 플랜');
+  if (items.length === 0) {
+    return `# ${heading}\n\n복습할 노트가 없습니다.`;
+  }
+
+  return [
+    `# ${heading}`,
+    '',
+    ...items.flatMap((item, index) => [
+      `${index + 1}. ${cleanMarkdownValue(item.note.title, '제목 없음')}`,
+      `   - 단계: ${item.label}`,
+      `   - 행동: ${item.actionLabel}`,
+      `   - 남은 항목: ${item.remaining}개`,
+      `   - 진행: ${item.summary.completed}/${item.summary.total} (${item.summary.percent}%)`,
+      `   - 링크: /notes/${encodeURIComponent(item.note.id)}#study-progress`,
+    ]),
+  ].join('\n');
+}

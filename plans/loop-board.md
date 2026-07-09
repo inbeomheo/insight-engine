@@ -67,6 +67,7 @@
   10차: `/notes/[id]` 복습 완료 시 세션 완료 요약과 `다시 복습` 버튼을 표시.
   11차: `/notes/[id]` 복습 진행 카드에 다음 미완료 학습 포인트/복습 질문을 안내하는 `다음 복습` CTA 추가.
   12차: `/notes` 홈 학습 큐 상단에 진행 중 노트 우선, 미시작 노트 후순위로 묶은 `오늘의 복습 플랜` 추가.
+  13차: `/notes` 홈 오늘의 복습 플랜을 Markdown으로 복사하는 빠른 액션 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -93,6 +94,12 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 오늘의 복습 플랜 Markdown 복사 추가.
+  `/notes` 홈의 `오늘의 복습 플랜` 카드에 플랜 복사 버튼을 추가해 복습 순서·행동·남은 항목·진행률·노트 링크를 Markdown으로 저장할 수 있게 개선.
+  공용 `note-list` 유틸에 일일 복습 플랜 Markdown 생성 함수를 추가하고, 공백 정리·빈 플랜·노트 링크 인코딩을 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 37 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 위키 읽기 경로 Markdown 복사 추가.
   `/notes/[id]`의 `위키 읽기 경로` 카드에 경로 복사 버튼을 추가해 관련 문서 순서·관련도·이유를 Markdown으로 저장할 수 있게 개선.
   공용 `note-wiki-brief` 유틸에 읽기 경로 Markdown 생성 함수를 추가하고, 공백 정리·빈 경로·Markdown 링크 텍스트 이스케이프를 단위 테스트로 검증.

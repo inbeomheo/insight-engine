@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NoteListItem } from './api';
 import {
+  buildDailyStudyPlanMarkdown,
   buildNoteFacetHref,
   filterNotesByStudyStatus,
   filterNotesByFacet,
@@ -290,6 +291,38 @@ describe('note-list', () => {
       { id: 'high-plan', kind: 'continue', remaining: 1, label: '이어 복습' },
       { id: 'start-plan', kind: 'start', remaining: 2, label: '새로 시작' },
     ]);
+  });
+
+  it('builds markdown for the daily study plan', () => {
+    const plan = getDailyStudyPlanItems(
+      [
+        note({ id: 'continue plan', title: '이어갈 노트', learning_point_count: 3, review_question_count: 0 }),
+        note({ id: 'start-plan', title: '  새\n노트  ', learning_point_count: 1, review_question_count: 1 }),
+      ],
+      {
+        'continue plan': { learning: [0], review: [], updatedAt: '2026-07-10T05:00:00Z' },
+      },
+      2
+    );
+
+    expect(buildDailyStudyPlanMarkdown(plan, '  오늘\n계획  ')).toBe([
+      '# 오늘 계획',
+      '',
+      '1. 이어갈 노트',
+      '   - 단계: 이어 복습',
+      '   - 행동: 남은 항목 이어가기',
+      '   - 남은 항목: 2개',
+      '   - 진행: 1/3 (33%)',
+      '   - 링크: /notes/continue%20plan#study-progress',
+      '2. 새 노트',
+      '   - 단계: 새로 시작',
+      '   - 행동: 첫 체크 시작',
+      '   - 남은 항목: 2개',
+      '   - 진행: 0/2 (0%)',
+      '   - 링크: /notes/start-plan#study-progress',
+    ].join('\n'));
+
+    expect(buildDailyStudyPlanMarkdown([], '')).toBe('# 오늘의 복습 플랜\n\n복습할 노트가 없습니다.');
   });
 
   it('orders study dashboard cards by action priority', () => {

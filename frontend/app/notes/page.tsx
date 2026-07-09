@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, Copy, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from 
 import {
   filterNotesByFacet,
   filterNotesByStudyStatus,
+  buildDailyStudyPlanMarkdown,
   getCompletedStudyItems,
   getDailyStudyPlanItems,
   getFacetLabel,
@@ -515,6 +516,7 @@ function WikiMap({
 }) {
   const [studyQueueOpen, setStudyQueueOpen] = useState(true);
   const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
+  const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   useEffect(() => {
     try {
       setStudyQueueOpen(
@@ -564,6 +566,26 @@ function WikiMap({
       return next;
     });
   }, []);
+
+  const copyDailyStudyPlan = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setStudyPlanCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildDailyStudyPlanMarkdown(dailyStudyPlanItems));
+      setStudyPlanCopyStatus('copied');
+    } catch {
+      setStudyPlanCopyStatus('error');
+    }
+  }, [dailyStudyPlanItems]);
+
+  useEffect(() => {
+    if (studyPlanCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setStudyPlanCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [studyPlanCopyStatus]);
 
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
@@ -782,9 +804,28 @@ function WikiMap({
                             <Brain className="h-4 w-4 text-primary/70" />
                             <h2 className="text-sm font-semibold text-foreground">오늘의 복습 플랜</h2>
                           </div>
-                          <span className="text-[10px] text-primary">
-                            {dailyStudyPlanItems.length}단계
-                          </span>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-primary">
+                                {dailyStudyPlanItems.length}단계
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 px-2 text-[10px]"
+                                onClick={copyDailyStudyPlan}
+                              >
+                                <Copy className="h-3 w-3" />
+                                플랜 복사
+                              </Button>
+                            </div>
+                            {studyPlanCopyStatus !== 'idle' && (
+                              <span className={`text-[10px] ${studyPlanCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                {studyPlanCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           진행 중인 노트를 먼저 끝내고, 남는 시간에 새 노트를 시작합니다.
