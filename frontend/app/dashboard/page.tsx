@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OperationsDashboard from '@/components/dashboard/OperationsDashboard';
 import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
+import { buildLocalDashboardMarkdown, buildLocalDashboardStats, cleanMarkdownLine } from '@/lib/dashboard-summary';
 import { getStyleLabel } from '@/lib/helpers';
 import { apiUrl } from '@/lib/api';
 import type { Report } from '@/lib/types';
@@ -52,22 +53,6 @@ async function writeClipboardText(text: string) {
     document.execCommand('copy');
     document.body.removeChild(textarea);
   }
-}
-
-function cleanMarkdownLine(value: string | undefined, fallback = '-') {
-  const text = value?.replace(/\s+/g, ' ').trim();
-  return text || fallback;
-}
-
-function formatDayKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatDayLabel(date: Date) {
-  return date.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 }
 
 export default function DashboardPage() {
@@ -311,99 +296,10 @@ function SystemHealthCard({
 
 function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinnedIds: Set<string> }) {
   const [summaryCopied, setSummaryCopied] = useState(false);
-  const stats = useMemo(() => {
-    const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens ?? 0), 0);
-    const avgLength = reports.length
-      ? Math.round(reports.reduce((sum, report) => sum + report.content.length, 0) / reports.length)
-      : 0;
-    const styleCounts = new Map<string, number>();
-    for (const report of reports) {
-      styleCounts.set(report.style, (styleCounts.get(report.style) ?? 0) + 1);
-    }
-    const topStyles = Array.from(styleCounts.entries())
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 4);
-    const recent = [...reports]
-      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-      .slice(0, 4);
-    const pinned = reports.filter((report) => pinnedIds.has(report.id)).slice(0, 4);
-    const activityDays = Array.from({ length: 7 }, (_, index) => {
-      const day = new Date();
-      day.setHours(0, 0, 0, 0);
-      day.setDate(day.getDate() - (6 - index));
-      return {
-        key: formatDayKey(day),
-        label: formatDayLabel(day),
-        count: 0,
-      };
-    });
-    const activityIndex = new Map(activityDays.map((day, index) => [day.key, index]));
-    for (const report of reports) {
-      if (!report.createdAt) continue;
-      const index = activityIndex.get(formatDayKey(new Date(report.createdAt)));
-      if (index !== undefined) activityDays[index].count += 1;
-    }
-    const maxActivityCount = Math.max(1, ...activityDays.map((day) => day.count));
-    const storagePct = Math.round((reports.length / MAX_LOCAL_REPORTS) * 100);
-    const storageStatus =
-      reports.length >= MAX_LOCAL_REPORTS
-        ? '가득 참'
-        : reports.length >= Math.floor(MAX_LOCAL_REPORTS * 0.8)
-          ? '여유 적음'
-          : '여유 있음';
-
-    return { totalTokens, avgLength, topStyles, recent, pinned, activityDays, maxActivityCount, storagePct, storageStatus };
-  }, [pinnedIds, reports]);
+  const stats = useMemo(() => buildLocalDashboardStats(reports, pinnedIds, MAX_LOCAL_REPORTS), [pinnedIds, reports]);
 
   async function copyMarkdownSummary() {
-    const styleLines = stats.topStyles.length
-      ? stats.topStyles.map(([style, count]) => `- ${getStyleLabel(style)}: ${count}건`).join('\n')
-      : '- 아직 생성 결과가 없습니다.';
-    const recentLines = stats.recent.length
-      ? stats.recent
-          .map((report, index) =>
-            [
-              `${index + 1}. ${cleanMarkdownLine(report.title || report.youtube_title, '제목 없음')}`,
-              `   - 스타일: ${getStyleLabel(report.style)}`,
-              `   - 생성: ${cleanMarkdownLine(report.time)}`,
-              `   - 길이: ${report.content.length.toLocaleString()}자`,
-              report.url ? `   - 원본: ${report.url}` : null,
-            ]
-              .filter(Boolean)
-              .join('\n')
-          )
-          .join('\n')
-      : '1. 아직 생성 결과가 없습니다.';
-    const pinnedLines = stats.pinned.length
-      ? stats.pinned
-          .map((report, index) => {
-            const title = cleanMarkdownLine(report.title || report.youtube_title, '제목 없음');
-            return `${index + 1}. ${title} (${getStyleLabel(report.style)})`;
-          })
-          .join('\n')
-      : '1. 고정한 결과가 없습니다.';
-    const activityLines = stats.activityDays.map((day) => `- ${day.label}: ${day.count}건`).join('\n');
-    const text = [
-      '# 내 작업 요약',
-      '',
-      `- 복사 시각: ${new Date().toLocaleString('ko-KR')}`,
-      `- 저장된 결과: ${reports.length}/${MAX_LOCAL_REPORTS}개`,
-      `- 저장 공간: ${stats.storageStatus} · ${stats.storagePct}% 사용 중`,
-      `- 누적 토큰: ${stats.totalTokens.toLocaleString()}`,
-      `- 평균 길이: ${stats.avgLength.toLocaleString()}자`,
-      '',
-      '## 로컬 스타일 분포',
-      styleLines,
-      '',
-      '## 최근 7일 생성 흐름',
-      activityLines,
-      '',
-      '## 고정 결과',
-      pinnedLines,
-      '',
-      '## 최근 로컬 결과',
-      recentLines,
-    ].join('\n');
+    const text = buildLocalDashboardMarkdown(stats, reports.length, MAX_LOCAL_REPORTS);
 
     await writeClipboardText(text);
     setSummaryCopied(true);

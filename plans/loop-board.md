@@ -24,6 +24,7 @@
   11차: `/dashboard` 내 작업 요약에 최근 7일 로컬 생성 흐름 카드 추가.
   12차: `/dashboard` 상단에 새 콘텐츠·지식위키·최근 결과 빠른 실행 카드 추가.
   13차: `/dashboard` 내 작업 요약에 고정 결과 패널과 Markdown 고정 결과 섹션 추가.
+  14차: 대시보드 로컬 통계/Markdown 생성 로직을 순수 함수로 분리하고 단위 테스트 추가.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -46,6 +47,11 @@
 
 ## Done
 
+- [x] 2026-07-10 refactor(dashboard): 로컬 요약 계산 로직 분리.
+  `/dashboard`의 로컬 통계, 최근 7일 흐름, 고정 결과, Markdown 생성 로직을
+  `frontend/lib/dashboard-summary.ts` 순수 함수로 분리하고 단위 테스트를 추가.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- dashboard-summary.test.ts` 3 passed.
 - [x] 2026-07-10 feat(dashboard): 고정 결과 패널 추가.
   `/dashboard` 내 작업 요약에 카드에서 핀 고정한 로컬 결과를 모아 보여주는 패널을 추가하고,
   Markdown 복사 내용에도 고정 결과 섹션을 포함.
