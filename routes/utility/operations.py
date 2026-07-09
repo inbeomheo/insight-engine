@@ -1,6 +1,6 @@
 """운영/모니터링 라우트 — utility_routes.py에서 분리.
 
-헬스체크, 클라이언트 트래커(heartbeat/close), 프로바이더 조회/검증, Ollama 헬스.
+헬스체크, 클라이언트 트래커(heartbeat/close), ChatMock 프로바이더 조회/검증.
 카운터 변수와 헬퍼는 utility_routes.py에서 import하여 사용 (외부 patch 호환성).
 """
 import os
@@ -20,6 +20,32 @@ from routes.utility._state import (
     get_request_count,
     increment_request_count,
 )
+
+
+CHATMOCK_SETUP_HINT = (
+    "ChatMock 서버에 연결할 수 없습니다. 터미널에서 `chatmock login` 후 "
+    "`chatmock serve`를 실행하고 CHATMOCK_BASE_URL을 확인하세요."
+)
+
+_CONNECTION_ERROR_MARKERS = (
+    "connection",
+    "connect",
+    "refused",
+    "winerror 10061",
+    "connection refused",
+    "failed to establish",
+    "httpconnectionpool",
+    "server disconnected",
+)
+
+
+def _format_chatmock_validation_error(error: Exception) -> str:
+    """ChatMock 연결 오류에는 실행 순서를 바로 안내합니다."""
+    message = str(error)
+    error_lower = message.lower()
+    if any(marker in error_lower for marker in _CONNECTION_ERROR_MARKERS):
+        return CHATMOCK_SETUP_HINT
+    return sanitize_error_for_client(message)
 
 
 @blog_bp.route('/health')
@@ -84,44 +110,9 @@ def api_heartbeat():
     return jsonify({'ok': True})
 
 
-def _fetch_ollama_models(base_url=None):
-    """Ollama 서버(/api/tags)에서 실제 설치된 모델을 조회해 동적 모델 목록을 만든다.
-
-    서버에 연결할 수 없으면 None을 반환해 호출측이 정적 config 목록으로 폴백하게 한다.
-    """
-    import requests as http_requests
-
-    base_url = base_url or os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
-    try:
-        resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception:
-        return None
-
-    models = []
-    for m in data.get('models', []):
-        name = m.get('name', '')
-        if not name:
-            continue
-        ctx = (m.get('details') or {}).get('context_length') or 8192
-        models.append({
-            'id': f'ollama_chat/{name}',
-            'name': name,
-            'max_input_tokens': ctx,
-            'price_input': 0,
-            'price_output': 0,
-            'size_bytes': m.get('size'),  # 모델 디스크 크기 (UI에서 대용량 경고용)
-        })
-    return models
-
-
 @blog_bp.route('/api/providers', methods=['GET'])
 def api_providers():
-    """API 키가 설정된 AI 서비스 및 모델 목록을 반환합니다.
-    환경변수에 API 키가 설정된 프로바이더만 반환됩니다.
-    Ollama는 로컬 서버에 실제 설치된 모델을 동적으로 조회해 반환합니다.
-    """
+    """활성 AI 프로바이더 및 모델 목록을 반환합니다."""
     from config import get_available_providers, SUPADATA_API_KEY
 
     providers = get_available_providers()
@@ -131,11 +122,6 @@ def api_providers():
     enriched = {}
     for pid, pdata in providers.items():
         models = pdata.get('models', [])
-        if pid == 'ollama':
-            # 설치된 모델을 실시간 조회 — 실패 시 정적 config 목록으로 폴백
-            live_models = _fetch_ollama_models(pdata.get('api_base'))
-            if live_models:
-                models = live_models
         enriched[pid] = {
             **pdata,
             'models': models,
@@ -149,22 +135,6 @@ def api_providers():
         'supadataConfigured': bool(SUPADATA_API_KEY),
         'hasAutoFallback': True
     })
-
-
-@blog_bp.route('/api/ollama/health', methods=['GET'])
-def api_ollama_health():
-    """Ollama 서버 연결 상태를 확인합니다."""
-    import requests as http_requests
-
-    base_url = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
-    try:
-        resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
-        resp.raise_for_status()
-        data = resp.json()
-        models = [m.get('name', '') for m in data.get('models', [])]
-        return jsonify({'ok': True, 'models': models, 'base_url': base_url})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': sanitize_error_for_client(str(e)), 'base_url': base_url}), 503
 
 
 @blog_bp.route('/api/providers/validate', methods=['POST'])
@@ -188,19 +158,6 @@ def api_validate_provider():
         return jsonify({'valid': False, 'error': '사용 가능한 모델이 없습니다.'}), 400
 
     test_model = models[0]['id']
-
-    # Ollama는 API 키 대신 base URL로 연결 테스트
-    if provider_id == 'ollama':
-        import requests as http_requests
-        base_url = api_key or provider.get('api_base', 'http://localhost:11434')
-        try:
-            t0 = time.time()
-            resp = http_requests.get(f'{base_url}/api/tags', timeout=5)
-            latency_ms = round((time.time() - t0) * 1000)
-            resp.raise_for_status()
-            return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
-        except Exception as e:
-            return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
     if not api_key and provider_id != 'chatmock':
         return jsonify({'valid': False, 'error': 'API 키가 필요합니다.'}), 400
@@ -230,4 +187,5 @@ def api_validate_provider():
         latency_ms = round((time.time() - t0) * 1000)
         return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
     except Exception as e:
-        return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
+        error = _format_chatmock_validation_error(e) if provider_id == 'chatmock' else sanitize_error_for_client(str(e))
+        return jsonify({'valid': False, 'model_tested': test_model, 'error': error})

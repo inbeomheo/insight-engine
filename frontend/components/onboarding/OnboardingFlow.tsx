@@ -10,9 +10,9 @@ interface OnboardingStep {
 }
 
 const DEFAULT_STEPS: OnboardingStep[] = [
-  { title: 'AI 프로바이더 설정', description: 'Gemini, DeepSeek 등 API 키를 입력하세요.' },
-  { title: '첫 콘텐츠 생성', description: 'YouTube URL을 입력하고 스타일을 선택하세요.' },
-  { title: '결과 확인', description: '생성된 콘텐츠를 확인하고 내보내기하세요.' },
+  { title: 'ChatMock 실행', description: '터미널에서 chatmock login 후 chatmock serve를 실행하세요.' },
+  { title: '첫 학습 노트 생성', description: 'YouTube URL, 문서, 텍스트 중 하나를 넣고 스타일을 선택하세요.' },
+  { title: '지식으로 쌓기', description: '생성된 노트를 확인하고 Markdown 또는 HTML로 내보내세요.' },
 ];
 
 interface OnboardingFlowProps {

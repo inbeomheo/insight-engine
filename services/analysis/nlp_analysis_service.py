@@ -2,18 +2,16 @@
 NLP 분석 서비스 — LLM 기반 키워드/감성/토픽 분석
 
 외부 NLP 라이브러리(spaCy, nltk 등) 없이 LiteLLM을 통해 분석.
-비용 절감을 위해 경량 모델 우선 사용.
+ChatMock 기본 모델을 사용합니다.
 """
 import json
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
-# 분석에 사용할 경량 모델 폴백 체인
+# 분석에 사용할 기본 모델
 _ANALYSIS_MODEL_CHAIN = [
-    'zhipuai/GLM-4.5-Air',
-    'zhipuai/GLM-4.7',
+    'chatmock/gpt-5.4-mini',
 ]
 
 # NLP 분석 프롬프트 — 최소 토큰으로 정확한 JSON 반환 유도
@@ -62,29 +60,21 @@ _EMPTY_ANALYSIS = {
 
 
 def _get_analysis_model() -> str:
-    """분석에 사용할 모델을 반환합니다. API 키가 있는 첫 번째 모델 사용."""
-    from config import PROVIDER_API_KEYS
-
-    zhipu_key = PROVIDER_API_KEYS.get('zhipuai', '')
-    if zhipu_key:
-        return _ANALYSIS_MODEL_CHAIN[0]
-
-    # Gemini 폴백
-    gemini_key = PROVIDER_API_KEYS.get('gemini', '')
-    if gemini_key:
-        return 'gemini/gemini-2.5-flash-lite-preview-09-2025'
-
-    # DeepSeek 폴백
-    deepseek_key = PROVIDER_API_KEYS.get('deepseek', '')
-    if deepseek_key:
-        return 'deepseek/deepseek-chat'
-
-    # Ollama 폴백 (무료)
-    ollama_url = PROVIDER_API_KEYS.get('ollama', '')
-    if ollama_url:
-        return 'ollama_chat/llama3.2'
-
+    """분석에 사용할 ChatMock 기본 모델을 반환합니다."""
     return _ANALYSIS_MODEL_CHAIN[0]
+
+
+def _apply_chatmock_kwargs(kwargs: dict, model: str) -> None:
+    """ChatMock 모델 ID를 OpenAI 호환 호출 파라미터로 변환합니다."""
+    if not model.startswith('chatmock/'):
+        return
+    import os
+
+    kwargs["model"] = model.replace('chatmock/', '')
+    kwargs["api_base"] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
+    kwargs["api_key"] = 'dummy'
+    kwargs["drop_params"] = True
+    kwargs.pop("temperature", None)
 
 
 def _call_llm_for_analysis(content: str, model: str) -> dict:
@@ -110,18 +100,7 @@ def _call_llm_for_analysis(content: str, model: str) -> dict:
         "temperature": 0.3,
     }
 
-    # Zhipu GLM OpenAI 호환 API 설정
-    if model.startswith('zhipuai/'):
-        from services.core.ai_service import ZHIPUAI_API_BASE
-        kwargs["api_base"] = ZHIPUAI_API_BASE
-        api_key = os.getenv('ZHIPUAI_API_KEY', '')
-        if api_key:
-            kwargs["api_key"] = api_key
-
-    # Ollama: api_base 설정
-    if model.startswith('ollama_chat/') or model.startswith('ollama/'):
-        ollama_base = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-        kwargs["api_base"] = ollama_base
+    _apply_chatmock_kwargs(kwargs, model)
 
     response = completion(**kwargs)
     raw = response.choices[0].message.content or ''
@@ -328,15 +307,7 @@ def analyze_sentiment_flow(content: str, model: str = None) -> dict:
             "temperature": 0.3,
         }
 
-        if model.startswith('zhipuai/'):
-            from services.core.ai_service import ZHIPUAI_API_BASE
-            kwargs["api_base"] = ZHIPUAI_API_BASE
-            api_key = os.getenv('ZHIPUAI_API_KEY', '')
-            if api_key:
-                kwargs["api_key"] = api_key
-
-        if model.startswith('ollama_chat/') or model.startswith('ollama/'):
-            kwargs["api_base"] = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+        _apply_chatmock_kwargs(kwargs, model)
 
         response = completion(**kwargs)
         raw = response.choices[0].message.content or ''

@@ -32,7 +32,6 @@ PROVIDER_API_KEYS: Dict[str, str] = {
     'gemini': os.getenv('GEMINI_API_KEY', ''),
     'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
     'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
-    'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
     'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
@@ -211,10 +210,7 @@ _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
 
 
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
-    """API 키가 설정된 프로바이더만 반환합니다.
-    Ollama는 API 키 불필요 — OLLAMA_BASE_URL이 설정되어 있으면 활성화.
-    결과를 60초간 캐싱합니다.
-    """
+    """활성 프로바이더만 반환합니다. 결과를 60초간 캐싱합니다."""
     global _providers_cache, _providers_cache_time
     now = time.time()
     if _providers_cache and (now - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
@@ -243,8 +239,6 @@ def get_provider_from_model(model_id: str) -> str:
         return 'deepseek'
     elif model_id.startswith('zhipuai/'):
         return 'zhipuai'
-    elif model_id.startswith('ollama_chat/') or model_id.startswith('ollama/'):
-        return 'ollama'
     elif model_id.startswith('chatmock/'):
         return 'chatmock'
     elif model_id.startswith('openrouter/'):

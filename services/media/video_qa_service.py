@@ -243,9 +243,6 @@ def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[s
             if api_key:
                 kwargs["api_key"] = api_key
 
-        if model.startswith("ollama_chat/") or model.startswith("ollama/"):
-            kwargs["api_base"] = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-
         if model.startswith("chatmock/"):
             actual_model = model.replace("chatmock/", "")
             kwargs["model"] = actual_model

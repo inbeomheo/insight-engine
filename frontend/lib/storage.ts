@@ -56,10 +56,6 @@ const customStylesStorage = makeStorage<CustomStyle[]>(STORAGE_KEYS.CUSTOM_STYLE
 export const loadCustomStyles = customStylesStorage.load;
 export const saveCustomStyles = (styles: CustomStyle[]) => customStylesStorage.save(styles);
 
-const ollamaStorage = makeStorage<string>(STORAGE_KEYS.OLLAMA_BASE_URL, '');
-export const loadOllamaBaseUrl = ollamaStorage.load;
-export const saveOllamaBaseUrl = (url: string) => ollamaStorage.save(url);
-
 const webhookStorage = makeStorage<string>(STORAGE_KEYS.WEBHOOK_URL, '');
 export const loadWebhookUrl = webhookStorage.load;
 export const saveWebhookUrl = (url: string) => webhookStorage.save(url);

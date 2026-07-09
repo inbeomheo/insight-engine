@@ -156,27 +156,6 @@ class TestProviderRoutes(_BaseTestCase):
         self.assertIn('hasAutoFallback', data)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get')
-    def test_ollama_health_success(self, mock_get, _):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'models': [{'name': 'llama3'}]}
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value = mock_resp
-        resp = self.client.get('/api/ollama/health')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['ok'])
-        self.assertIn('llama3', data['models'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get', side_effect=Exception('connection refused'))
-    def test_ollama_health_failure(self, mock_get, _):
-        resp = self.client.get('/api/ollama/health')
-        self.assertEqual(resp.status_code, 503)
-        data = resp.get_json()
-        self.assertFalse(data['ok'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_validate_provider_missing_id(self, _):
         resp = self.client.post('/api/providers/validate',
                                 json={}, headers=_H)
@@ -214,6 +193,18 @@ class TestProviderRoutes(_BaseTestCase):
         kwargs = mock_completion.call_args.kwargs
         self.assertEqual(kwargs['api_key'], 'dummy')
         self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('litellm.completion', side_effect=Exception('connection refused'))
+    def test_validate_provider_chatmock_connection_hint(self, _, __):
+        resp = self.client.post('/api/providers/validate',
+                                json={'provider_id': 'chatmock'},
+                                headers=_H)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertFalse(data['valid'])
+        self.assertIn('chatmock login', data['error'])
+        self.assertIn('chatmock serve', data['error'])
 
 # ── 캐시 관련 ──────────────────────────────────────
 

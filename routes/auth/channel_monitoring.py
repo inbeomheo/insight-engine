@@ -91,18 +91,19 @@ def admin_dashboard():
             })
 
         # 프로바이더별 활성 상태 집계 (서버 설정 기반)
-        from config import PROVIDER_API_KEYS
+        from config import PROVIDER_API_KEYS, SUPPORTED_PROVIDERS
         provider_distribution = {}
         _provider_labels = {
             'gemini': 'Gemini', 'deepseek': 'DeepSeek', 'zhipuai': 'Zhipu AI',
-            'ollama': 'Ollama', 'openai': 'OpenAI', 'anthropic': 'Anthropic',
+            'openai': 'OpenAI', 'anthropic': 'Anthropic',
             'openrouter': 'OpenRouter', 'chatmock': 'ChatMock',
         }
-        for prov, key in PROVIDER_API_KEYS.items():
-            if key and key not in ('', 'dummy', 'http://localhost:11434'):
+        for prov in SUPPORTED_PROVIDERS:
+            key = PROVIDER_API_KEYS.get(prov, '')
+            if prov == 'chatmock' and key:
                 provider_distribution[_provider_labels.get(prov, prov)] = 'active'
-            elif prov == 'ollama' and key:
-                provider_distribution[_provider_labels.get(prov, prov)] = 'local'
+            elif key and key not in ('', 'dummy'):
+                provider_distribution[_provider_labels.get(prov, prov)] = 'active'
 
         return jsonify({
             'period': '7d',

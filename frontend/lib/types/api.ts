@@ -178,6 +178,7 @@ export interface SharePageResponse {
 export interface ProviderValidateResponse {
   valid: boolean;
   model_tested?: string;
+  latency_ms?: number;
   error?: string;
 }
 

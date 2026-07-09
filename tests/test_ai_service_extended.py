@@ -82,11 +82,6 @@ class TestBuildCompletionKwargs(unittest.TestCase):
                 if old:
                     os.environ['ZHIPUAI_API_KEY'] = old
 
-    def test_ollama_model(self):
-        from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('ollama_chat/llama3.2', 'test')
-        self.assertIn('api_base', kwargs)
-
     def test_chatmock_model(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('chatmock/gpt-5.4', 'test')
@@ -331,6 +326,12 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         from services.core.ai_service import _convert_error_message
         result = _convert_error_message('Connection refused')
         self.assertIn('연결', result)
+
+    def test_chatmock_connection_error_has_setup_hint(self):
+        from services.core.ai_service import _convert_error_message
+        result = _convert_error_message('Connection refused', model='chatmock/gpt-5.4-mini')
+        self.assertIn('chatmock login', result)
+        self.assertIn('chatmock serve', result)
 
     def test_service_unavailable(self):
         from services.core.ai_service import _convert_error_message

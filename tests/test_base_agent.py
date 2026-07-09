@@ -43,10 +43,10 @@ class TestBaseAgent(unittest.TestCase):
     # --- _get_default_model ---
 
     @patch('services.agents.base_agent.BaseAgent._get_default_model')
-    def test_get_default_model_gemini(self, mock_default):
-        mock_default.return_value = 'gemini/gemini-3-flash-preview'
+    def test_get_default_model_chatmock(self, mock_default):
+        mock_default.return_value = 'chatmock/gpt-5.4-mini'
         agent = ConcreteAgent()
-        self.assertEqual(agent._get_default_model(), 'gemini/gemini-3-flash-preview')
+        self.assertEqual(agent._get_default_model(), 'chatmock/gpt-5.4-mini')
 
     def test_get_default_model_no_config(self):
         """config import 실패 시 기본 모델 반환"""
@@ -128,18 +128,20 @@ class TestBaseAgent(unittest.TestCase):
         with self.assertRaises(ValueError):
             agent._call_ai('prompt')
 
-    # --- _call_ai: ollama ---
+    # --- _call_ai: ChatMock ---
 
     @patch('litellm.completion')
-    def test_call_ai_ollama_sets_api_base(self, mock_llm):
+    def test_call_ai_chatmock_sets_api_base(self, mock_llm):
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = '응답'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='ollama_chat/llama3.2')
+        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
+        self.assertEqual(kwargs['model'], 'gpt-5.4-mini')
+        self.assertEqual(kwargs['api_key'], 'dummy')
         self.assertIn('api_base', kwargs)
 
 

@@ -10,10 +10,10 @@ import type { ProviderInfo } from '@/lib/types';
 
 // 프로바이더별 라벨 (SVG 아이콘 대신 텍스트 약어)
 const PROVIDER_LABELS: Record<string, string> = {
+  chatmock: 'CM',
   gemini: 'G',
   deepseek: 'DS',
   zhipuai: 'ZH',
-  ollama: 'OL',
   openrouter: 'OR',
   openai: 'AI',
   anthropic: 'AN',
@@ -49,14 +49,14 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
 
   const handleTest = useCallback(async (providerId: string) => {
     const state = states[providerId];
-    const isOllama = providerId === 'ollama';
+    const isChatMock = providerId === 'chatmock';
 
-    if (!isOllama && !state.apiKey) return;
+    if (!isChatMock && !state.apiKey) return;
 
     updateState(providerId, { status: 'testing', error: undefined });
 
     try {
-      const result = await validateProvider(providerId, state.apiKey);
+      const result = await validateProvider(providerId, state.apiKey || 'dummy');
       if (result.valid) {
         updateState(providerId, { status: 'valid' });
       } else {
@@ -132,7 +132,7 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
         {providerIds.map((id) => {
           const provider = providers[id];
           const state = states[id];
-          const isOllama = id === 'ollama';
+          const isChatMock = id === 'chatmock';
 
           return (
             <div
@@ -149,29 +149,46 @@ export default function ProviderSetup({ providers }: ProviderSetupProps) {
                 {statusBadge(state.status)}
               </div>
 
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={state.showKey ? 'text' : 'password'}
-                    placeholder={isOllama ? 'Base URL (예: http://localhost:11434)' : 'API 키 입력'}
-                    value={state.apiKey}
-                    onChange={(e) => updateState(id, { apiKey: e.target.value, status: 'untested' })}
-                    className="pr-9 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => updateState(id, { showKey: !state.showKey })}
-                    aria-label={state.showKey ? 'API 키 숨기기' : 'API 키 보기'}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-                  >
-                    {state.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              {isChatMock && (
+                <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-[var(--text-secondary)]">
+                  <p className="font-medium text-[var(--text-primary)]">ChatMock 실행 순서</p>
+                  <ol className="mt-1 list-decimal space-y-1 pl-4">
+                    <li><code>pipx install chatmock</code> 또는 Homebrew로 설치</li>
+                    <li><code>chatmock login</code></li>
+                    <li><code>chatmock serve</code></li>
+                  </ol>
+                  <p className="mt-2">
+                    Base URL: <code>{provider.api_base || 'http://127.0.0.1:8000/v1'}</code> · API key는 <code>dummy</code>
+                  </p>
                 </div>
+              )}
+
+              <div className="flex gap-2">
+                {!isChatMock && (
+                  <div className="relative flex-1">
+                    <Input
+                      type={state.showKey ? 'text' : 'password'}
+                      placeholder="API 키 입력"
+                      value={state.apiKey}
+                      onChange={(e) => updateState(id, { apiKey: e.target.value, status: 'untested' })}
+                      className="pr-9 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateState(id, { showKey: !state.showKey })}
+                      aria-label={state.showKey ? 'API 키 숨기기' : 'API 키 보기'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                    >
+                      {state.showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleTest(id)}
-                  disabled={state.status === 'testing' || (!isOllama && !state.apiKey)}
+                  disabled={state.status === 'testing' || (!isChatMock && !state.apiKey)}
+                  className={isChatMock ? 'w-full' : undefined}
                 >
                   {state.status === 'testing' ? (
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />

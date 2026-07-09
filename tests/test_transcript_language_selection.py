@@ -443,8 +443,7 @@ class TestFetchYoutubeContentLanguage(unittest.TestCase):
 class TestGenerateStreamRouteTranscriptLanguage(unittest.TestCase):
     """POST /generate-stream이 transcript_language를 _fetch_youtube_content에 전달하는지 확인.
 
-    Ollama 모델은 프론트엔드에서 강제로 스트리밍 경로를 타므로, 이 경로가
-    언어 파라미터를 무시하면 Ollama 사용자에게는 설정이 완전히 no-op이 된다.
+    사용자가 스트리밍 생성을 켜는 경우에도 자막 언어 설정이 유지되어야 한다.
     """
 
     def setUp(self):

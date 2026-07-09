@@ -11,7 +11,6 @@ quality_check: true 파라미터가 있을 때만 동작합니다.
 import logging
 import json
 import re
-import os
 from typing import Callable, Dict, Optional, Tuple
 
 from flask import current_app
@@ -21,12 +20,9 @@ logger = logging.getLogger(__name__)
 # 등급 순서 (낮을수록 낮은 등급)
 _GRADE_ORDER = {'D': 0, 'C': 1, 'B': 2, 'A': 3}
 
-# 기본 평가 모델 (가장 저렴하고 빠른 모델 우선)
+# 기본 평가 모델
 _EVAL_MODEL_CANDIDATES = [
-    'zhipuai/GLM-4.5-Air',
-    'gemini/gemini-2.5-flash-lite-preview-09-2025',
-    'gemini/gemini-3-flash-preview',
-    'deepseek/deepseek-chat',
+    'chatmock/gpt-5.4-mini',
 ]
 
 
@@ -111,16 +107,14 @@ def _build_eval_kwargs(eval_model: str, eval_prompt: str) -> Dict:
         "timeout": 60,
     }
 
-    if eval_model.startswith("zhipuai/"):
-        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
-        if not zhipuai_key:
-            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
-        kwargs["model"] = f"openai/{eval_model.replace('zhipuai/', '')}"
-        kwargs["api_base"] = 'https://open.bigmodel.cn/api/paas/v4/'
-        kwargs["api_key"] = zhipuai_key
+    if eval_model.startswith("chatmock/"):
+        import os
 
-    if eval_model.startswith("ollama_chat/") or eval_model.startswith("ollama/"):
-        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        kwargs["model"] = eval_model.replace("chatmock/", "")
+        kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
+        kwargs["api_key"] = "dummy"
+        kwargs["drop_params"] = True
+        kwargs.pop("temperature", None)
 
     return kwargs
 

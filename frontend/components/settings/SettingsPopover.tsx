@@ -25,7 +25,6 @@ export default function SettingsPopover() {
     selectedStyle,
     modifiers,
     customStyles,
-    ollamaBaseUrl,
     webhookUrl,
     enableWebSearch,
     transcriptLanguage,
@@ -33,7 +32,6 @@ export default function SettingsPopover() {
     setSelectedModel,
     setSelectedStyle,
     setModifiers,
-    setOllamaBaseUrl,
     setWebhookUrl,
     setEnableWebSearch,
     setTranscriptLanguage,
@@ -263,25 +261,6 @@ export default function SettingsPopover() {
           다국어 자막이 있는 영상에서 추출할 언어를 지정합니다 (없으면 자동 우선순위로 대체).
         </p>
       </div>
-
-      {/* Ollama 설정 — ollama 프로바이더 선택 시만 표시 */}
-      {selectedProvider === 'ollama' && (
-        <div>
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">
-            Ollama Base URL
-          </label>
-          <input
-            type="text"
-            value={ollamaBaseUrl}
-            onChange={(e) => setOllamaBaseUrl(e.target.value)}
-            placeholder="http://localhost:11434"
-            className="w-full h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Ollama 서버 주소 (기본: http://localhost:11434)
-          </p>
-        </div>
-      )}
 
       {/* 웹 검색 보강 */}
       <div>

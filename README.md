@@ -75,7 +75,13 @@ cd frontend && npm install && cd ..
 cp .env.example .env
 ```
 
-ChatMock을 로그인/실행하고 `.env`에 base URL을 설정하세요:
+ChatMock을 설치·로그인·실행하고 `.env`에 base URL을 설정하세요:
+
+```bash
+pipx install chatmock              # 또는 brew tap RayBytes/chatmock && brew install chatmock
+chatmock login
+chatmock serve                     # 기본 API: http://127.0.0.1:8000/v1
+```
 
 ```env
 CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1

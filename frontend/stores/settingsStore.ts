@@ -7,8 +7,6 @@ import {
   saveSelectedModel,
   loadCustomStyles,
   saveCustomStyles,
-  loadOllamaBaseUrl,
-  saveOllamaBaseUrl,
   loadWebhookUrl,
   saveWebhookUrl,
 } from '@/lib/storage';
@@ -35,10 +33,6 @@ interface SettingsState {
   addCustomStyle: (s: CustomStyle) => void;
   updateCustomStyle: (id: string, s: Partial<CustomStyle>) => void;
   deleteCustomStyle: (id: string) => void;
-
-  // Ollama
-  ollamaBaseUrl: string;
-  setOllamaBaseUrl: (url: string) => void;
 
   // 웹훅
   webhookUrl: string;
@@ -79,7 +73,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   selectedStyle: 'summary',
   modifiers: { length: 'medium', writing_style: 'conversational', language: 'ko' },
   customStyles: [],
-  ollamaBaseUrl: '',
   webhookUrl: '',
   generationMode: 'individual',
   enableWebResearch: true,
@@ -126,11 +119,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ customStyles: next });
   },
 
-  setOllamaBaseUrl: (url) => {
-    saveOllamaBaseUrl(url);
-    set({ ollamaBaseUrl: url });
-  },
-
   setWebhookUrl: (url) => {
     saveWebhookUrl(url);
     set({ webhookUrl: url });
@@ -149,7 +137,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       selectedProvider: loadSelectedProvider(),
       selectedModel: loadSelectedModel(),
       customStyles: loadCustomStyles(),
-      ollamaBaseUrl: loadOllamaBaseUrl(),
       webhookUrl: loadWebhookUrl(),
     });
   },

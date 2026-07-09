@@ -40,6 +40,11 @@ GLM_RETRY_COUNT = 5
 GLM_RETRY_DELAY = 10  # 초
 
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
+CHATMOCK_CONNECTION_HINT = (
+    "[ChatMock 연결 실패] ChatMock 서버에 연결할 수 없습니다. "
+    "터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고 "
+    "CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1 설정을 확인해주세요."
+)
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -151,11 +156,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
     from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS
 
-    # 타임아웃은 환경변수로 조정 가능. 로컬(Ollama) 모델은 CPU 추론으로 느릴 수 있어 더 길게 둔다.
-    if model.startswith('ollama'):
-        request_timeout = int(os.getenv('OLLAMA_REQUEST_TIMEOUT', '1800'))
-    else:
-        request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
+    request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
@@ -184,10 +185,6 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
         kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
         kwargs["api_base"] = ZHIPUAI_API_BASE
         kwargs["api_key"] = zhipuai_key
-
-    # Ollama → api_base 설정 (API 키 불필요)
-    if model.startswith("ollama_chat/") or model.startswith("ollama/"):
-        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     # ChatMock → OpenAI 호환 프록시 (ChatGPT 구독 기반)
     if model.startswith("chatmock/"):
@@ -255,6 +252,15 @@ def _convert_error_message(error_msg, model=None):
     """API 에러 메시지를 사용자 친화적인 한국어로 변환합니다."""
     error_lower = error_msg.lower()
     model_info = f" (모델: {model})" if model else ""
+
+    if model and model.startswith("chatmock/") and any(
+        marker in error_lower
+        for marker in (
+            "connection", "connect", "refused", "winerror 10061",
+            "failed to establish", "httpconnectionpool", "server disconnected",
+        )
+    ):
+        return CHATMOCK_CONNECTION_HINT
 
     # 인증 관련
     if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
@@ -460,8 +466,7 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
     # API 키가 있는 모델만 필터링
     available_models = []
     for model_id in models:
-        # 모델 ID 접두사(예: 'ollama_chat/')와 PROVIDER_API_KEYS 키('ollama')가
-        # 다르므로 정규화 헬퍼로 프로바이더를 추출한다.
+        # 모델 ID 접두사와 PROVIDER_API_KEYS 키가 다를 수 있어 헬퍼로 프로바이더를 추출한다.
         provider = get_provider_from_model(model_id)
         api_key = PROVIDER_API_KEYS.get(provider, '')
         if api_key:

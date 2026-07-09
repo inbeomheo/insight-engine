@@ -34,18 +34,16 @@ class TestProviderValidateLatency(unittest.TestCase):
         self.assertGreaterEqual(data['latency_ms'], 0)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_ollama_success_has_latency_ms(self, mock_sb):
-        """Ollama 성공 시 latency_ms 포함"""
+    def test_chatmock_success_has_latency_ms(self, mock_sb):
+        """ChatMock 성공 시 latency_ms 포함"""
         fake_provider = {
-            'models': [{'id': 'ollama_chat/llama3'}],
-            'api_base': 'http://localhost:11434',
+            'models': [{'id': 'chatmock/gpt-5.4-mini'}],
+            'api_base': 'http://127.0.0.1:8000/v1',
         }
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status = MagicMock()
-        with patch('config.SUPPORTED_PROVIDERS', {'ollama': fake_provider}), \
-             patch('requests.get', return_value=mock_resp):
+        with patch('config.SUPPORTED_PROVIDERS', {'chatmock': fake_provider}), \
+             patch('litellm.completion', return_value=MagicMock()):
             resp = self.client.post('/api/providers/validate', json={
-                'provider_id': 'ollama',
+                'provider_id': 'chatmock',
                 'api_key': '',
             }, headers={'Origin': 'http://localhost:3000'})
 

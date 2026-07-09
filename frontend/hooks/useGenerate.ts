@@ -212,9 +212,7 @@ export function useGenerate() {
         return;
       }
 
-      // 로컬(Ollama) 모델은 CPU 추론으로 느릴 수 있어 스트리밍을 사용 —
-      // 5분 타임아웃으로 끊기는 대신 토큰을 즉시 표시한다.
-      const streaming = useStreaming || selectedModel.startsWith('ollama');
+      const streaming = useStreaming;
 
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
 
@@ -397,7 +395,7 @@ export function useGenerate() {
         return false;
       }
 
-      const streaming = useStreaming || selectedModel.startsWith('ollama');
+      const streaming = useStreaming;
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
       const req = {
         url: '',

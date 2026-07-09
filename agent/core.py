@@ -340,13 +340,12 @@ class AIAgent:
                 kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
                 kwargs["api_key"] = zhipuai_key
 
-        elif self.model.startswith("ollama_chat/") or self.model.startswith("ollama/"):
-            kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
         elif self.model.startswith("chatmock/"):
-            kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://localhost:8000/v1")
+            kwargs["model"] = self.model.replace("chatmock/", "")
+            kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
             kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy")
             kwargs["drop_params"] = True
+            kwargs.pop("temperature", None)
 
         # 스트리밍 콜백이 있으면 스트리밍 모드
         if self._on_stream_delta:

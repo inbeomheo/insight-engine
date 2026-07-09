@@ -15,7 +15,7 @@ class BaseAgent(ABC):
     """모든 에이전트의 기반 추상 클래스.
 
     Args:
-        model: 사용할 AI 모델 ID (예: 'gemini/gemini-3-flash-preview').
+        model: 사용할 AI 모델 ID (예: 'chatmock/gpt-5.4-mini').
                None이면 기본 모델 자동 선택.
     """
 
@@ -51,22 +51,14 @@ class BaseAgent(ABC):
     def _get_default_model(self) -> str:
         """설정된 모델이 없을 때 사용 가능한 기본 모델을 반환합니다.
 
-        config.py의 PROVIDER_API_KEYS를 확인하여 사용 가능한 모델 선택.
+        config.py의 AGENT_DEFAULT_MODEL을 사용합니다.
         """
         try:
-            from config import PROVIDER_API_KEYS
-            # 우선순위: Gemini → DeepSeek → Zhipu
-            candidates = [
-                ('gemini', 'gemini/gemini-3-flash-preview'),
-                ('deepseek', 'deepseek/deepseek-chat'),
-                ('zhipuai', 'zhipuai/GLM-4.5-Air'),
-            ]
-            for provider, model_id in candidates:
-                if PROVIDER_API_KEYS.get(provider):
-                    return model_id
+            from config import AGENT_DEFAULT_MODEL
+            return AGENT_DEFAULT_MODEL
         except Exception:
             pass
-        return 'gemini/gemini-3-flash-preview'
+        return 'chatmock/gpt-5.4-mini'
 
     def _call_ai(self, prompt: str, temperature: float = 0.7, max_tokens: int = 4000) -> str:
         """AI 모델을 호출하여 응답을 반환하는 헬퍼.
@@ -87,7 +79,6 @@ class BaseAgent(ABC):
 
         # GLM 모델 → OpenAI 호환 변환
         ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
-        _glm_lock_attr = '_glm_lock'
         if not hasattr(BaseAgent, '_glm_lock'):
             BaseAgent._glm_lock = threading.Lock()
 
@@ -110,8 +101,12 @@ class BaseAgent(ABC):
         elif model.startswith('gemini/') and 'lite' not in model.lower():
             kwargs['reasoning_effort'] = 'minimal'
 
-        elif model.startswith('ollama_chat/') or model.startswith('ollama/'):
-            kwargs['api_base'] = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+        elif model.startswith('chatmock/'):
+            kwargs['model'] = model.replace('chatmock/', '')
+            kwargs['api_base'] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
+            kwargs['api_key'] = 'dummy'
+            kwargs['drop_params'] = True
+            kwargs.pop('temperature', None)
 
         try:
             if model.startswith('zhipuai/') or 'zhipuai' in kwargs.get('model', ''):
