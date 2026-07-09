@@ -3,6 +3,7 @@ import {
   RESULT_CHAT_STUDY_CARDS_STORAGE_KEY,
   buildResultChatStudyCard,
   buildResultChatStudyCardMarkdown,
+  buildResultChatStudyCardsMarkdown,
   readResultChatStudyCards,
   saveResultChatStudyCard,
 } from './result-chat-study-card';
@@ -41,6 +42,61 @@ describe('result-chat-study-card', () => {
       '',
       '## 답변',
       '답변 없음',
+    ].join('\n'));
+  });
+
+  it('builds markdown for a study card collection', () => {
+    const cards = [
+      buildResultChatStudyCard({
+        title: '첫 카드',
+        question: '첫 질문',
+        answer: '첫 답',
+        sources: [{ title: '출처 A', score: 0.91, snippet: '근거 A' }],
+        createdAt: '2026-07-10T00:00:00.000Z',
+        sourceHref: '/notes/a',
+      }),
+      buildResultChatStudyCard({
+        title: '둘째 카드',
+        question: '둘째 질문',
+        answer: '둘째 답',
+        createdAt: '2026-07-09T00:00:00.000Z',
+      }),
+    ];
+
+    expect(buildResultChatStudyCardsMarkdown(cards)).toBe([
+      '# Q&A 복습 카드함',
+      '',
+      '- 카드 수: 2',
+      '',
+      '## 1. 첫 카드',
+      '- 생성: 2026-07-10T00:00:00.000Z',
+      '- 원본 노트: /notes/a',
+      '',
+      '### 질문',
+      '첫 질문',
+      '',
+      '### 답변',
+      '첫 답',
+      '',
+      '### 근거',
+      '1. 출처 A · 91% — 근거 A',
+      '',
+      '## 2. 둘째 카드',
+      '- 생성: 2026-07-09T00:00:00.000Z',
+      '',
+      '### 질문',
+      '둘째 질문',
+      '',
+      '### 답변',
+      '둘째 답',
+    ].join('\n'));
+  });
+
+  it('builds empty markdown for a study card collection', () => {
+    expect(buildResultChatStudyCardsMarkdown([])).toBe([
+      '# Q&A 복습 카드함',
+      '',
+      '저장된 Q&A 복습 카드가 없습니다.',
     ].join('\n'));
   });
 

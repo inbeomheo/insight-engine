@@ -50,6 +50,15 @@ function cleanSourceHref(value: string | undefined): string | undefined {
   return undefined;
 }
 
+function buildSourceMarkdownLine(source: ResultChatStudyCard['sources'][number], index: number): string {
+  const score =
+    typeof source.score === 'number' && Number.isFinite(source.score)
+      ? ` · ${Math.round(source.score * 100)}%`
+      : '';
+  const snippet = source.snippet ? ` — ${source.snippet}` : '';
+  return `${index + 1}. ${source.title}${score}${snippet}`;
+}
+
 function parseStudyCard(value: unknown): ResultChatStudyCard | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Partial<ResultChatStudyCard>;
@@ -86,16 +95,54 @@ export function buildResultChatStudyCardMarkdown(input: ResultChatStudyCardInput
       ? [
           '',
           '## 근거',
-          ...sources.map((source, index) => {
-            const score =
-              typeof source.score === 'number' && Number.isFinite(source.score)
-                ? ` · ${Math.round(source.score * 100)}%`
-                : '';
-            const snippet = source.snippet ? ` — ${source.snippet}` : '';
-            return `${index + 1}. ${source.title}${score}${snippet}`;
-          }),
+          ...sources.map(buildSourceMarkdownLine),
         ]
       : []),
+  ].join('\n');
+}
+
+export function buildResultChatStudyCardsMarkdown(
+  cards: ResultChatStudyCard[],
+  title = 'Q&A 복습 카드함'
+): string {
+  const heading = cleanMarkdownValue(title, 'Q&A 복습 카드함');
+  if (cards.length === 0) {
+    return [
+      `# ${heading}`,
+      '',
+      '저장된 Q&A 복습 카드가 없습니다.',
+    ].join('\n');
+  }
+
+  const cardBlocks = cards.map((card, index) => {
+    const sources = normalizeSources(card.sources);
+    const sourceHref = cleanSourceHref(card.sourceHref);
+    return [
+      `## ${index + 1}. ${cleanMarkdownValue(card.title, '근거 Q&A')}`,
+      `- 생성: ${cleanMarkdownValue(card.createdAt, '생성일 없음')}`,
+      ...(sourceHref ? [`- 원본 노트: ${sourceHref}`] : []),
+      '',
+      '### 질문',
+      cleanMarkdownValue(card.question, '질문 없음'),
+      '',
+      '### 답변',
+      cleanMarkdownValue(card.answer, '답변 없음'),
+      ...(sources.length > 0
+        ? [
+            '',
+            '### 근거',
+            ...sources.map(buildSourceMarkdownLine),
+          ]
+        : []),
+    ].join('\n');
+  });
+
+  return [
+    `# ${heading}`,
+    '',
+    `- 카드 수: ${cards.length}`,
+    '',
+    cardBlocks.join('\n\n'),
   ].join('\n');
 }
 

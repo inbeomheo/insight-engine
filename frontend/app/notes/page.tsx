@@ -48,6 +48,7 @@ import {
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import {
+  buildResultChatStudyCardsMarkdown,
   readResultChatStudyCards,
   type ResultChatStudyCard,
 } from '@/lib/result-chat-study-card';
@@ -545,6 +546,7 @@ function WikiMap({
   const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
   const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [qnaCardsCopyStatus, setQnaCardsCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [qnaCardCopyStatus, setQnaCardCopyStatus] = useState<{
     id: string;
     status: 'copied' | 'error';
@@ -638,6 +640,26 @@ function WikiMap({
     const timer = window.setTimeout(() => setWikiIndexCopyStatus('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [wikiIndexCopyStatus]);
+
+  const copyQnaStudyCards = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setQnaCardsCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildResultChatStudyCardsMarkdown(qnaStudyCards));
+      setQnaCardsCopyStatus('copied');
+    } catch {
+      setQnaCardsCopyStatus('error');
+    }
+  }, [qnaStudyCards]);
+
+  useEffect(() => {
+    if (qnaCardsCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setQnaCardsCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [qnaCardsCopyStatus]);
 
   const copyQnaStudyCard = useCallback(async (card: ResultChatStudyCard) => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -890,13 +912,37 @@ function WikiMap({
                   {qnaStudyCards.length > 0 && (
                     <Card className="border-primary/30 bg-background/90 py-4">
                       <CardContent className="px-4">
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-primary/70" />
-                          <h2 className="text-sm font-semibold text-foreground">Q&A 복습 카드함</h2>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary/70" />
+                              <h2 className="text-sm font-semibold text-foreground">Q&A 복습 카드함</h2>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              근거 Q&A에서 저장한 최근 복습 카드입니다.
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">
+                              최근 {qnaStudyCards.length}개
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 gap-1 px-2 text-[10px]"
+                              onClick={copyQnaStudyCards}
+                            >
+                              <Copy className="h-3 w-3" />
+                              전체 복사
+                            </Button>
+                          </div>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          근거 Q&A에서 저장한 최근 복습 카드입니다.
-                        </p>
+                        {qnaCardsCopyStatus !== 'idle' && (
+                          <p className={`mt-2 text-[10px] ${qnaCardsCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                            {qnaCardsCopyStatus === 'copied' ? '카드함 복사 완료' : '카드함 복사 실패'}
+                          </p>
+                        )}
                         <ul className="mt-3 space-y-2">
                           {qnaStudyCards.map((card) => (
                             <li key={card.id} className="rounded-lg border border-border bg-background px-3 py-2">

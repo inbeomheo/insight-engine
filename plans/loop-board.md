@@ -97,10 +97,17 @@
   23차: `/notes/[id]` 근거 Q&A 답변을 복습 카드 Markdown으로 복사하는 빠른 액션 추가.
   24차: `/notes` 홈 학습 큐에 최근 Q&A 복습 카드함을 추가해 저장한 Q&A 카드를 다시 볼 수 있게 개선.
   25차: Q&A 복습 카드에 원본 노트 링크를 저장하고 `/notes` 홈 카드함에서 바로 이동할 수 있게 개선.
+  26차: `/notes` 홈 Q&A 복습 카드함 전체를 Markdown으로 복사하는 빠른 액션 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): Q&A 복습 카드함 전체 복사 추가.
+  `/notes` 홈 Q&A 복습 카드함에 전체 복사 버튼을 추가해 최근 카드 묶음을 Markdown으로 저장할 수 있게 개선.
+  `result-chat-study-card` 유틸에 카드함 Markdown 생성 함수를 추가하고, 빈 카드함·복수 카드·원본 노트·근거 출처 출력 형식을 단위 테스트로 검증.
+  검증: `cd frontend && npm.cmd test -- ResultChatPanel.test.tsx result-chat-study-card.test.ts note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 53 passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): Q&A 복습 카드 원본 노트 링크 추가.
   `/notes/[id]` 근거 Q&A에서 저장한 복습 카드에 원본 노트 링크를 함께 저장하고, `/notes` 홈 `Q&A 복습 카드함`에 `원본 노트` 이동 버튼을 추가.
   `result-chat-study-card` 유틸은 `/notes/` 내부 링크만 보존하도록 정리해 외부 URL 저장을 막고, 복습 카드 Markdown에도 원본 노트 경로를 포함.
