@@ -5,6 +5,7 @@ import {
   filterNotesByStudyStatus,
   filterNotesByFacet,
   getCompletedStudyItems,
+  getDailyStudyPlanItems,
   getFacetLabel,
   getNoteConceptClusters,
   getNoteStudyCardOrder,
@@ -255,6 +256,40 @@ describe('note-list', () => {
         2
       ).map((item) => item.note.id)
     ).toEqual(['recent-complete', 'older-complete']);
+  });
+
+  it('builds a daily study plan from unfinished and not-started notes', () => {
+    const low = note({ id: 'low-plan', learning_point_count: 4, review_question_count: 0 });
+    const high = note({ id: 'high-plan', learning_point_count: 4, review_question_count: 0 });
+    const start = note({
+      id: 'start-plan',
+      learning_point_count: 1,
+      review_question_count: 1,
+      created_at: '2026-07-10T09:00:00Z',
+    });
+    const done = note({ id: 'done-plan', learning_point_count: 1, review_question_count: 0 });
+    const empty = note({ id: 'empty-plan', learning_point_count: 0, review_question_count: 0 });
+
+    expect(
+      getDailyStudyPlanItems(
+        [done, start, high, empty, low],
+        {
+          'low-plan': { learning: [0], review: [], updatedAt: '2026-07-10T05:00:00Z' },
+          'high-plan': { learning: [0, 1, 2], review: [], updatedAt: '2026-07-10T06:00:00Z' },
+          'done-plan': { learning: [0], review: [], updatedAt: '2026-07-10T07:00:00Z' },
+        },
+        3
+      ).map((item) => ({
+        id: item.note.id,
+        kind: item.kind,
+        remaining: item.remaining,
+        label: item.label,
+      }))
+    ).toEqual([
+      { id: 'low-plan', kind: 'continue', remaining: 3, label: '이어 복습' },
+      { id: 'high-plan', kind: 'continue', remaining: 1, label: '이어 복습' },
+      { id: 'start-plan', kind: 'start', remaining: 2, label: '새로 시작' },
+    ]);
   });
 
   it('orders study dashboard cards by action priority', () => {

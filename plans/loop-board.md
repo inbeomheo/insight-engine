@@ -65,6 +65,7 @@
   9차: `/notes` 홈에 아직 체크하지 않은 최근 학습 노트를 시작하도록 안내하는 `복습 시작` 카드를 추가.
   10차: `/notes/[id]` 복습 완료 시 세션 완료 요약과 `다시 복습` 버튼을 표시.
   11차: `/notes/[id]` 복습 진행 카드에 다음 미완료 학습 포인트/복습 질문을 안내하는 `다음 복습` CTA 추가.
+  12차: `/notes` 홈 학습 큐 상단에 진행 중 노트 우선, 미시작 노트 후순위로 묶은 `오늘의 복습 플랜` 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -89,6 +90,12 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 오늘의 복습 플랜 추가.
+  `/notes` 홈 학습 큐 상단에 진행 중 노트를 먼저 이어가고 미시작 노트를 뒤에 배치하는 `오늘의 복습 플랜` 카드를 추가.
+  공용 `note-list` 유틸에 일일 학습 플랜 계산 함수를 추가하고, 진행 중/미시작/완료/빈 노트 우선순위를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 34 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 chore(dead-code): content_workspace 죽은 라우트 그룹 제거.
   프론트 소비 0·테스트 전용으로 남은 `routes/integrations/content_workspace.py`의 버전 히스토리/검색/알림/협업 세션 라우트 그룹을 제거.
   전용 인메모리 서비스(`version_service`, `search_service`, `notification_service`, `collaboration_service`)와 해당 전용 테스트를 함께 삭제하고 통합 라우트 shim 문서를 갱신.

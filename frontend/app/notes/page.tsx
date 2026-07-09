@@ -15,6 +15,7 @@ import {
   filterNotesByFacet,
   filterNotesByStudyStatus,
   getCompletedStudyItems,
+  getDailyStudyPlanItems,
   getFacetLabel,
   getNoteConceptClusters,
   getNoteStudyCardOrder,
@@ -36,6 +37,7 @@ import {
   sortNotesByRecent,
   type NoteStudyStatus,
   type NoteStudyResumeItem,
+  type NoteStudyPlanItem,
   type NoteStudyCardKind,
   type NoteFacet,
   type NoteConceptCluster,
@@ -255,6 +257,10 @@ export default function NotesPage() {
     ),
     [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes],
   );
+  const dailyStudyPlanItems = useMemo(
+    () => getDailyStudyPlanItems(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
   const studyCardOrder = useMemo(
     () => getNoteStudyCardOrder({
       'review-needed': reviewNeededNotes.length,
@@ -338,6 +344,7 @@ export default function NotesPage() {
             reviewNeededNotes={reviewNeededNotes}
             completedStudyNotes={completedStudyNotes}
             studyResumeNotes={studyResumeNotes}
+            dailyStudyPlanItems={dailyStudyPlanItems}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
           />
@@ -489,6 +496,7 @@ function WikiMap({
   reviewNeededNotes,
   completedStudyNotes,
   studyResumeNotes,
+  dailyStudyPlanItems,
   studyCardOrder,
   onFacetSelect,
 }: {
@@ -501,6 +509,7 @@ function WikiMap({
   reviewNeededNotes: NoteStudyResumeItem[];
   completedStudyNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
+  dailyStudyPlanItems: NoteStudyPlanItem[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -765,6 +774,50 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {dailyStudyPlanItems.length > 0 && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-primary/70" />
+                            <h2 className="text-sm font-semibold text-foreground">오늘의 복습 플랜</h2>
+                          </div>
+                          <span className="text-[10px] text-primary">
+                            {dailyStudyPlanItems.length}단계
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          진행 중인 노트를 먼저 끝내고, 남는 시간에 새 노트를 시작합니다.
+                        </p>
+                        <ol className="mt-3 space-y-2">
+                          {dailyStudyPlanItems.map((item, index) => (
+                            <li key={`${item.kind}-${item.note.id}`}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                                  {index + 1}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </span>
+                                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                                    {item.label} · {item.remaining}개 항목
+                                  </span>
+                                </span>
+                                <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                  {item.actionLabel}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ol>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {studyStartNotes.length > 0 && (
                     <Card className="bg-background/80 py-4" style={studyCardOrderStyle('study-start')}>
                       <CardContent className="px-4">

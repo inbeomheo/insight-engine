@@ -132,6 +132,13 @@ export interface NoteStudyResumeItem {
 
 export type NoteStudyStatus = 'not-started' | 'in-progress' | 'completed';
 export type NoteStudyCardKind = 'review-needed' | 'study-start' | 'completed' | 'recent';
+export type NoteStudyPlanKind = 'continue' | 'start';
+export interface NoteStudyPlanItem extends NoteStudyResumeItem {
+  kind: NoteStudyPlanKind;
+  label: string;
+  actionLabel: string;
+  remaining: number;
+}
 export const NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY = 'insight-engine.note-study-queue-open';
 export const NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY = 'insight-engine.note-wiki-explore-open';
 
@@ -311,4 +318,27 @@ export function getRecentStudyResumeItems(
   return getNotesWithStudyProgress(notes, progressByNote, notes.length)
     .filter((item) => !excludedNoteIds.has(item.note.id))
     .slice(0, limit);
+}
+
+export function getDailyStudyPlanItems(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  limit = 3
+): NoteStudyPlanItem[] {
+  const continuing = getNotesNeedingReview(notes, progressByNote, notes.length).map((item) => ({
+    ...item,
+    kind: 'continue' as const,
+    label: '이어 복습',
+    actionLabel: '남은 항목 이어가기',
+    remaining: item.summary.total - item.summary.completed,
+  }));
+  const starting = getStudyStartCandidates(notes, progressByNote, notes.length).map((item) => ({
+    ...item,
+    kind: 'start' as const,
+    label: '새로 시작',
+    actionLabel: '첫 체크 시작',
+    remaining: item.summary.total,
+  }));
+
+  return [...continuing, ...starting].slice(0, Math.max(0, limit));
 }
