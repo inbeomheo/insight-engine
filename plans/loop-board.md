@@ -43,6 +43,7 @@
   7차: 입력 영역에서 소비되지 않는 레거시 북마크/파일/상세도/퓨전/모드/추천 컴포넌트 6개 제거 완료.
   8차: 설정/협업 영역에서 소비되지 않는 레거시 설정·구독·협업 컴포넌트 6개 제거 완료.
   9차: 운영/피드백/워크스페이스 영역에서 소비되지 않는 레거시 프론트 컴포넌트 8개 제거 완료.
+  10차: 설정 영역에서 소비되지 않는 레거시 메모리·스니펫·지식그래프 컴포넌트와 전용 훅 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -65,6 +66,12 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 레거시 설정 고아 컴포넌트 5개 제거.
+  프론트 소스 전수 grep으로 현재 앱 진입점에서 소비되지 않는 설정 영역 컴포넌트/훅 5개를 삭제.
+  삭제 대상: MemoryManager, SnippetLibrary, KnowledgeGraph, useSnippets, useListManager. 활성 `KnowledgeGraphPanel`은 별도 소비 가능성이 있어 보존.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-list.test.ts` 14 passed +
+  제거 대상 import/훅 grep 0.
 - [x] 2026-07-10 feat(notes): 노트 상세 문서 브리핑 추가.
   `/notes/[id]` 상단 목차 아래에 문서 브리핑 카드를 추가해 출처, 목차 섹션 수, 복습 진행률, 원본 결과·관련 노트·인용 연결 수를 한눈에 표시.
   문서 목차에 `문서 브리핑` 앵커를 추가하고, 공용 `note-wiki-brief` 유틸/테스트로 브리핑 값과 빠른 액션 구성을 검증.
