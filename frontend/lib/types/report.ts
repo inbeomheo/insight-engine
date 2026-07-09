@@ -197,6 +197,9 @@ export interface Report {
   source_receipts?: SourceReceipt[];
   favorite?: boolean;
   share_url?: string;
+  knowledge_note_id?: string;
+  knowledge_note_title?: string;
+  knowledge_note_saved_at?: string;
   notebooklm?: NotebookLmData;
 }
 

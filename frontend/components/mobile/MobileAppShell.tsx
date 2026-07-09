@@ -455,9 +455,32 @@ function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (
 function MobileDetailView({ report, onBack }: { report: Report; onBack: () => void }) {
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
+  const updateReport = useResultStore((s) => s.updateReport);
   const [chatOpen, setChatOpen] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [linkedNote, setLinkedNote] = useState<{ id?: string; title?: string }>({
+    id: report.knowledge_note_id,
+    title: report.knowledge_note_title,
+  });
   const noteSource = getKnowledgeNoteSource(report);
+  const linkedNoteId = linkedNote.id || report.knowledge_note_id;
+
+  function openKnowledgeNote(noteId: string) {
+    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+  }
+
+  function markKnowledgeNoteLinked(noteId: string, title?: string) {
+    const next = {
+      id: noteId,
+      title: title || noteSource?.title || '학습 노트',
+    };
+    setLinkedNote(next);
+    updateReport(report.id, {
+      knowledge_note_id: next.id,
+      knowledge_note_title: next.title,
+      knowledge_note_saved_at: new Date().toISOString(),
+    });
+  }
 
   async function handleSaveKnowledgeNote() {
     if (isSavingNote || !noteSource) return;
@@ -469,12 +492,13 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
         model: selectedModel || undefined,
         source: noteSource,
       });
+      markKnowledgeNoteLinked(note.id, note.source?.title);
       toast.success('학습 노트로 저장했습니다.', {
         description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
         action: {
           label: '열기',
           onClick: () => {
-            window.location.href = `/notes/${encodeURIComponent(note.id)}`;
+            openKnowledgeNote(note.id);
           },
         },
       });
@@ -482,12 +506,13 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
       const body = isApiError<NoteDuplicateWarning>(err) ? err.body : undefined;
       const duplicate = body?.duplicate_notes?.[0];
       if (isApiError<NoteDuplicateWarning>(err) && err.status === 409 && duplicate?.id) {
+        markKnowledgeNoteLinked(duplicate.id, duplicate.title);
         toast.warning(body?.warning || '이미 학습한 자료와 비슷합니다.', {
           description: body?.next_action || '기존 노트를 열어 이어서 확인하세요.',
           action: {
             label: '기존 노트 열기',
             onClick: () => {
-              window.location.href = `/notes/${encodeURIComponent(duplicate.id)}`;
+              openKnowledgeNote(duplicate.id);
             },
           },
         });
@@ -497,6 +522,14 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
     } finally {
       setIsSavingNote(false);
     }
+  }
+
+  function handleKnowledgeNoteAction() {
+    if (linkedNoteId) {
+      openKnowledgeNote(linkedNoteId);
+      return;
+    }
+    void handleSaveKnowledgeNote();
   }
 
   return (
@@ -545,21 +578,21 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
           <p className="signal-meta mb-3 text-[10px] text-muted-foreground/45">출처</p>
           <div className="flex items-center gap-2 text-sm font-semibold">
             <span className="h-2.5 w-2.5 rounded-full bg-[#20C997]" />
-            <span className="min-w-0 flex-1 truncate">{report.youtube_title || report.url || '생성 콘텐츠'}</span>
+            <span className="min-w-0 flex-1 truncate">{report.source_title || report.youtube_title || report.url || '생성 콘텐츠'}</span>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
 
         <div className="mt-6 grid gap-3">
-          {noteSource && (
+          {(noteSource || linkedNoteId) && (
             <button
               type="button"
-              onClick={handleSaveKnowledgeNote}
-              disabled={isSavingNote}
+              onClick={handleKnowledgeNoteAction}
+              disabled={!linkedNoteId && isSavingNote}
               className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-card px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
-              {isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
+              {!linkedNoteId && isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+              {linkedNoteId ? '학습 노트 열기' : isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
             </button>
           )}
           <a

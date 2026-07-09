@@ -275,6 +275,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const { t } = useTranslation();
   const noteSource = getKnowledgeNoteSource(report);
+  const linkedNoteId = report.knowledge_note_id;
 
   // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
   const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -380,6 +381,18 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     }
   }
 
+  function openKnowledgeNote(noteId: string) {
+    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+  }
+
+  function markKnowledgeNoteLinked(noteId: string, title?: string) {
+    updateReport(report.id, {
+      knowledge_note_id: noteId,
+      knowledge_note_title: title || noteSource?.title || '학습 노트',
+      knowledge_note_saved_at: new Date().toISOString(),
+    });
+  }
+
   async function handleSaveKnowledgeNote() {
     if (isSavingNote || !noteSource) return;
     setIsSavingNote(true);
@@ -390,12 +403,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
         model: selectedModel || undefined,
         source: noteSource,
       });
+      markKnowledgeNoteLinked(note.id, note.source?.title);
       toast.success('학습 노트로 저장했습니다.', {
         description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
         action: {
           label: '열기',
           onClick: () => {
-            window.location.href = `/notes/${encodeURIComponent(note.id)}`;
+            openKnowledgeNote(note.id);
           },
         },
       });
@@ -403,12 +417,13 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
       const body = isApiError<NoteDuplicateWarning>(err) ? err.body : undefined;
       const duplicate = body?.duplicate_notes?.[0];
       if (isApiError<NoteDuplicateWarning>(err) && err.status === 409 && duplicate?.id) {
+        markKnowledgeNoteLinked(duplicate.id, duplicate.title);
         toast.warning(body?.warning || '이미 학습한 자료와 비슷합니다.', {
           description: body?.next_action || '기존 노트를 열어 이어서 확인하세요.',
           action: {
             label: '기존 노트 열기',
             onClick: () => {
-              window.location.href = `/notes/${encodeURIComponent(duplicate.id)}`;
+              openKnowledgeNote(duplicate.id);
             },
           },
         });
@@ -418,6 +433,14 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     } finally {
       setIsSavingNote(false);
     }
+  }
+
+  function handleKnowledgeNoteAction() {
+    if (linkedNoteId) {
+      openKnowledgeNote(linkedNoteId);
+      return;
+    }
+    void handleSaveKnowledgeNote();
   }
 
   async function handleExportFormat(format: 'markdown') {
@@ -1030,14 +1053,14 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <Code className="h-3.5 w-3.5 mr-2" />
                 {t('result.promptView')}
               </DropdownMenuItem>
-              {noteSource && (
-                <DropdownMenuItem onClick={handleSaveKnowledgeNote} disabled={isSavingNote}>
-                  {isSavingNote ? (
+              {(noteSource || linkedNoteId) && (
+                <DropdownMenuItem onClick={handleKnowledgeNoteAction} disabled={!linkedNoteId && isSavingNote}>
+                  {!linkedNoteId && isSavingNote ? (
                     <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                   ) : (
                     <BookOpen className="h-3.5 w-3.5 mr-2" />
                   )}
-                  {isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
+                  {linkedNoteId ? '학습 노트 열기' : isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
                 </DropdownMenuItem>
               )}
               {NOTEBOOKLM_ENABLED && (
