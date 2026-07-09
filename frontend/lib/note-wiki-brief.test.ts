@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildNoteQuoteMarkdown,
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
   buildNoteWikiReadingPath,
@@ -127,6 +128,24 @@ describe('note-wiki-brief', () => {
 
     expect(buildNoteWikiReadingPathMarkdown([], '')).toBe(
       '# 위키 읽기 경로: 현재 문서\n\n연결된 관련 문서가 없습니다.'
+    );
+  });
+
+  it('builds markdown for quote evidence', () => {
+    expect(
+      buildNoteQuoteMarkdown([
+        { text: '  핵심\n근거  ', ref: '  01:23  ' },
+        { text: '', ref: '' },
+      ], '  인용\n묶음  ')
+    ).toBe([
+      '# 인용 묶음',
+      '',
+      '1. "핵심 근거" (01:23)',
+      '2. "인용 내용 없음"',
+    ].join('\n'));
+
+    expect(buildNoteQuoteMarkdown([], '')).toBe(
+      '# 근거 인용\n\n인용 가능한 근거가 없습니다.'
     );
   });
 });

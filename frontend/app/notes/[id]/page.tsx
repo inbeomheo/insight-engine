@@ -18,6 +18,7 @@ import {
   toggleReviewAnswerVisibility,
 } from '@/lib/note-review-session';
 import {
+  buildNoteQuoteMarkdown,
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
   buildNoteWikiReadingPath,
@@ -183,6 +184,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
@@ -272,6 +274,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     }
   }, [nextStudyTarget, note.source?.title]);
 
+  const copyQuoteMarkdown = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setQuoteCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        buildNoteQuoteMarkdown(note.quotes, `${note.source?.title || '제목 없음'} 근거 인용`)
+      );
+      setQuoteCopyStatus('copied');
+    } catch {
+      setQuoteCopyStatus('error');
+    }
+  }, [note.quotes, note.source?.title]);
+
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
       toggleReviewAnswerVisibility(current, index, reviewQuestions.length)
@@ -315,6 +333,12 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     const timer = window.setTimeout(() => setNextStudyCopyStatus('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [nextStudyCopyStatus]);
+
+  useEffect(() => {
+    if (quoteCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setQuoteCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [quoteCopyStatus]);
 
   return (
     <div className="space-y-6">
@@ -756,7 +780,26 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       {/* 인용구 */}
       {note.quotes.length > 0 && (
         <section id="quotes" className="scroll-mt-24">
-          <h2 className="text-sm font-semibold text-foreground mb-2.5">근거 인용</h2>
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-foreground">근거 인용</h2>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={copyQuoteMarkdown}
+              >
+                <Copy className="mr-1 h-3 w-3" />
+                인용 복사
+              </Button>
+              {quoteCopyStatus !== 'idle' && (
+                <span className={`text-[10px] ${quoteCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                  {quoteCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                </span>
+              )}
+            </div>
+          </div>
           <ul className="space-y-2.5">
             {note.quotes.map((quote, idx) => (
               <li key={idx} className="flex gap-2.5 border-l-2 border-primary/30 pl-3">

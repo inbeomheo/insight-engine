@@ -37,6 +37,11 @@ export interface NoteWikiReadingPathItem {
   scorePercent: number;
 }
 
+export interface NoteWikiQuoteSource {
+  text?: string;
+  ref?: string;
+}
+
 function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
   const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
   return cleaned || fallback;
@@ -165,5 +170,25 @@ export function buildNoteWikiReadingPathMarkdown(
       `   - 관련도: ${item.scorePercent}%`,
       `   - 이유: ${cleanMarkdownValue(item.description)}`,
     ]),
+  ].join('\n');
+}
+
+export function buildNoteQuoteMarkdown(
+  quotes: NoteWikiQuoteSource[] = [],
+  title = '근거 인용'
+): string {
+  const heading = cleanMarkdownValue(title, '근거 인용');
+  if (quotes.length === 0) {
+    return `# ${heading}\n\n인용 가능한 근거가 없습니다.`;
+  }
+
+  return [
+    `# ${heading}`,
+    '',
+    ...quotes.map((quote, index) => {
+      const text = cleanMarkdownValue(quote.text, '인용 내용 없음');
+      const ref = quote.ref?.trim() ? ` (${cleanMarkdownValue(quote.ref)})` : '';
+      return `${index + 1}. "${text}"${ref}`;
+    }),
   ].join('\n');
 }

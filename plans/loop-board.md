@@ -92,10 +92,17 @@
   18차: `/notes/[id]` 문서 브리핑 아래에 관련 노트를 점수순으로 안내하는 `위키 읽기 경로` 카드 추가.
   19차: `/notes/[id]` 위키 읽기 경로를 Markdown으로 복사하는 빠른 액션 추가.
   20차: `/notes` 홈 위키 인덱스를 Markdown으로 복사하는 빠른 액션 추가.
+  21차: `/notes/[id]` 근거 인용을 Markdown으로 복사하는 빠른 액션 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 근거 인용 Markdown 복사 추가.
+  `/notes/[id]` 근거 인용 섹션에 인용 복사 버튼을 추가해 인용 문장과 출처 표기를 Markdown으로 저장할 수 있게 개선.
+  공용 `note-wiki-brief` 유틸에 근거 인용 Markdown 생성 함수를 추가하고, 공백 정리·출처 표기·빈 인용 상태를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 40 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 다음 복습 Markdown 복사 추가.
   `/notes/[id]` 복습 진행 카드의 `다음 복습` 안내에 복사 버튼을 추가해 이어서 볼 학습 포인트/복습 질문을 Markdown으로 저장할 수 있게 개선.
   공용 `note-study-progress` 유틸에 다음 복습 항목 Markdown 생성 함수를 추가하고, 공백 정리·완료 상태 메시지를 단위 테스트로 검증.
