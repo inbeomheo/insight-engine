@@ -13,6 +13,7 @@ import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from 
 import {
   filterNotesByFacet,
   filterNotesByStudyStatus,
+  getCompletedStudyItems,
   getFacetLabel,
   getNotesNeedingReview,
   getNoteSourceLabel,
@@ -39,6 +40,18 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatStudyUpdatedAt(iso: string | null): string {
+  if (!iso) return '기록 없음';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '기록 없음';
+  return d.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function topCounts(items: string[], limit: number): Array<{ label: string; count: number }> {
@@ -187,14 +200,21 @@ export default function NotesPage() {
     () => getStudyStartCandidates(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
+  const completedStudyNotes = useMemo(
+    () => getCompletedStudyItems(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
   const studyResumeNotes = useMemo(
     () => getRecentStudyResumeItems(
       notes,
       studyProgressByNote,
-      new Set(reviewNeededNotes.map((item) => item.note.id)),
+      new Set([
+        ...reviewNeededNotes.map((item) => item.note.id),
+        ...completedStudyNotes.map((item) => item.note.id),
+      ]),
       3
     ),
-    [notes, studyProgressByNote, reviewNeededNotes],
+    [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes],
   );
   const studyStatusCounts = useMemo(
     () => getNoteStudyStatusCounts(notes, studyProgressByNote),
@@ -267,6 +287,7 @@ export default function NotesPage() {
             recentNotes={recentNotes}
             studyStartNotes={studyStartNotes}
             reviewNeededNotes={reviewNeededNotes}
+            completedStudyNotes={completedStudyNotes}
             studyResumeNotes={studyResumeNotes}
             onFacetSelect={handleFacetSelect}
           />
@@ -415,6 +436,7 @@ function WikiMap({
   recentNotes,
   studyStartNotes,
   reviewNeededNotes,
+  completedStudyNotes,
   studyResumeNotes,
   onFacetSelect,
 }: {
@@ -424,6 +446,7 @@ function WikiMap({
   recentNotes: NoteListItem[];
   studyStartNotes: NoteStudyResumeItem[];
   reviewNeededNotes: NoteStudyResumeItem[];
+  completedStudyNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -611,6 +634,42 @@ function WikiMap({
           </Card>
         )}
 
+        {completedStudyNotes.length > 0 && (
+          <Card className="py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">완료 학습</h2>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                최근 완료한 복습 노트를 따로 모아 성취를 확인하세요.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {completedStudyNotes.map((item) => (
+                  <li key={item.note.id}>
+                    <Link
+                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                      className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {item.note.title || '제목 없음'}
+                        </p>
+                        <span className="shrink-0 text-[10px] font-semibold text-primary">
+                          완료
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {item.summary.completed}/{item.summary.total} 완료 · {formatStudyUpdatedAt(item.updatedAt)}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         {studyResumeNotes.length > 0 && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
@@ -619,7 +678,7 @@ function WikiMap({
                 <h2 className="text-sm font-semibold text-foreground">최근 복습</h2>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                우선 복습 목록과 겹치지 않는 최근 체크 노트입니다.
+                우선·완료 목록과 겹치지 않는 최근 체크 노트입니다.
               </p>
               <ul className="mt-3 space-y-2">
                 {studyResumeNotes.map((item) => {

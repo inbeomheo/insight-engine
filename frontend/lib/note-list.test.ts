@@ -3,6 +3,7 @@ import type { NoteListItem } from './api';
 import {
   filterNotesByStudyStatus,
   filterNotesByFacet,
+  getCompletedStudyItems,
   getFacetLabel,
   getNotesNeedingReview,
   getNotesWithStudyProgress,
@@ -176,6 +177,25 @@ describe('note-list', () => {
         2
       ).map((item) => item.note.id)
     ).toEqual(['newer', 'older-start']);
+  });
+
+  it('builds completed study items by latest update time', () => {
+    const recentDone = note({ id: 'recent-complete', learning_point_count: 1, review_question_count: 1 });
+    const olderDone = note({ id: 'older-complete', learning_point_count: 2, review_question_count: 0 });
+    const ongoing = note({ id: 'ongoing-complete-test', learning_point_count: 2, review_question_count: 0 });
+    const empty = note({ id: 'empty-complete-test', learning_point_count: 0, review_question_count: 0 });
+
+    expect(
+      getCompletedStudyItems(
+        [ongoing, olderDone, empty, recentDone],
+        {
+          'recent-complete': { learning: [0], review: [0], updatedAt: '2026-07-10T10:00:00Z' },
+          'older-complete': { learning: [0, 1], review: [], updatedAt: '2026-07-10T08:00:00Z' },
+          'ongoing-complete-test': { learning: [0], review: [], updatedAt: '2026-07-10T11:00:00Z' },
+        },
+        2
+      ).map((item) => item.note.id)
+    ).toEqual(['recent-complete', 'older-complete']);
   });
 
   it('classifies and filters notes by study status', () => {
