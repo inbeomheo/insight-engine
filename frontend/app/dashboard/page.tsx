@@ -1,8 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Activity, AlertCircle, ArrowLeft, BarChart3, Check, Copy, FileText, Hash, Server, Sparkles, Zap } from 'lucide-react';
+import {
+  Activity,
+  AlertCircle,
+  ArrowLeft,
+  BarChart3,
+  Check,
+  Copy,
+  FileText,
+  Hash,
+  RotateCw,
+  Server,
+  Sparkles,
+  Zap,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,32 +40,38 @@ export default function DashboardPage() {
   const reports = useResultStore((s) => s.reports);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [healthCheckedAt, setHealthCheckedAt] = useState<Date | null>(null);
+
+  const refreshHealth = useCallback(async (signal?: AbortSignal) => {
+    setHealthLoading(true);
+    try {
+      const res = await fetch(apiUrl('/health'), { signal });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (signal?.aborted) return;
+      setHealth(data as HealthStatus);
+      setHealthError(null);
+    } catch (err) {
+      if (signal?.aborted) return;
+      setHealth(null);
+      setHealthError(err instanceof Error ? err.message : 'API 상태를 확인할 수 없습니다.');
+    } finally {
+      if (signal?.aborted) return;
+      setHealthCheckedAt(new Date());
+      setHealthLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     hydrateResults();
   }, [hydrateResults]);
 
   useEffect(() => {
-    let alive = true;
-    fetch(apiUrl('/health'))
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        return data as HealthStatus;
-      })
-      .then((data) => {
-        if (!alive) return;
-        setHealth(data);
-        setHealthError(null);
-      })
-      .catch((err) => {
-        if (!alive) return;
-        setHealthError(err instanceof Error ? err.message : 'API 상태를 확인할 수 없습니다.');
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+    const controller = new AbortController();
+    void refreshHealth(controller.signal);
+    return () => controller.abort();
+  }, [refreshHealth]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,17 +89,38 @@ export default function DashboardPage() {
           </div>
         </div>
         <LocalDashboardSummary reports={reports} />
-        <SystemHealthCard health={health} error={healthError} />
+        <SystemHealthCard
+          health={health}
+          error={healthError}
+          isLoading={healthLoading}
+          checkedAt={healthCheckedAt}
+          onRefresh={() => void refreshHealth()}
+        />
         <OperationsDashboard />
       </div>
     </div>
   );
 }
 
-function SystemHealthCard({ health, error }: { health: HealthStatus | null; error: string | null }) {
+function SystemHealthCard({
+  health,
+  error,
+  isLoading,
+  checkedAt,
+  onRefresh,
+}: {
+  health: HealthStatus | null;
+  error: string | null;
+  isLoading: boolean;
+  checkedAt: Date | null;
+  onRefresh: () => void;
+}) {
   const [copied, setCopied] = useState(false);
-  const statusLabel = health?.status === 'healthy' ? '정상' : error ? '확인 필요' : '확인 중';
+  const statusLabel = health?.status === 'healthy' ? '정상' : error ? '확인 필요' : isLoading ? '확인 중' : '-';
   const errorRatePct = health ? Math.round((health.error_rate ?? 0) * 1000) / 10 : 0;
+  const checkedAtLabel = checkedAt
+    ? checkedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : null;
 
   async function copyDiagnostics() {
     const payload = {
@@ -89,6 +129,8 @@ function SystemHealthCard({ health, error }: { health: HealthStatus | null; erro
       api_base: apiUrl('/').replace(/\/$/, ''),
       health: health ?? null,
       health_error: error ?? null,
+      health_loading: isLoading,
+      health_checked_at: checkedAt?.toISOString() ?? null,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     };
     const text = JSON.stringify(payload, null, 2);
@@ -113,14 +155,27 @@ function SystemHealthCard({ health, error }: { health: HealthStatus | null; erro
   return (
     <section className="mb-6">
       <Card className="rounded-sm border-border bg-card shadow-none">
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardHeader className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
             <Server className="h-4 w-4" /> 시스템 건강도
           </CardTitle>
-          <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={copyDiagnostics}>
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            진단 복사
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              disabled={isLoading}
+              onClick={onRefresh}
+            >
+              <RotateCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              새로고침
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={copyDiagnostics}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              진단 복사
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {error ? (
@@ -149,6 +204,9 @@ function SystemHealthCard({ health, error }: { health: HealthStatus | null; erro
               요청 {health.request_count.toLocaleString()}회 · 에러 {health.error_count.toLocaleString()}회
             </p>
           )}
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            {isLoading ? '현재 상태를 새로 확인 중입니다.' : checkedAtLabel ? `마지막 확인 ${checkedAtLabel}` : '아직 확인 전입니다.'}
+          </p>
         </CardContent>
       </Card>
     </section>
