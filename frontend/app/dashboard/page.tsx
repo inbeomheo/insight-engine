@@ -1,22 +1,57 @@
 'use client';
 
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BarChart3, FileText, Hash, Sparkles, Zap } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, BarChart3, FileText, Hash, Server, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OperationsDashboard from '@/components/dashboard/OperationsDashboard';
 import { useResultStore } from '@/stores/resultStore';
 import { getStyleLabel } from '@/lib/helpers';
+import { apiUrl } from '@/lib/api';
 import type { Report } from '@/lib/types';
+
+interface HealthStatus {
+  status: string;
+  environment: string;
+  api_version: string;
+  request_count: number;
+  error_count: number;
+  error_rate: number;
+  memory_usage_mb?: number | null;
+}
 
 export default function DashboardPage() {
   const hydrateResults = useResultStore((s) => s.hydrate);
   const reports = useResultStore((s) => s.reports);
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
 
   useEffect(() => {
     hydrateResults();
   }, [hydrateResults]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(apiUrl('/health'))
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data as HealthStatus;
+      })
+      .then((data) => {
+        if (!alive) return;
+        setHealth(data);
+        setHealthError(null);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setHealthError(err instanceof Error ? err.message : 'API 상태를 확인할 수 없습니다.');
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,9 +69,55 @@ export default function DashboardPage() {
           </div>
         </div>
         <LocalDashboardSummary reports={reports} />
+        <SystemHealthCard health={health} error={healthError} />
         <OperationsDashboard />
       </div>
     </div>
+  );
+}
+
+function SystemHealthCard({ health, error }: { health: HealthStatus | null; error: string | null }) {
+  const statusLabel = health?.status === 'healthy' ? '정상' : error ? '확인 필요' : '확인 중';
+  const errorRatePct = health ? Math.round((health.error_rate ?? 0) * 1000) / 10 : 0;
+
+  return (
+    <section className="mb-6">
+      <Card className="rounded-sm border-border bg-card shadow-none">
+        <CardHeader>
+          <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Server className="h-4 w-4" /> 시스템 건강도
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <div className="flex items-start gap-3 rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <div>
+                <p className="text-sm font-medium text-destructive">API 서버 상태 확인 실패</p>
+                <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <HealthMetric label="상태" value={statusLabel} />
+              <HealthMetric label="환경" value={health?.environment ?? '-'} />
+              <HealthMetric label="API 버전" value={health?.api_version ?? '-'} />
+              <HealthMetric label="에러율" value={`${errorRatePct}%`} />
+              <HealthMetric
+                label="메모리"
+                value={typeof health?.memory_usage_mb === 'number' ? `${health.memory_usage_mb}MB` : '-'}
+              />
+            </div>
+          )}
+          {health && (
+            <p className="mt-3 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Activity className="h-3 w-3" />
+              요청 {health.request_count.toLocaleString()}회 · 에러 {health.error_count.toLocaleString()}회
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
@@ -156,5 +237,14 @@ function LocalMetric({ icon, label, value }: { icon: ReactNode; label: string; v
         <span className="text-3xl font-bold tracking-[-0.03em]">{value}</span>
       </CardContent>
     </Card>
+  );
+}
+
+function HealthMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-sm border border-border bg-background/60 px-3 py-2">
+      <p className="signal-meta text-[10px] text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
+    </div>
   );
 }
