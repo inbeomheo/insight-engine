@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Bot, ChevronDown, ChevronUp, Loader2, Send, User } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Bot, ChevronDown, ChevronUp, Copy, Loader2, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { askResultChat, type ResultChatMessage, type ResultChatSource } from '@/lib/api';
+import { buildResultChatStudyCardMarkdown } from '@/lib/result-chat-study-card';
 
 interface ResultChatPanelProps {
   context: string;
@@ -15,6 +16,7 @@ interface ResultChatPanelProps {
   emptyText?: string;
   placeholder?: string;
   suggestedQuestions?: string[];
+  studyCardTitle?: string;
 }
 
 interface ChatMessage extends ResultChatMessage {
@@ -31,12 +33,17 @@ export default function ResultChatPanel({
   emptyText = '궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.',
   placeholder = '예: 이 영상의 핵심 실행 단계는?',
   suggestedQuestions = [],
+  studyCardTitle,
 }: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [studyCardCopyStatus, setStudyCardCopyStatus] = useState<{
+    index: number;
+    status: 'copied' | 'error';
+  } | null>(null);
   const { requestContext, hasContext, isContextSliced } = useMemo(() => {
     const trimmed = context.trim();
     return {
@@ -50,6 +57,7 @@ export default function ResultChatPanel({
     setMessages([]);
     setInput('');
     setError(null);
+    setStudyCardCopyStatus(null);
   }, [context]);
 
   const helperText = useMemo(() => {
@@ -61,6 +69,35 @@ export default function ResultChatPanel({
     () => suggestedQuestions.map((question) => question.trim()).filter(Boolean).slice(0, 3),
     [suggestedQuestions]
   );
+
+  const copyStudyCard = useCallback(async (message: ChatMessage, index: number) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setStudyCardCopyStatus({ index, status: 'error' });
+      return;
+    }
+
+    const question = [...messages.slice(0, index)]
+      .reverse()
+      .find((item) => item.role === 'user')?.content;
+
+    try {
+      await navigator.clipboard.writeText(buildResultChatStudyCardMarkdown({
+        title: studyCardTitle ?? title,
+        question,
+        answer: message.content,
+        sources: message.rag_sources,
+      }));
+      setStudyCardCopyStatus({ index, status: 'copied' });
+    } catch {
+      setStudyCardCopyStatus({ index, status: 'error' });
+    }
+  }, [messages, studyCardTitle, title]);
+
+  useEffect(() => {
+    if (!studyCardCopyStatus) return;
+    const timer = window.setTimeout(() => setStudyCardCopyStatus(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [studyCardCopyStatus]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,6 +232,25 @@ export default function ResultChatPanel({
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                    {message.role === 'assistant' && (
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-border/50 pt-2">
+                        {studyCardCopyStatus?.index === index && (
+                          <span className={`text-[10px] ${
+                            studyCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'
+                          }`}>
+                            {studyCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => copyStudyCard(message, index)}
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+                        >
+                          <Copy className="h-3 w-3" />
+                          복습 카드 복사
+                        </button>
                       </div>
                     )}
                   </div>

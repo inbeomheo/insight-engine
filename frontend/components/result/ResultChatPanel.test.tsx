@@ -60,6 +60,12 @@ async function submitQuestion(text: string) {
 describe('ResultChatPanel rag_sources', () => {
   beforeEach(() => {
     vi.mocked(askResultChat).mockReset();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   afterEach(async () => {
@@ -134,5 +140,46 @@ describe('ResultChatPanel rag_sources', () => {
     expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe(
       '근거 인용을 기준으로 설명해줘.'
     );
+  });
+
+  it('copies an assistant answer as a study card', async () => {
+    vi.mocked(askResultChat).mockResolvedValueOnce({
+      answer: '핵심 답변',
+      rag_sources: [{
+        type: 'knowledge_note',
+        id: 'n1',
+        title: '근거 노트',
+        score: 0.92,
+        snippet: '근거 스니펫',
+      }],
+    });
+
+    await renderPanel({ studyCardTitle: '노트 제목' });
+    await openPanel();
+    await submitQuestion('무엇을 복습할까?');
+
+    const copyButton = Array.from(document.querySelectorAll('button')).find((el) =>
+      el.textContent?.includes('복습 카드 복사')
+    );
+    if (!copyButton) throw new Error('study card copy button not found');
+
+    await act(async () => {
+      copyButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith([
+      '# 근거 Q&A 복습 카드: 노트 제목',
+      '',
+      '## 질문',
+      '무엇을 복습할까?',
+      '',
+      '## 답변',
+      '핵심 답변',
+      '',
+      '## 근거',
+      '1. 근거 노트 · 92% — 근거 스니펫',
+    ].join('\n'));
+    expect(document.body.textContent).toContain('복사 완료');
   });
 });

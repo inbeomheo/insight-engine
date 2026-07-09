@@ -742,6 +742,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
               emptyText="이 노트의 요약, 학습 포인트, 인용, 관련 노트를 근거로 질문해보세요."
               placeholder="예: 이 노트에서 바로 실행할 수 있는 행동은?"
               suggestedQuestions={chatSuggestedQuestions}
+              studyCardTitle={note.source?.title || '제목 없음'}
             />
           </CardContent>
         </Card>
