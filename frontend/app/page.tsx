@@ -51,6 +51,7 @@ export default function Home() {
   const setSettingsPopoverOpen = useUIStore((s) => s.setSettingsPopoverOpen);
   const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
   const activeReportId = useUIStore((s) => s.activeReportId);
+  const setActiveReportId = useUIStore((s) => s.setActiveReportId);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
@@ -109,6 +110,7 @@ export default function Home() {
   const INITIAL_RENDER_COUNT = 5;
   const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
   const deferredFiltered = useDeferredValue(filtered);
+  const handledReportParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -118,6 +120,35 @@ export default function Home() {
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
   }, [deferredFiltered.length]);
+
+  // /?report=<id> 딥링크 — 대시보드/외부 진입에서 해당 결과 카드로 복귀
+  useEffect(() => {
+    if (typeof window === 'undefined' || reports.length === 0) return;
+    const url = new URL(window.location.href);
+    const reportId = url.searchParams.get('report');
+    if (!reportId || handledReportParamRef.current === reportId) return;
+
+    const index = reports.findIndex((report) => report.id === reportId);
+    if (index < 0) return;
+
+    handledReportParamRef.current = reportId;
+    const resultState = useResultStore.getState();
+    resultState.setSearchQuery('');
+    resultState.setStyleFilter('');
+    setVisibleCount(Math.max(INITIAL_RENDER_COUNT, index + 1));
+    setActiveReportId(reportId);
+
+    url.searchParams.delete('report');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(reportId) : reportId.replace(/"/g, '\\"');
+        const el = document.querySelector(`[data-report-id="${escapedId}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }, 80);
+  }, [reports, setActiveReportId]);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);

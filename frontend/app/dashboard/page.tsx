@@ -117,11 +117,21 @@ function LocalDashboardSummary({ reports }: { reports: Report[] }) {
             ) : (
               <ul className="space-y-2">
                 {stats.recent.map((report) => (
-                  <li key={report.id} className="rounded-sm border border-border px-3 py-2">
-                    <p className="truncate text-sm font-medium">{report.title || '제목 없음'}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {getStyleLabel(report.style)} · {report.time}
-                    </p>
+                  <li key={report.id}>
+                    <Link
+                      href={`/?report=${encodeURIComponent(report.id)}`}
+                      className="block rounded-sm border border-border px-3 py-2 transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{report.title || '제목 없음'}</p>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            {getStyleLabel(report.style)} · {report.time}
+                          </p>
+                        </div>
+                        <span className="signal-meta shrink-0 text-[10px] text-primary">열기</span>
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
