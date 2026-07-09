@@ -341,7 +341,7 @@ function WebhookSection({
             setWebhookUrl(e.target.value);
             setTestResult(null);
           }}
-          placeholder="https://n8n.example.com/webhook/..."
+          placeholder="https://example.com/webhook/..."
           className="flex-1 h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
         <button
@@ -363,7 +363,7 @@ function WebhookSection({
         </p>
       )}
       <p className="text-xs text-muted-foreground mt-1">
-        n8n, Make, Zapier 웹훅 URL (콘텐츠 생성 시 자동 전송)
+        콘텐츠 생성 완료 시 결과를 받을 Webhook URL
       </p>
     </div>
   );

@@ -40,9 +40,8 @@ Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · 4,300+ 테스트(pass
 
 ### Export & Integration
 - **단순 내보내기** — HTML, Markdown
-- **웹훅 알림** — 생성 완료 시 n8n/Make/Zapier 연동
-- **외부 서비스** — Slack, Discord, RSS, GitHub 연동
-- **GraphQL API** — 유연한 쿼리 지원
+- **웹훅 알림** — 생성 완료 시 설정한 Webhook URL로 결과 전송
+- **외부 소스** — RSS, Notion, 북마크 기반 학습 소스 수집
 
 ---
 
@@ -146,7 +145,6 @@ insight-engine/
 │   ├── export_routes.py           # HTML/MD 내보내기 중심
 │   ├── utility_routes.py          # 헬스체크, 프로바이더, 캐시
 │   ├── analytics_routes.py        # 분석 대시보드
-│   ├── graphql_routes.py          # GraphQL API
 │   ├── payment_routes.py          # 결제/구독
 │   └── ...
 │
@@ -164,10 +162,8 @@ insight-engine/
 │   ├── mcp/                       # MCP Apps SDK + MCP 서버 (3개)
 │   ├── platform/                  # 웹훅, RSS, 채널 모니터링 (11개)
 │   ├── data/                      # Supabase, 스케줄, 알림 (33개)
-│   ├── integrations/              # Slack, Discord (7개)
 │   ├── payment/                   # 결제/구독 (9개)
 │   ├── export/                    # 내보내기 유틸
-│   ├── auth/                      # 인증/OAuth (2개)
 │   ├── usage/                     # 사용량 관리 (5개)
 │   └── exceptions/                # 에러 처리
 │

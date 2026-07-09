@@ -12,9 +12,7 @@
 - platform/: 외부 플랫폼 (웹훅, RSS, GitHub, SNS)
 - data/: 데이터/인프라 (Supabase, 스케줄, 알림, 버전)
 - agents/: 멀티에이전트 파이프라인
-- auth/: 인증/OAuth
 - analytics/: 분석 대시보드
-- integrations/: 외부 서비스 연동 (Slack, Discord, Telegram)
 - mcp/: MCP 플러그인
 - rag/: RAG 벡터 스토어
 - usage/: 사용량 관리
