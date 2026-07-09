@@ -255,35 +255,6 @@ class TestGenerateFusion(_Base):
         self.assertIn(resp.status_code, [429, 500])
 
 
-# ── QA 체크 ──────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestQACheck(_Base):
-
-    def test_qa_no_content(self, _):
-        resp = self.client.post('/api/qa-check', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.quality.qa_gate_service.check_quality',
-           return_value={'passed': True, 'issues': []})
-    def test_qa_success(self, _qa, _):
-        resp = self.client.post('/api/qa-check',
-                                json={'content': 'test content'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['passed'])
-
-    @patch('services.quality.qa_gate_service.check_quality',
-           side_effect=Exception('qa fail'))
-    def test_qa_exception(self, _qa, _):
-        resp = self.client.post('/api/qa-check',
-                                json={'content': 'test'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 500])
-
-
 # ── 썸네일 ───────────────────────────────────────────
 
 

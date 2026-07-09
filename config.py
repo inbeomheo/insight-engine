@@ -189,16 +189,6 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# === QA 게이트 (발행 전 품질 검증) ===
-
-QA_FORBIDDEN_WORDS: List[str] = [
-    '놀라운', '혁신적', '획기적', '최고의', '게임체인저',
-    '압도적', '경이로운', '드디어', '탁월한', '인상적', '뛰어난', '강력한',
-]
-
-QA_MIN_SECTIONS: int = 2
-QA_MIN_CHARS: int = 200
-
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
@@ -395,11 +385,6 @@ __all__ = [
     'STYLE_TEMPERATURE',
     'LENGTH_MAX_TOKENS',
     'DETAIL_PRESETS',
-
-    # QA Gate
-    'QA_FORBIDDEN_WORDS',
-    'QA_MIN_SECTIONS',
-    'QA_MIN_CHARS',
 
     # Providers
     'SUPPORTED_PROVIDERS',

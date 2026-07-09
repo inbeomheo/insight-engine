@@ -13,7 +13,7 @@ interface UseListManagerReturn<T> {
 
 /**
  * 배열 상태의 add/remove/update 보일러플레이트를 제거하는 훅.
- * MemoryManager, QaRulesEditor 등에서 반복되는 태그/리스트 관리 패턴 통합.
+ * MemoryManager 등에서 반복되는 태그/리스트 관리 패턴 통합.
  */
 export function useListManager<T>(initial: T[] = []): UseListManagerReturn<T> {
   const [items, setItems] = useState<T[]>(initial);

@@ -63,7 +63,7 @@ class TestFlaskMaxContentLength(unittest.TestCase):
         # MAX_CONTENT_LENGTH보다 큰 데이터 전송
         big_data = 'x' * (3 * 1024 * 1024)
         resp = client.post(
-            '/api/qa-check',
+            '/api/export/html',
             data=big_data,
             content_type='application/json',
             headers={'Origin': 'http://localhost:3000'},

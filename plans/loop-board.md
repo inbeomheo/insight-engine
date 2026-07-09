@@ -10,9 +10,10 @@
 
 ## 백로그
 
-- [ ] [정리] 데드 엔드포인트 잔여 335건 코드 정리 — 사용자 2026-07-09 승인:
+- [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
   착수 시 `plans/dead-code-audit-2026-06-10.md` 기준으로 프론트 소비자·테스트 소비자 grep 재검증.
+  2026-07-09 1차: export/QA 표면 제거 완료. 다음 배치는 남은 감사 목록에서 프론트 소비 0 체인을 재검증해 소형 묶음으로 처리.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -23,6 +24,14 @@
 
 ## Done
 
+- [x] 2026-07-09 chore(dead-code): export/QA 데드 엔드포인트 1차 정리.
+  `/api/export/{docx,epub,txt,zip,slides,srt,infographic,card-news,summary-card,code-image,newsletter-html,interactive-report}`와
+  `/api/qa-check` 라우트 제거. 프론트 고아 컴포넌트 `InfographicPreview`, `QaRulesEditor`,
+  서비스 `qa_gate_service`, `epub_service`, export 서비스의 DOCX/TXT/ZIP 경로 및 전용 테스트 제거.
+  데이터/DB/마이그레이션은 건드리지 않음.
+  소비자 grep: 제거 엔드포인트/서비스 참조 0.
+  검증: `python -m pytest tests/ -q --tb=no -p no:cacheprovider` 4199 passed, 1 skipped, 11 subtests passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과.
 - [x] 2026-07-09 feat(product): 제품 표면 1차 단순화.
   스타일 UI를 요약/Q&A/퀴즈/리텐션 카드 4개로 축소하고 기본 스타일을 `summary`로 변경.
   프로바이더 노출은 ChatMock(OpenAI 호환) 단일로 정리, 기본 모델은 `chatmock/gpt-5.4-mini`.
