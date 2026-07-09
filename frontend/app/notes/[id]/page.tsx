@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Brain, CheckCircle2, ExternalLink, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
+import { ArrowLeft, Brain, CheckCircle2, ExternalLink, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
+import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
+import { getStyleLabel } from '@/lib/helpers';
+import type { Report } from '@/lib/types';
+import { useResultStore } from '@/stores/resultStore';
 
 function formatDate(iso: string): string {
   if (!iso) return '';
@@ -56,6 +60,16 @@ export default function NoteDetailPage() {
   const [note, setNote] = useState<NoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hydrateResults = useResultStore((state) => state.hydrate);
+  const reports = useResultStore((state) => state.reports);
+  const linkedReport = useMemo(
+    () => findReportLinkedToNote(reports, noteId),
+    [reports, noteId]
+  );
+
+  useEffect(() => {
+    hydrateResults();
+  }, [hydrateResults]);
 
   useEffect(() => {
     let alive = true;
@@ -98,14 +112,14 @@ export default function NoteDetailPage() {
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : note ? (
-          <NoteBody note={note} />
+          <NoteBody note={note} linkedReport={linkedReport} />
         ) : null}
       </div>
     </div>
   );
 }
 
-function NoteBody({ note }: { note: NoteDetail }) {
+function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Report | null }) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
   const learningPoints = note.learning_points ?? [];
   const reviewQuestions = note.review_questions ?? [];
@@ -153,6 +167,30 @@ function NoteBody({ note }: { note: NoteDetail }) {
           </div>
         )}
       </div>
+
+      {linkedReport && (
+        <Card className="border-primary/20 bg-primary/5 py-3">
+          <CardContent className="px-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary/75" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">원본 결과 카드</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {linkedReport.title || '제목 없음'}
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground/70">
+                    {getStyleLabel(linkedReport.style)} · {linkedReport.time}
+                  </p>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline" className="shrink-0">
+                <Link href={`/?report=${encodeURIComponent(linkedReport.id)}`}>결과 열기</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 핵심 개념 */}
       {note.key_concepts.length > 0 && (

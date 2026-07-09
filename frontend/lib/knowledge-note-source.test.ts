@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createReport } from './report-factory';
-import { getKnowledgeNoteContent, getKnowledgeNoteSource } from './knowledge-note-source';
+import {
+  findReportLinkedToNote,
+  getKnowledgeNoteContent,
+  getKnowledgeNoteSource,
+} from './knowledge-note-source';
 
 describe('knowledge-note-source', () => {
   it('builds youtube note source from url reports', () => {
@@ -39,5 +43,31 @@ describe('knowledge-note-source', () => {
       title: '직접 입력 텍스트',
     });
     expect(getKnowledgeNoteContent(report)).toBe('붙여넣은 원문');
+  });
+
+  it('finds a local report linked to a knowledge note id', () => {
+    const reports = [
+      createReport({
+        id: 'other',
+        url: 'https://example.com/other',
+        title: '다른 결과',
+        content: '다른 내용',
+        html: '<p>다른 내용</p>',
+        style: 'summary',
+      }),
+      createReport({
+        id: 'linked',
+        url: 'https://example.com/source',
+        title: '연결된 결과',
+        content: '연결된 내용',
+        html: '<p>연결된 내용</p>',
+        style: 'qna',
+        knowledge_note_id: 'note-1',
+      }),
+    ];
+
+    expect(findReportLinkedToNote(reports, 'note-1')?.id).toBe('linked');
+    expect(findReportLinkedToNote(reports, 'missing')).toBeNull();
+    expect(findReportLinkedToNote(reports, '   ')).toBeNull();
   });
 });

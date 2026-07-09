@@ -30,3 +30,10 @@ export function getKnowledgeNoteSource(report: Report): NoteSource | null {
 export function getKnowledgeNoteContent(report: Report): string {
   return report.transcript?.trim() || report.content;
 }
+
+export function findReportLinkedToNote(reports: Report[], noteId: string): Report | null {
+  const targetNoteId = noteId.trim();
+  if (!targetNoteId) return null;
+
+  return reports.find((report) => report.knowledge_note_id === targetNoteId) ?? null;
+}
