@@ -7,13 +7,11 @@
 - imports: Notion, Google Docs, RSS, 북마크, 이메일 임포트
 - mcp_plugins: MCP 플러그인/앱/SDK/서버 + 모든 CMS 발행 플러그인
 - knowledge: RAG 지식 베이스 (벡터, GraphRAG)
-- content_workspace: 버전 히스토리, 검색, 폴더, 알림, 협업 세션
 - misc: 앱 피드백
 """
 from routes.integrations import (  # noqa: F401 — 부수효과 import (라우트 등록)
     imports,
     mcp_plugins,
     knowledge,
-    content_workspace,
     misc,
 )

@@ -50,6 +50,7 @@
   10차: 설정 영역에서 소비되지 않는 레거시 메모리·스니펫·지식그래프 컴포넌트와 전용 훅 제거 완료.
   11차: 프론트에서 소비되지 않는 레거시 훅 7개와 고아 playlist 모달 상태 제거 완료.
   12차: 프론트에서 소비되지 않는 레거시 결과/입력/위키/파이프라인 컴포넌트 15개 제거 완료.
+  13차: 프론트 소비 0인 `/api/content/<id>/versions*`, `/api/search`, `/api/notifications*`, `/api/collab/session*` 라우트와 전용 인메모리 서비스/테스트 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -88,6 +89,14 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): content_workspace 죽은 라우트 그룹 제거.
+  프론트 소비 0·테스트 전용으로 남은 `routes/integrations/content_workspace.py`의 버전 히스토리/검색/알림/협업 세션 라우트 그룹을 제거.
+  전용 인메모리 서비스(`version_service`, `search_service`, `notification_service`, `collaboration_service`)와 해당 전용 테스트를 함께 삭제하고 통합 라우트 shim 문서를 갱신.
+  검증: 제거 대상 경로/서비스명 grep 0 +
+  `.venv\Scripts\python.exe -m pytest tests/test_integration_routes.py -q -p no:cacheprovider` 25 passed +
+  `.venv\Scripts\python.exe -m py_compile app.py routes\integration_routes.py routes\integrations\__init__.py` 통과 +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 위키 필터 딥링크 추가.
   `/notes/[id]`의 핵심 개념·태그 배지를 `/notes?concept=...`, `/notes?tag=...` 딥링크로 연결하고, `/notes` 홈이 URL 쿼리에서 개념/태그/출처 필터를 복원하도록 개선.
   공용 `note-list` 유틸에 위키 필터 링크 생성/파싱 함수를 추가하고, 인코딩·우선순위·빈 값 경로를 단위 테스트로 검증.
