@@ -17,8 +17,10 @@ import {
 import { Button } from '@/components/ui/button';
 import TextInput from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
+import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
+import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
 
@@ -347,11 +349,11 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
   );
 }
 
-function MobileDashboardView({ reports }: { reports: Report[] }) {
-  const styleCounts = useMemo(() => {
-    return STYLE_OPTIONS.slice(0, 3).map((style) => ({ ...style, count: reports.filter((r) => r.style === style.id).length }));
-  }, [reports]);
-  const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens || 0), 0);
+function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (report: Report) => void }) {
+  const pinnedIds = useResultStore((s) => s.pinnedIds);
+  const stats = useMemo(() => buildLocalDashboardStats(reports, pinnedIds, MAX_LOCAL_REPORTS), [pinnedIds, reports]);
+  const totalTokens = stats.totalTokens;
+  const storageTone = stats.storageStatus === '가득 참' ? 'text-destructive' : stats.storageStatus === '여유 적음' ? 'text-amber-600' : 'text-primary';
 
   return (
     <section className="min-h-dvh px-6 pb-28 pt-12">
@@ -360,7 +362,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">총 콘텐츠</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}</p>
-          <p className="mt-1 text-[10px] text-emerald-600">▲ 최근 기록</p>
+          <p className="mt-1 text-[10px] text-emerald-600">로컬 저장</p>
         </div>
         <div className="bg-foreground p-4 text-background shadow-[0_1px_8px_rgba(21,23,31,0.06)]">
           <p className="signal-meta text-[9px] text-background/55">총 토큰</p>
@@ -369,13 +371,13 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
         </div>
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">평균 글자</p>
-          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length ? Math.round(reports.reduce((s, r) => s + r.content.length, 0) / reports.length) : 0}</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{stats.avgLength}</p>
           <p className="mt-1 text-[10px] text-muted-foreground/55">콘텐츠 평균</p>
         </div>
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
-          <p className="signal-meta text-[9px] text-muted-foreground/50">QA 통과율</p>
-          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">96<span className="text-base">%</span></p>
-          <p className="mt-1 text-[10px] text-primary">지표 5</p>
+          <p className="signal-meta text-[9px] text-muted-foreground/50">저장 공간</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}<span className="text-base">/{MAX_LOCAL_REPORTS}</span></p>
+          <p className={cn('mt-1 text-[10px]', storageTone)}>{stats.storageStatus} · {stats.storagePct}%</p>
         </div>
       </div>
 
@@ -385,33 +387,61 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
           <span className="signal-meta text-[9px] text-muted-foreground/45">최근 7일</span>
         </div>
         <div className="flex h-28 items-end justify-between gap-3 px-2">
-          {[45, 62, 38, 86, 68, 54, 34].map((height, index) => (
-            <div key={index} className="flex flex-1 flex-col items-center gap-2">
-              <div className={cn('w-full max-w-8', index === 3 ? 'bg-primary' : 'bg-[#EEE9E0]')} style={{ height: `${height}px` }} />
-              <span className="signal-meta text-[9px] text-muted-foreground/45">{'월화수목금토일'[index]}</span>
-            </div>
-          ))}
+          {stats.activityDays.map((day) => {
+            const height = day.count > 0 ? Math.max(10, Math.round((day.count / stats.maxActivityCount) * 86)) : 8;
+            return (
+              <div key={day.key} className="flex flex-1 flex-col items-center gap-2">
+                <div className={cn('w-full max-w-8', day.count > 0 ? 'bg-primary' : 'bg-muted')} style={{ height: `${height}px` }} />
+                <span className="signal-meta text-[9px] text-muted-foreground/45">{day.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
         <h2 className="mb-4 text-sm font-black">스타일 분포</h2>
-        <div className="space-y-3">
-          {styleCounts.map((style, index) => {
-            const pct = reports.length ? Math.max(8, Math.round((style.count / reports.length) * 100)) : [58, 22, 13][index];
-            return (
-              <div key={style.id}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="font-semibold">{style.label}</span>
-                  <span className="text-muted-foreground/55">{pct}%</span>
+        {stats.topStyles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">아직 생성 결과가 없습니다.</p>
+        ) : (
+          <div className="space-y-3">
+            {stats.topStyles.map(([style, count], index) => {
+              const pct = reports.length ? Math.max(8, Math.round((count / reports.length) * 100)) : 0;
+              return (
+                <div key={style}>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-semibold">{getStyleLabel(style)}</span>
+                    <span className="text-muted-foreground/55">{pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted">
+                    <div className={cn('h-full', index === 0 ? 'bg-primary' : 'bg-foreground')} style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-[#EEE9E0]">
-                  <div className={cn('h-full', index === 0 ? 'bg-primary' : 'bg-foreground')} style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+        <h2 className="mb-4 text-sm font-black">고정 결과</h2>
+        {stats.pinned.length === 0 ? (
+          <p className="text-sm text-muted-foreground">중요한 결과를 고정하면 모바일에서도 바로 열 수 있습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {stats.pinned.slice(0, 3).map((report) => (
+              <button
+                key={report.id}
+                type="button"
+                className="block w-full border border-border/70 bg-background px-3 py-3 text-left"
+                onClick={() => onOpen(report)}
+              >
+                <p className="line-clamp-1 text-sm font-black">{report.title || '제목 없음'}</p>
+                <p className="signal-meta mt-1 text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)} · {report.time}</p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -523,7 +553,7 @@ export default function MobileAppShell({
         />
       )}
       {activeTab === 'library' && <MobileLibraryView reports={reports} onOpen={setActiveReport} />}
-      {activeTab === 'dashboard' && <MobileDashboardView reports={reports} />}
+      {activeTab === 'dashboard' && <MobileDashboardView reports={reports} onOpen={setActiveReport} />}
       <MobileBottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
