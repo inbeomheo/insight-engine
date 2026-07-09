@@ -658,7 +658,7 @@ function NoteWikiBrief({ items, actions }: { items: NoteWikiBriefItem[]; actions
             LLMWiki
           </div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-5">
           {items.map((item) => (
             <div key={item.label} className="rounded-xl border border-border bg-background/70 px-3 py-2.5">
               <div className="text-[10px] text-muted-foreground">{item.label}</div>

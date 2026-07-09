@@ -66,10 +66,16 @@
   5차: `/notes` 홈에 브라우저 로컬 복습 기록 기반 이어 복습 카드와 노트별 복습 질문 수 표시를 추가.
   6차: `/notes` 홈에 미시작/진행중/완료 학습 상태 필터와 노트별 상태 배지를 추가.
   7차: `/notes/[id]` 문서 브리핑 카드로 출처·문서 구성·학습 상태·근거 연결을 한눈에 요약.
+  8차: `/notes/[id]` 문서 브리핑에 다음 행동 카드를 추가해 복습 시작/남은 항목/완료 상태를 바로 안내.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 문서 브리핑 다음 행동 추가.
+  `/notes/[id]` 문서 브리핑에 `다음 행동` 카드를 추가해 미시작이면 복습 시작, 진행 중이면 남은 항목 수, 완료면 전체 완료 상태를 바로 보여줌.
+  공용 `note-wiki-brief` 유틸과 테스트를 갱신해 진행 중/미시작/완료/학습 항목 없음 경로를 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 19 passed.
 - [x] 2026-07-10 chore(dead-code): 레거시 미사용 훅 7개 제거.
   프론트 소스 전수 grep으로 실제 import/호출이 없는 훅 7개를 삭제하고, 함께 고아가 된 `playlist` 모달 상태를 UI 스토어에서 제거.
   삭제 대상: useApiCall, useInfiniteHistory, useKeyboardShortcuts, useMindmap, useModal, useModifierPresets, usePipeline.

@@ -37,6 +37,13 @@ function getStudyValue(summary: NoteWikiBriefInput['studySummary']): string {
   return `${summary.percent}% 진행 · ${summary.completed}/${summary.total}`;
 }
 
+function getNextActionValue(summary: NoteWikiBriefInput['studySummary']): string {
+  if (summary.total <= 0) return '근거 Q&A로 확장';
+  if (summary.completed <= 0) return '복습 시작';
+  if (summary.completed >= summary.total) return '전체 완료';
+  return `남은 ${summary.total - summary.completed}개`;
+}
+
 export function buildNoteWikiBrief(input: NoteWikiBriefInput): NoteWikiBriefItem[] {
   const evidenceCount =
     Math.max(0, input.quoteCount) +
@@ -58,6 +65,11 @@ export function buildNoteWikiBrief(input: NoteWikiBriefInput): NoteWikiBriefItem
       label: '학습 상태',
       value: getStudyValue(input.studySummary),
       description: '체크한 학습 포인트와 복습 질문',
+    },
+    {
+      label: '다음 행동',
+      value: getNextActionValue(input.studySummary),
+      description: '지금 이어갈 학습 단계',
     },
     {
       label: '근거 연결',
