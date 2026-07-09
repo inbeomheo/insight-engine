@@ -57,8 +57,9 @@ test.describe('결과 카드 상호작용', () => {
     await expect(page.getByRole('menuitem', { name: '프롬프트 보기' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: '마인드맵' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'HTML 내보내기' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'DOCX 내보내기' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'PDF 인쇄' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '마크다운 (.md)' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'DOCX 내보내기' })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: 'PDF 인쇄' })).toHaveCount(0);
     await expect(page.getByRole('menuitem', { name: '공유' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: '삭제' })).toBeVisible();
   });

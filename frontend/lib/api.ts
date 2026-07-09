@@ -122,7 +122,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   }
 }
 
-/** Blob 응답 전용 (DOCX/PDF 등 바이너리 다운로드) */
+/** Blob 응답 전용 (Markdown 파일 다운로드) */
 async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
