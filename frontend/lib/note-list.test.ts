@@ -16,6 +16,8 @@ import {
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
   getStudyStartCandidates,
+  parseNoteStudyQueueOpen,
+  serializeNoteStudyQueueOpen,
   sortNotesByRecent,
 } from './note-list';
 
@@ -222,6 +224,14 @@ describe('note-list', () => {
       completed: 0,
       recent: 1,
     })).toBe(3);
+  });
+
+  it('serializes study queue open state for browser storage', () => {
+    expect(serializeNoteStudyQueueOpen(true)).toBe('open');
+    expect(serializeNoteStudyQueueOpen(false)).toBe('closed');
+    expect(parseNoteStudyQueueOpen('open')).toBe(true);
+    expect(parseNoteStudyQueueOpen('closed')).toBe(false);
+    expect(parseNoteStudyQueueOpen('legacy', false)).toBe(false);
   });
 
   it('classifies and filters notes by study status', () => {

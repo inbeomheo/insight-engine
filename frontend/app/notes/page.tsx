@@ -25,6 +25,9 @@ import {
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
   getStudyStartCandidates,
+  NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
+  parseNoteStudyQueueOpen,
+  serializeNoteStudyQueueOpen,
   sortNotesByRecent,
   type NoteStudyStatus,
   type NoteStudyResumeItem,
@@ -466,6 +469,31 @@ function WikiMap({
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
   const [studyQueueOpen, setStudyQueueOpen] = useState(true);
+  useEffect(() => {
+    try {
+      setStudyQueueOpen(
+        parseNoteStudyQueueOpen(window.localStorage.getItem(NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY), true),
+      );
+    } catch {
+      setStudyQueueOpen(true);
+    }
+  }, []);
+
+  const handleStudyQueueToggle = useCallback(() => {
+    setStudyQueueOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem(
+          NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
+          serializeNoteStudyQueueOpen(next),
+        );
+      } catch {
+        // Ignore unavailable storage; the visible toggle still works.
+      }
+      return next;
+    });
+  }, []);
+
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
     'study-start': studyStartNotes.length,
@@ -586,7 +614,7 @@ function WikiMap({
             <CardContent className="px-4">
               <button
                 type="button"
-                onClick={() => setStudyQueueOpen((open) => !open)}
+                onClick={handleStudyQueueToggle}
                 aria-expanded={studyQueueOpen}
                 className="flex w-full items-center justify-between gap-3 text-left"
               >

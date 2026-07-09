@@ -65,6 +65,7 @@ export interface NoteStudyResumeItem {
 
 export type NoteStudyStatus = 'not-started' | 'in-progress' | 'completed';
 export type NoteStudyCardKind = 'review-needed' | 'study-start' | 'completed' | 'recent';
+export const NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY = 'insight-engine.note-study-queue-open';
 
 const NOTE_STUDY_CARD_PRIORITY: NoteStudyCardKind[] = [
   'review-needed',
@@ -81,6 +82,16 @@ export function getNoteStudyCardOrder(
 
 export function getNoteStudyQueueCount(counts: Record<NoteStudyCardKind, number>): number {
   return getNoteStudyCardOrder(counts).reduce((sum, kind) => sum + counts[kind], 0);
+}
+
+export function serializeNoteStudyQueueOpen(open: boolean): string {
+  return open ? 'open' : 'closed';
+}
+
+export function parseNoteStudyQueueOpen(value: string | null, fallback = true): boolean {
+  if (value === 'open') return true;
+  if (value === 'closed') return false;
+  return fallback;
 }
 
 export function getNoteStudyCounts(note: NoteListItem): NoteStudyCounts {
