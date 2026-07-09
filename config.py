@@ -1,6 +1,6 @@
 """
 스마트 콘텐츠 생성기 설정 파일
-AI 서비스, 스타일 옵션 정의
+ChatMock(OpenAI 호환) 서비스, 스타일 옵션 정의
 프롬프트 템플릿은 prompts/ 패키지에서 관리
 
 v3.0 업데이트:
@@ -27,12 +27,6 @@ from prompts import (
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
 PROVIDER_API_KEYS: Dict[str, str] = {
-    'openai': os.getenv('OPENAI_API_KEY', ''),
-    'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
-    'gemini': os.getenv('GEMINI_API_KEY', ''),
-    'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
-    'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
-    'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
 
@@ -229,20 +223,8 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 @functools.lru_cache(maxsize=128)
 def get_provider_from_model(model_id: str) -> str:
     """모델 ID에서 프로바이더를 추출합니다."""
-    if model_id.startswith('gpt-'):
-        return 'openai'
-    elif model_id.startswith('claude-'):
-        return 'anthropic'
-    elif model_id.startswith('gemini/'):
-        return 'gemini'
-    elif model_id.startswith('deepseek/'):
-        return 'deepseek'
-    elif model_id.startswith('zhipuai/'):
-        return 'zhipuai'
-    elif model_id.startswith('chatmock/'):
+    if model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
         return 'chatmock'
-    elif model_id.startswith('openrouter/'):
-        return 'openrouter'
     return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
 
 

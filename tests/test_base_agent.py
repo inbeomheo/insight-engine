@@ -28,8 +28,8 @@ class TestBaseAgent(unittest.TestCase):
     # --- 초기화 ---
 
     def test_init_with_model(self):
-        agent = ConcreteAgent(model='gemini/gemini-3-flash-preview')
-        self.assertEqual(agent.model, 'gemini/gemini-3-flash-preview')
+        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        self.assertEqual(agent.model, 'chatmock/gpt-5.4-mini')
 
     def test_init_without_model(self):
         agent = ConcreteAgent()
@@ -64,69 +64,9 @@ class TestBaseAgent(unittest.TestCase):
         mock_resp.choices[0].message.content = '응답 텍스트'
         mock_llm.return_value = mock_resp
 
-        agent = ConcreteAgent(model='gemini/gemini-3-flash-preview')
+        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
         result = agent._call_ai('테스트 프롬프트')
         self.assertEqual(result, '응답 텍스트')
-
-    # --- _call_ai: Gemini reasoning_effort ---
-
-    @patch('litellm.completion')
-    def test_call_ai_gemini_adds_reasoning_effort(self, mock_llm):
-        mock_resp = MagicMock()
-        mock_resp.choices[0].message.content = '응답'
-        mock_llm.return_value = mock_resp
-
-        agent = ConcreteAgent(model='gemini/gemini-3-flash-preview')
-        agent._call_ai('prompt')
-
-        kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs.get('reasoning_effort'), 'minimal')
-
-    @patch('litellm.completion')
-    def test_call_ai_gemini_lite_no_reasoning_effort(self, mock_llm):
-        mock_resp = MagicMock()
-        mock_resp.choices[0].message.content = '응답'
-        mock_llm.return_value = mock_resp
-
-        agent = ConcreteAgent(model='gemini/gemini-2.5-flash-lite-preview-09-2025')
-        agent._call_ai('prompt')
-
-        kwargs = mock_llm.call_args[1]
-        self.assertNotIn('reasoning_effort', kwargs)
-
-    # --- _call_ai: 오류 ---
-
-    @patch('litellm.completion', side_effect=Exception('timeout'))
-    def test_call_ai_failure_raises(self, mock_llm):
-        agent = ConcreteAgent(model='gemini/gemini-3-flash-preview')
-        with self.assertRaises(Exception) as ctx:
-            agent._call_ai('prompt')
-        self.assertIn('timeout', str(ctx.exception))
-
-    # --- _call_ai: zhipuai ---
-
-    @patch.dict('os.environ', {'ZHIPUAI_API_KEY': 'test-key'})
-    @patch('litellm.completion')
-    def test_call_ai_zhipuai_conversion(self, mock_llm):
-        mock_resp = MagicMock()
-        mock_resp.choices[0].message.content = '응답'
-        mock_llm.return_value = mock_resp
-
-        agent = ConcreteAgent(model='zhipuai/GLM-4.7')
-        agent._call_ai('prompt')
-
-        kwargs = mock_llm.call_args[1]
-        self.assertTrue(kwargs['model'].startswith('openai/'))
-        self.assertEqual(kwargs['api_key'], 'test-key')
-
-    @patch.dict('os.environ', {}, clear=True)
-    def test_call_ai_zhipuai_no_key_raises(self):
-        # ZHIPUAI_API_KEY 없는 환경
-        import os
-        os.environ.pop('ZHIPUAI_API_KEY', None)
-        agent = ConcreteAgent(model='zhipuai/GLM-4.7')
-        with self.assertRaises(ValueError):
-            agent._call_ai('prompt')
 
     # --- _call_ai: ChatMock ---
 
@@ -143,6 +83,32 @@ class TestBaseAgent(unittest.TestCase):
         self.assertEqual(kwargs['model'], 'gpt-5.4-mini')
         self.assertEqual(kwargs['api_key'], 'dummy')
         self.assertIn('api_base', kwargs)
+        self.assertEqual(kwargs['reasoning_effort'], 'medium')
+        self.assertTrue(kwargs['drop_params'])
+        self.assertNotIn('temperature', kwargs)
+
+    @patch('litellm.completion')
+    def test_call_ai_raw_gpt_uses_chatmock(self, mock_llm):
+        mock_resp = MagicMock()
+        mock_resp.choices[0].message.content = '응답'
+        mock_llm.return_value = mock_resp
+
+        agent = ConcreteAgent(model='gpt-5.4')
+        agent._call_ai('prompt')
+
+        kwargs = mock_llm.call_args[1]
+        self.assertEqual(kwargs['model'], 'gpt-5.4')
+        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertIn('api_base', kwargs)
+
+    # --- _call_ai: 오류 ---
+
+    @patch('litellm.completion', side_effect=Exception('timeout'))
+    def test_call_ai_failure_raises(self, mock_llm):
+        agent = ConcreteAgent(model='chatmock/gpt-5.4-mini')
+        with self.assertRaises(Exception) as ctx:
+            agent._call_ai('prompt')
+        self.assertIn('timeout', str(ctx.exception))
 
 
 if __name__ == '__main__':

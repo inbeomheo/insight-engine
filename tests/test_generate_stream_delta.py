@@ -396,26 +396,25 @@ class TestGenerateStreamDelta(unittest.TestCase):
         self.assertIn('생성 중 오류', events[-1]['error'])
         self.assertEqual(events[-1]['message'], events[-1]['error'])
 
-    def test_glm_fallback_emits_single_delta_and_result_from_meta_result(self):
-        fallback_result = {
-            'title': 'GLM 제목',
-            'content': 'GLM 본문',
-            'html': '<p>GLM 본문</p>',
-            'usage': {'prompt_tokens': 11, 'completion_tokens': 7, 'total_tokens': 18},
-        }
+    def test_chatmock_stream_emits_delta_and_result(self):
+        def fake_stream(*args, **kwargs):
+            yield 'ChatMock 본문'
+            return {
+                'prompt': 'ChatMock 프롬프트',
+                'usage': {'prompt_tokens': 11, 'completion_tokens': 7, 'total_tokens': 18},
+            }
 
         with self._patched(
-            create_content=patch('services.core.ai_service.create_content', return_value=(fallback_result, 'GLM 프롬프트')),
+            create_stream=patch('routes.blog_routes.ai_service.create_content_stream', side_effect=fake_stream),
         ):
-            resp = self._post(model='zhipuai/GLM-4.7')
+            resp = self._post(model='chatmock/gpt-5.4-mini')
             body = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)
         events = _parse_sse(body)
         self.assertEqual([e['type'] for e in events], ['meta', 'delta', 'result'])
-        self.assertEqual(events[1]['delta'], 'GLM 본문')
-        self.assertEqual(events[-1]['title'], 'GLM 제목')
-        self.assertEqual(events[-1]['content'], 'GLM 본문')
+        self.assertEqual(events[1]['delta'], 'ChatMock 본문')
+        self.assertEqual(events[-1]['content'], 'ChatMock 본문')
         self.assertEqual(events[-1]['usage']['total_tokens'], 18)
 
     def test_direct_text_stream_emits_meta_delta_and_text_result(self):

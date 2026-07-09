@@ -43,23 +43,24 @@ def run_tests():
         auth_visible = auth_modal.is_visible() if auth_modal else False
         log("T2. 로그인 버튼 제거", login_btn is None, f"btn={login_btn}, modal_visible={auth_visible}")
 
-        # ==================== T3. GLM 모델만 표시 ====================
-        # 설정(⚙) 클릭 → 프로바이더 팝오버 확인
+        # ==================== T3. ChatMock 모델만 표시 ====================
+        # 설정(⚙) 클릭 → 모델 설정 확인
         settings_btn = page.query_selector("#settings-btn")
         if settings_btn:
             settings_btn.click()
             page.wait_for_timeout(500)
 
-        # provider select 확인
+        # provider select가 남아 있으면 레거시 프로바이더가 없는지 확인
         provider_select = page.query_selector("#provider")
         provider_options = []
         if provider_select:
             provider_options = provider_select.query_selector_all("option")
             provider_options = [o.text_content().strip() for o in provider_options]
-        has_glm = any("GLM" in opt or "Zhipu" in opt for opt in provider_options)
+        has_chatmock = "ChatMock" in page.content()
+        no_zhipu = not any("GLM" in opt or "Zhipu" in opt for opt in provider_options)
         no_gemini = not any("Gemini" in opt for opt in provider_options)
         no_deepseek = not any("DeepSeek" in opt for opt in provider_options)
-        log("T3. GLM 모델만", has_glm and no_gemini and no_deepseek, f"providers={provider_options}")
+        log("T3. ChatMock 모델만", has_chatmock and no_zhipu and no_gemini and no_deepseek, f"providers={provider_options}")
 
         # 모달 닫기
         close_btn = page.query_selector("#modal-close")

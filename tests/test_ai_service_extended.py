@@ -45,66 +45,38 @@ class TestBuildCompletionKwargs(unittest.TestCase):
 
     def test_basic_model(self):
         from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('gpt-4o', 'test prompt')
-        self.assertEqual(kwargs['model'], 'gpt-4o')
+        kwargs = _build_completion_kwargs('custom/local-model', 'test prompt')
+        self.assertEqual(kwargs['model'], 'custom/local-model')
         self.assertIn('messages', kwargs)
         self.assertIn('temperature', kwargs)
         self.assertIn('max_tokens', kwargs)
 
-    def test_gemini_reasoning_effort(self):
-        from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('gemini/gemini-3-flash-preview', 'test')
-        self.assertEqual(kwargs.get('reasoning_effort'), 'minimal')
-
-    def test_gemini_lite_no_reasoning(self):
-        from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('gemini/gemini-2.5-flash-lite-preview', 'test')
-        self.assertNotIn('reasoning_effort', kwargs)
-
-    def test_zhipuai_model(self):
-        from services.core.ai_service import _build_completion_kwargs
-        with patch.dict('os.environ', {'ZHIPUAI_API_KEY': 'test-key'}):
-            kwargs = _build_completion_kwargs('zhipuai/GLM-4.7', 'test')
-            self.assertTrue(kwargs['model'].startswith('openai/'))
-            self.assertIn('api_base', kwargs)
-            self.assertEqual(kwargs['api_key'], 'test-key')
-
-    def test_zhipuai_no_key_raises(self):
-        from services.core.ai_service import _build_completion_kwargs
-        with patch.dict('os.environ', {}, clear=False):
-            # ZHIPUAI_API_KEY 환경변수 제거
-            import os
-            old = os.environ.pop('ZHIPUAI_API_KEY', None)
-            try:
-                with self.assertRaises(ValueError):
-                    _build_completion_kwargs('zhipuai/GLM-4.7', 'test')
-            finally:
-                if old:
-                    os.environ['ZHIPUAI_API_KEY'] = old
-
     def test_chatmock_model(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('chatmock/gpt-5.4', 'test')
-        self.assertNotIn('chatmock/', kwargs['model'])
+        self.assertEqual(kwargs['model'], 'gpt-5.4')
         self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
+        self.assertEqual(kwargs['reasoning_effort'], 'medium')
         self.assertTrue(kwargs.get('drop_params'))
+        self.assertNotIn('temperature', kwargs)
 
-    def test_openrouter_model(self):
+    def test_raw_gpt_model_uses_chatmock_base(self):
         from services.core.ai_service import _build_completion_kwargs
-        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'or-key'}):
-            kwargs = _build_completion_kwargs('openrouter/meta-llama/llama-3', 'test')
-            self.assertEqual(kwargs['api_key'], 'or-key')
-            self.assertIn('openrouter.ai', kwargs['api_base'])
+        kwargs = _build_completion_kwargs('gpt-5.4-mini', 'test')
+        self.assertEqual(kwargs['model'], 'gpt-5.4-mini')
+        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
+        self.assertEqual(kwargs['api_key'], 'dummy')
 
     def test_stream_flag(self):
         from services.core.ai_service import _build_completion_kwargs
-        kwargs = _build_completion_kwargs('gpt-4o', 'test', stream=True)
+        kwargs = _build_completion_kwargs('chatmock/gpt-5.4-mini', 'test', stream=True)
         self.assertTrue(kwargs.get('stream'))
 
     def test_detail_level_applies(self):
         from services.core.ai_service import _build_completion_kwargs
-        kwargs_brief = _build_completion_kwargs('gpt-4o', 'test', detail_level='brief')
-        kwargs_deep = _build_completion_kwargs('gpt-4o', 'test', detail_level='deep')
+        kwargs_brief = _build_completion_kwargs('custom/local-model', 'test', detail_level='brief')
+        kwargs_deep = _build_completion_kwargs('custom/local-model', 'test', detail_level='deep')
         self.assertLess(kwargs_brief['max_tokens'], kwargs_deep['max_tokens'])
 
 
@@ -353,20 +325,11 @@ class TestConvertErrorMessageExtended(unittest.TestCase):
         result = _convert_error_message('Content policy violation blocked')
         self.assertIn('컨텐츠 차단', result)
 
-    def test_zhipu_1113(self):
+    def test_unknown_numeric_error_uses_generic_ai_error(self):
         from services.core.ai_service import _convert_error_message
         result = _convert_error_message('Error code: 1113')
-        self.assertIn('권한', result)
-
-    def test_zhipu_1211(self):
-        from services.core.ai_service import _convert_error_message
-        result = _convert_error_message('Error code: 1211')
-        self.assertIn('모델 없음', result)
-
-    def test_zhipu_1302(self):
-        from services.core.ai_service import _convert_error_message
-        result = _convert_error_message('Error code: 1302')
-        self.assertIn('동시성', result)
+        self.assertIn('AI 오류', result)
+        self.assertIn('1113', result)
 
     def test_model_info_included(self):
         from services.core.ai_service import _convert_error_message

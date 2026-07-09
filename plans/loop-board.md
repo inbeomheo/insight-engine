@@ -34,6 +34,7 @@
   21차: 홈에 커맨드 팔레트를 다시 렌더링하고, 실제 화면이 없는 재생목록 명령을 제거해 Cmd/Ctrl+K 진입을 복구.
   22차: 템플릿/설정/온보딩/파이프라인의 레거시 15개 스타일 노출을 4개 학습 스타일 기준으로 정리.
   23차: 결과 카드/번역/E2E 기대값의 내보내기 노출을 HTML/Markdown 전용으로 정리.
+  24차: 생성/스트리밍/에이전트/영상 Q&A 호출부의 Gemini/Zhipu/OpenRouter 전용 분기를 제거하고 ChatMock(OpenAI 호환) 단일 모델 경로로 단순화.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -84,6 +85,14 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(provider): ChatMock 단일 생성 경로로 단순화.
+  `config.py`의 활성 프로바이더 키를 ChatMock으로 축소하고, 생성/스트리밍/에이전트/영상 Q&A 호출부에서 Gemini/Zhipu/OpenRouter 전용 변환·락·폴백 분기를 제거.
+  설정 팝오버는 서비스 선택 대신 ChatMock 단일 서비스 안내와 모델 선택만 노출하도록 정리하고, 부하/E2E/단위 테스트 샘플 모델을 ChatMock 기준으로 갱신.
+  ChatMock README 기준 기본 OpenAI 호환 base URL(`http://127.0.0.1:8000/v1`)과 지원 모델(`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex-spark`)을 재확인.
+  검증: `python -m py_compile ...` 통과 + `.venv\\Scripts\\python.exe -m pytest tests/test_ai_service.py tests/test_ai_service_extended.py tests/test_base_agent.py tests/test_generate_stream_delta.py tests/test_advanced_routes_cov.py tests/test_article_generate_route.py tests/test_blog_routes_cov.py tests/test_video_qa_service.py tests/test_cost_tracker_service.py tests/test_dashboard_service.py tests/test_utility_routes.py tests/test_provider_validate_latency.py -q -p no:cacheprovider` 237 passed, 11 subtests passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- ResultChatPanel.test.tsx useGenerate.test.tsx note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 34 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(export): HTML/Markdown 내보내기만 노출.
   백엔드 export 라우트는 이미 HTML/Markdown 전용임을 재검증하고, 프론트 번역/E2E 기대값/API 주석의 DOCX/PDF/EPUB 잔여 노출을 제거.
   결과 카드 메뉴는 `HTML 내보내기`와 `마크다운 (.md)`만 검증하도록 업데이트.

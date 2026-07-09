@@ -72,15 +72,9 @@ class BaseAgent(ABC):
             AI 응답 텍스트. 오류 발생 시 빈 문자열 반환.
         """
         import os
-        import threading
         from litellm import completion
 
         model = self.model or self._get_default_model()
-
-        # GLM 모델 → OpenAI 호환 변환
-        ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
-        if not hasattr(BaseAgent, '_glm_lock'):
-            BaseAgent._glm_lock = threading.Lock()
 
         kwargs: dict[str, Any] = {
             'model': model,
@@ -90,31 +84,16 @@ class BaseAgent(ABC):
             'timeout': 180,
         }
 
-        if model.startswith('zhipuai/'):
-            zhipuai_key = os.getenv('ZHIPUAI_API_KEY')
-            if not zhipuai_key:
-                raise ValueError('ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.')
-            kwargs['model'] = f"openai/{model.replace('zhipuai/', '')}"
-            kwargs['api_base'] = ZHIPUAI_API_BASE
-            kwargs['api_key'] = zhipuai_key
-
-        elif model.startswith('gemini/') and 'lite' not in model.lower():
-            kwargs['reasoning_effort'] = 'minimal'
-
-        elif model.startswith('chatmock/'):
-            kwargs['model'] = model.replace('chatmock/', '')
+        if model.startswith('chatmock/') or model.startswith('gpt-'):
+            kwargs['model'] = model.replace('chatmock/', '', 1)
             kwargs['api_base'] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
-            kwargs['api_key'] = 'dummy'
+            kwargs['api_key'] = os.getenv('CHATMOCK_API_KEY', 'dummy') or 'dummy'
+            kwargs['reasoning_effort'] = 'medium'
             kwargs['drop_params'] = True
             kwargs.pop('temperature', None)
 
         try:
-            if model.startswith('zhipuai/') or 'zhipuai' in kwargs.get('model', ''):
-                # GLM은 순차 처리
-                with BaseAgent._glm_lock:
-                    resp = completion(**kwargs)
-            else:
-                resp = completion(**kwargs)
+            resp = completion(**kwargs)
 
             return resp.choices[0].message.content or ''
         except Exception as e:

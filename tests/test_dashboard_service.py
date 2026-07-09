@@ -11,8 +11,8 @@ class TestDashboardService(unittest.TestCase):
         self.svc = DashboardService()
 
     def test_record_and_summary(self):
-        self.svc.record_generation('blog_seo', 'gemini/gemini-2.5-flash', 1000, 2000, True)
-        self.svc.record_generation('summary', 'deepseek/deepseek-chat', 800, 1500, False)
+        self.svc.record_generation('summary', 'chatmock/gpt-5.4-mini', 1000, 2000, True)
+        self.svc.record_generation('qna', 'chatmock/gpt-5.4', 800, 1500, False)
         summary = self.svc.get_summary(30)
         self.assertEqual(summary['total_generations'], 2)
         self.assertEqual(summary['success_count'], 1)
@@ -38,17 +38,17 @@ class TestDashboardService(unittest.TestCase):
         self.assertEqual(blog_stat['success_rate'], 100.0)
 
     def test_model_stats(self):
-        self.svc.record_generation('blog_seo', 'gemini', 1000, 2000, True)
-        self.svc.record_generation('summary', 'deepseek', 800, 1000, True)
+        self.svc.record_generation('summary', 'chatmock/gpt-5.4-mini', 1000, 2000, True)
+        self.svc.record_generation('qna', 'chatmock/gpt-5.4', 800, 1000, True)
         stats = self.svc.get_model_stats(30)
         model_names = [s['model'] for s in stats]
-        self.assertIn('gemini', model_names)
-        self.assertIn('deepseek', model_names)
+        self.assertIn('chatmock/gpt-5.4-mini', model_names)
+        self.assertIn('chatmock/gpt-5.4', model_names)
 
     def test_daily_trend(self):
-        self.svc.record_generation('blog_seo', 'gemini', 100, 500, True, '2026-01-01T00:00:00+00:00')
-        self.svc.record_generation('summary', 'gemini', 100, 500, True, '2026-01-01T12:00:00+00:00')
-        self.svc.record_generation('blog_seo', 'gemini', 100, 500, True, '2026-01-02T00:00:00+00:00')
+        self.svc.record_generation('summary', 'chatmock/gpt-5.4-mini', 100, 500, True, '2026-01-01T00:00:00+00:00')
+        self.svc.record_generation('qna', 'chatmock/gpt-5.4-mini', 100, 500, True, '2026-01-01T12:00:00+00:00')
+        self.svc.record_generation('summary', 'chatmock/gpt-5.4-mini', 100, 500, True, '2026-01-02T00:00:00+00:00')
         trend = self.svc.get_daily_trend(365)
         dates = {t['date'] for t in trend}
         self.assertIn('2026-01-01', dates)

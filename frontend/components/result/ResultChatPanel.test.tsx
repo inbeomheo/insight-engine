@@ -22,7 +22,7 @@ async function renderPanel() {
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root!.render(<ResultChatPanel context="자막 본문" model="gemini/test" />);
+    root!.render(<ResultChatPanel context="자막 본문" model="chatmock/gpt-5.4-mini" />);
   });
 }
 

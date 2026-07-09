@@ -28,7 +28,6 @@ export default function SettingsPopover() {
     webhookUrl,
     enableWebSearch,
     transcriptLanguage,
-    setSelectedProvider,
     setSelectedModel,
     setSelectedStyle,
     setModifiers,
@@ -73,8 +72,9 @@ export default function SettingsPopover() {
 
   if (!settingsPopoverOpen) return null;
 
-  const providerIds = Object.keys(providers);
-  const currentModels = selectedProvider ? providers[selectedProvider]?.models || [] : [];
+  const selectedProviderInfo = selectedProvider ? providers[selectedProvider] : undefined;
+  const currentModels = selectedProviderInfo?.models || [];
+  const providerName = selectedProviderInfo?.name ?? 'ChatMock (OpenAI 호환)';
 
   // 내장 + 커스텀 스타일
   const allStyles: StyleOption[] = [
@@ -94,29 +94,12 @@ export default function SettingsPopover() {
       {/* AI 모델 */}
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
+        <div className="mb-2 rounded-sm border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          {providerName} 단일 서비스 사용 중
+        </div>
         <div className="flex gap-2">
-          <Select
-            value={selectedProvider}
-            onValueChange={(v) => {
-              setSelectedProvider(v);
-              const first = providers[v]?.models[0];
-              if (first) setSelectedModel(first.id);
-            }}
-          >
-            <SelectTrigger className="h-9 text-sm flex-1">
-              <SelectValue placeholder="서비스" />
-            </SelectTrigger>
-            <SelectContent>
-              {providerIds.map((id) => (
-                <SelectItem key={id} value={id} className="text-sm">
-                  {providers[id].name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="h-9 text-sm flex-1">
+            <SelectTrigger className="h-9 text-sm w-full">
               <SelectValue placeholder="모델" />
             </SelectTrigger>
             <SelectContent>

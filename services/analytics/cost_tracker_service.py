@@ -10,14 +10,14 @@ from services.core.logging_config import ServiceLogger
 
 logger = ServiceLogger('CostTrackerService')
 
-# 모델별 1K 토큰 단가 (USD) — 최신 가격은 config.py 참조
+# 모델별 1K 토큰 단가 (USD)
+# ChatMock은 로컬 OpenAI 호환 프록시라 앱 내부 과금은 0으로 집계합니다.
 _PRICE_TABLE: dict[str, dict[str, float]] = {
-    'gemini/gemini-2.5-flash': {'input': 0.00015, 'output': 0.0006},
-    'gemini/gemini-2.5-pro': {'input': 0.00125, 'output': 0.01},
-    'deepseek/deepseek-chat': {'input': 0.00014, 'output': 0.00028},
-    'deepseek/deepseek-reasoner': {'input': 0.00055, 'output': 0.00219},
-    'zhipuai/GLM-4.7': {'input': 0.0005, 'output': 0.0005},
-    'default': {'input': 0.001, 'output': 0.002},
+    'chatmock/gpt-5.4-mini': {'input': 0.0, 'output': 0.0},
+    'chatmock/gpt-5.4': {'input': 0.0, 'output': 0.0},
+    'chatmock/gpt-5.5': {'input': 0.0, 'output': 0.0},
+    'chatmock/gpt-5.3-codex-spark': {'input': 0.0, 'output': 0.0},
+    'default': {'input': 0.0, 'output': 0.0},
 }
 
 

@@ -75,8 +75,7 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
     LiteLLM 스트리밍으로 AI 콘텐츠를 생성합니다.
     각 조각은 텍스트 delta만 yield하고, generator return 값으로 prompt/usage를 돌려줍니다.
 
-    GLM(zhipuai)은 전역 락을 스트림 내내 잡는 것이 안전하지 않아 기존 non-streaming
-    create_content 경로로 폴백합니다. 이 경로는 GLM 락/재시도 정책을 그대로 사용합니다.
+    ChatMock(OpenAI 호환) 단일 경로를 사용하므로 프로바이더별 스트리밍 폴백은 두지 않습니다.
     """
     default_meta = {
         'prompt': '',
@@ -84,25 +83,6 @@ def create_content_stream(content: str, model: str, style_prompt: Optional[str] 
         'web_sources': None,
         'fallback_non_streaming': False,
     }
-
-    # GLM 모델: 스트리밍 중 락 장기 점유 방지를 위해 일반 호출로 폴백
-    if model.startswith("zhipuai/"):
-        result, prompt = ai_service.create_content(
-            content, model, style_prompt, return_prompt=True,
-            modifiers=modifiers, style_id=style_id, user_id=user_id,
-            segments=segments, web_search=web_search, detail_level=detail_level,
-        )
-        body = result.get('content', '')
-        if body:
-            yield body
-        return {
-            **default_meta,
-            'prompt': prompt,
-            'usage': result.get('usage') or default_meta['usage'],
-            'web_sources': result.get('web_sources'),
-            'result': result,
-            'fallback_non_streaming': True,
-        }
 
     try:
         rag_context, web_context, web_sources, style_memory_context, memory_context = (

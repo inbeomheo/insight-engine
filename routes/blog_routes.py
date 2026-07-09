@@ -662,10 +662,8 @@ def generate():
 
         # 챕터 분할 LLM 호출을 메인 생성과 병렬로 시작
         # (입력이 자막뿐이라 독립적 — 기존엔 메인 생성 후 직렬 호출로 응답 지연)
-        # 단, GLM은 _glm_lock으로 직렬화되어 챕터 호출이 락을 선점하면
-        # 사용자에게 보이는 메인 생성이 뒤로 밀리므로 병렬 경로에서 제외
         chapter_future = None
-        if transcript_segments and not str(params['model']).startswith('zhipuai/'):
+        if transcript_segments:
             from routes.generation_helpers import _run_chapter_split
             _chapter_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             chapter_future = _chapter_executor.submit(
@@ -830,75 +828,53 @@ def generate_batch():
         results = [None] * len(urls)
         combined_content = []
 
-        # zhipuai/ 모델은 _glm_lock으로 직렬화되므로 순차 처리 (concurrent 경로는 락 대기만 하다 타임아웃)
-        is_sequential_model = model.startswith('zhipuai/')
+        current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
 
-        if is_sequential_model:
-            current_app.logger.info(f"Starting to process {len(urls)} URLs sequentially ({model})")
-            for i, url in enumerate(urls):
-                try:
-                    result = _process_single_url(app, url, model, style, modifiers, custom_prompt)
-                    results[i] = result
-                    current_app.logger.info(f"Completed processing URL {i + 1}: {result.get('success', False)}")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
+            future_to_index = {
+                executor.submit(
+                    _process_single_url, app, url, model, style,
+                    modifiers, custom_prompt
+                ): i for i, url in enumerate(urls)
+            }
 
-                    if result['success'] and isinstance(result.get('content', ''), str):
-                        combined_content.append(result['content'])
-                except Exception as e:
-                    current_app.logger.error(f"Exception for URL {i + 1}: {e}")
-                    results[i] = {
-                        'success': False,
-                        'url': url,
-                        'title': '오류 발생',
-                        'error': _sanitize_error_for_client(str(e))
-                    }
-        else:
-            current_app.logger.info(f"Starting to process {len(urls)} URLs concurrently")
+            try:
+                for future in concurrent.futures.as_completed(future_to_index, timeout=600):
+                    index = future_to_index[future]
+                    try:
+                        result = future.result(timeout=300)
+                        results[index] = result
+                        current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_BATCH_WORKERS) as executor:
-                future_to_index = {
-                    executor.submit(
-                        _process_single_url, app, url, model, style,
-                        modifiers, custom_prompt
-                    ): i for i, url in enumerate(urls)
-                }
-
-                try:
-                    for future in concurrent.futures.as_completed(future_to_index, timeout=600):
-                        index = future_to_index[future]
-                        try:
-                            result = future.result(timeout=300)
-                            results[index] = result
-                            current_app.logger.info(f"Completed processing URL {index + 1}: {result.get('success', False)}")
-
-                            if result['success'] and isinstance(result.get('content', ''), str):
-                                combined_content.append(result['content'])
-                        except concurrent.futures.TimeoutError:
-                            current_app.logger.error(f"Timeout for URL {index + 1}")
-                            results[index] = {
-                                'success': False,
-                                'url': urls[index],
-                                'title': '시간 초과',
-                                'error': '[타임아웃] 처리 시간이 초과되었습니다.'
-                            }
-                        except Exception as e:
-                            current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
-                            results[index] = {
-                                'success': False,
-                                'url': urls[index],
-                                'title': '오류 발생',
-                                'error': _sanitize_error_for_client(str(e))
-                            }
-                except concurrent.futures.TimeoutError:
-                    current_app.logger.error("Batch overall timeout (600s)")
-                    for future, index in future_to_index.items():
-                        if results[index] is None:
-                            future.cancel()
-                            results[index] = {
-                                'success': False,
-                                'url': urls[index],
-                                'title': '시간 초과',
-                                'error': '[타임아웃] 배치 전체 처리 시간이 초과되었습니다.'
-                            }
+                        if result['success'] and isinstance(result.get('content', ''), str):
+                            combined_content.append(result['content'])
+                    except concurrent.futures.TimeoutError:
+                        current_app.logger.error(f"Timeout for URL {index + 1}")
+                        results[index] = {
+                            'success': False,
+                            'url': urls[index],
+                            'title': '시간 초과',
+                            'error': '[타임아웃] 처리 시간이 초과되었습니다.'
+                        }
+                    except Exception as e:
+                        current_app.logger.error(f"Exception in future for URL {index + 1}: {e}")
+                        results[index] = {
+                            'success': False,
+                            'url': urls[index],
+                            'title': '오류 발생',
+                            'error': _sanitize_error_for_client(str(e))
+                        }
+            except concurrent.futures.TimeoutError:
+                current_app.logger.error("Batch overall timeout (600s)")
+                for future, index in future_to_index.items():
+                    if results[index] is None:
+                        future.cancel()
+                        results[index] = {
+                            'success': False,
+                            'url': urls[index],
+                            'title': '시간 초과',
+                            'error': '[타임아웃] 배치 전체 처리 시간이 초과되었습니다.'
+                        }
 
         url_to_result = {result['url']: result for result in results if result}
         ordered_results = [
@@ -1118,7 +1094,6 @@ def generate_merged():
 def generate_stream():
     """SSE 스트리밍으로 콘텐츠를 생성합니다.
     @require_usage 데코레이터 사용 불가 (generator 응답) → 수동 사용량 관리.
-    GLM 모델은 ai_service에서 non-streaming 폴백으로 처리합니다.
     """
     from services.usage.usage_service import UsageService
     import markdown as md_lib
@@ -1266,8 +1241,8 @@ def generate_stream():
                         meta_event['youtube_title'] = youtube_title
                     yield _sse(meta_event)
 
-                    if comments and not str(model).startswith('zhipuai/'):
-                        # 비GLM 댓글 요약은 메인 스트림과 병렬 실행해 result 전 공백을 줄입니다.
+                    if comments:
+                        # 댓글 요약은 메인 스트림과 병렬 실행해 result 전 공백을 줄입니다.
                         comment_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
                         comment_future = comment_executor.submit(
                             _generate_comment_summary, app, comments, model
@@ -1323,15 +1298,6 @@ def generate_stream():
                     web_sources = stream_meta.get('web_sources')
                     comment_result = None
 
-                    # GLM 폴백처럼 ai_service가 완성 result를 돌려준 경우 그 값을 우선 사용
-                    meta_result = stream_meta.get('result')
-                    if isinstance(meta_result, dict):
-                        title = meta_result.get('title') or title
-                        body = meta_result.get('content') or body
-                        html = meta_result.get('html') or html
-                        usage = meta_result.get('usage') or usage
-                        web_sources = meta_result.get('web_sources') or web_sources
-
                     base_result = {
                         'title': title,
                         'content': body,
@@ -1348,7 +1314,7 @@ def generate_stream():
                                 current_app.logger.warning(f"댓글 요약 생성 실패 (무시): {comment_err}")
                                 comment_result = None
                         else:
-                            # GLM은 전역 락 규칙에 맞춰 메인 생성 후 순차 실행
+                            # 예외적 경로: comment_future 생성 전 실패한 경우 메인 완료 후 순차 실행
                             comment_result = _generate_comment_summary(app, comments, model)
                         base_result, prompt = _combine_results(base_result, prompt, comment_result)
                         title = base_result.get('title') or title

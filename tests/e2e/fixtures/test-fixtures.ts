@@ -23,8 +23,8 @@ export const TEST_DATA = {
 
   // 저비용 프리셋 (API 테스트용)
   CHEAP_PRESET: {
-    provider: 'zhipuai',
-    model: 'zhipuai/GLM-4.5-Air',
+    provider: 'chatmock',
+    model: 'chatmock/gpt-5.4-mini',
     style: 'summary',
     length: 'short' as const,
   },
@@ -130,16 +130,16 @@ class ContentGeneratorHelper {
     await this.page.waitForTimeout(200);
   }
 
-  /** 저비용 프리셋 적용 (zhipuai/GLM-4.5-Air, 요약, 짧게) */
+  /** 저비용 프리셋 적용 (ChatMock Mini, 요약, 짧게) */
   async applyCheapPreset() {
     await this.openSettings();
 
-    // 프로바이더 선택
-    const providerTrigger = this.page.locator('[role="combobox"]').first();
-    await providerTrigger.click();
-    const zhipuaiOption = this.page.getByRole('option', { name: /zhipu|GLM/i });
-    if (await zhipuaiOption.isVisible().catch(() => false)) {
-      await zhipuaiOption.click();
+    // 모델 선택
+    const modelTrigger = this.page.locator('[role="combobox"]').first();
+    await modelTrigger.click();
+    const miniOption = this.page.getByRole('option', { name: /5\.4 Mini|Mini/i });
+    if (await miniOption.isVisible().catch(() => false)) {
+      await miniOption.click();
     }
 
     // 스타일: 요약

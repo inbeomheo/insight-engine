@@ -568,36 +568,23 @@ def _call_ai_with_comments(truncated_content, model, style_prompt, params,
         )
         return result, used_prompt, comment_result
 
-    is_glm = model.startswith('zhipuai/')
-
     if comments:
         app = current_app._get_current_object()
 
-        if is_glm:
-            # GLM 모델: 순차 실행 (글로벌 락 충돌 방지)
-            result, used_prompt = ai_service.create_content(
-                truncated_content, model, style_prompt,
-                return_prompt=True, modifiers=params['modifiers'],
-                style_id=params['style'], user_id=user_id,
-                web_search=web_search,
+        # 단일 ChatMock 경로: 메인 생성과 댓글 요약을 병렬 실행
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            main_future = executor.submit(
+                _generate_main_content_with_web_search, app, truncated_content,
+                model, style_prompt, params['modifiers'],
+                style_id=params['style'], web_search=web_search,
                 detail_level=detail_level,
             )
-            comment_result = _generate_comment_summary(app, comments, model)
-        else:
-            # 병렬 실행
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                main_future = executor.submit(
-                    _generate_main_content_with_web_search, app, truncated_content,
-                    model, style_prompt, params['modifiers'],
-                    style_id=params['style'], web_search=web_search,
-                    detail_level=detail_level,
-                )
-                comment_future = executor.submit(
-                    _generate_comment_summary, app, comments, model
-                )
+            comment_future = executor.submit(
+                _generate_comment_summary, app, comments, model
+            )
 
-                result, used_prompt = main_future.result()
-                comment_result = comment_future.result()
+            result, used_prompt = main_future.result()
+            comment_result = comment_future.result()
 
         result, used_prompt = _combine_results(result, used_prompt, comment_result)
     else:

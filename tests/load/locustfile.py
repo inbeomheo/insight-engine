@@ -13,8 +13,8 @@ SAMPLE_URLS = [
     "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
 ]
 
-SAMPLE_STYLES = ['blog_seo', 'summary', 'tutorial', 'qna', 'sns_post']
-SAMPLE_MODELS = ['gemini/gemini-2.5-flash-lite-preview-09-2025']
+SAMPLE_STYLES = ['summary', 'qna', 'quiz', 'retention_cards']
+SAMPLE_MODELS = ['chatmock/gpt-5.4-mini']
 
 
 class InsightEngineUser(HttpUser):

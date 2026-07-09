@@ -91,16 +91,10 @@ def generate_multi():
                         )
                     }
 
-        is_glm = model.startswith('zhipuai/')
-        if is_glm:
-            # GLM: 순차 실행
-            for style_id in valid_styles:
-                results.append(_gen_for_style(style_id))
-        else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(valid_styles))) as executor:
-                futures = {executor.submit(_gen_for_style, s): s for s in valid_styles}
-                for future in concurrent.futures.as_completed(futures):
-                    results.append(future.result())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(valid_styles))) as executor:
+            futures = {executor.submit(_gen_for_style, s): s for s in valid_styles}
+            for future in concurrent.futures.as_completed(futures):
+                results.append(future.result())
 
         # 스타일 순서 정렬
         style_order = {s: i for i, s in enumerate(valid_styles)}
