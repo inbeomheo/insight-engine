@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Brain, FileText, Network, Quote, Search, Tags, Youtube } from 'lucide-react';
@@ -21,6 +21,24 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function topCounts(items: string[], limit: number): Array<{ label: string; count: number }> {
+  const counts = new Map<string, number>();
+  items
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => counts.set(item, (counts.get(item) ?? 0) + 1));
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit);
+}
+
+function sourceLabel(type?: string): string {
+  if (type === 'youtube') return 'YouTube';
+  if (type === 'article') return 'Article';
+  return '기타';
 }
 
 export default function NotesPage() {
@@ -51,13 +69,13 @@ export default function NotesPage() {
     };
   }, []);
 
-  const handleSearch = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = query.trim();
+  const runSearch = useCallback(async (term: string) => {
+    const q = term.trim();
     if (!q) {
       setSearchResults(null);
       return;
     }
+    setQuery(q);
     setSearching(true);
     setError(null);
     try {
@@ -68,7 +86,12 @@ export default function NotesPage() {
     } finally {
       setSearching(false);
     }
-  }, [query]);
+  }, []);
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    void runSearch(query);
+  }, [query, runSearch]);
 
   const handleClear = useCallback(() => {
     setQuery('');
@@ -79,6 +102,24 @@ export default function NotesPage() {
   const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;
   const quoteCount = notes.reduce((sum, note) => sum + (note.quote_count ?? 0), 0);
   const learningPointCount = notes.reduce((sum, note) => sum + (note.learning_point_count ?? 0), 0);
+  const topConcepts = useMemo(
+    () => topCounts(notes.flatMap((note) => note.key_concepts ?? []), 10),
+    [notes],
+  );
+  const topTags = useMemo(
+    () => topCounts(notes.flatMap((note) => note.tags ?? []), 12),
+    [notes],
+  );
+  const sourceGroups = useMemo(
+    () => topCounts(notes.map((note) => sourceLabel(note.source?.type)), 4),
+    [notes],
+  );
+  const recentNotes = useMemo(
+    () => [...notes]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3),
+    [notes],
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,6 +179,16 @@ export default function NotesPage() {
           <p className="text-sm text-destructive mb-4">{error}</p>
         )}
 
+        {!loading && !isSearchMode && notes.length > 0 && (
+          <WikiMap
+            topConcepts={topConcepts}
+            topTags={topTags}
+            sourceGroups={sourceGroups}
+            recentNotes={recentNotes}
+            onSearch={(term) => { void runSearch(term); }}
+          />
+        )}
+
         {/* 로딩 */}
         {loading ? (
           <div className="space-y-3">
@@ -164,6 +215,121 @@ function WikiStat({ icon, label, value }: { icon: ReactNode; label: string; valu
       </div>
       <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
     </div>
+  );
+}
+
+function WikiMap({
+  topConcepts,
+  topTags,
+  sourceGroups,
+  recentNotes,
+  onSearch,
+}: {
+  topConcepts: Array<{ label: string; count: number }>;
+  topTags: Array<{ label: string; count: number }>;
+  sourceGroups: Array<{ label: string; count: number }>;
+  recentNotes: NoteListItem[];
+  onSearch: (term: string) => void;
+}) {
+  return (
+    <section className="mb-6 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <Card className="py-4">
+        <CardContent className="px-4">
+          <div className="flex items-center gap-2">
+            <Network className="h-4 w-4 text-primary/70" />
+            <h2 className="text-sm font-semibold text-foreground">개념 지도</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            반복 등장하는 개념과 태그를 눌러 관련 노트를 바로 이어서 탐색하세요.
+          </p>
+
+          {topConcepts.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                핵심 개념
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {topConcepts.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onSearch(item.label)}
+                    className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <Brain className="h-3 w-3" />
+                    {item.label}
+                    <span className="text-[10px] text-primary/60">{item.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {topTags.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                태그
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {topTags.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onSearch(item.label)}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40"
+                  >
+                    <Tags className="h-3 w-3 text-muted-foreground" />
+                    {item.label}
+                    <span className="text-[10px] text-muted-foreground">{item.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3">
+        <Card className="py-4">
+          <CardContent className="px-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary/70" />
+              <h2 className="text-sm font-semibold text-foreground">출처 구성</h2>
+            </div>
+            <div className="mt-3 space-y-2">
+              {sourceGroups.map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="font-medium text-foreground">{item.count}개</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="py-4">
+          <CardContent className="px-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary/70" />
+              <h2 className="text-sm font-semibold text-foreground">최근 학습 흐름</h2>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {recentNotes.map((note) => (
+                <li key={note.id}>
+                  <Link
+                    href={`/notes/${encodeURIComponent(note.id)}`}
+                    className="block rounded-lg border border-border px-3 py-2 transition-colors hover:border-primary/40"
+                  >
+                    <p className="truncate text-xs font-medium text-foreground">{note.title || '제목 없음'}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">{formatDate(note.created_at)}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
   );
 }
 
