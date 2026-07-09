@@ -13,6 +13,8 @@ export interface LocalDashboardStats {
   topStyles: Array<[string, number]>;
   recent: Report[];
   pinned: Report[];
+  linkedNoteCount: number;
+  linkedNotes: Report[];
   activityDays: DashboardActivityDay[];
   maxActivityCount: number;
   storagePct: number;
@@ -56,6 +58,16 @@ export function buildLocalDashboardStats(
     .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
     .slice(0, 4);
   const pinned = reports.filter((report) => pinnedIds.has(report.id)).slice(0, 4);
+  const allLinkedNotes = reports.filter((report) => Boolean(report.knowledge_note_id));
+  const linkedNotes = [...allLinkedNotes]
+    .sort((a, b) => {
+      const savedA = Date.parse(a.knowledge_note_saved_at ?? '');
+      const savedB = Date.parse(b.knowledge_note_saved_at ?? '');
+      const timeA = Number.isFinite(savedA) ? savedA : (a.createdAt ?? 0);
+      const timeB = Number.isFinite(savedB) ? savedB : (b.createdAt ?? 0);
+      return timeB - timeA;
+    })
+    .slice(0, 4);
   const activityDays = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(now);
     day.setHours(0, 0, 0, 0);
@@ -81,7 +93,19 @@ export function buildLocalDashboardStats(
         ? '여유 적음'
         : '여유 있음';
 
-  return { totalTokens, avgLength, topStyles, recent, pinned, activityDays, maxActivityCount, storagePct, storageStatus };
+  return {
+    totalTokens,
+    avgLength,
+    topStyles,
+    recent,
+    pinned,
+    linkedNoteCount: allLinkedNotes.length,
+    linkedNotes,
+    activityDays,
+    maxActivityCount,
+    storagePct,
+    storageStatus,
+  };
 }
 
 export function buildLocalDashboardMarkdown(
@@ -116,6 +140,14 @@ export function buildLocalDashboardMarkdown(
         })
         .join('\n')
     : '1. 고정한 결과가 없습니다.';
+  const linkedNoteLines = stats.linkedNotes.length
+    ? stats.linkedNotes
+        .map((report, index) => {
+          const title = cleanMarkdownLine(report.knowledge_note_title || report.title || report.youtube_title, '제목 없음');
+          return `${index + 1}. ${title} — /notes/${encodeURIComponent(report.knowledge_note_id ?? '')}`;
+        })
+        .join('\n')
+    : '1. 연결된 학습 노트가 없습니다.';
   const activityLines = stats.activityDays.map((day) => `- ${day.label}: ${day.count}건`).join('\n');
 
   return [
@@ -135,6 +167,9 @@ export function buildLocalDashboardMarkdown(
     '',
     '## 고정 결과',
     pinnedLines,
+    '',
+    '## 연결된 학습 노트',
+    linkedNoteLines,
     '',
     '## 최근 로컬 결과',
     recentLines,

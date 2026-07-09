@@ -35,6 +35,9 @@ describe('dashboard-summary', () => {
         content: '123',
         usage: { total_tokens: 50 },
         createdAt: new Date(2026, 6, 9, 9).getTime(),
+        knowledge_note_id: 'note-yesterday',
+        knowledge_note_title: '어제 학습 노트',
+        knowledge_note_saved_at: '2026-07-10T01:00:00Z',
       }),
       makeReport({
         id: 'old',
@@ -53,6 +56,8 @@ describe('dashboard-summary', () => {
     expect(stats.topStyles[0]).toEqual(['summary', 2]);
     expect(stats.recent.map((report) => report.id)).toEqual(['today', 'yesterday', 'old']);
     expect(stats.pinned.map((report) => report.id)).toEqual(['yesterday']);
+    expect(stats.linkedNoteCount).toBe(1);
+    expect(stats.linkedNotes.map((report) => report.id)).toEqual(['yesterday']);
     expect(stats.activityDays.map((day) => day.count)).toEqual([0, 0, 0, 0, 0, 1, 1]);
     expect(stats.storageStatus).toBe('여유 있음');
   });
@@ -64,6 +69,9 @@ describe('dashboard-summary', () => {
       title: '  고정   결과  ',
       style: 'quiz',
       url: 'https://example.com',
+      knowledge_note_id: 'note-pinned',
+      knowledge_note_title: '고정 결과 노트',
+      knowledge_note_saved_at: '2026-07-10T01:00:00Z',
       createdAt: now.getTime(),
     });
     const stats = buildLocalDashboardStats([report], new Set(['pinned']), 20, now);
@@ -73,7 +81,9 @@ describe('dashboard-summary', () => {
     expect(markdown).toContain('# 내 작업 요약');
     expect(markdown).toContain('## 최근 7일 생성 흐름');
     expect(markdown).toContain('## 고정 결과');
+    expect(markdown).toContain('## 연결된 학습 노트');
     expect(markdown).toContain('고정 결과');
+    expect(markdown).toContain('/notes/note-pinned');
     expect(markdown).toContain('https://example.com');
   });
 

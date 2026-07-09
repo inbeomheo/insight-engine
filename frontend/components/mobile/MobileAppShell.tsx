@@ -308,6 +308,7 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
     reports.forEach((report) => byStyle.set(report.style, (byStyle.get(report.style) || 0) + 1));
     return byStyle;
   }, [reports]);
+  const linkedNoteCount = useMemo(() => reports.filter((report) => report.knowledge_note_id).length, [reports]);
 
   return (
     <section className="min-h-dvh px-6 pb-28 pt-12">
@@ -317,6 +318,10 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
       </div>
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
         <span className="shrink-0 rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background">전체 {reports.length}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-bold text-primary">
+          <BookOpen className="h-3 w-3" />
+          노트 {linkedNoteCount}
+        </span>
         {STYLE_OPTIONS.slice(0, 5).map((style) => (
           <span key={style.id} className="shrink-0 rounded-full border border-border/70 bg-card px-4 py-2 text-xs font-semibold text-muted-foreground">
             {style.label} {counts.get(style.id) || 0}
@@ -341,6 +346,12 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
               <div className="mb-2 flex items-center gap-2">
                 <span className={cn('h-2.5 w-2.5 rounded-full', CATEGORY_DOTS[index % CATEGORY_DOTS.length])} />
                 <span className="signal-meta text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)}</span>
+                {report.knowledge_note_id && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
+                    <BookOpen className="h-2.5 w-2.5" />
+                    노트 연결
+                  </span>
+                )}
               </div>
               <h2 className="line-clamp-2 text-[15px] font-black leading-snug tracking-[-0.02em]">{report.title}</h2>
               <p className="signal-meta mt-3 text-[9px] text-muted-foreground/45">
@@ -383,6 +394,11 @@ function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (
           <p className="signal-meta text-[9px] text-muted-foreground/50">저장 공간</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}<span className="text-base">/{MAX_LOCAL_REPORTS}</span></p>
           <p className={cn('mt-1 text-[10px]', storageTone)}>{stats.storageStatus} · {stats.storagePct}%</p>
+        </div>
+        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+          <p className="signal-meta text-[9px] text-muted-foreground/50">학습 노트</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{stats.linkedNoteCount}</p>
+          <p className="mt-1 text-[10px] text-primary">결과와 연결</p>
         </div>
       </div>
 
@@ -444,6 +460,26 @@ function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (
                 <p className="line-clamp-1 text-sm font-black">{report.title || '제목 없음'}</p>
                 <p className="signal-meta mt-1 text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)} · {report.time}</p>
               </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+        <h2 className="mb-4 text-sm font-black">연결된 학습 노트</h2>
+        {stats.linkedNotes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">결과를 학습 노트로 저장하면 여기서 바로 확인할 수 있습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {stats.linkedNotes.slice(0, 3).map((report) => (
+              <a
+                key={report.id}
+                href={`/notes/${encodeURIComponent(report.knowledge_note_id ?? '')}`}
+                className="block w-full border border-border/70 bg-background px-3 py-3 text-left"
+              >
+                <p className="line-clamp-1 text-sm font-black">{report.knowledge_note_title || report.title || '제목 없음'}</p>
+                <p className="signal-meta mt-1 text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)} · 노트 열기</p>
+              </a>
             ))}
           </div>
         )}

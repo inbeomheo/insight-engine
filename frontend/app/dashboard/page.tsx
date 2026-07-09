@@ -323,8 +323,9 @@ function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinn
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <LocalMetric icon={<FileText className="h-4 w-4" />} label="저장된 결과" value={`${reports.length}개`} />
+        <LocalMetric icon={<BookOpen className="h-4 w-4" />} label="학습 노트 연결" value={`${stats.linkedNoteCount}개`} />
         <LocalMetric icon={<Zap className="h-4 w-4" />} label="누적 토큰" value={stats.totalTokens.toLocaleString()} />
         <LocalMetric icon={<Hash className="h-4 w-4" />} label="평균 길이" value={`${stats.avgLength.toLocaleString()}자`} />
         <LocalMetric icon={<Server className="h-4 w-4" />} label="저장 공간" value={`${reports.length}/${MAX_LOCAL_REPORTS}`} />
@@ -377,7 +378,7 @@ function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinn
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader>
             <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -431,6 +432,40 @@ function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinn
                           </p>
                         </div>
                         <span className="signal-meta shrink-0 text-[10px] text-primary">열기</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader>
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <BookOpen className="h-4 w-4" /> 연결된 학습 노트
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.linkedNotes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">결과 카드에서 학습 노트로 저장하면 여기에 연결됩니다.</p>
+            ) : (
+              <ul className="space-y-2">
+                {stats.linkedNotes.map((report) => (
+                  <li key={report.id}>
+                    <Link
+                      href={`/notes/${encodeURIComponent(report.knowledge_note_id ?? '')}`}
+                      className="block rounded-sm border border-border px-3 py-2 transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{report.knowledge_note_title || report.title || '제목 없음'}</p>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            {getStyleLabel(report.style)} · {report.time}
+                          </p>
+                        </div>
+                        <span className="signal-meta shrink-0 text-[10px] text-primary">노트</span>
                       </div>
                     </Link>
                   </li>
