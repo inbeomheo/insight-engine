@@ -5,8 +5,10 @@ import Link from 'next/link';
 import {
   Activity,
   AlertCircle,
+  ArrowRight,
   ArrowLeft,
   BarChart3,
+  BookOpen,
   Check,
   Copy,
   FileText,
@@ -74,6 +76,14 @@ export default function DashboardPage() {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthCheckedAt, setHealthCheckedAt] = useState<Date | null>(null);
+  const latestReport = useMemo(
+    () =>
+      reports.reduce<Report | null>((latest, report) => {
+        if (!latest) return report;
+        return (report.createdAt ?? 0) > (latest.createdAt ?? 0) ? report : latest;
+      }, null),
+    [reports]
+  );
 
   const refreshHealth = useCallback(async (signal?: AbortSignal) => {
     setHealthLoading(true);
@@ -120,6 +130,7 @@ export default function DashboardPage() {
             운영 상태
           </div>
         </div>
+        <DashboardQuickActions latestReport={latestReport} />
         <LocalDashboardSummary reports={reports} />
         <SystemHealthCard
           health={health}
@@ -131,6 +142,69 @@ export default function DashboardPage() {
         <OperationsDashboard />
       </div>
     </div>
+  );
+}
+
+function DashboardQuickActions({ latestReport }: { latestReport: Report | null }) {
+  return (
+    <section className="mb-6 grid gap-3 md:grid-cols-3">
+      <QuickActionCard
+        href="/"
+        icon={<Sparkles className="h-4 w-4" />}
+        title="새 콘텐츠 만들기"
+        description="URL이나 텍스트로 바로 생성하고 학습 노트로 이어갑니다."
+        actionLabel="시작"
+      />
+      <QuickActionCard
+        href="/notes"
+        icon={<BookOpen className="h-4 w-4" />}
+        title="지식위키 열기"
+        description="저장한 노트, 근거, 관련 개념을 다시 탐색합니다."
+        actionLabel="열기"
+      />
+      <QuickActionCard
+        href={latestReport ? `/?report=${encodeURIComponent(latestReport.id)}` : '/'}
+        icon={<FileText className="h-4 w-4" />}
+        title="최근 결과 이어보기"
+        description={
+          latestReport
+            ? cleanMarkdownLine(latestReport.title || latestReport.youtube_title, '최근 생성 결과로 이동합니다.')
+            : '생성 결과가 생기면 여기서 바로 이어볼 수 있습니다.'
+        }
+        actionLabel={latestReport ? '이어보기' : '홈으로'}
+      />
+    </section>
+  );
+}
+
+function QuickActionCard({
+  href,
+  icon,
+  title,
+  description,
+  actionLabel,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+  actionLabel: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-sm border border-border bg-card p-4 shadow-none transition-colors hover:border-primary/40"
+    >
+      <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
+      <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+        {actionLabel}
+        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </Link>
   );
 }
 
