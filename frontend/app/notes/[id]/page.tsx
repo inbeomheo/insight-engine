@@ -20,8 +20,10 @@ import {
 import {
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
+  buildNoteWikiReadingPath,
   type NoteWikiBriefItem,
   type NoteWikiQuickAction,
+  type NoteWikiReadingPathItem,
 } from '@/lib/note-wiki-brief';
 import {
   buildNoteStudyMarkdown,
@@ -213,6 +215,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   }), [hasLinkedReport, note.source?.type, outlineItems, quoteCount, relatedNoteCount, studySummary]);
   const wikiBriefItems = useMemo(() => buildNoteWikiBrief(wikiBriefInput), [wikiBriefInput]);
   const wikiQuickActions = useMemo(() => buildNoteWikiQuickActions(wikiBriefInput), [wikiBriefInput]);
+  const wikiReadingPathItems = useMemo(
+    () => buildNoteWikiReadingPath(note.related_notes ?? [], 3),
+    [note.related_notes]
+  );
 
   useEffect(() => {
     setStudyProgress(readNoteStudyProgress(note.id, studyCounts));
@@ -360,6 +366,9 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
       <NoteOutline items={outlineItems} />
       <NoteWikiBrief items={wikiBriefItems} actions={wikiQuickActions} />
+      {wikiReadingPathItems.length > 0 && (
+        <NoteWikiReadingPath items={wikiReadingPathItems} />
+      )}
 
       {studySummary.total > 0 && (
         <Card id="study-progress" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
@@ -716,6 +725,50 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         </section>
       )}
     </div>
+  );
+}
+
+function NoteWikiReadingPath({ items }: { items: NoteWikiReadingPathItem[] }) {
+  return (
+    <Card id="wiki-reading-path" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
+      <CardContent className="px-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">위키 읽기 경로</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              현재 문서를 읽은 뒤 이어서 보면 좋은 관련 문서입니다.
+            </p>
+          </div>
+          <span className="rounded-full border border-primary/20 bg-background/80 px-2 py-1 text-[10px] font-medium text-primary">
+            {items.length}개 연결
+          </span>
+        </div>
+        <ol className="space-y-2">
+          {items.map((item, index) => (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                className="flex items-start gap-2 rounded-xl border border-border bg-background/80 px-3 py-2.5 transition-colors hover:border-primary/40"
+              >
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-semibold text-foreground">{item.title}</span>
+                    <span className="shrink-0 text-[10px] font-medium text-primary">{item.scorePercent}%</span>
+                  </span>
+                  <span className="mt-1 block text-[10px] font-medium text-primary/80">{item.label}</span>
+                  <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
   );
 }
 

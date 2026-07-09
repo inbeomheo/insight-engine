@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildNoteWikiBrief, buildNoteWikiQuickActions } from './note-wiki-brief';
+import { buildNoteWikiBrief, buildNoteWikiQuickActions, buildNoteWikiReadingPath } from './note-wiki-brief';
 
 describe('note-wiki-brief', () => {
   it('summarizes source, structure, study progress, and evidence links', () => {
@@ -68,8 +68,36 @@ describe('note-wiki-brief', () => {
       })
     ).toEqual([
       { href: '#chat', label: '근거 Q&A' },
-      { href: '#related-notes', label: '관련 노트' },
+      { href: '#wiki-reading-path', label: '읽기 경로' },
       { href: '#quotes', label: '인용 보기' },
+    ]);
+  });
+
+  it('builds a ranked wiki reading path from related notes', () => {
+    expect(
+      buildNoteWikiReadingPath([
+        { id: 'low score', title: '낮은 관련', score: 0.2, snippet: '' },
+        { id: 'high-score', title: '높은 관련', score: 0.94, snippet: '핵심 연결 설명' },
+        { id: '', title: '잘못된 노트', score: 1 },
+        { id: 'over-score', title: '상한 보정', score: 1.7, snippet: '상한 확인' },
+      ], 2)
+    ).toEqual([
+      {
+        id: 'over-score',
+        href: '/notes/over-score',
+        title: '상한 보정',
+        label: '다음 읽기',
+        description: '상한 확인',
+        scorePercent: 100,
+      },
+      {
+        id: 'high-score',
+        href: '/notes/high-score',
+        title: '높은 관련',
+        label: '2번째 연결',
+        description: '핵심 연결 설명',
+        scorePercent: 94,
+      },
     ]);
   });
 });

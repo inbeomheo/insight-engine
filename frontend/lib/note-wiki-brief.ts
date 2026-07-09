@@ -21,6 +21,22 @@ export interface NoteWikiQuickAction {
   label: string;
 }
 
+export interface NoteWikiReadingPathSource {
+  id: string;
+  title: string;
+  score: number;
+  snippet?: string;
+}
+
+export interface NoteWikiReadingPathItem {
+  id: string;
+  href: string;
+  title: string;
+  label: string;
+  description: string;
+  scorePercent: number;
+}
+
 function getSourceLabel(type?: string): string {
   if (type === 'youtube') return 'YouTube';
   if (type === 'text') return '직접 텍스트';
@@ -92,11 +108,32 @@ export function buildNoteWikiQuickActions(input: NoteWikiBriefInput): NoteWikiQu
   actions.push({ href: '#chat', label: '근거 Q&A' });
 
   if (input.relatedNoteCount > 0) {
-    actions.push({ href: '#related-notes', label: '관련 노트' });
+    actions.push({ href: '#wiki-reading-path', label: '읽기 경로' });
   }
   if (input.quoteCount > 0) {
     actions.push({ href: '#quotes', label: '인용 보기' });
   }
 
   return actions.slice(0, 4);
+}
+
+export function buildNoteWikiReadingPath(
+  relatedNotes: NoteWikiReadingPathSource[] = [],
+  limit = 3
+): NoteWikiReadingPathItem[] {
+  return [...relatedNotes]
+    .filter((note) => note.id)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (a.title || '').localeCompare(b.title || '');
+    })
+    .slice(0, Math.max(0, limit))
+    .map((note, index) => ({
+      id: note.id,
+      href: `/notes/${encodeURIComponent(note.id)}`,
+      title: note.title || '제목 없음',
+      label: index === 0 ? '다음 읽기' : `${index + 1}번째 연결`,
+      description: note.snippet?.trim() || '현재 문서와 의미가 가까운 관련 노트입니다.',
+      scorePercent: Math.round(Math.max(0, Math.min(1, note.score)) * 100),
+    }));
 }

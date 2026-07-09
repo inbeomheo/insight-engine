@@ -86,10 +86,17 @@
   15차: `/notes` 홈의 개념·태그·출처 필터를 접을 수 있는 `지식 탐색` 패널로 묶어 초기 화면 밀도를 낮춤.
   16차: `/notes` 홈의 지식 탐색 패널에 개념별 관련 문서를 묶어 보여주는 `위키 인덱스`를 추가.
   17차: `/notes/[id]`의 핵심 개념·태그를 `/notes` 필터 딥링크로 연결해 노트 상세에서 위키 인덱스로 되돌아가는 탐색 흐름 추가.
+  18차: `/notes/[id]` 문서 브리핑 아래에 관련 노트를 점수순으로 안내하는 `위키 읽기 경로` 카드 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 위키 읽기 경로 추가.
+  `/notes/[id]` 문서 브리핑 아래에 관련 노트를 관련도 점수순으로 보여주는 `위키 읽기 경로` 카드를 추가하고, 문서 브리핑 빠른 액션도 해당 카드로 연결.
+  공용 `note-wiki-brief` 유틸에 읽기 경로 계산을 추가하고, 빈 ID 제외·점수 정렬·점수 상한 보정·스니펫 설명을 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 35 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 오늘의 복습 플랜 추가.
   `/notes` 홈 학습 큐 상단에 진행 중 노트를 먼저 이어가고 미시작 노트를 뒤에 배치하는 `오늘의 복습 플랜` 카드를 추가.
   공용 `note-list` 유틸에 일일 학습 플랜 계산 함수를 추가하고, 진행 중/미시작/완료/빈 노트 우선순위를 단위 테스트로 검증.
