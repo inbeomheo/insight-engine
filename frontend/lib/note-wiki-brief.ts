@@ -37,6 +37,15 @@ export interface NoteWikiReadingPathItem {
   scorePercent: number;
 }
 
+function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
+  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
+  return cleaned || fallback;
+}
+
+function escapeMarkdownLinkText(value: string): string {
+  return value.replace(/([[\]\\])/g, '\\$1');
+}
+
 function getSourceLabel(type?: string): string {
   if (type === 'youtube') return 'YouTube';
   if (type === 'text') return '직접 텍스트';
@@ -136,4 +145,25 @@ export function buildNoteWikiReadingPath(
       description: note.snippet?.trim() || '현재 문서와 의미가 가까운 관련 노트입니다.',
       scorePercent: Math.round(Math.max(0, Math.min(1, note.score)) * 100),
     }));
+}
+
+export function buildNoteWikiReadingPathMarkdown(
+  items: NoteWikiReadingPathItem[],
+  currentTitle = '현재 문서'
+): string {
+  const title = cleanMarkdownValue(currentTitle, '현재 문서');
+  if (items.length === 0) {
+    return `# 위키 읽기 경로: ${title}\n\n연결된 관련 문서가 없습니다.`;
+  }
+
+  return [
+    `# 위키 읽기 경로: ${title}`,
+    '',
+    ...items.flatMap((item, index) => [
+      `${index + 1}. [${escapeMarkdownLinkText(cleanMarkdownValue(item.title, '제목 없음'))}](${item.href})`,
+      `   - 단계: ${item.label}`,
+      `   - 관련도: ${item.scorePercent}%`,
+      `   - 이유: ${cleanMarkdownValue(item.description)}`,
+    ]),
+  ].join('\n');
 }

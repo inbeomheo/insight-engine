@@ -21,6 +21,7 @@ import {
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
   buildNoteWikiReadingPath,
+  buildNoteWikiReadingPathMarkdown,
   type NoteWikiBriefItem,
   type NoteWikiQuickAction,
   type NoteWikiReadingPathItem,
@@ -367,7 +368,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       <NoteOutline items={outlineItems} />
       <NoteWikiBrief items={wikiBriefItems} actions={wikiQuickActions} />
       {wikiReadingPathItems.length > 0 && (
-        <NoteWikiReadingPath items={wikiReadingPathItems} />
+        <NoteWikiReadingPath
+          title={note.source?.title || '제목 없음'}
+          items={wikiReadingPathItems}
+        />
       )}
 
       {studySummary.total > 0 && (
@@ -728,7 +732,28 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   );
 }
 
-function NoteWikiReadingPath({ items }: { items: NoteWikiReadingPathItem[] }) {
+function NoteWikiReadingPath({ title, items }: { title: string; items: NoteWikiReadingPathItem[] }) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const copyReadingPath = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildNoteWikiReadingPathMarkdown(items, title));
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+  }, [items, title]);
+
+  useEffect(() => {
+    if (copyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyStatus]);
+
   return (
     <Card id="wiki-reading-path" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
       <CardContent className="px-4">
@@ -739,9 +764,28 @@ function NoteWikiReadingPath({ items }: { items: NoteWikiReadingPathItem[] }) {
               현재 문서를 읽은 뒤 이어서 보면 좋은 관련 문서입니다.
             </p>
           </div>
-          <span className="rounded-full border border-primary/20 bg-background/80 px-2 py-1 text-[10px] font-medium text-primary">
-            {items.length}개 연결
-          </span>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-full border border-primary/20 bg-background/80 px-2 py-1 text-[10px] font-medium text-primary">
+                {items.length}개 연결
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 px-2 text-[10px]"
+                onClick={copyReadingPath}
+              >
+                <Copy className="h-3 w-3" />
+                경로 복사
+              </Button>
+            </div>
+            {copyStatus !== 'idle' && (
+              <span className={`text-[10px] ${copyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                {copyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+              </span>
+            )}
+          </div>
         </div>
         <ol className="space-y-2">
           {items.map((item, index) => (

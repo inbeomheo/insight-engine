@@ -88,10 +88,17 @@
   16차: `/notes` 홈의 지식 탐색 패널에 개념별 관련 문서를 묶어 보여주는 `위키 인덱스`를 추가.
   17차: `/notes/[id]`의 핵심 개념·태그를 `/notes` 필터 딥링크로 연결해 노트 상세에서 위키 인덱스로 되돌아가는 탐색 흐름 추가.
   18차: `/notes/[id]` 문서 브리핑 아래에 관련 노트를 점수순으로 안내하는 `위키 읽기 경로` 카드 추가.
+  19차: `/notes/[id]` 위키 읽기 경로를 Markdown으로 복사하는 빠른 액션 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 위키 읽기 경로 Markdown 복사 추가.
+  `/notes/[id]`의 `위키 읽기 경로` 카드에 경로 복사 버튼을 추가해 관련 문서 순서·관련도·이유를 Markdown으로 저장할 수 있게 개선.
+  공용 `note-wiki-brief` 유틸에 읽기 경로 Markdown 생성 함수를 추가하고, 공백 정리·빈 경로·Markdown 링크 텍스트 이스케이프를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 36 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 chore(dead-code): 외부 임포트 죽은 라우트 그룹 제거.
   프론트 소비 0·테스트/스케줄러 전용으로 남은 Notion 임포트, RSS 구독, 북마크 파싱 라우트 그룹을 제거.
   Notion/RSS/북마크 전용 서비스 3종, 전용 테스트, RSS 구독 스케줄러 작업, 미사용 Notion API 키 설정 잔여를 함께 정리하고 단일 RSS URL 파싱 경로는 보존.

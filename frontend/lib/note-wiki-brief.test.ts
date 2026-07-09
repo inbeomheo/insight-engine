@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildNoteWikiBrief, buildNoteWikiQuickActions, buildNoteWikiReadingPath } from './note-wiki-brief';
+import {
+  buildNoteWikiBrief,
+  buildNoteWikiQuickActions,
+  buildNoteWikiReadingPath,
+  buildNoteWikiReadingPathMarkdown,
+} from './note-wiki-brief';
 
 describe('note-wiki-brief', () => {
   it('summarizes source, structure, study progress, and evidence links', () => {
@@ -99,5 +104,29 @@ describe('note-wiki-brief', () => {
         scorePercent: 94,
       },
     ]);
+  });
+
+  it('builds markdown for the wiki reading path', () => {
+    const items = buildNoteWikiReadingPath([
+      { id: 'next', title: '다음 [문서]', score: 0.84, snippet: '  핵심\n연결  ' },
+      { id: 'fallback', title: '', score: 0.4 },
+    ]);
+
+    expect(buildNoteWikiReadingPathMarkdown(items, '현재 노트')).toBe([
+      '# 위키 읽기 경로: 현재 노트',
+      '',
+      '1. [다음 \\[문서\\]](/notes/next)',
+      '   - 단계: 다음 읽기',
+      '   - 관련도: 84%',
+      '   - 이유: 핵심 연결',
+      '2. [제목 없음](/notes/fallback)',
+      '   - 단계: 2번째 연결',
+      '   - 관련도: 40%',
+      '   - 이유: 현재 문서와 의미가 가까운 관련 노트입니다.',
+    ].join('\n'));
+
+    expect(buildNoteWikiReadingPathMarkdown([], '')).toBe(
+      '# 위키 읽기 경로: 현재 문서\n\n연결된 관련 문서가 없습니다.'
+    );
   });
 });
