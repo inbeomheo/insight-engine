@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { askResultChat } from '@/lib/api';
@@ -17,12 +17,18 @@ vi.mock('sonner', () => ({
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-async function renderPanel() {
+async function renderPanel(props: Partial<ComponentProps<typeof ResultChatPanel>> = {}) {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root!.render(<ResultChatPanel context="자막 본문" model="chatmock/gpt-5.4-mini" />);
+    root!.render(
+      <ResultChatPanel
+        context="자막 본문"
+        model="chatmock/gpt-5.4-mini"
+        {...props}
+      />
+    );
   });
 }
 
@@ -108,5 +114,25 @@ describe('ResultChatPanel rag_sources', () => {
     expect(document.body.textContent).toContain('근거 1개');
     expect(document.body.textContent).toContain('기존 노트');
     expect(document.body.textContent).toContain('기존 스니펫');
+  });
+
+  it('fills the input from a suggested question', async () => {
+    await renderPanel({
+      suggestedQuestions: ['  근거 인용을 기준으로 설명해줘.  ', '', '관련 노트와 비교해줘.'],
+    });
+    await openPanel();
+
+    const suggestedButton = Array.from(document.querySelectorAll('button')).find((el) =>
+      el.textContent?.includes('근거 인용을 기준으로 설명해줘.')
+    );
+    if (!suggestedButton) throw new Error('suggested question button not found');
+
+    await act(async () => {
+      suggestedButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe(
+      '근거 인용을 기준으로 설명해줘.'
+    );
   });
 });

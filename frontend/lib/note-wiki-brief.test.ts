@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildNoteChatSuggestedQuestions,
   buildNoteQuoteMarkdown,
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
@@ -147,5 +148,23 @@ describe('note-wiki-brief', () => {
     expect(buildNoteQuoteMarkdown([], '')).toBe(
       '# 근거 인용\n\n인용 가능한 근거가 없습니다.'
     );
+  });
+
+  it('builds suggested questions for evidence-based note chat', () => {
+    expect(buildNoteChatSuggestedQuestions({
+      quoteCount: 2,
+      relatedNoteCount: 1,
+      studySummary: { completed: 1, total: 3, percent: 33 },
+    })).toEqual([
+      '이 노트의 핵심 근거를 3개로 요약해줘.',
+      '근거 인용을 기준으로 중요한 주장과 출처를 짝지어줘.',
+      '남은 학습 항목을 복습 질문으로 다시 정리해줘.',
+    ]);
+
+    expect(buildNoteChatSuggestedQuestions({
+      quoteCount: 0,
+      relatedNoteCount: 0,
+      studySummary: { completed: 0, total: 0, percent: 0 },
+    })).toEqual(['이 노트의 핵심 근거를 3개로 요약해줘.']);
   });
 });

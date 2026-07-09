@@ -42,6 +42,11 @@ export interface NoteWikiQuoteSource {
   ref?: string;
 }
 
+export type NoteWikiChatQuestionInput = Pick<
+  NoteWikiBriefInput,
+  'quoteCount' | 'relatedNoteCount' | 'studySummary'
+>;
+
 function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
   const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
   return cleaned || fallback;
@@ -191,4 +196,26 @@ export function buildNoteQuoteMarkdown(
       return `${index + 1}. "${text}"${ref}`;
     }),
   ].join('\n');
+}
+
+export function buildNoteChatSuggestedQuestions(
+  input: NoteWikiChatQuestionInput
+): string[] {
+  const questions = ['이 노트의 핵심 근거를 3개로 요약해줘.'];
+
+  if (input.quoteCount > 0) {
+    questions.push('근거 인용을 기준으로 중요한 주장과 출처를 짝지어줘.');
+  }
+  if (input.studySummary.total > 0) {
+    questions.push(
+      input.studySummary.completed >= input.studySummary.total
+        ? '복습 완료 내용을 바탕으로 심화 질문 3개를 만들어줘.'
+        : '남은 학습 항목을 복습 질문으로 다시 정리해줘.'
+    );
+  }
+  if (input.relatedNoteCount > 0) {
+    questions.push('관련 노트와 비교해서 이어서 읽을 주제를 추천해줘.');
+  }
+
+  return questions.slice(0, 3);
 }

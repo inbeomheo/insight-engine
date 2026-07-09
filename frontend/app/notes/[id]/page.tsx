@@ -18,6 +18,7 @@ import {
   toggleReviewAnswerVisibility,
 } from '@/lib/note-review-session';
 import {
+  buildNoteChatSuggestedQuestions,
   buildNoteQuoteMarkdown,
   buildNoteWikiBrief,
   buildNoteWikiQuickActions,
@@ -220,6 +221,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   }), [hasLinkedReport, note.source?.type, outlineItems, quoteCount, relatedNoteCount, studySummary]);
   const wikiBriefItems = useMemo(() => buildNoteWikiBrief(wikiBriefInput), [wikiBriefInput]);
   const wikiQuickActions = useMemo(() => buildNoteWikiQuickActions(wikiBriefInput), [wikiBriefInput]);
+  const chatSuggestedQuestions = useMemo(
+    () => buildNoteChatSuggestedQuestions(wikiBriefInput),
+    [wikiBriefInput]
+  );
   const wikiReadingPathItems = useMemo(
     () => buildNoteWikiReadingPath(note.related_notes ?? [], 3),
     [note.related_notes]
@@ -736,6 +741,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
               title="노트 근거 Q&A"
               emptyText="이 노트의 요약, 학습 포인트, 인용, 관련 노트를 근거로 질문해보세요."
               placeholder="예: 이 노트에서 바로 실행할 수 있는 행동은?"
+              suggestedQuestions={chatSuggestedQuestions}
             />
           </CardContent>
         </Card>

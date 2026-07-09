@@ -14,6 +14,7 @@ interface ResultChatPanelProps {
   title?: string;
   emptyText?: string;
   placeholder?: string;
+  suggestedQuestions?: string[];
 }
 
 interface ChatMessage extends ResultChatMessage {
@@ -29,6 +30,7 @@ export default function ResultChatPanel({
   title = '콘텐츠 Q&A',
   emptyText = '궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.',
   placeholder = '예: 이 영상의 핵심 실행 단계는?',
+  suggestedQuestions = [],
 }: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -55,6 +57,10 @@ export default function ResultChatPanel({
     if (isContextSliced) return '자막이 길어 앞부분 50,000자를 기준으로 답변합니다.';
     return '현재 결과의 자막/본문과 관련 지식 노트만 근거로 답합니다.';
   }, [hasContext, isContextSliced]);
+  const visibleSuggestedQuestions = useMemo(
+    () => suggestedQuestions.map((question) => question.trim()).filter(Boolean).slice(0, 3),
+    [suggestedQuestions]
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,6 +133,24 @@ export default function ResultChatPanel({
       {open && (
         <div className="border-t border-border/40 p-4">
           <p className="mb-3 text-xs text-muted-foreground">{helperText}</p>
+          {visibleSuggestedQuestions.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {visibleSuggestedQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => {
+                    setInput(question);
+                    setError(null);
+                  }}
+                  disabled={loading || !hasContext}
+                  className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:border-primary/40 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="mb-3 max-h-72 space-y-3 overflow-y-auto rounded-md bg-background/70 p-3">
             {messages.length === 0 ? (

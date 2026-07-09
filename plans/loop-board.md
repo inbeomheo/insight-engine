@@ -93,10 +93,18 @@
   19차: `/notes/[id]` 위키 읽기 경로를 Markdown으로 복사하는 빠른 액션 추가.
   20차: `/notes` 홈 위키 인덱스를 Markdown으로 복사하는 빠른 액션 추가.
   21차: `/notes/[id]` 근거 인용을 Markdown으로 복사하는 빠른 액션 추가.
+  22차: `/notes/[id]` 근거 기반 채팅에 추천 질문 칩을 추가해 바로 질문을 시작할 수 있게 개선.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 근거 Q&A 추천 질문 추가.
+  `/notes/[id]` 근거 기반 채팅에 노트 상태에 맞는 추천 질문 칩을 추가해 핵심 근거·인용·복습 항목 질문을 바로 입력할 수 있게 개선.
+  공용 `note-wiki-brief` 유틸에 추천 질문 생성 함수를 추가하고, `ResultChatPanel`은 전달받은 추천 질문을 정리해 최대 3개 버튼으로 표시하도록 확장.
+  추천 질문 생성과 버튼 클릭 시 입력창 채우기를 단위 테스트로 검증.
+  검증: `cd frontend && npm.cmd test -- ResultChatPanel.test.tsx note-wiki-brief.test.ts note-outline.test.ts note-study-progress.test.ts note-review-session.test.ts note-list.test.ts` 44 passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 근거 인용 Markdown 복사 추가.
   `/notes/[id]` 근거 인용 섹션에 인용 복사 버튼을 추가해 인용 문장과 출처 표기를 Markdown으로 저장할 수 있게 개선.
   공용 `note-wiki-brief` 유틸에 근거 인용 Markdown 생성 함수를 추가하고, 공백 정리·출처 표기·빈 인용 상태를 단위 테스트로 검증.
