@@ -31,7 +31,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
-import { getKnowledgeNoteContent, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
+import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -275,6 +275,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const { t } = useTranslation();
   const noteSource = getKnowledgeNoteSource(report);
+  const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
   const linkedNoteId = report.knowledge_note_id;
 
   // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
@@ -877,6 +878,57 @@ variant={report.share_url ? 'secondary' : 'outline'}
               deepDiveUrl={deepDiveUrl}
               slides={deepDiveSlides}
             />
+          )}
+
+          {notePreview && !linkedNoteId && (
+            <section className="mb-5 rounded-sm border border-primary/25 bg-primary/5 p-4">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="mb-1 flex items-center gap-2 text-sm font-black text-foreground">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    학습 노트 미리보기
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    저장하면 지식위키에 아래 구조로 추가됩니다. 태그와 핵심 개념은 저장 전 검토용입니다.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-sm text-xs"
+                  onClick={handleKnowledgeNoteAction}
+                  disabled={isSavingNote}
+                >
+                  {isSavingNote ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <BookOpen className="mr-1.5 h-3.5 w-3.5" />}
+                  {isSavingNote ? '저장 중...' : '노트로 저장'}
+                </Button>
+              </div>
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {notePreview.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+                <Badge variant="outline" className="text-[10px]">
+                  {notePreview.contentChars.toLocaleString()}자
+                </Badge>
+              </div>
+              {notePreview.concepts.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {notePreview.concepts.map((concept) => (
+                    <span key={concept} className="rounded-full border border-primary/20 bg-background px-2 py-0.5 text-[11px] font-semibold text-primary">
+                      {concept}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="grid gap-2 md:grid-cols-2">
+                {notePreview.learningPoints.slice(0, 2).map((point, index) => (
+                  <p key={`${point}-${index}`} className="rounded-sm border border-border/70 bg-card p-2.5 text-xs leading-5 text-foreground/80">
+                    {point}
+                  </p>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}

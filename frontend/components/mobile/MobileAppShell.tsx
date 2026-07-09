@@ -24,7 +24,7 @@ import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
 import { createKnowledgeNote, isApiError, type NoteDuplicateWarning } from '@/lib/api';
-import { getKnowledgeNoteContent, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
+import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
@@ -499,6 +499,7 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
     title: report.knowledge_note_title,
   });
   const noteSource = getKnowledgeNoteSource(report);
+  const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
   const linkedNoteId = linkedNote.id || report.knowledge_note_id;
 
   function openKnowledgeNote(noteId: string) {
@@ -618,6 +619,37 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
             <CheckCircle2 className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
+
+        {notePreview && !linkedNoteId && (
+          <div className="mt-5 border border-primary/25 bg-primary/5 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black">학습 노트 미리보기</p>
+                <p className="mt-1 text-[10px] leading-4 text-muted-foreground">저장 전 태그와 핵심 개념을 확인하세요.</p>
+              </div>
+              <span className="signal-meta shrink-0 text-[9px] text-primary">{notePreview.contentChars.toLocaleString()}자</span>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {notePreview.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-background px-2 py-1 text-[10px] font-bold text-foreground/70">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            {notePreview.concepts.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {notePreview.concepts.slice(0, 5).map((concept) => (
+                  <span key={concept} className="rounded-full border border-primary/25 px-2 py-1 text-[10px] font-bold text-primary">
+                    {concept}
+                  </span>
+                ))}
+              </div>
+            )}
+            {notePreview.learningPoints[0] && (
+              <p className="line-clamp-2 text-xs leading-5 text-foreground/75">{notePreview.learningPoints[0]}</p>
+            )}
+          </div>
+        )}
 
         <div className="mt-6 grid gap-3">
           {(noteSource || linkedNoteId) && (

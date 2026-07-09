@@ -3,6 +3,7 @@ import { createReport } from './report-factory';
 import {
   findReportLinkedToNote,
   getKnowledgeNoteContent,
+  getKnowledgeNotePreview,
   getKnowledgeNoteSource,
 } from './knowledge-note-source';
 
@@ -69,5 +70,31 @@ describe('knowledge-note-source', () => {
     expect(findReportLinkedToNote(reports, 'note-1')?.id).toBe('linked');
     expect(findReportLinkedToNote(reports, 'missing')).toBeNull();
     expect(findReportLinkedToNote(reports, '   ')).toBeNull();
+  });
+
+  it('builds a learning preview before saving a note', () => {
+    const report = createReport({
+      url: '',
+      source_type: 'text',
+      source_title: 'Next.js RAG 학습',
+      title: 'RAG 노트',
+      content: [
+        '## RAG 검색',
+        'RAG는 지식 검색과 생성 답변을 연결합니다.',
+        '복습 질문을 만들면 학습 유지에 도움이 됩니다.',
+      ].join('\n'),
+      html: '<p>RAG는 지식 검색과 생성 답변을 연결합니다.</p>',
+      style: 'summary',
+      transcript_source: 'direct_input',
+    });
+
+    const preview = getKnowledgeNotePreview(report);
+
+    expect(preview.title).toBe('Next.js RAG 학습');
+    expect(preview.sourceLabel).toBe('직접 텍스트');
+    expect(preview.tags).toEqual(expect.arrayContaining(['직접 텍스트', '요약', '직접 입력']));
+    expect(preview.concepts).toEqual(expect.arrayContaining(['Next.js', 'RAG']));
+    expect(preview.learningPoints[0]).toContain('RAG는');
+    expect(preview.excerpt).toContain('지식 검색');
   });
 });
