@@ -39,6 +39,7 @@
   3차: GraphQL/OAuth 공급자/외부 자동화 웹훅 그룹 제거 완료.
   4차: Agent helper/auth me/content-score 그룹 정리 진행 중. 다음 배치는 남은 감사 목록에서 프론트 소비 0 체인을 재검증해 소형 묶음으로 처리.
   5차: 최종 라우트 감사 `NO_FRONT_NO_TEST_COUNT 0` 확인 완료.
+  6차: 결과 카드에서 소비되지 않는 레거시 품질/미디어/미리보기 프론트 컴포넌트 13개 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -56,6 +57,11 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 레거시 결과 컴포넌트 13개 제거.
+  프론트 소스 전수 grep으로 import/동적 참조 0을 재검증한 뒤 결과 카드에서 더 이상 소비하지 않는 품질·미디어·미리보기 컴포넌트 13개를 삭제.
+  삭제 대상: ABTitleSelector, AutoTags, FactCheckBadge, FeedbackButtons, NewsletterPreview, PlagiarismScore, PodcastPlayer, ReadabilityGauge, SlidePreview, SocialCardPreview, ThumbnailPreview, VideoClipPlayer, WordCloud.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- ResultChatPanel.test.tsx note-list.test.ts knowledge-note-source.test.ts dashboard-summary.test.ts` 13 passed.
 - [x] 2026-07-10 feat(notes): 지식위키 로컬 필터 강화.
   `/notes` 홈의 개념 지도, 태그, 출처 구성을 즉시 적용되는 로컬 필터로 연결하고 활성 필터 요약/해제 바를 추가.
   `note-list` 유틸로 출처 라벨, 필터 매칭, 최신순 정렬을 분리하고 단위 테스트를 추가해 검색/탐색 흐름을 안정화.
