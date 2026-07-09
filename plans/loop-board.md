@@ -20,6 +20,7 @@
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
   2026-07-09 1차: 학습 포인트/복습 질문 스키마, 검색 색인 보강, 중복 경고 next_action 추가 완료.
+  2차: 생성 결과 더보기 메뉴에서 URL 기반 결과를 바로 학습 노트로 저장하고, 중복 경고 시 기존 노트 열기로 연결 완료.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -28,6 +29,13 @@
 
 ## Done
 
+- [x] 2026-07-09 feat(notes): 생성 결과에서 학습 노트 저장 UX 연결.
+  `frontend/lib/api.ts`에 노트 생성 래퍼와 API 에러 본문 전달을 추가하고,
+  `ResultCard` 더보기 메뉴에 `학습 노트로 저장` 액션을 추가.
+  저장 성공 시 생성된 노트로 바로 이동할 수 있고, 409 재학습 경고는 기존 노트 열기 액션으로 자연스럽게 연결.
+  데이터/DB/마이그레이션은 건드리지 않음.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `.venv\Scripts\python.exe -m pytest tests/test_notes_routes.py tests/test_note_service.py tests/test_note_index_service.py -q -p no:cacheprovider` 34 passed.
 - [x] 2026-07-09 chore(dead-code): Agent helper/auth me/content-score 데드 엔드포인트 정리.
   프론트/테스트 직접 소비 0으로 재검증된 `/api/agent/{sdk,sessions,tools,toolsets}`,
   `/api/agent/pipeline`, `/api/content-score`, `/api/auth/me` 라우트를 제거.

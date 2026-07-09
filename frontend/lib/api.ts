@@ -71,6 +71,15 @@ function supportHeaders(): HeadersInit {
   return { 'X-Support-Session-Id': getSupportSessionId() };
 }
 
+export type ApiError<T = unknown> = Error & {
+  status?: number;
+  body?: T;
+};
+
+export function isApiError<T = unknown>(err: unknown): err is ApiError<T> {
+  return err instanceof Error && ('status' in err || 'body' in err);
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
@@ -97,7 +106,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const error = new Error(body.error || `HTTP ${res.status}`) as ApiError;
+      error.status = res.status;
+      error.body = body;
+      throw error;
     }
     return res.json();
   } catch (err) {
@@ -916,6 +928,13 @@ export interface NoteSource {
   title: string;
 }
 
+export interface CreateNoteRequest {
+  content: string;
+  source: NoteSource;
+  language?: string;
+  model?: string;
+}
+
 export interface NoteListItem {
   id: string;
   title: string;
@@ -952,6 +971,29 @@ export interface NoteSearchResult {
   title: string;
   score: number;
   snippet: string;
+}
+
+export interface DuplicateNoteItem {
+  id: string;
+  title: string;
+  score?: number;
+  snippet?: string;
+  source?: NoteSource;
+}
+
+export interface NoteDuplicateWarning {
+  error: string;
+  warning?: string;
+  next_action?: string;
+  duplicate_reason?: 'same_url' | 'similar_content' | (string & {});
+  duplicate_notes?: DuplicateNoteItem[];
+}
+
+export async function createKnowledgeNote(req: CreateNoteRequest): Promise<NoteDetail> {
+  return request('/api/notes', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
 }
 
 export async function getNotes(): Promise<{ notes: NoteListItem[] }> {
