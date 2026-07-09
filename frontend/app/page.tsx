@@ -26,6 +26,7 @@ const CustomStyleModal = dynamic(() => import('@/components/modals/CustomStyleMo
 const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/WorkspaceSettingsModal'), { ssr: false });
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
 const SupportAssistant = dynamic(() => import('@/components/support/SupportAssistant'), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 
 
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -632,6 +633,7 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
+      <CommandPalette />
       </div>
       <SupportAssistant />
     </>

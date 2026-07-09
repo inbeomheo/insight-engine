@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, FileText, Settings, Download, Plus,
-  BarChart3, BookOpen, Globe
+  BarChart3, BookOpen
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -29,7 +29,6 @@ export default function CommandPalette() {
 
   const {
     setSettingsModalOpen,
-    setPlaylistModalOpen,
     setTemplateGalleryOpen,
   } = useUIStore();
 
@@ -57,14 +56,6 @@ export default function CommandPalette() {
       category: '설정',
       action: () => { setOpen(false); setSettingsModalOpen(true); },
       keywords: ['설정', 'settings', 'config'],
-    },
-    {
-      id: 'open-playlist',
-      label: '재생목록 가져오기',
-      icon: Globe,
-      category: '도구',
-      action: () => { setOpen(false); setPlaylistModalOpen(true); },
-      keywords: ['재생목록', 'playlist', 'youtube'],
     },
     {
       id: 'open-templates',
