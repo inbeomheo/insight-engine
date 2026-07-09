@@ -408,10 +408,6 @@
 ### F4-19. 온보딩 퍼널 — 난이도 M
 - [P4-39] frontend/components/onboarding/OnboardingFlow.tsx: 단계별 온보딩 (프로바이더 설정→첫 생성→구독) | 검증: build
 
-### F4-20. NPS/CSAT 설문 — 난이도 S
-- [P4-40] frontend/components/feedback/NpsSurvey.tsx: 10점 척도 NPS 팝업 | 검증: build
-- [P4-41] routes/utility_routes.py: /api/feedback/nps 엔드포인트 | 검증: pytest
-
 ### F4-21. 사용자 세그먼트 — 난이도 M
 - [P4-42] services/analytics/segment_service.py: 사용자를 활동 패턴별 세그먼트 분류 | 검증: pytest
 

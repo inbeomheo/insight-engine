@@ -23,7 +23,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
   - `routes/integrations/misc.py`의 `GET /api/openapi.json`, `GET /api/docs` — **[완료: 2026-07-05 cycle 29a 삭제]** `services/data/openapi_service.py`(`build_openapi_spec` 포함 모듈 전체) 함께 삭제. `misc.py`의 앱 피드백/OAuth 2.0 라우트는 그대로 유지.
   - `routes/blog_routes.py`의 `POST /regenerate` — 삭제 확인. **[완료: 삭제 확인]**
   - `routes/utility/external.py`의 `POST /api/wordcloud`, `GET /api/schema` — 삭제됨, 파일은 현재 webhook-test/playlist-videos/recommend-sources/feed.xml(활성+유지판정 혼재)로 재구성됨. **[완료: 삭제 확인]**
-  - `routes/utility/feedback_quality.py`의 `DELETE /api/cache/ai`, `GET /api/feedback/stats/<style_id>` — 삭제됨, 파일은 현재 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
+  - `routes/utility/feedback_quality.py`의 `DELETE /api/cache/ai`, `GET /api/feedback/stats/<style_id>` — 삭제됨, 파일은 현재 피드백/팩트체크/표절/가독성/감정분석(활성 기능)으로 재구성됨. **[완료: 삭제 확인]**
   - `routes/utility/operations.py`의 `POST /api/close` — 삭제됨, 파일은 헬스체크/heartbeat/providers/ollama-health(활성 기능)로 재구성됨. **[완료: 삭제 확인]**
 - **routes/marketplace_routes.py, routes/payment/*, routes/payment_routes.py** — 이번 배치 범위 밖(지시에 따라 제외), 미처리.
 
@@ -367,7 +367,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 - POST /api/wordcloud
 - GET /api/schema
 
-### routes/utility/feedback_quality.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 피드백/팩트체크/SEO/표절/가독성/감정분석/NPS로 재구성]
+### routes/utility/feedback_quality.py (2건) — [완료: 재검증 결과 이미 삭제됨, 파일은 활성 피드백/팩트체크/표절/가독성/감정분석으로 재구성]
 - DELETE /api/cache/ai
 - GET /api/feedback/stats/<style_id>
 

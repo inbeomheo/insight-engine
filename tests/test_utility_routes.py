@@ -331,37 +331,6 @@ class TestRecommendSources(_BaseTestCase):
         self.assertEqual(len(data['sources']), 1)
 
 
-# ── NPS 피드백 ──────────────────────────────────────
-
-
-class TestNPSFeedback(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_valid_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={'score': 8, 'feedback': '좋아요'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['success'])
-        self.assertEqual(data['score'], 8)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_invalid_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={'score': 15},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_missing_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-
-
 # ── 피드백 ──────────────────────────────────────
 
 

@@ -52,6 +52,7 @@
   12차: 프론트에서 소비되지 않는 레거시 결과/입력/위키/파이프라인 컴포넌트 15개 제거 완료.
   13차: 프론트 소비 0인 `/api/content/<id>/versions*`, `/api/search`, `/api/notifications*`, `/api/collab/session*` 라우트와 전용 인메모리 서비스/테스트 제거 완료.
   14차: 프론트 소비 0인 Notion 임포트, RSS 구독, 북마크 파싱 라우트와 전용 서비스/테스트, RSS 구독 스케줄러 작업 제거 완료.
+  15차: 프론트 소비 0인 `/api/feedback/nps` 라우트와 전용 테스트·재추가 유도 문서 항목 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -102,6 +103,12 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): NPS 피드백 엔드포인트 제거.
+  프론트 소비자가 없고 전용 테스트만 남은 `POST /api/feedback/nps`를 제거하고, `TASKS.md`의 NPS/CSAT 재추가 유도 항목과 라우트 설명 문서를 정리.
+  `create_app()` 라우트 맵에서 `/api/feedback/nps` 부재를 확인하고, `feedback/nps`/`submit_nps_feedback` 검색으로 코드 소비자 0을 재검증.
+  검증: `.venv\Scripts\python.exe -m pytest tests/test_utility_routes.py -q` 33 passed, 11 subtests passed +
+  `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): Q&A 복습 카드함 전체 복사 추가.
   `/notes` 홈 Q&A 복습 카드함에 전체 복사 버튼을 추가해 최근 카드 묶음을 Markdown으로 저장할 수 있게 개선.
   `result-chat-study-card` 유틸에 카드함 Markdown 생성 함수를 추가하고, 빈 카드함·복수 카드·원본 노트·근거 출처 출력 형식을 단위 테스트로 검증.
