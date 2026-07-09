@@ -26,7 +26,10 @@ import {
   getRecentStudyResumeItems,
   getStudyStartCandidates,
   NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
+  NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
+  parseNotePanelOpen,
   parseNoteStudyQueueOpen,
+  serializeNotePanelOpen,
   serializeNoteStudyQueueOpen,
   sortNotesByRecent,
   type NoteStudyStatus,
@@ -469,6 +472,7 @@ function WikiMap({
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
   const [studyQueueOpen, setStudyQueueOpen] = useState(true);
+  const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
   useEffect(() => {
     try {
       setStudyQueueOpen(
@@ -476,6 +480,16 @@ function WikiMap({
       );
     } catch {
       setStudyQueueOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setWikiExploreOpen(
+        parseNotePanelOpen(window.localStorage.getItem(NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY), true),
+      );
+    } catch {
+      setWikiExploreOpen(true);
     }
   }, []);
 
@@ -494,6 +508,21 @@ function WikiMap({
     });
   }, []);
 
+  const handleWikiExploreToggle = useCallback(() => {
+    setWikiExploreOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem(
+          NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
+          serializeNotePanelOpen(next),
+        );
+      } catch {
+        // Ignore unavailable storage; the visible toggle still works.
+      }
+      return next;
+    });
+  }, []);
+
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
     'study-start': studyStartNotes.length,
@@ -501,6 +530,7 @@ function WikiMap({
     recent: studyResumeNotes.length,
   };
   const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts);
+  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
     return { order: index >= 0 ? index + 1 : 99 };
@@ -510,82 +540,105 @@ function WikiMap({
     <section className="mb-6 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
       <Card className="py-4">
         <CardContent className="px-4">
-          <div className="flex items-center gap-2">
-            <Network className="h-4 w-4 text-primary/70" />
-            <h2 className="text-sm font-semibold text-foreground">개념 지도</h2>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            반복 등장하는 개념과 태그를 눌러 관련 노트를 바로 이어서 탐색하세요.
-          </p>
+          <button
+            type="button"
+            onClick={handleWikiExploreToggle}
+            aria-expanded={wikiExploreOpen}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Network className="h-4 w-4 text-primary/70" />
+                지식 탐색
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                개념·태그·출처 필터를 필요할 때만 펼칩니다.
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              {totalWikiExploreItems}개 단서
+              <ChevronDown className={`h-4 w-4 transition-transform ${wikiExploreOpen ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
 
-          {topConcepts.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                핵심 개념
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {topConcepts.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => onFacetSelect({ type: 'concept', value: item.label })}
-                    className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
-                  >
-                    <Brain className="h-3 w-3" />
-                    {item.label}
-                    <span className="text-[10px] text-primary/60">{item.count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {wikiExploreOpen && (
+            <>
+              <p className="mt-3 text-xs text-muted-foreground">
+                반복 등장하는 개념과 태그를 눌러 관련 노트를 바로 이어서 탐색하세요.
+              </p>
 
-          {topTags.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                태그
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {topTags.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => onFacetSelect({ type: 'tag', value: item.label })}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40"
-                  >
-                    <Tags className="h-3 w-3 text-muted-foreground" />
-                    {item.label}
-                    <span className="text-[10px] text-muted-foreground">{item.count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+              {topConcepts.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    핵심 개념
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {topConcepts.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => onFacetSelect({ type: 'concept', value: item.label })}
+                        className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <Brain className="h-3 w-3" />
+                        {item.label}
+                        <span className="text-[10px] text-primary/60">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {topTags.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    태그
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {topTags.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => onFacetSelect({ type: 'tag', value: item.label })}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40"
+                      >
+                        <Tags className="h-3 w-3 text-muted-foreground" />
+                        {item.label}
+                        <span className="text-[10px] text-muted-foreground">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
       <div className="grid gap-3">
-        <Card className="py-4">
-          <CardContent className="px-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary/70" />
-              <h2 className="text-sm font-semibold text-foreground">출처 구성</h2>
-            </div>
-            <div className="mt-3 space-y-2">
-              {sourceGroups.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => onFacetSelect({ type: 'source', value: item.label })}
-                  className="flex w-full items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
-                >
-                  <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-medium text-foreground">{item.count}개</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {wikiExploreOpen && (
+          <Card className="py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">출처 구성</h2>
+              </div>
+              <div className="mt-3 space-y-2">
+                {sourceGroups.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onFacetSelect({ type: 'source', value: item.label })}
+                    className="flex w-full items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
+                  >
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className="font-medium text-foreground">{item.count}개</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="py-4">
           <CardContent className="px-4">

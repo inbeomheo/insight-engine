@@ -16,7 +16,9 @@ import {
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
   getStudyStartCandidates,
+  parseNotePanelOpen,
   parseNoteStudyQueueOpen,
+  serializeNotePanelOpen,
   serializeNoteStudyQueueOpen,
   sortNotesByRecent,
 } from './note-list';
@@ -227,6 +229,11 @@ describe('note-list', () => {
   });
 
   it('serializes study queue open state for browser storage', () => {
+    expect(serializeNotePanelOpen(true)).toBe('open');
+    expect(serializeNotePanelOpen(false)).toBe('closed');
+    expect(parseNotePanelOpen('open')).toBe(true);
+    expect(parseNotePanelOpen('closed')).toBe(false);
+    expect(parseNotePanelOpen('legacy', false)).toBe(false);
     expect(serializeNoteStudyQueueOpen(true)).toBe('open');
     expect(serializeNoteStudyQueueOpen(false)).toBe('closed');
     expect(parseNoteStudyQueueOpen('open')).toBe(true);
