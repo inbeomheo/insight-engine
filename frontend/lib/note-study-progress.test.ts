@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildNoteStudyMarkdown,
   clearNoteStudyProgress,
   getNoteStudyProgressKey,
   getNoteStudySummary,
@@ -72,5 +73,40 @@ describe('note-study-progress', () => {
       review: [],
       updatedAt: null,
     });
+  });
+
+  it('builds markdown with checked study items and review answers', () => {
+    expect(
+      buildNoteStudyMarkdown({
+        title: '테스트 노트',
+        sourceUrl: 'https://example.com/video',
+        learningPoints: ['핵심 개념 정리', '실습으로 확인'],
+        reviewQuestions: [
+          { question: '첫 질문은?', answer: '첫 답변' },
+          { question: '둘째 질문은?' },
+        ],
+        progress: {
+          learning: [1],
+          review: [0],
+          updatedAt: '2026-07-10T00:00:00.000Z',
+        },
+      })
+    ).toBe([
+      '# 테스트 노트 복습 노트',
+      '',
+      '- 진행률: 2/4 (50%)',
+      '- 원본: https://example.com/video',
+      '- 마지막 체크: 2026-07-10T00:00:00.000Z',
+      '',
+      '## 학습 포인트',
+      '- [ ] 핵심 개념 정리',
+      '- [x] 실습으로 확인',
+      '',
+      '## 복습 질문',
+      '- [x] 첫 질문은?',
+      '  - 답: 첫 답변',
+      '- [ ] 둘째 질문은?',
+      '',
+    ].join('\n'));
   });
 });

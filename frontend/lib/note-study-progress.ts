@@ -19,6 +19,14 @@ export interface NoteStudySummary {
   completedReview: number;
 }
 
+export interface NoteStudyMarkdownInput {
+  title: string;
+  sourceUrl?: string;
+  learningPoints?: string[];
+  reviewQuestions?: Array<{ question: string; answer?: string }>;
+  progress: NoteStudyProgress;
+}
+
 type NoteStudyStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 export function getNoteStudyProgressKey(noteId: string): string {
@@ -131,4 +139,47 @@ export function writeNoteStudyProgress(
 export function clearNoteStudyProgress(noteId: string, storage?: NoteStudyStorage): void {
   const target = resolveStorage(storage);
   target?.removeItem(getNoteStudyProgressKey(noteId));
+}
+
+function checkbox(done: boolean): string {
+  return done ? '[x]' : '[ ]';
+}
+
+export function buildNoteStudyMarkdown(input: NoteStudyMarkdownInput): string {
+  const learningPoints = input.learningPoints ?? [];
+  const reviewQuestions = input.reviewQuestions ?? [];
+  const counts = { learning: learningPoints.length, review: reviewQuestions.length };
+  const progress = normalizeNoteStudyProgress(input.progress, counts);
+  const summary = getNoteStudySummary(progress, counts);
+  const lines = [
+    `# ${input.title || '제목 없음'} 복습 노트`,
+    '',
+    `- 진행률: ${summary.completed}/${summary.total} (${summary.percent}%)`,
+  ];
+
+  if (input.sourceUrl) {
+    lines.push(`- 원본: ${input.sourceUrl}`);
+  }
+  if (progress.updatedAt) {
+    lines.push(`- 마지막 체크: ${progress.updatedAt}`);
+  }
+
+  if (learningPoints.length > 0) {
+    lines.push('', '## 학습 포인트');
+    learningPoints.forEach((point, index) => {
+      lines.push(`- ${checkbox(progress.learning.includes(index))} ${point}`);
+    });
+  }
+
+  if (reviewQuestions.length > 0) {
+    lines.push('', '## 복습 질문');
+    reviewQuestions.forEach((item, index) => {
+      lines.push(`- ${checkbox(progress.review.includes(index))} ${item.question}`);
+      if (item.answer?.trim()) {
+        lines.push(`  - 답: ${item.answer}`);
+      }
+    });
+  }
+
+  return `${lines.join('\n')}\n`;
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Brain, CheckCircle2, ExternalLink, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
+import { ArrowLeft, Brain, CheckCircle2, Copy, ExternalLink, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
 import { buildNoteOutline, type NoteOutlineItem } from '@/lib/note-outline';
 import {
+  buildNoteStudyMarkdown,
   getNoteStudySummary,
   normalizeNoteStudyProgress,
   readNoteStudyProgress,
@@ -155,6 +156,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const [studyProgress, setStudyProgress] = useState<NoteStudyProgress>(() =>
     normalizeNoteStudyProgress(null, studyCounts)
   );
+  const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const studySummary = getNoteStudySummary(studyProgress, studyCounts);
 
   useEffect(() => {
@@ -174,6 +176,34 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     writeNoteStudyProgress(note.id, next, studyCounts);
     setStudyProgress(next);
   }, [note.id, studyCounts]);
+
+  const copyStudyMarkdown = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setStudyCopyStatus('error');
+      return;
+    }
+
+    const markdown = buildNoteStudyMarkdown({
+      title: note.source?.title || '제목 없음',
+      sourceUrl: sourceUrl ?? undefined,
+      learningPoints,
+      reviewQuestions,
+      progress: studyProgress,
+    });
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setStudyCopyStatus('copied');
+    } catch {
+      setStudyCopyStatus('error');
+    }
+  }, [learningPoints, note.source?.title, reviewQuestions, sourceUrl, studyProgress]);
+
+  useEffect(() => {
+    if (studyCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setStudyCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [studyCopyStatus]);
 
   return (
     <div className="space-y-6">
@@ -255,16 +285,36 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                   학습 포인트와 복습 질문을 체크해 이 노트의 학습 상태를 브라우저에 저장합니다.
                 </p>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-8 shrink-0 text-xs"
-                onClick={resetStudyProgress}
-                disabled={studySummary.completed === 0}
-              >
-                초기화
-              </Button>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={copyStudyMarkdown}
+                    disabled={studySummary.total === 0}
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    Markdown 복사
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs"
+                    onClick={resetStudyProgress}
+                    disabled={studySummary.completed === 0}
+                  >
+                    초기화
+                  </Button>
+                </div>
+                {studyCopyStatus !== 'idle' && (
+                  <span className={`text-[10px] ${studyCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                    {studyCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="mt-4 flex items-end justify-between gap-3">
               <div>
