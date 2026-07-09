@@ -243,17 +243,3 @@ export interface SentimentFlowResponse {
   dominant_emotion: string;
 }
 
-// === QA 게이트 ===
-
-export interface QaIssue {
-  type: string;
-  message: string;
-  severity: 'error' | 'warning';
-  words?: string[];
-}
-
-export interface QaCheckResponse {
-  passed: boolean;
-  issues: QaIssue[];
-  score: number;
-}

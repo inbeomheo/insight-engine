@@ -72,7 +72,7 @@ CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '
 
 AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
 AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
-AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'gemini/gemini-3.1-flash-lite-preview')
+AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.4-mini')
 
 # === Whisper (음성 인식 자막 폴백) ===
 
@@ -115,10 +115,10 @@ WHITELABEL_CONFIG: Dict[str, str] = {
 
 PLAN_FEATURES: Dict[str, List[str]] = {
     'free': ['generate', 'history', 'export_markdown'],
-    'starter': ['generate', 'history', 'export_markdown', 'export_docx', 'multi_style', 'custom_style', 'rag'],
-    'pro': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+    'starter': ['generate', 'history', 'export_markdown', 'multi_style', 'custom_style', 'rag'],
+    'pro': ['generate', 'history', 'export_markdown',
             'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel', 'api_access'],
-    'enterprise': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+    'enterprise': ['generate', 'history', 'export_markdown',
                    'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel',
                    'api_access', 'sso', 'audit_log', 'team_billing', 'custom_model'],
 }
@@ -149,8 +149,8 @@ AI_CACHE_MAX_SIZE_MB = 512
 # === AI Model & Fallback ===
 
 FALLBACK_CHAIN = [
-    'zhipuai/GLM-4.5-Air',
-    'zhipuai/GLM-4.7',
+    'chatmock/gpt-5.4-mini',
+    'chatmock/gpt-5.4',
 ]
 MAX_FALLBACK_ATTEMPTS = 3
 
@@ -202,52 +202,15 @@ QA_MIN_CHARS: int = 200
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'gemini': {
-        'name': 'Google Gemini',
-        'models': [
-            {'id': 'gemini/gemini-3.1-flash-lite-preview', 'name': 'Gemini 3.1 Flash Lite (최신)', 'max_input_tokens': 1048576, 'price_input': 0.075, 'price_output': 0.30},
-        ]
-    },
-    'zhipuai': {
-        'name': 'Zhipu AI (GLM)',
-        'api_base': 'https://open.bigmodel.cn/api/paas/v4/',
-        'models': [
-            {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7 (최신)', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
-            {'id': 'zhipuai/GLM-4.5-Air', 'name': 'GLM-4.5 Air (경량)', 'max_input_tokens': 128000, 'price_input': 0.10, 'price_output': 0.10},
-        ]
-    },
-    'deepseek': {
-        'name': 'DeepSeek',
-        'models': [
-            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek Chat (V3)', 'max_input_tokens': 64000, 'price_input': 0.27, 'price_output': 1.10},
-            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek Reasoner (R1)', 'max_input_tokens': 64000, 'price_input': 0.55, 'price_output': 2.19},
-        ]
-    },
-    'ollama': {
-        'name': 'Ollama (로컬)',
-        'api_base': os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434'),
-        'models': [
-            {'id': 'ollama_chat/llama3.2', 'name': 'Llama 3.2 (8B)', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'ollama_chat/mistral', 'name': 'Mistral 7B', 'max_input_tokens': 32000, 'price_input': 0, 'price_output': 0},
-            {'id': 'ollama_chat/gemma2', 'name': 'Gemma 2 (9B)', 'max_input_tokens': 8192, 'price_input': 0, 'price_output': 0},
-        ]
-    },
     'chatmock': {
-        'name': 'ChatMock',
+        'name': 'ChatMock (OpenAI 호환)',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
+            {'id': 'chatmock/gpt-5.4-mini', 'name': 'GPT-5.4 Mini', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
             {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-        ]
-    },
-    'openrouter': {
-        'name': 'OpenRouter (2600+ 모델)',
-        'api_base': 'https://openrouter.ai/api/v1',
-        'models': [
-            {'id': 'openrouter/anthropic/claude-sonnet-4', 'name': 'Claude Sonnet 4 (Anthropic)', 'max_input_tokens': 200000, 'price_input': 3.00, 'price_output': 15.00},
-            {'id': 'openrouter/google/gemini-2.5-flash', 'name': 'Gemini 2.5 Flash (Google)', 'max_input_tokens': 1048576, 'price_input': 0.15, 'price_output': 0.60},
-            {'id': 'openrouter/meta-llama/llama-4-scout', 'name': 'Llama 4 Scout (Meta)', 'max_input_tokens': 131072, 'price_input': 0.08, 'price_output': 0.30},
-            {'id': 'openrouter/mistralai/mistral-large-2', 'name': 'Mistral Large 2 (Mistral)', 'max_input_tokens': 131072, 'price_input': 2.00, 'price_output': 6.00},
-        ]
+            {'id': 'chatmock/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+        ],
     },
 }
 
@@ -296,26 +259,14 @@ def get_provider_from_model(model_id: str) -> str:
         return 'chatmock'
     elif model_id.startswith('openrouter/'):
         return 'openrouter'
-    return 'gemini'  # 기본값 (Gemini)
+    return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
 
 
 # === Styles & Modifiers ===
 
 STYLE_OPTIONS: List[Tuple[str, str]] = [
-    ('blog_seo', '🔍 블로그+SEO'),
     ('summary', '⚡ 요약'),
-    ('tutorial', '📚 튜토리얼'),
     ('qna', '❓ Q&A'),
-    ('app_ideas', '💡 앱 아이디어'),
-    ('yozm_it', '💻 요즘IT'),
-    ('brunch_essay', '✍️ 브런치'),
-    ('naver_popular', '💚 네이버'),
-    ('sns_post', '📱 SNS 포스트'),
-    ('newsletter', '📧 뉴스레터'),
-    ('show_notes', '🎙️ 쇼노트'),
-    ('shorts_script', '🎬 쇼츠 클립'),
-    ('geo_seo', '🤖 GEO (AI검색)'),
-    ('course', '🎓 AI 코스'),
     ('quiz', '🧠 퀴즈'),
     ('retention_cards', '🧩 리텐션 카드'),
 ]

@@ -89,7 +89,7 @@ export default function Home() {
 
   // 스타일 선택 — 현재 선택을 다시 누르면 안전한 기본값으로 복귀
   const handleStyleSelect = useCallback((styleId: string) => {
-    setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
+    setSelectedStyle(selectedStyle === styleId && styleId !== 'summary' ? 'summary' : styleId);
   }, [selectedStyle, setSelectedStyle]);
 
   // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
@@ -393,7 +393,7 @@ export default function Home() {
                             type="button"
                             aria-pressed={active}
                             aria-label={`${style.label} 스타일 선택${style.description ? `: ${style.description}` : ''}`}
-                            title={active && style.id !== 'blog_seo' ? '다시 누르면 블로그+SEO 기본값으로 돌아가요' : style.description}
+                            title={active && style.id !== 'summary' ? '다시 누르면 요약 기본값으로 돌아가요' : style.description}
                             className={cn(
                               'flex min-h-16 flex-col justify-center border px-2 py-2 text-left transition-colors',
                               active

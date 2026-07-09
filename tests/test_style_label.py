@@ -14,9 +14,8 @@ class TestGetStyleLabel(unittest.TestCase):
         """등록된 스타일 ID는 한글 라벨을 반환."""
         with self.app.app_context():
             from routes.generation_helpers import _get_style_label
-            label = _get_style_label('blog_seo')
-            self.assertIn('블로그', label)
-            self.assertIn('SEO', label)
+            label = _get_style_label('summary')
+            self.assertIn('요약', label)
 
     def test_unknown_style_returns_id(self):
         """미등록 스타일 ID는 ID를 그대로 반환."""

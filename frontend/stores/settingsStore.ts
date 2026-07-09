@@ -76,7 +76,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   providers: {},
   selectedProvider: '',
   selectedModel: '',
-  selectedStyle: 'blog_seo',
+  selectedStyle: 'summary',
   modifiers: { length: 'medium', writing_style: 'conversational', language: 'ko' },
   customStyles: [],
   ollamaBaseUrl: '',

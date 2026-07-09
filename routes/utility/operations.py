@@ -202,22 +202,28 @@ def api_validate_provider():
         except Exception as e:
             return jsonify({'valid': False, 'model_tested': test_model, 'error': sanitize_error_for_client(str(e))})
 
-    if not api_key:
+    if not api_key and provider_id != 'chatmock':
         return jsonify({'valid': False, 'error': 'API 키가 필요합니다.'}), 400
 
     # LiteLLM으로 소량 토큰 호출 테스트
     try:
         import litellm
 
+        model_for_call = test_model
+        if provider_id == 'chatmock' and test_model.startswith('chatmock/'):
+            model_for_call = test_model.replace('chatmock/', '')
+
         kwargs = {
-            'model': test_model,
+            'model': model_for_call,
             'messages': [{'role': 'user', 'content': 'Hi'}],
             'max_tokens': 5,
-            'api_key': api_key,
+            'api_key': api_key or ('dummy' if provider_id == 'chatmock' else api_key),
         }
         # api_base가 있는 프로바이더 (zhipuai, openrouter 등)
         if provider.get('api_base'):
             kwargs['api_base'] = provider['api_base']
+        if provider_id == 'chatmock':
+            kwargs['drop_params'] = True
 
         t0 = time.time()
         litellm.completion(**kwargs)

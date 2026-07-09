@@ -17,7 +17,6 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
-  QaCheckResponse,
   ProviderValidateResponse,
   FactCheckResponse,
   PlagiarismResponse,
@@ -45,7 +44,6 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/generate-multi': 300_000,
   '/api/generate-fusion': 300_000,
   '/api/mindmap': 60_000,
-  '/api/export/docx': 30_000,
   '/api/shares': 15_000,
   '/api/providers': 10_000,
   '/api/playlist-videos': 30_000,
@@ -377,13 +375,8 @@ export async function fetchPlaylistVideos(
   });
 }
 
-// DOCX 내보내기
-export async function exportDocx(title: string, content: string): Promise<Blob> {
-  return requestBlob('/api/export/docx', { method: 'POST', body: JSON.stringify({ title, content }) });
-}
-
-// 포맷별 내보내기 (MD, TXT, ZIP)
-export async function exportFormat(format: 'markdown' | 'txt' | 'zip', title: string, content: string): Promise<Blob> {
+// 포맷별 내보내기 (MD)
+export async function exportFormat(format: 'markdown', title: string, content: string): Promise<Blob> {
   return requestBlob(`/api/export/${format}`, { method: 'POST', body: JSON.stringify({ title, content }) });
 }
 
@@ -710,18 +703,6 @@ export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractE
   return request('/api/extract-events', {
     method: 'POST',
     body: JSON.stringify(req),
-  });
-}
-
-// === QA 게이트 ===
-
-export async function qaCheck(
-  content: string,
-  rules?: { forbidden_words?: string[] },
-): Promise<QaCheckResponse> {
-  return request('/api/qa-check', {
-    method: 'POST',
-    body: JSON.stringify({ content, rules }),
   });
 }
 

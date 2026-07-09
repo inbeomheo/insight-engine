@@ -191,29 +191,29 @@ class TestProviderRoutes(_BaseTestCase):
         self.assertEqual(resp.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get')
-    def test_validate_provider_ollama(self, mock_get, _):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'models': []}
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value = mock_resp
+    def test_validate_provider_ollama_removed(self, _):
         resp = self.client.post('/api/providers/validate',
                                 json={'provider_id': 'ollama',
                                       'api_key': 'http://localhost:11434'},
                                 headers=_H)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 400)
         data = resp.get_json()
-        self.assertTrue(data['valid'])
+        self.assertFalse(data['valid'])
+        self.assertIn('지원하지 않는 프로바이더', data['error'])
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_validate_provider_no_api_key(self, _):
-        """Ollama가 아닌 프로바이더에서 api_key 누락 시 에러."""
-        # gemini 프로바이더가 존재한다고 가정
+    @patch('litellm.completion')
+    def test_validate_provider_no_api_key(self, mock_completion, _):
+        """ChatMock은 api_key 누락 시 dummy key로 검증한다."""
+        mock_completion.return_value = MagicMock()
         resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'gemini'},
+                                json={'provider_id': 'chatmock'},
                                 headers=_H)
-        # api_key 없으면 400
-        self.assertIn(resp.status_code, [200, 400])
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json()['valid'])
+        kwargs = mock_completion.call_args.kwargs
+        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
 
 # ── 캐시 관련 ──────────────────────────────────────
 

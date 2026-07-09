@@ -126,7 +126,7 @@ class TestValidateStyle(_Base):
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_validate_style_empty_defaults(self, _):
         from routes.blog_routes import _validate_style
-        self.assertEqual(_validate_style('   '), 'blog_seo')
+        self.assertEqual(_validate_style('   '), 'summary')
 
 
 class TestGetRequestData(_Base):

@@ -3,7 +3,7 @@
 import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
-  FileText, Code, Brain, Download, Share2, Printer,
+  FileText, Code, Brain, Share2,
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -30,12 +30,12 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
+import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
-import { EXPORT_HTML_STYLE, PRINT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
+import { EXPORT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
 const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
@@ -46,7 +46,6 @@ const ShortsClipList = dynamic(() => import('./ShortsClipList'), { ssr: false })
 const WebSourcesSection = dynamic(() => import('./WebSourcesSection'), { ssr: false });
 const InsertedLinksSection = dynamic(() => import('./InsertedLinksSection'), { ssr: false });
 const EventTimeline = dynamic(() => import('./EventTimeline'), { ssr: false });
-const QaGateBadge = dynamic(() => import('./QaGateBadge'), { ssr: false });
 
 // 무거운 서브컴포넌트 dynamic import
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
@@ -335,21 +334,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     }
   }
 
-  async function handleExportDocx() {
-    try {
-      const blob = await exportDocx(report.title, report.content);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${report.title.slice(0, 50)}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(t('result.docxSuccess'));
-    } catch {
-      toast.error(t('result.docxError'));
-    }
-  }
-
   function handleExportHtml() {
     const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><title>${report.title}</title>
@@ -362,17 +346,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     a.click();
     URL.revokeObjectURL(url);
     toast.success(t('result.htmlSuccess'));
-  }
-
-  function handlePrint() {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html>
-<html><head><title>${report.title}</title>
-<style>${PRINT_HTML_STYLE}</style></head>
-<body>${sanitizeHtml(report.html || report.content)}</body></html>`);
-    w.document.close();
-    w.print();
   }
 
   async function handleShare() {
@@ -403,7 +376,7 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     }
   }
 
-  async function handleExportFormat(format: 'markdown' | 'txt' | 'zip') {
+  async function handleExportFormat(format: 'markdown') {
     try {
       const blob = await exportFormat(format, report.title, report.content);
       const ext = format === 'markdown' ? 'md' : format;
@@ -710,7 +683,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
                 </TooltipContent>
               </Tooltip>
             )}
-            <QaGateBadge content={report.content} />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {report.transcript_segments && report.transcript_segments.length > 0 && (
@@ -1072,25 +1044,9 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 {t('result.exportHtml')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportDocx}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                {t('result.exportDocx')}
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExportFormat('markdown')}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportFormat('txt')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                텍스트 (.txt)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportFormat('zip')}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                패키지 (.zip)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrint}>
-                <Printer className="h-3.5 w-3.5 mr-2" />
-                {t('result.printPdf')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

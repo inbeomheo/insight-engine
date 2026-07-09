@@ -1,25 +1,25 @@
 # Insight Engine
 
-YouTube 영상 URL 하나로 15가지 스타일의 고품질 콘텐츠를 자동 생성하는 AI 콘텐츠 엔진.
-5개 AI 프로바이더(Gemini, DeepSeek, Zhipu GLM, Ollama, OpenRouter) 통합, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
+YouTube/문서/텍스트를 학습하고 LLMWiki형 지식 위키로 쌓는 AI 학습 엔진.
+ChatMock(OpenAI 호환) 기반 생성, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
 
-Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 · 5,300+ 테스트(pass)
+Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · 4,300+ 테스트(pass)
 
 ---
 
 ## Features
 
 ### Core
-- **15가지 출력 스타일** — 블로그+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버 인기글, SNS, 뉴스레터, 쇼노트, Shorts 클립, GEO(AI검색 최적화), AI 코스, 퀴즈
-- **5개 AI 프로바이더** — Gemini, DeepSeek, Zhipu GLM, Ollama(로컬), OpenRouter(2600+ 모델)
+- **4가지 출력 스타일** — 요약, Q&A, 퀴즈, 리텐션 카드
+- **ChatMock 단일 프로바이더** — ChatGPT 계정을 OpenAI 호환 API로 사용하는 로컬 프록시
 - **다국어 출력** — 한국어, 영어, 일본어
 - **4단계 자막 폴백** — youtube-transcript-api → watch 페이지 파싱 → Supadata API → Whisper 로컬 음성인식
 
 ### Content Generation
 - **배치 처리** — 최대 10개 URL 동시 분석
-- **멀티스타일** — 1 URL × N 스타일 동시 생성 (사용량 1회 차감)
+- **멀티스타일** — 1 URL × N 스타일 동시 생성
 - **퓨전 분석** — 다중 소스 교차 분석 콘텐츠
-- **파이프라인 자동화** — 자막 추출 → 생성 → SEO 최적화 (SSE 실시간 진행률)
+- **파이프라인 자동화** — 자막 추출 → 학습 노트 생성 (SSE 실시간 진행률)
 - **소스 인용 모드** — 모든 주장에 [MM:SS] 타임스탬프 인용 + YouTube 링크 변환
 - **챕터 자동 분할** — AI가 자막을 주제별 챕터로 분할
 - **댓글 병렬 분석** — 메인 콘텐츠와 댓글 요약 동시 생성
@@ -27,7 +27,6 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 ### Post-Processing
 - **인라인 AI 편집** — 텍스트 선택 영역 부분 재생성 (축약/확장/톤변경/번역)
 - **마인드맵** — 콘텐츠 → 마인드맵 마크다운 변환
-- **QA 게이트** — 발행 전 금칙어/구조/중복/링크 품질 검증
 
 ### Publishing & Collaboration
 - **팀 워크스페이스** — 멤버 관리 (Owner/Editor/Viewer) + 콘텐츠 승인 플로우
@@ -37,10 +36,10 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 - **RAG 지식 참조** — ChromaDB 벡터 스토어, 파일 업로드 → 생성 시 자동 주입
 - **웹 검색 보강** — Tavily API로 자막 내용을 웹 검색으로 보강
 - **멀티에이전트** — Research → Writer → Editor → SEO 파이프라인
-- **95개 텍스트 분석 서비스** — 가독성, 구조, 감정, NLP 분석
+- **지식 위키** — 노트 저장, 관련 노트 추천, 근거 기반 채팅
 
 ### Export & Integration
-- **다중 내보내기** — DOCX, PDF, Markdown, TXT, ZIP(전체 패키지)
+- **단순 내보내기** — HTML, Markdown
 - **웹훅 알림** — 생성 완료 시 n8n/Make/Zapier 연동
 - **외부 서비스** — Slack, Discord, RSS, GitHub 연동
 - **GraphQL API** — 유연한 쿼리 지원
@@ -52,7 +51,7 @@ Flask + Next.js 풀스택 · LiteLLM 멀티프로바이더 · 323개 서비스 �
 ### 요구사항
 - Python 3.8+
 - Node.js 18+
-- AI Provider API 키 최소 하나
+- ChatMock 서버
 
 ### 설치
 
@@ -76,15 +75,11 @@ cd frontend && npm install && cd ..
 cp .env.example .env
 ```
 
-`.env`에 최소 하나의 AI API 키를 설정하세요:
+ChatMock을 로그인/실행하고 `.env`에 base URL을 설정하세요:
 
 ```env
-# 최소 하나 필수 — 설정된 프로바이더만 UI에 표시
-GEMINI_API_KEY=AIza...          # Google Gemini (기본 권장)
-DEEPSEEK_API_KEY=sk-...         # DeepSeek
-ZAI_API_KEY=...                 # Zhipu AI (GLM)
-OLLAMA_BASE_URL=http://localhost:11434  # Ollama (로컬, API 키 불필요)
-OPENROUTER_API_KEY=sk-or-...    # OpenRouter (2600+ 모델)
+CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1
+CHATMOCK_API_KEY=dummy
 
 # 선택
 YOUTUBE_API_KEY=...             # 댓글 수집
@@ -117,15 +112,15 @@ cd frontend && npm run dev       # → http://localhost:3000
 │  Next.js 16 Frontend      │────▶│  Flask Backend           │
 │  React 19 + Tailwind v4   │     │  Port 5001               │
 │  Zustand + TanStack Query │     │                           │
-│  Port 3000                │◀────│  LiteLLM Multi-Provider  │
+│  Port 3000                │◀────│  LiteLLM + ChatMock      │
 └───────────────────────────┘     └────────┬────────────────┘
                                            │
                     ┌──────────────────────┼──────────────────────┐
                     ▼                      ▼                      ▼
              ┌─────────────┐      ┌──────────────┐      ┌──────────────┐
-             │ YouTube API  │      │ AI Providers  │      │ Supabase     │
-             │ Transcript   │      │ Gemini,DeepSeek│     │ Auth, DB     │
-             │ Comments     │      │ GLM,Ollama,OR │      │ Usage        │
+             │ YouTube API  │      │ ChatMock      │      │ Supabase     │
+             │ Transcript   │      │ OpenAI Compat │      │ Auth, DB     │
+             │ Comments     │      │ Local Proxy   │      │ Usage        │
              └─────────────┘      └──────────────┘      └──────────────┘
 ```
 
@@ -142,7 +137,7 @@ insight-engine/
 │   ├── blog_routes.py             # 콘텐츠 생성, 파이프라인, MCP
 │   ├── auth_routes.py             # 인증, API 키, 사용량, 워크스페이스
 │   ├── advanced_routes.py         # 멀티스타일, 퓨전, QA
-│   ├── export_routes.py           # DOCX/MD/TXT/ZIP 내보내기
+│   ├── export_routes.py           # HTML/MD 내보내기 중심
 │   ├── utility_routes.py          # 헬스체크, 프로바이더, 캐시
 │   ├── analytics_routes.py        # 분석 대시보드
 │   ├── graphql_routes.py          # GraphQL API
@@ -165,14 +160,14 @@ insight-engine/
 │   ├── data/                      # Supabase, 스케줄, 알림 (33개)
 │   ├── integrations/              # Slack, Discord (7개)
 │   ├── payment/                   # 결제/구독 (9개)
-│   ├── export/                    # DOCX, EPUB (5개)
+│   ├── export/                    # 내보내기 유틸
 │   ├── auth/                      # 인증/OAuth (2개)
 │   ├── usage/                     # 사용량 관리 (5개)
 │   └── exceptions/                # 에러 처리
 │
 ├── prompts/                       # 프롬프트 시스템 v3.4
 │   ├── base.py                    # 기본 프롬프트 (Chain-of-Thought)
-│   └── styles/                    # 15개 UI 스타일 + 4개 내부 스타일
+│   └── styles/                    # 4개 UI 스타일 + 내부 변환 스타일
 │
 ├── frontend/                      # Next.js 16 + Tailwind v4 + shadcn
 │   ├── app/                       # App Router 페이지
@@ -195,11 +190,7 @@ insight-engine/
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **Gemini** (기본) | gemini-3.1-flash-lite | reasoning_effort 지원 |
-| **DeepSeek** | deepseek-chat (V3), deepseek-reasoner (R1) | |
-| **Zhipu AI** | GLM-4.7, GLM-4.5-Air | OpenAI 호환 API |
-| **Ollama** (로컬) | llama3.2, mistral, gemma2 | API 키 불필요 |
-| **OpenRouter** | 2600+ 모델 (Claude, GPT, Llama 등) | 단일 키로 모든 모델 접근 |
+| **ChatMock** (기본) | gpt-5.4-mini, gpt-5.4, gpt-5.5, gpt-5.3-codex-spark | OpenAI 호환 로컬 프록시 |
 
 ---
 
@@ -207,21 +198,10 @@ insight-engine/
 
 | Style | Description |
 |-------|-------------|
-| Blog+SEO | 검색 최적화 블로그 포스트 |
 | Summary | 핵심 요약 |
-| Tutorial | 단계별 튜토리얼 |
 | Q&A | 질문-답변 형식 |
-| App Ideas | 앱/서비스 아이디어 도출 |
-| YozmIT | IT 미디어 스타일 |
-| Brunch | 에세이/칼럼 |
-| Naver Popular | 네이버 인기글 스타일 |
-| SNS Post | 소셜 미디어용 |
-| Newsletter | 이메일 뉴스레터 |
-| Show Notes | 팟캐스트 쇼노트 |
-| Shorts Clip | 60초 Shorts 스크립트 (3-5개 클립) |
-| GEO | AI 검색엔진 최적화 (citations, entity tags) |
-| AI Course | 교육 코스 콘텐츠 |
 | Quiz | 객관식 학습 퀴즈 |
+| Retention Cards | 반복 학습 카드 |
 
 각 스타일은 독립 프롬프트 + 최적화된 temperature/max_tokens 설정.
 
@@ -246,10 +226,8 @@ insight-engine/
 | `/api/mindmap` | POST | 마인드맵 생성 |
 | `/api/extract-document` | POST | PDF/DOCX/PPTX 텍스트 추출 |
 | `/api/extract-audio` | POST | MP3/WAV/M4A/OGG/FLAC/AAC 음성 전사 |
-| `/api/qa-check` | POST | QA 게이트 검증 |
-| `/api/export/docx` | POST | DOCX 내보내기 |
+| `/api/export/html` | POST | HTML 내보내기 |
 | `/api/export/markdown` | POST | Markdown 내보내기 |
-| `/api/export/zip` | POST | ZIP 패키지 (전체 포맷) |
 
 ### Platform & Publishing
 
@@ -263,7 +241,6 @@ insight-engine/
 |----------|--------|-------------|
 | `/api/providers` | GET | 사용 가능한 AI 목록 |
 | `/api/providers/validate` | POST | API 키 유효성 검증 |
-| `/api/ollama/health` | GET | Ollama 상태 확인 |
 | `/api/knowledge/upload` | POST | RAG 문서 업로드 |
 | `/api/admin/dashboard` | GET | 운영 대시보드 |
 
@@ -271,17 +248,12 @@ insight-engine/
 
 ## Environment Variables
 
-### AI Provider Keys (최소 하나 필수)
+### AI Provider
 
 | Variable | Provider | Get Key |
 |----------|----------|---------|
-| `GEMINI_API_KEY` | Google Gemini | [aistudio.google.com](https://aistudio.google.com/apikey) |
-| `DEEPSEEK_API_KEY` | DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
-| `ZAI_API_KEY` | Zhipu AI (GLM) | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) |
-| `OLLAMA_BASE_URL` | Ollama (로컬) | `http://localhost:11434` |
-| `OPENROUTER_API_KEY` | OpenRouter | [openrouter.ai](https://openrouter.ai/keys) |
-| `OPENAI_API_KEY` | OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) |
-| `ANTHROPIC_API_KEY` | Anthropic | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| `CHATMOCK_BASE_URL` | ChatMock | `http://127.0.0.1:8000/v1` |
+| `CHATMOCK_API_KEY` | ChatMock | `dummy` |
 
 ### Optional
 
@@ -350,10 +322,9 @@ gunicorn app:app -b 0.0.0.0:5001
 
 | 문제 | 해결 |
 |------|------|
-| AI 서비스가 표시되지 않음 | `.env`에 해당 프로바이더 API 키 설정 확인 |
+| AI 서비스가 표시되지 않음 | `chatmock login` 후 `chatmock serve` 실행 및 `CHATMOCK_BASE_URL` 확인 |
 | YouTube 자막 수집 실패 | `SUPADATA_API_KEY` 설정 또는 프록시(`YT_HTTP_PROXY`) 사용 |
 | 댓글이 수집되지 않음 | `YOUTUBE_API_KEY` 설정 + YouTube Data API v3 활성화 확인 |
-| Ollama 연결 실패 | Ollama 서버 실행 확인 (`ollama serve`), URL 설정 확인 |
 | 프론트엔드 빈 화면 | 백엔드(`python app.py`)가 실행 중인지 확인 |
 
 ---

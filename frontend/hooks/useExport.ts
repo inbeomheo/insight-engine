@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { exportDocx } from '@/lib/api';
-import { EXPORT_HTML_STYLE, PRINT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
+import { EXPORT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
 import { toast } from 'sonner';
 import type { Report } from '@/lib/types';
 
@@ -27,15 +26,6 @@ function triggerDownload(blob: Blob, filename: string, successMsg: string): void
 }
 
 export function useExport() {
-  const downloadDocx = useCallback(async (report: Report) => {
-    try {
-      const blob = await exportDocx(report.title, report.content);
-      triggerDownload(blob, `${report.title.slice(0, 50)}.docx`, 'DOCX 다운로드 완료');
-    } catch {
-      toast.error('DOCX 내보내기 실패');
-    }
-  }, []);
-
   const downloadHtml = useCallback((report: Report) => {
     try {
       const html = `<!DOCTYPE html>
@@ -57,19 +47,5 @@ export function useExport() {
     }
   }, []);
 
-  const printPdf = useCallback((report: Report) => {
-    const w = window.open('', '_blank');
-    if (!w) {
-      toast.error('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
-      return;
-    }
-    w.document.write(`<!DOCTYPE html>
-<html><head><title>${report.title}</title>
-<style>${PRINT_HTML_STYLE}</style></head>
-<body>${sanitizeHtml(report.html || report.content)}</body></html>`);
-    w.document.close();
-    w.print();
-  }, []);
-
-  return { downloadDocx, downloadHtml, downloadMarkdown, printPdf };
+  return { downloadHtml, downloadMarkdown };
 }
