@@ -45,6 +45,7 @@
   8차: 설정/협업 영역에서 소비되지 않는 레거시 설정·구독·협업 컴포넌트 6개 제거 완료.
   9차: 운영/피드백/워크스페이스 영역에서 소비되지 않는 레거시 프론트 컴포넌트 8개 제거 완료.
   10차: 설정 영역에서 소비되지 않는 레거시 메모리·스니펫·지식그래프 컴포넌트와 전용 훅 제거 완료.
+  11차: 프론트에서 소비되지 않는 레거시 훅 7개와 고아 playlist 모달 상태 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -69,6 +70,12 @@
 
 ## Done
 
+- [x] 2026-07-10 chore(dead-code): 레거시 미사용 훅 7개 제거.
+  프론트 소스 전수 grep으로 실제 import/호출이 없는 훅 7개를 삭제하고, 함께 고아가 된 `playlist` 모달 상태를 UI 스토어에서 제거.
+  삭제 대상: useApiCall, useInfiniteHistory, useKeyboardShortcuts, useMindmap, useModal, useModifierPresets, usePipeline.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts note-list.test.ts useGenerate.test.tsx` 22 passed +
+  제거 대상 grep 0.
 - [x] 2026-07-10 feat(app): 커맨드 팔레트 진입 복구.
   `CommandPalette`가 import 0인 고아 상태라 Cmd/Ctrl+K 진입이 실제 앱에 나타나지 않던 문제를 홈에 동적 렌더링으로 복구.
   팔레트 내부에서 실제 모달이 없는 `재생목록 가져오기` 명령은 제거하고, 새 콘텐츠·LLMWiki·설정·템플릿·대시보드처럼 실제 동작하는 명령만 유지.

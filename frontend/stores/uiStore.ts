@@ -7,7 +7,6 @@ type ModalType =
   | 'customStyle'
   | 'mindmap'
   | 'prompt'
-  | 'playlist'
   | 'workspaceSettings'
   | 'templateGallery'
   | null;
@@ -36,7 +35,6 @@ interface UIState {
   setCustomStyleModalOpen: (v: boolean, editId?: string | null) => void;
   setMindmapModalOpen: (v: boolean, reportId?: string) => void;
   setPromptModalOpen: (v: boolean, prompt?: string) => void;
-  setPlaylistModalOpen: (v: boolean) => void;
   setWorkspaceSettingsOpen: (v: boolean) => void;
   setTemplateGalleryOpen: (v: boolean) => void;
 }
@@ -65,8 +63,6 @@ export const useUIStore = create<UIState>((set) => ({
     set({ activeModal: v ? 'mindmap' : null, activeMindmapReportId: reportId }),
   setPromptModalOpen: (v, prompt = '') =>
     set({ activeModal: v ? 'prompt' : null, activePrompt: prompt }),
-  setPlaylistModalOpen: (v) =>
-    set({ activeModal: v ? 'playlist' : null }),
   setWorkspaceSettingsOpen: (v) =>
     set({ activeModal: v ? 'workspaceSettings' : null }),
   setTemplateGalleryOpen: (v) =>
