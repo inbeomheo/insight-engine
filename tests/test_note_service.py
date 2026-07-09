@@ -98,6 +98,7 @@ def test_list_notes_newest_first(tmp_path, monkeypatch):
         "summary": "요약입니다.",
         "quote_count": 1,
         "learning_point_count": 1,
+        "review_question_count": 1,
         "created_at": "2026-07-04T12:00:00Z",
         "source": {"type": "article", "url": "https://example.com/a", "title": "테스트 글"},
     }

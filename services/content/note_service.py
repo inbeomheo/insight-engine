@@ -185,6 +185,7 @@ def list_notes() -> list[dict[str, Any]]:
             "summary": note.get("summary", ""),
             "quote_count": len(note.get("quotes", []) if isinstance(note.get("quotes"), list) else []),
             "learning_point_count": len(note.get("learning_points", []) if isinstance(note.get("learning_points"), list) else []),
+            "review_question_count": len(note.get("review_questions", []) if isinstance(note.get("review_questions"), list) else []),
             "created_at": note.get("created_at", ""),
             "source": source,
         })

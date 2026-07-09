@@ -1,4 +1,10 @@
 import type { NoteListItem } from './api';
+import {
+  getNoteStudySummary,
+  type NoteStudyCounts,
+  type NoteStudyProgress,
+  type NoteStudySummary,
+} from './note-study-progress';
 
 export type NoteFacet =
   | { type: 'concept'; value: string }
@@ -49,4 +55,40 @@ export function getFacetLabel(facet: NoteFacet): string {
   if (facet.type === 'concept') return `개념: ${facet.value}`;
   if (facet.type === 'tag') return `태그: ${facet.value}`;
   return `출처: ${facet.value}`;
+}
+
+export interface NoteStudyResumeItem {
+  note: NoteListItem;
+  summary: NoteStudySummary;
+  updatedAt: string | null;
+}
+
+export function getNoteStudyCounts(note: NoteListItem): NoteStudyCounts {
+  return {
+    learning: note.learning_point_count ?? 0,
+    review: note.review_question_count ?? 0,
+  };
+}
+
+export function getNotesWithStudyProgress(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  limit = 3
+): NoteStudyResumeItem[] {
+  return notes
+    .map((note) => {
+      const progress = progressByNote[note.id];
+      const summary = getNoteStudySummary(
+        progress ?? { learning: [], review: [], updatedAt: null },
+        getNoteStudyCounts(note)
+      );
+      return { note, summary, updatedAt: progress?.updatedAt ?? null };
+    })
+    .filter((item) => item.summary.total > 0 && item.summary.completed > 0)
+    .sort((a, b) => {
+      const timeA = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+      const timeB = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+      return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
+    })
+    .slice(0, limit);
 }

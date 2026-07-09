@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Brain, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,10 +13,14 @@ import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from 
 import {
   filterNotesByFacet,
   getFacetLabel,
+  getNotesWithStudyProgress,
   getNoteSourceLabel,
+  getNoteStudyCounts,
   sortNotesByRecent,
+  type NoteStudyResumeItem,
   type NoteFacet,
 } from '@/lib/note-list';
+import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 
 function SourceIcon({ type }: { type: string }) {
   if (type === 'youtube') return <Youtube className="h-4 w-4 text-red-500/80 shrink-0" />;
@@ -45,6 +49,7 @@ function topCounts(items: string[], limit: number): Array<{ label: string; count
 export default function NotesPage() {
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
+  const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +96,21 @@ export default function NotesPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (notes.length === 0) {
+      setStudyProgressByNote({});
+      return;
+    }
+    setStudyProgressByNote(
+      Object.fromEntries(
+        notes.map((note) => [
+          note.id,
+          readNoteStudyProgress(note.id, getNoteStudyCounts(note)),
+        ])
+      )
+    );
+  }, [notes]);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     void runSearch(query);
@@ -114,6 +134,7 @@ export default function NotesPage() {
   const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;
   const quoteCount = notes.reduce((sum, note) => sum + (note.quote_count ?? 0), 0);
   const learningPointCount = notes.reduce((sum, note) => sum + (note.learning_point_count ?? 0), 0);
+  const reviewQuestionCount = notes.reduce((sum, note) => sum + (note.review_question_count ?? 0), 0);
   const topConcepts = useMemo(
     () => topCounts(notes.flatMap((note) => note.key_concepts ?? []), 10),
     [notes],
@@ -135,6 +156,10 @@ export default function NotesPage() {
   const visibleNotes = useMemo(
     () => sortNotesByRecent(filterNotesByFacet(notes, activeFacet)),
     [notes, activeFacet],
+  );
+  const studyResumeNotes = useMemo(
+    () => getNotesWithStudyProgress(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
   );
 
   return (
@@ -165,7 +190,7 @@ export default function NotesPage() {
             <WikiStat icon={<BookOpen className="h-4 w-4" />} label="노트" value={notes.length} />
             <WikiStat icon={<Brain className="h-4 w-4" />} label="핵심 개념" value={conceptCount} />
             <WikiStat icon={<Quote className="h-4 w-4" />} label="근거 인용" value={quoteCount} />
-            <WikiStat icon={<Network className="h-4 w-4" />} label="학습 포인트" value={learningPointCount} />
+            <WikiStat icon={<Network className="h-4 w-4" />} label="학습 항목" value={learningPointCount + reviewQuestionCount} />
           </div>
         </div>
 
@@ -201,6 +226,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             recentNotes={recentNotes}
+            studyResumeNotes={studyResumeNotes}
             onFacetSelect={handleFacetSelect}
           />
         )}
@@ -279,12 +305,14 @@ function WikiMap({
   topTags,
   sourceGroups,
   recentNotes,
+  studyResumeNotes,
   onFacetSelect,
 }: {
   topConcepts: Array<{ label: string; count: number }>;
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   recentNotes: NoteListItem[];
+  studyResumeNotes: NoteStudyResumeItem[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
   return (
@@ -389,6 +417,48 @@ function WikiMap({
             </ul>
           </CardContent>
         </Card>
+
+        {studyResumeNotes.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5 py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">이어 복습</h2>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                최근 체크한 학습 노트를 바로 이어서 마무리하세요.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {studyResumeNotes.map((item) => (
+                  <li key={item.note.id}>
+                    <Link
+                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                      className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {item.note.title || '제목 없음'}
+                        </p>
+                        <span className="shrink-0 text-[10px] font-semibold text-primary">
+                          {item.summary.percent}%
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${item.summary.percent}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {item.summary.completed}/{item.summary.total} 완료
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </section>
   );
@@ -452,6 +522,10 @@ function NotesList({ notes, emptyText }: { notes: NoteListItem[]; emptyText?: st
                       <span className="inline-flex items-center gap-1">
                         <Network className="h-3 w-3" />
                         포인트 {note.learning_point_count ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        질문 {note.review_question_count ?? 0}
                       </span>
                     </div>
                   </div>

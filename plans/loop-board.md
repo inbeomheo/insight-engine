@@ -57,10 +57,17 @@
   2차: `/notes` 홈에 개념 지도, 태그 탐색, 출처 구성, 최근 학습 흐름 추가 완료.
   3차: `/notes/[id]`에 문서 목차와 섹션 앵커를 추가해 위키 문서처럼 이동 가능하게 개선 완료.
   4차: `/notes` 홈의 개념·태그·출처를 로컬 필터로 연결하고 활성 필터 요약/해제 UX를 추가.
+  5차: `/notes` 홈에 브라우저 로컬 복습 기록 기반 이어 복습 카드와 노트별 복습 질문 수 표시를 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 지식위키 홈 이어 복습 카드 추가.
+  노트 상세에서 저장한 브라우저 로컬 복습 진행 상태를 `/notes` 홈에서 읽어 최근 체크한 노트를 이어 복습 카드로 노출.
+  노트 목록 API와 프론트 타입에 `review_question_count`를 추가해 학습 포인트+복습 질문 기준의 진행률 계산을 안정화.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-outline.test.ts` 10 passed +
+  `.venv\Scripts\python.exe -m pytest tests/test_note_service.py tests/test_notes_routes.py -q -p no:cacheprovider` 30 passed.
 - [x] 2026-07-10 feat(notes): 노트 상세 복습 진행 상태 추가.
   `/notes/[id]`에서 학습 포인트와 복습 질문을 체크하며 학습 진행률을 볼 수 있게 하고, 진행 상태를 브라우저 로컬 저장소에 보존.
   공용 `note-study-progress` 유틸과 단위 테스트를 추가해 인덱스 정규화, 토글, 저장/초기화 경로를 검증.

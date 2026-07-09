@@ -305,6 +305,7 @@ def test_get_notes_lists_newest_first_and_detail(tmp_path, monkeypatch):
     assert listed[0]["key_concepts"] == ["개념"]
     assert listed[0]["quote_count"] == 1
     assert listed[0]["learning_point_count"] == 1
+    assert listed[0]["review_question_count"] == 1
     assert detail_resp.status_code == 200
     detail = detail_resp.get_json()
     assert detail["id"] == "new"

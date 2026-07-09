@@ -3,7 +3,9 @@ import type { NoteListItem } from './api';
 import {
   filterNotesByFacet,
   getFacetLabel,
+  getNotesWithStudyProgress,
   getNoteSourceLabel,
+  getNoteStudyCounts,
   sortNotesByRecent,
 } from './note-list';
 
@@ -56,5 +58,40 @@ describe('note-list', () => {
 
   it('builds readable active facet labels', () => {
     expect(getFacetLabel({ type: 'tag', value: 'AI' })).toBe('태그: AI');
+  });
+
+  it('builds study resume items from local progress', () => {
+    const source = note({
+      id: 'study',
+      learning_point_count: 3,
+      review_question_count: 2,
+      created_at: '2026-07-10T02:00:00Z',
+    });
+    const stale = note({
+      id: 'stale',
+      learning_point_count: 1,
+      review_question_count: 0,
+      created_at: '2026-07-10T03:00:00Z',
+    });
+
+    expect(getNoteStudyCounts(source)).toEqual({ learning: 3, review: 2 });
+    expect(
+      getNotesWithStudyProgress([source, stale], {
+        study: { learning: [0, 2], review: [1], updatedAt: '2026-07-10T05:00:00Z' },
+        stale: { learning: [], review: [], updatedAt: '2026-07-10T06:00:00Z' },
+      })
+    ).toEqual([
+      {
+        note: source,
+        summary: {
+          completed: 3,
+          total: 5,
+          percent: 60,
+          completedLearning: 2,
+          completedReview: 1,
+        },
+        updatedAt: '2026-07-10T05:00:00Z',
+      },
+    ]);
   });
 });

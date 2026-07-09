@@ -943,6 +943,7 @@ export interface NoteListItem {
   summary?: string;
   quote_count?: number;
   learning_point_count?: number;
+  review_question_count?: number;
   created_at: string;
   source: NoteSource;
 }
