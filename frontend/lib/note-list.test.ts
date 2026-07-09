@@ -4,6 +4,7 @@ import {
   filterNotesByStudyStatus,
   filterNotesByFacet,
   getFacetLabel,
+  getNotesNeedingReview,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
   getNoteStudyCounts,
@@ -97,6 +98,24 @@ describe('note-list', () => {
         updatedAt: '2026-07-10T05:00:00Z',
       },
     ]);
+  });
+
+  it('prioritizes unfinished study notes that need review', () => {
+    const lowOld = note({ id: 'low-old', learning_point_count: 4, review_question_count: 0 });
+    const lowNew = note({ id: 'low-new', learning_point_count: 4, review_question_count: 0 });
+    const high = note({ id: 'high', learning_point_count: 4, review_question_count: 0 });
+    const done = note({ id: 'done-review', learning_point_count: 2, review_question_count: 0 });
+    const fresh = note({ id: 'fresh', learning_point_count: 3, review_question_count: 0 });
+
+    expect(
+      getNotesNeedingReview([high, done, lowOld, fresh, lowNew], {
+        high: { learning: [0, 1, 2], review: [], updatedAt: '2026-07-10T07:00:00Z' },
+        'done-review': { learning: [0, 1], review: [], updatedAt: '2026-07-10T08:00:00Z' },
+        'low-old': { learning: [0], review: [], updatedAt: '2026-07-10T04:00:00Z' },
+        fresh: { learning: [], review: [], updatedAt: '2026-07-10T09:00:00Z' },
+        'low-new': { learning: [0], review: [], updatedAt: '2026-07-10T06:00:00Z' },
+      }).map((item) => item.note.id)
+    ).toEqual(['low-new', 'low-old', 'high']);
   });
 
   it('classifies and filters notes by study status', () => {

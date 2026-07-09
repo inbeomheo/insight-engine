@@ -14,6 +14,7 @@ import {
   filterNotesByFacet,
   filterNotesByStudyStatus,
   getFacetLabel,
+  getNotesNeedingReview,
   getNotesWithStudyProgress,
   getNoteSourceLabel,
   getNoteStudyCounts,
@@ -181,6 +182,10 @@ export default function NotesPage() {
     () => getNotesWithStudyProgress(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
+  const reviewNeededNotes = useMemo(
+    () => getNotesNeedingReview(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
   const studyStatusCounts = useMemo(
     () => getNoteStudyStatusCounts(notes, studyProgressByNote),
     [notes, studyProgressByNote],
@@ -250,6 +255,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             recentNotes={recentNotes}
+            reviewNeededNotes={reviewNeededNotes}
             studyResumeNotes={studyResumeNotes}
             onFacetSelect={handleFacetSelect}
           />
@@ -396,6 +402,7 @@ function WikiMap({
   topTags,
   sourceGroups,
   recentNotes,
+  reviewNeededNotes,
   studyResumeNotes,
   onFacetSelect,
 }: {
@@ -403,6 +410,7 @@ function WikiMap({
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   recentNotes: NoteListItem[];
+  reviewNeededNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -508,6 +516,51 @@ function WikiMap({
             </ul>
           </CardContent>
         </Card>
+
+        {reviewNeededNotes.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5 py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">복습 필요</h2>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                진행률이 낮은 미완료 노트부터 우선 이어가세요.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {reviewNeededNotes.map((item) => {
+                  const remaining = item.summary.total - item.summary.completed;
+                  return (
+                    <li key={item.note.id}>
+                      <Link
+                        href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                        className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-medium text-foreground">
+                            {item.note.title || '제목 없음'}
+                          </p>
+                          <span className="shrink-0 text-[10px] font-semibold text-primary">
+                            남은 {remaining}개
+                          </span>
+                        </div>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${item.summary.percent}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          {item.summary.completed}/{item.summary.total} 완료 · {item.summary.percent}%
+                        </p>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {studyResumeNotes.length > 0 && (
           <Card className="border-primary/20 bg-primary/5 py-4">

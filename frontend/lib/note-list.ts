@@ -136,3 +136,33 @@ export function getNotesWithStudyProgress(
     })
     .slice(0, limit);
 }
+
+export function getNotesNeedingReview(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  limit = 3
+): NoteStudyResumeItem[] {
+  return notes
+    .map((note) => {
+      const progress = progressByNote[note.id];
+      const summary = getNoteStudySummary(
+        progress ?? { learning: [], review: [], updatedAt: null },
+        getNoteStudyCounts(note)
+      );
+      return { note, summary, updatedAt: progress?.updatedAt ?? null };
+    })
+    .filter((item) => (
+      item.summary.total > 0 &&
+      item.summary.completed > 0 &&
+      item.summary.completed < item.summary.total
+    ))
+    .sort((a, b) => {
+      if (a.summary.percent !== b.summary.percent) {
+        return a.summary.percent - b.summary.percent;
+      }
+      const timeA = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+      const timeB = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+      return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
+    })
+    .slice(0, limit);
+}

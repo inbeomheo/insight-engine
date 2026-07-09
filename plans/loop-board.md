@@ -56,6 +56,7 @@
   5차: 노트 상세 복습 진행 상태를 Markdown 체크리스트로 복사하는 기능 추가.
   6차: 노트 상세 복습 질문 답변을 가리고 열어보는 능동 회상 학습 흐름 추가.
   7차: 노트 상세에서 완료한 학습 포인트/복습 질문을 숨기고 남은 항목에 집중하는 필터 추가.
+  8차: `/notes` 홈에 진행률이 낮은 미완료 노트를 우선 노출하는 `복습 필요` 카드를 추가.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -72,6 +73,11 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 복습 필요 우선순위 추가.
+  `/notes` 홈에 완료하지 못한 학습 노트만 모아 진행률 낮은 순(동률이면 최근 체크 순)으로 보여주는 `복습 필요` 카드를 추가.
+  공용 `note-list` 유틸에 미완료 복습 우선순위 함수를 추가하고, 완료/미시작 노트 제외와 정렬 기준을 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 21 passed.
 - [x] 2026-07-10 feat(notes): 문서 브리핑 추천 액션 강화.
   `/notes/[id]` 문서 브리핑의 첫 빠른 액션을 `추천:` CTA로 강조하고, 복습이 완료된 노트는 다시 복습으로 보내지 않고 근거 Q&A/관련 노트/인용 확장으로 이어지게 조정.
   공용 `note-wiki-brief` 테스트에 완료 상태 빠른 액션 경로를 추가해 학습 상태와 추천 액션이 어긋나지 않도록 검증.
