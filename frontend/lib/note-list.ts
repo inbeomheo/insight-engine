@@ -48,6 +48,25 @@ export function filterNotesByFacet(notes: NoteListItem[], facet: NoteFacet | nul
   return notes.filter((note) => noteMatchesFacet(note, facet));
 }
 
+export function buildNoteFacetHref(facet: NoteFacet): string {
+  const params = new URLSearchParams();
+  params.set(facet.type, facet.value);
+  return `/notes?${params.toString()}`;
+}
+
+export function parseNoteFacetSearchParams(
+  params: Pick<URLSearchParams, 'get'> | null | undefined
+): NoteFacet | null {
+  if (!params) return null;
+  const concept = params.get('concept')?.trim();
+  if (concept) return { type: 'concept', value: concept };
+  const tag = params.get('tag')?.trim();
+  if (tag) return { type: 'tag', value: tag };
+  const source = params.get('source')?.trim();
+  if (source) return { type: 'source', value: source };
+  return null;
+}
+
 export function sortNotesByRecent(notes: NoteListItem[]): NoteListItem[] {
   return [...notes].sort((a, b) => {
     const timeA = Date.parse(a.created_at);

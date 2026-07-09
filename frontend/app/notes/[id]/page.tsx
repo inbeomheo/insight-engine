@@ -38,6 +38,7 @@ import {
   type NoteStudyProgress,
 } from '@/lib/note-study-progress';
 import { getStyleLabel } from '@/lib/helpers';
+import { buildNoteFacetHref } from '@/lib/note-list';
 import type { Report } from '@/lib/types';
 import { useResultStore } from '@/stores/resultStore';
 
@@ -319,9 +320,15 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         {note.tags.length > 0 && (
           <div className="flex items-center gap-1.5 mt-3 flex-wrap">
             {note.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px]">
-                {tag}
-              </Badge>
+              <Link
+                key={tag}
+                href={buildNoteFacetHref({ type: 'tag', value: tag })}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Badge variant="secondary" className="cursor-pointer text-[10px] hover:bg-primary/10">
+                  {tag}
+                </Badge>
+              </Link>
             ))}
           </div>
         )}
@@ -478,9 +485,15 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
           <h2 className="text-sm font-semibold text-foreground mb-2.5">핵심 개념</h2>
           <div className="flex flex-wrap gap-2">
             {note.key_concepts.map((concept, idx) => (
-              <Badge key={`${concept}-${idx}`} variant="outline" className="text-xs px-2.5 py-1">
-                {concept}
-              </Badge>
+              <Link
+                key={`${concept}-${idx}`}
+                href={buildNoteFacetHref({ type: 'concept', value: concept })}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Badge variant="outline" className="cursor-pointer px-2.5 py-1 text-xs hover:border-primary/40 hover:text-primary">
+                  {concept}
+                </Badge>
+              </Link>
             ))}
           </div>
         </section>

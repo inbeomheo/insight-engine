@@ -83,10 +83,17 @@
   14차: `학습 큐` 접힘/펼침 상태를 브라우저 로컬 저장소에 보존해 지식위키 홈 단순화 상태를 유지.
   15차: `/notes` 홈의 개념·태그·출처 필터를 접을 수 있는 `지식 탐색` 패널로 묶어 초기 화면 밀도를 낮춤.
   16차: `/notes` 홈의 지식 탐색 패널에 개념별 관련 문서를 묶어 보여주는 `위키 인덱스`를 추가.
+  17차: `/notes/[id]`의 핵심 개념·태그를 `/notes` 필터 딥링크로 연결해 노트 상세에서 위키 인덱스로 되돌아가는 탐색 흐름 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 위키 필터 딥링크 추가.
+  `/notes/[id]`의 핵심 개념·태그 배지를 `/notes?concept=...`, `/notes?tag=...` 딥링크로 연결하고, `/notes` 홈이 URL 쿼리에서 개념/태그/출처 필터를 복원하도록 개선.
+  공용 `note-list` 유틸에 위키 필터 링크 생성/파싱 함수를 추가하고, 인코딩·우선순위·빈 값 경로를 단위 테스트로 검증.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 33 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 다음 복습 CTA 추가.
   `/notes/[id]` 복습 진행 카드에 첫 미완료 학습 포인트/복습 질문을 자동 안내하는 `다음 복습` CTA를 추가.
   공용 `note-study-progress` 유틸에 다음 학습 대상 계산을 추가하고, 학습 우선/질문 폴백/전체 완료 상태를 단위 테스트로 검증.

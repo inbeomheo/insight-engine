@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, FileText, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,8 @@ import {
   type NoteStudyCardKind,
   type NoteFacet,
   type NoteConceptCluster,
+  buildNoteFacetHref,
+  parseNoteFacetSearchParams,
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 
@@ -78,6 +81,7 @@ function topCounts(items: string[], limit: number): Array<{ label: string; count
 }
 
 export default function NotesPage() {
+  const router = useRouter();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
@@ -108,6 +112,21 @@ export default function NotesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const syncFacetFromUrl = () => {
+      const facet = parseNoteFacetSearchParams(new URLSearchParams(window.location.search));
+      setActiveFacet(facet);
+      if (facet) {
+        setSearchResults(null);
+        setActiveStudyStatus(null);
+      }
+    };
+
+    syncFacetFromUrl();
+    window.addEventListener('popstate', syncFacetFromUrl);
+    return () => window.removeEventListener('popstate', syncFacetFromUrl);
+  }, []);
+
   const runSearch = useCallback(async (term: string) => {
     const q = term.trim();
     if (!q) {
@@ -117,6 +136,7 @@ export default function NotesPage() {
     setQuery(q);
     setActiveFacet(null);
     setActiveStudyStatus(null);
+    router.replace('/notes', { scroll: false });
     setSearching(true);
     setError(null);
     try {
@@ -127,7 +147,7 @@ export default function NotesPage() {
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (notes.length === 0) {
@@ -152,23 +172,27 @@ export default function NotesPage() {
   const handleClear = useCallback(() => {
     setQuery('');
     setSearchResults(null);
-  }, []);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
 
   const handleFacetSelect = useCallback((facet: NoteFacet) => {
     setSearchResults(null);
     setActiveFacet(facet);
     setActiveStudyStatus(null);
-  }, []);
+    router.replace(buildNoteFacetHref(facet), { scroll: false });
+  }, [router]);
 
   const handleFacetClear = useCallback(() => {
     setActiveFacet(null);
-  }, []);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
 
   const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
     setSearchResults(null);
     setActiveFacet(null);
     setActiveStudyStatus((current) => current === status ? null : status);
-  }, []);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
 
   const isSearchMode = searchResults !== null;
   const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;

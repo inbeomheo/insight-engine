@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NoteListItem } from './api';
 import {
+  buildNoteFacetHref,
   filterNotesByStudyStatus,
   filterNotesByFacet,
   getCompletedStudyItems,
@@ -18,6 +19,7 @@ import {
   getRecentStudyResumeItems,
   getStudyStartCandidates,
   parseNotePanelOpen,
+  parseNoteFacetSearchParams,
   parseNoteStudyQueueOpen,
   serializeNotePanelOpen,
   serializeNoteStudyQueueOpen,
@@ -65,6 +67,23 @@ describe('note-list', () => {
     expect(filterNotesByFacet(notes, { type: 'tag', value: '학습' }).map((n) => n.id)).toEqual(['memo']);
     expect(filterNotesByFacet(notes, { type: 'source', value: 'YouTube' }).map((n) => n.id)).toEqual(['rag']);
     expect(filterNotesByFacet(notes, null)).toHaveLength(2);
+  });
+
+  it('builds and parses wiki facet deep links', () => {
+    expect(buildNoteFacetHref({ type: 'concept', value: 'RAG 검색' })).toBe('/notes?concept=RAG+%EA%B2%80%EC%83%89');
+    expect(parseNoteFacetSearchParams(new URLSearchParams('concept=RAG&tag=AI'))).toEqual({
+      type: 'concept',
+      value: 'RAG',
+    });
+    expect(parseNoteFacetSearchParams(new URLSearchParams('tag=%ED%95%99%EC%8A%B5'))).toEqual({
+      type: 'tag',
+      value: '학습',
+    });
+    expect(parseNoteFacetSearchParams(new URLSearchParams('source=YouTube'))).toEqual({
+      type: 'source',
+      value: 'YouTube',
+    });
+    expect(parseNoteFacetSearchParams(new URLSearchParams('concept=   '))).toBeNull();
   });
 
   it('sorts notes by recent created date first', () => {
