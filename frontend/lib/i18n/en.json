@@ -46,24 +46,11 @@
   },
   "emptyState": {
     "title": "Analyze videos, text, and PDFs",
-    "description": "Paste a URL or add text/PDF content and AI will generate\nsummaries, tutorials, and learning-ready drafts"
+    "description": "Paste a URL or add text/PDF content and AI will generate\\nsummaries, Q&A, and learning-ready drafts"
   },
   "styles": {
-    "blog_seo": "Blog+SEO",
     "summary": "Summary",
-    "tutorial": "Tutorial",
     "qna": "Q&A",
-    "app_ideas": "App Ideas",
-    "yozm_it": "Tech Article",
-    "brunch_essay": "Essay",
-    "naver_popular": "Popular Post",
-    "sns_post": "SNS Post",
-    "newsletter": "Newsletter",
-    "show_notes": "Show Notes",
-    "shorts_script": "Shorts Script",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "Comment Summary",
-    "course": "Course Notes",
     "quiz": "Quiz",
     "retention_cards": "Retention Cards"
   },
@@ -124,13 +111,14 @@
     "description": "Analyze YouTube videos with AI\nand generate content in various formats",
     "noServer": "Please check if the Flask server is running.",
     "modelCount": "{count} models",
-    "start": "Get Started"
+    "start": "Get Started",
+    "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards."
   },
   "tour": {
     "step1Title": "Enter URL",
     "step1Desc": "Enter a YouTube URL or web page address to analyze.",
     "step2Title": "Choose Style",
-    "step2Desc": "Select your desired content style: blog, summary, tutorial, etc.",
+    "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards.",
     "step3Title": "Start Generation",
     "step3Desc": "Click the generate button and AI will create your content.",
     "step4Title": "Use Results",

@@ -160,7 +160,7 @@ function TutorialVisualCueSection({
             <ImageIcon className="h-4 w-4" />
           </span>
           <div>
-            <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">튜토리얼 사진 가이드</h4>
+            <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">시각 자료 가이드</h4>
             <p className="text-xs text-muted-foreground">
               {visibleSlides.length > 0 ? '영상에서 실제 화면을 추출했어.' : '각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.'}
             </p>
@@ -1013,7 +1013,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
             />
           )}
 
-          {/* FAQ + CTA 섹션 (blog_seo, geo_seo 스타일) */}
+          {/* FAQ + CTA 섹션 (기존 결과 호환) */}
           {(report.faq_schema || report.cta) && (
             <FaqCtaSection faqSchema={report.faq_schema} cta={report.cta} content={report.content} />
           )}

@@ -46,24 +46,11 @@
   },
   "emptyState": {
     "title": "영상·텍스트·PDF를 분석해보세요",
-    "description": "URL을 붙여넣거나 텍스트/PDF를 넣으면 AI가 요약, 튜토리얼 등\n다양한 형식의 학습 콘텐츠를 자동 생성합니다"
+    "description": "URL을 붙여넣거나 텍스트/PDF를 넣으면 AI가 요약·Q&A 등\\n학습용 콘텐츠를 자동 생성합니다"
   },
   "styles": {
-    "blog_seo": "블로그+SEO",
     "summary": "요약",
-    "tutorial": "튜토리얼",
     "qna": "Q&A",
-    "app_ideas": "앱 아이디어",
-    "yozm_it": "요즘IT",
-    "brunch_essay": "브런치 에세이",
-    "naver_popular": "네이버 인기글",
-    "sns_post": "SNS 포스트",
-    "newsletter": "뉴스레터",
-    "show_notes": "쇼노트",
-    "shorts_script": "Shorts 스크립트",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "댓글 요약",
-    "course": "강의 노트",
     "quiz": "퀴즈",
     "retention_cards": "리텐션 카드"
   },
@@ -124,13 +111,14 @@
     "description": "YouTube 영상을 AI로 분석하여\n다양한 형식의 콘텐츠를 생성합니다",
     "noServer": "Flask 서버가 실행 중인지 확인하세요.",
     "modelCount": "{count}개 모델",
-    "start": "시작하기"
+    "start": "시작하기",
+    "step2Desc": "요약, Q&A, 퀴즈, 리텐션 카드 중 원하는 학습 스타일을 선택하세요."
   },
   "tour": {
     "step1Title": "URL 입력",
     "step1Desc": "분석할 YouTube URL이나 웹페이지 주소를 입력하세요.",
     "step2Title": "스타일 선택",
-    "step2Desc": "블로그, 요약, 튜토리얼 등 원하는 콘텐츠 스타일을 선택하세요.",
+    "step2Desc": "요약, Q&A, 퀴즈, 리텐션 카드 중 원하는 학습 스타일을 선택하세요.",
     "step3Title": "생성 시작",
     "step3Desc": "생성 버튼을 클릭하면 AI가 콘텐츠를 자동 생성합니다.",
     "step4Title": "결과 활용",

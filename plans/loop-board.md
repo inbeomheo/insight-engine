@@ -32,6 +32,7 @@
   19차: 대시보드와 모바일 목록/대시보드에 학습 노트 연결 수·최근 연결 노트·노트 연결 배지를 노출.
   20차: `/notes/[id]`에서 연결된 로컬 결과 카드를 감지해 홈의 원본 결과로 되돌아가는 CTA를 제공.
   21차: 홈에 커맨드 팔레트를 다시 렌더링하고, 실제 화면이 없는 재생목록 명령을 제거해 Cmd/Ctrl+K 진입을 복구.
+  22차: 템플릿/설정/온보딩/파이프라인의 레거시 15개 스타일 노출을 4개 학습 스타일 기준으로 정리.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -82,6 +83,12 @@
 
 ## Done
 
+- [x] 2026-07-10 feat(styles): 레거시 스타일 노출 단순화.
+  템플릿 갤러리/커스텀 스타일/설정 모달/온보딩/파이프라인의 15개 스타일 잔여 노출을 공용 `STYLE_OPTIONS` 4개 기준으로 정리.
+  기존 결과 렌더링 호환 조건은 유지하되, 사용자에게 보이는 블로그/튜토리얼 중심 문구는 학습 노트/요약/Q&A/퀴즈/리텐션 카드 중심으로 교체.
+  검증: 레거시 스타일명 grep 결과가 기존 결과 호환 조건문만 남음 + `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts useGenerate.test.tsx` 32 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 chore(dead-code): 레거시 프론트 컴포넌트 15개 제거.
   프론트 앱/테스트 전수 grep으로 실제 참조가 없는 레거시 컴포넌트 15개를 삭제.
   삭제 대상: PresenceCursors, ModifierPresets, GraphVisualization, PipelineMonitor, AudioPlayer, ChannelAnalysis, CitationLink, CompareView, ContextMenu, FavoriteButton, InlineEditor, MultiLangView, ProgressiveSummary, TranscriptSourceBadge, VersionHistory.

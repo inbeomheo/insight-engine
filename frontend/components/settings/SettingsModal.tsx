@@ -16,27 +16,11 @@ import { formatModelSize } from '@/lib/utils';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Trash2, Bot, Brain, RotateCcw } from 'lucide-react';
 import { clearCache, getStyleMemory, updateStyleMemory, resetStyleMemory, type StyleProfile } from '@/lib/api';
+import { STYLE_OPTIONS } from '@/lib/constants';
 import { toast } from 'sonner';
 import LanguageSwitcher from './LanguageSwitcher';
 
-const STYLE_LABELS: Record<string, string> = {
-  blog_seo: '블로그+SEO',
-  summary: '요약',
-  tutorial: '튜토리얼',
-  qna: 'Q&A',
-  app_ideas: '앱 아이디어',
-  yozm_it: '요즘IT',
-  brunch_essay: '브런치 에세이',
-  naver_popular: '네이버 인기글',
-  sns_post: 'SNS 게시글',
-  newsletter: '뉴스레터',
-  show_notes: '쇼 노트',
-  shorts_script: '쇼츠 클립',
-  geo_seo: 'GEO 검색',
-  course: 'AI 코스',
-  quiz: '퀴즈',
-  retention_cards: '리텐션 카드',
-};
+const STYLE_LABELS = Object.fromEntries(STYLE_OPTIONS.map((style) => [style.id, style.label]));
 
 const LENGTH_LABELS: Record<string, string> = {
   short: '짧게',
@@ -136,6 +120,7 @@ export default function SettingsModal() {
   }
 
   const topStyles = (profile?.preferred_styles || [])
+    .filter((style) => STYLE_LABELS[style.style_id])
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
@@ -234,7 +219,7 @@ export default function SettingsModal() {
               <p className="font-medium text-muted-foreground mb-2">학습된 선호도 ({profile.generation_count}회 생성)</p>
               {topStyles.length > 0 && (
                 <p>
-                  자주 사용: {topStyles.map((s) => STYLE_LABELS[s.style_id] || s.style_id).join(', ')}
+                  자주 사용: {topStyles.map((s) => STYLE_LABELS[s.style_id]).join(', ')}
                 </p>
               )}
               <p>선호 길이: {LENGTH_LABELS[profile.preferred_length] || profile.preferred_length}</p>

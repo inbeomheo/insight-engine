@@ -46,24 +46,11 @@
   },
   "emptyState": {
     "title": "動画・テキスト・PDFを分析しましょう",
-    "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やチュートリアルなど\n学習向けコンテンツを自動生成します"
+    "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やQ&Aなど\\n学習向けコンテンツを自動生成します"
   },
   "styles": {
-    "blog_seo": "ブログ+SEO",
     "summary": "要約",
-    "tutorial": "チュートリアル",
     "qna": "Q&A",
-    "app_ideas": "アプリアイデア",
-    "yozm_it": "IT記事",
-    "brunch_essay": "エッセイ",
-    "naver_popular": "人気記事",
-    "sns_post": "SNS投稿",
-    "newsletter": "ニュースレター",
-    "show_notes": "ショーノート",
-    "shorts_script": "ショートスクリプト",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "コメント要約",
-    "course": "講義ノート",
     "quiz": "クイズ",
     "retention_cards": "復習カード"
   },
@@ -124,13 +111,14 @@
     "description": "YouTubeの動画をAIで分析して\nさまざまな形式のコンテンツを生成します",
     "noServer": "Flaskサーバーが実行中か確認してください。",
     "modelCount": "{count}モデル",
-    "start": "始める"
+    "start": "始める",
+    "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。"
   },
   "tour": {
     "step1Title": "URL入力",
     "step1Desc": "分析したいYouTube URLやWebページのアドレスを入力してください。",
     "step2Title": "スタイル選択",
-    "step2Desc": "ブログ、要約、チュートリアルなど、お好みのスタイルを選択してください。",
+    "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。",
     "step3Title": "生成開始",
     "step3Desc": "生成ボタンをクリックすると、AIがコンテンツを自動生成します。",
     "step4Title": "結果の活用",
