@@ -15,12 +15,12 @@ import {
   filterNotesByStudyStatus,
   getFacetLabel,
   getNotesNeedingReview,
-  getNotesWithStudyProgress,
   getNoteSourceLabel,
   getNoteStudyCounts,
   getNoteStudyStatus,
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
+  getRecentStudyResumeItems,
   sortNotesByRecent,
   type NoteStudyStatus,
   type NoteStudyResumeItem,
@@ -178,13 +178,18 @@ export default function NotesPage() {
     ),
     [notes, activeFacet, activeStudyStatus, studyProgressByNote],
   );
-  const studyResumeNotes = useMemo(
-    () => getNotesWithStudyProgress(notes, studyProgressByNote, 3),
-    [notes, studyProgressByNote],
-  );
   const reviewNeededNotes = useMemo(
     () => getNotesNeedingReview(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
+  );
+  const studyResumeNotes = useMemo(
+    () => getRecentStudyResumeItems(
+      notes,
+      studyProgressByNote,
+      new Set(reviewNeededNotes.map((item) => item.note.id)),
+      3
+    ),
+    [notes, studyProgressByNote, reviewNeededNotes],
   );
   const studyStatusCounts = useMemo(
     () => getNoteStudyStatusCounts(notes, studyProgressByNote),
@@ -567,38 +572,41 @@ function WikiMap({
             <CardContent className="px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-primary/70" />
-                <h2 className="text-sm font-semibold text-foreground">이어 복습</h2>
+                <h2 className="text-sm font-semibold text-foreground">최근 복습</h2>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                최근 체크한 학습 노트를 바로 이어서 마무리하세요.
+                우선 복습 목록과 겹치지 않는 최근 체크 노트입니다.
               </p>
               <ul className="mt-3 space-y-2">
-                {studyResumeNotes.map((item) => (
-                  <li key={item.note.id}>
-                    <Link
-                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
-                      className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-xs font-medium text-foreground">
-                          {item.note.title || '제목 없음'}
+                {studyResumeNotes.map((item) => {
+                  const completed = item.summary.completed >= item.summary.total;
+                  return (
+                    <li key={item.note.id}>
+                      <Link
+                        href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                        className="block rounded-lg border border-primary/20 bg-background/80 px-3 py-2 transition-colors hover:border-primary/50"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-xs font-medium text-foreground">
+                            {item.note.title || '제목 없음'}
+                          </p>
+                          <span className="shrink-0 text-[10px] font-semibold text-primary">
+                            {completed ? '완료' : `${item.summary.percent}%`}
+                          </span>
+                        </div>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${item.summary.percent}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          {item.summary.completed}/{item.summary.total} 완료
                         </p>
-                        <span className="shrink-0 text-[10px] font-semibold text-primary">
-                          {item.summary.percent}%
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${item.summary.percent}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {item.summary.completed}/{item.summary.total} 완료
-                      </p>
-                    </Link>
-                  </li>
-                ))}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>

@@ -11,6 +11,7 @@ import {
   getNoteStudyStatus,
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
+  getRecentStudyResumeItems,
   sortNotesByRecent,
 } from './note-list';
 
@@ -116,6 +117,27 @@ describe('note-list', () => {
         'low-new': { learning: [0], review: [], updatedAt: '2026-07-10T06:00:00Z' },
       }).map((item) => item.note.id)
     ).toEqual(['low-new', 'low-old', 'high']);
+  });
+
+  it('builds recent resume items without duplicated priority review notes', () => {
+    const priority = note({ id: 'priority', learning_point_count: 4, review_question_count: 0 });
+    const recentDone = note({ id: 'recent-done', learning_point_count: 2, review_question_count: 0 });
+    const older = note({ id: 'older', learning_point_count: 2, review_question_count: 0 });
+    const backfill = note({ id: 'backfill', learning_point_count: 2, review_question_count: 0 });
+
+    expect(
+      getRecentStudyResumeItems(
+        [older, priority, backfill, recentDone],
+        {
+          priority: { learning: [0], review: [], updatedAt: '2026-07-10T09:00:00Z' },
+          'recent-done': { learning: [0, 1], review: [], updatedAt: '2026-07-10T08:00:00Z' },
+          older: { learning: [0], review: [], updatedAt: '2026-07-10T07:00:00Z' },
+          backfill: { learning: [0], review: [], updatedAt: '2026-07-10T06:00:00Z' },
+        },
+        new Set(['priority']),
+        3
+      ).map((item) => item.note.id)
+    ).toEqual(['recent-done', 'older', 'backfill']);
   });
 
   it('classifies and filters notes by study status', () => {

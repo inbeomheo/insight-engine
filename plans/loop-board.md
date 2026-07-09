@@ -69,10 +69,17 @@
   7차: `/notes/[id]` 문서 브리핑 카드로 출처·문서 구성·학습 상태·근거 연결을 한눈에 요약.
   8차: `/notes/[id]` 문서 브리핑에 다음 행동 카드를 추가해 복습 시작/남은 항목/완료 상태를 바로 안내.
   9차: `/notes/[id]` 문서 브리핑 빠른 액션을 학습 상태와 맞추고 첫 액션을 추천 CTA로 강조.
+  10차: `/notes` 홈의 `복습 필요`와 `최근 복습` 목록을 분리해 같은 노트가 반복 노출되지 않도록 정리.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
 
+- [x] 2026-07-10 feat(notes): 복습 카드 중복 노출 정리.
+  `/notes` 홈에서 `복습 필요` 우선순위 카드에 표시된 노트를 `최근 복습` 카드에서 제외해 같은 노트가 반복되지 않도록 정리.
+  최근 복습 카드는 완료 노트를 `완료` 배지로 표시하고, 공용 `note-list` 유틸에 제외 목록 기반 최근 복습 계산을 추가.
+  검증: `cd frontend && npx.cmd tsc --noEmit` 통과 +
+  `cd frontend && npm.cmd test -- note-list.test.ts note-study-progress.test.ts note-review-session.test.ts note-wiki-brief.test.ts note-outline.test.ts` 22 passed +
+  `git diff --check` 통과.
 - [x] 2026-07-10 feat(notes): 복습 필요 우선순위 추가.
   `/notes` 홈에 완료하지 못한 학습 노트만 모아 진행률 낮은 순(동률이면 최근 체크 순)으로 보여주는 `복습 필요` 카드를 추가.
   공용 `note-list` 유틸에 미완료 복습 우선순위 함수를 추가하고, 완료/미시작 노트 제외와 정렬 기준을 단위 테스트로 검증.

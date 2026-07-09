@@ -114,20 +114,25 @@ export function filterNotesByStudyStatus(
   return notes.filter((note) => getNoteStudyStatus(note, progressByNote[note.id]) === status);
 }
 
+function getStudyResumeItem(
+  note: NoteListItem,
+  progressByNote: Record<string, NoteStudyProgress>
+): NoteStudyResumeItem {
+  const progress = progressByNote[note.id];
+  const summary = getNoteStudySummary(
+    progress ?? { learning: [], review: [], updatedAt: null },
+    getNoteStudyCounts(note)
+  );
+  return { note, summary, updatedAt: progress?.updatedAt ?? null };
+}
+
 export function getNotesWithStudyProgress(
   notes: NoteListItem[],
   progressByNote: Record<string, NoteStudyProgress>,
   limit = 3
 ): NoteStudyResumeItem[] {
   return notes
-    .map((note) => {
-      const progress = progressByNote[note.id];
-      const summary = getNoteStudySummary(
-        progress ?? { learning: [], review: [], updatedAt: null },
-        getNoteStudyCounts(note)
-      );
-      return { note, summary, updatedAt: progress?.updatedAt ?? null };
-    })
+    .map((note) => getStudyResumeItem(note, progressByNote))
     .filter((item) => item.summary.total > 0 && item.summary.completed > 0)
     .sort((a, b) => {
       const timeA = a.updatedAt ? Date.parse(a.updatedAt) : 0;
@@ -143,14 +148,7 @@ export function getNotesNeedingReview(
   limit = 3
 ): NoteStudyResumeItem[] {
   return notes
-    .map((note) => {
-      const progress = progressByNote[note.id];
-      const summary = getNoteStudySummary(
-        progress ?? { learning: [], review: [], updatedAt: null },
-        getNoteStudyCounts(note)
-      );
-      return { note, summary, updatedAt: progress?.updatedAt ?? null };
-    })
+    .map((note) => getStudyResumeItem(note, progressByNote))
     .filter((item) => (
       item.summary.total > 0 &&
       item.summary.completed > 0 &&
@@ -164,5 +162,16 @@ export function getNotesNeedingReview(
       const timeB = b.updatedAt ? Date.parse(b.updatedAt) : 0;
       return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
     })
+    .slice(0, limit);
+}
+
+export function getRecentStudyResumeItems(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  excludedNoteIds: ReadonlySet<string> = new Set(),
+  limit = 3
+): NoteStudyResumeItem[] {
+  return getNotesWithStudyProgress(notes, progressByNote, notes.length)
+    .filter((item) => !excludedNoteIds.has(item.note.id))
     .slice(0, limit);
 }
