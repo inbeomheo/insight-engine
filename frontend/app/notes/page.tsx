@@ -21,6 +21,7 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
+  getStudyStartCandidates,
   sortNotesByRecent,
   type NoteStudyStatus,
   type NoteStudyResumeItem,
@@ -182,6 +183,10 @@ export default function NotesPage() {
     () => getNotesNeedingReview(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
+  const studyStartNotes = useMemo(
+    () => getStudyStartCandidates(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
   const studyResumeNotes = useMemo(
     () => getRecentStudyResumeItems(
       notes,
@@ -260,6 +265,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             recentNotes={recentNotes}
+            studyStartNotes={studyStartNotes}
             reviewNeededNotes={reviewNeededNotes}
             studyResumeNotes={studyResumeNotes}
             onFacetSelect={handleFacetSelect}
@@ -407,6 +413,7 @@ function WikiMap({
   topTags,
   sourceGroups,
   recentNotes,
+  studyStartNotes,
   reviewNeededNotes,
   studyResumeNotes,
   onFacetSelect,
@@ -415,6 +422,7 @@ function WikiMap({
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   recentNotes: NoteListItem[];
+  studyStartNotes: NoteStudyResumeItem[];
   reviewNeededNotes: NoteStudyResumeItem[];
   studyResumeNotes: NoteStudyResumeItem[];
   onFacetSelect: (facet: NoteFacet) => void;
@@ -521,6 +529,42 @@ function WikiMap({
             </ul>
           </CardContent>
         </Card>
+
+        {studyStartNotes.length > 0 && (
+          <Card className="py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">복습 시작</h2>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                아직 체크하지 않은 최근 학습 노트부터 시작하세요.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {studyStartNotes.map((item) => (
+                  <li key={item.note.id}>
+                    <Link
+                      href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                      className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-medium text-foreground">
+                          {item.note.title || '제목 없음'}
+                        </p>
+                        <span className="shrink-0 text-[10px] font-semibold text-primary">
+                          학습 {item.summary.total}개
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {formatDate(item.note.created_at)}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {reviewNeededNotes.length > 0 && (
           <Card className="border-primary/20 bg-primary/5 py-4">

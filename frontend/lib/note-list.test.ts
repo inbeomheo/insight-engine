@@ -12,6 +12,7 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
+  getStudyStartCandidates,
   sortNotesByRecent,
 } from './note-list';
 
@@ -138,6 +139,43 @@ describe('note-list', () => {
         3
       ).map((item) => item.note.id)
     ).toEqual(['recent-done', 'older', 'backfill']);
+  });
+
+  it('recommends recent not-started notes as study start candidates', () => {
+    const newer = note({
+      id: 'newer',
+      learning_point_count: 1,
+      review_question_count: 1,
+      created_at: '2026-07-10T09:00:00Z',
+    });
+    const older = note({
+      id: 'older-start',
+      learning_point_count: 2,
+      review_question_count: 0,
+      created_at: '2026-07-10T07:00:00Z',
+    });
+    const started = note({
+      id: 'started',
+      learning_point_count: 2,
+      review_question_count: 0,
+      created_at: '2026-07-10T10:00:00Z',
+    });
+    const empty = note({
+      id: 'empty',
+      learning_point_count: 0,
+      review_question_count: 0,
+      created_at: '2026-07-10T11:00:00Z',
+    });
+
+    expect(
+      getStudyStartCandidates(
+        [empty, started, older, newer],
+        {
+          started: { learning: [0], review: [], updatedAt: '2026-07-10T10:30:00Z' },
+        },
+        2
+      ).map((item) => item.note.id)
+    ).toEqual(['newer', 'older-start']);
   });
 
   it('classifies and filters notes by study status', () => {

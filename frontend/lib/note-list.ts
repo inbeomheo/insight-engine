@@ -165,6 +165,22 @@ export function getNotesNeedingReview(
     .slice(0, limit);
 }
 
+export function getStudyStartCandidates(
+  notes: NoteListItem[],
+  progressByNote: Record<string, NoteStudyProgress>,
+  limit = 3
+): NoteStudyResumeItem[] {
+  return notes
+    .map((note) => getStudyResumeItem(note, progressByNote))
+    .filter((item) => item.summary.total > 0 && item.summary.completed === 0)
+    .sort((a, b) => {
+      const timeA = Date.parse(a.note.created_at);
+      const timeB = Date.parse(b.note.created_at);
+      return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
+    })
+    .slice(0, limit);
+}
+
 export function getRecentStudyResumeItems(
   notes: NoteListItem[],
   progressByNote: Record<string, NoteStudyProgress>,
