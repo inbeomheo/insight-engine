@@ -71,7 +71,6 @@ function sanitizeHtml(html: string): string {
 
 interface ResultCardProps {
   report: Report;
-  searchQuery?: string;
   viewMode?: ViewMode;
   /** compact 모드에서 카드 클릭 시 full 전환 콜백 */
   onExpandToFull?: () => void;
@@ -250,7 +249,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
   return { ...state, ...action.updates };
 }
 
-const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'full', onExpandToFull }: ResultCardProps) {
+const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -258,7 +257,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
 
   // 간편 setter
@@ -1211,8 +1209,7 @@ function keywordOpacity(relevance: number): string {
 
 function NlpAnalysisSection({ analysis }: { analysis: NlpAnalysis }) {
   const [open, setOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { sentiment, keywords, topics } = analysis;
+  const { sentiment, keywords } = analysis;
   const cfg = SENTIMENT_CONFIG[sentiment.overall];
 
   // 게이지 너비: score -1~1 → 0~100%

@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateStream } from '@/lib/api';
@@ -26,8 +26,9 @@ type GenerateHook = ReturnType<typeof useGenerate>;
 let root: Root | null = null;
 let currentHook: GenerateHook | null = null;
 
-function Harness() {
-  currentHook = useGenerate();
+function Harness({ onRender }: { onRender: (hook: GenerateHook) => void }) {
+  const hook = useGenerate();
+  useEffect(() => onRender(hook), [hook, onRender]);
   return null;
 }
 
@@ -36,7 +37,7 @@ async function renderHook() {
   document.body.appendChild(el);
   root = createRoot(el);
   await act(async () => {
-    root!.render(<Harness />);
+    root!.render(<Harness onRender={(hook) => { currentHook = hook; }} />);
   });
   return {
     get hook() {
