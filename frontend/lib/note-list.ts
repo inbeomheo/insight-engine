@@ -1,5 +1,10 @@
 import type { NoteListItem } from './api';
 import {
+  getNoteReviewScheduleStatus,
+  type NoteReviewSchedule,
+  type NoteReviewScheduleStatus,
+} from './note-review-schedule';
+import {
   getNoteStudySummary,
   type NoteStudyCounts,
   type NoteStudyProgress,
@@ -189,6 +194,34 @@ export function getFacetLabel(facet: NoteFacet): string {
   if (facet.type === 'concept') return `개념: ${facet.value}`;
   if (facet.type === 'tag') return `태그: ${facet.value}`;
   return `출처: ${facet.value}`;
+}
+
+export interface NoteScheduledReviewItem {
+  note: NoteListItem;
+  schedule: NoteReviewSchedule;
+  status: NoteReviewScheduleStatus;
+}
+
+export function getScheduledReviewItems(
+  notes: NoteListItem[],
+  schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
+  now = new Date(),
+  limit = 3
+): NoteScheduledReviewItem[] {
+  return notes
+    .flatMap((note) => {
+      const schedule = schedulesByNote[note.id];
+      if (!schedule) return [];
+      const status = getNoteReviewScheduleStatus(schedule, now);
+      return status.state === 'invalid' ? [] : [{ note, schedule, status }];
+    })
+    .sort((a, b) => {
+      if (a.status.daysUntilDue !== b.status.daysUntilDue) {
+        return a.status.daysUntilDue - b.status.daysUntilDue;
+      }
+      return a.note.title.localeCompare(b.note.title);
+    })
+    .slice(0, Math.max(0, limit));
 }
 
 export interface NoteStudyResumeItem {

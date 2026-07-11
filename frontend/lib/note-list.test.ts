@@ -21,6 +21,7 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
+  getScheduledReviewItems,
   getStudyStartCandidates,
   parseNotePanelOpen,
   parseNoteFacetSearchParams,
@@ -176,6 +177,32 @@ describe('note-list', () => {
 
   it('builds readable active facet labels', () => {
     expect(getFacetLabel({ type: 'tag', value: 'AI' })).toBe('태그: AI');
+  });
+
+
+  it('orders scheduled reviews by due date and respects the limit', () => {
+    const overdue = note({ id: 'overdue', title: '지난 노트' });
+    const upcoming = note({ id: 'upcoming', title: '예정 노트' });
+    const now = new Date('2026-07-14T10:00:00.000Z');
+    const items = getScheduledReviewItems([upcoming, overdue], {
+      overdue: {
+        dueAt: '2026-07-13T10:00:00.000Z',
+        intervalDays: 1,
+        scheduledAt: '2026-07-12T10:00:00.000Z',
+      },
+      upcoming: {
+        dueAt: '2026-07-17T10:00:00.000Z',
+        intervalDays: 3,
+        scheduledAt: '2026-07-14T10:00:00.000Z',
+      },
+    }, now, 1);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      note: { id: 'overdue' },
+      status: { state: 'due', label: '1일 지남', daysUntilDue: -1 },
+    });
+    expect(getScheduledReviewItems([upcoming], {}, now)).toEqual([]);
   });
 
   it('builds study resume items from local progress', () => {

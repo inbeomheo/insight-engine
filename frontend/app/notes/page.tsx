@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, Copy, FileText, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CalendarClock, CheckCircle2, ChevronDown, Copy, FileText, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
+  getScheduledReviewItems,
   getStudyStartCandidates,
   NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
   NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
@@ -44,11 +45,13 @@ import {
   type NoteStudyCardKind,
   type NoteFacet,
   type NoteConceptCluster,
+  type NoteScheduledReviewItem,
   type NoteKnowledgeGap,
   buildNoteFacetHref,
   parseNoteFacetSearchParams,
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
+import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
 import {
   buildResultChatStudyCardsMarkdown,
   readResultChatStudyCards,
@@ -97,6 +100,7 @@ export default function NotesPage() {
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
+  const [reviewScheduleByNote, setReviewScheduleByNote] = useState<Record<string, NoteReviewSchedule | null>>({});
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
   const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
@@ -194,6 +198,22 @@ export default function NotesPage() {
     );
   }, [notes]);
 
+  useEffect(() => {
+    const syncReviewSchedules = () => {
+      setReviewScheduleByNote(
+        Object.fromEntries(notes.map((note) => [note.id, readNoteReviewSchedule(note.id)]))
+      );
+    };
+
+    syncReviewSchedules();
+    window.addEventListener('storage', syncReviewSchedules);
+    window.addEventListener('focus', syncReviewSchedules);
+    return () => {
+      window.removeEventListener('storage', syncReviewSchedules);
+      window.removeEventListener('focus', syncReviewSchedules);
+    };
+  }, [notes]);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     void runSearch(query);
@@ -273,9 +293,19 @@ export default function NotesPage() {
     () => getStudyStartCandidates(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
+  const scheduledReviewItems = useMemo(
+    () => getScheduledReviewItems(notes, reviewScheduleByNote, new Date(), 4),
+    [notes, reviewScheduleByNote],
+  );
+  const scheduledReviewNoteIds = useMemo(
+    () => new Set(scheduledReviewItems.map((item) => item.note.id)),
+    [scheduledReviewItems],
+  );
   const completedStudyNotes = useMemo(
-    () => getCompletedStudyItems(notes, studyProgressByNote, 3),
-    [notes, studyProgressByNote],
+    () => getCompletedStudyItems(notes, studyProgressByNote, notes.length)
+      .filter((item) => !scheduledReviewNoteIds.has(item.note.id))
+      .slice(0, 3),
+    [notes, scheduledReviewNoteIds, studyProgressByNote],
   );
   const studyResumeNotes = useMemo(
     () => getRecentStudyResumeItems(
@@ -284,10 +314,11 @@ export default function NotesPage() {
       new Set([
         ...reviewNeededNotes.map((item) => item.note.id),
         ...completedStudyNotes.map((item) => item.note.id),
+        ...scheduledReviewNoteIds,
       ]),
       3
     ),
-    [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes],
+    [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes, scheduledReviewNoteIds],
   );
   const dailyStudyPlanItems = useMemo(
     () => getDailyStudyPlanItems(notes, studyProgressByNote, 3),
@@ -379,6 +410,7 @@ export default function NotesPage() {
             studyResumeNotes={studyResumeNotes}
             dailyStudyPlanItems={dailyStudyPlanItems}
             qnaStudyCards={qnaStudyCards}
+            scheduledReviewItems={scheduledReviewItems}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
           />
@@ -533,6 +565,7 @@ function WikiMap({
   studyResumeNotes,
   dailyStudyPlanItems,
   qnaStudyCards,
+  scheduledReviewItems,
   studyCardOrder,
   onFacetSelect,
 }: {
@@ -548,6 +581,7 @@ function WikiMap({
   studyResumeNotes: NoteStudyResumeItem[];
   dailyStudyPlanItems: NoteStudyPlanItem[];
   qnaStudyCards: ResultChatStudyCard[];
+  scheduledReviewItems: NoteScheduledReviewItem[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -562,6 +596,8 @@ function WikiMap({
   } | null>(null);
   useEffect(() => {
     try {
+      // 브라우저 저장값은 hydration 이후에만 반영합니다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStudyQueueOpen(
         parseNoteStudyQueueOpen(window.localStorage.getItem(NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY), true),
       );
@@ -572,6 +608,8 @@ function WikiMap({
 
   useEffect(() => {
     try {
+      // 브라우저 저장값은 hydration 이후에만 반영합니다.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWikiExploreOpen(
         parseNotePanelOpen(window.localStorage.getItem(NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY), true),
       );
@@ -696,7 +734,8 @@ function WikiMap({
     completed: completedStudyNotes.length,
     recent: studyResumeNotes.length,
   };
-  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length;
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length + scheduledReviewItems.length;
+  const dueReviewCount = scheduledReviewItems.filter((item) => item.status.state === 'due').length;
   const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length + knowledgeGaps.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
@@ -930,7 +969,7 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0) && (
+        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0 || scheduledReviewItems.length > 0) && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
               <button
@@ -956,6 +995,50 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {scheduledReviewItems.length > 0 && (
+                    <Card className="border-amber-500/20 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <CalendarClock className="h-4 w-4 text-amber-500/80" />
+                              <h2 className="text-sm font-semibold text-foreground">예정 복습</h2>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {dueReviewCount > 0
+                                ? `오늘 확인할 노트 ${dueReviewCount}개가 있습니다.`
+                                : '예약한 복습일이 가까운 순서대로 표시됩니다.'}
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${dueReviewCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'}`}>
+                            {dueReviewCount > 0 ? `오늘 ${dueReviewCount}개` : `${scheduledReviewItems.length}개 예약`}
+                          </span>
+                        </div>
+                        <ul className="mt-3 space-y-2">
+                          {scheduledReviewItems.map((item) => (
+                            <li key={item.note.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-amber-500/40"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </span>
+                                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                                    {formatDate(item.schedule.dueAt)} · {item.schedule.intervalDays}일 간격
+                                  </span>
+                                </span>
+                                <span className={`shrink-0 text-[10px] font-semibold ${item.status.state === 'due' ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
+                                  {item.status.label}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
                   {qnaStudyCards.length > 0 && (
                     <Card className="border-primary/30 bg-background/90 py-4">
                       <CardContent className="px-4">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Brain, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
+import { ArrowLeft, Brain, CalendarClock, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +43,14 @@ import {
   type NoteStudyKind,
   type NoteStudyProgress,
 } from '@/lib/note-study-progress';
+import {
+  NOTE_REVIEW_INTERVAL_OPTIONS,
+  clearNoteReviewSchedule,
+  getNoteReviewScheduleStatus,
+  readNoteReviewSchedule,
+  writeNoteReviewSchedule,
+  type NoteReviewSchedule,
+} from '@/lib/note-review-schedule';
 import { getStyleLabel } from '@/lib/helpers';
 import { buildNoteFacetHref } from '@/lib/note-list';
 import type { Report } from '@/lib/types';
@@ -85,6 +93,12 @@ function buildNoteChatContext(note: NoteDetail): string {
       : '',
   ];
   return lines.filter(Boolean).join('\n\n');
+}
+
+function formatReviewDueAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '일정 확인 필요';
+  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 }
 
 function formatStudyUpdatedAt(iso: string | null): string {
@@ -157,7 +171,7 @@ export default function NoteDetailPage() {
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : note ? (
-          <NoteBody note={note} linkedReport={linkedReport} />
+          <NoteBody key={note.id} note={note} linkedReport={linkedReport} />
         ) : null}
       </div>
     </div>
@@ -166,8 +180,9 @@ export default function NoteDetailPage() {
 
 function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Report | null }) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
-  const learningPoints = note.learning_points ?? [];
-  const reviewQuestions = note.review_questions ?? [];
+  const learningPoints = useMemo(() => note.learning_points ?? [], [note.learning_points]);
+  const reviewQuestions = useMemo(() => note.review_questions ?? [], [note.review_questions]);
+  const noteTitle = note.source?.title || '제목 없음';
   const quoteCount = note.quotes.length;
   const relatedNoteCount = note.related_notes?.length ?? 0;
   const hasLinkedReport = Boolean(linkedReport);
@@ -184,6 +199,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     normalizeNoteStudyProgress(null, studyCounts)
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [reviewSchedule, setReviewSchedule] = useState<NoteReviewSchedule | null>(null);
   const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
@@ -197,6 +213,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const studyCompletion = useMemo(
     () => getNoteStudyCompletionSummary(studySummary),
     [studySummary]
+  );
+  const reviewScheduleStatus = useMemo(
+    () => reviewSchedule ? getNoteReviewScheduleStatus(reviewSchedule) : null,
+    [reviewSchedule]
   );
   const nextStudyTarget = useMemo(
     () => getNextNoteStudyTarget({ learningPoints, reviewQuestions, progress: studyProgress }),
@@ -231,28 +251,49 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   );
 
   useEffect(() => {
+    // 브라우저 저장값은 hydration 이후에만 반영합니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStudyProgress(readNoteStudyProgress(note.id, studyCounts));
   }, [note.id, studyCounts]);
 
   useEffect(() => {
-    setReviewAnswerVisible((current) =>
-      normalizeReviewAnswerVisibility(current, reviewQuestions.length)
-    );
-  }, [reviewQuestions.length]);
+    // 브라우저 저장값은 hydration 이후에만 반영합니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReviewSchedule(readNoteReviewSchedule(note.id));
+  }, [note.id]);
+
+
+
+
+  const clearScheduledReview = useCallback(() => {
+    clearNoteReviewSchedule(note.id);
+    setReviewSchedule(null);
+  }, [note.id]);
 
   const toggleStudyProgress = useCallback((kind: NoteStudyKind, index: number) => {
     setStudyProgress((current) => {
       const next = toggleNoteStudyItem(current, kind, index, studyCounts);
       writeNoteStudyProgress(note.id, next, studyCounts);
+      const nextSummary = getNoteStudySummary(next, studyCounts);
+      if (reviewSchedule && nextSummary.completed < nextSummary.total) {
+        clearNoteReviewSchedule(note.id);
+        setReviewSchedule(null);
+      }
       return next;
     });
-  }, [note.id, studyCounts]);
+  }, [note.id, reviewSchedule, studyCounts]);
 
   const resetStudyProgress = useCallback(() => {
     const next = normalizeNoteStudyProgress(null, studyCounts);
     writeNoteStudyProgress(note.id, next, studyCounts);
+    clearScheduledReview();
     setStudyProgress(next);
-  }, [note.id, studyCounts]);
+  }, [clearScheduledReview, note.id, studyCounts]);
+
+  const scheduleReview = useCallback((intervalDays: number) => {
+    const next = writeNoteReviewSchedule(note.id, intervalDays);
+    setReviewSchedule(next);
+  }, [note.id]);
 
   const scrollToNextStudyTarget = useCallback(() => {
     if (!nextStudyTarget) return;
@@ -270,14 +311,14 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
     try {
       await navigator.clipboard.writeText(buildNextNoteStudyTargetMarkdown({
-        noteTitle: note.source?.title || '제목 없음',
+        noteTitle,
         target: nextStudyTarget,
       }));
       setNextStudyCopyStatus('copied');
     } catch {
       setNextStudyCopyStatus('error');
     }
-  }, [nextStudyTarget, note.source?.title]);
+  }, [nextStudyTarget, noteTitle]);
 
   const copyQuoteMarkdown = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -287,13 +328,13 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
     try {
       await navigator.clipboard.writeText(
-        buildNoteQuoteMarkdown(note.quotes, `${note.source?.title || '제목 없음'} 근거 인용`)
+        buildNoteQuoteMarkdown(note.quotes, `${noteTitle} 근거 인용`)
       );
       setQuoteCopyStatus('copied');
     } catch {
       setQuoteCopyStatus('error');
     }
-  }, [note.quotes, note.source?.title]);
+  }, [note.quotes, noteTitle]);
 
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
@@ -312,7 +353,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     }
 
     const markdown = buildNoteStudyMarkdown({
-      title: note.source?.title || '제목 없음',
+      title: noteTitle,
       sourceUrl: sourceUrl ?? undefined,
       learningPoints,
       reviewQuestions,
@@ -325,7 +366,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     } catch {
       setStudyCopyStatus('error');
     }
-  }, [learningPoints, note.source?.title, reviewQuestions, sourceUrl, studyProgress]);
+  }, [learningPoints, noteTitle, reviewQuestions, sourceUrl, studyProgress]);
 
   useEffect(() => {
     if (studyCopyStatus === 'idle') return;
@@ -540,25 +581,65 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
               </div>
             )}
             {studyCompletion.complete && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-background/80 px-3 py-3">
-                <div className="flex min-w-0 items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">복습 세션 완료</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {studyCompletion.message} Markdown으로 저장하거나 다시 복습해 기억을 확인하세요.
-                    </p>
+              <div className="mt-4 rounded-xl border border-primary/20 bg-background/80 px-3 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">복습 세션 완료</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {studyCompletion.message} 다음 복습일을 예약해 기억을 다시 확인하세요.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 shrink-0 text-xs"
+                    onClick={resetStudyProgress}
+                  >
+                    {studyCompletion.actionLabel}
+                  </Button>
+                </div>
+                <div className="mt-3 rounded-lg border border-border bg-card/70 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="h-3.5 w-3.5 text-primary/70" />
+                      <span className="text-xs font-semibold text-foreground">다음 복습 예약</span>
+                    </div>
+                    {reviewSchedule && reviewScheduleStatus && (
+                      <span className={`text-[10px] font-medium ${reviewScheduleStatus.state === 'due' ? 'text-amber-600 dark:text-amber-400' : 'text-primary'}`}>
+                        {reviewScheduleStatus.label} · {formatReviewDueAt(reviewSchedule.dueAt)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {NOTE_REVIEW_INTERVAL_OPTIONS.map((days) => (
+                      <Button
+                        key={days}
+                        type="button"
+                        size="sm"
+                        variant={reviewSchedule?.intervalDays === days ? 'default' : 'outline'}
+                        className="h-7 px-2.5 text-[10px]"
+                        onClick={() => scheduleReview(days)}
+                      >
+                        {days === 1 ? '내일' : `${days}일 후`}
+                      </Button>
+                    ))}
+                    {reviewSchedule && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={clearScheduledReview}
+                      >
+                        일정 해제
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 shrink-0 text-xs"
-                  onClick={resetStudyProgress}
-                >
-                  {studyCompletion.actionLabel}
-                </Button>
               </div>
             )}
           </CardContent>
