@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Sidebar from '@/components/layout/Sidebar';
 import UrlInput from '@/components/input/UrlInput';
 import TextInput from '@/components/input/TextInput';
+import ClipboardPaste from '@/components/input/ClipboardPaste';
 import SettingsPopover from '@/components/settings/SettingsPopover';
 import SettingsModal from '@/components/settings/SettingsModal';
 const ResultCard = dynamic(() => import('@/components/result/ResultCard'), { ssr: false });
@@ -25,6 +26,7 @@ const CustomStyleModal = dynamic(() => import('@/components/modals/CustomStyleMo
 const WorkspaceSettingsModal = dynamic(() => import('@/components/modals/WorkspaceSettingsModal'), { ssr: false });
 const TemplateGalleryModal = dynamic(() => import('@/components/modals/TemplateGalleryModal'), { ssr: false });
 const SupportAssistant = dynamic(() => import('@/components/support/SupportAssistant'), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/ui/CommandPalette'), { ssr: false });
 
 
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -50,6 +52,7 @@ export default function Home() {
   const setSettingsPopoverOpen = useUIStore((s) => s.setSettingsPopoverOpen);
   const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
   const activeReportId = useUIStore((s) => s.activeReportId);
+  const setActiveReportId = useUIStore((s) => s.setActiveReportId);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
@@ -88,7 +91,7 @@ export default function Home() {
 
   // 스타일 선택 — 현재 선택을 다시 누르면 안전한 기본값으로 복귀
   const handleStyleSelect = useCallback((styleId: string) => {
-    setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
+    setSelectedStyle(selectedStyle === styleId && styleId !== 'summary' ? 'summary' : styleId);
   }, [selectedStyle, setSelectedStyle]);
 
   // filteredReports — 메모이제이션 (매 렌더마다 새 배열 생성 방지)
@@ -108,6 +111,7 @@ export default function Home() {
   const INITIAL_RENDER_COUNT = 5;
   const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
   const deferredFiltered = useDeferredValue(filtered);
+  const handledReportParamRef = useRef<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -117,6 +121,35 @@ export default function Home() {
   const handleLoadMore = useCallback(() => {
     setVisibleCount((prev) => Math.min(prev + 5, deferredFiltered.length));
   }, [deferredFiltered.length]);
+
+  // /?report=<id> 딥링크 — 대시보드/외부 진입에서 해당 결과 카드로 복귀
+  useEffect(() => {
+    if (typeof window === 'undefined' || reports.length === 0) return;
+    const url = new URL(window.location.href);
+    const reportId = url.searchParams.get('report');
+    if (!reportId || handledReportParamRef.current === reportId) return;
+
+    const index = reports.findIndex((report) => report.id === reportId);
+    if (index < 0) return;
+
+    handledReportParamRef.current = reportId;
+    const resultState = useResultStore.getState();
+    resultState.setSearchQuery('');
+    resultState.setStyleFilter('');
+    setVisibleCount(Math.max(INITIAL_RENDER_COUNT, index + 1));
+    setActiveReportId(reportId);
+
+    url.searchParams.delete('report');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(reportId) : reportId.replace(/"/g, '\\"');
+        const el = document.querySelector(`[data-report-id="${escapedId}"]`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }, 80);
+  }, [reports, setActiveReportId]);
 
   // 전체 페이지 드래그앤드롭
   const [isDragOver, setIsDragOver] = useState(false);
@@ -224,8 +257,28 @@ export default function Home() {
     if (ok) startTransition(() => urls.forEach(removeUrl));
   }, [urls, generationMode, generateBatchUrls, generateMergedUrls, generateFusionUrls, removeUrl]);
 
+  const handleClipboardUrl = useCallback((text: string) => {
+    const matches = text.match(/https?:\/\/[^\s]+/g);
+    if (matches && matches.length > 1) {
+      addUrls(matches);
+    } else {
+      addUrl(matches?.[0] ?? text);
+    }
+    setInputTab('url');
+  }, [addUrl, addUrls]);
+
+  const handleClipboardText = useCallback((text: string) => {
+    setPastedText(text);
+    setInputTab('text');
+  }, []);
+
   return (
     <>
+      <ClipboardPaste
+        enabled={!isLoading}
+        onPasteUrl={handleClipboardUrl}
+        onPasteText={handleClipboardText}
+      />
       <MobileAppShell
         reports={reports}
         urls={urls}
@@ -372,7 +425,7 @@ export default function Home() {
                             type="button"
                             aria-pressed={active}
                             aria-label={`${style.label} 스타일 선택${style.description ? `: ${style.description}` : ''}`}
-                            title={active && style.id !== 'blog_seo' ? '다시 누르면 블로그+SEO 기본값으로 돌아가요' : style.description}
+                            title={active && style.id !== 'summary' ? '다시 누르면 요약 기본값으로 돌아가요' : style.description}
                             className={cn(
                               'flex min-h-16 flex-col justify-center border px-2 py-2 text-left transition-colors',
                               active
@@ -580,6 +633,7 @@ export default function Home() {
       <CustomStyleModal />
       <WorkspaceSettingsModal />
       <TemplateGalleryModal />
+      <CommandPalette />
       </div>
       <SupportAssistant />
     </>

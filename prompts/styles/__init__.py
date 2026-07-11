@@ -1,6 +1,6 @@
 """
 스타일 패키지 v4.0
-UI 노출 15개 스타일 + 내부 전용(comment_summary, mindmap, cited_summary)
+UI 노출 16개 스타일 + 내부 전용(comment_summary, mindmap, cited_summary)
 
 콘텐츠 스타일은 베이스 규칙(prompts.base.BASE_PROMPT)과 결합되어 사용되고,
 변환계 프롬프트(TRANSFORM_STYLE_IDS)는 결합 없이 단독 사용된다.
@@ -24,6 +24,7 @@ from .shorts_script import SHORTS_SCRIPT_PROMPT
 from .geo_seo import GEO_SEO_PROMPT
 from .course import COURSE_PROMPT
 from .quiz import QUIZ_PROMPT
+from .retention_cards import RETENTION_CARDS_PROMPT
 from .cited_summary import CITED_SUMMARY_PROMPT
 from .knowledge_note import KNOWLEDGE_NOTE_PROMPT
 
@@ -44,6 +45,7 @@ STYLE_PROMPTS = {
     'geo_seo': GEO_SEO_PROMPT,
     'course': COURSE_PROMPT,
     'quiz': QUIZ_PROMPT,
+    'retention_cards': RETENTION_CARDS_PROMPT,
     'cited_summary': CITED_SUMMARY_PROMPT,
     # 내부 전용 (UI 비노출)
     'mindmap': MINDMAP_PROMPT,
@@ -90,6 +92,7 @@ __all__ = [
     'GEO_SEO_PROMPT',
     'COURSE_PROMPT',
     'QUIZ_PROMPT',
+    'RETENTION_CARDS_PROMPT',
     'CITED_SUMMARY_PROMPT',
     'KNOWLEDGE_NOTE_PROMPT',
 ]

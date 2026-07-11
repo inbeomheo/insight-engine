@@ -20,14 +20,14 @@ FAQ_ITEMS = [
         "answer": "예약 발행과 캘린더 기능은 학습 엔진으로의 방향 전환 과정에서 제거됐어. 지금은 URL/텍스트를 넣어 바로 콘텐츠를 생성하고 학습하는 흐름에 집중하고 있어.",
     },
     {
-        "keywords": ["모델", "openrouter", "gpt", "키미", "kimi", "프로바이더"],
+        "keywords": ["모델", "chatmock", "gpt", "프로바이더", "provider"],
         "title": "모델/프로바이더",
-        "answer": "모델 목록은 백엔드 `/api/providers` 응답과 환경변수/API 키 상태에 따라 달라져. GPT 계열은 ChatMock 또는 OpenAI/OpenRouter 설정이 연결돼야 보이고, Kimi는 OpenRouter 모델로 노출되는 구조가 일반적이야.",
+        "answer": "현재 생성 모델은 ChatMock(OpenAI 호환 로컬 프록시) 기준으로 단순화했어. 터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고, `.env`의 `CHATMOCK_BASE_URL`이 `http://127.0.0.1:8000/v1`인지 확인하면 돼.",
     },
     {
-        "keywords": ["스타일", "출력", "blog", "seo", "shorts", "geo", "퀴즈", "quiz"],
+        "keywords": ["스타일", "출력", "요약", "qna", "q&a", "퀴즈", "quiz", "리텐션"],
         "title": "출력 스타일",
-        "answer": "출력 스타일은 블로그+SEO, 요약, 튜토리얼, Q&A, 앱 아이디어, 요즘IT, 브런치, 네이버, SNS 포스트, 뉴스레터, 쇼노트, 쇼츠 클립, GEO 검색, AI 코스, 퀴즈 같은 목적별 프롬프트 프리셋이야.",
+        "answer": "출력 스타일은 요약, Q&A, 퀴즈, 리텐션 카드 4개로 단순화했어. 생성 결과는 바로 학습 노트로 저장해 핵심 개념·태그·인용·관련 노트로 쌓아갈 수 있어.",
     },
     {
         "keywords": ["공유", "링크", "복사", "url"],

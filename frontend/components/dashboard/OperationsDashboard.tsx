@@ -1,7 +1,9 @@
 'use client';
 import { memo, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Activity, Clock, CheckCircle, BarChart3 } from 'lucide-react';
+import { Activity, Clock, CheckCircle, BarChart3, FileText, Gauge, Server } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { apiUrl } from '@/lib/api';
 
 interface DashboardData {
@@ -10,6 +12,11 @@ interface DashboardData {
   avg_time: number;
   style_distribution: Record<string, number>;
   daily_usage: Array<{ date: string; count: number }>;
+  avg_content_length?: number;
+  top_styles?: Array<{ style: string; count: number }>;
+  recent_generations?: Array<{ title: string; style: string; created_at: string }>;
+  busiest_hour?: number | null;
+  provider_distribution?: Record<string, string>;
 }
 
 export const OperationsDashboard = memo(function OperationsDashboard() {
@@ -29,12 +36,29 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
   }, []);
 
   if (loading) return <div className="signal-meta py-12 text-center text-[10px] text-muted-foreground">로딩 중...</div>;
-  if (error) return <div className="py-12 text-center text-sm text-destructive">{error}</div>;
+  if (error) {
+    return (
+      <Card className="rounded-sm border-border bg-card shadow-none">
+        <CardContent className="py-10 text-center">
+          <p className="text-sm font-medium text-destructive">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            운영 대시보드는 관리자 권한과 Supabase 연결이 필요합니다.
+          </p>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link href="/">생성 화면으로 돌아가기</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!data) return null;
 
-  const topStyles = Object.entries(data.style_distribution)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
+  const topStyles = data.top_styles?.length
+    ? data.top_styles.map((item) => [item.style, item.count] as const)
+    : Object.entries(data.style_distribution)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5);
+  const providers = Object.entries(data.provider_distribution ?? {});
 
   return (
     <div className="space-y-6">
@@ -45,7 +69,7 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
       </div>
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <Card className="rounded-sm border-border bg-card shadow-none">
           <CardHeader className="pb-2">
             <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -76,6 +100,28 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
             <span className="text-3xl font-bold tracking-[-0.03em]">{data.avg_time}초</span>
           </CardContent>
         </Card>
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <FileText className="h-4 w-4" /> 평균 길이
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-3xl font-bold tracking-[-0.03em]">{(data.avg_content_length ?? 0).toLocaleString()}</span>
+          </CardContent>
+        </Card>
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Gauge className="h-4 w-4" /> 피크 시간
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-3xl font-bold tracking-[-0.03em]">
+              {data.busiest_hour === null || data.busiest_hour === undefined ? '-' : `${data.busiest_hour}시`}
+            </span>
+          </CardContent>
+        </Card>
       </div>
 
       {/* 스타일 분포 */}
@@ -102,6 +148,52 @@ export const OperationsDashboard = memo(function OperationsDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader>
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <FileText className="h-4 w-4" /> 최근 생성
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(data.recent_generations ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">최근 생성 기록이 없습니다.</p>
+            ) : (
+              <ul className="space-y-2">
+                {(data.recent_generations ?? []).map((item, idx) => (
+                  <li key={`${item.created_at}-${idx}`} className="rounded-sm border border-border px-3 py-2">
+                    <p className="truncate text-sm font-medium">{item.title}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{item.style} · {item.created_at || '시간 없음'}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-sm border-border bg-card shadow-none">
+          <CardHeader>
+            <CardTitle className="signal-meta flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Server className="h-4 w-4" /> 프로바이더 상태
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {providers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">활성 프로바이더 정보가 없습니다.</p>
+            ) : (
+              <div className="space-y-2">
+                {providers.map(([name, status]) => (
+                  <div key={name} className="flex items-center justify-between rounded-sm border border-border px-3 py-2">
+                    <span className="text-sm font-medium">{name}</span>
+                    <span className="signal-meta text-[10px] text-primary">{status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 일별 사용량 */}
       {data.daily_usage.length > 0 && (

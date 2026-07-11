@@ -11,8 +11,10 @@ import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { toast } from 'sonner';
 import { createTemplate } from '@/lib/api';
+import { STYLE_OPTIONS } from '@/lib/constants';
 
 const ICON_OPTIONS = ['edit_note', 'star', 'bookmark', 'psychology', 'rocket_launch'];
+const DEFAULT_STYLE_BASE = STYLE_OPTIONS[0]?.id ?? 'summary';
 const ICON_LABELS: Record<string, string> = {
   edit_note: '편집',
   star: '별',
@@ -85,7 +87,7 @@ export default function CustomStyleModal() {
         name: name.trim(),
         prompt_text: prompt.trim(),
         description: `커스텀 스타일에서 저장된 템플릿`,
-        style_base: 'blog_seo',
+        style_base: DEFAULT_STYLE_BASE,
         is_public: false,
       });
       toast.success('템플릿 갤러리에 저장되었습니다.');

@@ -6,7 +6,6 @@
 서브모듈:
 - mindmap: 콘텐츠 → 마인드맵 변환 (1개 엔드포인트)
 - fusion: N개 URL → 1편 융합 (1개 엔드포인트)
-- qa: 발행 전 QA 게이트 (1개 엔드포인트)
 
 멀티스타일/캠페인/파이프라인/에이전트/메모리/미디어 등은 routes/advanced_routes.py에
 그대로 유지 (test patch 호환성 보존).
@@ -14,5 +13,4 @@
 from routes.advanced import (  # noqa: F401 — 부수효과 import (라우트 등록)
     fusion,
     mindmap,
-    qa,
 )

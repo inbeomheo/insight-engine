@@ -156,27 +156,6 @@ class TestProviderRoutes(_BaseTestCase):
         self.assertIn('hasAutoFallback', data)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get')
-    def test_ollama_health_success(self, mock_get, _):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'models': [{'name': 'llama3'}]}
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value = mock_resp
-        resp = self.client.get('/api/ollama/health')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['ok'])
-        self.assertIn('llama3', data['models'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get', side_effect=Exception('connection refused'))
-    def test_ollama_health_failure(self, mock_get, _):
-        resp = self.client.get('/api/ollama/health')
-        self.assertEqual(resp.status_code, 503)
-        data = resp.get_json()
-        self.assertFalse(data['ok'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
     def test_validate_provider_missing_id(self, _):
         resp = self.client.post('/api/providers/validate',
                                 json={}, headers=_H)
@@ -191,29 +170,41 @@ class TestProviderRoutes(_BaseTestCase):
         self.assertEqual(resp.status_code, 400)
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('requests.get')
-    def test_validate_provider_ollama(self, mock_get, _):
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = {'models': []}
-        mock_resp.raise_for_status = MagicMock()
-        mock_get.return_value = mock_resp
+    def test_validate_provider_ollama_removed(self, _):
         resp = self.client.post('/api/providers/validate',
                                 json={'provider_id': 'ollama',
                                       'api_key': 'http://localhost:11434'},
                                 headers=_H)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 400)
         data = resp.get_json()
-        self.assertTrue(data['valid'])
+        self.assertFalse(data['valid'])
+        self.assertIn('지원하지 않는 프로바이더', data['error'])
 
     @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_validate_provider_no_api_key(self, _):
-        """Ollama가 아닌 프로바이더에서 api_key 누락 시 에러."""
-        # gemini 프로바이더가 존재한다고 가정
+    @patch('litellm.completion')
+    def test_validate_provider_no_api_key(self, mock_completion, _):
+        """ChatMock은 api_key 누락 시 dummy key로 검증한다."""
+        mock_completion.return_value = MagicMock()
         resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'gemini'},
+                                json={'provider_id': 'chatmock'},
                                 headers=_H)
-        # api_key 없으면 400
-        self.assertIn(resp.status_code, [200, 400])
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json()['valid'])
+        kwargs = mock_completion.call_args.kwargs
+        self.assertEqual(kwargs['api_key'], 'dummy')
+        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
+
+    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
+    @patch('litellm.completion', side_effect=Exception('connection refused'))
+    def test_validate_provider_chatmock_connection_hint(self, _, __):
+        resp = self.client.post('/api/providers/validate',
+                                json={'provider_id': 'chatmock'},
+                                headers=_H)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertFalse(data['valid'])
+        self.assertIn('chatmock login', data['error'])
+        self.assertIn('chatmock serve', data['error'])
 
 # ── 캐시 관련 ──────────────────────────────────────
 
@@ -338,37 +329,6 @@ class TestRecommendSources(_BaseTestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertEqual(len(data['sources']), 1)
-
-
-# ── NPS 피드백 ──────────────────────────────────────
-
-
-class TestNPSFeedback(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_valid_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={'score': 8, 'feedback': '좋아요'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['success'])
-        self.assertEqual(data['score'], 8)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_invalid_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={'score': 15},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_nps_missing_score(self, _):
-        resp = self.client.post('/api/feedback/nps',
-                                json={},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
 
 
 # ── 피드백 ──────────────────────────────────────

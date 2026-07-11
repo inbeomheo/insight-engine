@@ -39,13 +39,6 @@
 - [P1-09] frontend/components/input/TextInput.tsx: 텍스트 직접 입력 탭 추가 | 검증: build
 - [P1-10] frontend/hooks/useGenerate.ts: generateFromText() 추가 | 검증: tsc
 
-### F1-05. RSS 피드 구독 → 자동 생성 — 난이도 M
-- **기존**: rss_service.py (feedparser), scheduler_worker.py
-- [P1-11] services/rss_subscription_service.py: RSS 구독 CRUD + 새 글 감지 로직 | 검증: pytest
-- [P1-12] routes/integration_routes.py: /api/rss/subscribe, /api/rss/list, /api/rss/unsubscribe 엔드포인트 | 검증: pytest
-- [P1-13] services/scheduler_worker.py: RSS 폴링 잡 추가 (30분 간격) | 검증: pytest
-- [P1-14] frontend/components/settings/RssSubscription.tsx: RSS 구독 관리 UI | 검증: build
-
 ### F1-06. 팟캐스트 오디오 URL → 자막 → 콘텐츠 — 난이도 M
 - **기존**: whisper_service.py, yt-dlp
 - [P1-15] services/content_service.py: 팟캐스트 URL 감지 + yt-dlp 오디오 다운로드 + Whisper 변환 경로 추가 | 검증: pytest
@@ -64,11 +57,6 @@
 - [P1-21] services/social_scraper_service.py: Reddit 포스트+댓글 추출 (JSON API) | 검증: pytest
 - [P1-22] routes/blog_routes.py: source_type='reddit' 분기 추가 | 검증: pytest
 
-### F1-10. Notion 페이지 → 콘텐츠 변환 — 난이도 M
-- [P1-23] services/notion_service.py: Notion API 연동 → 페이지 마크다운 추출 | 검증: pytest
-- [P1-24] routes/integration_routes.py: /api/notion/import 엔드포인트 | 검증: pytest
-- [P1-25] frontend/components/settings/NotionConnect.tsx: Notion 연결 설정 UI | 검증: build
-
 ### F1-11. Google Docs → 콘텐츠 변환 — 난이도 M
 - [P1-26] services/gdocs_service.py: Google Docs API → 마크다운 추출 | 검증: pytest
 - [P1-27] routes/integration_routes.py: /api/gdocs/import 엔드포인트 | 검증: pytest
@@ -78,11 +66,7 @@
 - [P1-29] routes/integration_routes.py: /api/email/ingest 엔드포인트 | 검증: pytest
 
 ### F1-13. 클립보드 붙여넣기 → 즉시 생성 — 난이도 S
-- [P1-30] frontend/components/input/ClipboardPaste.tsx: Ctrl+V 감지 → 텍스트/URL 자동 판별 | 검증: build
-
-### F1-14. 북마크 일괄 가져오기 — 난이도 M
-- [P1-31] services/bookmark_import_service.py: Chrome/Firefox 북마크 HTML 파싱 | 검증: pytest
-- [P1-32] frontend/components/input/BookmarkImport.tsx: 북마크 파일 업로드 UI | 검증: build
+- [x] [P1-30] frontend/components/input/ClipboardPaste.tsx: Ctrl+V 감지 → 텍스트/URL 자동 판별 | 검증: build
 
 ### F1-15. YouTube 채널 전체 분석 — 난이도 L
 - **기존**: channel_monitor_service.py
@@ -134,13 +118,6 @@
 - **기존**: tts_service.py (OpenAI + Edge TTS), AudioPlayer.tsx, synthesizeTts() API
 - [P2-01] frontend/components/result/AudioPlayer.tsx: 다운로드 버튼 + 속도 조절 슬라이더 추가 | 검증: build
 - [P2-02] services/tts_service.py: 배치 TTS (장문 분할 처리) 최적화 | 검증: pytest
-
-### F2-02. AI 썸네일/배너 자동 생성 — 난이도 L
-- [P2-03] services/image_gen_service.py: DALL-E / Stable Diffusion API 연동 래퍼 | 검증: pytest
-- [P2-04] services/thumbnail_service.py: 제목+키워드 → 이미지 프롬프트 자동 생성 → 이미지 API 호출 | 검증: pytest
-- [P2-05] routes/advanced_routes.py: /api/generate-thumbnail 엔드포인트 | 검증: pytest
-- [P2-06] frontend/components/result/ThumbnailPreview.tsx: 썸네일 미리보기 + 재생성 버튼 | 검증: build
-- [P2-07] config.py: IMAGE_GEN_PROVIDER, IMAGE_GEN_API_KEY 설정 추가 | 검증: pytest
 
 ### F2-03. 마크다운 → 슬라이드(PPT) 변환 — 난이도 M
 - [P2-08] services/slide_service.py: 마크다운 → Marp/Reveal.js 슬라이드 HTML 변환 | 검증: pytest
@@ -235,13 +212,6 @@
 
 > 단순 1회 AI 호출 → 자율 에이전트 기반 지능형 파이프라인
 
-### F3-01. 자동 리서치 에이전트 — 난이도 L
-- **기존**: web_research_service.py, web_search_service.py
-- [P3-01] services/agent/research_agent.py: 주제 → 웹검색 → 기사수집 → 요약 → 콘텐츠 생성 자율 루프 | 검증: pytest
-- [P3-02] services/agent/__init__.py: 에이전트 베이스 클래스 (plan→execute→reflect 루프) | 검증: pytest
-- [P3-03] routes/advanced_routes.py: /api/agent/research 엔드포인트 (SSE) | 검증: pytest
-- [P3-04] frontend/components/agent/AgentProgress.tsx: 에이전트 진행 상황 실시간 표시 | 검증: build
-
 ### F3-02. GraphRAG 고도화 — 난이도 L
 - **기존**: services/rag/graph_store.py, graph_builder.py (networkx 기반)
 - [P3-05] services/rag/graph_rag_engine.py: 엔티티/관계 자동 추출 → 그래프 구축 → 글로벌/로컬 검색 | 검증: pytest
@@ -252,7 +222,7 @@
 - [P3-08] services/agent/content_pipeline_agent.py: 리서처→작가→편집자→SEO 4단계 에이전트 체인 | 검증: pytest
 - [P3-09] services/agent/agent_orchestrator.py: 에이전트 오케스트레이터 (순차/병렬 실행) | 검증: pytest
 - [P3-10] config.py: AGENT_MODE_ENABLED, AGENT_MODELS 설정 추가 | 검증: pytest
-- [P3-11] frontend/components/agent/AgentPipeline.tsx: 에이전트 파이프라인 시각화 | 검증: build
+- [P3-11] ~~frontend/components/agent/AgentPipeline.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 진입점과 함께 신규 UI 작성 | 검증: build
 
 ### F3-04. AI 메모리 레이어 (개인화) — 난이도 M
 - **기존**: style_memory_service.py
@@ -316,10 +286,6 @@
 ### F3-19. 콘텐츠 유사도 비교 — 난이도 M
 - [P3-36] services/similarity_service.py: 두 콘텐츠 간 의미적 유사도 계산 (임베딩) | 검증: pytest
 
-### F3-20. 자동 태깅 시스템 — 난이도 M
-- [P3-37] services/auto_tag_service.py: 콘텐츠 → 자동 태그/카테고리 분류 | 검증: pytest
-- [P3-38] frontend/components/result/AutoTags.tsx: 태그 표시 + 편집 UI | 검증: build
-
 ### F3-21. 콘텐츠 브리프 생성 — 난이도 M
 - [P3-39] services/brief_service.py: 주제/키워드 → 콘텐츠 브리프 (개요, 타겟, 키워드, 구조) | 검증: pytest
 
@@ -329,14 +295,10 @@
 ### F3-23. 콘텐츠 점수 카드 — 난이도 M
 - **기존**: quality_service.py
 - [P3-41] services/quality_service.py: 종합 점수 (SEO + 가독성 + 독창성 + 구조) 통합 | 검증: pytest
-- [P3-42] frontend/components/result/ScoreCard.tsx: 종합 점수 카드 UI | 검증: build
+- [P3-42] ~~frontend/components/result/ScoreCard.tsx~~: 고아 컴포넌트로 제거됨. 재도입 시 실제 소비 화면과 함께 신규 UI 작성 | 검증: build
 
 ### F3-24. AI 코멘터리 (해설) — 난이도 M
 - [P3-43] services/commentary_service.py: 원본 콘텐츠에 AI 해설/주석 추가 | 검증: pytest
-
-### F3-25. 스마트 요약 (단계별) — 난이도 M
-- [P3-44] services/progressive_summary_service.py: 1줄 요약 → 3줄 요약 → 전체 요약 단계별 제공 | 검증: pytest
-- [P3-45] frontend/components/result/ProgressiveSummary.tsx: 단계별 요약 토글 UI | 검증: build
 
 ---
 
@@ -423,10 +385,6 @@
 
 ### F4-19. 온보딩 퍼널 — 난이도 M
 - [P4-39] frontend/components/onboarding/OnboardingFlow.tsx: 단계별 온보딩 (프로바이더 설정→첫 생성→구독) | 검증: build
-
-### F4-20. NPS/CSAT 설문 — 난이도 S
-- [P4-40] frontend/components/feedback/NpsSurvey.tsx: 10점 척도 NPS 팝업 | 검증: build
-- [P4-41] routes/utility_routes.py: /api/feedback/nps 엔드포인트 | 검증: pytest
 
 ### F4-21. 사용자 세그먼트 — 난이도 M
 - [P4-42] services/analytics/segment_service.py: 사용자를 활동 패턴별 세그먼트 분류 | 검증: pytest

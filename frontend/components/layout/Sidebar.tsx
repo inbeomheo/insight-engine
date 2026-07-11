@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Trash2, Clock, Sparkles, Eraser, BookOpen } from 'lucide-react';
+import { Plus, Search, Trash2, Clock, Sparkles, Eraser, BookOpen, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -220,7 +220,7 @@ export default function Sidebar() {
           )}
         </ScrollArea>
 
-        {/* 전체 삭제 + 노트 */}
+        {/* 탐색 + 전체 삭제 */}
         <div className="px-3 pb-2 flex flex-col gap-1">
           <Button
             asChild
@@ -230,6 +230,16 @@ export default function Sidebar() {
             <Link href="/notes" onClick={() => { if (isMobile) setSidebarOpen(false); }}>
               <BookOpen className="h-4 w-4" />
               {t('sidebar.notes')}
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="ghost"
+            className="signal-meta h-9 w-full justify-start gap-2 rounded-sm text-[10px]"
+          >
+            <Link href="/dashboard" onClick={() => { if (isMobile) setSidebarOpen(false); }}>
+              <BarChart3 className="h-4 w-4" />
+              {t('sidebar.dashboard')}
             </Link>
           </Button>
           {isClient && reports.length > 0 && (

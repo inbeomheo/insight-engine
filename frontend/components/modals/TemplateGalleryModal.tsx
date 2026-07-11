@@ -34,25 +34,14 @@ import {
   useTemplate,
   type PromptTemplate,
 } from '@/lib/api';
+import { STYLE_OPTIONS } from '@/lib/constants';
 
-// 스타일 라벨 매핑
-const STYLE_LABELS: Record<string, string> = {
-  blog_seo: 'SEO 블로그',
-  summary: '요약',
-  tutorial: '튜토리얼',
-  qna: 'Q&A',
-  app_ideas: '앱 아이디어',
-  yozm_it: '요즘IT',
-  brunch_essay: '브런치 에세이',
-  naver_popular: '네이버 인기',
-  sns_post: 'SNS 포스트',
-  newsletter: '뉴스레터',
-  show_notes: '쇼노트',
-  shorts_script: '쇼츠 클립',
-  geo_seo: 'GEO 검색',
-  course: 'AI 코스',
-  quiz: '퀴즈',
-};
+const STYLE_LABELS = Object.fromEntries(STYLE_OPTIONS.map((style) => [style.id, style.label]));
+const DEFAULT_STYLE_BASE = STYLE_OPTIONS[0]?.id ?? 'summary';
+const getStyleBaseLabel = (styleBase: string) => STYLE_LABELS[styleBase] ?? '레거시 스타일';
+const normalizeStyleBase = (styleBase: string) => (
+  STYLE_LABELS[styleBase] ? styleBase : DEFAULT_STYLE_BASE
+);
 
 type ViewMode = 'list' | 'create' | 'edit';
 
@@ -68,7 +57,7 @@ const EMPTY_FORM: FormState = {
   name: '',
   description: '',
   prompt_text: '',
-  style_base: 'blog_seo',
+  style_base: DEFAULT_STYLE_BASE,
   is_public: false,
 };
 
@@ -142,7 +131,7 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
       name: t.name,
       description: t.description,
       prompt_text: t.prompt_text,
-      style_base: t.style_base,
+      style_base: normalizeStyleBase(t.style_base),
       is_public: t.is_public,
     });
     setView('edit');
@@ -269,7 +258,7 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
                           )}
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {STYLE_LABELS[t.style_base] || t.style_base}
+                              {getStyleBaseLabel(t.style_base)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               사용 {t.usage_count}회
@@ -392,9 +381,9 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
                 onChange={(e) => setForm((f) => ({ ...f, style_base: e.target.value }))}
                 className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
               >
-                {Object.entries(STYLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+                {STYLE_OPTIONS.map((style) => (
+                  <option key={style.id} value={style.id}>
+                    {style.label}
                   </option>
                 ))}
               </select>

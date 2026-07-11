@@ -4,6 +4,7 @@ import unittest
 from services.content.citation_service import (
     _timestamp_to_seconds, parse_citations,
     validate_citations, enrich_content_with_links, enrich_html_with_links,
+    build_source_receipts,
 )
 
 
@@ -169,6 +170,58 @@ class TestEnrichContentSkipsExisting(unittest.TestCase):
         """HTML 변환 시 유효하지 않은 video_id는 ValueError 발생"""
         with self.assertRaises(ValueError):
             enrich_html_with_links('<p>[01:00]</p>', '')
+
+
+class TestBuildSourceReceipts(unittest.TestCase):
+    """build_source_receipts 테스트"""
+
+    def test_builds_claim_timestamp_and_collected_at(self):
+        citations = [{
+            'marker': '[02:30]',
+            'seconds': 150,
+            'context': '핵심 주장은 [02:30] 여기에서 확인됩니다.',
+            'valid': True,
+        }]
+
+        result = build_source_receipts(
+            citations,
+            'dQw4w9WgXcQ',
+            '2026-07-08T00:00:00+00:00',
+            source_title='테스트 영상',
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['claim'], '핵심 주장은 여기에서 확인됩니다.')
+        self.assertEqual(result[0]['timestamp_url'], 'https://youtube.com/watch?v=dQw4w9WgXcQ&t=150s')
+        self.assertEqual(result[0]['collected_at'], '2026-07-08T00:00:00+00:00')
+        self.assertEqual(result[0]['source']['type'], 'youtube')
+        self.assertEqual(result[0]['source']['title'], '테스트 영상')
+        self.assertTrue(result[0]['valid'])
+
+    def test_linked_marker_is_removed_from_claim(self):
+        citations = [{
+            'marker': '[01:00]',
+            'seconds': 60,
+            'context': '주장은 [01:00](https://youtube.com/watch?v=dQw4w9WgXcQ&t=60s) 근거입니다.',
+        }]
+
+        result = build_source_receipts(citations, 'dQw4w9WgXcQ', '2026-07-08T00:00:00+00:00')
+
+        self.assertEqual(result[0]['claim'], '주장은 근거입니다.')
+
+    def test_deduplicates_same_marker_and_seconds(self):
+        citations = [
+            {'marker': '[01:00]', 'seconds': 60, 'context': 'A [01:00]'},
+            {'marker': '[01:00]', 'seconds': 60, 'context': 'B [01:00]'},
+        ]
+
+        result = build_source_receipts(citations, 'dQw4w9WgXcQ', '2026-07-08T00:00:00+00:00')
+
+        self.assertEqual(len(result), 1)
+
+    def test_invalid_video_id_raises(self):
+        with self.assertRaises(ValueError):
+            build_source_receipts([], 'bad', '2026-07-08T00:00:00+00:00')
 
 
 if __name__ == '__main__':

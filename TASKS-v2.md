@@ -880,7 +880,7 @@ git worktree add ../ie-phase9-rag-quality -b phase/9-rag-quality
 git worktree add ../ie-phase10-monetize -b phase/10-monetize
 ```
 
-**수정**: `services/thumbnail_service.py` (기존 확장 — 텍스트 정확도)
+**수정**: 신규 텍스트 썸네일 서비스
 **서비스**: `services/backcatalog_affiliate_service.py` (신규)
 **테스트**: `tests/test_backcatalog_affiliate_service.py`
 

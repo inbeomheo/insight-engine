@@ -202,10 +202,6 @@ def create_app(test_config=None):
     app.register_blueprint(blog_bp)
     app.register_blueprint(auth_bp)
 
-    # Phase 7: GraphQL API (F7-09)
-    from routes.graphql_routes import graphql_bp
-    app.register_blueprint(graphql_bp)
-
     # NotebookLM 연동 라우트
     from routes.notebooklm_routes import notebooklm_bp
     app.register_blueprint(notebooklm_bp)

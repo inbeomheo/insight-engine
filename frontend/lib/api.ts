@@ -17,7 +17,6 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
-  QaCheckResponse,
   ProviderValidateResponse,
   FactCheckResponse,
   PlagiarismResponse,
@@ -45,7 +44,6 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/generate-multi': 300_000,
   '/api/generate-fusion': 300_000,
   '/api/mindmap': 60_000,
-  '/api/export/docx': 30_000,
   '/api/shares': 15_000,
   '/api/providers': 10_000,
   '/api/playlist-videos': 30_000,
@@ -71,6 +69,15 @@ function getSupportSessionId(): string {
 
 function supportHeaders(): HeadersInit {
   return { 'X-Support-Session-Id': getSupportSessionId() };
+}
+
+export type ApiError<T = unknown> = Error & {
+  status?: number;
+  body?: T;
+};
+
+export function isApiError<T = unknown>(err: unknown): err is ApiError<T> {
+  return err instanceof Error && ('status' in err || 'body' in err);
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -99,7 +106,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const error = new Error(body.error || `HTTP ${res.status}`) as ApiError;
+      error.status = res.status;
+      error.body = body;
+      throw error;
     }
     return res.json();
   } catch (err) {
@@ -112,7 +122,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   }
 }
 
-/** Blob 응답 전용 (DOCX/PDF 등 바이너리 다운로드) */
+/** Blob 응답 전용 (Markdown 파일 다운로드) */
 async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
@@ -377,13 +387,8 @@ export async function fetchPlaylistVideos(
   });
 }
 
-// DOCX 내보내기
-export async function exportDocx(title: string, content: string): Promise<Blob> {
-  return requestBlob('/api/export/docx', { method: 'POST', body: JSON.stringify({ title, content }) });
-}
-
-// 포맷별 내보내기 (MD, TXT, ZIP)
-export async function exportFormat(format: 'markdown' | 'txt' | 'zip', title: string, content: string): Promise<Blob> {
+// 포맷별 내보내기 (MD)
+export async function exportFormat(format: 'markdown', title: string, content: string): Promise<Blob> {
   return requestBlob(`/api/export/${format}`, { method: 'POST', body: JSON.stringify({ title, content }) });
 }
 
@@ -713,18 +718,6 @@ export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractE
   });
 }
 
-// === QA 게이트 ===
-
-export async function qaCheck(
-  content: string,
-  rules?: { forbidden_words?: string[] },
-): Promise<QaCheckResponse> {
-  return request('/api/qa-check', {
-    method: 'POST',
-    body: JSON.stringify({ content, rules }),
-  });
-}
-
 // === 프로바이더 유효성 검사 (F18) ===
 
 export async function validateProvider(
@@ -903,9 +896,14 @@ export interface ResultChatNote {
   snippet?: string;
 }
 
+export interface ResultChatSource extends ResultChatNote {
+  type: 'knowledge_note' | (string & {});
+}
+
 export interface ResultChatResponse {
   answer: string;
   notes?: ResultChatNote[];
+  rag_sources?: ResultChatSource[];
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }
 
@@ -925,15 +923,27 @@ export async function askResultChat(req: {
 // ── 지식 노트 (학습 엔진) ──
 
 export interface NoteSource {
-  type: 'youtube' | 'article' | (string & {});
+  type: 'youtube' | 'article' | 'text' | (string & {});
   url: string;
   title: string;
+}
+
+export interface CreateNoteRequest {
+  content: string;
+  source: NoteSource;
+  language?: string;
+  model?: string;
 }
 
 export interface NoteListItem {
   id: string;
   title: string;
   tags: string[];
+  key_concepts?: string[];
+  summary?: string;
+  quote_count?: number;
+  learning_point_count?: number;
+  review_question_count?: number;
   created_at: string;
   source: NoteSource;
 }
@@ -948,10 +958,13 @@ export interface NoteDetail {
   source: NoteSource;
   key_concepts: string[];
   summary: string;
+  learning_points?: string[];
+  review_questions?: Array<{ question: string; answer: string }>;
   quotes: NoteQuote[];
   tags: string[];
   language: string;
   created_at: string;
+  related_notes?: NoteSearchResult[];
 }
 
 export interface NoteSearchResult {
@@ -959,6 +972,29 @@ export interface NoteSearchResult {
   title: string;
   score: number;
   snippet: string;
+}
+
+export interface DuplicateNoteItem {
+  id: string;
+  title: string;
+  score?: number;
+  snippet?: string;
+  source?: NoteSource;
+}
+
+export interface NoteDuplicateWarning {
+  error: string;
+  warning?: string;
+  next_action?: string;
+  duplicate_reason?: 'same_url' | 'similar_content' | (string & {});
+  duplicate_notes?: DuplicateNoteItem[];
+}
+
+export async function createKnowledgeNote(req: CreateNoteRequest): Promise<NoteDetail> {
+  return request('/api/notes', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
 }
 
 export async function getNotes(): Promise<{ notes: NoteListItem[] }> {

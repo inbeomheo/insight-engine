@@ -1,12 +1,12 @@
 """
-채널 모니터링 + RSS 구독 확인 백그라운드 워커
+채널 모니터링 백그라운드 워커
 
-예약 발행 기능은 제거됨(Dep-6). 채널 모니터링/RSS 구독 확인은
-30분 간격으로 신규 업로드·새 글을 감지합니다.
+예약 발행/RSS 구독 확인 기능은 제거됨(Dep-6/Dep-14). 채널 모니터링은
+30분 간격으로 신규 업로드를 감지합니다.
 
 apscheduler import는 entry-points 전체 스캔으로 ~0.7초가 걸려 앱 스타트업의
-약 31%를 차지하므로, 스케줄러 인스턴스는 PEP 562 __getattr__로 지연 생성한다.
-(외부에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
+약 31%를 차지하므로, 스케줄러 인스턴스는 PEP 562 __getattr__로 지연 생성합니다.
+(테스트에서 `from ... import scheduler`로 접근하는 기존 코드/테스트와 호환)
 """
 
 import os
@@ -108,23 +108,6 @@ def _check_channel_monitors():
         logger.error(f"채널 모니터링 실패: {e}")
 
 
-def _check_rss_subscriptions():
-    """30분 간격: RSS 구독 피드 새 글 감지"""
-    from services.platform.rss_subscription_service import check_all_subscriptions
-
-    try:
-        results = check_all_subscriptions()
-        if results:
-            for r in results:
-                feed_title = r["subscription"].get("title", "알 수 없음")
-                count = len(r["new_entries"])
-                logger.info(
-                    f"RSS 새 글 감지: {feed_title} — {count}건 (user={r['user_id']})"
-                )
-    except Exception as e:
-        logger.error(f"RSS 구독 확인 실패: {e}")
-
-
 def start_scheduler(app):
     """Flask 앱 컨텍스트에서 스케줄러 시작"""
     try:
@@ -165,17 +148,8 @@ def start_scheduler(app):
             id="channel_monitor_checker",
             replace_existing=True,
         )
-        scheduler.add_job(
-            _with_context(_check_rss_subscriptions),
-            "interval",
-            minutes=30,
-            id="rss_subscription_checker",
-            replace_existing=True,
-        )
         scheduler.start()
-        logger.info(
-            "스케줄러 시작됨 (채널 모니터링: 30분, RSS 구독: 30분)"
-        )
+        logger.info("스케줄러 시작됨 (채널 모니터링: 30분)")
     except Exception as e:
         logger.error("start_scheduler 실패: %s", e, exc_info=True)
         return None

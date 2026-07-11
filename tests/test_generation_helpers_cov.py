@@ -338,5 +338,58 @@ class TestHandleCacheHit(unittest.TestCase):
             # 이 테스트는 _handle_cache_hit의 분기 커버리지를 위함
 
 
+class TestPersistGenerationResult(unittest.TestCase):
+    """_persist_generation_result 캐시 페이로드 테스트."""
+
+    def test_persists_source_receipts_to_cache(self):
+        from app import create_app
+        from routes.generation_helpers import _persist_generation_result
+
+        class ImmediateThread:
+            def __init__(self, target, args=(), kwargs=None, daemon=None):
+                self.target = target
+                self.args = args
+                self.kwargs = kwargs or {}
+
+            def start(self):
+                self.target(*self.args, **self.kwargs)
+
+        app = create_app()
+        app.config['TESTING'] = True
+
+        with app.test_request_context():
+            from flask import g, current_app
+            g.user_id = None
+            current_app.ai_cache = MagicMock()
+            result = {
+                'title': '제목',
+                'content': '본문',
+                'html': '<p>본문</p>',
+                'citations': [{'marker': '[01:00]', 'seconds': 60}],
+                'source_receipts': [{'claim': '본문', 'timestamp_url': 'u'}],
+            }
+
+            with patch('threading.Thread', ImmediateThread):
+                _persist_generation_result(
+                    'cache-key',
+                    'dQw4w9WgXcQ',
+                    {'model': 'm', 'style': 'summary', 'modifiers': {}},
+                    'https://youtu.be/dQw4w9WgXcQ',
+                    'YT',
+                    result,
+                    'prompt',
+                    None,
+                    '자막',
+                    'api',
+                    [],
+                    1.0,
+                    'report-id',
+                )
+
+            cached_payload = current_app.ai_cache.put.call_args.args[6]
+            self.assertEqual(cached_payload['source_receipts'], result['source_receipts'])
+            self.assertEqual(cached_payload['citations'], result['citations'])
+
+
 if __name__ == '__main__':
     unittest.main()

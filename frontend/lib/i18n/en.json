@@ -28,6 +28,7 @@
     "noHistory": "No analysis history",
     "noSearchResults": "No results found",
     "notes": "Notes",
+    "dashboard": "Dashboard",
     "poweredBy": "Powered by AI",
     "help": "Help"
   },
@@ -45,24 +46,13 @@
   },
   "emptyState": {
     "title": "Analyze videos, text, and PDFs",
-    "description": "Paste a URL or add text/PDF content and AI will generate\nsummaries, tutorials, and learning-ready drafts"
+    "description": "Paste a URL or add text/PDF content and AI will generate\\nsummaries, Q&A, and learning-ready drafts"
   },
   "styles": {
-    "blog_seo": "Blog+SEO",
     "summary": "Summary",
-    "tutorial": "Tutorial",
     "qna": "Q&A",
-    "app_ideas": "App Ideas",
-    "yozm_it": "Tech Article",
-    "brunch_essay": "Essay",
-    "naver_popular": "Popular Post",
-    "sns_post": "SNS Post",
-    "newsletter": "Newsletter",
-    "show_notes": "Show Notes",
-    "shorts_script": "Shorts Script",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "Comment Summary",
-    "course": "Course Notes"
+    "quiz": "Quiz",
+    "retention_cards": "Retention Cards"
   },
   "result": {
     "copyTitle": "Copy title",
@@ -71,10 +61,7 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "exportHtml": "Export HTML",
-    "exportDocx": "Export DOCX",
     "exportMarkdown": "Export Markdown",
-    "exportEpub": "Export EPUB",
-    "printPdf": "Print PDF",
     "share": "Share",
     "promptView": "View prompt",
     "mindmap": "Mindmap",
@@ -89,8 +76,6 @@
     "copied": "Copied",
     "richCopied": "Rich copy complete",
     "shareCopied": "Share text copied",
-    "docxSuccess": "DOCX downloaded",
-    "docxError": "DOCX export failed",
     "htmlSuccess": "HTML downloaded",
     "tts": "Text to speech",
     "factCheck": "Fact check",
@@ -101,12 +86,12 @@
   "settings": {
     "title": "Settings",
     "aiService": "AI Service",
-    "aiServiceDescription": "Manage AI services and cache",
-    "provider": "AI Provider",
+    "aiServiceDescription": "Manage ChatMock models and cache",
+    "provider": "AI Service",
     "model": "Model",
-    "selectProvider": "Select service",
+    "selectProvider": "Use ChatMock",
     "selectModel": "Select model",
-    "noProviders": "No AI services available. Run Flask server and set API keys.",
+    "noProviders": "Could not load ChatMock models. Check Flask server and chatmock serve.",
     "cacheManagement": "Cache Management",
     "cacheDescription": "Delete saved transcript/comment cache.",
     "clearCache": "Clear all cache",
@@ -121,13 +106,14 @@
     "description": "Analyze YouTube videos with AI\nand generate content in various formats",
     "noServer": "Please check if the Flask server is running.",
     "modelCount": "{count} models",
-    "start": "Get Started"
+    "start": "Get Started",
+    "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards."
   },
   "tour": {
     "step1Title": "Enter URL",
     "step1Desc": "Enter a YouTube URL or web page address to analyze.",
     "step2Title": "Choose Style",
-    "step2Desc": "Select your desired content style: blog, summary, tutorial, etc.",
+    "step2Desc": "Select a learning style: summary, Q&A, quiz, or retention cards.",
     "step3Title": "Start Generation",
     "step3Desc": "Click the generate button and AI will create your content.",
     "step4Title": "Use Results",
@@ -143,7 +129,7 @@
     "shortcutsDesc": "Press Enter to add a URL or start generation.",
     "faq": "FAQ",
     "faqApiKey": "Where do I set my API key?",
-    "faqApiKeyAnswer": "Go to Settings > AI Service to select your provider and model.",
+    "faqApiKeyAnswer": "Run ChatMock, then choose a model in Settings > AI Service.",
     "faqOffline": "Can I use it offline?",
     "faqOfflineAnswer": "Previously generated content is available offline, but new generation requires an internet connection."
   },

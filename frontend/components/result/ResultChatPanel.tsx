@@ -1,26 +1,54 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Bot, ChevronDown, ChevronUp, Loader2, Send, User } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Bot, ChevronDown, ChevronUp, Copy, Loader2, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { askResultChat, type ResultChatMessage } from '@/lib/api';
+import { askResultChat, type ResultChatMessage, type ResultChatSource } from '@/lib/api';
+import {
+  buildResultChatStudyCard,
+  saveResultChatStudyCard,
+} from '@/lib/result-chat-study-card';
 
 interface ResultChatPanelProps {
   context: string;
   model?: string;
   language?: string;
+  title?: string;
+  emptyText?: string;
+  placeholder?: string;
+  suggestedQuestions?: string[];
+  studyCardTitle?: string;
+  studyCardSourceHref?: string;
+}
+
+interface ChatMessage extends ResultChatMessage {
+  rag_sources?: ResultChatSource[];
 }
 
 const MAX_CONTEXT_CHARS = 50_000;
 
-export default function ResultChatPanel({ context, model, language = 'ko' }: ResultChatPanelProps) {
+export default function ResultChatPanel({
+  context,
+  model,
+  language = 'ko',
+  title = '콘텐츠 Q&A',
+  emptyText = '궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.',
+  placeholder = '예: 이 영상의 핵심 실행 단계는?',
+  suggestedQuestions = [],
+  studyCardTitle,
+  studyCardSourceHref,
+}: ResultChatPanelProps) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ResultChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [studyCardCopyStatus, setStudyCardCopyStatus] = useState<{
+    index: number;
+    status: 'copied' | 'error';
+  } | null>(null);
   const { requestContext, hasContext, isContextSliced } = useMemo(() => {
     const trimmed = context.trim();
     return {
@@ -34,6 +62,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
     setMessages([]);
     setInput('');
     setError(null);
+    setStudyCardCopyStatus(null);
   }, [context]);
 
   const helperText = useMemo(() => {
@@ -41,6 +70,49 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
     if (isContextSliced) return '자막이 길어 앞부분 50,000자를 기준으로 답변합니다.';
     return '현재 결과의 자막/본문과 관련 지식 노트만 근거로 답합니다.';
   }, [hasContext, isContextSliced]);
+  const visibleSuggestedQuestions = useMemo(
+    () => suggestedQuestions.map((question) => question.trim()).filter(Boolean).slice(0, 3),
+    [suggestedQuestions]
+  );
+
+  const copyStudyCard = useCallback(async (message: ChatMessage, index: number) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setStudyCardCopyStatus({ index, status: 'error' });
+      return;
+    }
+
+    const question = [...messages.slice(0, index)]
+      .reverse()
+      .find((item) => item.role === 'user')?.content;
+
+    try {
+      const cardInput = {
+        title: studyCardTitle ?? title,
+        question,
+        answer: message.content,
+        sources: message.rag_sources,
+        sourceHref: studyCardSourceHref,
+      };
+      let card = buildResultChatStudyCard(cardInput);
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          card = saveResultChatStudyCard(window.localStorage, cardInput);
+        }
+      } catch {
+        // Clipboard copy still works even when browser storage is unavailable.
+      }
+      await navigator.clipboard.writeText(card.markdown);
+      setStudyCardCopyStatus({ index, status: 'copied' });
+    } catch {
+      setStudyCardCopyStatus({ index, status: 'error' });
+    }
+  }, [messages, studyCardSourceHref, studyCardTitle, title]);
+
+  useEffect(() => {
+    if (!studyCardCopyStatus) return;
+    const timer = window.setTimeout(() => setStudyCardCopyStatus(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [studyCardCopyStatus]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +127,9 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       return;
     }
 
-    const history = messages.slice(-10);
+    const history: ResultChatMessage[] = messages
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content }));
     const userMessage: ResultChatMessage = { role: 'user', content: question };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -72,7 +146,14 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       });
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: result.answer || '답변을 받지 못했습니다.' },
+        {
+          role: 'assistant',
+          content: result.answer || '답변을 받지 못했습니다.',
+          rag_sources: result.rag_sources ?? (result.notes ?? []).map((note) => ({
+            ...note,
+            type: 'knowledge_note' as const,
+          })),
+        },
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : '채팅 요청에 실패했습니다.';
@@ -93,7 +174,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       >
         <span className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          콘텐츠 Q&A
+          {title}
         </span>
         <span className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
           {messages.length > 0 ? `${messages.length}개 메시지` : '질문하기'}
@@ -104,11 +185,29 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
       {open && (
         <div className="border-t border-border/40 p-4">
           <p className="mb-3 text-xs text-muted-foreground">{helperText}</p>
+          {visibleSuggestedQuestions.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {visibleSuggestedQuestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => {
+                    setInput(question);
+                    setError(null);
+                  }}
+                  disabled={loading || !hasContext}
+                  className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:border-primary/40 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="mb-3 max-h-72 space-y-3 overflow-y-auto rounded-md bg-background/70 p-3">
             {messages.length === 0 ? (
               <p className="py-5 text-center text-sm text-muted-foreground">
-                궁금한 점을 물어보세요. 근거가 없으면 “자막에 없는 내용입니다”라고 답합니다.
+                {emptyText}
               </p>
             ) : (
               messages.map((message, index) => (
@@ -125,6 +224,50 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
                     }`}
                   >
                     {message.content}
+                    {message.role === 'assistant' && message.rag_sources && message.rag_sources.length > 0 && (
+                      <div className="mt-3 border-t border-border/50 pt-2">
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          근거 {message.rag_sources.length}개
+                        </p>
+                        <div className="space-y-1.5">
+                          {message.rag_sources.map((source, sourceIndex) => (
+                            <div
+                              key={`${source.id ?? 'source'}-${sourceIndex}`}
+                              className="rounded-md border border-border/50 bg-background/70 px-2.5 py-1.5 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2 text-muted-foreground">
+                                <span className="truncate">{source.title || '지식 노트'}</span>
+                                {typeof source.score === 'number' && (
+                                  <span className="shrink-0">{Math.round(source.score * 100)}%</span>
+                                )}
+                              </div>
+                              {source.snippet && (
+                                <p className="mt-1 line-clamp-2 text-foreground/80">{source.snippet}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {message.role === 'assistant' && (
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-border/50 pt-2">
+                        {studyCardCopyStatus?.index === index && (
+                          <span className={`text-[10px] ${
+                            studyCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'
+                          }`}>
+                            {studyCardCopyStatus.status === 'copied' ? '복사+저장 완료' : '복사 실패'}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => copyStudyCard(message, index)}
+                          className="inline-flex items-center gap-1 rounded-full border border-primary/20 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/5"
+                        >
+                          <Copy className="h-3 w-3" />
+                          복습 카드 저장
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {message.role === 'user' && <User className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />}
                 </div>
@@ -148,7 +291,7 @@ export default function ResultChatPanel({ context, model, language = 'ko' }: Res
             <Textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="예: 이 영상의 핵심 실행 단계는?"
+              placeholder={placeholder}
               maxLength={500}
               disabled={loading || !hasContext}
               className="min-h-20 resize-y"

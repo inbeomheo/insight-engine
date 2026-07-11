@@ -1,8 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
-export const runtime = 'edge';
-
 /**
  * OG 이미지 생성 엔드포인트
  * GET /api/og?title=...&description=...

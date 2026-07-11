@@ -58,7 +58,7 @@ SEO/발행 계열이라 사용자 결정 필요.
 | 2 | `aeo_optimizer_service.py` | AI Answer Engine 최적화(직답 구조 점수) | `tests/test_aeo_optimizer_service.py`만. routes/services cross-import 0 (`grep -rln "aeo_optimizer" --include=*.py .` → 테스트 파일만) | [SEO 전용-제거 후보] |
 | 3 | `anchor_text_service.py` | 앵커 텍스트 품질 감사 | `tests/test_anchor_text_service.py`만 | [SEO 전용-제거 후보] |
 | 4 | `cannibalization_service.py` | 콘텐츠 카니발리제이션(주제 중복) 감지 | `tests/test_cannibalization_service.py`만 | [SEO 전용-제거 후보] |
-| 5 | `competitor_analysis_service.py` | 경쟁 콘텐츠 스크레이핑+분석 (`services.data.web_scraper_service`, `services.data.auto_tag_service`를 내부에서 import — outbound 의존성일 뿐 inbound 소비자 아님) | `tests/test_competitor_analysis_service.py`만 | [SEO 전용-제거 후보] |
+| 5 | `competitor_analysis_service.py` | 경쟁 콘텐츠 스크레이핑+분석 (`services.data.web_scraper_service`, `services.data.auto_tag_service`를 내부에서 import했음 — 이후 `auto_tag_service`는 별도 데드코드 배치에서 제거됨) | `tests/test_competitor_analysis_service.py`만 | [SEO 전용-제거 후보] |
 | 6 | `content_freshness_indicator_service.py` | 콘텐츠 최신성 지표 계산 | `tests/test_content_freshness_indicator_service.py`만 | [SEO 전용-제거 후보] |
 | 7 | `content_performance_predictor_service.py` | 규칙 기반 성과(조회/공유/참여) 예측 | `tests/test_content_performance_predictor_service.py`만 | [SEO 전용-제거 후보] |
 | 8 | `cta_optimizer_service.py` | CTA 문구 분석/추천 | `tests/test_cta_optimizer_service.py`만 | [SEO 전용-제거 후보] |
@@ -336,7 +336,7 @@ CLAUDE.md의 "파서 계약: blog_seo 메타 테이블 행 / FAQ / 해시태그,
 | `frontend/components/result/ScoreCard.tsx` | `seo` 점수 필드를 표시 | 백엔드 `/api/content-score`(`routes/advanced_routes.py:517`)는 `services/quality/quality_service.calculate_comprehensive_score`를 쓰며 `services/seo/`를 전혀 import하지 않음. 컴포넌트 자체는 고아(§0-3)지만 **Dep-7 범위(services/seo) 밖** — 건드리려면 별도 quality 도메인 정리 이슈로 분리 |
 | `services/core/ai_metadata.py`의 `extract_seo_metadata`/`extract_geo_metadata`/`extract_faq_schema`/`extract_cta` | 이름에 "seo"/"geo" 포함, `services/seo/`와 혼동하기 쉬움 | 물리적으로 `services/core/`에 위치하며 `services/seo/` 디렉토리와 무관. blog_seo/geo_seo 스타일의 **메인 생성 경로 파서**이므로 배치 D(스타일 자체 제거)를 실행하지 않는 한 절대 건드리지 않는다 |
 | `services/agents/seo_agent.py`(SEOAgent 클래스 자체, meta_title/description/faq/keywords 생성 부분) | 파일명에 seo, `agent_mode` 4단계 고정 스텝 | `agent_mode`는 스타일 무관의 범용 "에이전트 모드" 기능(§1 하단)이라 SEO 스타일 제거와 독립. json_ld 호출부(`services/seo/seo_metadata_service` 의존 부분)만 배치 D에서 함께 정리하고, 나머지 메타데이터 생성 로직은 존치 — 오케스트레이터 재설계는 별도 작업 |
-| `services/data/web_scraper_service.py`, `services/data/auto_tag_service.py` | `competitor_analysis_service.py`가 이 둘을 import(§1 #5) | 이 두 서비스는 `services/data/`에 있고 다른 다수 소비자를 가질 가능성이 높음(본 조사에서 역방향 확인 안 함) — 배치 A에서 `competitor_analysis_service.py`를 삭제해도 이 두 서비스는 **절대 함께 삭제 대상 아님**, 별도 사용처 존재 여부를 그때 다시 확인 |
+| `services/data/web_scraper_service.py`, `services/data/auto_tag_service.py` | `competitor_analysis_service.py`가 이 둘을 import(§1 #5) | 당시에는 범위 밖으로 보류. 이후 `auto_tag_service.py`는 프론트 소비 0 라우트(`/api/auto-tags`) 전용 고아로 재검증되어 별도 배치에서 제거됨. |
 | `services/quality/qa_gate_service.py`(발행 전 QA 게이트) | "품질/게이트"라는 이름이 SEO 점검과 유사한 어휘 | `services/seo/`와 물리적으로 무관한 별도 도메인(`services/quality/`), CLAUDE.md에 별도 기능(`POST /api/qa-check`)으로 명시되어 있음 — Dep-7 범위 아님 |
 | `services/rag/`(RAG 지식 참조, ChromaDB) | 제품 비전의 "지식 위키" 기둥과 혼동 가능 | SEO와 무관한 학습축 핵심 인프라, 이 문서의 어떤 배치에서도 대상이 아님 (명시적으로 out-of-scope) |
 

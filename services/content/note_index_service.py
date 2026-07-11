@@ -11,6 +11,8 @@ from services.rag.chroma_client_factory import get_chroma_client
 NOTES_COLLECTION_NAME = "knowledge_notes"
 DEFAULT_SEARCH_LIMIT = 5
 MAX_SEARCH_LIMIT = 20
+DEFAULT_RELATED_LIMIT = 3
+MAX_RELATED_LIMIT = MAX_SEARCH_LIMIT - 1
 SNIPPET_MAX_CHARS = 180
 
 logger = get_logger(__name__)
@@ -55,6 +57,32 @@ def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str
     return _map_results(results)
 
 
+def get_related_notes(
+    note: dict[str, Any],
+    limit: int = DEFAULT_RELATED_LIMIT,
+) -> list[dict[str, Any]]:
+    """Return similar notes, excluding the note itself."""
+    note_id = _required_note_id(note)
+    query = _build_searchable_text(note)
+    if not query:
+        return []
+
+    collection = _get_collection()
+    count = collection.count()
+    if count == 0:
+        return []
+
+    normalized_limit = _normalize_related_limit(limit)
+    n_results = min(normalized_limit + 1, count, MAX_SEARCH_LIMIT)
+    results = collection.query(query_texts=[query], n_results=n_results)
+    related = [
+        result
+        for result in _map_results(results)
+        if result.get("id") and result.get("id") != note_id
+    ]
+    return related[:normalized_limit]
+
+
 def _get_collection():
     client = get_chroma_client(CHROMA_DB_PATH)
     # hnsw:space is immutable after collection creation; notes rely on cosine distances for scoring.
@@ -76,6 +104,9 @@ def _required_note_id(note: dict[str, Any]) -> str:
 def _build_searchable_text(note: dict[str, Any]) -> str:
     concepts = _str_list(note.get("key_concepts"))
     tags = _str_list(note.get("tags"))
+    learning_points = _str_list(note.get("learning_points"))
+    review_questions = _review_question_texts(note.get("review_questions"))
+    quotes = _quote_texts(note.get("quotes"))
     summary = str(note.get("summary", "")).strip()
 
     parts: list[str] = []
@@ -83,6 +114,12 @@ def _build_searchable_text(note: dict[str, Any]) -> str:
         parts.append("핵심 개념: " + ", ".join(concepts))
     if summary:
         parts.append("요약: " + summary)
+    if learning_points:
+        parts.append("학습 포인트: " + " ".join(learning_points))
+    if review_questions:
+        parts.append("복습 질문: " + " ".join(review_questions))
+    if quotes:
+        parts.append("근거 인용: " + " ".join(quotes))
     if tags:
         parts.append("태그: " + ", ".join(tags))
     return "\n".join(parts).strip()
@@ -103,12 +140,49 @@ def _str_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _review_question_texts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    texts: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        question = str(item.get("question", "")).strip()
+        answer = str(item.get("answer", "")).strip()
+        if question or answer:
+            texts.append(f"{question} {answer}".strip())
+    return texts
+
+
+def _quote_texts(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    texts: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            text = str(item.get("text", "")).strip()
+            ref = str(item.get("ref", "")).strip()
+            if text:
+                texts.append(f"{text} {ref}".strip())
+        elif str(item).strip():
+            texts.append(str(item).strip())
+    return texts
+
+
 def _normalize_limit(limit: int) -> int:
     try:
         value = int(limit)
     except (TypeError, ValueError):
         value = DEFAULT_SEARCH_LIMIT
     return max(1, min(value, MAX_SEARCH_LIMIT))
+
+
+def _normalize_related_limit(limit: int) -> int:
+    try:
+        value = int(limit)
+    except (TypeError, ValueError):
+        value = DEFAULT_RELATED_LIMIT
+    return max(1, min(value, MAX_RELATED_LIMIT))
 
 
 def _map_results(results: dict[str, Any]) -> list[dict[str, Any]]:

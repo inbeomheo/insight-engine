@@ -70,6 +70,15 @@ class TestAICacheService(unittest.TestCase):
         self.assertNotEqual(en_key, default_key)
         self.assertNotEqual(ja_key, default_key)
 
+    def test_make_key_differs_by_enable_citations(self):
+        """인용 모드는 일반 생성 캐시와 분리."""
+        default_key = AICacheService.make_key('abc', 'summary', 'gemini/flash')
+        citation_key = AICacheService.make_key(
+            'abc', 'summary', 'gemini/flash', enable_citations=True
+        )
+
+        self.assertNotEqual(default_key, citation_key)
+
     def test_language_specific_cache_entries_do_not_cross_hit(self):
         """언어별 캐시 응답은 서로 교차 히트하지 않음."""
         en_key = AICacheService.make_key('v1', 'summary', 'model1', transcript_language='en')

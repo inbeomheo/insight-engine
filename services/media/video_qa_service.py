@@ -233,24 +233,12 @@ def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[s
             "temperature": 0.3,
         }
 
-        # 프로바이더별 설정 (ai_service.py 패턴 동일 적용)
-        if model.startswith("gemini/") and "lite" not in model.lower():
-            kwargs["reasoning_effort"] = "minimal"
-
-        if model.startswith("zhipuai/"):
-            kwargs["api_base"] = "https://open.bigmodel.cn/api/paas/v4/"
-            api_key = os.environ.get("ZHIPUAI_API_KEY", "")
-            if api_key:
-                kwargs["api_key"] = api_key
-
-        if model.startswith("ollama_chat/") or model.startswith("ollama/"):
-            kwargs["api_base"] = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-
-        if model.startswith("chatmock/"):
-            actual_model = model.replace("chatmock/", "")
+        if model.startswith("chatmock/") or model.startswith("gpt-"):
+            actual_model = model.replace("chatmock/", "", 1)
             kwargs["model"] = actual_model
             kwargs["api_base"] = os.environ.get("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-            kwargs["api_key"] = "dummy"
+            kwargs["api_key"] = os.environ.get("CHATMOCK_API_KEY", "dummy") or "dummy"
+            kwargs["reasoning_effort"] = "medium"
             kwargs.pop("temperature", None)
             kwargs["drop_params"] = True
 

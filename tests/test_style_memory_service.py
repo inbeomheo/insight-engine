@@ -24,6 +24,7 @@ class TestConstants(unittest.TestCase):
         """스타일 레이블 매핑"""
         self.assertIn('blog_seo', STYLE_LABELS)
         self.assertEqual(STYLE_LABELS['blog_seo'], '블로그+SEO')
+        self.assertEqual(STYLE_LABELS['retention_cards'], '리텐션 카드')
 
     def test_writing_style_labels(self):
         """문체 레이블 매핑"""

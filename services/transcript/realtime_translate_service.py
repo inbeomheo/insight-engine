@@ -69,7 +69,7 @@ def _translate_with_ai(text: str, target_lang: str, model: Optional[str] = None)
     from services.core.ai_service import call_litellm
 
     prompt = _TRANSLATE_PROMPTS.get(target_lang, _TRANSLATE_PROMPTS['en'])
-    target_model = model or os.getenv('TRANSLATION_MODEL', 'gemini/gemini-2.5-flash-lite-preview-09-2025')
+    target_model = model or os.getenv('TRANSLATION_MODEL', 'chatmock/gpt-5.4-mini')
 
     messages = [
         {"role": "system", "content": prompt},

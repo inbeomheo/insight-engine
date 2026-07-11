@@ -85,7 +85,7 @@ JSON 응답 {title, content, html, usage}
 | 서비스 | `services/transcript/chapter_service.py` | AI 자막 → 챕터 자동 분할 |
 | 서비스 | `services/platform/webhook_service.py` | 웹훅 알림 (SSRF 검증 + 재시도) |
 | 서비스 | `services/platform/channel_monitor_service.py` | YouTube 채널 신규 업로드 감지 (30분 폴링) |
-| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (채널 모니터링/RSS 구독, 30분 간격) |
+| 서비스 | `services/data/scheduler_worker.py` | APScheduler 백그라운드 워커 (채널 모니터링, 30분 간격) |
 | 서비스 | `services/data/workspace_service.py` | 워크스페이스 생성/초대/역할 관리 + 콘텐츠 승인 플로우 |
 | 서비스 | `services/data/supabase_service.py` | Supabase 인증, CRUD, 관리자 조회 |
 | 서비스 | `services/content/citation_service.py` | 인용 마커 [MM:SS] 파싱 + 검증 + YouTube 링크 변환 |
@@ -410,7 +410,7 @@ SELECT decrement_usage_safe('user-uuid');
 
 `plans/dep7-seo-geo-split-plan.md` §4 배치 B 실행. 이미 생성된 콘텐츠의 SEO 점수/제안을 반환하는 3단 죽은 체인(서비스→라우트→프론트 래퍼)을 재검증 후 제거:
 - 제거된 서비스: `services/agents/seo_optimize_agent.py`(`optimize_seo()`) 전체
-- 제거된 라우트: `routes/utility/feedback_quality.py`의 `POST /api/seo-optimize`(`api_seo_optimize`) — 파일 내 다른 라우트(피드백/팩트체크/표절/가독성/감정흐름/NPS)는 그대로 유지
+- 제거된 라우트: `routes/utility/feedback_quality.py`의 `POST /api/seo-optimize`(`api_seo_optimize`) — 파일 내 다른 라우트(피드백/팩트체크/표절/가독성/감정흐름)는 그대로 유지
 - 제거된 프론트: `frontend/lib/api.ts`의 `seoOptimize()` 래퍼 + `SeoOptimizeResponse` import, `frontend/lib/types/api.ts`의 `SeoOptimizeResponse` 타입
 - 제거된 테스트: `tests/test_seo_optimize_agent.py`(파일 전체), `tests/test_utility_routes.py`의 `_CONTENT_ENDPOINTS` 목록·`simple_services` 서브테스트 중 `/api/seo-optimize` 케이스만 삭제(파일 자체는 다른 분석 엔드포인트 테스트가 있어 유지)
 - 이 3단 모두 재검증 결과 프로덕션/프론트 어디서도 호출자가 없었음(`services/agents/seo_agent.py`의 활성 `SEOAgent`와는 다른 파일이며, `services/seo/`(Dep-7 배치 A 대상)와도 무관)

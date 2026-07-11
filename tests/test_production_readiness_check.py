@@ -22,6 +22,20 @@ def _run_readiness_check(env):
     )
 
 
+def _run_readiness_check_args(args, env=None):
+    process_env = os.environ.copy()
+    if env:
+        process_env.update(env)
+    return subprocess.run(
+        [sys.executable, str(ROOT / 'scripts' / 'check_production_readiness.py'), *args],
+        cwd=ROOT,
+        env=process_env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 def test_readiness_check_passes_with_safe_minimum_production_env():
     result = _run_readiness_check({
         'FLASK_ENV': 'production',
@@ -36,6 +50,70 @@ def test_readiness_check_passes_with_safe_minimum_production_env():
 
     assert result.returncode == 0
     assert 'production readiness checks passed' in result.stdout
+
+
+def test_readiness_check_can_load_explicit_env_file(tmp_path):
+    env_file = tmp_path / 'production.env'
+    env_file.write_text(
+        '\n'.join([
+            'FLASK_ENV=production',
+            'CORS_ORIGINS=https://app.example.com',
+            'METRICS_AUTH_TOKEN=metrics-token',
+            f"ENCRYPTION_SECRET={'x' * 32}",
+            'REDIS_URL=redis://redis:6379/0',
+            'AUTO_BACKUP_INTERVAL_HOURS=6',
+            'MAX_BACKUPS=30',
+            'APP_DATA_BACKUP_DIR=/mnt/backups/insight-engine',
+        ]),
+        encoding='utf-8',
+    )
+
+    result = _run_readiness_check_args(['--env-file', str(env_file)], {
+        'FLASK_ENV': '',
+        'CORS_ORIGINS': '',
+        'METRICS_AUTH_TOKEN': '',
+        'ENCRYPTION_SECRET': '',
+        'REDIS_URL': '',
+        'AUTO_BACKUP_INTERVAL_HOURS': '',
+        'APP_DATA_BACKUP_DIR': '',
+    })
+
+    assert result.returncode == 0
+    assert 'production readiness checks passed' in result.stdout
+
+
+def test_readiness_check_env_file_does_not_fall_back_to_process_env(tmp_path):
+    env_file = tmp_path / 'incomplete-production.env'
+    env_file.write_text(
+        '\n'.join([
+            'FLASK_ENV=production',
+            'CORS_ORIGINS=https://app.example.com',
+        ]),
+        encoding='utf-8',
+    )
+
+    result = _run_readiness_check_args(['--env-file', str(env_file)], {
+        'METRICS_AUTH_TOKEN': 'metrics-token',
+        'ENCRYPTION_SECRET': 'x' * 32,
+        'REDIS_URL': 'redis://redis:6379/0',
+        'AUTO_BACKUP_INTERVAL_HOURS': '6',
+        'MAX_BACKUPS': '30',
+        'APP_DATA_BACKUP_DIR': '/mnt/backups/insight-engine',
+    })
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'METRICS_AUTH_TOKEN' in output
+    assert 'ENCRYPTION_SECRET' in output
+    assert 'REDIS_URL' in output
+
+
+def test_readiness_check_reports_missing_env_file():
+    result = _run_readiness_check_args(['--env-file', 'missing.production.env'])
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 1
+    assert 'env file not found' in output
 
 
 def test_readiness_check_reports_missing_production_guards_together():

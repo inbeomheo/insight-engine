@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from config import get_model_max_tokens
 from prompts.styles.knowledge_note import KNOWLEDGE_NOTE_PROMPT
@@ -20,7 +21,8 @@ from services.core.logging_config import get_logger
 
 NOTES_DIR = Path(os.getenv("KNOWLEDGE_NOTES_DIR", "data/notes"))
 NOTE_STYLE_ID = "knowledge_note"
-SOURCE_TYPES = {"youtube", "article"}
+SOURCE_TYPES = {"youtube", "article", "text"}
+URL_REQUIRED_SOURCE_TYPES = {"youtube", "article"}
 _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
 logger = get_logger(__name__)
 
@@ -45,15 +47,39 @@ def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
         errors.append("source는 객체여야 합니다.")
     else:
         if source.get("type") not in SOURCE_TYPES:
-            errors.append("source.type은 youtube 또는 article이어야 합니다.")
-        for key in ("url", "title"):
-            if not isinstance(source.get(key), str) or not source.get(key, "").strip():
-                errors.append(f"source.{key}는 비어 있지 않은 문자열이어야 합니다.")
+            errors.append("source.type은 youtube, article 또는 text여야 합니다.")
+        if source.get("type") in URL_REQUIRED_SOURCE_TYPES and (
+            not isinstance(source.get("url"), str) or not source.get("url", "").strip()
+        ):
+            errors.append("source.url은 비어 있지 않은 문자열이어야 합니다.")
+        elif "url" in source and not isinstance(source.get("url"), str):
+            errors.append("source.url은 문자열이어야 합니다.")
+        if not isinstance(source.get("title"), str) or not source.get("title", "").strip():
+            errors.append("source.title은 비어 있지 않은 문자열이어야 합니다.")
 
     for key in ("key_concepts", "tags"):
         value = note.get(key)
         if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
             errors.append(f"{key}는 비어 있지 않은 문자열 배열이어야 합니다.")
+
+    for key in ("learning_points",):
+        value = note.get(key, [])
+        if value and (not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value)):
+            errors.append(f"{key}는 문자열 배열이어야 합니다.")
+
+    review_questions = note.get("review_questions", [])
+    if review_questions:
+        if not isinstance(review_questions, list):
+            errors.append("review_questions는 배열이어야 합니다.")
+        else:
+            for item in review_questions:
+                if not isinstance(item, dict):
+                    errors.append("review_questions 항목은 객체여야 합니다.")
+                    continue
+                if not isinstance(item.get("question"), str) or not item.get("question", "").strip():
+                    errors.append("review_questions.question은 비어 있지 않은 문자열이어야 합니다.")
+                if not isinstance(item.get("answer"), str) or not item.get("answer", "").strip():
+                    errors.append("review_questions.answer는 비어 있지 않은 문자열이어야 합니다.")
 
     if not isinstance(note.get("summary"), str) or not note.get("summary", "").strip():
         errors.append("summary는 비어 있지 않은 문자열이어야 합니다.")
@@ -155,10 +181,40 @@ def list_notes() -> list[dict[str, Any]]:
             "id": note.get("id"),
             "title": source.get("title", ""),
             "tags": note.get("tags", []),
+            "key_concepts": note.get("key_concepts", []),
+            "summary": note.get("summary", ""),
+            "quote_count": len(note.get("quotes", []) if isinstance(note.get("quotes"), list) else []),
+            "learning_point_count": len(note.get("learning_points", []) if isinstance(note.get("learning_points"), list) else []),
+            "review_question_count": len(note.get("review_questions", []) if isinstance(note.get("review_questions"), list) else []),
             "created_at": note.get("created_at", ""),
             "source": source,
         })
     return sorted(items, key=lambda item: item.get("created_at", ""), reverse=True)
+
+
+def find_notes_by_source_url(
+    source: dict[str, Any],
+    notes: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Find existing notes with the same canonical source URL."""
+    normalized = normalize_source(source)
+    target_url = _canonical_url(normalized["url"])
+    if not target_url:
+        return []
+    duplicates: list[dict[str, Any]] = []
+    source_notes = list_notes() if notes is None else notes
+
+    for item in source_notes:
+        item_source = item.get("source") if isinstance(item.get("source"), dict) else {}
+        if _canonical_url(str(item_source.get("url", ""))) != target_url:
+            continue
+        duplicates.append({
+            "id": item.get("id"),
+            "title": item.get("title", ""),
+            "created_at": item.get("created_at", ""),
+            "source": item_source,
+        })
+    return duplicates
 
 
 def generate_knowledge_note(
@@ -173,7 +229,7 @@ def generate_knowledge_note(
     if not isinstance(model, str) or not model.strip():
         raise ValueError("[노트 생성 실패] 모델이 필요합니다.")
 
-    source = _normalize_source(source)
+    source = normalize_source(source)
     model = model.strip()
     language = str(language or "ko").strip() or "ko"
     prompt = style_prompt or KNOWLEDGE_NOTE_PROMPT
@@ -216,16 +272,69 @@ def _normalize_source(source: dict[str, Any]) -> dict[str, str]:
     url = str(source.get("url", "")).strip()
     title = str(source.get("title", "")).strip()
     if source_type not in SOURCE_TYPES:
-        raise ValueError("[노트 생성 실패] source.type은 youtube 또는 article이어야 합니다.")
-    if not url or not title:
-        raise ValueError("[노트 생성 실패] source.url과 source.title이 필요합니다.")
+        raise ValueError("[노트 생성 실패] source.type은 youtube, article 또는 text여야 합니다.")
+    if source_type in URL_REQUIRED_SOURCE_TYPES and not url:
+        raise ValueError("[노트 생성 실패] source.url이 필요합니다.")
+    if source_type == "text" and not title:
+        title = "직접 입력 텍스트"
+    if not title:
+        raise ValueError("[노트 생성 실패] source.title이 필요합니다.")
     return {"type": source_type, "url": url, "title": title}
 
 
+def normalize_source(source: dict[str, Any]) -> dict[str, str]:
+    return _normalize_source(source)
+
+
+def _canonical_url(url: str) -> str:
+    raw_url = str(url or "").strip()
+    if not raw_url:
+        return ""
+    try:
+        parsed = urlsplit(raw_url)
+    except ValueError:
+        return raw_url.rstrip("/")
+
+    host = parsed.netloc.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    query_pairs = _canonical_query_pairs(parsed.query)
+    query = urlencode(query_pairs)
+
+    if host in {"youtube.com", "m.youtube.com"} and parsed.path.rstrip("/") == "/watch":
+        video_id = next((value for key, value in query_pairs if key == "v"), "")
+        if video_id:
+            return f"https://youtube.com/watch?v={video_id}"
+    if host == "youtu.be":
+        video_id = parsed.path.strip("/")
+        if video_id:
+            return f"https://youtube.com/watch?v={video_id}"
+
+    return urlunsplit((
+        parsed.scheme.lower(),
+        host,
+        parsed.path.rstrip("/"),
+        "",
+        query,
+    ))
+
+
+def _canonical_query_pairs(query: str) -> list[tuple[str, str]]:
+    tracking_keys = {"fbclid", "gclid"}
+    pairs = []
+    for key, value in parse_qsl(query, keep_blank_values=True):
+        lowered = key.lower()
+        if lowered.startswith("utm_") or lowered in tracking_keys:
+            continue
+        pairs.append((key, value))
+    return sorted(pairs)
+
+
 def _build_ai_input(content: str, source: dict[str, str], language: str) -> str:
+    url_line = f"url: {source['url']}\n" if source.get("url") else ""
     return (
         "[source]\n"
-        f"type: {source['type']}\nurl: {source['url']}\ntitle: {source['title']}\nlanguage: {language}\n\n"
+        f"type: {source['type']}\n{url_line}title: {source['title']}\nlanguage: {language}\n\n"
         "[content]\n"
         f"{content}"
     )
@@ -279,6 +388,8 @@ def _normalize_generated_note(note: dict[str, Any]) -> dict[str, Any]:
     note = dict(note or {})
     note["key_concepts"] = _coerce_str_list(note.get("key_concepts"))
     note["tags"] = _coerce_str_list(note.get("tags"))
+    note["learning_points"] = _coerce_str_list(note.get("learning_points"))
+    note["review_questions"] = _coerce_review_questions(note.get("review_questions"))
     note["quotes"] = _coerce_quotes(note.get("quotes"))
     note["summary"] = str(note.get("summary", "")).strip()
     note["language"] = str(note.get("language", "")).strip()
@@ -311,6 +422,27 @@ def _coerce_quotes(value: Any) -> list[dict[str, str]]:
     return quotes
 
 
+def _coerce_review_questions(value: Any) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    questions: list[dict[str, str]] = []
+    for item in value:
+        if isinstance(item, dict):
+            question = str(item.get("question", "")).strip()
+            answer = str(item.get("answer", "")).strip()
+        else:
+            text = str(item).strip()
+            if "?" in text:
+                question, answer = text.split("?", 1)
+                question = question.strip() + "?"
+                answer = answer.strip(" :-")
+            else:
+                question, answer = text, ""
+        if question and answer:
+            questions.append({"question": question, "answer": answer})
+    return questions
+
+
 def _parse_markdown_note(text: str) -> dict[str, Any] | None:
     summary = _markdown_section(text, "summary")
     concepts = _markdown_list_section(text, "key_concepts")
@@ -320,6 +452,8 @@ def _parse_markdown_note(text: str) -> dict[str, Any] | None:
     return {
         "key_concepts": concepts,
         "summary": summary,
+        "learning_points": [],
+        "review_questions": [],
         "quotes": [],
         "tags": tags,
         "language": "ko",

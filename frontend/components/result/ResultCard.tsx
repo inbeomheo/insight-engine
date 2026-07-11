@@ -3,7 +3,7 @@
 import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
-  FileText, Code, Brain, Download, Share2, Printer,
+  FileText, Code, Brain, BookOpen, Share2,
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -30,12 +30,13 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { exportDocx, exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, type VideoDeepDiveSlide } from '@/lib/api';
+import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
+import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
 import { ReportProvider } from './ReportContext';
-import { EXPORT_HTML_STYLE, PRINT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
+import { EXPORT_HTML_STYLE } from '@/lib/exportHtmlTemplate';
 
 // 조건부 서브컴포넌트 — 특정 스타일/데이터에서만 사용되므로 dynamic import
 const SeoSection = dynamic(() => import('./SeoSection'), { ssr: false });
@@ -46,7 +47,6 @@ const ShortsClipList = dynamic(() => import('./ShortsClipList'), { ssr: false })
 const WebSourcesSection = dynamic(() => import('./WebSourcesSection'), { ssr: false });
 const InsertedLinksSection = dynamic(() => import('./InsertedLinksSection'), { ssr: false });
 const EventTimeline = dynamic(() => import('./EventTimeline'), { ssr: false });
-const QaGateBadge = dynamic(() => import('./QaGateBadge'), { ssr: false });
 
 // 무거운 서브컴포넌트 dynamic import
 const VideoChatPanel = dynamic(() => import('@/components/chat/VideoChatPanel'), { ssr: false });
@@ -160,7 +160,7 @@ function TutorialVisualCueSection({
             <ImageIcon className="h-4 w-4" />
           </span>
           <div>
-            <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">튜토리얼 사진 가이드</h4>
+            <h4 className="text-sm font-black tracking-[-0.01em] text-foreground">시각 자료 가이드</h4>
             <p className="text-xs text-muted-foreground">
               {visibleSlides.length > 0 ? '영상에서 실제 화면을 추출했어.' : '각 단계에 넣으면 좋은 사진/스크린샷 큐시트야.'}
             </p>
@@ -253,6 +253,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'full', onExpandToFull }: ResultCardProps) {
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [isSavingDeepDive, setIsSavingDeepDive] = useState(false);
   const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
@@ -271,7 +272,11 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
   const setPromptModalOpen = useUIStore((s) => s.setPromptModalOpen);
 
   const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const { t } = useTranslation();
+  const noteSource = getKnowledgeNoteSource(report);
+  const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
+  const linkedNoteId = report.knowledge_note_id;
 
   // NotebookLM 폴링 interval 추적 — 언마운트 시 정리 (메모리 누수/유령 폴링 방지)
   const pollIdsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
@@ -335,21 +340,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     }
   }
 
-  async function handleExportDocx() {
-    try {
-      const blob = await exportDocx(report.title, report.content);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${report.title.slice(0, 50)}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(t('result.docxSuccess'));
-    } catch {
-      toast.error(t('result.docxError'));
-    }
-  }
-
   function handleExportHtml() {
     const html = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><title>${report.title}</title>
@@ -362,17 +352,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     a.click();
     URL.revokeObjectURL(url);
     toast.success(t('result.htmlSuccess'));
-  }
-
-  function handlePrint() {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html>
-<html><head><title>${report.title}</title>
-<style>${PRINT_HTML_STYLE}</style></head>
-<body>${sanitizeHtml(report.html || report.content)}</body></html>`);
-    w.document.close();
-    w.print();
   }
 
   async function handleShare() {
@@ -403,7 +382,69 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
     }
   }
 
-  async function handleExportFormat(format: 'markdown' | 'txt' | 'zip') {
+  function openKnowledgeNote(noteId: string) {
+    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+  }
+
+  function markKnowledgeNoteLinked(noteId: string, title?: string) {
+    updateReport(report.id, {
+      knowledge_note_id: noteId,
+      knowledge_note_title: title || noteSource?.title || '학습 노트',
+      knowledge_note_saved_at: new Date().toISOString(),
+    });
+  }
+
+  async function handleSaveKnowledgeNote() {
+    if (isSavingNote || !noteSource) return;
+    setIsSavingNote(true);
+    try {
+      const note = await createKnowledgeNote({
+        content: getKnowledgeNoteContent(report),
+        language: noteLanguage,
+        model: selectedModel || undefined,
+        source: noteSource,
+      });
+      markKnowledgeNoteLinked(note.id, note.source?.title);
+      toast.success('학습 노트로 저장했습니다.', {
+        description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
+        action: {
+          label: '열기',
+          onClick: () => {
+            openKnowledgeNote(note.id);
+          },
+        },
+      });
+    } catch (err) {
+      const body = isApiError<NoteDuplicateWarning>(err) ? err.body : undefined;
+      const duplicate = body?.duplicate_notes?.[0];
+      if (isApiError<NoteDuplicateWarning>(err) && err.status === 409 && duplicate?.id) {
+        markKnowledgeNoteLinked(duplicate.id, duplicate.title);
+        toast.warning(body?.warning || '이미 학습한 자료와 비슷합니다.', {
+          description: body?.next_action || '기존 노트를 열어 이어서 확인하세요.',
+          action: {
+            label: '기존 노트 열기',
+            onClick: () => {
+              openKnowledgeNote(duplicate.id);
+            },
+          },
+        });
+      } else {
+        toast.error(err instanceof Error ? err.message : '학습 노트 저장에 실패했습니다.');
+      }
+    } finally {
+      setIsSavingNote(false);
+    }
+  }
+
+  function handleKnowledgeNoteAction() {
+    if (linkedNoteId) {
+      openKnowledgeNote(linkedNoteId);
+      return;
+    }
+    void handleSaveKnowledgeNote();
+  }
+
+  async function handleExportFormat(format: 'markdown') {
     try {
       const blob = await exportFormat(format, report.title, report.content);
       const ext = format === 'markdown' ? 'md' : format;
@@ -710,7 +751,6 @@ const ResultCard = memo(function ResultCard({ report, searchQuery, viewMode = 'f
                 </TooltipContent>
               </Tooltip>
             )}
-            <QaGateBadge content={report.content} />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {report.transcript_segments && report.transcript_segments.length > 0 && (
@@ -840,6 +880,57 @@ variant={report.share_url ? 'secondary' : 'outline'}
             />
           )}
 
+          {notePreview && !linkedNoteId && (
+            <section className="mb-5 rounded-sm border border-primary/25 bg-primary/5 p-4">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="mb-1 flex items-center gap-2 text-sm font-black text-foreground">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    학습 노트 미리보기
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    저장하면 지식위키에 아래 구조로 추가됩니다. 태그와 핵심 개념은 저장 전 검토용입니다.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-sm text-xs"
+                  onClick={handleKnowledgeNoteAction}
+                  disabled={isSavingNote}
+                >
+                  {isSavingNote ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <BookOpen className="mr-1.5 h-3.5 w-3.5" />}
+                  {isSavingNote ? '저장 중...' : '노트로 저장'}
+                </Button>
+              </div>
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {notePreview.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+                <Badge variant="outline" className="text-[10px]">
+                  {notePreview.contentChars.toLocaleString()}자
+                </Badge>
+              </div>
+              {notePreview.concepts.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {notePreview.concepts.map((concept) => (
+                    <span key={concept} className="rounded-full border border-primary/20 bg-background px-2 py-0.5 text-[11px] font-semibold text-primary">
+                      {concept}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="grid gap-2 md:grid-cols-2">
+                {notePreview.learningPoints.slice(0, 2).map((point, index) => (
+                  <p key={`${point}-${index}`} className="rounded-sm border border-border/70 bg-card p-2.5 text-xs leading-5 text-foreground/80">
+                    {point}
+                  </p>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
           {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
@@ -922,7 +1013,7 @@ variant={report.share_url ? 'secondary' : 'outline'}
             />
           )}
 
-          {/* FAQ + CTA 섹션 (blog_seo, geo_seo 스타일) */}
+          {/* FAQ + CTA 섹션 (기존 결과 호환) */}
           {(report.faq_schema || report.cta) && (
             <FaqCtaSection faqSchema={report.faq_schema} cta={report.cta} content={report.content} />
           )}
@@ -1014,6 +1105,16 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <Code className="h-3.5 w-3.5 mr-2" />
                 {t('result.promptView')}
               </DropdownMenuItem>
+              {(noteSource || linkedNoteId) && (
+                <DropdownMenuItem onClick={handleKnowledgeNoteAction} disabled={!linkedNoteId && isSavingNote}>
+                  {!linkedNoteId && isSavingNote ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                  ) : (
+                    <BookOpen className="h-3.5 w-3.5 mr-2" />
+                  )}
+                  {linkedNoteId ? '학습 노트 열기' : isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
+                </DropdownMenuItem>
+              )}
               {NOTEBOOKLM_ENABLED && (
                 <>
                   <DropdownMenuSeparator />
@@ -1072,25 +1173,9 @@ variant={report.share_url ? 'secondary' : 'outline'}
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 {t('result.exportHtml')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportDocx}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                {t('result.exportDocx')}
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExportFormat('markdown')}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
                 마크다운 (.md)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportFormat('txt')}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                텍스트 (.txt)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportFormat('zip')}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                패키지 (.zip)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrint}>
-                <Printer className="h-3.5 w-3.5 mr-2" />
-                {t('result.printPdf')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

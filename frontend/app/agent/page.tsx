@@ -203,8 +203,8 @@ export default function AgentPage() {
 }
 
 const QUICK_PROMPTS = [
-  '블로그 글 작성해줘',
-  '이 영상 요약해줘',
-  'SEO 키워드 추천',
-  '가독성 분석해줘',
+  '학습 노트 만들어줘',
+  '핵심 요약해줘',
+  '복습 질문 만들어줘',
+  '리텐션 카드로 바꿔줘',
 ];

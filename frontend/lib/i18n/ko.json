@@ -28,6 +28,7 @@
     "noHistory": "분석 히스토리가 없습니다",
     "noSearchResults": "검색 결과가 없습니다",
     "notes": "노트",
+    "dashboard": "대시보드",
     "poweredBy": "Powered by AI",
     "help": "도움말"
   },
@@ -45,24 +46,13 @@
   },
   "emptyState": {
     "title": "영상·텍스트·PDF를 분석해보세요",
-    "description": "URL을 붙여넣거나 텍스트/PDF를 넣으면 AI가 요약, 튜토리얼 등\n다양한 형식의 학습 콘텐츠를 자동 생성합니다"
+    "description": "URL을 붙여넣거나 텍스트/PDF를 넣으면 AI가 요약·Q&A 등\\n학습용 콘텐츠를 자동 생성합니다"
   },
   "styles": {
-    "blog_seo": "블로그+SEO",
     "summary": "요약",
-    "tutorial": "튜토리얼",
     "qna": "Q&A",
-    "app_ideas": "앱 아이디어",
-    "yozm_it": "요즘IT",
-    "brunch_essay": "브런치 에세이",
-    "naver_popular": "네이버 인기글",
-    "sns_post": "SNS 포스트",
-    "newsletter": "뉴스레터",
-    "show_notes": "쇼노트",
-    "shorts_script": "Shorts 스크립트",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "댓글 요약",
-    "course": "강의 노트"
+    "quiz": "퀴즈",
+    "retention_cards": "리텐션 카드"
   },
   "result": {
     "copyTitle": "제목 복사",
@@ -71,10 +61,7 @@
     "collapse": "접기",
     "expand": "펼치기",
     "exportHtml": "HTML 내보내기",
-    "exportDocx": "DOCX 내보내기",
     "exportMarkdown": "Markdown 내보내기",
-    "exportEpub": "EPUB 내보내기",
-    "printPdf": "PDF 인쇄",
     "share": "공유",
     "promptView": "프롬프트 보기",
     "mindmap": "마인드맵",
@@ -89,8 +76,6 @@
     "copied": "복사되었습니다",
     "richCopied": "서식 포함 복사 완료",
     "shareCopied": "공유 텍스트 복사 완료",
-    "docxSuccess": "DOCX 다운로드 완료",
-    "docxError": "DOCX 내보내기 실패",
     "htmlSuccess": "HTML 다운로드 완료",
     "tts": "음성 변환",
     "factCheck": "팩트체크",
@@ -101,12 +86,12 @@
   "settings": {
     "title": "설정",
     "aiService": "AI 서비스",
-    "aiServiceDescription": "AI 서비스와 캐시를 관리합니다",
-    "provider": "AI 프로바이더",
+    "aiServiceDescription": "ChatMock 모델과 캐시를 관리합니다",
+    "provider": "AI 서비스",
     "model": "모델",
-    "selectProvider": "서비스 선택",
+    "selectProvider": "ChatMock 사용",
     "selectModel": "모델 선택",
-    "noProviders": "사용 가능한 AI 서비스가 없습니다. Flask 서버를 실행하고 API 키를 설정하세요.",
+    "noProviders": "ChatMock 모델 목록을 불러올 수 없습니다. Flask 서버와 chatmock serve 실행 상태를 확인하세요.",
     "cacheManagement": "캐시 관리",
     "cacheDescription": "저장된 자막/댓글 캐시를 삭제합니다.",
     "clearCache": "전체 캐시 삭제",
@@ -121,13 +106,14 @@
     "description": "YouTube 영상을 AI로 분석하여\n다양한 형식의 콘텐츠를 생성합니다",
     "noServer": "Flask 서버가 실행 중인지 확인하세요.",
     "modelCount": "{count}개 모델",
-    "start": "시작하기"
+    "start": "시작하기",
+    "step2Desc": "요약, Q&A, 퀴즈, 리텐션 카드 중 원하는 학습 스타일을 선택하세요."
   },
   "tour": {
     "step1Title": "URL 입력",
     "step1Desc": "분석할 YouTube URL이나 웹페이지 주소를 입력하세요.",
     "step2Title": "스타일 선택",
-    "step2Desc": "블로그, 요약, 튜토리얼 등 원하는 콘텐츠 스타일을 선택하세요.",
+    "step2Desc": "요약, Q&A, 퀴즈, 리텐션 카드 중 원하는 학습 스타일을 선택하세요.",
     "step3Title": "생성 시작",
     "step3Desc": "생성 버튼을 클릭하면 AI가 콘텐츠를 자동 생성합니다.",
     "step4Title": "결과 활용",
@@ -143,7 +129,7 @@
     "shortcutsDesc": "Enter키로 URL 추가 및 생성을 시작할 수 있습니다.",
     "faq": "자주 묻는 질문",
     "faqApiKey": "API 키는 어디서 설정하나요?",
-    "faqApiKeyAnswer": "설정 > AI 서비스에서 프로바이더와 모델을 선택할 수 있습니다.",
+    "faqApiKeyAnswer": "ChatMock을 실행한 뒤 설정 > AI 서비스에서 모델만 선택하세요.",
     "faqOffline": "오프라인에서도 사용할 수 있나요?",
     "faqOfflineAnswer": "이전에 생성한 콘텐츠는 오프라인에서도 볼 수 있지만, 새 콘텐츠 생성에는 인터넷 연결이 필요합니다."
   },

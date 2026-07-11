@@ -50,13 +50,22 @@ class TestTranscriptTiming(unittest.TestCase):
 
     @patch('services.core.content_service._save_cache')
     @patch('services.core.content_service._load_cache', return_value=None)
+    @patch('services.core.content_service._run_parallel_fallbacks')
     @patch('services.core.content_service._get_transcript_from_watch_page', return_value='watch 페이지 자막')
     @patch('services.core.content_service._fetch_transcript_with_api', return_value=None)
     @patch('services.core.content_service._build_ytt_api')
     def test_watch_page_result_has_extraction_time_ms(self, mock_build, mock_fetch,
-                                                       mock_watch, mock_no_cache, mock_save):
+                                                       mock_watch, mock_parallel,
+                                                       mock_no_cache, mock_save):
         """watch 페이지 폴백 시 extraction_time_ms 포함"""
         mock_build.return_value = MagicMock()
+        mock_parallel.return_value = {
+            'text': 'watch 페이지 자막',
+            'source': 'watch',
+            'segments': [],
+            'source_meta': {'source_type': 'manual', 'quality_score': 0.7, 'is_auto': False},
+            'extraction_time_ms': 1.0,
+        }
 
         with self.app.app_context():
             from services.core.content_service import get_transcript

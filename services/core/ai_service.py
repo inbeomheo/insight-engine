@@ -1,13 +1,11 @@
 """
 AI 콘텐츠 생성 서비스
-LiteLLM을 사용한 다중 AI 프로바이더 지원
+LiteLLM을 사용한 ChatMock(OpenAI 호환) 호출 지원
 """
 import functools
 import html as html_lib
 import os
-import time
 markdown = None  # 지연 로딩 (cold start 최적화)
-import threading
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
@@ -29,17 +27,12 @@ def _get_completion():
     from litellm import completion
     return completion
 
-# Zhipu AI (GLM) OpenAI 호환 API 설정
-ZHIPUAI_API_BASE = 'https://open.bigmodel.cn/api/paas/v4/'
-
-# GLM 모델 동시성 제한 - 한 번에 하나의 요청만 처리
-_glm_lock = threading.Lock()
-
-# GLM 재시도 설정
-GLM_RETRY_COUNT = 5
-GLM_RETRY_DELAY = 10  # 초
-
 DEFAULT_LANGUAGE_INSTRUCTION = '결과는 반드시 한국어로 작성해주세요.'
+CHATMOCK_CONNECTION_HINT = (
+    "[ChatMock 연결 실패] ChatMock 서버에 연결할 수 없습니다. "
+    "터미널에서 `chatmock login` 후 `chatmock serve`를 실행하고 "
+    "CHATMOCK_BASE_URL=http://127.0.0.1:8000/v1 설정을 확인해주세요."
+)
 
 def _build_modifier_instructions(modifiers, style_modifiers):
     """세부 옵션에서 추가 지시사항을 생성합니다.
@@ -102,8 +95,7 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
     """프롬프트를 구성합니다.
 
     배치 순서: 지시(스타일) → 입력(자막/컨텍스트) → 가변 지시(모디파이어/시간).
-    정적인 스타일 프롬프트를 맨 앞에 두면 프로바이더 프리픽스 캐싱(Gemini
-    implicit caching 등)이 동작해 반복 호출 비용/지연이 줄어든다.
+    정적인 스타일 프롬프트를 맨 앞에 두면 OpenAI 호환 프록시의 프롬프트 처리 안정성이 좋아진다.
     """
     # 타임스탬프 세그먼트가 있으면 타임코드 자막 섹션 추가
     if segments:
@@ -151,11 +143,7 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
     from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS
 
-    # 타임아웃은 환경변수로 조정 가능. 로컬(Ollama) 모델은 CPU 추론으로 느릴 수 있어 더 길게 둔다.
-    if model.startswith('ollama'):
-        request_timeout = int(os.getenv('OLLAMA_REQUEST_TIMEOUT', '1800'))
-    else:
-        request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
+    request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
     kwargs = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
@@ -173,69 +161,21 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
     base_tokens = LENGTH_MAX_TOKENS.get(length, 4000)
     kwargs["max_tokens"] = int(base_tokens * detail['max_tokens_multiplier'])
 
-    if model.startswith("gemini/") and "lite" not in model.lower():
-        kwargs["reasoning_effort"] = "minimal"
-
-    # GLM → OpenAI 호환 API 변환
-    if model.startswith("zhipuai/"):
-        zhipuai_key = os.getenv("ZHIPUAI_API_KEY")
-        if not zhipuai_key:
-            raise ValueError("ZHIPUAI_API_KEY 환경변수가 설정되지 않았습니다.")
-        kwargs["model"] = f"openai/{model.replace('zhipuai/', '')}"
-        kwargs["api_base"] = ZHIPUAI_API_BASE
-        kwargs["api_key"] = zhipuai_key
-
-    # Ollama → api_base 설정 (API 키 불필요)
-    if model.startswith("ollama_chat/") or model.startswith("ollama/"):
-        kwargs["api_base"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
     # ChatMock → OpenAI 호환 프록시 (ChatGPT 구독 기반)
-    if model.startswith("chatmock/"):
-        actual_model = model.replace("chatmock/", "")
+    if model.startswith("chatmock/") or model.startswith("gpt-"):
+        actual_model = model.replace("chatmock/", "", 1)
         kwargs["model"] = actual_model
         kwargs["api_base"] = os.getenv("CHATMOCK_BASE_URL", "http://127.0.0.1:8000/v1")
-        kwargs["api_key"] = "dummy"
+        kwargs["api_key"] = os.getenv("CHATMOCK_API_KEY", "dummy") or "dummy"
         kwargs["reasoning_effort"] = "medium"
         kwargs.pop("temperature", None)
         kwargs["drop_params"] = True
-
-    # OpenRouter → api_base + API 키 설정
-    if model.startswith("openrouter/"):
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if not openrouter_key:
-            raise ValueError("OPENROUTER_API_KEY 환경변수가 설정되지 않았습니다.")
-        kwargs["api_base"] = "https://openrouter.ai/api/v1"
-        kwargs["api_key"] = openrouter_key
 
     return kwargs
 
 
 def _call_completion_with_model_retry(model: str, completion_kwargs: Dict[str, Any]) -> Any:
-    """Call LiteLLM completion, preserving the global GLM concurrency guard."""
-    is_glm = model.startswith("zhipuai/")
-
-    # GLM 모델은 동시성 제한으로 순차 처리 (락은 호출 시만, sleep은 밖에서)
-    if is_glm:
-        last_error = None
-        for attempt in range(GLM_RETRY_COUNT):
-            with _glm_lock:
-                try:
-                    response = _get_completion()(**completion_kwargs)
-                    current_app.logger.info(f"GLM 성공 (시도 {attempt + 1}): {model}")
-                    return response
-                except Exception as e:
-                    last_error = e
-                    error_str = str(e)
-                    if '1302' not in error_str or attempt >= GLM_RETRY_COUNT - 1:
-                        raise
-                    current_app.logger.warning(
-                        f"GLM 동시성 에러, {GLM_RETRY_DELAY}초 후 재시도 "
-                        f"({attempt + 1}/{GLM_RETRY_COUNT}): {model}"
-                    )
-            # sleep은 락 밖에서 (다른 요청 블로킹 방지)
-            time.sleep(GLM_RETRY_DELAY)
-        raise last_error
-
+    """LiteLLM completion을 호출합니다. 단일 ChatMock 경로라 별도 프로바이더 재시도 분기는 없습니다."""
     return _get_completion()(**completion_kwargs)
 
 
@@ -255,6 +195,15 @@ def _convert_error_message(error_msg, model=None):
     """API 에러 메시지를 사용자 친화적인 한국어로 변환합니다."""
     error_lower = error_msg.lower()
     model_info = f" (모델: {model})" if model else ""
+
+    if model and model.startswith("chatmock/") and any(
+        marker in error_lower
+        for marker in (
+            "connection", "connect", "refused", "winerror 10061",
+            "failed to establish", "httpconnectionpool", "server disconnected",
+        )
+    ):
+        return CHATMOCK_CONNECTION_HINT
 
     # 인증 관련
     if 'invalid_api_key' in error_lower or 'authentication' in error_lower or 'unauthorized' in error_lower:
@@ -290,14 +239,6 @@ def _convert_error_message(error_msg, model=None):
     if 'content' in error_lower and ('policy' in error_lower or 'filter' in error_lower or 'blocked' in error_lower):
         return f"[컨텐츠 차단] 요청이 컨텐츠 정책에 의해 차단되었습니다{model_info}."
 
-    # Zhipu AI 관련 에러
-    if '1113' in error_msg:
-        return f"[권한 없음] 해당 모델에 대한 접근 권한이 없습니다{model_info}. API 키 권한을 확인해주세요."
-    if '1211' in error_msg:
-        return f"[모델 없음] 요청한 모델이 존재하지 않습니다{model_info}. 모델명을 확인해주세요."
-    if '1302' in error_msg:
-        return f"[동시성 초과] 동시 요청 수가 초과되었습니다{model_info}. 잠시 후 다시 시도해주세요."
-
     # 기타 - 원본 메시지 포함
     return f"[AI 오류] 콘텐츠 생성 실패{model_info}: {error_msg}"
 
@@ -307,12 +248,12 @@ def create_content(content: str, model: str, style_prompt: Optional[str] = None,
                    user_id: Optional[str] = None, segments: Optional[List[Dict[str, Any]]] = None,
                    web_search: bool = False, detail_level: Optional[str] = None) -> Union[Dict[str, Any], Tuple[Dict[str, Any], str]]:
     """
-    LiteLLM을 사용하여 AI 콘텐츠를 생성합니다.
-    API 키는 환경변수에서 자동으로 로드됩니다 (OPENAI_API_KEY, ANTHROPIC_API_KEY 등).
+    LiteLLM을 사용하여 ChatMock(OpenAI 호환)으로 AI 콘텐츠를 생성합니다.
+    ChatMock 서버 기본 URL은 CHATMOCK_BASE_URL 환경변수로 조정할 수 있습니다.
 
     Args:
         content: 분석할 콘텐츠 (자막 + 댓글)
-        model: 모델 ID (예: 'gpt-4o', 'claude-sonnet-4-20250514')
+        model: 모델 ID (예: 'chatmock/gpt-5.4-mini')
         style_prompt: 스타일 프롬프트
         return_prompt: 사용된 프롬프트 반환 여부
         modifiers: 세부 옵션 딕셔너리 (length, writing_style)
@@ -460,8 +401,7 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
     # API 키가 있는 모델만 필터링
     available_models = []
     for model_id in models:
-        # 모델 ID 접두사(예: 'ollama_chat/')와 PROVIDER_API_KEYS 키('ollama')가
-        # 다르므로 정규화 헬퍼로 프로바이더를 추출한다.
+        # 모델 ID 접두사와 PROVIDER_API_KEYS 키가 다를 수 있어 헬퍼로 프로바이더를 추출한다.
         provider = get_provider_from_model(model_id)
         api_key = PROVIDER_API_KEYS.get(provider, '')
         if api_key:
@@ -553,7 +493,7 @@ def inline_edit(content: str, selection: str, instruction: str, model: str, cont
     }
 
 
-def create_full_blog_post(content: str, model_name: str = 'gemini/gemini-3-flash-preview', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
+def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.4-mini', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.

@@ -1,6 +1,6 @@
 """
 스마트 콘텐츠 생성기 설정 파일
-AI 서비스, 스타일 옵션 정의
+ChatMock(OpenAI 호환) 서비스, 스타일 옵션 정의
 프롬프트 템플릿은 prompts/ 패키지에서 관리
 
 v3.0 업데이트:
@@ -27,13 +27,6 @@ from prompts import (
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
 PROVIDER_API_KEYS: Dict[str, str] = {
-    'openai': os.getenv('OPENAI_API_KEY', ''),
-    'anthropic': os.getenv('ANTHROPIC_API_KEY', ''),
-    'gemini': os.getenv('GEMINI_API_KEY', ''),
-    'deepseek': os.getenv('DEEPSEEK_API_KEY', ''),
-    'zhipuai': os.getenv('ZHIPUAI_API_KEY', ''),
-    'ollama': os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434'),
-    'openrouter': os.getenv('OPENROUTER_API_KEY', ''),
     'chatmock': os.getenv('CHATMOCK_API_KEY', 'dummy'),
 }
 
@@ -44,10 +37,6 @@ SUPADATA_API_KEY: str = os.getenv('SUPADATA_API_KEY', '')
 TAVILY_API_KEY: str = os.getenv('TAVILY_API_KEY', '')
 WEB_SEARCH_ENABLED: bool = os.getenv('WEB_SEARCH_ENABLED', 'false').lower() == 'true'
 WEB_SEARCH_MAX_RESULTS: int = int(os.getenv('WEB_SEARCH_MAX_RESULTS', '5'))
-
-# === 외부 소스 연동 ===
-
-NOTION_API_KEY: str = os.getenv('NOTION_API_KEY', '')
 
 # === RAG (지식 참조) ===
 
@@ -72,7 +61,7 @@ CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '
 
 AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
 AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
-AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'gemini/gemini-3.1-flash-lite-preview')
+AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.4-mini')
 
 # === Whisper (음성 인식 자막 폴백) ===
 
@@ -98,11 +87,6 @@ DOCUMENT_UPLOAD_MAX_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_MAX_BYTES', str(
 DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES: int = int(os.getenv('DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES', str(1024 * 1024)))
 AUDIO_UPLOAD_MAX_BYTES: int = int(os.getenv('AUDIO_UPLOAD_MAX_BYTES', str(50 * 1024 * 1024)))
 
-# === 이미지 생성 ===
-
-IMAGE_GEN_PROVIDER: str = os.getenv('IMAGE_GEN_PROVIDER', 'openai')
-IMAGE_GEN_API_KEY: str = os.getenv('IMAGE_GEN_API_KEY', '') or os.getenv('OPENAI_API_KEY', '')
-
 # === 화이트라벨 (F4-15) ===
 
 WHITELABEL_ENABLED: bool = os.getenv('WHITELABEL_ENABLED', 'false').lower() == 'true'
@@ -115,10 +99,10 @@ WHITELABEL_CONFIG: Dict[str, str] = {
 
 PLAN_FEATURES: Dict[str, List[str]] = {
     'free': ['generate', 'history', 'export_markdown'],
-    'starter': ['generate', 'history', 'export_markdown', 'export_docx', 'multi_style', 'custom_style', 'rag'],
-    'pro': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+    'starter': ['generate', 'history', 'export_markdown', 'multi_style', 'custom_style', 'rag'],
+    'pro': ['generate', 'history', 'export_markdown',
             'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel', 'api_access'],
-    'enterprise': ['generate', 'history', 'export_markdown', 'export_docx', 'export_pdf',
+    'enterprise': ['generate', 'history', 'export_markdown',
                    'multi_style', 'custom_style', 'rag', 'pipeline', 'tts', 'image_gen', 'whitelabel',
                    'api_access', 'sso', 'audit_log', 'team_billing', 'custom_model'],
 }
@@ -149,15 +133,15 @@ AI_CACHE_MAX_SIZE_MB = 512
 # === AI Model & Fallback ===
 
 FALLBACK_CHAIN = [
-    'zhipuai/GLM-4.5-Air',
-    'zhipuai/GLM-4.7',
+    'chatmock/gpt-5.4-mini',
+    'chatmock/gpt-5.4',
 ]
 MAX_FALLBACK_ATTEMPTS = 3
 
 # === Style Tuning ===
 # 스타일별 temperature (정밀형 0.5 / 균형형 0.7 / 창의형 0.85)
 STYLE_TEMPERATURE: Dict[str, float] = {
-    'summary': 0.35, 'tutorial': 0.5, 'qna': 0.35, 'show_notes': 0.45, 'geo_seo': 0.4, 'course': 0.5, 'quiz': 0.5,
+    'summary': 0.35, 'tutorial': 0.5, 'qna': 0.35, 'show_notes': 0.45, 'geo_seo': 0.4, 'course': 0.5, 'quiz': 0.5, 'retention_cards': 0.5,
     'blog_seo': 0.7, 'yozm_it': 0.7, 'app_ideas': 0.7, 'newsletter': 0.7, 'shorts_script': 0.7,
     'brunch_essay': 0.85, 'naver_popular': 0.85, 'sns_post': 0.8,
     'comment_summary': 0.35,
@@ -189,65 +173,18 @@ DETAIL_PRESETS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# === QA 게이트 (발행 전 품질 검증) ===
-
-QA_FORBIDDEN_WORDS: List[str] = [
-    '놀라운', '혁신적', '획기적', '최고의', '게임체인저',
-    '압도적', '경이로운', '드디어', '탁월한', '인상적', '뛰어난', '강력한',
-]
-
-QA_MIN_SECTIONS: int = 2
-QA_MIN_CHARS: int = 200
-
 # === Providers ===
 
 SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
-    'gemini': {
-        'name': 'Google Gemini',
-        'models': [
-            {'id': 'gemini/gemini-3.1-flash-lite-preview', 'name': 'Gemini 3.1 Flash Lite (최신)', 'max_input_tokens': 1048576, 'price_input': 0.075, 'price_output': 0.30},
-        ]
-    },
-    'zhipuai': {
-        'name': 'Zhipu AI (GLM)',
-        'api_base': 'https://open.bigmodel.cn/api/paas/v4/',
-        'models': [
-            {'id': 'zhipuai/GLM-4.7', 'name': 'GLM-4.7 (최신)', 'max_input_tokens': 128000, 'price_input': 1.00, 'price_output': 1.00},
-            {'id': 'zhipuai/GLM-4.5-Air', 'name': 'GLM-4.5 Air (경량)', 'max_input_tokens': 128000, 'price_input': 0.10, 'price_output': 0.10},
-        ]
-    },
-    'deepseek': {
-        'name': 'DeepSeek',
-        'models': [
-            {'id': 'deepseek/deepseek-chat', 'name': 'DeepSeek Chat (V3)', 'max_input_tokens': 64000, 'price_input': 0.27, 'price_output': 1.10},
-            {'id': 'deepseek/deepseek-reasoner', 'name': 'DeepSeek Reasoner (R1)', 'max_input_tokens': 64000, 'price_input': 0.55, 'price_output': 2.19},
-        ]
-    },
-    'ollama': {
-        'name': 'Ollama (로컬)',
-        'api_base': os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434'),
-        'models': [
-            {'id': 'ollama_chat/llama3.2', 'name': 'Llama 3.2 (8B)', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-            {'id': 'ollama_chat/mistral', 'name': 'Mistral 7B', 'max_input_tokens': 32000, 'price_input': 0, 'price_output': 0},
-            {'id': 'ollama_chat/gemma2', 'name': 'Gemma 2 (9B)', 'max_input_tokens': 8192, 'price_input': 0, 'price_output': 0},
-        ]
-    },
     'chatmock': {
-        'name': 'ChatMock',
+        'name': 'ChatMock (OpenAI 호환)',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
+            {'id': 'chatmock/gpt-5.4-mini', 'name': 'GPT-5.4 Mini', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
             {'id': 'chatmock/gpt-5.4', 'name': 'GPT-5.4', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
-        ]
-    },
-    'openrouter': {
-        'name': 'OpenRouter (2600+ 모델)',
-        'api_base': 'https://openrouter.ai/api/v1',
-        'models': [
-            {'id': 'openrouter/anthropic/claude-sonnet-4', 'name': 'Claude Sonnet 4 (Anthropic)', 'max_input_tokens': 200000, 'price_input': 3.00, 'price_output': 15.00},
-            {'id': 'openrouter/google/gemini-2.5-flash', 'name': 'Gemini 2.5 Flash (Google)', 'max_input_tokens': 1048576, 'price_input': 0.15, 'price_output': 0.60},
-            {'id': 'openrouter/meta-llama/llama-4-scout', 'name': 'Llama 4 Scout (Meta)', 'max_input_tokens': 131072, 'price_input': 0.08, 'price_output': 0.30},
-            {'id': 'openrouter/mistralai/mistral-large-2', 'name': 'Mistral Large 2 (Mistral)', 'max_input_tokens': 131072, 'price_input': 2.00, 'price_output': 6.00},
-        ]
+            {'id': 'chatmock/gpt-5.5', 'name': 'GPT-5.5', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+        ],
     },
 }
 
@@ -258,10 +195,7 @@ _PROVIDERS_CACHE_TTL: float = 60.0  # 60초 TTL
 
 
 def get_available_providers() -> Dict[str, Dict[str, Any]]:
-    """API 키가 설정된 프로바이더만 반환합니다.
-    Ollama는 API 키 불필요 — OLLAMA_BASE_URL이 설정되어 있으면 활성화.
-    결과를 60초간 캐싱합니다.
-    """
+    """활성 프로바이더만 반환합니다. 결과를 60초간 캐싱합니다."""
     global _providers_cache, _providers_cache_time
     now = time.time()
     if _providers_cache and (now - _providers_cache_time) < _PROVIDERS_CACHE_TTL:
@@ -280,43 +214,18 @@ def get_available_providers() -> Dict[str, Dict[str, Any]]:
 @functools.lru_cache(maxsize=128)
 def get_provider_from_model(model_id: str) -> str:
     """모델 ID에서 프로바이더를 추출합니다."""
-    if model_id.startswith('gpt-'):
-        return 'openai'
-    elif model_id.startswith('claude-'):
-        return 'anthropic'
-    elif model_id.startswith('gemini/'):
-        return 'gemini'
-    elif model_id.startswith('deepseek/'):
-        return 'deepseek'
-    elif model_id.startswith('zhipuai/'):
-        return 'zhipuai'
-    elif model_id.startswith('ollama_chat/') or model_id.startswith('ollama/'):
-        return 'ollama'
-    elif model_id.startswith('chatmock/'):
+    if model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
         return 'chatmock'
-    elif model_id.startswith('openrouter/'):
-        return 'openrouter'
-    return 'gemini'  # 기본값 (Gemini)
+    return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
 
 
 # === Styles & Modifiers ===
 
 STYLE_OPTIONS: List[Tuple[str, str]] = [
-    ('blog_seo', '🔍 블로그+SEO'),
     ('summary', '⚡ 요약'),
-    ('tutorial', '📚 튜토리얼'),
     ('qna', '❓ Q&A'),
-    ('app_ideas', '💡 앱 아이디어'),
-    ('yozm_it', '💻 요즘IT'),
-    ('brunch_essay', '✍️ 브런치'),
-    ('naver_popular', '💚 네이버'),
-    ('sns_post', '📱 SNS 포스트'),
-    ('newsletter', '📧 뉴스레터'),
-    ('show_notes', '🎙️ 쇼노트'),
-    ('shorts_script', '🎬 쇼츠 클립'),
-    ('geo_seo', '🤖 GEO (AI검색)'),
-    ('course', '🎓 AI 코스'),
     ('quiz', '🧠 퀴즈'),
+    ('retention_cards', '🧩 리텐션 카드'),
 ]
 
 
@@ -337,7 +246,7 @@ def get_model_max_tokens(model_id: str) -> int:
 def get_model_display_name(model_id: str) -> str:
     """모델 ID로 사용자 표시용 이름을 반환합니다.
 
-    예: 'zhipuai/GLM-4.5-Air' → 'GLM-4.5 Air (경량)'
+    예: 'chatmock/gpt-5.4-mini' → 'GPT-5.4 Mini'
     매칭 실패 시 모델 ID를 그대로 반환합니다.
     """
     for provider in SUPPORTED_PROVIDERS.values():
@@ -399,7 +308,7 @@ RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
 DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
 TRANSLATION_MODEL: str = os.getenv(
     'TRANSLATION_MODEL',
-    'gemini/gemini-2.5-flash-lite-preview-09-2025'
+    'chatmock/gpt-5.4-mini'
 )
 
 # 임베딩 모델 (RAG)
@@ -443,11 +352,6 @@ __all__ = [
     'STYLE_TEMPERATURE',
     'LENGTH_MAX_TOKENS',
     'DETAIL_PRESETS',
-
-    # QA Gate
-    'QA_FORBIDDEN_WORDS',
-    'QA_MIN_SECTIONS',
-    'QA_MIN_CHARS',
 
     # Providers
     'SUPPORTED_PROVIDERS',

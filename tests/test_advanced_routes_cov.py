@@ -255,62 +255,6 @@ class TestGenerateFusion(_Base):
         self.assertIn(resp.status_code, [429, 500])
 
 
-# ── QA 체크 ──────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestQACheck(_Base):
-
-    def test_qa_no_content(self, _):
-        resp = self.client.post('/api/qa-check', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.quality.qa_gate_service.check_quality',
-           return_value={'passed': True, 'issues': []})
-    def test_qa_success(self, _qa, _):
-        resp = self.client.post('/api/qa-check',
-                                json={'content': 'test content'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertTrue(data['passed'])
-
-    @patch('services.quality.qa_gate_service.check_quality',
-           side_effect=Exception('qa fail'))
-    def test_qa_exception(self, _qa, _):
-        resp = self.client.post('/api/qa-check',
-                                json={'content': 'test'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 500])
-
-
-# ── 썸네일 ───────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestThumbnail(_Base):
-
-    def test_thumbnail_no_title(self, _):
-        resp = self.client.post('/api/generate-thumbnail', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.media.thumbnail_service.generate_thumbnail',
-           return_value={'success': True, 'url': 'https://img.example.com/thumb.png'})
-    def test_thumbnail_success(self, _thumb, _):
-        resp = self.client.post('/api/generate-thumbnail',
-                                json={'title': 'Test Title'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('services.media.thumbnail_service.generate_thumbnail',
-           return_value={'success': False, 'error': 'API error'})
-    def test_thumbnail_fail(self, _thumb, _):
-        resp = self.client.post('/api/generate-thumbnail',
-                                json={'title': 'Test Title'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-
 # ── 인라인 편집 ──────────────────────────────────────
 
 
@@ -369,17 +313,6 @@ class TestPipeline(_Base):
                                 json={'pipeline_id': 'nonexistent', 'url': 'https://youtube.com/watch?v=a'},
                                 headers=_H)
         self.assertIn(resp.status_code, [400, 429, 500])
-
-
-# ── 에이전트 리서치 ──────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestAgentResearch(_Base):
-
-    def test_agent_research_no_topic(self, _):
-        resp = self.client.post('/api/agent/research', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
 
 
 # ── 에러 정리 헬퍼 ─────────────────────────────────────

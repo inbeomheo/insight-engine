@@ -271,28 +271,6 @@ def refresh_token():
         )
 
 
-@auth_bp.route('/api/auth/me', methods=['GET'])
-@require_auth
-def get_current_user():
-    """현재 사용자 정보 조회"""
-    try:
-        user = get_supabase().auth.get_user(g.access_token)
-        return jsonify({
-            'user': {
-                'id': user.user.id,
-                'email': user.user.email,
-                'created_at': user.user.created_at
-            }
-        })
-    except Exception as e:
-        return _exception_error_response(
-            '사용자 정보 조회 오류',
-            e,
-            '[인증 실패] 사용자 정보를 확인할 수 없습니다. 다시 로그인해주세요.',
-            401
-        )
-
-
 # 관리자 권한 헬퍼 — 단일 정의 (channel_monitoring.py에서 사용).
 # is_admin은 namespace 호출이므로 `@patch('routes.auth_routes.is_admin')` 그대로 동작.
 def _require_admin():

@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, Zap, FileText, Search, ShieldCheck, Send } from 'lucide-react';
+import { Trash2, Zap, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import type { PipelineStepDef } from './PipelineBuilder';
@@ -8,10 +8,9 @@ import type { PipelineStepDef } from './PipelineBuilder';
 const STEP_ICONS: Record<string, typeof Zap> = {
   transcript: FileText,
   generate: Zap,
-  seo: Search,
-  qa: ShieldCheck,
-  publish: Send,
 };
+
+const DEFAULT_STYLE_ID = STYLE_OPTIONS[0]?.id ?? 'summary';
 
 interface PipelineNodeProps {
   step: PipelineStepDef;
@@ -52,7 +51,7 @@ export default function PipelineNode({ step, onRemove, onConfigChange }: Pipelin
         <div className="mt-2 pt-2 border-t border-border/30">
           <label className="text-[11px] text-muted-foreground/60">스타일</label>
           <select
-            value={step.config.style || 'blog_seo'}
+            value={step.config.style || DEFAULT_STYLE_ID}
             onChange={(e) => onConfigChange({ style: e.target.value })}
             className="mt-1 w-full text-xs border border-border/40 rounded px-2 py-1 bg-white dark:bg-zinc-800"
           >

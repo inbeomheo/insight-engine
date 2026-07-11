@@ -75,7 +75,21 @@ export interface Citation {
   marker: string;
   seconds: number;
   context: string;
-  valid?: boolean;
+  valid?: boolean | null;
+}
+
+export interface SourceReceipt {
+  claim: string;
+  marker: string;
+  seconds: number;
+  timestamp_url: string;
+  collected_at: string;
+  valid?: boolean | null;
+  source: {
+    type: 'youtube';
+    video_id: string;
+    title?: string;
+  };
 }
 
 export interface ShortsClip {
@@ -140,6 +154,14 @@ export interface Report {
   id: string;
   url: string;
   youtube_title: string;
+  source_type?: 'text' | 'document' | 'voice' | 'article' | string;
+  source_title?: string;
+  source_meta?: {
+    source_type: string;
+    chars?: number;
+    quality_score?: number;
+    is_auto?: boolean;
+  };
   title: string;
   content: string;
   html: string;
@@ -172,8 +194,12 @@ export interface Report {
   transcript_segments?: Array<{ start: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
+  source_receipts?: SourceReceipt[];
   favorite?: boolean;
   share_url?: string;
+  knowledge_note_id?: string;
+  knowledge_note_title?: string;
+  knowledge_note_saved_at?: string;
   notebooklm?: NotebookLmData;
 }
 

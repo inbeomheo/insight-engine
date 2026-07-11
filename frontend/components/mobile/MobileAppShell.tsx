@@ -7,18 +7,25 @@ import {
   ArrowLeft,
   ArrowUp,
   BarChart3,
+  BookOpen,
   CheckCircle2,
+  ExternalLink,
   Grid2X2,
   Loader2,
   MessageSquare,
   PlusCircle,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import TextInput from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
+import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
 import { getStyleLabel } from '@/lib/helpers';
+import { createKnowledgeNote, isApiError, type NoteDuplicateWarning } from '@/lib/api';
+import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
+import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { GenerationMode, Report } from '@/lib/types';
 
@@ -133,7 +140,7 @@ function MobileCreateView({
   };
 
   const handleStyleSelect = (styleId: string) => {
-    setSelectedStyle(selectedStyle === styleId && styleId !== 'blog_seo' ? 'blog_seo' : styleId);
+    setSelectedStyle(selectedStyle === styleId && styleId !== 'summary' ? 'summary' : styleId);
   };
 
   return (
@@ -244,7 +251,7 @@ function MobileCreateView({
                 type="button"
                 aria-pressed={active}
                 aria-label={`${style.label} 스타일 선택${style.description ? `: ${style.description}` : ''}`}
-                title={active && style.id !== 'blog_seo' ? '다시 누르면 블로그+SEO 기본값으로 돌아가요' : style.description}
+                title={active && style.id !== 'summary' ? '다시 누르면 요약 기본값으로 돌아가요' : style.description}
                 className={cn(
                   'rounded-full border px-4 py-2 text-xs font-bold transition-colors',
                   active
@@ -301,6 +308,7 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
     reports.forEach((report) => byStyle.set(report.style, (byStyle.get(report.style) || 0) + 1));
     return byStyle;
   }, [reports]);
+  const linkedNoteCount = useMemo(() => reports.filter((report) => report.knowledge_note_id).length, [reports]);
 
   return (
     <section className="min-h-dvh px-6 pb-28 pt-12">
@@ -310,6 +318,10 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
       </div>
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
         <span className="shrink-0 rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background">전체 {reports.length}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-bold text-primary">
+          <BookOpen className="h-3 w-3" />
+          노트 {linkedNoteCount}
+        </span>
         {STYLE_OPTIONS.slice(0, 5).map((style) => (
           <span key={style.id} className="shrink-0 rounded-full border border-border/70 bg-card px-4 py-2 text-xs font-semibold text-muted-foreground">
             {style.label} {counts.get(style.id) || 0}
@@ -334,6 +346,12 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
               <div className="mb-2 flex items-center gap-2">
                 <span className={cn('h-2.5 w-2.5 rounded-full', CATEGORY_DOTS[index % CATEGORY_DOTS.length])} />
                 <span className="signal-meta text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)}</span>
+                {report.knowledge_note_id && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
+                    <BookOpen className="h-2.5 w-2.5" />
+                    노트 연결
+                  </span>
+                )}
               </div>
               <h2 className="line-clamp-2 text-[15px] font-black leading-snug tracking-[-0.02em]">{report.title}</h2>
               <p className="signal-meta mt-3 text-[9px] text-muted-foreground/45">
@@ -347,11 +365,11 @@ function MobileLibraryView({ reports, onOpen }: { reports: Report[]; onOpen: (re
   );
 }
 
-function MobileDashboardView({ reports }: { reports: Report[] }) {
-  const styleCounts = useMemo(() => {
-    return STYLE_OPTIONS.slice(0, 3).map((style) => ({ ...style, count: reports.filter((r) => r.style === style.id).length }));
-  }, [reports]);
-  const totalTokens = reports.reduce((sum, report) => sum + (report.usage?.total_tokens || 0), 0);
+function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (report: Report) => void }) {
+  const pinnedIds = useResultStore((s) => s.pinnedIds);
+  const stats = useMemo(() => buildLocalDashboardStats(reports, pinnedIds, MAX_LOCAL_REPORTS), [pinnedIds, reports]);
+  const totalTokens = stats.totalTokens;
+  const storageTone = stats.storageStatus === '가득 참' ? 'text-destructive' : stats.storageStatus === '여유 적음' ? 'text-amber-600' : 'text-primary';
 
   return (
     <section className="min-h-dvh px-6 pb-28 pt-12">
@@ -360,7 +378,7 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">총 콘텐츠</p>
           <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}</p>
-          <p className="mt-1 text-[10px] text-emerald-600">▲ 최근 기록</p>
+          <p className="mt-1 text-[10px] text-emerald-600">로컬 저장</p>
         </div>
         <div className="bg-foreground p-4 text-background shadow-[0_1px_8px_rgba(21,23,31,0.06)]">
           <p className="signal-meta text-[9px] text-background/55">총 토큰</p>
@@ -369,13 +387,18 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
         </div>
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
           <p className="signal-meta text-[9px] text-muted-foreground/50">평균 글자</p>
-          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length ? Math.round(reports.reduce((s, r) => s + r.content.length, 0) / reports.length) : 0}</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{stats.avgLength}</p>
           <p className="mt-1 text-[10px] text-muted-foreground/55">콘텐츠 평균</p>
         </div>
         <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
-          <p className="signal-meta text-[9px] text-muted-foreground/50">QA 통과율</p>
-          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">96<span className="text-base">%</span></p>
-          <p className="mt-1 text-[10px] text-primary">지표 5</p>
+          <p className="signal-meta text-[9px] text-muted-foreground/50">저장 공간</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{reports.length}<span className="text-base">/{MAX_LOCAL_REPORTS}</span></p>
+          <p className={cn('mt-1 text-[10px]', storageTone)}>{stats.storageStatus} · {stats.storagePct}%</p>
+        </div>
+        <div className="bg-card p-4 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+          <p className="signal-meta text-[9px] text-muted-foreground/50">학습 노트</p>
+          <p className="mt-3 text-[30px] font-black tracking-[-0.05em]">{stats.linkedNoteCount}</p>
+          <p className="mt-1 text-[10px] text-primary">결과와 연결</p>
         </div>
       </div>
 
@@ -385,33 +408,81 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
           <span className="signal-meta text-[9px] text-muted-foreground/45">최근 7일</span>
         </div>
         <div className="flex h-28 items-end justify-between gap-3 px-2">
-          {[45, 62, 38, 86, 68, 54, 34].map((height, index) => (
-            <div key={index} className="flex flex-1 flex-col items-center gap-2">
-              <div className={cn('w-full max-w-8', index === 3 ? 'bg-primary' : 'bg-[#EEE9E0]')} style={{ height: `${height}px` }} />
-              <span className="signal-meta text-[9px] text-muted-foreground/45">{'월화수목금토일'[index]}</span>
-            </div>
-          ))}
+          {stats.activityDays.map((day) => {
+            const height = day.count > 0 ? Math.max(10, Math.round((day.count / stats.maxActivityCount) * 86)) : 8;
+            return (
+              <div key={day.key} className="flex flex-1 flex-col items-center gap-2">
+                <div className={cn('w-full max-w-8', day.count > 0 ? 'bg-primary' : 'bg-muted')} style={{ height: `${height}px` }} />
+                <span className="signal-meta text-[9px] text-muted-foreground/45">{day.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
         <h2 className="mb-4 text-sm font-black">스타일 분포</h2>
-        <div className="space-y-3">
-          {styleCounts.map((style, index) => {
-            const pct = reports.length ? Math.max(8, Math.round((style.count / reports.length) * 100)) : [58, 22, 13][index];
-            return (
-              <div key={style.id}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="font-semibold">{style.label}</span>
-                  <span className="text-muted-foreground/55">{pct}%</span>
+        {stats.topStyles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">아직 생성 결과가 없습니다.</p>
+        ) : (
+          <div className="space-y-3">
+            {stats.topStyles.map(([style, count], index) => {
+              const pct = reports.length ? Math.max(8, Math.round((count / reports.length) * 100)) : 0;
+              return (
+                <div key={style}>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-semibold">{getStyleLabel(style)}</span>
+                    <span className="text-muted-foreground/55">{pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-muted">
+                    <div className={cn('h-full', index === 0 ? 'bg-primary' : 'bg-foreground')} style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-[#EEE9E0]">
-                  <div className={cn('h-full', index === 0 ? 'bg-primary' : 'bg-foreground')} style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+        <h2 className="mb-4 text-sm font-black">고정 결과</h2>
+        {stats.pinned.length === 0 ? (
+          <p className="text-sm text-muted-foreground">중요한 결과를 고정하면 모바일에서도 바로 열 수 있습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {stats.pinned.slice(0, 3).map((report) => (
+              <button
+                key={report.id}
+                type="button"
+                className="block w-full border border-border/70 bg-background px-3 py-3 text-left"
+                onClick={() => onOpen(report)}
+              >
+                <p className="line-clamp-1 text-sm font-black">{report.title || '제목 없음'}</p>
+                <p className="signal-meta mt-1 text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)} · {report.time}</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 bg-card p-5 shadow-[0_1px_8px_rgba(21,23,31,0.04)]">
+        <h2 className="mb-4 text-sm font-black">연결된 학습 노트</h2>
+        {stats.linkedNotes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">결과를 학습 노트로 저장하면 여기서 바로 확인할 수 있습니다.</p>
+        ) : (
+          <div className="space-y-2">
+            {stats.linkedNotes.slice(0, 3).map((report) => (
+              <a
+                key={report.id}
+                href={`/notes/${encodeURIComponent(report.knowledge_note_id ?? '')}`}
+                className="block w-full border border-border/70 bg-background px-3 py-3 text-left"
+              >
+                <p className="line-clamp-1 text-sm font-black">{report.knowledge_note_title || report.title || '제목 없음'}</p>
+                <p className="signal-meta mt-1 text-[9px] text-muted-foreground/55">{getStyleLabel(report.style)} · 노트 열기</p>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -419,7 +490,85 @@ function MobileDashboardView({ reports }: { reports: Report[] }) {
 
 function MobileDetailView({ report, onBack }: { report: Report; onBack: () => void }) {
   const selectedModel = useSettingsStore((s) => s.selectedModel);
+  const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
+  const updateReport = useResultStore((s) => s.updateReport);
   const [chatOpen, setChatOpen] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [linkedNote, setLinkedNote] = useState<{ id?: string; title?: string }>({
+    id: report.knowledge_note_id,
+    title: report.knowledge_note_title,
+  });
+  const noteSource = getKnowledgeNoteSource(report);
+  const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
+  const linkedNoteId = linkedNote.id || report.knowledge_note_id;
+
+  function openKnowledgeNote(noteId: string) {
+    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+  }
+
+  function markKnowledgeNoteLinked(noteId: string, title?: string) {
+    const next = {
+      id: noteId,
+      title: title || noteSource?.title || '학습 노트',
+    };
+    setLinkedNote(next);
+    updateReport(report.id, {
+      knowledge_note_id: next.id,
+      knowledge_note_title: next.title,
+      knowledge_note_saved_at: new Date().toISOString(),
+    });
+  }
+
+  async function handleSaveKnowledgeNote() {
+    if (isSavingNote || !noteSource) return;
+    setIsSavingNote(true);
+    try {
+      const note = await createKnowledgeNote({
+        content: getKnowledgeNoteContent(report),
+        language: noteLanguage,
+        model: selectedModel || undefined,
+        source: noteSource,
+      });
+      markKnowledgeNoteLinked(note.id, note.source?.title);
+      toast.success('학습 노트로 저장했습니다.', {
+        description: '핵심 개념·인용·복습 질문으로 지식위키에 추가했습니다.',
+        action: {
+          label: '열기',
+          onClick: () => {
+            openKnowledgeNote(note.id);
+          },
+        },
+      });
+    } catch (err) {
+      const body = isApiError<NoteDuplicateWarning>(err) ? err.body : undefined;
+      const duplicate = body?.duplicate_notes?.[0];
+      if (isApiError<NoteDuplicateWarning>(err) && err.status === 409 && duplicate?.id) {
+        markKnowledgeNoteLinked(duplicate.id, duplicate.title);
+        toast.warning(body?.warning || '이미 학습한 자료와 비슷합니다.', {
+          description: body?.next_action || '기존 노트를 열어 이어서 확인하세요.',
+          action: {
+            label: '기존 노트 열기',
+            onClick: () => {
+              openKnowledgeNote(duplicate.id);
+            },
+          },
+        });
+      } else {
+        toast.error(err instanceof Error ? err.message : '학습 노트 저장에 실패했습니다.');
+      }
+    } finally {
+      setIsSavingNote(false);
+    }
+  }
+
+  function handleKnowledgeNoteAction() {
+    if (linkedNoteId) {
+      openKnowledgeNote(linkedNoteId);
+      return;
+    }
+    void handleSaveKnowledgeNote();
+  }
+
   return (
     <>
     <section className="min-h-dvh pb-28">
@@ -440,31 +589,99 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
           <ReactMarkdown>{report.content}</ReactMarkdown>
         </div>
 
-        <div className="mt-7 flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
-          {['요약', '튜토리얼', 'Q&A', '앱 아이디어'].map((label) => (
-            <span key={label} className="shrink-0 rounded-full border border-border/70 bg-card px-4 py-2 text-xs font-bold text-foreground/75">{label} →</span>
-          ))}
+        <div className="mt-7">
+          <p className="signal-meta mb-3 text-[10px] text-muted-foreground/45">지원 스타일</p>
+          <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
+            {STYLE_OPTIONS.map((style) => {
+              const active = style.id === report.style;
+              return (
+                <span
+                  key={style.id}
+                  className={cn(
+                    'shrink-0 rounded-full border px-4 py-2 text-xs font-bold',
+                    active
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border/70 bg-card text-foreground/75',
+                  )}
+                >
+                  {style.emoji} {style.label}{active ? ' · 현재' : ''}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-5 border border-border/70 bg-card p-4">
           <p className="signal-meta mb-3 text-[10px] text-muted-foreground/45">출처</p>
           <div className="flex items-center gap-2 text-sm font-semibold">
             <span className="h-2.5 w-2.5 rounded-full bg-[#20C997]" />
-            <span className="min-w-0 flex-1 truncate">{report.youtube_title || report.url || '생성 콘텐츠'}</span>
+            <span className="min-w-0 flex-1 truncate">{report.source_title || report.youtube_title || report.url || '생성 콘텐츠'}</span>
             <CheckCircle2 className="h-4 w-4 text-muted-foreground/40" />
           </div>
         </div>
 
-        {report.url && (
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-sm border border-foreground bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)] transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
-          >
-            <MessageSquare className="h-4 w-4" />
-            영상에 질문하기
-          </button>
+        {notePreview && !linkedNoteId && (
+          <div className="mt-5 border border-primary/25 bg-primary/5 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black">학습 노트 미리보기</p>
+                <p className="mt-1 text-[10px] leading-4 text-muted-foreground">저장 전 태그와 핵심 개념을 확인하세요.</p>
+              </div>
+              <span className="signal-meta shrink-0 text-[9px] text-primary">{notePreview.contentChars.toLocaleString()}자</span>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {notePreview.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-background px-2 py-1 text-[10px] font-bold text-foreground/70">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            {notePreview.concepts.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {notePreview.concepts.slice(0, 5).map((concept) => (
+                  <span key={concept} className="rounded-full border border-primary/25 px-2 py-1 text-[10px] font-bold text-primary">
+                    {concept}
+                  </span>
+                ))}
+              </div>
+            )}
+            {notePreview.learningPoints[0] && (
+              <p className="line-clamp-2 text-xs leading-5 text-foreground/75">{notePreview.learningPoints[0]}</p>
+            )}
+          </div>
         )}
+
+        <div className="mt-6 grid gap-3">
+          {(noteSource || linkedNoteId) && (
+            <button
+              type="button"
+              onClick={handleKnowledgeNoteAction}
+              disabled={!linkedNoteId && isSavingNote}
+              className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-card px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {!linkedNoteId && isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+              {linkedNoteId ? '학습 노트 열기' : isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
+            </button>
+          )}
+          <a
+            href="/notes"
+            className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-background px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted"
+          >
+            <BookOpen className="h-4 w-4" />
+            지식위키 열기
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50" />
+          </a>
+          {report.url && (
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-sm border border-foreground bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-[3px_3px_0_var(--foreground)] transition-transform active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+            >
+              <MessageSquare className="h-4 w-4" />
+              영상에 질문하기
+            </button>
+          )}
+        </div>
       </article>
     </section>
     {chatOpen && report.url && (
@@ -523,7 +740,7 @@ export default function MobileAppShell({
         />
       )}
       {activeTab === 'library' && <MobileLibraryView reports={reports} onOpen={setActiveReport} />}
-      {activeTab === 'dashboard' && <MobileDashboardView reports={reports} />}
+      {activeTab === 'dashboard' && <MobileDashboardView reports={reports} onOpen={setActiveReport} />}
       <MobileBottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );

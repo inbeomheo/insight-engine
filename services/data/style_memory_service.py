@@ -24,6 +24,9 @@ STYLE_LABELS = {
     'show_notes': '쇼 노트',
     'shorts_script': 'Shorts 스크립트',
     'geo_seo': 'GEO SEO',
+    'course': '강의 노트',
+    'quiz': '퀴즈',
+    'retention_cards': '리텐션 카드',
 }
 
 # 문체 → 한국어 레이블 매핑

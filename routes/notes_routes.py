@@ -13,6 +13,9 @@ from utils.responses import api_error, clamp_query_int, handle_error, validate_c
 
 notes_bp = Blueprint("notes", __name__, url_prefix="/api/notes")
 MAX_SEARCH_QUERY_CHARS = 200
+DUPLICATE_SIMILARITY_THRESHOLD = 0.92
+DUPLICATE_SIMILARITY_LIMIT = 3
+DUPLICATE_QUERY_MAX_CHARS = 2000
 
 
 @notes_bp.route("", methods=["POST"])
@@ -32,6 +35,10 @@ def create_note():
         return api_error(f"[노트 생성 실패] {length_error}", 400)
 
     try:
+        duplicate_reason, duplicate_notes = _find_duplicate_notes(content, source)
+        if duplicate_notes:
+            return _duplicate_warning_response(duplicate_reason, duplicate_notes)
+
         style_prompt = current_app.config.get("STYLE_PROMPTS", {}).get(
             note_service.NOTE_STYLE_ID
         )
@@ -98,4 +105,54 @@ def get_note(note_id):
     note = note_service.load_note(note_id)
     if note is None:
         return api_error("[노트 조회 실패] 노트를 찾을 수 없습니다.", 404)
+    try:
+        note["related_notes"] = note_index_service.get_related_notes(note, limit=3)
+    except Exception as exc:
+        current_app.logger.warning(
+            "Related note lookup failed (ignored): %s",
+            exc,
+            exc_info=True,
+        )
+        note["related_notes"] = []
     return jsonify(note)
+
+
+def _find_duplicate_notes(content: str, source: dict) -> tuple[str, list[dict]]:
+    normalized_source = note_service.normalize_source(source)
+    existing_notes = note_service.list_notes()
+    same_url_notes = note_service.find_notes_by_source_url(normalized_source, notes=existing_notes)
+    if same_url_notes:
+        return "same_url", same_url_notes
+
+    if not existing_notes:
+        return "", []
+
+    query = str(content or "").strip()[:DUPLICATE_QUERY_MAX_CHARS]
+    if not query:
+        return "", []
+
+    try:
+        similar_notes = [
+            note
+            for note in note_index_service.search_notes(query, limit=DUPLICATE_SIMILARITY_LIMIT)
+            if float(note.get("score") or 0) > DUPLICATE_SIMILARITY_THRESHOLD
+        ]
+    except Exception as exc:
+        current_app.logger.warning(
+            "Duplicate note similarity lookup failed (ignored): %s",
+            exc,
+            exc_info=True,
+        )
+        return "", []
+    return ("similar_content", similar_notes) if similar_notes else ("", [])
+
+
+def _duplicate_warning_response(reason: str, duplicate_notes: list[dict]):
+    reason_label = "동일 URL" if reason == "same_url" else "유사 콘텐츠"
+    return jsonify({
+        "error": "[재학습 경고] 이미 학습한 소스와 중복될 수 있습니다.",
+        "warning": f"[재학습 경고] {reason_label}로 보이는 기존 노트가 있습니다.",
+        "next_action": "새 노트를 만들기보다 기존 노트를 열어 관련 개념을 이어서 확인하세요.",
+        "duplicate_reason": reason,
+        "duplicate_notes": duplicate_notes,
+    }), 409

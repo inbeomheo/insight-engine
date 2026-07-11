@@ -11,7 +11,7 @@ import litellm
 logger = logging.getLogger(__name__)
 
 # 리랭킹용 모델 (빠른 응답 우선)
-_DEFAULT_MODEL = "gemini/gemini-2.5-flash-lite-preview-09-2025"
+_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
 
 _RERANK_PROMPT = """다음 쿼리에 대해 각 문서 청크의 관련도 점수(0~10)를 평가하세요.
 

@@ -43,6 +43,9 @@ export function responseToReport(
   return createReport({
     url,
     youtube_title: res.youtube_title || '',
+    source_type: res.source_type,
+    source_title: res.source_title,
+    source_meta: res.source_meta,
     title: res.title,
     content: res.content,
     html: res.html,
@@ -59,8 +62,11 @@ export function responseToReport(
     cta: res.cta,
     json_ld_schemas: res.json_ld_schemas,
     web_sources: res.web_sources,
+    transcript: res.transcript,
     transcript_segments: res.transcript_segments,
     chapters: res.chapters,
+    citations: res.citations,
+    source_receipts: res.source_receipts,
     ...overrides,
   });
 }

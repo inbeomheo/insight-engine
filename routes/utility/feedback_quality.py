@@ -1,10 +1,10 @@
 """사용자 피드백 + 콘텐츠 품질 분석 라우트.
 
 utility_routes.py에서 분리됨:
-- 피드백/NPS
+- 피드백
 - 팩트체크 / 표절 / 가독성 / 감정 흐름
 """
-from flask import g, jsonify, request
+from flask import jsonify, request
 from utils.responses import api_error
 
 from routes.blog_routes import blog_bp
@@ -92,24 +92,3 @@ def api_sentiment_flow():
     from services.analysis.nlp_analysis_service import analyze_sentiment_flow
     result = analyze_sentiment_flow(content)
     return jsonify(result)
-
-
-# === NPS 피드백 (F4-20) ===
-
-@blog_bp.route('/api/feedback/nps', methods=['POST'])
-def submit_nps_feedback():
-    """NPS 점수 + 피드백 제출"""
-    data = request.get_json(silent=True) or {}
-    score = data.get('score')
-    feedback = data.get('feedback', '')
-
-    if score is None or not (0 <= int(score) <= 10):
-        return api_error('score는 0~10 사이여야 합니다.', 400)
-
-    # 인메모리 저장 (프로덕션에서는 DB)
-    entry = {
-        'user_id': getattr(g, 'user_id', 'anonymous'),
-        'score': int(score),
-        'feedback': feedback,
-    }
-    return jsonify({'success': True, **entry})

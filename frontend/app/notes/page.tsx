@@ -1,14 +1,57 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, FileText, Search, Youtube } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, BookOpen, Brain, CheckCircle2, ChevronDown, Copy, FileText, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
+import {
+  filterNotesByFacet,
+  filterNotesByStudyStatus,
+  buildDailyStudyPlanMarkdown,
+  buildWikiIndexMarkdown,
+  getCompletedStudyItems,
+  getDailyStudyPlanItems,
+  getFacetLabel,
+  getNoteConceptClusters,
+  getNoteStudyCardOrder,
+  getNoteStudyQueueCount,
+  getNotesNeedingReview,
+  getNoteSourceLabel,
+  getNoteStudyCounts,
+  getNoteStudyStatus,
+  getNoteStudyStatusCounts,
+  getNoteStudyStatusLabel,
+  getRecentStudyResumeItems,
+  getStudyStartCandidates,
+  NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
+  NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
+  parseNotePanelOpen,
+  parseNoteStudyQueueOpen,
+  serializeNotePanelOpen,
+  serializeNoteStudyQueueOpen,
+  sortNotesByRecent,
+  type NoteStudyStatus,
+  type NoteStudyResumeItem,
+  type NoteStudyPlanItem,
+  type NoteStudyCardKind,
+  type NoteFacet,
+  type NoteConceptCluster,
+  buildNoteFacetHref,
+  parseNoteFacetSearchParams,
+} from '@/lib/note-list';
+import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
+import {
+  buildResultChatStudyCardsMarkdown,
+  readResultChatStudyCards,
+  type ResultChatStudyCard,
+} from '@/lib/result-chat-study-card';
 
 function SourceIcon({ type }: { type: string }) {
   if (type === 'youtube') return <Youtube className="h-4 w-4 text-red-500/80 shrink-0" />;
@@ -22,10 +65,39 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function formatStudyUpdatedAt(iso: string | null): string {
+  if (!iso) return '기록 없음';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '기록 없음';
+  return d.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function topCounts(items: string[], limit: number): Array<{ label: string; count: number }> {
+  const counts = new Map<string, number>();
+  items
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => counts.set(item, (counts.get(item) ?? 0) + 1));
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit);
+}
+
 export default function NotesPage() {
+  const router = useRouter();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
+  const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
+  const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
   const [query, setQuery] = useState('');
+  const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
+  const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,13 +122,49 @@ export default function NotesPage() {
     };
   }, []);
 
-  const handleSearch = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = query.trim();
+  useEffect(() => {
+    const syncQnaStudyCards = () => {
+      try {
+        setQnaStudyCards(readResultChatStudyCards(window.localStorage).slice(0, 3));
+      } catch {
+        setQnaStudyCards([]);
+      }
+    };
+
+    syncQnaStudyCards();
+    window.addEventListener('storage', syncQnaStudyCards);
+    window.addEventListener('focus', syncQnaStudyCards);
+    return () => {
+      window.removeEventListener('storage', syncQnaStudyCards);
+      window.removeEventListener('focus', syncQnaStudyCards);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncFacetFromUrl = () => {
+      const facet = parseNoteFacetSearchParams(new URLSearchParams(window.location.search));
+      setActiveFacet(facet);
+      if (facet) {
+        setSearchResults(null);
+        setActiveStudyStatus(null);
+      }
+    };
+
+    syncFacetFromUrl();
+    window.addEventListener('popstate', syncFacetFromUrl);
+    return () => window.removeEventListener('popstate', syncFacetFromUrl);
+  }, []);
+
+  const runSearch = useCallback(async (term: string) => {
+    const q = term.trim();
     if (!q) {
       setSearchResults(null);
       return;
     }
+    setQuery(q);
+    setActiveFacet(null);
+    setActiveStudyStatus(null);
+    router.replace('/notes', { scroll: false });
     setSearching(true);
     setError(null);
     try {
@@ -67,28 +175,161 @@ export default function NotesPage() {
     } finally {
       setSearching(false);
     }
-  }, [query]);
+  }, [router]);
+
+  useEffect(() => {
+    if (notes.length === 0) {
+      setStudyProgressByNote({});
+      return;
+    }
+    setStudyProgressByNote(
+      Object.fromEntries(
+        notes.map((note) => [
+          note.id,
+          readNoteStudyProgress(note.id, getNoteStudyCounts(note)),
+        ])
+      )
+    );
+  }, [notes]);
+
+  const handleSearch = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    void runSearch(query);
+  }, [query, runSearch]);
 
   const handleClear = useCallback(() => {
     setQuery('');
     setSearchResults(null);
-  }, []);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
+
+  const handleFacetSelect = useCallback((facet: NoteFacet) => {
+    setSearchResults(null);
+    setActiveFacet(facet);
+    setActiveStudyStatus(null);
+    router.replace(buildNoteFacetHref(facet), { scroll: false });
+  }, [router]);
+
+  const handleFacetClear = useCallback(() => {
+    setActiveFacet(null);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
+
+  const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
+    setSearchResults(null);
+    setActiveFacet(null);
+    setActiveStudyStatus((current) => current === status ? null : status);
+    router.replace('/notes', { scroll: false });
+  }, [router]);
 
   const isSearchMode = searchResults !== null;
+  const conceptCount = new Set(notes.flatMap((note) => note.key_concepts ?? [])).size;
+  const quoteCount = notes.reduce((sum, note) => sum + (note.quote_count ?? 0), 0);
+  const learningPointCount = notes.reduce((sum, note) => sum + (note.learning_point_count ?? 0), 0);
+  const reviewQuestionCount = notes.reduce((sum, note) => sum + (note.review_question_count ?? 0), 0);
+  const topConcepts = useMemo(
+    () => topCounts(notes.flatMap((note) => note.key_concepts ?? []), 10),
+    [notes],
+  );
+  const topTags = useMemo(
+    () => topCounts(notes.flatMap((note) => note.tags ?? []), 12),
+    [notes],
+  );
+  const sourceGroups = useMemo(
+    () => topCounts(notes.map((note) => getNoteSourceLabel(note.source?.type)), 4),
+    [notes],
+  );
+  const conceptClusters = useMemo(
+    () => getNoteConceptClusters(notes, { limit: 4, notesPerCluster: 3 }),
+    [notes],
+  );
+  const recentNotes = useMemo(
+    () => [...notes]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3),
+    [notes],
+  );
+  const visibleNotes = useMemo(
+    () => sortNotesByRecent(
+      filterNotesByStudyStatus(
+        filterNotesByFacet(notes, activeFacet),
+        studyProgressByNote,
+        activeStudyStatus
+      )
+    ),
+    [notes, activeFacet, activeStudyStatus, studyProgressByNote],
+  );
+  const reviewNeededNotes = useMemo(
+    () => getNotesNeedingReview(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
+  const studyStartNotes = useMemo(
+    () => getStudyStartCandidates(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
+  const completedStudyNotes = useMemo(
+    () => getCompletedStudyItems(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
+  const studyResumeNotes = useMemo(
+    () => getRecentStudyResumeItems(
+      notes,
+      studyProgressByNote,
+      new Set([
+        ...reviewNeededNotes.map((item) => item.note.id),
+        ...completedStudyNotes.map((item) => item.note.id),
+      ]),
+      3
+    ),
+    [notes, studyProgressByNote, reviewNeededNotes, completedStudyNotes],
+  );
+  const dailyStudyPlanItems = useMemo(
+    () => getDailyStudyPlanItems(notes, studyProgressByNote, 3),
+    [notes, studyProgressByNote],
+  );
+  const studyCardOrder = useMemo(
+    () => getNoteStudyCardOrder({
+      'review-needed': reviewNeededNotes.length,
+      'study-start': studyStartNotes.length,
+      completed: completedStudyNotes.length,
+      recent: studyResumeNotes.length,
+    }),
+    [completedStudyNotes.length, reviewNeededNotes.length, studyResumeNotes.length, studyStartNotes.length],
+  );
+  const studyStatusCounts = useMemo(
+    () => getNoteStudyStatusCounts(notes, studyProgressByNote),
+    [notes, studyProgressByNote],
+  );
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* 헤더 */}
-        <div className="flex items-center gap-3 mb-6">
-          <Button asChild variant="ghost" size="icon" className="h-8 w-8 -ml-2">
-            <Link href="/" aria-label="홈으로 돌아가기">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary/70" />
-            <h1 className="text-lg font-semibold text-foreground">노트</h1>
+        <div className="mb-6 rounded-2xl border border-border bg-card/60 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Button asChild variant="ghost" size="icon" className="h-8 w-8 -ml-2 shrink-0">
+                <Link href="/" aria-label="홈으로 돌아가기">
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary/70" />
+                  <h1 className="text-xl font-semibold text-foreground">LLMWiki 홈</h1>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  학습한 자료가 핵심 개념, 근거 인용, 관련 노트로 쌓이는 지식 베이스입니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-2 sm:grid-cols-4">
+            <WikiStat icon={<BookOpen className="h-4 w-4" />} label="노트" value={notes.length} />
+            <WikiStat icon={<Brain className="h-4 w-4" />} label="핵심 개념" value={conceptCount} />
+            <WikiStat icon={<Quote className="h-4 w-4" />} label="근거 인용" value={quoteCount} />
+            <WikiStat icon={<Network className="h-4 w-4" />} label="학습 항목" value={learningPointCount + reviewQuestionCount} />
           </div>
         </div>
 
@@ -118,6 +359,24 @@ export default function NotesPage() {
           <p className="text-sm text-destructive mb-4">{error}</p>
         )}
 
+        {!loading && !isSearchMode && notes.length > 0 && (
+          <WikiMap
+            topConcepts={topConcepts}
+            topTags={topTags}
+            sourceGroups={sourceGroups}
+            conceptClusters={conceptClusters}
+            recentNotes={recentNotes}
+            studyStartNotes={studyStartNotes}
+            reviewNeededNotes={reviewNeededNotes}
+            completedStudyNotes={completedStudyNotes}
+            studyResumeNotes={studyResumeNotes}
+            dailyStudyPlanItems={dailyStudyPlanItems}
+            qnaStudyCards={qnaStudyCards}
+            studyCardOrder={studyCardOrder}
+            onFacetSelect={handleFacetSelect}
+          />
+        )}
+
         {/* 로딩 */}
         {loading ? (
           <div className="space-y-3">
@@ -128,38 +387,884 @@ export default function NotesPage() {
         ) : isSearchMode ? (
           <SearchResultsList results={searchResults} />
         ) : (
-          <NotesList notes={notes} />
+          <>
+            {notes.length > 0 && (
+              <StudyStatusFilter
+                counts={studyStatusCounts}
+                activeStatus={activeStudyStatus}
+                resultCount={visibleNotes.length}
+                onSelect={handleStudyStatusSelect}
+              />
+            )}
+            {activeFacet && (
+              <ActiveFacetBar
+                facet={activeFacet}
+                resultCount={visibleNotes.length}
+                totalCount={notes.length}
+                onClear={handleFacetClear}
+              />
+            )}
+            <NotesList
+              notes={visibleNotes}
+              studyProgressByNote={studyProgressByNote}
+              emptyText={(activeFacet || activeStudyStatus) ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
+            />
+          </>
         )}
       </div>
     </div>
   );
 }
 
-function NotesList({ notes }: { notes: NoteListItem[] }) {
+function WikiStat({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/70 p-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="text-primary/70">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-semibold text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function StudyStatusFilter({
+  counts,
+  activeStatus,
+  resultCount,
+  onSelect,
+}: {
+  counts: Record<NoteStudyStatus, number>;
+  activeStatus: NoteStudyStatus | null;
+  resultCount: number;
+  onSelect: (status: NoteStudyStatus) => void;
+}) {
+  const items: Array<{ status: NoteStudyStatus; description: string }> = [
+    { status: 'in-progress', description: '체크한 항목이 남은 노트' },
+    { status: 'completed', description: '모든 항목을 끝낸 노트' },
+    { status: 'not-started', description: '아직 체크하지 않은 노트' },
+  ];
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-card/60 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+          학습 상태
+        </div>
+        {activeStatus && (
+          <span className="text-[10px] text-muted-foreground">
+            {getNoteStudyStatusLabel(activeStatus)} {resultCount}개 표시
+          </span>
+        )}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {items.map((item) => {
+          const selected = activeStatus === item.status;
+          return (
+            <button
+              key={item.status}
+              type="button"
+              onClick={() => onSelect(item.status)}
+              aria-pressed={selected}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                selected
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-foreground hover:border-primary/40'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold">
+                <span>{getNoteStudyStatusLabel(item.status)}</span>
+                <span>{counts[item.status]}</span>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">{item.description}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ActiveFacetBar({
+  facet,
+  resultCount,
+  totalCount,
+  onClear,
+}: {
+  facet: NoteFacet;
+  resultCount: number;
+  totalCount: number;
+  onClear: () => void;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-semibold text-primary">{getFacetLabel(facet)}</span>
+        <span className="text-xs text-muted-foreground">
+          {resultCount}/{totalCount}개 노트
+        </span>
+      </div>
+      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
+        <X className="h-3.5 w-3.5" />
+        필터 해제
+      </Button>
+    </div>
+  );
+}
+
+function WikiMap({
+  topConcepts,
+  topTags,
+  sourceGroups,
+  conceptClusters,
+  recentNotes,
+  studyStartNotes,
+  reviewNeededNotes,
+  completedStudyNotes,
+  studyResumeNotes,
+  dailyStudyPlanItems,
+  qnaStudyCards,
+  studyCardOrder,
+  onFacetSelect,
+}: {
+  topConcepts: Array<{ label: string; count: number }>;
+  topTags: Array<{ label: string; count: number }>;
+  sourceGroups: Array<{ label: string; count: number }>;
+  conceptClusters: NoteConceptCluster[];
+  recentNotes: NoteListItem[];
+  studyStartNotes: NoteStudyResumeItem[];
+  reviewNeededNotes: NoteStudyResumeItem[];
+  completedStudyNotes: NoteStudyResumeItem[];
+  studyResumeNotes: NoteStudyResumeItem[];
+  dailyStudyPlanItems: NoteStudyPlanItem[];
+  qnaStudyCards: ResultChatStudyCard[];
+  studyCardOrder: NoteStudyCardKind[];
+  onFacetSelect: (facet: NoteFacet) => void;
+}) {
+  const [studyQueueOpen, setStudyQueueOpen] = useState(true);
+  const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
+  const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [qnaCardsCopyStatus, setQnaCardsCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [qnaCardCopyStatus, setQnaCardCopyStatus] = useState<{
+    id: string;
+    status: 'copied' | 'error';
+  } | null>(null);
+  useEffect(() => {
+    try {
+      setStudyQueueOpen(
+        parseNoteStudyQueueOpen(window.localStorage.getItem(NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY), true),
+      );
+    } catch {
+      setStudyQueueOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setWikiExploreOpen(
+        parseNotePanelOpen(window.localStorage.getItem(NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY), true),
+      );
+    } catch {
+      setWikiExploreOpen(true);
+    }
+  }, []);
+
+  const handleStudyQueueToggle = useCallback(() => {
+    setStudyQueueOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem(
+          NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
+          serializeNoteStudyQueueOpen(next),
+        );
+      } catch {
+        // Ignore unavailable storage; the visible toggle still works.
+      }
+      return next;
+    });
+  }, []);
+
+  const handleWikiExploreToggle = useCallback(() => {
+    setWikiExploreOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem(
+          NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
+          serializeNotePanelOpen(next),
+        );
+      } catch {
+        // Ignore unavailable storage; the visible toggle still works.
+      }
+      return next;
+    });
+  }, []);
+
+  const copyDailyStudyPlan = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setStudyPlanCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildDailyStudyPlanMarkdown(dailyStudyPlanItems));
+      setStudyPlanCopyStatus('copied');
+    } catch {
+      setStudyPlanCopyStatus('error');
+    }
+  }, [dailyStudyPlanItems]);
+
+  useEffect(() => {
+    if (studyPlanCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setStudyPlanCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [studyPlanCopyStatus]);
+
+  const copyWikiIndex = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setWikiIndexCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildWikiIndexMarkdown(conceptClusters));
+      setWikiIndexCopyStatus('copied');
+    } catch {
+      setWikiIndexCopyStatus('error');
+    }
+  }, [conceptClusters]);
+
+  useEffect(() => {
+    if (wikiIndexCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setWikiIndexCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [wikiIndexCopyStatus]);
+
+  const copyQnaStudyCards = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setQnaCardsCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildResultChatStudyCardsMarkdown(qnaStudyCards));
+      setQnaCardsCopyStatus('copied');
+    } catch {
+      setQnaCardsCopyStatus('error');
+    }
+  }, [qnaStudyCards]);
+
+  useEffect(() => {
+    if (qnaCardsCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setQnaCardsCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [qnaCardsCopyStatus]);
+
+  const copyQnaStudyCard = useCallback(async (card: ResultChatStudyCard) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setQnaCardCopyStatus({ id: card.id, status: 'error' });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(card.markdown);
+      setQnaCardCopyStatus({ id: card.id, status: 'copied' });
+    } catch {
+      setQnaCardCopyStatus({ id: card.id, status: 'error' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!qnaCardCopyStatus) return;
+    const timer = window.setTimeout(() => setQnaCardCopyStatus(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [qnaCardCopyStatus]);
+
+  const studyQueueCounts = {
+    'review-needed': reviewNeededNotes.length,
+    'study-start': studyStartNotes.length,
+    completed: completedStudyNotes.length,
+    recent: studyResumeNotes.length,
+  };
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length;
+  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length;
+  const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
+    const index = studyCardOrder.indexOf(kind);
+    return { order: index >= 0 ? index + 1 : 99 };
+  };
+
+  return (
+    <section className="mb-6 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <Card className="py-4">
+        <CardContent className="px-4">
+          <button
+            type="button"
+            onClick={handleWikiExploreToggle}
+            aria-expanded={wikiExploreOpen}
+            className="flex w-full items-center justify-between gap-3 text-left"
+          >
+            <span>
+              <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Network className="h-4 w-4 text-primary/70" />
+                지식 탐색
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                개념·태그·출처 필터를 필요할 때만 펼칩니다.
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+              {totalWikiExploreItems}개 단서
+              <ChevronDown className={`h-4 w-4 transition-transform ${wikiExploreOpen ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+
+          {wikiExploreOpen && (
+            <>
+              <p className="mt-3 text-xs text-muted-foreground">
+                반복 등장하는 개념과 태그를 눌러 관련 노트를 바로 이어서 탐색하세요.
+              </p>
+
+              {topConcepts.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    핵심 개념
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {topConcepts.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => onFacetSelect({ type: 'concept', value: item.label })}
+                        className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <Brain className="h-3 w-3" />
+                        {item.label}
+                        <span className="text-[10px] text-primary/60">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {topTags.length > 0 && (
+                <div className="mt-4">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    태그
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {topTags.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => onFacetSelect({ type: 'tag', value: item.label })}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary/40"
+                      >
+                        <Tags className="h-3 w-3 text-muted-foreground" />
+                        {item.label}
+                        <span className="text-[10px] text-muted-foreground">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {conceptClusters.length > 0 && (
+                <div className="mt-4 rounded-xl border border-border bg-background/70 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                      <BookOpen className="h-3.5 w-3.5 text-primary/70" />
+                      위키 인덱스
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-muted-foreground">
+                          개념별 문서 묶음
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 px-2 text-[10px]"
+                          onClick={copyWikiIndex}
+                        >
+                          <Copy className="h-3 w-3" />
+                          인덱스 복사
+                        </Button>
+                      </div>
+                      {wikiIndexCopyStatus !== 'idle' && (
+                        <span className={`text-[10px] ${wikiIndexCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                          {wikiIndexCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {conceptClusters.map((cluster) => (
+                      <div key={cluster.concept} className="rounded-lg border border-border bg-card/60 p-3">
+                        <button
+                          type="button"
+                          onClick={() => onFacetSelect({ type: 'concept', value: cluster.concept })}
+                          className="flex w-full items-center justify-between gap-2 text-left"
+                        >
+                          <span className="truncate text-xs font-semibold text-foreground">
+                            {cluster.concept}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-primary">
+                            {cluster.count}개 문서
+                          </span>
+                        </button>
+                        <ul className="mt-2 space-y-1">
+                          {cluster.notes.map((note) => (
+                            <li key={`${cluster.concept}-${note.id}`}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(note.id)}`}
+                                className="block truncate rounded-md px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              >
+                                {note.title || '제목 없음'}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3">
+        {wikiExploreOpen && (
+          <Card className="py-4">
+            <CardContent className="px-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary/70" />
+                <h2 className="text-sm font-semibold text-foreground">출처 구성</h2>
+              </div>
+              <div className="mt-3 space-y-2">
+                {sourceGroups.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => onFacetSelect({ type: 'source', value: item.label })}
+                    className="flex w-full items-center justify-between rounded-lg bg-muted/40 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
+                  >
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className="font-medium text-foreground">{item.count}개</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="py-4">
+          <CardContent className="px-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary/70" />
+              <h2 className="text-sm font-semibold text-foreground">최근 학습 흐름</h2>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {recentNotes.map((note) => (
+                <li key={note.id}>
+                  <Link
+                    href={`/notes/${encodeURIComponent(note.id)}`}
+                    className="block rounded-lg border border-border px-3 py-2 transition-colors hover:border-primary/40"
+                  >
+                    <p className="truncate text-xs font-medium text-foreground">{note.title || '제목 없음'}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">{formatDate(note.created_at)}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0) && (
+          <Card className="border-primary/20 bg-primary/5 py-4">
+            <CardContent className="px-4">
+              <button
+                type="button"
+                onClick={handleStudyQueueToggle}
+                aria-expanded={studyQueueOpen}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                    학습 큐
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    복습할 노트를 우선순위대로 모았습니다.
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  {totalStudyQueueItems}개 항목
+                  <ChevronDown className={`h-4 w-4 transition-transform ${studyQueueOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
+
+              {studyQueueOpen && (
+                <div className="mt-3 grid gap-3">
+                  {qnaStudyCards.length > 0 && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary/70" />
+                              <h2 className="text-sm font-semibold text-foreground">Q&A 복습 카드함</h2>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              근거 Q&A에서 저장한 최근 복습 카드입니다.
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">
+                              최근 {qnaStudyCards.length}개
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 gap-1 px-2 text-[10px]"
+                              onClick={copyQnaStudyCards}
+                            >
+                              <Copy className="h-3 w-3" />
+                              전체 복사
+                            </Button>
+                          </div>
+                        </div>
+                        {qnaCardsCopyStatus !== 'idle' && (
+                          <p className={`mt-2 text-[10px] ${qnaCardsCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                            {qnaCardsCopyStatus === 'copied' ? '카드함 복사 완료' : '카드함 복사 실패'}
+                          </p>
+                        )}
+                        <ul className="mt-3 space-y-2">
+                          {qnaStudyCards.map((card) => (
+                            <li key={card.id} className="rounded-lg border border-border bg-background px-3 py-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-semibold text-foreground">
+                                    {card.title}
+                                  </p>
+                                  <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">
+                                    Q. {card.question}
+                                  </p>
+                                  <p className="mt-1 text-[10px] text-muted-foreground/70">
+                                    {formatStudyUpdatedAt(card.createdAt)} · 근거 {card.sources.length}개
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-end gap-1">
+                                  <div className="flex flex-wrap justify-end gap-1.5">
+                                    {card.sourceHref && (
+                                      <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[10px]">
+                                        <Link href={card.sourceHref}>원본 노트</Link>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 gap-1 px-2 text-[10px]"
+                                      onClick={() => copyQnaStudyCard(card)}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                      카드 복사
+                                    </Button>
+                                  </div>
+                                  {qnaCardCopyStatus?.id === card.id && (
+                                    <span className={`text-[10px] ${qnaCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                      {qnaCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {dailyStudyPlanItems.length > 0 && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-primary/70" />
+                            <h2 className="text-sm font-semibold text-foreground">오늘의 복습 플랜</h2>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-primary">
+                                {dailyStudyPlanItems.length}단계
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 px-2 text-[10px]"
+                                onClick={copyDailyStudyPlan}
+                              >
+                                <Copy className="h-3 w-3" />
+                                플랜 복사
+                              </Button>
+                            </div>
+                            {studyPlanCopyStatus !== 'idle' && (
+                              <span className={`text-[10px] ${studyPlanCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                {studyPlanCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          진행 중인 노트를 먼저 끝내고, 남는 시간에 새 노트를 시작합니다.
+                        </p>
+                        <ol className="mt-3 space-y-2">
+                          {dailyStudyPlanItems.map((item, index) => (
+                            <li key={`${item.kind}-${item.note.id}`}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                                  {index + 1}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </span>
+                                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                                    {item.label} · {item.remaining}개 항목
+                                  </span>
+                                </span>
+                                <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                  {item.actionLabel}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ol>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {studyStartNotes.length > 0 && (
+                    <Card className="bg-background/80 py-4" style={studyCardOrderStyle('study-start')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">복습 시작</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          아직 체크하지 않은 최근 학습 노트부터 시작하세요.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {studyStartNotes.map((item) => (
+                            <li key={item.note.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </p>
+                                  <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                    학습 {item.summary.total}개
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-[10px] text-muted-foreground">
+                                  {formatDate(item.note.created_at)}
+                                </p>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {reviewNeededNotes.length > 0 && (
+                    <Card className="border-primary/20 bg-background/80 py-4" style={studyCardOrderStyle('review-needed')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">복습 필요</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          진행률이 낮은 미완료 노트부터 우선 이어가세요.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {reviewNeededNotes.map((item) => {
+                            const remaining = item.summary.total - item.summary.completed;
+                            return (
+                              <li key={item.note.id}>
+                                <Link
+                                  href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                  className="block rounded-lg border border-primary/20 bg-background px-3 py-2 transition-colors hover:border-primary/50"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-xs font-medium text-foreground">
+                                      {item.note.title || '제목 없음'}
+                                    </p>
+                                    <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                      남은 {remaining}개
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${item.summary.percent}%` }}
+                                    />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    {item.summary.completed}/{item.summary.total} 완료 · {item.summary.percent}%
+                                  </p>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {completedStudyNotes.length > 0 && (
+                    <Card className="bg-background/80 py-4" style={studyCardOrderStyle('completed')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">완료 학습</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          최근 완료한 복습 노트를 따로 모아 성취를 확인하세요.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {completedStudyNotes.map((item) => (
+                            <li key={item.note.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-medium text-foreground">
+                                    {item.note.title || '제목 없음'}
+                                  </p>
+                                  <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                    완료
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-[10px] text-muted-foreground">
+                                  {item.summary.completed}/{item.summary.total} 완료 · {formatStudyUpdatedAt(item.updatedAt)}
+                                </p>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {studyResumeNotes.length > 0 && (
+                    <Card className="border-primary/20 bg-background/80 py-4" style={studyCardOrderStyle('recent')}>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary/70" />
+                          <h2 className="text-sm font-semibold text-foreground">최근 복습</h2>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          우선·완료 목록과 겹치지 않는 최근 체크 노트입니다.
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {studyResumeNotes.map((item) => {
+                            const completed = item.summary.completed >= item.summary.total;
+                            return (
+                              <li key={item.note.id}>
+                                <Link
+                                  href={`/notes/${encodeURIComponent(item.note.id)}#study-progress`}
+                                  className="block rounded-lg border border-primary/20 bg-background px-3 py-2 transition-colors hover:border-primary/50"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-xs font-medium text-foreground">
+                                      {item.note.title || '제목 없음'}
+                                    </p>
+                                    <span className="shrink-0 text-[10px] font-semibold text-primary">
+                                      {completed ? '완료' : `${item.summary.percent}%`}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${item.summary.percent}%` }}
+                                    />
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    {item.summary.completed}/{item.summary.total} 완료
+                                  </p>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function NotesList({
+  notes,
+  studyProgressByNote,
+  emptyText,
+}: {
+  notes: NoteListItem[];
+  studyProgressByNote: Record<string, NoteStudyProgress>;
+  emptyText?: string;
+}) {
   if (notes.length === 0) {
     return (
       <div className="text-center py-16">
         <BookOpen className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
         <p className="text-sm text-muted-foreground">
-          아직 노트가 없습니다. 영상이나 아티클을 분석하면 핵심 지식이 노트로 자동 정리됩니다.
+          {emptyText ?? '아직 노트가 없습니다. 영상이나 아티클을 분석하면 핵심 지식이 노트로 자동 정리됩니다.'}
         </p>
       </div>
     );
   }
 
   return (
-    <ul className="space-y-3">
-      {notes.map((note) => (
-        <li key={note.id}>
-          <Link href={`/notes/${encodeURIComponent(note.id)}`}>
-            <Card className="hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
-              <CardContent className="px-4">
-                <div className="flex items-start gap-2.5">
-                  <SourceIcon type={note.source?.type ?? ''} />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-medium text-foreground truncate">
-                      {note.title || '제목 없음'}
-                    </h2>
+    <ul className="grid gap-3 md:grid-cols-2">
+      {notes.map((note) => {
+        const studyStatus = getNoteStudyStatus(note, studyProgressByNote[note.id]);
+        const studyStatusLabel = getNoteStudyStatusLabel(studyStatus);
+        return (
+          <li key={note.id}>
+            <Link href={`/notes/${encodeURIComponent(note.id)}`}>
+              <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
+                <CardContent className="px-4">
+                  <div className="flex items-start gap-2.5">
+                    <SourceIcon type={note.source?.type ?? ''} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="truncate text-sm font-medium text-foreground">
+                          {note.title || '제목 없음'}
+                        </h2>
+                        <Badge variant={studyStatus === 'completed' ? 'default' : 'outline'} className="shrink-0 text-[10px]">
+                          {studyStatusLabel}
+                        </Badge>
+                      </div>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="text-xs text-muted-foreground/70">
                         {formatDate(note.created_at)}
@@ -170,13 +1275,43 @@ function NotesList({ notes }: { notes: NoteListItem[] }) {
                         </Badge>
                       ))}
                     </div>
+                    {note.summary && (
+                      <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                        {note.summary}
+                      </p>
+                    )}
+                    {(note.key_concepts?.length ?? 0) > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {note.key_concepts?.slice(0, 5).map((concept) => (
+                          <Badge key={concept} variant="outline" className="text-[10px]">
+                            <Brain className="mr-1 h-3 w-3" />
+                            {concept}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Quote className="h-3 w-3" />
+                        인용 {note.quote_count ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Network className="h-3 w-3" />
+                        포인트 {note.learning_point_count ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        질문 {note.review_question_count ?? 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -211,6 +1346,10 @@ function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
                     {result.snippet}
                   </p>
                 )}
+                <p className="mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Tags className="h-3 w-3" />
+                  이 노트를 열어 관련 개념과 근거를 이어서 확인하세요.
+                </p>
               </CardContent>
             </Card>
           </Link>

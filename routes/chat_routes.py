@@ -1,6 +1,7 @@
 """Processed content Q&A chat routes."""
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from flask import Blueprint, current_app, jsonify, request
@@ -20,6 +21,7 @@ MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CONTENT_CHARS = 2_000
 CHAT_ERROR_PREFIX = "[채팅 실패]"
 ALLOWED_LANGUAGES = {"ko", "en", "ja"}
+MIN_RAG_SOURCE_SCORE = 0.25
 
 
 @chat_bp.route("/api/chat", methods=["POST"])
@@ -37,7 +39,14 @@ def chat():
     model = payload["model"]
     language = payload["language"]
 
-    notes = _search_related_notes(question)
+    notes = _filter_supported_notes(_search_related_notes(question))
+    if notes is None:
+        return jsonify({
+            "answer": "[근거 부족] 관련 지식 노트의 유사도가 낮아 답변을 생성하지 않았습니다.",
+            "notes": [],
+            "rag_sources": [],
+            "usage": {},
+        })
     messages = _build_messages(
         question=question,
         context=context,
@@ -51,6 +60,7 @@ def chat():
         return jsonify({
             "answer": result.get("answer", ""),
             "notes": notes,
+            "rag_sources": _build_rag_sources(notes),
             "usage": result.get("usage", {}),
         })
     except Exception as exc:
@@ -115,6 +125,17 @@ def _search_related_notes(question: str) -> list[dict[str, Any]]:
         return []
 
 
+def _filter_supported_notes(notes: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    if not notes:
+        return []
+    supported = [
+        note
+        for note in notes
+        if (_numeric_score(note.get("score")) or 0.0) >= MIN_RAG_SOURCE_SCORE
+    ]
+    return supported if supported else None
+
+
 def _build_messages(
     question: str,
     context: str,
@@ -147,3 +168,30 @@ def _format_notes(notes: list[dict[str, Any]]) -> str:
         score_text = f" (score: {score})" if score is not None else ""
         lines.append(f"{idx}. {title}{score_text}\n{snippet}")
     return "\n\n".join(lines)
+
+
+def _build_rag_sources(notes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for note in notes:
+        note_id = str(note.get("id") or "").strip()
+        title = str(note.get("title") or "").strip()
+        snippet = str(note.get("snippet") or "").strip()
+        source = {
+            "type": "knowledge_note",
+            "id": note_id,
+            "title": title or "지식 노트",
+            "snippet": snippet,
+        }
+        score = _numeric_score(note.get("score"))
+        if score is not None:
+            source["score"] = score
+        sources.append(source)
+    return sources
+
+
+def _numeric_score(value: Any) -> float | None:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    return score if math.isfinite(score) else None

@@ -51,7 +51,7 @@ index d39f068..df8912a 100644
 +        #
 +        # 격리 — CI에 없는 미선언 의존성 때문에 깨지는 테스트만 제외:
 +        #  - web_feature_test: playwright 수동 스모크 (로컬 서버 필요)
-+        #  - test_web_research_* / test_fusion_service / TestGenerateFusion:
++        #  - test_web_research_service / test_fusion_service / TestGenerateFusion:
 +        #    web_research_service가 duckduckgo_search를 톱레벨 import하는데
 +        #    requirements.txt에 미선언 (보드 [사람] 항목 — 의존성 추가 결정 시 격리 해제)
          run: |
@@ -60,7 +60,6 @@ index d39f068..df8912a 100644
 -            -v \
              --ignore=tests/e2e \
 +            --ignore=tests/web_feature_test.py \
-+            --ignore=tests/test_web_research_agent.py \
 +            --ignore=tests/test_web_research_service.py \
 +            --ignore=tests/test_fusion_service.py \
 +            --deselect "tests/test_advanced_routes_cov.py::TestGenerateFusion" \

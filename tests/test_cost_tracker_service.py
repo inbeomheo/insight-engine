@@ -11,24 +11,22 @@ class TestCostTrackerService(unittest.TestCase):
         self.svc = CostTrackerService()
 
     def test_calculate_cost_known_model(self):
-        cost = self.svc.calculate_cost('gemini/gemini-2.5-flash', 1000, 500)
-        self.assertGreater(cost, 0)
+        cost = self.svc.calculate_cost('chatmock/gpt-5.4-mini', 1000, 500)
+        self.assertEqual(cost, 0.0)
 
     def test_calculate_cost_default_model(self):
         cost = self.svc.calculate_cost('unknown/model', 1000, 1000)
-        expected = (1000 / 1000 * 0.001) + (1000 / 1000 * 0.002)
-        self.assertAlmostEqual(cost, expected, places=6)
+        self.assertEqual(cost, 0.0)
 
     def test_record_returns_cost(self):
-        cost = self.svc.record('gemini/gemini-2.5-flash', 500, 300, user_id='user1')
-        self.assertGreater(cost, 0)
+        cost = self.svc.record('chatmock/gpt-5.4-mini', 500, 300, user_id='user1')
+        self.assertEqual(cost, 0.0)
 
     def test_total_cost(self):
         self.svc.record('unknown/model', 1000, 1000)
         self.svc.record('unknown/model', 1000, 1000)
         result = self.svc.get_total_cost()
-        # 각 2.0 * 2 = 6.0 (1k input 0.001 + 1k output 0.002)
-        self.assertAlmostEqual(result['total_cost_usd'], 0.006, places=4)
+        self.assertEqual(result['total_cost_usd'], 0.0)
         self.assertEqual(result['total_records'], 2)
 
     def test_cost_by_model(self):

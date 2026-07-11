@@ -28,6 +28,7 @@
     "noHistory": "分析履歴がありません",
     "noSearchResults": "検索結果がありません",
     "notes": "ノート",
+    "dashboard": "ダッシュボード",
     "poweredBy": "Powered by AI",
     "help": "ヘルプ"
   },
@@ -45,24 +46,13 @@
   },
   "emptyState": {
     "title": "動画・テキスト・PDFを分析しましょう",
-    "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やチュートリアルなど\n学習向けコンテンツを自動生成します"
+    "description": "URLを貼り付けるかテキスト/PDFを追加すると、AIが要約やQ&Aなど\\n学習向けコンテンツを自動生成します"
   },
   "styles": {
-    "blog_seo": "ブログ+SEO",
     "summary": "要約",
-    "tutorial": "チュートリアル",
     "qna": "Q&A",
-    "app_ideas": "アプリアイデア",
-    "yozm_it": "IT記事",
-    "brunch_essay": "エッセイ",
-    "naver_popular": "人気記事",
-    "sns_post": "SNS投稿",
-    "newsletter": "ニュースレター",
-    "show_notes": "ショーノート",
-    "shorts_script": "ショートスクリプト",
-    "geo_seo": "GEO+SEO",
-    "comment_summary": "コメント要約",
-    "course": "講義ノート"
+    "quiz": "クイズ",
+    "retention_cards": "復習カード"
   },
   "result": {
     "copyTitle": "タイトルをコピー",
@@ -71,10 +61,7 @@
     "collapse": "折りたたむ",
     "expand": "展開する",
     "exportHtml": "HTMLエクスポート",
-    "exportDocx": "DOCXエクスポート",
     "exportMarkdown": "Markdownエクスポート",
-    "exportEpub": "EPUBエクスポート",
-    "printPdf": "PDF印刷",
     "share": "共有",
     "promptView": "プロンプトを見る",
     "mindmap": "マインドマップ",
@@ -89,8 +76,6 @@
     "copied": "コピーしました",
     "richCopied": "書式付きコピー完了",
     "shareCopied": "共有テキストをコピーしました",
-    "docxSuccess": "DOCXをダウンロードしました",
-    "docxError": "DOCXのエクスポートに失敗しました",
     "htmlSuccess": "HTMLをダウンロードしました",
     "tts": "テキスト読み上げ",
     "factCheck": "ファクトチェック",
@@ -101,12 +86,12 @@
   "settings": {
     "title": "設定",
     "aiService": "AIサービス",
-    "aiServiceDescription": "AIサービスとキャッシュを管理します",
-    "provider": "AIプロバイダー",
+    "aiServiceDescription": "ChatMockモデルとキャッシュを管理します",
+    "provider": "AIサービス",
     "model": "モデル",
-    "selectProvider": "サービスを選択",
+    "selectProvider": "ChatMockを使用",
     "selectModel": "モデルを選択",
-    "noProviders": "利用可能なAIサービスがありません。Flaskサーバーを実行してAPIキーを設定してください。",
+    "noProviders": "ChatMockモデル一覧を読み込めません。Flaskサーバーとchatmock serveを確認してください。",
     "cacheManagement": "キャッシュ管理",
     "cacheDescription": "保存された字幕/コメントキャッシュを削除します。",
     "clearCache": "全キャッシュを削除",
@@ -121,13 +106,14 @@
     "description": "YouTubeの動画をAIで分析して\nさまざまな形式のコンテンツを生成します",
     "noServer": "Flaskサーバーが実行中か確認してください。",
     "modelCount": "{count}モデル",
-    "start": "始める"
+    "start": "始める",
+    "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。"
   },
   "tour": {
     "step1Title": "URL入力",
     "step1Desc": "分析したいYouTube URLやWebページのアドレスを入力してください。",
     "step2Title": "スタイル選択",
-    "step2Desc": "ブログ、要約、チュートリアルなど、お好みのスタイルを選択してください。",
+    "step2Desc": "要約、Q&A、クイズ、復習カードから学習スタイルを選択してください。",
     "step3Title": "生成開始",
     "step3Desc": "生成ボタンをクリックすると、AIがコンテンツを自動生成します。",
     "step4Title": "結果の活用",
@@ -143,7 +129,7 @@
     "shortcutsDesc": "Enterキーを押してURLを追加または生成を開始できます。",
     "faq": "よくある質問",
     "faqApiKey": "APIキーはどこで設定しますか？",
-    "faqApiKeyAnswer": "設定 > AIサービスからプロバイダーとモデルを選択できます。",
+    "faqApiKeyAnswer": "ChatMockを起動してから、設定 > AIサービスでモデルを選択してください。",
     "faqOffline": "オフラインでも使えますか？",
     "faqOfflineAnswer": "以前に生成したコンテンツはオフラインでも閲覧できますが、新しいコンテンツの生成にはインターネット接続が必要です。"
   },

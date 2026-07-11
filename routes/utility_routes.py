@@ -70,7 +70,7 @@ def api_clear_cache():
 
 # ============================================================
 # 분리된 utility 서브 라우트 — 부수효과 import (blog_bp에 라우트 등록)
-# - routes/utility/operations.py: 헬스/heartbeat/providers/ollama
+# - routes/utility/operations.py: 헬스/heartbeat/providers
 # - routes/utility/feedback_quality.py: 캐시/피드백/팩트체크/SEO
 # - routes/utility/external.py: 웹훅/재생목록/추천소스/RSS
 # ============================================================

@@ -1,21 +1,10 @@
 import type { StyleOption } from './types';
 
 export const STYLE_OPTIONS: StyleOption[] = [
-  { id: 'blog_seo', label: '블로그+SEO', emoji: '🔍', description: '검색 친화 블로그 글' },
   { id: 'summary', label: '요약', emoji: '⚡', description: '핵심만 빠르게 정리' },
-  { id: 'tutorial', label: '튜토리얼', emoji: '📚', description: '단계별 따라하기' },
   { id: 'qna', label: 'Q&A', emoji: '❓', description: '질문과 답변 정리' },
-  { id: 'app_ideas', label: '앱 아이디어', emoji: '💡', description: '서비스 아이디어 도출' },
-  { id: 'yozm_it', label: '요즘IT', emoji: '💻', description: 'IT 매체형 글' },
-  { id: 'brunch_essay', label: '브런치', emoji: '✍️', description: '에세이형 콘텐츠' },
-  { id: 'naver_popular', label: '네이버', emoji: '💚', description: '네이버 친화 글' },
-  { id: 'sns_post', label: 'SNS 포스트', emoji: '📱', description: '소셜 게시물 초안' },
-  { id: 'newsletter', label: '뉴스레터', emoji: '📧', description: '메일형 요약 콘텐츠' },
-  { id: 'show_notes', label: '쇼노트', emoji: '🎙️', description: '에피소드 노트' },
-  { id: 'shorts_script', label: '쇼츠 클립', emoji: '🎬', description: '짧은 영상 대본' },
-  { id: 'geo_seo', label: 'GEO 검색', emoji: '🤖', description: 'AI 검색 최적화' },
-  { id: 'course', label: 'AI 코스', emoji: '🎓', description: '강의형 학습 구성' },
   { id: 'quiz', label: '퀴즈', emoji: '🧠', description: '객관식 학습 문제' },
+  { id: 'retention_cards', label: '리텐션 카드', emoji: '🧩', description: '반복 학습 카드' },
 ];
 
 export const LENGTH_OPTIONS = [
@@ -51,7 +40,6 @@ export const STORAGE_KEYS = {
   MODEL: 'insight-engine-selected-model',
   CUSTOM_STYLES: 'insight-engine-custom-styles',
   ONBOARDING_DONE: 'insight-engine-onboarding-done',
-  OLLAMA_BASE_URL: 'insight-engine-ollama-base-url',
   WEBHOOK_URL: 'insight-engine-webhook-url',
 } as const;
 
