@@ -217,9 +217,6 @@ insight-engine/
 |----------|--------|-------------|
 | `/generate` | POST | 단일 URL 콘텐츠 생성 |
 | `/generate-batch` | POST | 다중 URL 배치 (최대 10개) |
-| `/api/generate-multi` | POST | 1 URL × N 스타일 동시 생성 |
-| `/api/pipeline` | POST | 파이프라인 자동화 (SSE) |
-| `/api/inline-edit` | POST | 인라인 AI 편집 |
 
 ### Content Management
 

@@ -1,6 +1,6 @@
 /**
  * SSE(Server-Sent Events) 스트림을 파싱하여 이벤트를 콜백으로 전달합니다.
- * generateStream과 runPipeline에서 공통으로 사용합니다.
+ * generateStream에서 사용합니다.
  */
 export async function parseSSEStream<T>(
   reader: ReadableStreamDefaultReader<Uint8Array>,

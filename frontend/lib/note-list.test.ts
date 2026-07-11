@@ -9,6 +9,7 @@ import {
   getCompletedStudyItems,
   getDailyStudyPlanItems,
   getFacetLabel,
+  getKnowledgeGapConcepts,
   getNoteConceptClusters,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
@@ -124,6 +125,27 @@ describe('note-list', () => {
       { concept: 'RAG', count: 2, notes: [recent] },
       { concept: 'Vector DB', count: 2, notes: [recent] },
     ]);
+  });
+
+  it('finds recent concepts that only appear in one note', () => {
+    const recent = note({
+      id: 'recent-gap',
+      title: 'Recent gap',
+      key_concepts: ['Solo', 'RAG', 'solo'],
+      created_at: '2026-07-10T05:00:00Z',
+    });
+    const older = note({
+      id: 'older-gap',
+      title: 'Older gap',
+      key_concepts: ['Legacy', 'RAG'],
+      created_at: '2026-07-10T01:00:00Z',
+    });
+
+    expect(getKnowledgeGapConcepts([older, recent], 2)).toEqual([
+      { concept: 'Solo', note: recent },
+      { concept: 'Legacy', note: older },
+    ]);
+    expect(getKnowledgeGapConcepts([older, recent], 0)).toEqual([]);
   });
 
   it('builds markdown for the wiki concept index', () => {

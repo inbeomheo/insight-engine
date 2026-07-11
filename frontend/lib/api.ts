@@ -4,14 +4,11 @@ import type {
   ProvidersResponse,
   MindmapResponse,
   PlaylistResponse,
-  MultiStyleResponse,
   StreamEvent,
   Modifiers,
   SourceVideo,
   FusionMeta,
   FusionSections,
-  PipelineRequest,
-  PipelineEvent,
   Workspace,
   WorkspaceMember,
   KnowledgeItem,
@@ -41,7 +38,6 @@ const TIMEOUT_MS: Record<string, number> = {
   '/generate': 300_000,
   '/generate-batch': 660_000,
   '/api/generate-merged': 300_000,
-  '/api/generate-multi': 300_000,
   '/api/generate-fusion': 300_000,
   '/api/mindmap': 60_000,
   '/api/shares': 15_000,
@@ -352,18 +348,6 @@ export async function generateMerged(
   });
 }
 
-// 멀티 스타일 생성
-export async function generateMulti(
-  url: string,
-  model: string,
-  styles: string[]
-): Promise<MultiStyleResponse> {
-  return request('/api/generate-multi', {
-    method: 'POST',
-    body: JSON.stringify({ url, model, styles }),
-  });
-}
-
 // 마인드맵
 export async function generateMindmap(
   content: string,
@@ -429,32 +413,6 @@ export async function testWebhook(url: string): Promise<{ success: boolean; erro
     method: 'POST',
     body: JSON.stringify({ url }),
   });
-}
-
-// 파이프라인 실행 (SSE)
-export async function runPipeline(
-  req: PipelineRequest,
-  onEvent: (event: PipelineEvent) => void,
-  signal?: AbortSignal
-): Promise<void> {
-  const res = await fetch(`${BASE}/api/pipeline`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-    signal,
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-
-  await parseSSEStream<PipelineEvent>(
-    res.body!.getReader(),
-    onEvent,
-    signal,
-    () => onEvent({ type: 'step_error', step: 'network', error: '네트워크 연결이 끊겼습니다.', progress: 0 })
-  );
 }
 
 // =============================================

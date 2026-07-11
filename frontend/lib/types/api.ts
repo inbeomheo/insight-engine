@@ -150,14 +150,6 @@ export interface PlaylistResponse {
   total: number;
 }
 
-// === 멀티 스타일 ===
-
-export interface MultiStyleResponse {
-  results: GenerateResponse[];
-  youtube_title: string;
-  transcript_source: string;
-}
-
 // === 프로바이더 API 응답 ===
 
 import type { ProviderInfo } from './settings';

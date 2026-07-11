@@ -1,20 +1,10 @@
-"""advanced_routes.py 라우트 커버리지 테스트.
-
-마인드맵, 멀티스타일, 퓨전, QA, 파이프라인,
-썸네일, 인라인 편집, 에이전트 커버.
-"""
+"""마인드맵·퓨전 고급 라우트 커버리지 테스트."""
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app import create_app
 
 _H = {'Origin': 'http://localhost:3000'}
-
-# require_auth + require_usage 를 동시에 우회하는 패치 목록
-_AUTH_PATCHES = [
-    patch('services.data.supabase_service.is_supabase_enabled', return_value=False),
-    patch('services.usage.usage_decorator.UsageService'),
-]
 
 
 class _Base(unittest.TestCase):
@@ -56,147 +46,7 @@ class TestMindmap(_Base):
         self.assertIn(resp.status_code, [400, 500])
 
 
-# ── 멀티스타일 ─────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestGenerateMulti(_Base):
-
-    def test_multi_no_url(self, _):
-        resp = self.client.post('/api/generate-multi', json={}, headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_multi_invalid_url(self, _):
-        resp = self.client.post('/api/generate-multi',
-                                json={'url': 'https://example.com', 'styles': ['blog_seo']},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_multi_no_styles(self, _):
-        resp = self.client.post('/api/generate-multi',
-                                json={'url': 'https://www.youtube.com/watch?v=test123'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_multi_too_many_styles(self, _):
-        resp = self.client.post('/api/generate-multi',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=test123',
-                                    'styles': ['s1', 's2', 's3', 's4', 's5', 's6']
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    @patch('routes.advanced_routes._fetch_youtube_content',
-           return_value=('transcript', [], None, [], 'api', None))
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    @patch('services.core.content_service.get_video_id', return_value='vid1')
-    @patch('services.core.content_service.get_content_title', return_value='Title')
-    @patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t)
-    @patch('services.core.ai_service.create_content',
-           return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}})
-    def test_multi_success(self, _ai, _trunc, _title, _vid, _yt, _fetch, _):
-        self.app.config['STYLE_PROMPTS'] = {'blog_seo': 'prompt'}
-        resp = self.client.post('/api/generate-multi',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=test123',
-                                    'styles': ['blog_seo']
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [200, 429])
-
-    @patch('routes.advanced_routes._fetch_youtube_content',
-           return_value=(None, [], '자막 없음', [], None, None))
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    @patch('services.core.content_service.get_video_id', return_value='vid1')
-    @patch('services.core.content_service.get_content_title', return_value='Title')
-    def test_multi_transcript_error(self, _title, _vid, _yt, _fetch, _):
-        resp = self.client.post('/api/generate-multi',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=test123',
-                                    'styles': ['blog_seo']
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    @patch('services.core.content_service.is_youtube_url', return_value=True)
-    @patch('services.core.content_service.get_video_id', return_value=None)
-    def test_multi_invalid_video_id(self, _vid, _yt, _):
-        resp = self.client.post('/api/generate-multi',
-                                json={
-                                    'url': 'https://www.youtube.com/watch?v=bad',
-                                    'styles': ['blog_seo']
-                                },
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429])
-
-    def test_multi_composes_base_prompt_for_ui_style(self, _):
-        from prompts.base import BASE_PROMPT
-
-        self.app.config['STYLE_PROMPTS'] = {'summary': 'SUMMARY_ONLY'}
-        with (
-            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
-            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
-            patch('routes.advanced_routes._fetch_youtube_content',
-                  return_value=('transcript', [], None, [], 'api', None)),
-            patch('services.core.content_service.is_youtube_url', return_value=True),
-            patch('services.core.content_service.get_video_id', return_value='vid1'),
-            patch('services.core.content_service.get_content_title', return_value='Title'),
-            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
-            patch('services.core.ai_service.create_content',
-                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
-        ):
-            resp = self.client.post(
-                '/api/generate-multi',
-                json={
-                    'url': 'https://www.youtube.com/watch?v=test123',
-                    'styles': ['summary'],
-                    'model': 'zhipuai/test',
-                },
-                headers=_H,
-                environ_overrides={'REMOTE_ADDR': '127.0.10.1'},
-            )
-
-        self.assertEqual(resp.status_code, 200)
-        style_prompt = create_content.call_args[0][2]
-        self.assertTrue(style_prompt.startswith(BASE_PROMPT))
-        self.assertEqual(style_prompt.count(BASE_PROMPT), 1)
-        self.assertTrue(style_prompt.endswith('SUMMARY_ONLY'))
-
-    def test_multi_transform_style_does_not_get_base_prompt(self, _):
-        from prompts.base import BASE_PROMPT
-
-        self.app.config['STYLE_PROMPTS'] = {'mindmap': 'TRANSFORM_ONLY'}
-        with (
-            patch('src.contexts.identity.interface.auth_decorators.is_supabase_enabled', return_value=False),
-            patch('services.usage.usage_decorator.is_supabase_enabled', return_value=False),
-            patch('routes.advanced_routes._fetch_youtube_content',
-                  return_value=('transcript', [], None, [], 'api', None)),
-            patch('services.core.content_service.is_youtube_url', return_value=True),
-            patch('services.core.content_service.get_video_id', return_value='vid1'),
-            patch('services.core.content_service.get_content_title', return_value='Title'),
-            patch('services.core.content_service.truncate_text', side_effect=lambda t, n: t),
-            patch('services.core.ai_service.create_content',
-                  return_value={'content': 'ok', 'title': 'T', 'html': '<p>', 'usage': {}}) as create_content,
-        ):
-            resp = self.client.post(
-                '/api/generate-multi',
-                json={
-                    'url': 'https://www.youtube.com/watch?v=test123',
-                    'styles': ['mindmap'],
-                    'model': 'zhipuai/test',
-                },
-                headers=_H,
-                environ_overrides={'REMOTE_ADDR': '127.0.10.2'},
-            )
-
-        self.assertEqual(resp.status_code, 200)
-        style_prompt = create_content.call_args[0][2]
-        self.assertEqual(style_prompt, 'TRANSFORM_ONLY')
-        self.assertFalse(style_prompt.startswith(BASE_PROMPT))
-
-
-# ── 퓨전 ──────────────────────────────────────────────
+# ── 퓨전 ─────────────────────────────────────────────
 
 
 @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
@@ -255,67 +105,7 @@ class TestGenerateFusion(_Base):
         self.assertIn(resp.status_code, [429, 500])
 
 
-# ── 인라인 편집 ──────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestInlineEdit(_Base):
-
-    def test_inline_edit_no_content(self, _):
-        resp = self.client.post('/api/inline-edit',
-                                json={'selection': 'text'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    def test_inline_edit_no_selection(self, _):
-        resp = self.client.post('/api/inline-edit',
-                                json={'content': 'full text'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.core.ai_service.inline_edit',
-           return_value={'content': 'edited', 'usage': {}})
-    def test_inline_edit_no_instruction(self, _ai, _):
-        """instruction 없으면 400."""
-        resp = self.client.post('/api/inline-edit',
-                                json={'content': 'full', 'selection': 'part', 'instruction': ''},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.core.ai_service.inline_edit',
-           return_value={'content': 'edited', 'usage': {}})
-    def test_inline_edit_success(self, _ai, _):
-        resp = self.client.post('/api/inline-edit',
-                                json={
-                                    'content': 'full text',
-                                    'selection': 'text',
-                                    'instruction': 'make bold'
-                                },
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-
-# ── 파이프라인 ────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestPipeline(_Base):
-
-    def test_pipeline_no_url(self, _):
-        resp = self.client.post('/api/pipeline',
-                                json={'pipeline_id': 'blog_automation'},
-                                headers=_H)
-        # _get_request_data가 url 파싱 시 에러 또는 빈 URL 400
-        self.assertIn(resp.status_code, [400, 429, 500])
-
-    def test_pipeline_invalid_pipeline_id(self, _):
-        resp = self.client.post('/api/pipeline',
-                                json={'pipeline_id': 'nonexistent', 'url': 'https://youtube.com/watch?v=a'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [400, 429, 500])
-
-
-# ── 에러 정리 헬퍼 ─────────────────────────────────────
+# ── 오류 메시지 정리 ─────────────────────────────────
 
 
 class TestSanitizeGenerationError(_Base):

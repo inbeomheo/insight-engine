@@ -19,6 +19,7 @@ import {
   getCompletedStudyItems,
   getDailyStudyPlanItems,
   getFacetLabel,
+  getKnowledgeGapConcepts,
   getNoteConceptClusters,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
@@ -43,6 +44,7 @@ import {
   type NoteStudyCardKind,
   type NoteFacet,
   type NoteConceptCluster,
+  type NoteKnowledgeGap,
   buildNoteFacetHref,
   parseNoteFacetSearchParams,
 } from '@/lib/note-list';
@@ -243,6 +245,10 @@ export default function NotesPage() {
     () => getNoteConceptClusters(notes, { limit: 4, notesPerCluster: 3 }),
     [notes],
   );
+  const knowledgeGaps = useMemo(
+    () => getKnowledgeGapConcepts(notes, 6),
+    [notes],
+  );
   const recentNotes = useMemo(
     () => [...notes]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -365,6 +371,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             conceptClusters={conceptClusters}
+            knowledgeGaps={knowledgeGaps}
             recentNotes={recentNotes}
             studyStartNotes={studyStartNotes}
             reviewNeededNotes={reviewNeededNotes}
@@ -518,6 +525,7 @@ function WikiMap({
   topTags,
   sourceGroups,
   conceptClusters,
+  knowledgeGaps,
   recentNotes,
   studyStartNotes,
   reviewNeededNotes,
@@ -532,6 +540,7 @@ function WikiMap({
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   conceptClusters: NoteConceptCluster[];
+  knowledgeGaps: NoteKnowledgeGap[];
   recentNotes: NoteListItem[];
   studyStartNotes: NoteStudyResumeItem[];
   reviewNeededNotes: NoteStudyResumeItem[];
@@ -688,7 +697,7 @@ function WikiMap({
     recent: studyResumeNotes.length,
   };
   const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length;
-  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length;
+  const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length + knowledgeGaps.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
     return { order: index >= 0 ? index + 1 : 99 };
@@ -826,6 +835,44 @@ function WikiMap({
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {knowledgeGaps.length > 0 && (
+                <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <Brain className="h-3.5 w-3.5 text-amber-500/80" />
+                        지식 공백
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        한 문서에만 등장하는 개념입니다. 연결 노트를 추가해 지식을 확장해 보세요.
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[10px] text-amber-600 dark:text-amber-400">
+                      {knowledgeGaps.length}개
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {knowledgeGaps.map((gap) => (
+                      <div key={`${gap.concept}-${gap.note.id}`} className="rounded-lg border border-border bg-card/70 p-2.5">
+                        <button
+                          type="button"
+                          onClick={() => onFacetSelect({ type: 'concept', value: gap.concept })}
+                          className="block w-full truncate text-left text-xs font-semibold text-foreground hover:text-primary"
+                        >
+                          {gap.concept}
+                        </button>
+                        <Link
+                          href={`/notes/${encodeURIComponent(gap.note.id)}`}
+                          className="mt-1 block truncate text-[10px] text-muted-foreground hover:text-foreground"
+                        >
+                          {gap.note.title || '제목 없음'}
+                        </Link>
                       </div>
                     ))}
                   </div>
