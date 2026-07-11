@@ -21,7 +21,7 @@ import {
   getFacetLabel,
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
-  getNoteRecallReinforcementPath,
+  getNoteReviewQueue,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -31,7 +31,6 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
-  getScheduledReviewItems,
   getStudyStartCandidates,
   NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
   NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
@@ -323,10 +322,11 @@ export default function NotesPage() {
     () => getStudyStartCandidates(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
-  const scheduledReviewItems = useMemo(
-    () => getScheduledReviewItems(notes, reviewScheduleByNote, reviewNow, 4),
-    [notes, reviewNow, reviewScheduleByNote],
+  const reviewQueue = useMemo(
+    () => getNoteReviewQueue(notes, reviewScheduleByNote, reviewHistory, reviewNow, 4),
+    [notes, reviewHistory, reviewNow, reviewScheduleByNote],
   );
+  const { recallReinforcementPath, scheduledReviewItems } = reviewQueue;
   const reviewHistorySummary = useMemo(
     () => getNoteReviewHistorySummary(reviewHistory),
     [reviewHistory],
@@ -340,13 +340,12 @@ export default function NotesPage() {
     return reviewHistory.filter((entry) => noteIds.has(entry.noteId));
   }, [notes, reviewHistory]);
   const recentReviewHistory = useMemo(() => linkedReviewHistory.slice(0, 3), [linkedReviewHistory]);
-  const recallReinforcementPath = useMemo(
-    () => getNoteRecallReinforcementPath(notes, reviewScheduleByNote, reviewHistory, reviewNow),
-    [notes, reviewHistory, reviewNow, reviewScheduleByNote],
-  );
   const scheduledReviewNoteIds = useMemo(
-    () => new Set(scheduledReviewItems.map((item) => item.note.id)),
-    [scheduledReviewItems],
+    () => new Set([
+      ...scheduledReviewItems.map((item) => item.note.id),
+      ...(recallReinforcementPath ? [recallReinforcementPath.originalNote.id] : []),
+    ]),
+    [recallReinforcementPath, scheduledReviewItems],
   );
   const completedStudyNotes = useMemo(
     () => getCompletedStudyItems(notes, studyProgressByNote, notes.length)
@@ -459,6 +458,8 @@ export default function NotesPage() {
             dailyStudyPlanItems={dailyStudyPlanItems}
             qnaStudyCards={qnaStudyCards}
             scheduledReviewItems={scheduledReviewItems}
+            reviewQueueTotalCount={reviewQueue.totalCount}
+            dueReviewCount={reviewQueue.dueCount}
             reviewHistorySummary={reviewHistorySummary}
             reviewActivityDays={reviewActivityDays}
             reviewHistoryEntries={linkedReviewHistory}
@@ -619,6 +620,8 @@ function WikiMap({
   dailyStudyPlanItems,
   qnaStudyCards,
   scheduledReviewItems,
+  reviewQueueTotalCount,
+  dueReviewCount,
   reviewHistorySummary,
   reviewActivityDays,
   reviewHistoryEntries,
@@ -640,6 +643,8 @@ function WikiMap({
   dailyStudyPlanItems: NoteStudyPlanItem[];
   qnaStudyCards: ResultChatStudyCard[];
   scheduledReviewItems: NoteScheduledReviewItem[];
+  reviewQueueTotalCount: number;
+  dueReviewCount: number;
   reviewHistorySummary: NoteReviewHistorySummary;
   reviewActivityDays: NoteReviewActivityDay[];
   reviewHistoryEntries: NoteReviewHistoryEntry[];
@@ -817,8 +822,9 @@ function WikiMap({
     completed: completedStudyNotes.length,
     recent: studyResumeNotes.length,
   };
-  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length + scheduledReviewItems.length;
-  const dueReviewCount = scheduledReviewItems.filter((item) => item.status.state === 'due').length;
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts)
+    + qnaStudyCards.length
+    + reviewQueueTotalCount;
   const maxReviewActivityCount = Math.max(1, ...reviewActivityDays.map((day) => day.count));
   const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length + knowledgeGaps.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
@@ -931,63 +937,6 @@ function WikiMap({
                       )}
                     </div>
                   </div>
-                  {recallReinforcementPath && (
-                    <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 p-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                            <Brain className="h-3.5 w-3.5 text-primary" />
-                            회상 보강 추천
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">
-                              {recallReinforcementPath.originalNote.title || '제목 없음'}
-                            </span>
-                            에서 막힌 개념을 연결 노트로 보강해 보세요.
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="shrink-0 text-[10px]">
-                          {recallReinforcementPath.status.label}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        지난 회상: {recallReinforcementPath.review.grade === 'again' ? '다시' : '어려움'}
-                        {' · '}
-                        {recallReinforcementPath.previousIntervalDays === null
-                          ? '이전 기록 없음'
-                          : recallReinforcementPath.previousIntervalDays + '일'}
-                        {' → '}{recallReinforcementPath.currentIntervalDays}일
-                        {' · 복습 시점 '}{formatStudyUpdatedAt(recallReinforcementPath.review.completedAt)}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] text-muted-foreground">공유 개념</span>
-                        {recallReinforcementPath.sharedConcepts.map((concept) => (
-                          <Badge key={concept} variant="secondary" className="text-[10px]">
-                            {concept}
-                          </Badge>
-                        ))}
-                      </div>
-                      <ol className="mt-3 grid gap-2 text-xs sm:grid-cols-2" aria-label="회상 보강 단계 미리보기">
-                        <li className="flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">1</span>
-                          <span className="break-words">연결 노트 읽기</span>
-                        </li>
-                        <li className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background/70 px-3 py-2 text-muted-foreground">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] font-semibold">2</span>
-                          <span className="break-words">원래 질문 전체 재도전</span>
-                        </li>
-                      </ol>
-                      <Button asChild size="sm" className="mt-3 h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
-                        <Link href={buildNoteRecallSupportHref(
-                          recallReinforcementPath.originalNote.id,
-                          recallReinforcementPath.supportNote.id
-                        ) ?? '/notes'}>
-                          보강 학습 시작
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-
                   <div className="mt-3 grid gap-2">
                     {conceptClusters.map((cluster) => (
                       <div key={cluster.concept} className="rounded-lg border border-border bg-card/60 p-3">
@@ -1110,7 +1059,7 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0 || scheduledReviewItems.length > 0 || recentReviewHistory.length > 0) && (
+        {(totalStudyQueueItems > 0 || recentReviewHistory.length > 0) && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
               <button
@@ -1129,6 +1078,7 @@ function WikiMap({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  {dueReviewCount > 0 && <>오늘 복습 {dueReviewCount}개 · </>}
                   {totalStudyQueueItems}개 항목
                   <ChevronDown className={`h-4 w-4 transition-transform ${studyQueueOpen ? 'rotate-180' : ''}`} />
                 </span>
@@ -1136,6 +1086,75 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {recallReinforcementPath && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                              <Brain className="h-4 w-4 text-primary" />
+                              회상 보강 추천
+                            </h2>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              막힌 개념을 연결 노트로 보강한 뒤 원래 질문을 다시 확인하세요.
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="shrink-0 text-[10px]">
+                            {recallReinforcementPath.status.label}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                          <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
+                            <span className="block text-[10px] text-muted-foreground">원본 노트</span>
+                            <span className="mt-0.5 block truncate font-medium text-foreground">
+                              {recallReinforcementPath.originalNote.title || '제목 없음'}
+                            </span>
+                          </div>
+                          <div className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+                            <span className="block text-[10px] text-muted-foreground">연결 노트</span>
+                            <span className="mt-0.5 block truncate font-medium text-foreground">
+                              {recallReinforcementPath.supportNote.title || '제목 없음'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          지난 회상: {recallReinforcementPath.review.grade === 'again' ? '다시' : '어려움'}
+                          {' · '}
+                          {recallReinforcementPath.previousIntervalDays === null
+                            ? '이전 기록 없음'
+                            : recallReinforcementPath.previousIntervalDays + '일'}
+                          {' → '}{recallReinforcementPath.currentIntervalDays}일
+                          {' · 복습 시점 '}{formatStudyUpdatedAt(recallReinforcementPath.review.completedAt)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">공유 개념</span>
+                          {recallReinforcementPath.sharedConcepts.map((concept) => (
+                            <Badge key={concept} variant="secondary" className="text-[10px]">
+                              {concept}
+                            </Badge>
+                          ))}
+                        </div>
+                        <ol className="mt-3 grid gap-2 text-xs sm:grid-cols-2" aria-label="회상 보강 단계 미리보기">
+                          <li className="flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">1</span>
+                            <span className="break-words">연결 노트 읽기</span>
+                          </li>
+                          <li className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background/70 px-3 py-2 text-muted-foreground">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] font-semibold">2</span>
+                            <span className="break-words">원래 질문 전체 재도전</span>
+                          </li>
+                        </ol>
+                        <Button asChild size="sm" className="mt-3 h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+                          <Link href={buildNoteRecallSupportHref(
+                            recallReinforcementPath.originalNote.id,
+                            recallReinforcementPath.supportNote.id
+                          ) ?? '/notes'}>
+                            보강 학습 시작
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                   {recentReviewHistory.length > 0 && (
                     <Card className="border-orange-500/20 bg-background/90 py-4">
                       <CardContent className="px-4">
@@ -1245,13 +1264,11 @@ function WikiMap({
                               <h2 className="text-sm font-semibold text-foreground">예정 복습</h2>
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {dueReviewCount > 0
-                                ? `오늘 확인할 노트 ${dueReviewCount}개가 있습니다.`
-                                : '예약한 복습일이 가까운 순서대로 표시됩니다.'}
+                              예약한 복습일이 가까운 순서대로 표시됩니다.
                             </p>
                           </div>
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${dueReviewCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'}`}>
-                            {dueReviewCount > 0 ? `오늘 ${dueReviewCount}개` : `${scheduledReviewItems.length}개 예약`}
+                          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                            {scheduledReviewItems.length}개 예약
                           </span>
                         </div>
                         <ul className="mt-3 space-y-2">

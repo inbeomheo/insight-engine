@@ -12,6 +12,7 @@ import {
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
   getNoteRecallReinforcementPath,
+  getNoteReviewQueue,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -205,6 +206,99 @@ describe('note-list', () => {
     });
     expect(getScheduledReviewItems([upcoming], {}, now)).toEqual([]);
   });
+
+  it('promotes recall reinforcement, backfills regular slots, and honors a zero limit', () => {
+    const original = note({
+      id: 'queue-original',
+      key_concepts: ['RAG'],
+      review_question_count: 2,
+    });
+    const support = note({ id: 'queue-support', key_concepts: ['rag'] });
+    const regular = note({ id: 'queue-regular' });
+    const scheduledAt = '2026-07-14T10:00:00.000Z';
+    const notes = [original, support, regular];
+    const schedules = {
+      'queue-original': {
+        dueAt: '2026-07-15T08:00:00.000Z',
+        intervalDays: 1,
+        scheduledAt,
+      },
+      'queue-regular': {
+        dueAt: '2026-07-15T10:00:00.000Z',
+        intervalDays: 3,
+        scheduledAt: '2026-07-12T10:00:00.000Z',
+      },
+    };
+    const history = [{
+      id: 'queue-original:review',
+      noteId: original.id,
+      noteTitle: original.title,
+      completedAt: '2026-07-14T10:00:01.000Z',
+      intervalDays: 1,
+      grade: 'again' as const,
+      baseIntervalDays: 4,
+      scheduleScheduledAt: scheduledAt,
+    }];
+    const now = new Date('2026-07-15T12:00:00.000Z');
+
+    const queue = getNoteReviewQueue(notes, schedules, history, now, 1);
+
+    expect(queue.recallReinforcementPath).toMatchObject({
+      originalNote: { id: 'queue-original' },
+      supportNote: { id: 'queue-support' },
+      sharedConcepts: ['RAG'],
+      status: { state: 'due', label: '오늘 복습' },
+    });
+    expect(queue.scheduledReviewItems.map((item) => item.note.id)).toEqual(['queue-regular']);
+    expect(queue.totalCount).toBe(2);
+    expect(queue.dueCount).toBe(2);
+
+    const zeroLimitQueue = getNoteReviewQueue(notes, schedules, history, now, 0);
+    expect(zeroLimitQueue.recallReinforcementPath?.originalNote.id).toBe('queue-original');
+    expect(zeroLimitQueue.scheduledReviewItems).toEqual([]);
+    expect(zeroLimitQueue.totalCount).toBe(1);
+    expect(zeroLimitQueue.dueCount).toBe(1);
+  });
+
+  it.each(['good', 'easy', 'mismatch', 'missing-support'] as const)(
+    'falls back to the regular schedule for %s reinforcement data',
+    (reason) => {
+      const original = note({
+        id: `fallback-${reason}`,
+        key_concepts: ['RAG'],
+        review_question_count: 1,
+      });
+      const support = reason === 'missing-support'
+        ? note({ id: `support-${reason}`, key_concepts: ['그래프'] })
+        : note({ id: `support-${reason}`, key_concepts: ['rag'] });
+      const scheduledAt = '2026-07-14T10:00:00.000Z';
+      const schedule = {
+        dueAt: '2026-07-15T10:00:00.000Z',
+        intervalDays: reason === 'mismatch' ? 2 : 1,
+        scheduledAt,
+      };
+      const queue = getNoteReviewQueue(
+        [original, support],
+        { [original.id]: schedule },
+        [{
+          id: `${original.id}:review`,
+          noteId: original.id,
+          noteTitle: original.title,
+          completedAt: '2026-07-14T10:00:01.000Z',
+          intervalDays: 1,
+          grade: reason === 'good' || reason === 'easy' ? reason : 'again',
+          baseIntervalDays: 4,
+          scheduleScheduledAt: scheduledAt,
+        }],
+        new Date('2026-07-15T12:00:00.000Z'),
+      );
+
+      expect(queue.recallReinforcementPath).toBeNull();
+      expect(queue.scheduledReviewItems.map((item) => item.note.id)).toEqual([original.id]);
+      expect(queue.totalCount).toBe(1);
+      expect(queue.dueCount).toBe(1);
+    },
+  );
 
   it('builds valid again and hard recall reinforcement paths', () => {
     const original = note({ id: 'original', key_concepts: ['RAG', '검색'], review_question_count: 2 });

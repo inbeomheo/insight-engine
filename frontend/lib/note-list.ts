@@ -329,6 +329,46 @@ export function getScheduledReviewItems(
     .slice(0, Math.max(0, limit));
 }
 
+export interface NoteReviewQueue {
+  recallReinforcementPath: NoteRecallReinforcementPath | null;
+  scheduledReviewItems: NoteScheduledReviewItem[];
+  totalCount: number;
+  dueCount: number;
+}
+
+export function getNoteReviewQueue(
+  notes: NoteListItem[],
+  schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
+  reviewHistory: NoteReviewHistoryEntry[],
+  now = new Date(),
+  scheduledLimit = 3
+): NoteReviewQueue {
+  const recallReinforcementPath = getNoteRecallReinforcementPath(
+    notes,
+    schedulesByNote,
+    reviewHistory,
+    now
+  );
+  const scheduledReviewItems = getScheduledReviewItems(
+    recallReinforcementPath
+      ? notes.filter((note) => note.id !== recallReinforcementPath.originalNote.id)
+      : notes,
+    schedulesByNote,
+    now,
+    scheduledLimit
+  );
+  const recallCount = recallReinforcementPath ? 1 : 0;
+  const recallDueCount = recallReinforcementPath?.status.state === 'due' ? 1 : 0;
+
+  return {
+    recallReinforcementPath,
+    scheduledReviewItems,
+    totalCount: scheduledReviewItems.length + recallCount,
+    dueCount: scheduledReviewItems.filter((item) => item.status.state === 'due').length
+      + recallDueCount,
+  };
+}
+
 export interface NoteStudyResumeItem {
   note: NoteListItem;
   summary: NoteStudySummary;
