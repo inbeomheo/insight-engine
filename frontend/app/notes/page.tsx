@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Brain, CalendarClock, CheckCircle2, ChevronDown, Copy, FileText, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Brain, CalendarClock, CheckCircle2, ChevronDown, Copy, FileText, Flame, MessageSquare, Network, Quote, Search, Tags, X, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,12 @@ import {
 } from '@/lib/note-list';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
+import {
+  getNoteReviewHistorySummary,
+  readNoteReviewHistory,
+  type NoteReviewHistoryEntry,
+  type NoteReviewHistorySummary,
+} from '@/lib/note-review-history';
 import {
   buildResultChatStudyCardsMarkdown,
   readResultChatStudyCards,
@@ -101,6 +107,7 @@ export default function NotesPage() {
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
   const [reviewScheduleByNote, setReviewScheduleByNote] = useState<Record<string, NoteReviewSchedule | null>>({});
+  const [reviewHistory, setReviewHistory] = useState<NoteReviewHistoryEntry[]>([]);
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
   const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
@@ -214,6 +221,17 @@ export default function NotesPage() {
     };
   }, [notes]);
 
+  useEffect(() => {
+    const syncReviewHistory = () => setReviewHistory(readNoteReviewHistory());
+    syncReviewHistory();
+    window.addEventListener('storage', syncReviewHistory);
+    window.addEventListener('focus', syncReviewHistory);
+    return () => {
+      window.removeEventListener('storage', syncReviewHistory);
+      window.removeEventListener('focus', syncReviewHistory);
+    };
+  }, []);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     void runSearch(query);
@@ -297,6 +315,14 @@ export default function NotesPage() {
     () => getScheduledReviewItems(notes, reviewScheduleByNote, new Date(), 4),
     [notes, reviewScheduleByNote],
   );
+  const reviewHistorySummary = useMemo(
+    () => getNoteReviewHistorySummary(reviewHistory),
+    [reviewHistory],
+  );
+  const recentReviewHistory = useMemo(() => {
+    const noteIds = new Set(notes.map((note) => note.id));
+    return reviewHistory.filter((entry) => noteIds.has(entry.noteId)).slice(0, 3);
+  }, [notes, reviewHistory]);
   const scheduledReviewNoteIds = useMemo(
     () => new Set(scheduledReviewItems.map((item) => item.note.id)),
     [scheduledReviewItems],
@@ -411,6 +437,8 @@ export default function NotesPage() {
             dailyStudyPlanItems={dailyStudyPlanItems}
             qnaStudyCards={qnaStudyCards}
             scheduledReviewItems={scheduledReviewItems}
+            reviewHistorySummary={reviewHistorySummary}
+            recentReviewHistory={recentReviewHistory}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
           />
@@ -566,6 +594,8 @@ function WikiMap({
   dailyStudyPlanItems,
   qnaStudyCards,
   scheduledReviewItems,
+  reviewHistorySummary,
+  recentReviewHistory,
   studyCardOrder,
   onFacetSelect,
 }: {
@@ -582,6 +612,8 @@ function WikiMap({
   dailyStudyPlanItems: NoteStudyPlanItem[];
   qnaStudyCards: ResultChatStudyCard[];
   scheduledReviewItems: NoteScheduledReviewItem[];
+  reviewHistorySummary: NoteReviewHistorySummary;
+  recentReviewHistory: NoteReviewHistoryEntry[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
 }) {
@@ -969,7 +1001,7 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0 || scheduledReviewItems.length > 0) && (
+        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0 || scheduledReviewItems.length > 0 || recentReviewHistory.length > 0) && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
               <button
@@ -995,6 +1027,51 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {recentReviewHistory.length > 0 && (
+                    <Card className="border-orange-500/20 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2">
+                          <Flame className="h-4 w-4 text-orange-500/80" />
+                          <h2 className="text-sm font-semibold text-foreground">복습 기록</h2>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          <div className="rounded-lg bg-orange-500/5 px-2 py-2 text-center">
+                            <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                              {reviewHistorySummary.currentStreak}일
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">연속 학습</div>
+                          </div>
+                          <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                            <div className="text-lg font-semibold text-foreground">
+                              {reviewHistorySummary.totalCompletions}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">7일 완료</div>
+                          </div>
+                          <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                            <div className="text-lg font-semibold text-foreground">
+                              {reviewHistorySummary.activeDays}일
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">7일 활동</div>
+                          </div>
+                        </div>
+                        <ul className="mt-3 space-y-1.5">
+                          {recentReviewHistory.map((entry) => (
+                            <li key={entry.id}>
+                              <Link
+                                href={`/notes/${encodeURIComponent(entry.noteId)}#study-progress`}
+                                className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted"
+                              >
+                                <span className="truncate text-foreground">{entry.noteTitle}</span>
+                                <span className="shrink-0 text-[10px] text-muted-foreground">
+                                  {formatStudyUpdatedAt(entry.completedAt)} · {entry.intervalDays}일 간격
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
                   {scheduledReviewItems.length > 0 && (
                     <Card className="border-amber-500/20 bg-background/90 py-4">
                       <CardContent className="px-4">
