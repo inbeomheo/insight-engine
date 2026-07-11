@@ -22,6 +22,7 @@ import {
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
   getNoteReviewQueue,
+  getNoteSearchResultPresentations,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -477,7 +478,7 @@ export default function NotesPage() {
             ))}
           </div>
         ) : isSearchMode ? (
-          <SearchResultsList results={searchResults} />
+          <SearchResultsList results={searchResults} notes={notes} />
         ) : (
           <>
             {notes.length > 0 && (
@@ -1703,7 +1704,16 @@ function NotesList({
   );
 }
 
-function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
+export function SearchResultsList({
+  results,
+  notes,
+}: {
+  results: NoteSearchResult[];
+  notes: NoteListItem[];
+}) {
+  const presentations = getNoteSearchResultPresentations(results, notes);
+  const actionLinkClass = 'inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
   if (results.length === 0) {
     return (
       <div className="text-center py-16">
@@ -1715,14 +1725,31 @@ function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
 
   return (
     <ul className="space-y-3">
-      {results.map((result) => (
-        <li key={result.id}>
-          <Link href={`/notes/${encodeURIComponent(result.id)}`}>
-            <Card className="hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
+      {presentations.map(({
+        result,
+        hasNoteMetadata,
+        keyConcepts,
+        quoteCount,
+        learningPointCount,
+        reviewQuestionCount,
+        studyCount,
+        links,
+      }) => {
+        const title = result.title || '제목 없음';
+
+        return (
+          <li key={result.id}>
+            <Card className="hover:border-primary/40 hover:shadow-sm transition-all py-4">
               <CardContent className="px-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-sm font-medium text-foreground truncate">
-                    {result.title || '제목 없음'}
+                  <h2 className="min-w-0 truncate text-sm font-medium text-foreground">
+                    <Link
+                      href={links.document}
+                      aria-label={title + ' 문서 열기'}
+                      className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {title}
+                    </Link>
                   </h2>
                   <Badge variant="outline" className="text-[10px] shrink-0">
                     유사도 {Math.round(result.score * 100)}%
@@ -1733,15 +1760,64 @@ function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
                     {result.snippet}
                   </p>
                 )}
-                <p className="mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Tags className="h-3 w-3" />
-                  이 노트를 열어 관련 개념과 근거를 이어서 확인하세요.
-                </p>
+                {keyConcepts.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="핵심 개념">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Tags className="h-3 w-3" />
+                      핵심 개념
+                    </span>
+                    {keyConcepts.map((concept) => (
+                      <Badge key={concept} variant="secondary" className="text-[10px] font-normal">
+                        {concept}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {hasNoteMetadata && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Quote className="h-3 w-3" />
+                      인용 {quoteCount}
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1"
+                      aria-label={'학습과 복습 ' + studyCount + '개: 학습 포인트 ' + learningPointCount + '개, 복습 질문 ' + reviewQuestionCount + '개'}
+                    >
+                      <Brain className="h-3 w-3" />
+                      학습·복습 {studyCount}
+                      <span className="text-muted-foreground/70">
+                        (포인트 {learningPointCount} · 질문 {reviewQuestionCount})
+                      </span>
+                    </span>
+                  </div>
+                )}
+                <nav className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" aria-label={title + ' 바로가기'}>
+                  <Link href={links.document} aria-label={title + ' 문서 열기'} className={actionLinkClass}>
+                    <FileText className="h-3.5 w-3.5" />
+                    문서 열기
+                  </Link>
+                  {links.quotes && (
+                    <Link href={links.quotes} aria-label={title + ' 근거 보기'} className={actionLinkClass}>
+                      <Quote className="h-3.5 w-3.5" />
+                      근거 보기
+                    </Link>
+                  )}
+                  {links.studyProgress && (
+                    <Link href={links.studyProgress} aria-label={title + ' 복습 시작'} className={actionLinkClass}>
+                      <Brain className="h-3.5 w-3.5" />
+                      복습 시작
+                    </Link>
+                  )}
+                  <Link href={links.chat} aria-label={title + ' 근거 Q&A'} className={actionLinkClass}>
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    근거 Q&amp;A
+                  </Link>
+                </nav>
               </CardContent>
             </Card>
-          </Link>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }

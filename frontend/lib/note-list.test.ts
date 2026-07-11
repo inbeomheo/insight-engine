@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { NoteListItem } from './api';
+import type { NoteListItem, NoteSearchResult } from './api';
 import {
   buildDailyStudyPlanMarkdown,
   buildNoteFacetHref,
@@ -13,6 +13,7 @@ import {
   getNoteConceptClusters,
   getNoteRecallReinforcementPath,
   getNoteReviewQueue,
+  getNoteSearchResultPresentations,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -62,6 +63,117 @@ describe('note-list', () => {
       source: { type: 'text', url: '', title: '메모' },
     }),
   ];
+
+  it('combines search results with matching note metadata and encoded action links', () => {
+    const result: NoteSearchResult = {
+      id: 'folder/note \uD55C\uAE00?',
+      title: 'Search result',
+      score: 0.91,
+      snippet: 'Search context',
+    };
+    const matchedNote = note({
+      id: result.id,
+      key_concepts: [' RAG ', 'rag', 'Vector DB', '', 'Graph', 'Overflow'],
+      quote_count: 2,
+      learning_point_count: 3,
+      review_question_count: 1,
+    });
+
+    expect(getNoteSearchResultPresentations([result], [matchedNote])).toEqual([{
+      result,
+      hasNoteMetadata: true,
+      keyConcepts: ['RAG', 'Vector DB', 'Graph'],
+      quoteCount: 2,
+      learningPointCount: 3,
+      reviewQuestionCount: 1,
+      studyCount: 4,
+      links: {
+        document: '/notes/folder%2Fnote%20%ED%95%9C%EA%B8%80%3F',
+        quotes: '/notes/folder%2Fnote%20%ED%95%9C%EA%B8%80%3F#quotes',
+        studyProgress: '/notes/folder%2Fnote%20%ED%95%9C%EA%B8%80%3F#study-progress',
+        chat: '/notes/folder%2Fnote%20%ED%95%9C%EA%B8%80%3F#chat',
+      },
+    }]);
+  });
+
+  it('builds quote and study actions independently', () => {
+    const result: NoteSearchResult = {
+      id: 'conditional',
+      title: 'Conditional',
+      score: 0.7,
+      snippet: '',
+    };
+
+    const [quoteOnly] = getNoteSearchResultPresentations([result], [note({
+      id: result.id,
+      quote_count: 2,
+      learning_point_count: 0,
+      review_question_count: 0,
+    })]);
+    expect(quoteOnly.links).toEqual({
+      document: '/notes/conditional',
+      quotes: '/notes/conditional#quotes',
+      chat: '/notes/conditional#chat',
+    });
+
+    const [studyOnly] = getNoteSearchResultPresentations([result], [note({
+      id: result.id,
+      quote_count: 0,
+      learning_point_count: 0,
+      review_question_count: 2,
+    })]);
+    expect(studyOnly.links).toEqual({
+      document: '/notes/conditional',
+      studyProgress: '/notes/conditional#study-progress',
+      chat: '/notes/conditional#chat',
+    });
+  });
+
+  it('keeps unmatched search cards usable without metadata-only actions', () => {
+    const result: NoteSearchResult = {
+      id: 'missing note',
+      title: 'Existing title',
+      score: 0.5,
+      snippet: 'Existing snippet',
+    };
+
+    expect(getNoteSearchResultPresentations([result], [])).toEqual([{
+      result,
+      hasNoteMetadata: false,
+      keyConcepts: [],
+      quoteCount: 0,
+      learningPointCount: 0,
+      reviewQuestionCount: 0,
+      studyCount: 0,
+      links: {
+        document: '/notes/missing%20note',
+        chat: '/notes/missing%20note#chat',
+      },
+    }]);
+  });
+
+  it('normalizes invalid search-card counts and respects a concept limit', () => {
+    const result: NoteSearchResult = { id: 'invalid', title: 'Invalid', score: 0, snippet: '' };
+    const invalid = note({
+      id: result.id,
+      key_concepts: ['One', 'Two', 'Three'],
+      quote_count: -1,
+      learning_point_count: Number.NaN,
+      review_question_count: Number.POSITIVE_INFINITY,
+    });
+
+    const [presentation] = getNoteSearchResultPresentations([result], [invalid], 2);
+
+    expect(presentation.hasNoteMetadata).toBe(true);
+    expect(presentation.keyConcepts).toEqual(['One', 'Two']);
+    expect(getNoteSearchResultPresentations([result], [invalid], 0)[0].keyConcepts).toEqual([]);
+    expect(presentation.quoteCount).toBe(0);
+    expect(presentation.studyCount).toBe(0);
+    expect(presentation.links).toEqual({
+      document: '/notes/invalid',
+      chat: '/notes/invalid#chat',
+    });
+  });
 
   it('labels common note source types', () => {
     expect(getNoteSourceLabel('youtube')).toBe('YouTube');

@@ -1,4 +1,4 @@
-import type { NoteListItem } from './api';
+import type { NoteListItem, NoteSearchResult } from './api';
 import {
   getNoteReviewScheduleStatus,
   type NoteReviewSchedule,
@@ -33,6 +33,82 @@ function normalize(value: string): string {
 function preferDisplayLabel(current: string, next: string): string {
   if (current === current.toLowerCase() && next !== next.toLowerCase()) return next;
   return current;
+}
+
+export interface NoteSearchResultPresentation {
+  result: NoteSearchResult;
+  hasNoteMetadata: boolean;
+  keyConcepts: string[];
+  quoteCount: number;
+  learningPointCount: number;
+  reviewQuestionCount: number;
+  studyCount: number;
+  links: {
+    document: string;
+    quotes?: string;
+    studyProgress?: string;
+    chat: string;
+  };
+}
+
+function normalizeNoteCount(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value);
+}
+
+function getLimitedConcepts(note: NoteListItem | undefined, limit: number): string[] {
+  if (limit <= 0) return [];
+  const concepts = Array.isArray(note?.key_concepts) ? note.key_concepts : [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const rawConcept of concepts) {
+    if (typeof rawConcept !== 'string') continue;
+    const concept = rawConcept.trim();
+    const key = normalize(concept);
+    if (!concept || seen.has(key)) continue;
+    seen.add(key);
+    result.push(concept);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}
+
+export function getNoteSearchResultPresentations(
+  results: NoteSearchResult[],
+  notes: NoteListItem[],
+  conceptLimit = 3
+): NoteSearchResultPresentation[] {
+  const notesById = new Map(notes.map((note) => [note.id, note]));
+  const limit = Number.isFinite(conceptLimit)
+    ? Math.max(0, Math.floor(conceptLimit))
+    : 3;
+
+  return results.map((result) => {
+    const note = notesById.get(result.id);
+    const quoteCount = normalizeNoteCount(note?.quote_count);
+    const learningPointCount = normalizeNoteCount(note?.learning_point_count);
+    const reviewQuestionCount = normalizeNoteCount(note?.review_question_count);
+    const studyCount = learningPointCount + reviewQuestionCount;
+    const document = `/notes/${encodeURIComponent(result.id)}`;
+
+    return {
+      result,
+      hasNoteMetadata: note !== undefined,
+      keyConcepts: getLimitedConcepts(note, limit),
+      quoteCount,
+      learningPointCount,
+      reviewQuestionCount,
+      studyCount,
+      links: {
+        document,
+        ...(quoteCount > 0 ? { quotes: `${document}#quotes` } : {}),
+        ...(studyCount > 0 ? { studyProgress: `${document}#study-progress` } : {}),
+        chat: `${document}#chat`,
+      },
+    };
+  });
 }
 
 export function noteMatchesFacet(note: NoteListItem, facet: NoteFacet): boolean {
