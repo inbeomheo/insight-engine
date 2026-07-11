@@ -207,7 +207,7 @@ describe('note-list', () => {
   });
 
   it('builds valid again and hard recall reinforcement paths', () => {
-    const original = note({ id: 'original', key_concepts: ['RAG', '검색'] });
+    const original = note({ id: 'original', key_concepts: ['RAG', '검색'], review_question_count: 2 });
     const support = note({ id: 'support', key_concepts: ['rag', '벡터'] });
     const schedule = {
       dueAt: '2026-07-15T10:00:00.000Z',
@@ -248,7 +248,7 @@ describe('note-list', () => {
   });
 
   it('uses only the latest review so good or easy clears an earlier difficult grade', () => {
-    const original = note({ id: 'latest-original', key_concepts: ['RAG'] });
+    const original = note({ id: 'latest-original', key_concepts: ['RAG'], review_question_count: 1 });
     const support = note({ id: 'latest-support', key_concepts: ['rag'] });
     const history = [
       {
@@ -275,7 +275,7 @@ describe('note-list', () => {
   });
 
   it('excludes legacy, missing or mismatched schedules, and notes without shared concepts', () => {
-    const original = note({ id: 'excluded-original', key_concepts: ['RAG'] });
+    const original = note({ id: 'excluded-original', key_concepts: ['RAG'], review_question_count: 1 });
     const shared = note({ id: 'excluded-shared', key_concepts: ['rag'] });
     const unrelated = note({ id: 'excluded-unrelated', key_concepts: ['그래프'] });
     const review = {
@@ -311,11 +311,11 @@ describe('note-list', () => {
   });
 
   it('normalizes concepts and applies target and support tie-break priorities', () => {
-    const againUpcoming = note({ id: 'again-upcoming', key_concepts: [' RAG ', 'rag', '검색'] });
-    const againDueSmall = note({ id: 'again-due-small', key_concepts: ['RAG'] });
-    const againDueLargeOld = note({ id: 'again-due-large-old', key_concepts: ['RAG'] });
-    const againDueLargeNew = note({ id: 'again-due-large-new', key_concepts: ['RAG', '검색'] });
-    const hardDue = note({ id: 'hard-due', key_concepts: ['RAG', '검색'] });
+    const againUpcoming = note({ id: 'again-upcoming', key_concepts: [' RAG ', 'rag', '검색'], review_question_count: 1 });
+    const againDueSmall = note({ id: 'again-due-small', key_concepts: ['RAG'], review_question_count: 1 });
+    const againDueLargeOld = note({ id: 'again-due-large-old', key_concepts: ['RAG'], review_question_count: 1 });
+    const againDueLargeNew = note({ id: 'again-due-large-new', key_concepts: ['RAG', '검색'], review_question_count: 1 });
+    const hardDue = note({ id: 'hard-due', key_concepts: ['RAG', '검색'], review_question_count: 1 });
     const olderSupport = note({
       id: 'older-support', key_concepts: [' rag ', '검색', '검색'], created_at: '2026-07-10T01:00:00Z',
     });
@@ -352,6 +352,21 @@ describe('note-list', () => {
     expect(result?.supportNote.id).toBe('recent-support');
     expect(result?.supportNote.id).not.toBe(result?.originalNote.id);
     expect(result?.sharedConcepts).toEqual(['RAG', '검색']);
+  });
+
+  it('excludes originals without review questions from recall reinforcement', () => {
+    const original = note({ id: 'no-questions', key_concepts: ['RAG'], review_question_count: 0 });
+    const support = note({ id: 'question-support', key_concepts: ['rag'] });
+    const schedule = {
+      dueAt: '2026-07-15T10:00:00.000Z',
+      intervalDays: 1,
+      scheduledAt: '2026-07-14T10:00:00.000Z',
+    };
+    expect(getNoteRecallReinforcementPath([original, support], { 'no-questions': schedule }, [{
+      id: 'no-questions:today', noteId: 'no-questions', noteTitle: 'no-questions',
+      completedAt: '2026-07-14T10:00:01.000Z', intervalDays: 1, grade: 'again',
+      baseIntervalDays: 4, scheduleScheduledAt: schedule.scheduledAt,
+    }])).toBeNull();
   });
 
   it('builds study resume items from local progress', () => {

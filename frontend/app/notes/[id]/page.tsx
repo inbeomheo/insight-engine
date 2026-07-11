@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Brain, CalendarClock, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +61,12 @@ import {
 } from '@/lib/note-review-history';
 import { getStyleLabel } from '@/lib/helpers';
 import { buildNoteFacetHref } from '@/lib/note-list';
+import {
+  buildNoteRecallRetryHref,
+  buildNoteRecallSupportHref,
+  resolveNoteRecallFlow,
+  type NoteRecallFlow,
+} from '@/lib/note-recall-flow';
 import type { Report } from '@/lib/types';
 import { useResultStore } from '@/stores/resultStore';
 
@@ -123,7 +129,9 @@ function formatStudyUpdatedAt(iso: string | null): string {
 
 export default function NoteDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const noteId = params.id;
+  const recallFlow = resolveNoteRecallFlow(noteId, new URLSearchParams(searchParams.toString()));
   const [note, setNote] = useState<NoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,14 +187,59 @@ export default function NoteDetailPage() {
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : note ? (
-          <NoteBody key={note.id} note={note} linkedReport={linkedReport} />
+          <NoteBody key={note.id} note={note} linkedReport={linkedReport} recallFlow={recallFlow} />
         ) : null}
       </div>
     </div>
   );
 }
 
-function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Report | null }) {
+export function RecallFlowGuide({ flow }: { flow: NoteRecallFlow }) {
+  const supportHref = buildNoteRecallSupportHref(flow.originId, flow.supportId);
+  const retryHref = buildNoteRecallRetryHref(flow.originId, flow.supportId);
+  if (!supportHref || !retryHref) return null;
+
+  return (
+    <Card className="border-primary/30 bg-primary/5 py-4">
+      <CardContent className="px-4">
+        <p className="text-xs font-semibold text-primary">회상 보강 2단계</p>
+        <ol className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="회상 보강 진행 단계">
+          <li aria-current={flow.step === 'support' ? 'step' : undefined} className={'min-w-0 rounded-lg border px-3 py-2 ' + (flow.step === 'support' ? 'border-primary/40 bg-background' : 'border-border bg-background/60 text-muted-foreground')}>
+            <span className="block break-words text-xs font-semibold">1/2 연결 노트 읽기</span>
+            <span className="mt-1 block break-words text-[10px] text-muted-foreground">공유 개념을 다른 설명으로 보강합니다.</span>
+          </li>
+          <li aria-current={flow.step === 'retry' ? 'step' : undefined} className={'min-w-0 rounded-lg border px-3 py-2 ' + (flow.step === 'retry' ? 'border-primary/40 bg-background' : 'border-border bg-background/60 text-muted-foreground')}>
+            <span className="block break-words text-xs font-semibold">2/2 원래 질문 재도전</span>
+            <span className="mt-1 block break-words text-[10px] text-muted-foreground">
+              {flow.step === 'support' ? '다음 단계에서 원래 질문 전체를 다시 풉니다.' : '답을 가린 채 질문 전체를 다시 풉니다.'}
+            </span>
+          </li>
+        </ol>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {flow.step === 'support' ? (
+            <Button asChild size="sm" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+              <Link href={retryHref}>읽기 마치고 원래 질문 재도전</Link>
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="outline" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+              <Link href={supportHref}>연결 노트 다시 보기</Link>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NoteBody({
+  note,
+  linkedReport,
+  recallFlow,
+}: {
+  note: NoteDetail;
+  linkedReport: Report | null;
+  recallFlow: NoteRecallFlow | null;
+}) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
   const learningPoints = useMemo(() => note.learning_points ?? [], [note.learning_points]);
   const reviewQuestions = useMemo(() => note.review_questions ?? [], [note.review_questions]);
@@ -248,8 +301,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     [learningPoints.length, showCompletedStudyItems, studyProgress.learning]
   );
   const visibleReviewIndexes = useMemo(
-    () => getVisibleNoteStudyIndexes(reviewQuestions.length, studyProgress.review, showCompletedStudyItems),
-    [reviewQuestions.length, showCompletedStudyItems, studyProgress.review]
+    () => recallFlow?.step === 'retry'
+      ? reviewQuestions.map((_, index) => index)
+      : getVisibleNoteStudyIndexes(reviewQuestions.length, studyProgress.review, showCompletedStudyItems),
+    [recallFlow?.step, reviewQuestions, showCompletedStudyItems, studyProgress.review]
   );
   const wikiBriefInput = useMemo(() => ({
     sourceType: note.source?.type,
@@ -437,8 +492,25 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     return () => window.clearTimeout(timer);
   }, [quoteCopyStatus]);
 
+  useEffect(() => {
+    if (recallFlow?.step !== 'retry') return;
+    // 재도전은 답 표시만 초기화하며 진행률·일정·이력은 건드리지 않습니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReviewAnswerVisible(setAllReviewAnswersVisible(reviewQuestions.length, false));
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('review-questions')?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    recallFlow?.originId,
+    recallFlow?.step,
+    recallFlow?.supportId,
+    reviewQuestions.length,
+  ]);
+
   return (
     <div className="space-y-6">
+      {recallFlow && <RecallFlowGuide flow={recallFlow} />}
       {/* 헤더: 제목 + 출처 */}
       <div id="source" className="scroll-mt-24 rounded-2xl border border-border bg-card/60 p-5">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary">

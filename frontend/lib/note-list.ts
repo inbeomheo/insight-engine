@@ -246,6 +246,8 @@ export function getNoteRecallReinforcementPath(
 
   return notes
     .flatMap((originalNote) => {
+      if ((originalNote.review_question_count ?? 0) <= 0) return [];
+
       const review = latestReviewByNote.get(originalNote.id);
       const schedule = schedulesByNote[originalNote.id];
       if (!review || !schedule || (review.grade !== 'again' && review.grade !== 'hard')) return [];

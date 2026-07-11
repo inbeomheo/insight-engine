@@ -52,6 +52,7 @@ import {
   buildNoteFacetHref,
   parseNoteFacetSearchParams,
 } from '@/lib/note-list';
+import { buildNoteRecallSupportHref } from '@/lib/note-recall-flow';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
 import {
@@ -966,18 +967,24 @@ function WikiMap({
                           </Badge>
                         ))}
                       </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                        <Button asChild size="sm" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
-                          <Link href={'/notes/' + encodeURIComponent(recallReinforcementPath.supportNote.id)}>
-                            ① 연결 노트로 보강
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="outline" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
-                          <Link href={'/notes/' + encodeURIComponent(recallReinforcementPath.originalNote.id) + '#review-questions'}>
-                            ② 원래 질문 다시 풀기
-                          </Link>
-                        </Button>
-                      </div>
+                      <ol className="mt-3 grid gap-2 text-xs sm:grid-cols-2" aria-label="회상 보강 단계 미리보기">
+                        <li className="flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">1</span>
+                          <span className="break-words">연결 노트 읽기</span>
+                        </li>
+                        <li className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background/70 px-3 py-2 text-muted-foreground">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] font-semibold">2</span>
+                          <span className="break-words">원래 질문 전체 재도전</span>
+                        </li>
+                      </ol>
+                      <Button asChild size="sm" className="mt-3 h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+                        <Link href={buildNoteRecallSupportHref(
+                          recallReinforcementPath.originalNote.id,
+                          recallReinforcementPath.supportNote.id
+                        ) ?? '/notes'}>
+                          보강 학습 시작
+                        </Link>
+                      </Button>
                     </div>
                   )}
 
