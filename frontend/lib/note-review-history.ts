@@ -8,6 +8,7 @@ export interface NoteReviewHistoryEntry {
   intervalDays: number;
   grade?: NoteReviewGrade;
   baseIntervalDays?: number | null;
+  scheduleScheduledAt?: string;
 }
 
 export interface NoteReviewHistorySummary {
@@ -22,6 +23,7 @@ export interface RecordNoteReviewInput {
   intervalDays: number;
   grade?: NoteReviewGrade;
   baseIntervalDays?: number | null;
+  scheduleScheduledAt?: string;
 }
 
 type ReviewHistoryStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -42,6 +44,13 @@ function localDateKey(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function normalizeIsoTimestamp(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !ISO_TIMESTAMP_PATTERN.test(value)) return undefined;
+  return Number.isNaN(Date.parse(value)) ? undefined : value;
+}
+
 function normalizeGrade(value: unknown): NoteReviewGrade | undefined {
   if (value === 'again' || value === 'hard' || value === 'good' || value === 'easy') {
     return value;
@@ -60,6 +69,7 @@ function normalizeEntry(value: unknown): NoteReviewHistoryEntry | null {
     return null;
   }
   const grade = normalizeGrade(record.grade);
+  const scheduleScheduledAt = normalizeIsoTimestamp(record.scheduleScheduledAt);
   const hasNullBaseInterval = record.baseIntervalDays === null;
   const baseIntervalDays = Number.isInteger(record.baseIntervalDays)
     && Number(record.baseIntervalDays) >= 1
@@ -74,6 +84,7 @@ function normalizeEntry(value: unknown): NoteReviewHistoryEntry | null {
     completedAt,
     intervalDays,
     ...(grade ? { grade } : {}),
+    ...(scheduleScheduledAt ? { scheduleScheduledAt } : {}),
     ...(hasNullBaseInterval || baseIntervalDays
       ? { baseIntervalDays }
       : {}),

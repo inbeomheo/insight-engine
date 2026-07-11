@@ -339,6 +339,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         intervalDays,
         grade,
         baseIntervalDays: previousReviewIntervalDays,
+        scheduleScheduledAt: next.scheduledAt,
       });
       setSelectedReviewGrade(grade);
     }

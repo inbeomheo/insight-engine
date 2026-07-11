@@ -4,6 +4,7 @@ import {
   type NoteReviewSchedule,
   type NoteReviewScheduleStatus,
 } from './note-review-schedule';
+import type { NoteReviewHistoryEntry } from './note-review-history';
 import {
   getNoteStudySummary,
   type NoteStudyCounts,
@@ -200,6 +201,108 @@ export interface NoteScheduledReviewItem {
   note: NoteListItem;
   schedule: NoteReviewSchedule;
   status: NoteReviewScheduleStatus;
+}
+
+export interface NoteRecallReinforcementPath {
+  originalNote: NoteListItem;
+  supportNote: NoteListItem;
+  review: NoteReviewHistoryEntry & { grade: 'again' | 'hard' };
+  schedule: NoteReviewSchedule;
+  status: NoteReviewScheduleStatus;
+  previousIntervalDays: number | null;
+  currentIntervalDays: number;
+  sharedConcepts: string[];
+}
+
+function getNormalizedConcepts(note: NoteListItem): Map<string, string> {
+  const concepts = new Map<string, string>();
+  for (const rawConcept of note.key_concepts ?? []) {
+    const concept = rawConcept.trim();
+    const key = normalize(concept);
+    if (!key) continue;
+    const current = concepts.get(key);
+    concepts.set(key, current ? preferDisplayLabel(current, concept) : concept);
+  }
+  return concepts;
+}
+
+export function getNoteRecallReinforcementPath(
+  notes: NoteListItem[],
+  schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
+  reviewHistory: NoteReviewHistoryEntry[],
+  now = new Date()
+): NoteRecallReinforcementPath | null {
+  const latestReviewByNote = new Map<string, NoteReviewHistoryEntry>();
+  for (const review of reviewHistory) {
+    const completedAt = Date.parse(review.completedAt);
+    if (Number.isNaN(completedAt)) continue;
+    const current = latestReviewByNote.get(review.noteId);
+    if (!current || completedAt > Date.parse(current.completedAt)) {
+      latestReviewByNote.set(review.noteId, review);
+    }
+  }
+
+  const conceptsByNote = new Map(notes.map((note) => [note.id, getNormalizedConcepts(note)]));
+
+  return notes
+    .flatMap((originalNote) => {
+      const review = latestReviewByNote.get(originalNote.id);
+      const schedule = schedulesByNote[originalNote.id];
+      if (!review || !schedule || (review.grade !== 'again' && review.grade !== 'hard')) return [];
+
+      const status = getNoteReviewScheduleStatus(schedule, now);
+      const completedAt = Date.parse(review.completedAt);
+      const scheduledAt = Date.parse(schedule.scheduledAt);
+      if (
+        status.state === 'invalid'
+        || schedule.intervalDays !== review.intervalDays
+        || review.scheduleScheduledAt !== schedule.scheduledAt
+        || Number.isNaN(completedAt)
+        || Number.isNaN(scheduledAt)
+        || completedAt < scheduledAt
+      ) return [];
+
+      const originalConcepts = conceptsByNote.get(originalNote.id) ?? new Map<string, string>();
+      const support = notes
+        .filter((note) => note.id !== originalNote.id)
+        .map((supportNote) => ({
+          supportNote,
+          sharedConcepts: Array.from(originalConcepts.entries())
+            .filter(([key]) => conceptsByNote.get(supportNote.id)?.has(key))
+            .map(([, concept]) => concept),
+        }))
+        .filter((item) => item.sharedConcepts.length > 0)
+        .sort((a, b) => {
+          if (a.sharedConcepts.length !== b.sharedConcepts.length) {
+            return b.sharedConcepts.length - a.sharedConcepts.length;
+          }
+          const timeA = Date.parse(a.supportNote.created_at);
+          const timeB = Date.parse(b.supportNote.created_at);
+          return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA)
+            || a.supportNote.id.localeCompare(b.supportNote.id);
+        })[0];
+      if (!support) return [];
+
+      return [{
+        originalNote,
+        supportNote: support.supportNote,
+        review: review as NoteRecallReinforcementPath['review'],
+        schedule,
+        status,
+        previousIntervalDays: review.baseIntervalDays ?? null,
+        currentIntervalDays: review.intervalDays,
+        sharedConcepts: support.sharedConcepts,
+      }];
+    })
+    .sort((a, b) => {
+      if (a.review.grade !== b.review.grade) return a.review.grade === 'again' ? -1 : 1;
+      if (a.status.state !== b.status.state) return a.status.state === 'due' ? -1 : 1;
+      const reductionA = (a.previousIntervalDays ?? a.currentIntervalDays) - a.currentIntervalDays;
+      const reductionB = (b.previousIntervalDays ?? b.currentIntervalDays) - b.currentIntervalDays;
+      if (reductionA !== reductionB) return reductionB - reductionA;
+      return Date.parse(b.review.completedAt) - Date.parse(a.review.completedAt)
+        || a.originalNote.id.localeCompare(b.originalNote.id);
+    })[0] ?? null;
 }
 
 export function getScheduledReviewItems(

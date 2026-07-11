@@ -11,6 +11,7 @@ import {
   getFacetLabel,
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
+  getNoteRecallReinforcementPath,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -203,6 +204,154 @@ describe('note-list', () => {
       status: { state: 'due', label: '1일 지남', daysUntilDue: -1 },
     });
     expect(getScheduledReviewItems([upcoming], {}, now)).toEqual([]);
+  });
+
+  it('builds valid again and hard recall reinforcement paths', () => {
+    const original = note({ id: 'original', key_concepts: ['RAG', '검색'] });
+    const support = note({ id: 'support', key_concepts: ['rag', '벡터'] });
+    const schedule = {
+      dueAt: '2026-07-15T10:00:00.000Z',
+      intervalDays: 1,
+      scheduledAt: '2026-07-14T10:00:00.000Z',
+    };
+
+    expect(getNoteRecallReinforcementPath([original, support], { original: schedule }, [{
+      id: 'original:2026-07-14',
+      noteId: 'original',
+      noteTitle: 'original',
+      completedAt: '2026-07-14T10:00:01.000Z',
+      intervalDays: 1,
+      grade: 'again',
+      baseIntervalDays: 7,
+      scheduleScheduledAt: schedule.scheduledAt,
+    }], new Date('2026-07-14T12:00:00.000Z'))).toMatchObject({
+      originalNote: { id: 'original' },
+      supportNote: { id: 'support' },
+      review: { grade: 'again' },
+      previousIntervalDays: 7,
+      currentIntervalDays: 1,
+      sharedConcepts: ['RAG'],
+    });
+
+    expect(getNoteRecallReinforcementPath([original, support], {
+      original: { ...schedule, intervalDays: 3, dueAt: '2026-07-17T10:00:00.000Z' },
+    }, [{
+      id: 'original:2026-07-14',
+      noteId: 'original',
+      noteTitle: 'original',
+      completedAt: '2026-07-14T10:00:01.000Z',
+      intervalDays: 3,
+      grade: 'hard',
+      baseIntervalDays: 2,
+      scheduleScheduledAt: schedule.scheduledAt,
+    }], new Date('2026-07-14T12:00:00.000Z'))?.review.grade).toBe('hard');
+  });
+
+  it('uses only the latest review so good or easy clears an earlier difficult grade', () => {
+    const original = note({ id: 'latest-original', key_concepts: ['RAG'] });
+    const support = note({ id: 'latest-support', key_concepts: ['rag'] });
+    const history = [
+      {
+        id: 'latest-original:old', noteId: 'latest-original', noteTitle: 'old',
+        completedAt: '2026-07-13T10:00:00.000Z', intervalDays: 1, grade: 'again' as const,
+      },
+      {
+        id: 'latest-original:new', noteId: 'latest-original', noteTitle: 'new',
+        completedAt: '2026-07-14T10:00:01.000Z', intervalDays: 4, grade: 'good' as const,
+      },
+    ];
+    const schedules = {
+      'latest-original': {
+        dueAt: '2026-07-18T10:00:00.000Z', intervalDays: 4,
+        scheduledAt: '2026-07-14T10:00:00.000Z',
+      },
+    };
+
+    expect(getNoteRecallReinforcementPath([original, support], schedules, history)).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, support], schedules, [
+      { ...history[0], grade: 'hard' },
+      { ...history[1], grade: 'easy' },
+    ])).toBeNull();
+  });
+
+  it('excludes legacy, missing or mismatched schedules, and notes without shared concepts', () => {
+    const original = note({ id: 'excluded-original', key_concepts: ['RAG'] });
+    const shared = note({ id: 'excluded-shared', key_concepts: ['rag'] });
+    const unrelated = note({ id: 'excluded-unrelated', key_concepts: ['그래프'] });
+    const review = {
+      id: 'excluded-original:today', noteId: 'excluded-original', noteTitle: 'original',
+      completedAt: '2026-07-14T10:00:01.000Z', intervalDays: 1,
+      grade: 'again' as const, baseIntervalDays: 4,
+      scheduleScheduledAt: '2026-07-14T10:00:00.000Z',
+    };
+    const schedule = {
+      dueAt: '2026-07-15T10:00:00.000Z', intervalDays: 1,
+      scheduledAt: '2026-07-14T10:00:00.000Z',
+    };
+
+    expect(getNoteRecallReinforcementPath([original, shared], { 'excluded-original': schedule }, [
+      { ...review, grade: undefined },
+    ])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, shared], {}, [review])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, shared], { 'excluded-original': schedule }, [
+      { ...review, scheduleScheduledAt: undefined },
+    ])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, shared], {
+      'excluded-original': { ...schedule, intervalDays: 2 },
+    }, [review])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, shared], {
+      'excluded-original': { ...schedule, scheduledAt: '2026-07-14T10:00:02.000Z' },
+    }, [review])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, shared], {
+      'excluded-original': { ...schedule, scheduledAt: '2026-07-13T10:00:00.000Z' },
+    }, [{ ...review, scheduleScheduledAt: '2026-07-12T10:00:00.000Z' }])).toBeNull();
+    expect(getNoteRecallReinforcementPath([original, unrelated], {
+      'excluded-original': schedule,
+    }, [review])).toBeNull();
+  });
+
+  it('normalizes concepts and applies target and support tie-break priorities', () => {
+    const againUpcoming = note({ id: 'again-upcoming', key_concepts: [' RAG ', 'rag', '검색'] });
+    const againDueSmall = note({ id: 'again-due-small', key_concepts: ['RAG'] });
+    const againDueLargeOld = note({ id: 'again-due-large-old', key_concepts: ['RAG'] });
+    const againDueLargeNew = note({ id: 'again-due-large-new', key_concepts: ['RAG', '검색'] });
+    const hardDue = note({ id: 'hard-due', key_concepts: ['RAG', '검색'] });
+    const olderSupport = note({
+      id: 'older-support', key_concepts: [' rag ', '검색', '검색'], created_at: '2026-07-10T01:00:00Z',
+    });
+    const recentSupport = note({
+      id: 'recent-support', key_concepts: ['RAG', ' 검색 '], created_at: '2026-07-10T02:00:00Z',
+    });
+    const newestSparseSupport = note({
+      id: 'newest-sparse-support', key_concepts: ['RAG'], created_at: '2026-07-10T03:00:00Z',
+    });
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    const targetIds = ['again-upcoming', 'again-due-small', 'again-due-large-old', 'again-due-large-new', 'hard-due'];
+    const schedules = Object.fromEntries(targetIds.map((id) => [id, {
+      dueAt: id === 'again-upcoming' ? '2026-07-16T10:00:00.000Z' : '2026-07-15T10:00:00.000Z',
+      intervalDays: 1,
+      scheduledAt: '2026-07-14T10:00:00.000Z',
+    }]));
+    const history = targetIds.map((id) => ({
+      id: `${id}:today`, noteId: id, noteTitle: id,
+      completedAt: id === 'again-due-large-new' ? '2026-07-14T11:00:00.000Z' : '2026-07-14T10:00:01.000Z',
+      intervalDays: 1,
+      grade: id === 'hard-due' ? 'hard' as const : 'again' as const,
+      baseIntervalDays: id.includes('large') ? 10 : 3,
+      scheduleScheduledAt: '2026-07-14T10:00:00.000Z',
+    }));
+
+    const result = getNoteRecallReinforcementPath(
+      [againUpcoming, againDueSmall, againDueLargeOld, againDueLargeNew, hardDue, olderSupport, recentSupport, newestSparseSupport],
+      schedules,
+      history,
+      now,
+    );
+
+    expect(result?.originalNote.id).toBe('again-due-large-new');
+    expect(result?.supportNote.id).toBe('recent-support');
+    expect(result?.supportNote.id).not.toBe(result?.originalNote.id);
+    expect(result?.sharedConcepts).toEqual(['RAG', '검색']);
   });
 
   it('builds study resume items from local progress', () => {

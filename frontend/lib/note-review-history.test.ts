@@ -104,6 +104,18 @@ describe('note-review-history', () => {
     }]);
   });
 
+  it('preserves valid schedule binding metadata and drops malformed values', () => {
+    const history = normalizeNoteReviewHistory([
+      { noteId: 'valid', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 3, scheduleScheduledAt: '2026-07-11T07:59:00.000Z' },
+      { noteId: 'invalid', completedAt: '2026-07-12T08:00:00.000Z', intervalDays: 3, scheduleScheduledAt: '2026-07-12 07:59:00' },
+    ]);
+
+    expect(history.find((entry) => entry.noteId === 'valid')?.scheduleScheduledAt)
+      .toBe('2026-07-11T07:59:00.000Z');
+    expect(history.find((entry) => entry.noteId === 'invalid'))
+      .not.toHaveProperty('scheduleScheduledAt');
+  });
+
   it('records one completion per note and local day', () => {
     const storage = createMemoryStorage();
     recordNoteReviewCompletion(
@@ -118,13 +130,19 @@ describe('note-review-history', () => {
         intervalDays: 7,
         grade: 'easy',
         baseIntervalDays: null,
+        scheduleScheduledAt: '2026-07-11T07:59:00.000Z',
       },
       storage,
       new Date('2026-07-11T08:00:00.000Z')
     );
 
     expect(updated).toHaveLength(1);
-    expect(updated[0]).toMatchObject({ intervalDays: 7, grade: 'easy', baseIntervalDays: null });
+    expect(updated[0]).toMatchObject({
+      intervalDays: 7,
+      grade: 'easy',
+      baseIntervalDays: null,
+      scheduleScheduledAt: '2026-07-11T07:59:00.000Z',
+    });
     expect(storage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY)).toContain('note-1');
     expect(readNoteReviewHistory(storage)).toEqual(updated);
   });
