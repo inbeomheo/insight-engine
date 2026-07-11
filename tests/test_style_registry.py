@@ -21,11 +21,12 @@ def _frontend_style_entry(style_id: str) -> str:
     return match.group(0)
 
 
-def _tsx_style_label_ids(path: str) -> set[str]:
+def _tsx_uses_shared_style_labels(path: str) -> bool:
     text = (ROOT / path).read_text(encoding="utf-8")
-    block = re.search(r"const STYLE_LABELS[^=]*=\s*\{(.*?)\};", text, re.S)
-    assert block, f"{path} STYLE_LABELS 블록을 찾을 수 없습니다."
-    return set(re.findall(r"^\s*([a-z_]+):\s*'", block.group(1), re.M))
+    return (
+        "import { STYLE_OPTIONS } from '@/lib/constants';" in text
+        and "Object.fromEntries(STYLE_OPTIONS.map" in text
+    )
 
 
 def test_ui_style_options_are_registered_prompts():
@@ -58,8 +59,8 @@ def test_ui_style_options_have_all_display_labels():
         )
         assert backend_ui_ids <= set(data["styles"])
 
-    assert backend_ui_ids <= _tsx_style_label_ids("frontend/components/settings/SettingsModal.tsx")
-    assert backend_ui_ids <= _tsx_style_label_ids("frontend/components/modals/TemplateGalleryModal.tsx")
+    assert _tsx_uses_shared_style_labels("frontend/components/settings/SettingsModal.tsx")
+    assert _tsx_uses_shared_style_labels("frontend/components/modals/TemplateGalleryModal.tsx")
     assert backend_ui_ids <= set(MEMORY_STYLE_LABELS)
 
 
