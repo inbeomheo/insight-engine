@@ -118,6 +118,43 @@ export function getNoteConceptClusters(
     .slice(0, limit);
 }
 
+export interface NoteKnowledgeGap {
+  concept: string;
+  note: NoteListItem;
+}
+
+export function getKnowledgeGapConcepts(
+  notes: NoteListItem[],
+  limit = 6
+): NoteKnowledgeGap[] {
+  const concepts = new Map<string, { concept: string; notes: NoteListItem[] }>();
+
+  for (const note of notes) {
+    const seenInNote = new Set<string>();
+    for (const rawConcept of note.key_concepts ?? []) {
+      const concept = rawConcept.trim();
+      const key = normalize(concept);
+      if (!concept || seenInNote.has(key)) continue;
+      seenInNote.add(key);
+      const current = concepts.get(key) ?? { concept, notes: [] };
+      current.concept = preferDisplayLabel(current.concept, concept);
+      current.notes.push(note);
+      concepts.set(key, current);
+    }
+  }
+
+  return Array.from(concepts.values())
+    .filter((item) => item.notes.length === 1)
+    .map((item) => ({ concept: item.concept, note: item.notes[0] }))
+    .sort((a, b) => {
+      const timeA = Date.parse(a.note.created_at);
+      const timeB = Date.parse(b.note.created_at);
+      const recentFirst = (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
+      return recentFirst || a.concept.localeCompare(b.concept);
+    })
+    .slice(0, Math.max(0, limit));
+}
+
 function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
   const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
   return cleaned || fallback;

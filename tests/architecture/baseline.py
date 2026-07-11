@@ -59,7 +59,6 @@ TRACKED_LINE_FILES = [
     "services/data/supabase_service.py",
     "services/data/workspace_service.py",
     # 다음 라운드에서 슬림화 대상이 될 수 있는 후보 (참고용)
-    "services/core/pipeline_service.py",
     "services/core/fusion_service.py",
 ]
 

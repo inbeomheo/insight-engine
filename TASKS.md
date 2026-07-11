@@ -419,10 +419,8 @@
 - [P5-06] frontend/components/editor/PresenceCursors.tsx: 참여자 커서 표시 | 검증: build
 
 ### F5-03. 드래그앤드롭 파이프라인 빌더 — 난이도 L
-- **기존**: pipeline_service.py
 - [P5-07] frontend/components/pipeline/PipelineBuilder.tsx: React Flow 기반 비주얼 파이프라인 편집기 | 검증: build
 - [P5-08] frontend/components/pipeline/PipelineNode.tsx: 각 단계 노드 (소스/생성/SEO/발행) | 검증: build
-- [P5-09] services/pipeline_service.py: 커스텀 파이프라인 정의 저장/실행 | 검증: pytest
 
 ### F5-04. 콘텐츠 버전 히스토리 + diff — 난이도 M
 - [P5-10] services/version_service.py: 콘텐츠 버전 저장/비교/복원 | 검증: pytest

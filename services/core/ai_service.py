@@ -442,57 +442,6 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
     raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
 
 
-def inline_edit(content: str, selection: str, instruction: str, model: str, context: str = '') -> dict:
-    """선택 영역을 AI로 부분 편집합니다.
-
-    Args:
-        content: 전체 콘텐츠
-        selection: 선택된 텍스트
-        instruction: 편집 지시 (축약/확장/톤변경/번역)
-        model: AI 모델 ID
-        context: 주변 맥락 (선택)
-
-    Returns:
-        {'original': str, 'edited': str, 'full_content': str}
-    """
-    prompt = f"""다음 텍스트의 선택된 부분만 수정해주세요.
-
-## 전체 텍스트 (맥락 참고용)
-{content[:2000]}
-
-## 선택된 부분
-{selection}
-
-## 수정 지시
-{instruction}
-
-## 규칙
-- 선택된 부분만 수정하고 나머지는 그대로 유지
-- 수정된 텍스트만 출력 (다른 설명 없이)
-"""
-    import difflib
-
-    result = create_content(prompt, model, style_prompt='', style_id='summary')
-    edited = result.get('content', '').strip()
-    full_content = content.replace(selection, edited, 1)
-
-    # unified diff 생성
-    diff_lines = list(difflib.unified_diff(
-        selection.splitlines(keepends=True),
-        edited.splitlines(keepends=True),
-        fromfile='original',
-        tofile='edited',
-        lineterm='',
-    ))
-
-    return {
-        'original': selection,
-        'edited': edited,
-        'full_content': full_content,
-        'diff': '\n'.join(diff_lines),
-    }
-
-
 def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.4-mini', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.

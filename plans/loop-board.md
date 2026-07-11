@@ -55,6 +55,7 @@
   15차: 프론트 소비 0인 `/api/feedback/nps` 라우트와 전용 테스트·재추가 유도 문서 항목 제거 완료.
   16차: 프론트 소비 0인 `/api/generate-thumbnail`, `/api/agent/research`와 전용 이미지 생성·웹 리서치 에이전트 서비스/테스트 제거 완료.
   17차: 프론트 소비 0인 `/api/memory`, `/api/auto-tags`, `/api/progressive-summary` 라우트와 전용 자동태깅·단계요약 서비스/테스트 제거 완료.
+  18차: 프론트 소비 0인 `/api/generate-multi`, `/api/pipeline`, `/api/inline-edit`와 파이프라인 서비스·고아 UI·전용 테스트 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -101,9 +102,17 @@
   24차: `/notes` 홈 학습 큐에 최근 Q&A 복습 카드함을 추가해 저장한 Q&A 카드를 다시 볼 수 있게 개선.
   25차: Q&A 복습 카드에 원본 노트 링크를 저장하고 `/notes` 홈 카드함에서 바로 이동할 수 있게 개선.
   26차: `/notes` 홈 Q&A 복습 카드함 전체를 Markdown으로 복사하는 빠른 액션 추가.
+  27차: `/notes` 홈에 한 문서에만 등장하는 개념을 최근순으로 보여주는 `지식 공백` 카드와 개념 필터·원본 노트 이동을 추가.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
+
+- [x] 2026-07-11 feat(notes): LLMWiki 지식 공백 탐색 카드 추가.
+  한 문서에만 등장하는 핵심 개념을 최신순으로 계산해 `/notes` 지식 탐색 패널에 표시하고, 개념 필터와 원본 노트 이동을 연결.
+  `getKnowledgeGapConcepts` 순수 함수와 중복·정렬·limit 단위 테스트 추가.
+- [x] 2026-07-11 chore(dead-code): 멀티생성·파이프라인·인라인 편집 데드 체인 제거.
+  프론트 소비 0인 엔드포인트 3개, `pipeline_service`, `ai_service.inline_edit`, 파이프라인 UI 3개, 전용 테스트·타입·문서 제거.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 80 passed, tsc/build 통과, 제거 라우트 맵·소비 grep 0.
 
 - [x] 2026-07-10 chore(dead-code): 메모리·자동태깅·단계요약 엔드포인트 제거.
   프론트 소비자가 없는 `GET/PUT/DELETE /api/memory`, `POST /api/auto-tags`, `POST /api/progressive-summary` 라우트를 제거.
