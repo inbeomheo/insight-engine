@@ -2,6 +2,9 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNote, type NoteDetail } from '@/lib/api';
+import { NOTE_REVIEW_HISTORY_STORAGE_KEY } from '@/lib/note-review-history';
+import { getNoteReviewScheduleKey } from '@/lib/note-review-schedule';
+import { getNoteStudyProgressKey } from '@/lib/note-study-progress';
 import NoteDetailPage from './page';
 
 const navigation = vi.hoisted(() => ({
@@ -117,6 +120,8 @@ describe('NoteDetailPage 회상 보강 UI', () => {
     expect(document.querySelector('a[href*="step=support"]')?.getAttribute('href')).toBe(
       '/notes/support?flow=recall&origin=origin&support=support&step=support'
     );
+    expect(document.querySelector('a[href="#study-progress"]')).not.toBeNull();
+    expect(document.getElementById('study-progress')).not.toBeNull();
   });
 
   it('keeps completed questions visible in retry mode and hides every answer', async () => {
@@ -130,7 +135,6 @@ describe('NoteDetailPage 회상 보강 UI', () => {
     for (const button of reviewButtons) {
       await act(async () => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     }
-    await act(async () => findButton('완료 숨기기').dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
     expect(document.body.textContent).toContain('첫 번째 질문');
     expect(document.body.textContent).toContain('두 번째 질문');
@@ -187,4 +191,142 @@ describe('NoteDetailPage 회상 보강 UI', () => {
     expect(setItem).not.toHaveBeenCalled();
     expect(removeItem).not.toHaveBeenCalled();
   });
+  it('uses isolated retry progress and enables grading only after completion', async () => {
+    navigation.id = 'origin';
+    navigation.search = 'flow=recall&origin=origin&support=support&step=retry';
+    const progressKey = getNoteStudyProgressKey('origin');
+    const savedProgress = JSON.stringify({
+      learning: [],
+      review: [0, 1],
+      updatedAt: null,
+    });
+    localStorage.setItem(progressKey, savedProgress);
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('재도전 진행');
+    expect(document.body.textContent).toContain('0/2');
+    expect(findButton('보통 ·').disabled).toBe(true);
+
+    const checks = Array.from(document.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('복습 체크')
+    );
+    for (const button of checks) {
+      await act(async () => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    }
+
+    expect(localStorage.getItem(progressKey)).toBe(savedProgress);
+    expect(Object.keys(localStorage)).toEqual([progressKey]);
+    expect(findButton('보통 ·').disabled).toBe(false);
+
+    await act(async () => {
+      findButton('보통 ·').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(localStorage.getItem(getNoteReviewScheduleKey('origin'))).not.toBeNull();
+    expect(localStorage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY)).not.toBeNull();
+    expect(document.body.textContent).toContain('평가 결과: 보통');
+    expect(document.body.textContent).toContain('노트 목록으로');
+  });
+
+  it('uses the active interval as the frozen base for a retry review', async () => {
+    navigation.id = 'origin';
+    navigation.search = 'flow=recall&origin=origin&support=support&step=retry';
+    const scheduleKey = getNoteReviewScheduleKey('origin');
+    const now = new Date();
+    localStorage.setItem(scheduleKey, JSON.stringify({
+      intervalDays: 1,
+      scheduledAt: now.toISOString(),
+      dueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    }));
+
+    await renderPage();
+
+    const checks = Array.from(document.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('복습 체크')
+    );
+    for (const button of checks) {
+      await act(async () => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    }
+
+    expect(findButton('보통 · 2일').disabled).toBe(false);
+    await act(async () => {
+      findButton('보통 · 2일').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    let schedule = JSON.parse(localStorage.getItem(scheduleKey) ?? '{}');
+    let history = JSON.parse(
+      localStorage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY) ?? '[]'
+    );
+    expect(schedule.intervalDays).toBe(2);
+    expect(history[0]).toMatchObject({
+      noteId: 'origin',
+      intervalDays: 2,
+      grade: 'good',
+      baseIntervalDays: 1,
+    });
+
+    expect(findButton('쉬움 · 3일').disabled).toBe(false);
+    await act(async () => {
+      findButton('쉬움 · 3일').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    schedule = JSON.parse(localStorage.getItem(scheduleKey) ?? '{}');
+    history = JSON.parse(localStorage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY) ?? '[]');
+    expect(schedule.intervalDays).toBe(3);
+    expect(history[0]).toMatchObject({
+      noteId: 'origin',
+      intervalDays: 3,
+      grade: 'easy',
+      baseIntervalDays: 1,
+    });
+  });
+
+  it('resets retry state on support-only changes', async () => {
+    navigation.id = 'origin';
+    navigation.search = 'flow=recall&origin=origin&support=a&step=retry';
+    await renderPage();
+
+    const checks = Array.from(document.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('복습 체크')
+    );
+    for (const button of checks) {
+      await act(async () => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    }
+    expect(findButton('다시 ·').disabled).toBe(false);
+
+    navigation.search = 'flow=recall&origin=origin&support=b&step=retry';
+    await renderPage();
+
+    expect(document.body.textContent).toContain('0/2');
+    expect(findButton('다시 ·').disabled).toBe(true);
+  });
+
+  it('keeps normal review checks persisted', async () => {
+    navigation.id = 'origin';
+    navigation.search = '';
+    await renderPage();
+
+    await act(async () => {
+      findButton('복습 체크').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const stored = JSON.parse(localStorage.getItem(getNoteStudyProgressKey('origin')) ?? '{}');
+    expect(stored.review).toEqual([0]);
+  });
+
+  it('disables retry grading with zero questions', async () => {
+    navigation.id = 'origin';
+    navigation.search = 'flow=recall&origin=origin&support=support&step=retry';
+    vi.mocked(getNote).mockResolvedValue({
+      ...makeNote('origin'),
+      review_questions: [],
+    });
+
+    await renderPage();
+
+    expect(document.body.textContent).toContain('재도전할 복습 질문이 없습니다.');
+    expect(findButton('다시 ·').disabled).toBe(true);
+  });
+
 });
