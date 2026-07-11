@@ -44,14 +44,21 @@ import {
   type NoteStudyProgress,
 } from '@/lib/note-study-progress';
 import {
-  NOTE_REVIEW_INTERVAL_OPTIONS,
+  NOTE_REVIEW_GRADE_OPTIONS,
   clearNoteReviewSchedule,
+  getNextReviewInterval,
+  getPreviousIntervalForNewReviewSession,
   getNoteReviewScheduleStatus,
   readNoteReviewSchedule,
   writeNoteReviewSchedule,
+  type NoteReviewGrade,
   type NoteReviewSchedule,
 } from '@/lib/note-review-schedule';
-import { recordNoteReviewCompletion } from '@/lib/note-review-history';
+import {
+  getNoteReviewSelectionState,
+  readNoteReviewHistory,
+  recordNoteReviewCompletion,
+} from '@/lib/note-review-history';
 import { getStyleLabel } from '@/lib/helpers';
 import { buildNoteFacetHref } from '@/lib/note-list';
 import type { Report } from '@/lib/types';
@@ -201,6 +208,8 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [reviewSchedule, setReviewSchedule] = useState<NoteReviewSchedule | null>(null);
+  const [previousReviewIntervalDays, setPreviousReviewIntervalDays] = useState<number | null>(null);
+  const [selectedReviewGrade, setSelectedReviewGrade] = useState<NoteReviewGrade | null>(null);
   const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
@@ -218,6 +227,16 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const reviewScheduleStatus = useMemo(
     () => reviewSchedule ? getNoteReviewScheduleStatus(reviewSchedule) : null,
     [reviewSchedule]
+  );
+  const reviewGradeOptions = useMemo(
+    () => NOTE_REVIEW_GRADE_OPTIONS.map((option) => ({
+      ...option,
+      intervalDays: getNextReviewInterval(
+        option.value,
+        previousReviewIntervalDays ?? undefined
+      ),
+    })),
+    [previousReviewIntervalDays]
   );
   const nextStudyTarget = useMemo(
     () => getNextNoteStudyTarget({ learningPoints, reviewQuestions, progress: studyProgress }),
@@ -259,16 +278,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
   useEffect(() => {
     // 브라우저 저장값은 hydration 이후에만 반영합니다.
+    const schedule = readNoteReviewSchedule(note.id);
+    const selection = getNoteReviewSelectionState(
+      readNoteReviewHistory(),
+      note.id,
+      schedule
+    );
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReviewSchedule(readNoteReviewSchedule(note.id));
+    setReviewSchedule(schedule);
+    setPreviousReviewIntervalDays(selection.previousIntervalDays);
+    setSelectedReviewGrade(selection.selectedGrade);
   }, [note.id]);
-
-
-
 
   const clearScheduledReview = useCallback(() => {
     clearNoteReviewSchedule(note.id);
     setReviewSchedule(null);
+    setSelectedReviewGrade(null);
   }, [note.id]);
 
   const toggleStudyProgress = useCallback((kind: NoteStudyKind, index: number) => {
@@ -279,6 +304,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       if (reviewSchedule && nextSummary.completed < nextSummary.total) {
         clearNoteReviewSchedule(note.id);
         setReviewSchedule(null);
+        setSelectedReviewGrade(null);
       }
       return next;
     });
@@ -287,17 +313,37 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   const resetStudyProgress = useCallback(() => {
     const next = normalizeNoteStudyProgress(null, studyCounts);
     writeNoteStudyProgress(note.id, next, studyCounts);
+    setPreviousReviewIntervalDays(
+      getPreviousIntervalForNewReviewSession(reviewSchedule, previousReviewIntervalDays)
+    );
     clearScheduledReview();
     setStudyProgress(next);
-  }, [clearScheduledReview, note.id, studyCounts]);
+  }, [
+    clearScheduledReview,
+    note.id,
+    previousReviewIntervalDays,
+    reviewSchedule,
+    studyCounts,
+  ]);
 
-  const scheduleReview = useCallback((intervalDays: number) => {
+  const scheduleReview = useCallback((grade: NoteReviewGrade) => {
+    const intervalDays = getNextReviewInterval(
+      grade,
+      previousReviewIntervalDays ?? undefined
+    );
     const next = writeNoteReviewSchedule(note.id, intervalDays);
     if (next) {
-      recordNoteReviewCompletion({ noteId: note.id, noteTitle, intervalDays });
+      recordNoteReviewCompletion({
+        noteId: note.id,
+        noteTitle,
+        intervalDays,
+        grade,
+        baseIntervalDays: previousReviewIntervalDays,
+      });
+      setSelectedReviewGrade(grade);
     }
     setReviewSchedule(next);
-  }, [note.id, noteTitle]);
+  }, [note.id, noteTitle, previousReviewIntervalDays]);
 
   const scrollToNextStudyTarget = useCallback(() => {
     if (!nextStudyTarget) return;
@@ -618,17 +664,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                       </span>
                     )}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {NOTE_REVIEW_INTERVAL_OPTIONS.map((days) => (
+                  <div
+                    className="mt-2 flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="회상도 선택"
+                  >
+                    {reviewGradeOptions.map(({ value, label, intervalDays }) => (
                       <Button
-                        key={days}
+                        key={value}
                         type="button"
                         size="sm"
-                        variant={reviewSchedule?.intervalDays === days ? 'default' : 'outline'}
+                        variant={selectedReviewGrade === value ? 'default' : 'outline'}
                         className="h-7 px-2.5 text-[10px]"
-                        onClick={() => scheduleReview(days)}
+                        onClick={() => scheduleReview(value)}
+                        aria-pressed={selectedReviewGrade === value}
                       >
-                        {days === 1 ? '내일' : `${days}일 후`}
+                        {label} · {intervalDays}일
                       </Button>
                     ))}
                     {reviewSchedule && (

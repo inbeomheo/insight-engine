@@ -4,10 +4,13 @@ import {
   buildNoteReviewHistoryMarkdown,
   getNoteReviewActivityDays,
   getNoteReviewHistorySummary,
+  getLatestNoteReviewIntervalDays,
+  getNoteReviewSelectionState,
   normalizeNoteReviewHistory,
   readNoteReviewHistory,
   recordNoteReviewCompletion,
 } from './note-review-history';
+import { getNextReviewInterval } from './note-review-schedule';
 
 function createMemoryStorage() {
   const data = new Map<string, string>();
@@ -18,6 +21,72 @@ function createMemoryStorage() {
 }
 
 describe('note-review-history', () => {
+  it('finds the latest valid interval for one note across legacy entries', () => {
+    expect(getLatestNoteReviewIntervalDays([
+      { noteId: 'note-1', completedAt: '2026-07-09T08:00:00.000Z', intervalDays: 2 },
+      { noteId: 'note-2', completedAt: '2026-07-11T09:00:00.000Z', intervalDays: 365 },
+      { noteId: 'note-1', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 6 },
+      { noteId: 'note-1', completedAt: '2026-07-12T08:00:00.000Z', intervalDays: 0 },
+    ], 'note-1')).toBe(6);
+    expect(getLatestNoteReviewIntervalDays([], 'note-1')).toBeNull();
+  });
+  it('keeps the original basis stable when a future schedule is reloaded and reselected', () => {
+    const schedule = {
+      dueAt: '2026-07-15T08:00:00.000Z',
+      intervalDays: 6,
+      scheduledAt: '2026-07-11T07:59:00.000Z',
+    };
+    const entries = [{
+      noteId: 'note-1',
+      completedAt: '2026-07-11T08:00:00.000Z',
+      intervalDays: 6,
+      grade: 'hard',
+      baseIntervalDays: 4,
+    }];
+
+    const reloaded = getNoteReviewSelectionState(
+      entries,
+      'note-1',
+      schedule,
+      new Date('2026-07-12T08:00:00.000Z')
+    );
+    expect(reloaded).toEqual({ previousIntervalDays: 4, selectedGrade: 'hard' });
+    expect(getNextReviewInterval('easy', reloaded.previousIntervalDays ?? undefined)).toBe(12);
+
+    const firstReview = getNoteReviewSelectionState([{
+      noteId: 'note-1',
+      completedAt: '2026-07-11T08:00:00.000Z',
+      intervalDays: 7,
+      grade: 'easy',
+      baseIntervalDays: null,
+    }], 'note-1', {
+      ...schedule,
+      intervalDays: 7,
+    }, new Date('2026-07-12T08:00:00.000Z'));
+    expect(firstReview).toEqual({ previousIntervalDays: null, selectedGrade: 'easy' });
+    expect(getNextReviewInterval('good', firstReview.previousIntervalDays ?? undefined)).toBe(3);
+    expect(getNoteReviewSelectionState(
+      entries,
+      'note-1',
+      schedule,
+      new Date('2026-07-15T08:00:00.000Z')
+    )).toEqual({ previousIntervalDays: 6, selectedGrade: null });
+  });
+
+  it('reads legacy entries without adaptive review metadata', () => {
+    const schedule = {
+      dueAt: '2026-07-15T08:00:00.000Z',
+      intervalDays: 3,
+      scheduledAt: '2026-07-11T07:59:00.000Z',
+    };
+    expect(getNoteReviewSelectionState([
+      { noteId: 'note-1', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 3 },
+    ], 'note-1', schedule, new Date('2026-07-12T08:00:00.000Z'))).toEqual({
+      previousIntervalDays: 3,
+      selectedGrade: null,
+    });
+  });
+
   it('normalizes malformed entries and keeps the latest review per note and day', () => {
     const history = normalizeNoteReviewHistory([
       null,
@@ -43,13 +112,19 @@ describe('note-review-history', () => {
       new Date('2026-07-11T01:00:00.000Z')
     );
     const updated = recordNoteReviewCompletion(
-      { noteId: 'note-1', noteTitle: '첫 노트', intervalDays: 7 },
+      {
+        noteId: 'note-1',
+        noteTitle: '첫 노트',
+        intervalDays: 7,
+        grade: 'easy',
+        baseIntervalDays: null,
+      },
       storage,
       new Date('2026-07-11T08:00:00.000Z')
     );
 
     expect(updated).toHaveLength(1);
-    expect(updated[0].intervalDays).toBe(7);
+    expect(updated[0]).toMatchObject({ intervalDays: 7, grade: 'easy', baseIntervalDays: null });
     expect(storage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY)).toContain('note-1');
     expect(readNoteReviewHistory(storage)).toEqual(updated);
   });
