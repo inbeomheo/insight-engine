@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NOTE_REVIEW_HISTORY_STORAGE_KEY,
+  getNoteReviewActivityDays,
   getNoteReviewHistorySummary,
   normalizeNoteReviewHistory,
   readNoteReviewHistory,
@@ -50,6 +51,23 @@ describe('note-review-history', () => {
     expect(updated[0].intervalDays).toBe(7);
     expect(storage.getItem(NOTE_REVIEW_HISTORY_STORAGE_KEY)).toContain('note-1');
     expect(readNoteReviewHistory(storage)).toEqual(updated);
+  });
+
+  it('builds an oldest-to-today seven-day activity series', () => {
+    const entries = normalizeNoteReviewHistory([
+      { noteId: 'a', noteTitle: 'A', completedAt: '2026-07-10T08:00:00.000Z', intervalDays: 1 },
+      { noteId: 'b', noteTitle: 'B', completedAt: '2026-07-10T09:00:00.000Z', intervalDays: 3 },
+      { noteId: 'c', noteTitle: 'C', completedAt: '2026-07-08T08:00:00.000Z', intervalDays: 7 },
+    ]);
+
+    const activity = getNoteReviewActivityDays(entries, new Date('2026-07-11T12:00:00.000Z'), 4);
+    expect(activity.map(({ dateKey, count, isToday }) => ({ dateKey, count, isToday }))).toEqual([
+      { dateKey: '2026-07-08', count: 1, isToday: false },
+      { dateKey: '2026-07-09', count: 0, isToday: false },
+      { dateKey: '2026-07-10', count: 2, isToday: false },
+      { dateKey: '2026-07-11', count: 0, isToday: true },
+    ]);
+    expect(getNoteReviewActivityDays(entries, new Date('invalid'))).toEqual([]);
   });
 
   it('summarizes seven-day activity and a streak ending today or yesterday', () => {

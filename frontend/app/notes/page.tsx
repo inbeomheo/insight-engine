@@ -53,8 +53,10 @@ import {
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
 import {
+  getNoteReviewActivityDays,
   getNoteReviewHistorySummary,
   readNoteReviewHistory,
+  type NoteReviewActivityDay,
   type NoteReviewHistoryEntry,
   type NoteReviewHistorySummary,
 } from '@/lib/note-review-history';
@@ -319,6 +321,10 @@ export default function NotesPage() {
     () => getNoteReviewHistorySummary(reviewHistory),
     [reviewHistory],
   );
+  const reviewActivityDays = useMemo(
+    () => getNoteReviewActivityDays(reviewHistory),
+    [reviewHistory],
+  );
   const recentReviewHistory = useMemo(() => {
     const noteIds = new Set(notes.map((note) => note.id));
     return reviewHistory.filter((entry) => noteIds.has(entry.noteId)).slice(0, 3);
@@ -438,6 +444,7 @@ export default function NotesPage() {
             qnaStudyCards={qnaStudyCards}
             scheduledReviewItems={scheduledReviewItems}
             reviewHistorySummary={reviewHistorySummary}
+            reviewActivityDays={reviewActivityDays}
             recentReviewHistory={recentReviewHistory}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
@@ -595,6 +602,7 @@ function WikiMap({
   qnaStudyCards,
   scheduledReviewItems,
   reviewHistorySummary,
+  reviewActivityDays,
   recentReviewHistory,
   studyCardOrder,
   onFacetSelect,
@@ -613,6 +621,7 @@ function WikiMap({
   qnaStudyCards: ResultChatStudyCard[];
   scheduledReviewItems: NoteScheduledReviewItem[];
   reviewHistorySummary: NoteReviewHistorySummary;
+  reviewActivityDays: NoteReviewActivityDay[];
   recentReviewHistory: NoteReviewHistoryEntry[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
@@ -768,6 +777,7 @@ function WikiMap({
   };
   const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length + scheduledReviewItems.length;
   const dueReviewCount = scheduledReviewItems.filter((item) => item.status.state === 'due').length;
+  const maxReviewActivityCount = Math.max(1, ...reviewActivityDays.map((day) => day.count));
   const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length + knowledgeGaps.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
     const index = studyCardOrder.indexOf(kind);
@@ -1052,6 +1062,41 @@ function WikiMap({
                               {reviewHistorySummary.activeDays}일
                             </div>
                             <div className="text-[10px] text-muted-foreground">7일 활동</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+                          <div className="mb-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>최근 7일 활동</span>
+                            <span>복습 완료 횟수</span>
+                          </div>
+                          <div
+                            role="img"
+                            aria-label="최근 7일 복습 활동"
+                            className="flex h-16 items-end justify-between gap-1.5"
+                          >
+                            {reviewActivityDays.map((day) => {
+                              const height = day.count > 0
+                                ? Math.max(8, Math.round((day.count / maxReviewActivityCount) * 42))
+                                : 4;
+                              return (
+                                <div
+                                  key={day.dateKey}
+                                  title={`${day.dateKey}: ${day.count}회`}
+                                  className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"
+                                >
+                                  <span className="text-[9px] font-medium text-muted-foreground">
+                                    {day.count > 0 ? day.count : ''}
+                                  </span>
+                                  <span
+                                    className={`w-full max-w-6 rounded-t-sm ${day.count > 0 ? 'bg-orange-500/80' : 'bg-muted'}`}
+                                    style={{ height }}
+                                  />
+                                  <span className={`text-[9px] ${day.isToday ? 'font-semibold text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                                    {day.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                         <ul className="mt-3 space-y-1.5">

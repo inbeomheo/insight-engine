@@ -114,6 +114,41 @@ function addLocalDays(value: Date, days: number): Date {
   return result;
 }
 
+export interface NoteReviewActivityDay {
+  dateKey: string;
+  label: string;
+  count: number;
+  isToday: boolean;
+}
+
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+export function getNoteReviewActivityDays(
+  entries: NoteReviewHistoryEntry[],
+  now = new Date(),
+  windowDays = 7
+): NoteReviewActivityDay[] {
+  if (Number.isNaN(now.getTime())) return [];
+  const days = Number.isFinite(windowDays) ? Math.max(1, Math.floor(windowDays)) : 7;
+  const today = startOfLocalDay(now);
+  const counts = new Map<string, number>();
+  for (const entry of normalizeNoteReviewHistory(entries)) {
+    const key = localDateKey(new Date(entry.completedAt));
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Array.from({ length: days }, (_, index) => {
+    const date = addLocalDays(today, index - days + 1);
+    const dateKey = localDateKey(date);
+    return {
+      dateKey,
+      label: WEEKDAY_LABELS[date.getDay()],
+      count: counts.get(dateKey) ?? 0,
+      isToday: index === days - 1,
+    };
+  });
+}
+
 export function getNoteReviewHistorySummary(
   entries: NoteReviewHistoryEntry[],
   now = new Date(),
