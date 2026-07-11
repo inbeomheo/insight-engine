@@ -244,4 +244,3 @@ export interface SentimentFlowResponse {
   overall_arc: 'ascending' | 'descending' | 'stable' | 'fluctuating';
   dominant_emotion: string;
 }
-
