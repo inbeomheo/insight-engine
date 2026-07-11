@@ -53,6 +53,7 @@ import {
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
 import {
+  buildNoteReviewHistoryMarkdown,
   getNoteReviewActivityDays,
   getNoteReviewHistorySummary,
   readNoteReviewHistory,
@@ -325,10 +326,11 @@ export default function NotesPage() {
     () => getNoteReviewActivityDays(reviewHistory),
     [reviewHistory],
   );
-  const recentReviewHistory = useMemo(() => {
+  const linkedReviewHistory = useMemo(() => {
     const noteIds = new Set(notes.map((note) => note.id));
-    return reviewHistory.filter((entry) => noteIds.has(entry.noteId)).slice(0, 3);
+    return reviewHistory.filter((entry) => noteIds.has(entry.noteId));
   }, [notes, reviewHistory]);
+  const recentReviewHistory = useMemo(() => linkedReviewHistory.slice(0, 3), [linkedReviewHistory]);
   const scheduledReviewNoteIds = useMemo(
     () => new Set(scheduledReviewItems.map((item) => item.note.id)),
     [scheduledReviewItems],
@@ -445,6 +447,7 @@ export default function NotesPage() {
             scheduledReviewItems={scheduledReviewItems}
             reviewHistorySummary={reviewHistorySummary}
             reviewActivityDays={reviewActivityDays}
+            reviewHistoryEntries={linkedReviewHistory}
             recentReviewHistory={recentReviewHistory}
             studyCardOrder={studyCardOrder}
             onFacetSelect={handleFacetSelect}
@@ -603,6 +606,7 @@ function WikiMap({
   scheduledReviewItems,
   reviewHistorySummary,
   reviewActivityDays,
+  reviewHistoryEntries,
   recentReviewHistory,
   studyCardOrder,
   onFacetSelect,
@@ -622,6 +626,7 @@ function WikiMap({
   scheduledReviewItems: NoteScheduledReviewItem[];
   reviewHistorySummary: NoteReviewHistorySummary;
   reviewActivityDays: NoteReviewActivityDay[];
+  reviewHistoryEntries: NoteReviewHistoryEntry[];
   recentReviewHistory: NoteReviewHistoryEntry[];
   studyCardOrder: NoteStudyCardKind[];
   onFacetSelect: (facet: NoteFacet) => void;
@@ -631,6 +636,7 @@ function WikiMap({
   const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [qnaCardsCopyStatus, setQnaCardsCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [reviewHistoryCopyStatus, setReviewHistoryCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [qnaCardCopyStatus, setQnaCardCopyStatus] = useState<{
     id: string;
     status: 'copied' | 'error';
@@ -728,6 +734,26 @@ function WikiMap({
     const timer = window.setTimeout(() => setWikiIndexCopyStatus('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [wikiIndexCopyStatus]);
+
+  const copyReviewHistory = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      setReviewHistoryCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(buildNoteReviewHistoryMarkdown(reviewHistoryEntries));
+      setReviewHistoryCopyStatus('copied');
+    } catch {
+      setReviewHistoryCopyStatus('error');
+    }
+  }, [reviewHistoryEntries]);
+
+  useEffect(() => {
+    if (reviewHistoryCopyStatus === 'idle') return;
+    const timer = window.setTimeout(() => setReviewHistoryCopyStatus('idle'), 2000);
+    return () => window.clearTimeout(timer);
+  }, [reviewHistoryCopyStatus]);
 
   const copyQnaStudyCards = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -1040,9 +1066,28 @@ function WikiMap({
                   {recentReviewHistory.length > 0 && (
                     <Card className="border-orange-500/20 bg-background/90 py-4">
                       <CardContent className="px-4">
-                        <div className="flex items-center gap-2">
-                          <Flame className="h-4 w-4 text-orange-500/80" />
-                          <h2 className="text-sm font-semibold text-foreground">복습 기록</h2>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Flame className="h-4 w-4 text-orange-500/80" />
+                            <h2 className="text-sm font-semibold text-foreground">복습 기록</h2>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 gap-1 px-2 text-[10px]"
+                              onClick={copyReviewHistory}
+                            >
+                              <Copy className="h-3 w-3" />
+                              기록 복사
+                            </Button>
+                            {reviewHistoryCopyStatus !== 'idle' && (
+                              <span className={`text-[10px] ${reviewHistoryCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                {reviewHistoryCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
                           <div className="rounded-lg bg-orange-500/5 px-2 py-2 text-center">

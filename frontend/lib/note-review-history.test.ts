@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   NOTE_REVIEW_HISTORY_STORAGE_KEY,
+  buildNoteReviewHistoryMarkdown,
   getNoteReviewActivityDays,
   getNoteReviewHistorySummary,
   normalizeNoteReviewHistory,
@@ -68,6 +69,25 @@ describe('note-review-history', () => {
       { dateKey: '2026-07-11', count: 0, isToday: true },
     ]);
     expect(getNoteReviewActivityDays(entries, new Date('invalid'))).toEqual([]);
+  });
+
+  it('builds a weekly review history markdown report', () => {
+    const entries = normalizeNoteReviewHistory([
+      { noteId: 'note 1', noteTitle: '  [RAG]\n노트  ', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 3 },
+      { noteId: 'note-2', noteTitle: '둘째 노트', completedAt: '2026-07-10T08:00:00.000Z', intervalDays: 7 },
+    ]);
+    const markdown = buildNoteReviewHistoryMarkdown(entries, {
+      title: '  나의\n복습  ',
+      now: new Date('2026-07-11T12:00:00.000Z'),
+    });
+
+    expect(markdown).toContain('# 나의 복습');
+    expect(markdown).toContain('- 연속 학습: 2일');
+    expect(markdown).toContain('- 최근 7일 완료: 2회');
+    expect(markdown).toContain('2026-07-11 (토): 1회');
+    expect(markdown).toContain('[\\[RAG\\] 노트](/notes/note%201#study-progress)');
+    expect(buildNoteReviewHistoryMarkdown([], { now: new Date('2026-07-11T12:00:00.000Z') }))
+      .toContain('복습 기록이 없습니다.');
   });
 
   it('summarizes seven-day activity and a streak ending today or yesterday', () => {

@@ -184,3 +184,47 @@ export function getNoteReviewHistorySummary(
     currentStreak,
   };
 }
+
+function cleanMarkdownValue(value: string | undefined, fallback = '-'): string {
+  const cleaned = (value ?? '').replace(/\s+/g, ' ').trim();
+  return cleaned || fallback;
+}
+
+function escapeMarkdownLinkText(value: string): string {
+  return value.replace(/([[\]\\])/g, '\\$1');
+}
+
+export function buildNoteReviewHistoryMarkdown(
+  entries: NoteReviewHistoryEntry[],
+  options: { title?: string; now?: Date } = {}
+): string {
+  const now = options.now ?? new Date();
+  const normalized = normalizeNoteReviewHistory(entries);
+  const summary = getNoteReviewHistorySummary(normalized, now);
+  const activity = getNoteReviewActivityDays(normalized, now);
+  const title = cleanMarkdownValue(options.title, '주간 복습 기록');
+  const lines = [
+    `# ${title}`,
+    '',
+    `- 연속 학습: ${summary.currentStreak}일`,
+    `- 최근 7일 완료: ${summary.totalCompletions}회`,
+    `- 최근 7일 활동: ${summary.activeDays}일`,
+    '',
+    '## 일별 활동',
+    ...activity.map((day) => `- ${day.dateKey} (${day.label}): ${day.count}회`),
+    '',
+    '## 최근 복습',
+  ];
+
+  if (normalized.length === 0) {
+    lines.push('복습 기록이 없습니다.');
+  } else {
+    normalized.slice(0, 10).forEach((entry) => {
+      lines.push(
+        `- [${escapeMarkdownLinkText(cleanMarkdownValue(entry.noteTitle, '제목 없음'))}](/notes/${encodeURIComponent(entry.noteId)}#study-progress) · ${entry.completedAt} · ${entry.intervalDays}일 간격`
+      );
+    });
+  }
+
+  return lines.join('\n');
+}
