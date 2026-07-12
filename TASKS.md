@@ -1,11 +1,10 @@
-# TASKS.md — 253개 기능 전체 구현 메가 플랜
+# TASKS.md — 기능 전체 구현 메가 플랜
 
 > 5개 보고서(YouTube/AI, 플랫폼/SaaS, UX/디자인, 수익화/그로스, AI/ML) 전체 기능을
-> 10 Phase × 25개씩 조직한 극세분화 태스크 플랜
+> 10개 Phase로 조직한 극세분화 태스크 플랜
 
 ## 메타데이터
 
-- **총 기능**: 253개 (중복 제거 후 약 220개 고유 기능)
 - **총 Phase**: 10개
 - **예상 태스크**: ~800개 (기능당 평균 3-4개)
 - **기존 부분 구현**: tts_service, rss_service, web_scraper, graph_store, style_memory 등 40+ 서비스 활용
@@ -13,7 +12,7 @@
 
 ---
 
-## Phase 1: 멀티소스 입력 확장 (25개 기능)
+## Phase 1: 멀티소스 입력 확장
 
 > YouTube 전용 → 범용 콘텐츠 플랫폼 전환. 기존 web_scraper_service, rss_service 활용.
 
@@ -104,13 +103,9 @@
 - **기존**: multi_source_collector.py, fusion_service.py
 - [P1-47] services/news_digest_service.py: 복수 뉴스 URL → 주제별 종합 다이제스트 | 검증: pytest
 
-### F1-25. 자동 소스 추천 — 난이도 M
-- [P1-48] services/source_recommender_service.py: 주제 입력 → 관련 YouTube/웹/논문 URL 자동 추천 | 검증: pytest
-- [P1-49] frontend/components/input/SourceRecommender.tsx: "관련 소스 찾기" 버튼 UI | 검증: build
-
 ---
 
-## Phase 2: 멀티모달 출력 (25개 기능)
+## Phase 2: 멀티모달 출력
 
 > 텍스트 중심 → 오디오/이미지/영상/슬라이드 등 다양한 포맷 출력
 
@@ -208,7 +203,7 @@
 
 ---
 
-## Phase 3: AI 에이전트 시스템 (25개 기능)
+## Phase 3: AI 에이전트 시스템
 
 > 단순 1회 AI 호출 → 자율 에이전트 기반 지능형 파이프라인
 
@@ -302,7 +297,7 @@
 
 ---
 
-## Phase 4: 수익화 & 과금 (25개 기능)
+## Phase 4: 수익화 & 과금
 
 > 무료 도구 → 지속 가능한 SaaS 비즈니스 모델 구축
 
@@ -404,7 +399,7 @@
 
 ---
 
-## Phase 5: UX/UI 혁신 (25개 기능)
+## Phase 5: UX/UI 혁신
 
 > 리텐션을 높이는 현대적 UX 패턴 도입
 
@@ -505,7 +500,7 @@
 
 ---
 
-## Phase 6: 분석 & 인사이트 (25개 기능)
+## Phase 6: 분석 & 인사이트
 
 ### F6-01. 운영 대시보드 고도화 — 난이도 M
 - **기존**: OperationsDashboard.tsx, /api/admin/dashboard
@@ -596,7 +591,7 @@
 
 ---
 
-## Phase 7: 통합 & 플러그인 (25개 기능)
+## Phase 7: 통합 & 플러그인
 
 ### F7-01. Chrome 확장 프로그램 — 난이도 L
 - [P7-01] chrome-extension/manifest.json: Manifest V3 확장 프로그램 기본 구조 | 검증: 로드
@@ -679,7 +674,7 @@
 
 ---
 
-## Phase 8: 콘텐츠 관리 & 라이브러리 (25개 기능)
+## Phase 8: 콘텐츠 관리 & 라이브러리
 
 ### F8-01. 콘텐츠 라이브러리 — 난이도 M
 - [P8-01] frontend/app/library/page.tsx: 생성된 콘텐츠 라이브러리 (그리드/리스트 뷰) | 검증: build
@@ -767,7 +762,7 @@
 
 ---
 
-## Phase 9: 인프라 & 성능 (25개 기능)
+## Phase 9: 인프라 & 성능
 
 ### F9-01. Redis 캐싱 레이어 — 난이도 M
 - **기존**: cache_service.py (인메모리)
@@ -847,7 +842,7 @@
 
 ---
 
-## Phase 10: 고급 AI & 미래 기술 (28개 기능)
+## Phase 10: 고급 AI & 미래 기술
 
 ### F10-01. LLM 파인튜닝 파이프라인 — 난이도 XL
 - [P10-01] services/finetune/dataset_builder.py: 생성 히스토리 → 학습 데이터셋 자동 구축 | 검증: pytest

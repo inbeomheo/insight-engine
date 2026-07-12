@@ -42,16 +42,10 @@ Phase 6
 | F02-B | 프리셋 저장/로드 (localStorage → Supabase 선택) | `frontend/hooks/useModifierPresets.ts` (신규) | F02-A | 저장/로드 동작 |
 | F02-C | 기존 모디파이어 선택 영역에 프리셋 카드 통합 | `frontend/app/page.tsx` 또는 입력 영역 | F02-A | UI 렌더링 |
 
-### F03. 스니펫 라이브러리 (인트로/CTA/해시태그)
+### F03. 스니펫 라이브러리 — 중단
 
-| ID | 태스크 | 파일 | 의존성 | 검증 기준 |
-|----|--------|------|--------|----------|
-| F03-A | Supabase `ie_snippets` 테이블 스키마 작성 | `supabase/migrations/` (신규) | 없음 | SQL 실행 성공 |
-| F03-B | 스니펫 CRUD API (`POST/GET/DELETE /api/user/snippets`) | `routes/auth_routes.py` | F03-A | curl 테스트 |
-| F03-C | `supabase_service.py`에 snippets 쿼리 함수 추가 | `services/supabase_service.py` | F03-A | 단위 테스트 |
-| F03-D | 스니펫 관리 UI (추가/편집/삭제/카테고리 필터) | `frontend/components/settings/SnippetLibrary.tsx` (신규) | 없음 | 빌드 성공 |
-| F03-E | `useSnippets` 훅 (CRUD + localStorage 폴백) | `frontend/hooks/useSnippets.ts` (신규) | F03-D | 동작 확인 |
-| F03-F | 결과 카드 더보기 메뉴에 "스니펫 삽입" 옵션 | `frontend/components/result/ResultCard.tsx` | F03-D,E | 삽입 동작 |
+- 프론트 소비자가 없어 API·서비스 체인은 2026-07-12 dead-code 20차에서 제거.
+- 기존 `supabase/migrations/003_snippets.sql`은 적용 이력과 데이터 보존을 위해 유지하며 새 기능에서는 사용하지 않음.
 
 ### F04. Summary/Transcript 듀얼 모드 토글
 

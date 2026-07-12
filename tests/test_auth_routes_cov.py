@@ -413,56 +413,6 @@ class TestStyleMemoryRoutes(_Base):
         self.assertEqual(resp.status_code, 200)
 
 
-# ── 스니펫 ────────────────────────────────────────────
-
-
-@patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-class TestSnippetRoutes(_Base):
-
-    @patch('routes.auth_routes.get_user_snippets', return_value=[])
-    def test_get_snippets(self, _mock, _):
-        resp = self.client.get('/api/user/snippets', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('snippets', resp.get_json())
-
-    @patch('routes.auth_routes.create_snippet', return_value={'id': 's1', 'content': 'hi'})
-    def test_create_snippet_success(self, _mock, _):
-        resp = self.client.post('/api/user/snippets',
-                                json={'content': 'hi'},
-                                headers=_H)
-        self.assertIn(resp.status_code, [200, 201])
-
-    def test_create_snippet_no_content(self, _):
-        resp = self.client.post('/api/user/snippets',
-                                json={'content': ''},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('routes.auth_routes.create_snippet', return_value={'error': 'fail'})
-    def test_create_snippet_error(self, _mock, _):
-        resp = self.client.post('/api/user/snippets',
-                                json={'content': 'hi'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 500)
-
-    @patch('routes.auth_routes.create_snippet', side_effect=Exception('boom'))
-    def test_create_snippet_exception(self, _mock, _):
-        resp = self.client.post('/api/user/snippets',
-                                json={'content': 'hi'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 500)
-
-    @patch('routes.auth_routes.delete_snippet', return_value=True)
-    def test_delete_snippet_success(self, _mock, _):
-        resp = self.client.delete('/api/user/snippets/s1', headers=_H)
-        self.assertEqual(resp.status_code, 200)
-
-    @patch('routes.auth_routes.delete_snippet', return_value=False)
-    def test_delete_snippet_fail(self, _mock, _):
-        resp = self.client.delete('/api/user/snippets/s1', headers=_H)
-        self.assertEqual(resp.status_code, 500)
-
-
 # ── 채널 모니터 ──────────────────────────────────────────
 
 

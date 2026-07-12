@@ -137,19 +137,5 @@ class TestGetAdminClient(unittest.TestCase):
             mod._supabase_admin = old
 
 
-class TestGetUserSnippets(unittest.TestCase):
-    """get_user_snippets 테스트"""
-
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
-    def test_no_client(self, _):
-        from services.data.supabase_service import get_user_snippets
-        self.assertEqual(get_user_snippets('user1'), [])
-
-    @patch('services.data.supabase_service.get_supabase', return_value=None)
-    def test_no_user_id(self, _):
-        from services.data.supabase_service import get_user_snippets
-        self.assertEqual(get_user_snippets(None), [])
-
-
 if __name__ == '__main__':
     unittest.main()

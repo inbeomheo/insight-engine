@@ -40,14 +40,15 @@ export default function SettingsModal() {
   const settingsModalOpen = activeModal === 'settings';
   const {
     providers,
-    selectedProvider,
     selectedModel,
-    setSelectedProvider,
     setSelectedModel,
   } = useSettingsStore();
 
-  const providerIds = Object.keys(providers);
-  const currentModels = selectedProvider ? providers[selectedProvider]?.models || [] : [];
+  const activeProvider = Object.values(providers)[0] ?? null;
+  const currentModels = activeProvider?.models ?? [];
+  const activeModelId = currentModels.some((model) => model.id === selectedModel)
+    ? selectedModel
+    : currentModels[0]?.id ?? '';
   const { t } = useTranslation();
 
   // 스타일 메모리 상태
@@ -145,48 +146,41 @@ export default function SettingsModal() {
         <div className="space-y-3 pt-4 border-t">
           <h3 className="text-sm font-semibold flex items-center gap-2">{t('settings.aiService')}</h3>
 
-          {providerIds.length === 0 ? (
+          {!activeProvider ? (
             <p className="text-xs text-muted-foreground">
               {t('settings.noProviders')}
             </p>
           ) : (
             <div className="space-y-2">
-              <Select
-                value={selectedProvider}
-                onValueChange={(v) => {
-                  setSelectedProvider(v);
-                  const first = providers[v]?.models[0];
-                  if (first) setSelectedModel(first.id);
-                }}
+              <div
+                role="group"
+                aria-label={t('settings.serviceInfoLabel')}
+                className="rounded-md border border-border bg-muted/30 px-3 py-2"
               >
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder={t('settings.selectProvider')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {providerIds.map((id) => (
-                    <SelectItem key={id} value={id}>
-                      {providers[id].name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <p className="text-sm font-medium">{activeProvider.name}</p>
+                <p className="text-xs text-muted-foreground">{t('settings.singleServiceActive')}</p>
+              </div>
 
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder={t('settings.selectModel')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentModels.map((m) => {
-                    const size = formatModelSize(m.size_bytes);
-                    return (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                        {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              {currentModels.length === 0 ? (
+                <p role="alert" className="text-xs text-destructive">{t('settings.noModels')}</p>
+              ) : (
+                <Select value={activeModelId} onValueChange={setSelectedModel}>
+                  <SelectTrigger className="text-sm" aria-label={t('settings.modelSelectLabel')}>
+                    <SelectValue placeholder={t('settings.selectModel')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentModels.map((m) => {
+                      const size = formatModelSize(m.size_bytes);
+                      return (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                          {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
         </div>

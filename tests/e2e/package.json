@@ -10,7 +10,6 @@
     "test:ui": "playwright test --ui",
 
     "test:no-auth": "playwright test --project=no-auth-chromium",
-    "test:content": "playwright test --project=content-generation",
     "test:batch": "playwright test --project=batch-generation",
     "test:auth": "playwright test --project=auth-setup --project=authenticated-tests",
     "test:error": "playwright test --project=error-handling",

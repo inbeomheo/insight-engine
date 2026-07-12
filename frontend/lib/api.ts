@@ -14,7 +14,6 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
-  ProviderValidateResponse,
   FactCheckResponse,
   PlagiarismResponse,
   ReadabilityResponse,
@@ -676,32 +675,6 @@ export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractE
   });
 }
 
-// === 프로바이더 유효성 검사 (F18) ===
-
-export async function validateProvider(
-  providerId: string,
-  apiKey: string,
-): Promise<ProviderValidateResponse> {
-  return request('/api/providers/validate', {
-    method: 'POST',
-    body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
-  });
-}
-
-export interface RecommendedSource {
-  url: string;
-  title: string;
-  source_type: string;
-  relevance_score: number;
-}
-
-export async function recommendSources(topic: string): Promise<{ sources: RecommendedSource[] }> {
-  return request('/api/recommend-sources', {
-    method: 'POST',
-    body: JSON.stringify({ topic }),
-  });
-}
-
 // === 피드백 (F3-06) ===
 
 export async function submitFeedback(
@@ -930,6 +903,7 @@ export interface NoteSearchResult {
   title: string;
   score: number;
   snippet: string;
+  highlight_ranges?: Array<[number, number]>;
 }
 
 export interface DuplicateNoteItem {

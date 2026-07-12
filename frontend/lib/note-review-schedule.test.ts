@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  NOTE_REVIEW_GRADE_OPTIONS,
   clearNoteReviewSchedule,
   createNoteReviewSchedule,
+  getNextReviewInterval,
+  getPreviousIntervalForNewReviewSession,
   getNoteReviewScheduleKey,
   getNoteReviewScheduleStatus,
   normalizeNoteReviewSchedule,
@@ -20,6 +23,45 @@ function createMemoryStorage() {
 
 describe('note-review-schedule', () => {
   const now = new Date('2026-07-11T10:00:00.000Z');
+
+  it('exposes Korean labels for every recall grade', () => {
+    expect(NOTE_REVIEW_GRADE_OPTIONS).toEqual([
+      { value: 'again', label: '다시' },
+      { value: 'hard', label: '어려움' },
+      { value: 'good', label: '보통' },
+      { value: 'easy', label: '쉬움' },
+    ]);
+  });
+
+  it('calculates the first review interval from recall grade', () => {
+    expect(getNextReviewInterval('again')).toBe(1);
+    expect(getNextReviewInterval('hard')).toBe(2);
+    expect(getNextReviewInterval('good')).toBe(3);
+    expect(getNextReviewInterval('easy')).toBe(7);
+  });
+
+  it('adjusts a valid previous interval and clamps the result', () => {
+    expect(getNextReviewInterval('again', 10)).toBe(1);
+    expect(getNextReviewInterval('hard', 3)).toBe(5);
+    expect(getNextReviewInterval('good', 10)).toBe(20);
+    expect(getNextReviewInterval('easy', 200)).toBe(365);
+  });
+
+  it('promotes the active interval only when starting a new review session', () => {
+    const activeSchedule = createNoteReviewSchedule(6, now);
+    const promoted = getPreviousIntervalForNewReviewSession(activeSchedule, 3);
+
+    expect(promoted).toBe(6);
+    expect(getNextReviewInterval('good', promoted ?? undefined)).toBe(12);
+    expect(getPreviousIntervalForNewReviewSession(null, 3)).toBe(3);
+  });
+
+  it('uses first-review intervals for missing or invalid previous values', () => {
+    expect(getNextReviewInterval('good', 0)).toBe(3);
+    expect(getNextReviewInterval('easy', 1.5)).toBe(7);
+    expect(getNextReviewInterval('hard', Number.NaN)).toBe(2);
+    expect(getNextReviewInterval('again', 366)).toBe(1);
+  });
 
   it('creates a deterministic review schedule', () => {
     expect(createNoteReviewSchedule(3, now)).toEqual({

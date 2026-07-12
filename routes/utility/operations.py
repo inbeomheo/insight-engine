@@ -1,6 +1,6 @@
 """운영/모니터링 라우트 — utility_routes.py에서 분리.
 
-헬스체크, 클라이언트 트래커(heartbeat/close), ChatMock 프로바이더 조회/검증.
+헬스체크, 클라이언트 트래커(heartbeat/close), ChatMock 프로바이더 조회.
 카운터 변수와 헬퍼는 utility_routes.py에서 import하여 사용 (외부 patch 호환성).
 """
 import os
@@ -9,7 +9,6 @@ import time
 from flask import current_app, jsonify, request
 
 from routes.blog_routes import blog_bp, _extract_client_id
-from utils.responses import sanitize_error_for_client
 
 # 카운터/트래커는 공용 _state 모듈에서 import (순환 import 방지).
 from routes.utility._state import (
@@ -20,32 +19,6 @@ from routes.utility._state import (
     get_request_count,
     increment_request_count,
 )
-
-
-CHATMOCK_SETUP_HINT = (
-    "ChatMock 서버에 연결할 수 없습니다. 터미널에서 `chatmock login` 후 "
-    "`chatmock serve`를 실행하고 CHATMOCK_BASE_URL을 확인하세요."
-)
-
-_CONNECTION_ERROR_MARKERS = (
-    "connection",
-    "connect",
-    "refused",
-    "winerror 10061",
-    "connection refused",
-    "failed to establish",
-    "httpconnectionpool",
-    "server disconnected",
-)
-
-
-def _format_chatmock_validation_error(error: Exception) -> str:
-    """ChatMock 연결 오류에는 실행 순서를 바로 안내합니다."""
-    message = str(error)
-    error_lower = message.lower()
-    if any(marker in error_lower for marker in _CONNECTION_ERROR_MARKERS):
-        return CHATMOCK_SETUP_HINT
-    return sanitize_error_for_client(message)
 
 
 @blog_bp.route('/health')
@@ -135,57 +108,3 @@ def api_providers():
         'supadataConfigured': bool(SUPADATA_API_KEY),
         'hasAutoFallback': True
     })
-
-
-@blog_bp.route('/api/providers/validate', methods=['POST'])
-def api_validate_provider():
-    """API 키를 소량 토큰 호출로 유효성 테스트합니다."""
-    data = request.get_json(silent=True) or {}
-    provider_id = data.get('provider_id', '')
-    api_key = data.get('api_key', '')
-
-    if not provider_id:
-        return jsonify({'valid': False, 'error': 'provider_id가 필요합니다.'}), 400
-
-    from config import SUPPORTED_PROVIDERS
-
-    if provider_id not in SUPPORTED_PROVIDERS:
-        return jsonify({'valid': False, 'error': f'지원하지 않는 프로바이더: {provider_id}'}), 400
-
-    provider = SUPPORTED_PROVIDERS[provider_id]
-    models = provider.get('models', [])
-    if not models:
-        return jsonify({'valid': False, 'error': '사용 가능한 모델이 없습니다.'}), 400
-
-    test_model = models[0]['id']
-
-    if not api_key and provider_id != 'chatmock':
-        return jsonify({'valid': False, 'error': 'API 키가 필요합니다.'}), 400
-
-    # LiteLLM으로 소량 토큰 호출 테스트
-    try:
-        import litellm
-
-        model_for_call = test_model
-        if provider_id == 'chatmock' and test_model.startswith('chatmock/'):
-            model_for_call = test_model.replace('chatmock/', '')
-
-        kwargs = {
-            'model': model_for_call,
-            'messages': [{'role': 'user', 'content': 'Hi'}],
-            'max_tokens': 5,
-            'api_key': api_key or ('dummy' if provider_id == 'chatmock' else api_key),
-        }
-        # ChatMock처럼 OpenAI 호환 api_base가 있는 프로바이더
-        if provider.get('api_base'):
-            kwargs['api_base'] = provider['api_base']
-        if provider_id == 'chatmock':
-            kwargs['drop_params'] = True
-
-        t0 = time.time()
-        litellm.completion(**kwargs)
-        latency_ms = round((time.time() - t0) * 1000)
-        return jsonify({'valid': True, 'model_tested': test_model, 'latency_ms': latency_ms})
-    except Exception as e:
-        error = _format_chatmock_validation_error(e) if provider_id == 'chatmock' else sanitize_error_for_client(str(e))
-        return jsonify({'valid': False, 'model_tested': test_model, 'error': error})

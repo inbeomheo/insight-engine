@@ -16,7 +16,48 @@ type ReviewScheduleStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const NOTE_REVIEW_INTERVAL_OPTIONS = [1, 3, 7] as const;
+export type NoteReviewGrade = 'again' | 'hard' | 'good' | 'easy';
+
+export interface NoteReviewGradeOption {
+  value: NoteReviewGrade;
+  label: string;
+}
+
+export const NOTE_REVIEW_GRADE_OPTIONS: readonly NoteReviewGradeOption[] = [
+  { value: 'again', label: '다시' },
+  { value: 'hard', label: '어려움' },
+  { value: 'good', label: '보통' },
+  { value: 'easy', label: '쉬움' },
+];
+
+const FIRST_REVIEW_INTERVALS: Record<NoteReviewGrade, number> = {
+  again: 1,
+  hard: 2,
+  good: 3,
+  easy: 7,
+};
+
+const REVIEW_INTERVAL_MULTIPLIERS: Record<NoteReviewGrade, number> = {
+  again: 0,
+  hard: 1.5,
+  good: 2,
+  easy: 3,
+};
+
+export function getNextReviewInterval(
+  grade: NoteReviewGrade,
+  previousIntervalDays?: number
+): number {
+  const hasValidPrevious = Number.isInteger(previousIntervalDays)
+    && Number(previousIntervalDays) >= 1
+    && Number(previousIntervalDays) <= 365;
+  if (!hasValidPrevious) return FIRST_REVIEW_INTERVALS[grade];
+
+  const nextInterval = grade === 'again'
+    ? 1
+    : Number(previousIntervalDays) * REVIEW_INTERVAL_MULTIPLIERS[grade];
+  return Math.min(365, Math.max(1, Math.round(nextInterval)));
+}
 
 export function getNoteReviewScheduleKey(noteId: string): string {
   return `ie_note_review_schedule:${noteId}`;
@@ -32,6 +73,14 @@ function normalizeIntervalDays(value: unknown): number | null {
   return Number.isInteger(value) && Number(value) > 0 && Number(value) <= 365
     ? Number(value)
     : null;
+}
+
+export function getPreviousIntervalForNewReviewSession(
+  activeSchedule: NoteReviewSchedule | null,
+  currentPreviousIntervalDays: number | null
+): number | null {
+  return normalizeIntervalDays(activeSchedule?.intervalDays)
+    ?? normalizeIntervalDays(currentPreviousIntervalDays);
 }
 
 export function normalizeNoteReviewSchedule(value: unknown): NoteReviewSchedule | null {

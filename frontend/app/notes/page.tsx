@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
 import {
+  advanceNoteSearchRequestId,
   filterNotesByFacet,
   filterNotesByStudyStatus,
   buildDailyStudyPlanMarkdown,
@@ -21,6 +22,9 @@ import {
   getFacetLabel,
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
+  getNoteReviewQueue,
+  getNoteSearchSnippetFragments,
+  getNoteSearchResultPresentations,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
   getNotesNeedingReview,
@@ -30,8 +34,8 @@ import {
   getNoteStudyStatusCounts,
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
-  getScheduledReviewItems,
   getStudyStartCandidates,
+  isCurrentNoteSearchRequest,
   NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
   NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
   parseNotePanelOpen,
@@ -47,9 +51,11 @@ import {
   type NoteConceptCluster,
   type NoteScheduledReviewItem,
   type NoteKnowledgeGap,
+  type NoteRecallReinforcementPath,
   buildNoteFacetHref,
   parseNoteFacetSearchParams,
 } from '@/lib/note-list';
+import { buildNoteRecallSupportHref } from '@/lib/note-recall-flow';
 import { readNoteStudyProgress, type NoteStudyProgress } from '@/lib/note-study-progress';
 import { readNoteReviewSchedule, type NoteReviewSchedule } from '@/lib/note-review-schedule';
 import {
@@ -107,16 +113,24 @@ export default function NotesPage() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
+  const [lastSearchQuery, setLastSearchQuery] = useState('');
+  const [searchReturnState, setSearchReturnState] = useState<{
+    query: string;
+    results: NoteSearchResult[];
+  } | null>(null);
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
   const [reviewScheduleByNote, setReviewScheduleByNote] = useState<Record<string, NoteReviewSchedule | null>>({});
   const [reviewHistory, setReviewHistory] = useState<NoteReviewHistoryEntry[]>([]);
+  const [reviewNow, setReviewNow] = useState(() => new Date());
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
+  const [facetHistory, setFacetHistory] = useState<NoteFacet[]>([]);
   const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchRequestIdRef = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -160,8 +174,12 @@ export default function NotesPage() {
     const syncFacetFromUrl = () => {
       const facet = parseNoteFacetSearchParams(new URLSearchParams(window.location.search));
       setActiveFacet(facet);
+      setFacetHistory([]);
       if (facet) {
+        advanceNoteSearchRequestId(searchRequestIdRef);
         setSearchResults(null);
+        setSearching(false);
+        setError(null);
         setActiveStudyStatus(null);
       }
     };
@@ -172,24 +190,35 @@ export default function NotesPage() {
   }, []);
 
   const runSearch = useCallback(async (term: string) => {
+    const requestId = advanceNoteSearchRequestId(searchRequestIdRef);
     const q = term.trim();
     if (!q) {
       setSearchResults(null);
+      setLastSearchQuery('');
+      setSearchReturnState(null);
+      setFacetHistory([]);
+      setSearching(false);
+      setError(null);
       return;
     }
     setQuery(q);
     setActiveFacet(null);
+    setFacetHistory([]);
     setActiveStudyStatus(null);
     router.replace('/notes', { scroll: false });
     setSearching(true);
     setError(null);
     try {
       const res = await searchNotes(q);
+      if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setSearchResults(res.notes);
+      setLastSearchQuery(q);
+      setSearchReturnState(null);
     } catch (err) {
+      if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setError(err instanceof Error ? err.message : '검색에 실패했습니다.');
     } finally {
-      setSearching(false);
+      if (isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) setSearching(false);
     }
   }, [router]);
 
@@ -235,31 +264,103 @@ export default function NotesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setReviewNow(new Date()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     void runSearch(query);
   }, [query, runSearch]);
 
   const handleClear = useCallback(() => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
     setQuery('');
     setSearchResults(null);
+    setLastSearchQuery('');
+    setSearchReturnState(null);
+    setFacetHistory([]);
+    setSearching(false);
+    setError(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
-  const handleFacetSelect = useCallback((facet: NoteFacet) => {
+  const applyFacetSelect = useCallback((facet: NoteFacet) => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    if (
+      activeFacet
+      && (activeFacet.type !== facet.type || activeFacet.value !== facet.value)
+    ) {
+      setFacetHistory((history) => [...history, activeFacet]);
+    }
     setSearchResults(null);
+    setSearching(false);
+    setError(null);
     setActiveFacet(facet);
     setActiveStudyStatus(null);
     router.replace(buildNoteFacetHref(facet), { scroll: false });
+  }, [activeFacet, router]);
+
+  const handleSearchResultFacetSelect = useCallback((facet: NoteFacet) => {
+    if (searchResults) {
+      setSearchReturnState({ query: lastSearchQuery, results: searchResults });
+    }
+    setQuery('');
+    setLastSearchQuery('');
+    applyFacetSelect(facet);
+  }, [applyFacetSelect, lastSearchQuery, searchResults]);
+
+  const handleReturnToFacet = useCallback((
+    targetFacet: NoteFacet,
+    nextHistory: NoteFacet[],
+  ) => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setFacetHistory(nextHistory);
+    setSearchResults(null);
+    setSearching(false);
+    setError(null);
+    setActiveFacet(targetFacet);
+    setActiveStudyStatus(null);
+    router.replace(buildNoteFacetHref(targetFacet), { scroll: false });
   }, [router]);
 
   const handleFacetClear = useCallback(() => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery('');
+    setLastSearchQuery('');
+    setSearchReturnState(null);
+    setFacetHistory([]);
+    setSearching(false);
+    setError(null);
     setActiveFacet(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
+  const handleReturnToSearch = useCallback(() => {
+    if (!searchReturnState) return;
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery(searchReturnState.query);
+    setLastSearchQuery(searchReturnState.query);
+    setSearchResults(searchReturnState.results);
+    setSearchReturnState(null);
+    setFacetHistory([]);
+    setSearching(false);
+    setError(null);
+    setActiveFacet(null);
+    setActiveStudyStatus(null);
+    router.replace('/notes', { scroll: false });
+  }, [router, searchReturnState]);
+
   const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery('');
+    setLastSearchQuery('');
+    setSearchReturnState(null);
+    setFacetHistory([]);
     setSearchResults(null);
+    setSearching(false);
+    setError(null);
     setActiveFacet(null);
     setActiveStudyStatus((current) => current === status ? null : status);
     router.replace('/notes', { scroll: false });
@@ -314,10 +415,11 @@ export default function NotesPage() {
     () => getStudyStartCandidates(notes, studyProgressByNote, 3),
     [notes, studyProgressByNote],
   );
-  const scheduledReviewItems = useMemo(
-    () => getScheduledReviewItems(notes, reviewScheduleByNote, new Date(), 4),
-    [notes, reviewScheduleByNote],
+  const reviewQueue = useMemo(
+    () => getNoteReviewQueue(notes, reviewScheduleByNote, reviewHistory, reviewNow, 4),
+    [notes, reviewHistory, reviewNow, reviewScheduleByNote],
   );
+  const { recallReinforcementPath, scheduledReviewItems } = reviewQueue;
   const reviewHistorySummary = useMemo(
     () => getNoteReviewHistorySummary(reviewHistory),
     [reviewHistory],
@@ -332,8 +434,11 @@ export default function NotesPage() {
   }, [notes, reviewHistory]);
   const recentReviewHistory = useMemo(() => linkedReviewHistory.slice(0, 3), [linkedReviewHistory]);
   const scheduledReviewNoteIds = useMemo(
-    () => new Set(scheduledReviewItems.map((item) => item.note.id)),
-    [scheduledReviewItems],
+    () => new Set([
+      ...scheduledReviewItems.map((item) => item.note.id),
+      ...(recallReinforcementPath ? [recallReinforcementPath.originalNote.id] : []),
+    ]),
+    [recallReinforcementPath, scheduledReviewItems],
   );
   const completedStudyNotes = useMemo(
     () => getCompletedStudyItems(notes, studyProgressByNote, notes.length)
@@ -436,6 +541,7 @@ export default function NotesPage() {
             topTags={topTags}
             sourceGroups={sourceGroups}
             conceptClusters={conceptClusters}
+            recallReinforcementPath={recallReinforcementPath}
             knowledgeGaps={knowledgeGaps}
             recentNotes={recentNotes}
             studyStartNotes={studyStartNotes}
@@ -445,12 +551,14 @@ export default function NotesPage() {
             dailyStudyPlanItems={dailyStudyPlanItems}
             qnaStudyCards={qnaStudyCards}
             scheduledReviewItems={scheduledReviewItems}
+            reviewQueueTotalCount={reviewQueue.totalCount}
+            dueReviewCount={reviewQueue.dueCount}
             reviewHistorySummary={reviewHistorySummary}
             reviewActivityDays={reviewActivityDays}
             reviewHistoryEntries={linkedReviewHistory}
             recentReviewHistory={recentReviewHistory}
             studyCardOrder={studyCardOrder}
-            onFacetSelect={handleFacetSelect}
+            onFacetSelect={applyFacetSelect}
           />
         )}
 
@@ -462,7 +570,11 @@ export default function NotesPage() {
             ))}
           </div>
         ) : isSearchMode ? (
-          <SearchResultsList results={searchResults} />
+          <SearchResultsList
+            results={searchResults}
+            notes={notes}
+            onFacetSelect={handleSearchResultFacetSelect}
+          />
         ) : (
           <>
             {notes.length > 0 && (
@@ -478,6 +590,11 @@ export default function NotesPage() {
                 facet={activeFacet}
                 resultCount={visibleNotes.length}
                 totalCount={notes.length}
+                facetHistory={facetHistory}
+                searchReturnQuery={searchReturnState?.query ?? null}
+                searchReturnCount={searchReturnState?.results.length ?? 0}
+                onReturnToFacet={handleReturnToFacet}
+                onReturnToSearch={handleReturnToSearch}
                 onClear={handleFacetClear}
               />
             )}
@@ -485,6 +602,7 @@ export default function NotesPage() {
               notes={visibleNotes}
               studyProgressByNote={studyProgressByNote}
               emptyText={(activeFacet || activeStudyStatus) ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
+              onFacetSelect={applyFacetSelect}
             />
           </>
         )}
@@ -563,15 +681,25 @@ function StudyStatusFilter({
   );
 }
 
-function ActiveFacetBar({
+export function ActiveFacetBar({
   facet,
   resultCount,
   totalCount,
+  facetHistory,
+  searchReturnQuery,
+  searchReturnCount,
+  onReturnToFacet,
+  onReturnToSearch,
   onClear,
 }: {
   facet: NoteFacet;
   resultCount: number;
   totalCount: number;
+  facetHistory: NoteFacet[];
+  searchReturnQuery: string | null;
+  searchReturnCount: number;
+  onReturnToFacet: (targetFacet: NoteFacet, nextHistory: NoteFacet[]) => void;
+  onReturnToSearch: () => void;
   onClear: () => void;
 }) {
   return (
@@ -582,10 +710,48 @@ function ActiveFacetBar({
           {resultCount}/{totalCount}개 노트
         </span>
       </div>
-      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
-        <X className="h-3.5 w-3.5" />
-        필터 해제
-      </Button>
+      <div className="flex flex-wrap items-center gap-1">
+        {searchReturnQuery !== null && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 max-w-full gap-1 text-xs"
+            aria-label={`“${searchReturnQuery}” 검색 결과 ${searchReturnCount}개로 돌아가기`}
+            title={`“${searchReturnQuery}” 검색 결과로 돌아가기`}
+            onClick={onReturnToSearch}
+          >
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="max-w-48 truncate">“{searchReturnQuery}” 검색 결과</span>
+            <span className="shrink-0">({searchReturnCount})</span>
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" aria-label={`${getFacetLabel(facet)} 필터 해제`} onClick={onClear}>
+          <X className="h-3.5 w-3.5" />
+          필터 해제
+        </Button>
+      </div>
+      {facetHistory.length > 0 && (
+        <nav className="order-last flex w-full flex-wrap items-center gap-1 border-t border-primary/10 pt-2 text-[11px]" aria-label="위키 탐색 경로">
+          <span className="mr-1 text-muted-foreground">탐색 경로</span>
+          {facetHistory.map((historyFacet, index) => (
+            <span key={`${historyFacet.type}:${historyFacet.value}:${index}`} className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                className="inline-flex min-h-9 max-w-full items-center rounded px-2.5 py-1.5 text-xs text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${getFacetLabel(historyFacet)} 탐색 ${index + 1}단계로 돌아가기`}
+                onClick={() => onReturnToFacet(historyFacet, facetHistory.slice(0, index))}
+              >
+                <span className="max-w-40 truncate">{getFacetLabel(historyFacet)}</span>
+              </button>
+              <span aria-hidden="true" className="text-muted-foreground/50">›</span>
+            </span>
+          ))}
+          <span aria-current="page" className="min-w-0 max-w-full truncate rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
+            {getFacetLabel(facet)}
+          </span>
+        </nav>
+      )}
     </div>
   );
 }
@@ -595,6 +761,7 @@ function WikiMap({
   topTags,
   sourceGroups,
   conceptClusters,
+  recallReinforcementPath,
   knowledgeGaps,
   recentNotes,
   studyStartNotes,
@@ -604,6 +771,8 @@ function WikiMap({
   dailyStudyPlanItems,
   qnaStudyCards,
   scheduledReviewItems,
+  reviewQueueTotalCount,
+  dueReviewCount,
   reviewHistorySummary,
   reviewActivityDays,
   reviewHistoryEntries,
@@ -615,6 +784,7 @@ function WikiMap({
   topTags: Array<{ label: string; count: number }>;
   sourceGroups: Array<{ label: string; count: number }>;
   conceptClusters: NoteConceptCluster[];
+  recallReinforcementPath: NoteRecallReinforcementPath | null;
   knowledgeGaps: NoteKnowledgeGap[];
   recentNotes: NoteListItem[];
   studyStartNotes: NoteStudyResumeItem[];
@@ -624,6 +794,8 @@ function WikiMap({
   dailyStudyPlanItems: NoteStudyPlanItem[];
   qnaStudyCards: ResultChatStudyCard[];
   scheduledReviewItems: NoteScheduledReviewItem[];
+  reviewQueueTotalCount: number;
+  dueReviewCount: number;
   reviewHistorySummary: NoteReviewHistorySummary;
   reviewActivityDays: NoteReviewActivityDay[];
   reviewHistoryEntries: NoteReviewHistoryEntry[];
@@ -801,8 +973,9 @@ function WikiMap({
     completed: completedStudyNotes.length,
     recent: studyResumeNotes.length,
   };
-  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts) + qnaStudyCards.length + scheduledReviewItems.length;
-  const dueReviewCount = scheduledReviewItems.filter((item) => item.status.state === 'due').length;
+  const totalStudyQueueItems = getNoteStudyQueueCount(studyQueueCounts)
+    + qnaStudyCards.length
+    + reviewQueueTotalCount;
   const maxReviewActivityCount = Math.max(1, ...reviewActivityDays.map((day) => day.count));
   const totalWikiExploreItems = topConcepts.length + topTags.length + sourceGroups.length + conceptClusters.length + knowledgeGaps.length;
   const studyCardOrderStyle = (kind: NoteStudyCardKind) => {
@@ -1037,7 +1210,7 @@ function WikiMap({
           </CardContent>
         </Card>
 
-        {(studyCardOrder.length > 0 || qnaStudyCards.length > 0 || scheduledReviewItems.length > 0 || recentReviewHistory.length > 0) && (
+        {(totalStudyQueueItems > 0 || recentReviewHistory.length > 0) && (
           <Card className="border-primary/20 bg-primary/5 py-4">
             <CardContent className="px-4">
               <button
@@ -1056,6 +1229,7 @@ function WikiMap({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  {dueReviewCount > 0 && <>오늘 복습 {dueReviewCount}개 · </>}
                   {totalStudyQueueItems}개 항목
                   <ChevronDown className={`h-4 w-4 transition-transform ${studyQueueOpen ? 'rotate-180' : ''}`} />
                 </span>
@@ -1063,6 +1237,75 @@ function WikiMap({
 
               {studyQueueOpen && (
                 <div className="mt-3 grid gap-3">
+                  {recallReinforcementPath && (
+                    <Card className="border-primary/30 bg-background/90 py-4">
+                      <CardContent className="px-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                              <Brain className="h-4 w-4 text-primary" />
+                              회상 보강 추천
+                            </h2>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              막힌 개념을 연결 노트로 보강한 뒤 원래 질문을 다시 확인하세요.
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="shrink-0 text-[10px]">
+                            {recallReinforcementPath.status.label}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                          <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
+                            <span className="block text-[10px] text-muted-foreground">원본 노트</span>
+                            <span className="mt-0.5 block truncate font-medium text-foreground">
+                              {recallReinforcementPath.originalNote.title || '제목 없음'}
+                            </span>
+                          </div>
+                          <div className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+                            <span className="block text-[10px] text-muted-foreground">연결 노트</span>
+                            <span className="mt-0.5 block truncate font-medium text-foreground">
+                              {recallReinforcementPath.supportNote.title || '제목 없음'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          지난 회상: {recallReinforcementPath.review.grade === 'again' ? '다시' : '어려움'}
+                          {' · '}
+                          {recallReinforcementPath.previousIntervalDays === null
+                            ? '이전 기록 없음'
+                            : recallReinforcementPath.previousIntervalDays + '일'}
+                          {' → '}{recallReinforcementPath.currentIntervalDays}일
+                          {' · 복습 시점 '}{formatStudyUpdatedAt(recallReinforcementPath.review.completedAt)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">공유 개념</span>
+                          {recallReinforcementPath.sharedConcepts.map((concept) => (
+                            <Badge key={concept} variant="secondary" className="text-[10px]">
+                              {concept}
+                            </Badge>
+                          ))}
+                        </div>
+                        <ol className="mt-3 grid gap-2 text-xs sm:grid-cols-2" aria-label="회상 보강 단계 미리보기">
+                          <li className="flex min-w-0 items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">1</span>
+                            <span className="break-words">연결 노트 읽기</span>
+                          </li>
+                          <li className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-background/70 px-3 py-2 text-muted-foreground">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] font-semibold">2</span>
+                            <span className="break-words">원래 질문 전체 재도전</span>
+                          </li>
+                        </ol>
+                        <Button asChild size="sm" className="mt-3 h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+                          <Link href={buildNoteRecallSupportHref(
+                            recallReinforcementPath.originalNote.id,
+                            recallReinforcementPath.supportNote.id
+                          ) ?? '/notes'}>
+                            보강 학습 시작
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                   {recentReviewHistory.length > 0 && (
                     <Card className="border-orange-500/20 bg-background/90 py-4">
                       <CardContent className="px-4">
@@ -1172,13 +1415,11 @@ function WikiMap({
                               <h2 className="text-sm font-semibold text-foreground">예정 복습</h2>
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {dueReviewCount > 0
-                                ? `오늘 확인할 노트 ${dueReviewCount}개가 있습니다.`
-                                : '예약한 복습일이 가까운 순서대로 표시됩니다.'}
+                              예약한 복습일이 가까운 순서대로 표시됩니다.
                             </p>
                           </div>
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${dueReviewCount > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'}`}>
-                            {dueReviewCount > 0 ? `오늘 ${dueReviewCount}개` : `${scheduledReviewItems.length}개 예약`}
+                          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                            {scheduledReviewItems.length}개 예약
                           </span>
                         </div>
                         <ul className="mt-3 space-y-2">
@@ -1521,14 +1762,16 @@ function WikiMap({
   );
 }
 
-function NotesList({
+export function NotesList({
   notes,
   studyProgressByNote,
   emptyText,
+  onFacetSelect,
 }: {
   notes: NoteListItem[];
   studyProgressByNote: Record<string, NoteStudyProgress>;
   emptyText?: string;
+  onFacetSelect: (facet: NoteFacet) => void;
 }) {
   if (notes.length === 0) {
     return (
@@ -1546,16 +1789,21 @@ function NotesList({
       {notes.map((note) => {
         const studyStatus = getNoteStudyStatus(note, studyProgressByNote[note.id]);
         const studyStatusLabel = getNoteStudyStatusLabel(studyStatus);
+        const sourceLabel = getNoteSourceLabel(note.source?.type);
         return (
           <li key={note.id}>
-            <Link href={`/notes/${encodeURIComponent(note.id)}`}>
-              <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
-                <CardContent className="px-4">
+            <Card className="relative h-full cursor-pointer py-4 transition-all hover:border-primary/40 hover:shadow-sm">
+              <Link
+                href={`/notes/${encodeURIComponent(note.id)}`}
+                className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`${note.title || '제목 없음'} 문서 열기`}
+              />
+              <CardContent className="pointer-events-none relative z-0 px-4">
                   <div className="flex items-start gap-2.5">
                     <SourceIcon type={note.source?.type ?? ''} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h2 className="truncate text-sm font-medium text-foreground">
+                        <h2 className="min-w-0 truncate text-sm font-medium text-foreground">
                           {note.title || '제목 없음'}
                         </h2>
                         <Badge variant={studyStatus === 'completed' ? 'default' : 'outline'} className="shrink-0 text-[10px]">
@@ -1566,10 +1814,36 @@ function NotesList({
                       <span className="text-xs text-muted-foreground/70">
                         {formatDate(note.created_at)}
                       </span>
-                      {note.tags.slice(0, 4).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-[10px]">
-                          {tag}
+                      <Link
+                        href={buildNoteFacetHref({ type: 'source', value: sourceLabel })}
+                        aria-label={`${sourceLabel} 출처로 계속 탐색`}
+                        className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={(event) => {
+                          if (!shouldHandleFacetLinkClick(event)) return;
+                          event.preventDefault();
+                          onFacetSelect({ type: 'source', value: sourceLabel });
+                        }}
+                      >
+                        <Badge variant="secondary" className="text-[10px] transition-colors hover:bg-primary/10">
+                          {sourceLabel}
                         </Badge>
+                      </Link>
+                      {note.tags.slice(0, 4).map((tag) => (
+                        <Link
+                          key={tag}
+                          href={buildNoteFacetHref({ type: 'tag', value: tag })}
+                          aria-label={`${tag} 태그로 계속 탐색`}
+                          className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onClick={(event) => {
+                            if (!shouldHandleFacetLinkClick(event)) return;
+                            event.preventDefault();
+                            onFacetSelect({ type: 'tag', value: tag });
+                          }}
+                        >
+                          <Badge variant="secondary" className="text-[10px] transition-colors hover:bg-primary/10">
+                            {tag}
+                          </Badge>
+                        </Link>
                       ))}
                     </div>
                     {note.summary && (
@@ -1580,10 +1854,22 @@ function NotesList({
                     {(note.key_concepts?.length ?? 0) > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {note.key_concepts?.slice(0, 5).map((concept) => (
-                          <Badge key={concept} variant="outline" className="text-[10px]">
-                            <Brain className="mr-1 h-3 w-3" />
-                            {concept}
-                          </Badge>
+                          <Link
+                            key={concept}
+                            href={buildNoteFacetHref({ type: 'concept', value: concept })}
+                            aria-label={`${concept} 개념으로 계속 탐색`}
+                            className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            onClick={(event) => {
+                              if (!shouldHandleFacetLinkClick(event)) return;
+                              event.preventDefault();
+                              onFacetSelect({ type: 'concept', value: concept });
+                            }}
+                          >
+                            <Badge variant="outline" className="text-[10px] transition-colors hover:bg-primary/10">
+                              <Brain className="mr-1 h-3 w-3" />
+                              {concept}
+                            </Badge>
+                          </Link>
                         ))}
                       </div>
                     )}
@@ -1605,15 +1891,36 @@ function NotesList({
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        </li>
+          </li>
         );
       })}
     </ul>
   );
 }
 
-function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
+export function shouldHandleFacetLinkClick(event: Pick<
+  React.MouseEvent<HTMLAnchorElement>,
+  'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey'
+>): boolean {
+  return event.button === 0
+    && !event.metaKey
+    && !event.ctrlKey
+    && !event.shiftKey
+    && !event.altKey;
+}
+
+export function SearchResultsList({
+  results,
+  notes,
+  onFacetSelect,
+}: {
+  results: NoteSearchResult[];
+  notes: NoteListItem[];
+  onFacetSelect: (facet: NoteFacet) => void;
+}) {
+  const presentations = getNoteSearchResultPresentations(results, notes);
+  const actionLinkClass = 'inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
   if (results.length === 0) {
     return (
       <div className="text-center py-16">
@@ -1625,33 +1932,123 @@ function SearchResultsList({ results }: { results: NoteSearchResult[] }) {
 
   return (
     <ul className="space-y-3">
-      {results.map((result) => (
-        <li key={result.id}>
-          <Link href={`/notes/${encodeURIComponent(result.id)}`}>
-            <Card className="hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
+      {presentations.map(({
+        result,
+        hasNoteMetadata,
+        keyConcepts,
+        quoteCount,
+        learningPointCount,
+        reviewQuestionCount,
+        studyCount,
+        links,
+      }) => {
+        const title = result.title || '제목 없음';
+        const snippetFragments = getNoteSearchSnippetFragments(result.snippet, result.highlight_ranges);
+
+        return (
+          <li key={result.id}>
+            <Card className="hover:border-primary/40 hover:shadow-sm transition-all py-4">
               <CardContent className="px-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-sm font-medium text-foreground truncate">
-                    {result.title || '제목 없음'}
+                  <h2 className="min-w-0 truncate text-sm font-medium text-foreground">
+                    <Link
+                      href={links.document}
+                      aria-label={title + ' 문서 열기'}
+                      className="rounded-sm hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {title}
+                    </Link>
                   </h2>
                   <Badge variant="outline" className="text-[10px] shrink-0">
                     유사도 {Math.round(result.score * 100)}%
                   </Badge>
                 </div>
                 {result.snippet && (
-                  <p className="text-xs text-muted-foreground/80 mt-1.5 line-clamp-2">
-                    {result.snippet}
-                  </p>
+                  <div role="group" aria-label={`${result.title} 검색 근거`}>
+                    <p className="text-xs text-muted-foreground/80 mt-1.5 line-clamp-2">
+                      {snippetFragments.map((fragment, index) => fragment.highlighted ? (
+                        <mark
+                          key={index}
+                          className="rounded-sm bg-primary/15 px-0.5 text-foreground"
+                        >
+                          {fragment.text}
+                        </mark>
+                      ) : (
+                        <span key={index}>{fragment.text}</span>
+                      ))}
+                    </p>
+                  </div>
                 )}
-                <p className="mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Tags className="h-3 w-3" />
-                  이 노트를 열어 관련 개념과 근거를 이어서 확인하세요.
-                </p>
+                {keyConcepts.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="핵심 개념">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Tags className="h-3 w-3" />
+                      핵심 개념
+                    </span>
+                    {keyConcepts.map((concept) => (
+                      <Link
+                        key={concept}
+                        href={buildNoteFacetHref({ type: 'concept', value: concept })}
+                        aria-label={concept + ' 개념으로 탐색'}
+                        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={(event) => {
+                          if (!shouldHandleFacetLinkClick(event)) return;
+                          event.preventDefault();
+                          onFacetSelect({ type: 'concept', value: concept });
+                        }}
+                      >
+                        <Badge variant="secondary" className="text-[10px] font-normal hover:bg-primary/15">
+                          {concept}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {hasNoteMetadata && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Quote className="h-3 w-3" />
+                      인용 {quoteCount}
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1"
+                      aria-label={'학습과 복습 ' + studyCount + '개: 학습 포인트 ' + learningPointCount + '개, 복습 질문 ' + reviewQuestionCount + '개'}
+                    >
+                      <Brain className="h-3 w-3" />
+                      학습·복습 {studyCount}
+                      <span className="text-muted-foreground/70">
+                        (포인트 {learningPointCount} · 질문 {reviewQuestionCount})
+                      </span>
+                    </span>
+                  </div>
+                )}
+                <nav className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" aria-label={title + ' 바로가기'}>
+                  <Link href={links.document} aria-label={title + ' 문서 열기'} className={actionLinkClass}>
+                    <FileText className="h-3.5 w-3.5" />
+                    문서 열기
+                  </Link>
+                  {links.quotes && (
+                    <Link href={links.quotes} aria-label={title + ' 근거 보기'} className={actionLinkClass}>
+                      <Quote className="h-3.5 w-3.5" />
+                      근거 보기
+                    </Link>
+                  )}
+                  {links.studyProgress && (
+                    <Link href={links.studyProgress} aria-label={title + ' 복습 시작'} className={actionLinkClass}>
+                      <Brain className="h-3.5 w-3.5" />
+                      복습 시작
+                    </Link>
+                  )}
+                  <Link href={links.chat} aria-label={title + ' 근거 Q&A'} className={actionLinkClass}>
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    근거 Q&amp;A
+                  </Link>
+                </nav>
               </CardContent>
             </Card>
-          </Link>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }

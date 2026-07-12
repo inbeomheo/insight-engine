@@ -5,7 +5,7 @@
 import io
 import json
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app import create_app
 
@@ -155,57 +155,6 @@ class TestProviderRoutes(_BaseTestCase):
         self.assertIn('styles', data)
         self.assertIn('hasAutoFallback', data)
 
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_validate_provider_missing_id(self, _):
-        resp = self.client.post('/api/providers/validate',
-                                json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-        self.assertFalse(resp.get_json()['valid'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_validate_provider_unsupported(self, _):
-        resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'nonexistent_provider_xyz'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_validate_provider_ollama_removed(self, _):
-        resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'ollama',
-                                      'api_key': 'http://localhost:11434'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 400)
-        data = resp.get_json()
-        self.assertFalse(data['valid'])
-        self.assertIn('지원하지 않는 프로바이더', data['error'])
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('litellm.completion')
-    def test_validate_provider_no_api_key(self, mock_completion, _):
-        """ChatMock은 api_key 누락 시 dummy key로 검증한다."""
-        mock_completion.return_value = MagicMock()
-        resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'chatmock'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.get_json()['valid'])
-        kwargs = mock_completion.call_args.kwargs
-        self.assertEqual(kwargs['api_key'], 'dummy')
-        self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('litellm.completion', side_effect=Exception('connection refused'))
-    def test_validate_provider_chatmock_connection_hint(self, _, __):
-        resp = self.client.post('/api/providers/validate',
-                                json={'provider_id': 'chatmock'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertFalse(data['valid'])
-        self.assertIn('chatmock login', data['error'])
-        self.assertIn('chatmock serve', data['error'])
-
 # ── 캐시 관련 ──────────────────────────────────────
 
 
@@ -307,28 +256,6 @@ class TestPlaylistRoutes(_BaseTestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertEqual(data['total'], 1)
-
-
-# ── 소스 추천 ──────────────────────────────────────
-
-
-class TestRecommendSources(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_recommend_sources_missing_topic(self, _):
-        resp = self.client.post('/api/recommend-sources', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.content.source_recommender_service.recommend_sources')
-    def test_recommend_sources_success(self, mock_rec, _):
-        mock_rec.return_value = [{'url': 'https://example.com', 'relevance': 0.9}]
-        resp = self.client.post('/api/recommend-sources',
-                                json={'topic': 'AI 기술'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(len(data['sources']), 1)
 
 
 # ── 피드백 ──────────────────────────────────────

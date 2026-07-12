@@ -6,7 +6,7 @@
 
 ## 진행중
 
-(없음)
+
 
 ## 백로그
 
@@ -35,6 +35,8 @@
   22차: 템플릿/설정/온보딩/파이프라인의 레거시 15개 스타일 노출을 4개 학습 스타일 기준으로 정리.
   23차: 결과 카드/번역/E2E 기대값의 내보내기 노출을 HTML/Markdown 전용으로 정리.
   24차: 생성/스트리밍/에이전트/영상 Q&A 호출부의 Gemini/Zhipu/OpenRouter 전용 분기를 제거하고 ChatMock(OpenAI 호환) 단일 모델 경로로 단순화.
+  25차: 온보딩·설정의 프로바이더 선택을 제거하고 ChatMock 고정 서비스 안내·모델 선택·모델 없음 차단을 한영일 UI로 제공.
+  26차: `selectedProvider` 상태·setter·localStorage 키를 제거하고 첫 ChatMock 모델 동기화와 팝오버 fallback으로 단일 모델 경로를 완성.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -56,7 +58,13 @@
   16차: 프론트 소비 0인 `/api/generate-thumbnail`, `/api/agent/research`와 전용 이미지 생성·웹 리서치 에이전트 서비스/테스트 제거 완료.
   17차: 프론트 소비 0인 `/api/memory`, `/api/auto-tags`, `/api/progressive-summary` 라우트와 전용 자동태깅·단계요약 서비스/테스트 제거 완료.
   18차: 프론트 소비 0인 `/api/generate-multi`, `/api/pipeline`, `/api/inline-edit`와 파이프라인 서비스·고아 UI·전용 테스트 제거 완료.
+  19차: 프론트 소비 0인 `/api/recommend-sources`와 전용 소스 추천 서비스·API 래퍼·타입·테스트·오래된 계획 문구 제거 완료.
+  20차: 프론트 소비 0인 `/api/user/snippets*`와 전용 facade·Supabase CRUD 헬퍼·테스트·재도입 계획을 제거하고 legacy DB migration은 보존.
+  21차: 프론트 소비 0인 `POST /api/providers/validate`와 전용 오류 헬퍼·프론트 래퍼·타입·테스트를 제거하고 활성 `GET /api/providers`는 보존.
+  22차: Next.js DOM에 없는 provider-list/provider-model E2E와 전용 계획, 빈 content-generation Playwright 프로젝트·스크립트·문서 참조를 제거.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
+- [ ] [사람][정리] 레거시 `tests/e2e/settings-modals/modals.spec.ts`와 `specs/03-settings-modals.plan.md` 삭제 승인 필요.
+  현재 Next.js DOM에 없는 `#onboarding-modal`, `#settings-modal`, `#provider-list`, `#custom-style-modal`만 검증하는 전체 고아 E2E이며 정책상 정확한 파일 삭제 확인 전 제거 금지.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
   2026-07-09 1차: 학습 포인트/복습 질문 스키마, 검색 색인 보강, 중복 경고 next_action 추가 완료.
@@ -77,6 +85,20 @@
   16차: 복습 일정 예약 시 노트별 하루 1회 완료 기록을 저장하고, `/notes` 학습 큐에 최근 7일 완료·활동일·연속 학습과 최근 기록을 표시.
   17차: `/notes` 복습 기록 카드에 최근 7일 완료 횟수를 요일별 막대 차트로 시각화.
   18차: `/notes` 복습 기록 카드의 주간 통계·일별 활동·최근 노트 링크를 Markdown으로 복사.
+  19차: 복습 완료 회상도를 `다시/어려움/보통/쉬움`으로 평가해 이전 간격 기반 다음 복습일을 자동 조정.
+  20차: 회상 보강 URL 재도전에서 저장 진행과 분리된 일회성 질문 완료 상태·평가 잠금·결과별 후속 경로를 추가.
+  21차: 다시/어려움 회상 보강을 학습 큐 최상단으로 승격하고 동일 원본의 일반 예정 복습 중복을 제거.
+  22차: 검색 결과에 기존 노트의 핵심 개념·인용·학습 메타와 문서/근거/복습/Q&A 바로가기를 결합.
+  23차: 검색 결과 스니펫을 검색 구문 또는 핵심 토큰이 실제 등장하는 주변 문맥으로 전환.
+  24차: 검색 결과에 서버가 계산한 실제 일치 범위를 강조하고 지연 검색 응답의 화면 복원을 차단.
+  25차: 검색 결과 핵심 개념을 같은 화면의 개념 필터로 연결해 검색에서 위키 탐색으로 즉시 전환.
+  26차: 검색 결과에서 개념 필터로 이동해도 원래 검색어·결과·강조를 메모리에 보존하고 한 번에 복귀.
+  27차: 검색 제출부터 개념 피벗·검색 복귀까지 전체 상태 전환을 통합 테스트로 고정.
+  28차: 개념 피벗 복귀 액션에 원래 검색어·결과 수를 표시하고 검색 근거·필터 액션의 접근성 이름을 강화.
+  29차: 일반 노트 카드의 핵심 개념을 연속 피벗 링크로 전환하고 다단계 탐색 뒤에도 원래 검색 복귀 세션을 유지.
+  30차: 노트 카드 태그·출처를 독립 피벗 링크로 확장하고 검색→개념→태그→출처 뒤에도 검색 복귀를 유지.
+  31차: 다축 facet 탐색 기록을 메모리에 쌓고 활성 필터 바에서 이전 탐색 단계로 한 번씩 복귀.
+  32차: 전체 facet 탐색 경로를 표시하고 원하는 개념·태그·출처 단계로 바로 점프.
   완료 기준: 노트 생성/검색 테스트 추가 + 전체 pytest 0 fail + tsc 통과.
 - [ ] [제품] LLMWiki형 지식위키 화면 강화 — `/notes`와 `/notes/[id]`를 위키 홈/문서 상세처럼 정리.
   관련 노트, 인용/출처, 근거 기반 채팅 진입을 더 선명하게 노출.
@@ -107,9 +129,129 @@
   25차: Q&A 복습 카드에 원본 노트 링크를 저장하고 `/notes` 홈 카드함에서 바로 이동할 수 있게 개선.
   26차: `/notes` 홈 Q&A 복습 카드함 전체를 Markdown으로 복사하는 빠른 액션 추가.
   27차: `/notes` 홈에 한 문서에만 등장하는 개념을 최근순으로 보여주는 `지식 공백` 카드와 개념 필터·원본 노트 이동을 추가.
+  28차: `다시/어려움` 회상 노트를 공유 개념의 연결 노트와 묶어 `보강 학습 → 원래 질문 재도전` 경로를 위키 인덱스에 추가.
+  29차: 회상 보강 추천을 URL 기반 `1/2 연결 노트 읽기 → 2/2 원래 질문 재도전` 단계 흐름으로 이어가기.
+  30차: 원래 질문 재도전을 0/N 임시 진행·회상도 재평가·연결 노트/목록 후속 경로가 있는 완결 세션으로 강화.
+  31차: 회상 보강 추천을 학습 큐의 우선 항목으로 통합해 접힌 탐색 패널과 무관하게 보강→재도전 경로를 노출.
+  32차: 검색 결과를 문서 전체 링크에서 근거·복습·Q&A 섹션으로 직접 진입하는 위키 탐색 카드로 강화.
+  33차: 검색어가 등장하는 실제 문맥과 양쪽 생략 표시를 제공해 결과 근거를 바로 판별하도록 강화.
+  34차: Python 검색 판정과 동일한 Unicode 일치 범위를 결과 카드에 강조해 지식 근거 판별 속도를 개선.
+  35차: 검색 결과의 핵심 개념 배지를 인코딩된 위키 개념 피벗 링크로 전환.
+  36차: 개념 피벗 필터 바에 원래 검색 결과 복귀 경로와 결과 수를 추가.
+  37차: 검색 복귀 시 검색어·스니펫·강조·정리된 URL이 함께 복원되는 계약을 통합 검증.
+  38차: 활성 개념 필터에서 돌아갈 검색어를 직접 확인하고 보조기기에서도 검색 근거·필터 해제를 구분하도록 강화.
+  39차: 노트 카드 전체 문서 이동과 개념 링크를 분리해 개념→개념 위키 탐색을 중첩 링크 없이 지원.
+  40차: 노트 카드 메타를 개념·태그·출처 3축 위키 탐색 링크로 확장.
+  41차: 개념·태그·출처 탐색을 단계별로 되돌릴 수 있는 위키 탐색 경로 추가.
+  42차: 탐색 경로 breadcrumb에서 임의 이전 단계로 복귀하고 현재 facet을 명확히 표시.
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
+
+- [x] 2026-07-12 cleanup(e2e): 레거시 다중 프로바이더 E2E 체인 제거 (로컬 커밋, 푸시 보류).
+  현재 Next.js DOM에 없는 `#provider`/`#model` 기반 provider-list/provider-model spec과 전용 계획을 제거.
+  빈 content-generation Playwright 프로젝트·npm 스크립트·README·AGENTS 그룹 참조를 함께 정리하고 활성 30파일 150테스트 목록을 확인.
+  검증: 전용 selector·프로젝트 참조 grep 0, Playwright `--list` 150 tests, frontend 174 passed, tsc 통과. 독립 리뷰어 재스폰 금지 규칙에 따라 메인 diff 리뷰 이슈 0.
+- [x] 2026-07-12 refactor(settings): selectedProvider 잔여 상태 제거 (PR #125).
+  Zustand 상태·setter·hydrate, localStorage 키·헬퍼, UI 3곳과 미사용 한영일 번역 키에서 프로바이더 선택 개념을 제거.
+  `useProviders`는 첫 ChatMock 모델만 검증·복구하고 설정 모달·팝오버·온보딩은 모델 없음과 오래된 모델 값을 일관되게 처리.
+  검증: 대상 11 passed, frontend 174 passed, 제거 심볼·스토리지·번역 키 grep 0, ESLint·tsc·build 통과. 독립 리뷰어 무응답 6분 종료 후 메인 diff 리뷰 이슈 0.
+- [x] 2026-07-12 feat(settings): 단일 ChatMock 서비스 UI 단순화 (PR #125).
+  온보딩과 설정 모달의 중복 프로바이더 선택을 읽기 전용 ChatMock 서비스 안내로 교체하고 모델 선택만 유지.
+  서비스·모델 없음 상태에서는 시작/빈 선택기를 차단하고 오래된 provider/model 저장값은 첫 ChatMock 모델로 복구하며 한영일 번역을 추가.
+  검증: 대상 7 passed, frontend 170 passed, ESLint·tsc·build 통과, React 품질 점검 완료, 독립 리뷰 BLOCKER 0 / IMPORTANT 4 모두 보완 / NIT 0.
+- [x] 2026-07-12 cleanup(api): 미사용 프로바이더 검증 체인 제거 (PR #125).
+  프론트 소비 0인 `POST /api/providers/validate`와 ChatMock 검증 오류 헬퍼, 프론트 래퍼·응답 타입, 전용·통합 테스트 10건을 제거.
+  활성 `GET /api/providers`, `fetchProviders`, `ProvidersResponse`, ChatMock 모델 목록은 유지하고 제거 심볼 grep 0을 확인.
+  검증: backend 3,865 passed / 1 skipped / 11 subtests, frontend 163 passed, ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+- [x] 2026-07-12 feat(notes): 전체 위키 탐색 경로와 임의 단계 복귀 추가 (PR #125).
+  개념·태그·출처 facet 스택 전체와 현재 단계를 활성 필터 바에 표시하고 원하는 이전 단계로 바로 점프.
+  동일 이름 단계는 순번이 포함된 접근성 이름으로 구분하고 모바일 터치 영역·긴 라벨 줄임표·중간 스택 절단·검색 복귀 보존을 테스트로 고정.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 9 passed, frontend 163 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER 0 / IMPORTANT 1 / NIT 1 모두 보완.
+- [x] 2026-07-12 feat(notes): 다축 위키 탐색 이전 단계 복귀 추가 (PR #125).
+  검색→개념→태그→출처 facet 이동을 메모리 스택에 기록하고 활성 필터 바에서 바로 이전 탐색 축으로 한 단계씩 복귀.
+  동일 facet 중복은 기록하지 않고 새 검색·필터 해제·학습 상태·브라우저 popstate에서는 기록을 초기화하며 원래 검색 복귀는 별도로 유지.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 9 passed, frontend 163 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 노트 카드 태그·출처 피벗 추가 (PR #125).
+  노트 카드의 태그와 표시용 출처를 기존 개념 링크와 같은 인코딩된 독립 facet 링크로 확장.
+  검색→개념→태그→출처처럼 탐색 축을 바꿔도 원래 검색어·결과·강조 복귀 세션을 유지하고 URL·콜백·중첩 링크를 통합 테스트로 고정.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 9 passed, frontend 163 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 노트 카드 연속 개념 피벗 추가 (PR #125).
+  일반 노트 카드 전체 클릭으로 문서를 여는 기존 동작을 보존하면서 핵심 개념을 인코딩된 독립 링크로 전환.
+  검색→개념→관련 개념처럼 여러 번 피벗해도 원래 검색어·결과·강조 복귀 세션을 유지하고 일반 클릭·수정키 클릭·중첩 링크 방지를 테스트로 고정.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 9 passed, frontend 163 passed, 전체 ESLint·tsc·build 통과, 최종 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 검색어가 보이는 접근 가능한 복귀 액션 추가 (PR #125).
+  개념 피벗 필터 바에 원래 검색어·결과 수를 직접 표시하고 긴 검색어는 모바일 폭에서 줄임표 처리.
+  검색 근거는 본문을 보존한 의미 그룹으로, 복귀·필터 해제는 문맥이 포함된 접근성 이름으로 고정하고 정규식 기반 테스트로 문구 결합도를 낮춤.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 8 passed, frontend 162 passed, 전체 ESLint·tsc·build 통과, 재리뷰 BLOCKER/IMPORTANT 0·NIT 1(초소형 화면 고정 폭 후속 가능).
+
+- [x] 2026-07-12 test(notes): 검색 복귀 전체 상태 전환 통합 검증 추가 (PR #125).
+  실제 NotesPage에서 검색어 입력·검색 제출·개념 피벗·검색 결과 복귀를 순서대로 실행해 검색어·스니펫·서버 강조·정리된 URL 복원을 고정.
+  API·라우터·로컬 저장소를 테스트별로 격리해 지난 독립 리뷰의 통합 상태 전환 누락 NIT를 해소.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 8 passed, frontend 162 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0·NIT 1(이번 후속 사이클에서 해소).
+
+- [x] 2026-07-12 feat(notes): 검색→개념→검색 복귀 경로 추가 (PR #125).
+  검색 결과의 개념 피벗에서 원래 검색어·결과·강조 범위를 메모리에 보존하고 활성 필터 바에서 검색 결과로 즉시 복귀.
+  새 검색·필터 해제·학습 상태 전환은 오래된 복귀 세션을 정리하고 요청 ID 경합 방어를 유지.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 7 passed, frontend 161 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0·NIT 1(이번 후속 사이클에서 해소).
+
+- [x] 2026-07-12 chore(dead-code): 사용자 스니펫 API 잔여 체인 제거 (PR #125).
+  프론트 소비가 없는 사용자 스니펫 CRUD 라우트·facade·Supabase 헬퍼·전용 테스트와 재도입 계획을 제거.
+  기존 ie_snippets migration·테이블·정책은 데이터 보존을 위해 유지하고 스타일 메모리·워크스페이스 활동 라우트는 그대로 보존.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 68 passed, frontend 159 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 검색 결과 개념 피벗 링크 추가 (PR #125).
+  검색 결과의 핵심 개념 배지를 인코딩된 위키 필터 링크로 바꾸고, 일반 활성화는 기존 facet 상태·URL을 즉시 동기화.
+  modifier·middle click은 브라우저 기본 동작을 유지하고 한국어 접근성 레이블·중첩 링크 방지·기존 근거/복습/Q&A 링크를 테스트로 고정.
+  검증: backend 3,884 passed / 1 skipped / 11 subtests, frontend 159 passed, 대상 5 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 서버 권위 검색 일치어 강조 추가 (PR #125).
+  검색 서비스가 스니펫 기준 Unicode code-point 일치 범위를 반환하고, 프론트는 이를 UTF-16 경계로 안전 변환해 실제 근거만 mark로 강조.
+  긴 검색어·말줄임표·Unicode 대소문자·잘못된 범위·원문 재결합을 고정하고 request ID 게이트로 clear/필터 전환 뒤 지연 응답 복원을 차단.
+  검증: backend 3,884 passed / 1 skipped / 11 subtests, frontend 158 passed, 대상 42 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0 (NIT: NotesPage 지연 Promise 통합 테스트 후속 가능).
+
+- [x] 2026-07-12 chore(dead-code): 소스 추천 잔여 체인 제거 (PR #125).
+  프론트 소비자가 사라진 POST /api/recommend-sources와 전용 서비스·API 래퍼·타입·테스트를 제거하고 TASKS/감사 문서의 오래된 활성 기능 표기도 정리.
+  webhook·재생목록·RSS 라우트와 외부 검색 의존성·DB는 유지했으며 관련 프로덕션 심볼과 경로 소비는 0건.
+  검증: backend 3,880 passed / 1 skipped / 11 subtests, frontend 152 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 검색어 문맥 근거 스니펫 추가 (PR #125).
+  검색 결과의 선두 고정 스니펫을 전체 구문 우선·긴 토큰 폴백의 실제 일치 문맥으로 전환하고, 관련 노트 경로는 기존 선두 180자 계약을 유지.
+  공백·대소문자·유니코드 중복·178~180자 긴 검색어·양쪽 경계·미일치 폴백을 테스트로 고정하고 API 응답 필드를 보존.
+  검증: backend 3,890 passed / 1 skipped / 11 subtests, 대상 24 passed, 관련 64 passed, 독립 리뷰 BLOCKER/IMPORTANT 0.
+
+- [x] 2026-07-12 feat(notes): 검색 결과의 근거·복습 탐색 강화 (PR #125).
+  검색 결과를 기존 노트 메타와 안전하게 결합해 핵심 개념·인용·학습·복습 수를 복원하고 문서/근거/복습/Q&A 섹션 딥링크를 제공.
+  카드 전체 링크를 제거해 중첩 링크를 막고, ID 인코딩·비정상 카운트·미매칭 폴백·조건부 CTA를 순수 helper와 DOM 접근성 테스트로 고정.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 152 passed, 대상 36 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
+
+- [x] 2026-07-12 feat(notes): 회상 보강을 학습 큐 우선 항목으로 승격 (PR #125).
+  다시/어려움 평가의 보강 추천을 학습 큐 최상단으로 이동하고, 동일 원본 노트를 일반 예약 목록에서 제외해 보강 경로 우회와 중복 노출을 제거.
+  원본·연결 노트·공유 개념·도래 상태를 한 카드에 표시하고 큐 전체/오늘 개수를 한 번만 집계. good/easy·불일치·연결 노트 없음은 기존 일정으로 폴백.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 146 passed, 대상 53 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0.
+
+- [x] 2026-07-12 feat(notes): 일회성 회상 재도전 세션 추가 (PR #125).
+  URL 재도전에서 기존 학습 저장과 분리된 0/N 질문 완료 상태를 사용하고, 전부 완료하기 전까지 회상도 평가를 UI와 저장 함수 양쪽에서 잠금.
+  활성 복습 간격을 새 세션 기준으로 고정해 일정·이력에 기록하고, 평가 결과에 따라 연결 노트 재방문 또는 지식위키 목록 복귀를 안내. 0질문·목차 앵커·접근성 경계도 보강.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 141 passed, 대상 14 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0.
+
+- [x] 2026-07-12 feat(notes): 회상 보강 2단계 이어가기 추가.
+  위키 인덱스의 보강 추천을 안전한 내부 URL로 `1/2 연결 노트 읽기 → 2/2 원래 질문 전체 재도전`까지 연결하고 새로고침·검색 파라미터 변경에도 단계를 복원.
+  위험 경로·중복/미등록 파라미터를 차단하고 재도전 시 완료 질문 전체 노출·답 가림·렌더 후 스크롤을 저장 상태 변경 없이 처리.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 133 passed, 대상 72 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0.
+
+- [x] 2026-07-12 feat(notes): 회상 보강 경로 추가.
+  최신 `다시/어려움` 평가와 현재 일정을 정확히 결합해 공유 개념이 가장 많은 연결 노트로 보강한 뒤 원래 복습 질문에 재도전하는 경로를 위키 인덱스에 표시.
+  일정 생성 시각 메타로 오래된 동일 간격 일정의 오탐을 차단하고, 1분 회상 시계로 예정/도래 상태를 자동 갱신.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 103 passed, 대상 42 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0.
+
+- [x] 2026-07-11 feat(learning): 회상도 기반 자동 간격 반복 추가.
+  복습 완료 후 `다시/어려움/보통/쉬움` 평가에 따라 최초 1/2/3/7일, 이후 최대 365일까지 다음 간격을 자동 조정.
+  활성 일정 재선택·새 세션 승격·과거 저장 기록 호환을 보존하고 회상도 버튼 접근성을 강화.
+  검증: backend 3,873 passed / 1 skipped / 11 subtests, frontend 98 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT 0.
 
 - [x] 2026-07-11 feat(learning): 주간 복습 기록 Markdown 복사 추가.
   최근 7일 통계·요일별 활동·최근 복습 노트 링크를 Markdown으로 생성하고 기록 카드에서 바로 복사.

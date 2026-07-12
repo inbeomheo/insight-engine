@@ -1,9 +1,14 @@
+import type { NoteReviewGrade, NoteReviewSchedule } from './note-review-schedule';
+
 export interface NoteReviewHistoryEntry {
   id: string;
   noteId: string;
   noteTitle: string;
   completedAt: string;
   intervalDays: number;
+  grade?: NoteReviewGrade;
+  baseIntervalDays?: number | null;
+  scheduleScheduledAt?: string;
 }
 
 export interface NoteReviewHistorySummary {
@@ -16,6 +21,9 @@ export interface RecordNoteReviewInput {
   noteId: string;
   noteTitle: string;
   intervalDays: number;
+  grade?: NoteReviewGrade;
+  baseIntervalDays?: number | null;
+  scheduleScheduledAt?: string;
 }
 
 type ReviewHistoryStorage = Pick<Storage, 'getItem' | 'setItem'>;
@@ -36,6 +44,20 @@ function localDateKey(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function normalizeIsoTimestamp(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !ISO_TIMESTAMP_PATTERN.test(value)) return undefined;
+  return Number.isNaN(Date.parse(value)) ? undefined : value;
+}
+
+function normalizeGrade(value: unknown): NoteReviewGrade | undefined {
+  if (value === 'again' || value === 'hard' || value === 'good' || value === 'easy') {
+    return value;
+  }
+  return undefined;
+}
+
 function normalizeEntry(value: unknown): NoteReviewHistoryEntry | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as Partial<NoteReviewHistoryEntry>;
@@ -46,6 +68,14 @@ function normalizeEntry(value: unknown): NoteReviewHistoryEntry | null {
   if (!noteId || Number.isNaN(Date.parse(completedAt)) || intervalDays < 1 || intervalDays > 365) {
     return null;
   }
+  const grade = normalizeGrade(record.grade);
+  const scheduleScheduledAt = normalizeIsoTimestamp(record.scheduleScheduledAt);
+  const hasNullBaseInterval = record.baseIntervalDays === null;
+  const baseIntervalDays = Number.isInteger(record.baseIntervalDays)
+    && Number(record.baseIntervalDays) >= 1
+    && Number(record.baseIntervalDays) <= 365
+    ? Number(record.baseIntervalDays)
+    : null;
   const completedDate = new Date(completedAt);
   return {
     id: `${noteId}:${localDateKey(completedDate)}`,
@@ -53,6 +83,11 @@ function normalizeEntry(value: unknown): NoteReviewHistoryEntry | null {
     noteTitle: noteTitle || '제목 없음',
     completedAt,
     intervalDays,
+    ...(grade ? { grade } : {}),
+    ...(scheduleScheduledAt ? { scheduleScheduledAt } : {}),
+    ...(hasNullBaseInterval || baseIntervalDays
+      ? { baseIntervalDays }
+      : {}),
   };
 }
 
@@ -70,6 +105,67 @@ export function normalizeNoteReviewHistory(value: unknown): NoteReviewHistoryEnt
   return Array.from(byId.values())
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
     .slice(0, MAX_HISTORY_ENTRIES);
+}
+
+function findLatestNoteReviewEntry(
+  entries: unknown,
+  noteId: string
+): NoteReviewHistoryEntry | null {
+  const normalizedNoteId = noteId.trim();
+  if (!normalizedNoteId || !Array.isArray(entries)) return null;
+
+  let latest: NoteReviewHistoryEntry | null = null;
+  for (const raw of entries) {
+    const entry = normalizeEntry(raw);
+    if (entry?.noteId !== normalizedNoteId) continue;
+    if (!latest || Date.parse(entry.completedAt) > Date.parse(latest.completedAt)) {
+      latest = entry;
+    }
+  }
+  return latest;
+}
+
+export function getLatestNoteReviewIntervalDays(
+  entries: unknown,
+  noteId: string
+): number | null {
+  return findLatestNoteReviewEntry(entries, noteId)?.intervalDays ?? null;
+}
+
+export interface NoteReviewSelectionState {
+  previousIntervalDays: number | null;
+  selectedGrade: NoteReviewGrade | null;
+}
+
+export function getNoteReviewSelectionState(
+  entries: unknown,
+  noteId: string,
+  schedule: NoteReviewSchedule | null,
+  now = new Date()
+): NoteReviewSelectionState {
+  const latest = findLatestNoteReviewEntry(entries, noteId);
+  if (!latest) return { previousIntervalDays: null, selectedGrade: null };
+
+  const dueAt = schedule ? Date.parse(schedule.dueAt) : Number.NaN;
+  const scheduledAt = schedule ? Date.parse(schedule.scheduledAt) : Number.NaN;
+  const isCurrentFutureSelection = Boolean(
+    schedule
+    && !Number.isNaN(now.getTime())
+    && dueAt > now.getTime()
+    && schedule.intervalDays === latest.intervalDays
+    && Date.parse(latest.completedAt) >= scheduledAt
+  );
+  if (
+    isCurrentFutureSelection
+    && latest.grade
+    && Object.prototype.hasOwnProperty.call(latest, 'baseIntervalDays')
+  ) {
+    return {
+      previousIntervalDays: latest.baseIntervalDays ?? null,
+      selectedGrade: latest.grade,
+    };
+  }
+  return { previousIntervalDays: latest.intervalDays, selectedGrade: null };
 }
 
 export function readNoteReviewHistory(storage?: ReviewHistoryStorage): NoteReviewHistoryEntry[] {

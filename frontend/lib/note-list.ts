@@ -1,9 +1,10 @@
-import type { NoteListItem } from './api';
+import type { NoteListItem, NoteSearchResult } from './api';
 import {
   getNoteReviewScheduleStatus,
   type NoteReviewSchedule,
   type NoteReviewScheduleStatus,
 } from './note-review-schedule';
+import type { NoteReviewHistoryEntry } from './note-review-history';
 import {
   getNoteStudySummary,
   type NoteStudyCounts,
@@ -32,6 +33,163 @@ function normalize(value: string): string {
 function preferDisplayLabel(current: string, next: string): string {
   if (current === current.toLowerCase() && next !== next.toLowerCase()) return next;
   return current;
+}
+
+export interface NoteSearchResultPresentation {
+  result: NoteSearchResult;
+  hasNoteMetadata: boolean;
+  keyConcepts: string[];
+  quoteCount: number;
+  learningPointCount: number;
+  reviewQuestionCount: number;
+  studyCount: number;
+  links: {
+    document: string;
+    quotes?: string;
+    studyProgress?: string;
+    chat: string;
+  };
+}
+
+export interface NoteSearchSnippetFragment {
+  text: string;
+  highlighted: boolean;
+}
+
+export interface NoteSearchRequestIdRef {
+  current: number;
+}
+
+export function advanceNoteSearchRequestId(requestIdRef: NoteSearchRequestIdRef): number {
+  requestIdRef.current += 1;
+  return requestIdRef.current;
+}
+
+export function isCurrentNoteSearchRequest(
+  requestIdRef: NoteSearchRequestIdRef,
+  requestId: number
+): boolean {
+  return requestIdRef.current === requestId;
+}
+
+function getCodePointBoundaries(text: string): number[] {
+  const boundaries = [0];
+  let offset = 0;
+  for (const codePoint of text) {
+    offset += codePoint.length;
+    boundaries.push(offset);
+  }
+  return boundaries;
+}
+
+function normalizeHighlightRanges(
+  ranges: unknown,
+  codePointCount: number
+): Array<[number, number]> {
+  if (!Array.isArray(ranges)) return [];
+  const normalized = ranges.flatMap((range): Array<[number, number]> => {
+    if (!Array.isArray(range) || range.length < 2) return [];
+    const [rawStart, rawEnd] = range;
+    if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) return [];
+    const start = Math.max(0, Math.min(codePointCount, Math.floor(rawStart)));
+    const end = Math.max(0, Math.min(codePointCount, Math.floor(rawEnd)));
+    return start < end ? [[start, end]] : [];
+  }).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+
+  const accepted: Array<[number, number]> = [];
+  for (const range of normalized) {
+    const previous = accepted.at(-1);
+    if (previous && range[0] < previous[1]) continue;
+    accepted.push(range);
+  }
+  return accepted;
+}
+
+export function getNoteSearchSnippetFragments(
+  text: string,
+  ranges: unknown
+): NoteSearchSnippetFragment[] {
+  const fallback = [{ text, highlighted: false }];
+  if (typeof text !== 'string') return fallback;
+
+  const boundaries = getCodePointBoundaries(text);
+  const normalizedRanges = normalizeHighlightRanges(ranges, boundaries.length - 1);
+  if (normalizedRanges.length === 0) return fallback;
+
+  const fragments: NoteSearchSnippetFragment[] = [];
+  let cursor = 0;
+  for (const [start, end] of normalizedRanges) {
+    const utf16Start = boundaries[start];
+    const utf16End = boundaries[end];
+    if (utf16Start > cursor) {
+      fragments.push({ text: text.slice(cursor, utf16Start), highlighted: false });
+    }
+    fragments.push({ text: text.slice(utf16Start, utf16End), highlighted: true });
+    cursor = utf16End;
+  }
+  if (cursor < text.length) fragments.push({ text: text.slice(cursor), highlighted: false });
+
+  return fragments.length > 0 ? fragments : fallback;
+}
+
+function normalizeNoteCount(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value);
+}
+
+function getLimitedConcepts(note: NoteListItem | undefined, limit: number): string[] {
+  if (limit <= 0) return [];
+  const concepts = Array.isArray(note?.key_concepts) ? note.key_concepts : [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const rawConcept of concepts) {
+    if (typeof rawConcept !== 'string') continue;
+    const concept = rawConcept.trim();
+    const key = normalize(concept);
+    if (!concept || seen.has(key)) continue;
+    seen.add(key);
+    result.push(concept);
+    if (result.length >= limit) break;
+  }
+
+  return result;
+}
+
+export function getNoteSearchResultPresentations(
+  results: NoteSearchResult[],
+  notes: NoteListItem[],
+  conceptLimit = 3
+): NoteSearchResultPresentation[] {
+  const notesById = new Map(notes.map((note) => [note.id, note]));
+  const limit = Number.isFinite(conceptLimit)
+    ? Math.max(0, Math.floor(conceptLimit))
+    : 3;
+
+  return results.map((result) => {
+    const note = notesById.get(result.id);
+    const quoteCount = normalizeNoteCount(note?.quote_count);
+    const learningPointCount = normalizeNoteCount(note?.learning_point_count);
+    const reviewQuestionCount = normalizeNoteCount(note?.review_question_count);
+    const studyCount = learningPointCount + reviewQuestionCount;
+    const document = `/notes/${encodeURIComponent(result.id)}`;
+
+    return {
+      result,
+      hasNoteMetadata: note !== undefined,
+      keyConcepts: getLimitedConcepts(note, limit),
+      quoteCount,
+      learningPointCount,
+      reviewQuestionCount,
+      studyCount,
+      links: {
+        document,
+        ...(quoteCount > 0 ? { quotes: `${document}#quotes` } : {}),
+        ...(studyCount > 0 ? { studyProgress: `${document}#study-progress` } : {}),
+        chat: `${document}#chat`,
+      },
+    };
+  });
 }
 
 export function noteMatchesFacet(note: NoteListItem, facet: NoteFacet): boolean {
@@ -202,6 +360,110 @@ export interface NoteScheduledReviewItem {
   status: NoteReviewScheduleStatus;
 }
 
+export interface NoteRecallReinforcementPath {
+  originalNote: NoteListItem;
+  supportNote: NoteListItem;
+  review: NoteReviewHistoryEntry & { grade: 'again' | 'hard' };
+  schedule: NoteReviewSchedule;
+  status: NoteReviewScheduleStatus;
+  previousIntervalDays: number | null;
+  currentIntervalDays: number;
+  sharedConcepts: string[];
+}
+
+function getNormalizedConcepts(note: NoteListItem): Map<string, string> {
+  const concepts = new Map<string, string>();
+  for (const rawConcept of note.key_concepts ?? []) {
+    const concept = rawConcept.trim();
+    const key = normalize(concept);
+    if (!key) continue;
+    const current = concepts.get(key);
+    concepts.set(key, current ? preferDisplayLabel(current, concept) : concept);
+  }
+  return concepts;
+}
+
+export function getNoteRecallReinforcementPath(
+  notes: NoteListItem[],
+  schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
+  reviewHistory: NoteReviewHistoryEntry[],
+  now = new Date()
+): NoteRecallReinforcementPath | null {
+  const latestReviewByNote = new Map<string, NoteReviewHistoryEntry>();
+  for (const review of reviewHistory) {
+    const completedAt = Date.parse(review.completedAt);
+    if (Number.isNaN(completedAt)) continue;
+    const current = latestReviewByNote.get(review.noteId);
+    if (!current || completedAt > Date.parse(current.completedAt)) {
+      latestReviewByNote.set(review.noteId, review);
+    }
+  }
+
+  const conceptsByNote = new Map(notes.map((note) => [note.id, getNormalizedConcepts(note)]));
+
+  return notes
+    .flatMap((originalNote) => {
+      if ((originalNote.review_question_count ?? 0) <= 0) return [];
+
+      const review = latestReviewByNote.get(originalNote.id);
+      const schedule = schedulesByNote[originalNote.id];
+      if (!review || !schedule || (review.grade !== 'again' && review.grade !== 'hard')) return [];
+
+      const status = getNoteReviewScheduleStatus(schedule, now);
+      const completedAt = Date.parse(review.completedAt);
+      const scheduledAt = Date.parse(schedule.scheduledAt);
+      if (
+        status.state === 'invalid'
+        || schedule.intervalDays !== review.intervalDays
+        || review.scheduleScheduledAt !== schedule.scheduledAt
+        || Number.isNaN(completedAt)
+        || Number.isNaN(scheduledAt)
+        || completedAt < scheduledAt
+      ) return [];
+
+      const originalConcepts = conceptsByNote.get(originalNote.id) ?? new Map<string, string>();
+      const support = notes
+        .filter((note) => note.id !== originalNote.id)
+        .map((supportNote) => ({
+          supportNote,
+          sharedConcepts: Array.from(originalConcepts.entries())
+            .filter(([key]) => conceptsByNote.get(supportNote.id)?.has(key))
+            .map(([, concept]) => concept),
+        }))
+        .filter((item) => item.sharedConcepts.length > 0)
+        .sort((a, b) => {
+          if (a.sharedConcepts.length !== b.sharedConcepts.length) {
+            return b.sharedConcepts.length - a.sharedConcepts.length;
+          }
+          const timeA = Date.parse(a.supportNote.created_at);
+          const timeB = Date.parse(b.supportNote.created_at);
+          return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA)
+            || a.supportNote.id.localeCompare(b.supportNote.id);
+        })[0];
+      if (!support) return [];
+
+      return [{
+        originalNote,
+        supportNote: support.supportNote,
+        review: review as NoteRecallReinforcementPath['review'],
+        schedule,
+        status,
+        previousIntervalDays: review.baseIntervalDays ?? null,
+        currentIntervalDays: review.intervalDays,
+        sharedConcepts: support.sharedConcepts,
+      }];
+    })
+    .sort((a, b) => {
+      if (a.review.grade !== b.review.grade) return a.review.grade === 'again' ? -1 : 1;
+      if (a.status.state !== b.status.state) return a.status.state === 'due' ? -1 : 1;
+      const reductionA = (a.previousIntervalDays ?? a.currentIntervalDays) - a.currentIntervalDays;
+      const reductionB = (b.previousIntervalDays ?? b.currentIntervalDays) - b.currentIntervalDays;
+      if (reductionA !== reductionB) return reductionB - reductionA;
+      return Date.parse(b.review.completedAt) - Date.parse(a.review.completedAt)
+        || a.originalNote.id.localeCompare(b.originalNote.id);
+    })[0] ?? null;
+}
+
 export function getScheduledReviewItems(
   notes: NoteListItem[],
   schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
@@ -222,6 +484,46 @@ export function getScheduledReviewItems(
       return a.note.title.localeCompare(b.note.title);
     })
     .slice(0, Math.max(0, limit));
+}
+
+export interface NoteReviewQueue {
+  recallReinforcementPath: NoteRecallReinforcementPath | null;
+  scheduledReviewItems: NoteScheduledReviewItem[];
+  totalCount: number;
+  dueCount: number;
+}
+
+export function getNoteReviewQueue(
+  notes: NoteListItem[],
+  schedulesByNote: Record<string, NoteReviewSchedule | null | undefined>,
+  reviewHistory: NoteReviewHistoryEntry[],
+  now = new Date(),
+  scheduledLimit = 3
+): NoteReviewQueue {
+  const recallReinforcementPath = getNoteRecallReinforcementPath(
+    notes,
+    schedulesByNote,
+    reviewHistory,
+    now
+  );
+  const scheduledReviewItems = getScheduledReviewItems(
+    recallReinforcementPath
+      ? notes.filter((note) => note.id !== recallReinforcementPath.originalNote.id)
+      : notes,
+    schedulesByNote,
+    now,
+    scheduledLimit
+  );
+  const recallCount = recallReinforcementPath ? 1 : 0;
+  const recallDueCount = recallReinforcementPath?.status.state === 'due' ? 1 : 0;
+
+  return {
+    recallReinforcementPath,
+    scheduledReviewItems,
+    totalCount: scheduledReviewItems.length + recallCount,
+    dueCount: scheduledReviewItems.filter((item) => item.status.state === 'due').length
+      + recallDueCount,
+  };
 }
 
 export interface NoteStudyResumeItem {

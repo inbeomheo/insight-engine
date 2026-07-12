@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Brain, CalendarClock, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, FileText, HelpCircle, Link2, MessageSquare, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,16 +44,35 @@ import {
   type NoteStudyProgress,
 } from '@/lib/note-study-progress';
 import {
-  NOTE_REVIEW_INTERVAL_OPTIONS,
+  NOTE_REVIEW_GRADE_OPTIONS,
   clearNoteReviewSchedule,
+  getNextReviewInterval,
+  getPreviousIntervalForNewReviewSession,
   getNoteReviewScheduleStatus,
   readNoteReviewSchedule,
   writeNoteReviewSchedule,
+  type NoteReviewGrade,
   type NoteReviewSchedule,
 } from '@/lib/note-review-schedule';
-import { recordNoteReviewCompletion } from '@/lib/note-review-history';
+import {
+  getNoteReviewSelectionState,
+  readNoteReviewHistory,
+  recordNoteReviewCompletion,
+} from '@/lib/note-review-history';
 import { getStyleLabel } from '@/lib/helpers';
 import { buildNoteFacetHref } from '@/lib/note-list';
+import {
+  buildNoteRecallRetryHref,
+  buildNoteRecallSupportHref,
+  resolveNoteRecallFlow,
+  type NoteRecallFlow,
+} from '@/lib/note-recall-flow';
+import {
+  createNoteRecallRetryState,
+  getNoteRecallRetrySummary,
+  toggleNoteRecallRetryItem,
+  type NoteRecallRetrySummary,
+} from '@/lib/note-recall-retry';
 import type { Report } from '@/lib/types';
 import { useResultStore } from '@/stores/resultStore';
 
@@ -116,7 +135,9 @@ function formatStudyUpdatedAt(iso: string | null): string {
 
 export default function NoteDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const noteId = params.id;
+  const recallFlow = resolveNoteRecallFlow(noteId, new URLSearchParams(searchParams.toString()));
   const [note, setNote] = useState<NoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,14 +193,175 @@ export default function NoteDetailPage() {
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : note ? (
-          <NoteBody key={note.id} note={note} linkedReport={linkedReport} />
+          <NoteBody key={note.id} note={note} linkedReport={linkedReport} recallFlow={recallFlow} />
         ) : null}
       </div>
     </div>
   );
 }
 
-function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Report | null }) {
+interface NoteReviewGradeWithInterval {
+  value: NoteReviewGrade;
+  label: string;
+  intervalDays: number;
+}
+
+interface NoteRecallRetryOutcome {
+  grade: NoteReviewGrade;
+  label: string;
+  intervalDays: number;
+}
+
+interface RecallFlowGuideProps {
+  flow: NoteRecallFlow;
+  retrySummary?: NoteRecallRetrySummary;
+  retryOutcome?: NoteRecallRetryOutcome | null;
+  reviewGradeOptions?: readonly NoteReviewGradeWithInterval[];
+  onReviewGrade?: (grade: NoteReviewGrade) => void;
+}
+
+export function RecallFlowGuide({
+  flow,
+  retrySummary,
+  retryOutcome,
+  reviewGradeOptions = [],
+  onReviewGrade,
+}: RecallFlowGuideProps) {
+  const supportHref = buildNoteRecallSupportHref(flow.originId, flow.supportId);
+  const retryHref = buildNoteRecallRetryHref(flow.originId, flow.supportId);
+  if (!supportHref || !retryHref) return null;
+
+  const retryLocked = !retrySummary?.isComplete;
+  const outcomeNeedsSupport = retryOutcome?.grade === 'again' || retryOutcome?.grade === 'hard';
+
+  return (
+    <Card
+      id={flow.step === 'retry' ? 'study-progress' : undefined}
+      className="scroll-mt-24 border-primary/30 bg-primary/5 py-4"
+    >
+      <CardContent className="px-4">
+        <p className="text-xs font-semibold text-primary">회상 보강 2단계</p>
+        <ol className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="회상 보강 진행 단계">
+          <li
+            aria-current={flow.step === 'support' ? 'step' : undefined}
+            className={'min-w-0 rounded-lg border px-3 py-2 ' + (flow.step === 'support' ? 'border-primary/40 bg-background' : 'border-border bg-background/60 text-muted-foreground')}
+          >
+            <span className="block break-words text-xs font-semibold">1/2 연결 노트 읽기</span>
+            <span className="mt-1 block break-words text-[10px] text-muted-foreground">공유 개념을 다른 설명으로 보강합니다.</span>
+          </li>
+          <li
+            aria-current={flow.step === 'retry' ? 'step' : undefined}
+            className={'min-w-0 rounded-lg border px-3 py-2 ' + (flow.step === 'retry' ? 'border-primary/40 bg-background' : 'border-border bg-background/60 text-muted-foreground')}
+          >
+            <span className="block break-words text-xs font-semibold">2/2 원래 질문 재도전</span>
+            <span className="mt-1 block break-words text-[10px] text-muted-foreground">
+              {flow.step === 'support' ? '다음 단계에서 원래 질문 전체를 다시 풉니다.' : '답을 가린 채 질문 전체를 다시 풉니다.'}
+            </span>
+          </li>
+        </ol>
+
+        {flow.step === 'retry' && (
+          <div className="mt-3 rounded-xl border border-primary/20 bg-background/80 p-3">
+            <div className="flex items-center justify-between gap-3 text-xs font-semibold text-foreground">
+              <span>재도전 진행</span>
+              <span aria-live="polite">
+                {retrySummary?.completed ?? 0}/{retrySummary?.total ?? 0}
+              </span>
+            </div>
+            {retrySummary && retrySummary.total > 0 ? (
+              <>
+                <div
+                  className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                  aria-label="재도전 진행률"
+                  aria-valuemin={0}
+                  aria-valuemax={retrySummary.total}
+                  aria-valuenow={retrySummary.completed}
+                >
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: String(Math.round((retrySummary.completed / retrySummary.total) * 100)) + '%' }}
+                  />
+                </div>
+                <p id="recall-retry-rating-help" className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                  {retrySummary.isComplete
+                    ? '모든 질문을 다시 풀었습니다. 이제 회상도를 평가하세요.'
+                    : '모든 질문을 다시 풀면 회상도 평가가 열립니다. ' + (retrySummary.total - retrySummary.completed) + '개 남았습니다.'}
+                </p>
+              </>
+            ) : (
+              <p id="recall-retry-rating-help" className="mt-2 text-xs text-muted-foreground">
+                재도전할 복습 질문이 없습니다.
+              </p>
+            )}
+
+            <div id="recall-retry-rating" className="mt-3 scroll-mt-24 border-t border-border pt-3">
+              <p className="text-xs font-semibold text-foreground">회상도 평가</p>
+              <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="재도전 회상도 선택">
+                {reviewGradeOptions.map(({ value, label, intervalDays }) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={retryOutcome?.grade === value ? 'default' : 'outline'}
+                    className="h-7 px-2.5 text-[10px]"
+                    onClick={() => onReviewGrade?.(value)}
+                    disabled={retryLocked || !onReviewGrade}
+                    aria-pressed={retryOutcome?.grade === value}
+                    aria-describedby="recall-retry-rating-help"
+                  >
+                    {label} · {intervalDays}일
+                  </Button>
+                ))}
+              </div>
+              <p className="mt-2 min-h-4 text-[10px] text-muted-foreground" role="status" aria-live="polite">
+                {retryOutcome
+                  ? '평가 결과: ' + retryOutcome.label + ' · 다음 복습 ' + retryOutcome.intervalDays + '일 후'
+                  : !retrySummary || retrySummary.total === 0
+                    ? '평가할 질문이 없어 회상도를 선택할 수 없습니다.'
+                    : retryLocked
+                      ? '질문을 모두 완료하기 전에는 회상도를 선택할 수 없습니다.'
+                      : '회상도를 선택하면 다음 복습 간격을 예약합니다.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {flow.step === 'support' ? (
+            <Button asChild size="sm" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+              <Link href={retryHref}>읽기 마치고 원래 질문 재도전</Link>
+            </Button>
+          ) : retryOutcome ? (
+            outcomeNeedsSupport ? (
+              <Button asChild size="sm" variant="outline" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+                <Link href={supportHref}>연결 노트 다시 보기</Link>
+              </Button>
+            ) : (
+              <Button asChild size="sm" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+                <Link href="/notes">노트 목록으로</Link>
+              </Button>
+            )
+          ) : (
+            <Button asChild size="sm" variant="outline" className="h-auto min-h-9 w-full whitespace-normal text-center sm:w-auto">
+              <Link href={supportHref}>연결 노트 다시 보기</Link>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NoteBody({
+  note,
+  linkedReport,
+  recallFlow,
+}: {
+  note: NoteDetail;
+  linkedReport: Report | null;
+  recallFlow: NoteRecallFlow | null;
+}) {
   const sourceUrl = note.source?.url ? safeHttpUrl(note.source.url) : null;
   const learningPoints = useMemo(() => note.learning_points ?? [], [note.learning_points]);
   const reviewQuestions = useMemo(() => note.review_questions ?? [], [note.review_questions]);
@@ -201,11 +383,23 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
   );
   const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [reviewSchedule, setReviewSchedule] = useState<NoteReviewSchedule | null>(null);
+  const [previousReviewIntervalDays, setPreviousReviewIntervalDays] = useState<number | null>(null);
+  const [selectedReviewGrade, setSelectedReviewGrade] = useState<NoteReviewGrade | null>(null);
   const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
+  );
+  const isRecallRetry = recallFlow?.step === 'retry';
+  const [recallRetryState, setRecallRetryState] = useState(() =>
+    createNoteRecallRetryState(reviewQuestions.length)
+  );
+  const [recallRetryOutcome, setRecallRetryOutcome] = useState<NoteRecallRetryOutcome | null>(null);
+  const [recallRetryBaseIntervalDays, setRecallRetryBaseIntervalDays] = useState<number | null>(null);
+  const recallRetrySummary = useMemo(
+    () => getNoteRecallRetrySummary(recallRetryState, reviewQuestions.length),
+    [recallRetryState, reviewQuestions.length]
   );
   const studySummary = useMemo(
     () => getNoteStudySummary(studyProgress, studyCounts),
@@ -219,6 +413,19 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     () => reviewSchedule ? getNoteReviewScheduleStatus(reviewSchedule) : null,
     [reviewSchedule]
   );
+  const reviewIntervalBaseDays = isRecallRetry
+    ? recallRetryBaseIntervalDays
+    : previousReviewIntervalDays;
+  const reviewGradeOptions = useMemo(
+    () => NOTE_REVIEW_GRADE_OPTIONS.map((option) => ({
+      ...option,
+      intervalDays: getNextReviewInterval(
+        option.value,
+        reviewIntervalBaseDays ?? undefined
+      ),
+    })),
+    [reviewIntervalBaseDays]
+  );
   const nextStudyTarget = useMemo(
     () => getNextNoteStudyTarget({ learningPoints, reviewQuestions, progress: studyProgress }),
     [learningPoints, reviewQuestions, studyProgress]
@@ -229,8 +436,10 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     [learningPoints.length, showCompletedStudyItems, studyProgress.learning]
   );
   const visibleReviewIndexes = useMemo(
-    () => getVisibleNoteStudyIndexes(reviewQuestions.length, studyProgress.review, showCompletedStudyItems),
-    [reviewQuestions.length, showCompletedStudyItems, studyProgress.review]
+    () => recallFlow?.step === 'retry'
+      ? reviewQuestions.map((_, index) => index)
+      : getVisibleNoteStudyIndexes(reviewQuestions.length, studyProgress.review, showCompletedStudyItems),
+    [recallFlow?.step, reviewQuestions, showCompletedStudyItems, studyProgress.review]
   );
   const wikiBriefInput = useMemo(() => ({
     sourceType: note.source?.type,
@@ -259,16 +468,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
   useEffect(() => {
     // 브라우저 저장값은 hydration 이후에만 반영합니다.
+    const schedule = readNoteReviewSchedule(note.id);
+    const selection = getNoteReviewSelectionState(
+      readNoteReviewHistory(),
+      note.id,
+      schedule
+    );
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReviewSchedule(readNoteReviewSchedule(note.id));
+    setReviewSchedule(schedule);
+    setPreviousReviewIntervalDays(selection.previousIntervalDays);
+    setSelectedReviewGrade(selection.selectedGrade);
   }, [note.id]);
-
-
-
 
   const clearScheduledReview = useCallback(() => {
     clearNoteReviewSchedule(note.id);
     setReviewSchedule(null);
+    setSelectedReviewGrade(null);
   }, [note.id]);
 
   const toggleStudyProgress = useCallback((kind: NoteStudyKind, index: number) => {
@@ -279,25 +494,75 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
       if (reviewSchedule && nextSummary.completed < nextSummary.total) {
         clearNoteReviewSchedule(note.id);
         setReviewSchedule(null);
+        setSelectedReviewGrade(null);
       }
       return next;
     });
   }, [note.id, reviewSchedule, studyCounts]);
 
+  const toggleReviewProgress = useCallback((index: number) => {
+    if (isRecallRetry) {
+      if (recallRetryOutcome) return;
+      setRecallRetryState((current) =>
+        toggleNoteRecallRetryItem(current, index, reviewQuestions.length)
+      );
+      return;
+    }
+    toggleStudyProgress('review', index);
+  }, [
+    isRecallRetry,
+    recallRetryOutcome,
+    reviewQuestions.length,
+    toggleStudyProgress,
+  ]);
+
   const resetStudyProgress = useCallback(() => {
     const next = normalizeNoteStudyProgress(null, studyCounts);
     writeNoteStudyProgress(note.id, next, studyCounts);
+    setPreviousReviewIntervalDays(
+      getPreviousIntervalForNewReviewSession(reviewSchedule, previousReviewIntervalDays)
+    );
     clearScheduledReview();
     setStudyProgress(next);
-  }, [clearScheduledReview, note.id, studyCounts]);
+  }, [
+    clearScheduledReview,
+    note.id,
+    previousReviewIntervalDays,
+    reviewSchedule,
+    studyCounts,
+  ]);
 
-  const scheduleReview = useCallback((intervalDays: number) => {
+  const scheduleReview = useCallback((grade: NoteReviewGrade) => {
+    if (isRecallRetry && !recallRetrySummary.isComplete) return;
+
+    const intervalDays = getNextReviewInterval(
+      grade,
+      reviewIntervalBaseDays ?? undefined
+    );
     const next = writeNoteReviewSchedule(note.id, intervalDays);
     if (next) {
-      recordNoteReviewCompletion({ noteId: note.id, noteTitle, intervalDays });
+      recordNoteReviewCompletion({
+        noteId: note.id,
+        noteTitle,
+        intervalDays,
+        grade,
+        baseIntervalDays: reviewIntervalBaseDays,
+        scheduleScheduledAt: next.scheduledAt,
+      });
+      setSelectedReviewGrade(grade);
+      if (isRecallRetry) {
+        const label = NOTE_REVIEW_GRADE_OPTIONS.find((option) => option.value === grade)?.label ?? grade;
+        setRecallRetryOutcome({ grade, label, intervalDays });
+      }
     }
     setReviewSchedule(next);
-  }, [note.id, noteTitle]);
+  }, [
+    isRecallRetry,
+    note.id,
+    noteTitle,
+    recallRetrySummary.isComplete,
+    reviewIntervalBaseDays,
+  ]);
 
   const scrollToNextStudyTarget = useCallback(() => {
     if (!nextStudyTarget) return;
@@ -390,8 +655,45 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
     return () => window.clearTimeout(timer);
   }, [quoteCopyStatus]);
 
+  useEffect(() => {
+    if (recallFlow?.step !== 'retry') return;
+    // 재도전 임시 진행과 답 표시만 초기화하며 저장 진행률·일정·이력은 건드리지 않습니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRecallRetryState(createNoteRecallRetryState(reviewQuestions.length));
+    setRecallRetryOutcome(null);
+    const activeSchedule = readNoteReviewSchedule(note.id);
+    const selection = getNoteReviewSelectionState(
+      readNoteReviewHistory(),
+      note.id,
+      activeSchedule
+    );
+    setRecallRetryBaseIntervalDays(
+      activeSchedule?.intervalDays ?? selection.previousIntervalDays
+    );
+    setReviewAnswerVisible(setAllReviewAnswersVisible(reviewQuestions.length, false));
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('review-questions')?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    note.id,
+    recallFlow?.originId,
+    recallFlow?.step,
+    recallFlow?.supportId,
+    reviewQuestions.length,
+  ]);
+
   return (
     <div className="space-y-6">
+      {recallFlow && (
+        <RecallFlowGuide
+          flow={recallFlow}
+          retrySummary={isRecallRetry ? recallRetrySummary : undefined}
+          retryOutcome={isRecallRetry ? recallRetryOutcome : null}
+          reviewGradeOptions={reviewGradeOptions}
+          onReviewGrade={scheduleReview}
+        />
+      )}
       {/* 헤더: 제목 + 출처 */}
       <div id="source" className="scroll-mt-24 rounded-2xl border border-border bg-card/60 p-5">
         <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[10px] font-medium text-primary">
@@ -473,7 +775,7 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
         />
       )}
 
-      {studySummary.total > 0 && (
+      {studySummary.total > 0 && !isRecallRetry && (
         <Card id="study-progress" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
           <CardContent className="px-4">
             <div className="flex items-start justify-between gap-3">
@@ -618,17 +920,22 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                       </span>
                     )}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {NOTE_REVIEW_INTERVAL_OPTIONS.map((days) => (
+                  <div
+                    className="mt-2 flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="회상도 선택"
+                  >
+                    {reviewGradeOptions.map(({ value, label, intervalDays }) => (
                       <Button
-                        key={days}
+                        key={value}
                         type="button"
                         size="sm"
-                        variant={reviewSchedule?.intervalDays === days ? 'default' : 'outline'}
+                        variant={selectedReviewGrade === value ? 'default' : 'outline'}
                         className="h-7 px-2.5 text-[10px]"
-                        onClick={() => scheduleReview(days)}
+                        onClick={() => scheduleReview(value)}
+                        aria-pressed={selectedReviewGrade === value}
                       >
-                        {days === 1 ? '내일' : `${days}일 후`}
+                        {label} · {intervalDays}일
                       </Button>
                     ))}
                     {reviewSchedule && (
@@ -744,6 +1051,9 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
             ) : (
               visibleReviewIndexes.map((idx) => {
                 const item = reviewQuestions[idx];
+                const isReviewComplete = isRecallRetry
+                  ? recallRetryState.completedIndexes.includes(idx)
+                  : studyProgress.review.includes(idx);
                 return (
                   <Card key={`${item.question}-${idx}`} id={`study-review-${idx}`} className="scroll-mt-24 py-3">
                     <CardContent className="px-4">
@@ -771,16 +1081,19 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
                           )}
                           <button
                             type="button"
-                            onClick={() => toggleStudyProgress('review', idx)}
-                            aria-pressed={studyProgress.review.includes(idx)}
-                            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            onClick={() => toggleReviewProgress(idx)}
+                            aria-pressed={isReviewComplete}
+                            disabled={isRecallRetry && Boolean(recallRetryOutcome)}
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <CheckCircle2
-                              className={`h-3 w-3 ${
-                                studyProgress.review.includes(idx) ? 'text-primary' : 'text-muted-foreground/40'
-                              }`}
+                              className={'h-3 w-3 ' + (
+                                isReviewComplete ? 'text-primary' : 'text-muted-foreground/40'
+                              )}
                             />
-                            {studyProgress.review.includes(idx) ? '복습 완료' : '복습 체크'}
+                            {isReviewComplete
+                              ? isRecallRetry ? '재도전 완료' : '복습 완료'
+                              : '복습 체크'}
                           </button>
                         </div>
                       </div>

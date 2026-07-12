@@ -12,21 +12,14 @@ import { setOnboardingDone } from '@/lib/storage';
 export default function OnboardingModal() {
   const { activeModal, setOnboardingOpen } = useUIStore();
   const onboardingOpen = activeModal === 'onboarding';
-  const { providers, selectedProvider, setSelectedProvider, setSelectedModel } =
-    useSettingsStore();
-
-  const providerIds = Object.keys(providers);
+  const { providers } = useSettingsStore();
+  const activeProvider = Object.values(providers)[0] ?? null;
+  const hasModels = Boolean(activeProvider?.models.length);
   const { t } = useTranslation();
 
   function handleStart() {
     setOnboardingDone();
     setOnboardingOpen(false);
-  }
-
-  function selectProvider(id: string) {
-    setSelectedProvider(id);
-    const first = providers[id]?.models[0];
-    if (first) setSelectedModel(first.id);
   }
 
   return (
@@ -48,38 +41,32 @@ export default function OnboardingModal() {
           </p>
         </div>
 
-        {providerIds.length > 0 ? (
-          <div className="space-y-2 mb-4">
-            {providerIds.map((id) => (
-              <button
-                key={id}
-                onClick={() => selectProvider(id)}
-                aria-label={`${id} 프로바이더 선택`}
-                className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                  selectedProvider === id
-                    ? 'border-primary bg-indigo-50/50 shadow-sm'
-                    : 'border-border/50 hover:border-primary/30 hover:bg-muted/30'
-                }`}
-              >
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{providers[id].name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t('onboarding.modelCount', { count: providers[id].models.length })}
-                  </div>
-                </div>
-                {selectedProvider === id && (
-                  <Check className="h-4 w-4 text-primary" />
-                )}
-              </button>
-            ))}
+        {activeProvider ? (
+          <div
+            role="group"
+            aria-label={t('onboarding.serviceInfoLabel')}
+            className="mb-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-left"
+          >
+            <div className="flex-1">
+              <div className="text-sm font-medium">{activeProvider.name}</div>
+              <div className="text-xs text-muted-foreground">
+                {t('onboarding.singleService')} · {t('onboarding.modelCount', { count: activeProvider.models.length })}
+              </div>
+            </div>
+            <Check className="h-4 w-4 text-primary" aria-hidden="true" />
           </div>
         ) : (
           <p className="text-xs text-muted-foreground text-center mb-4">
             {t('onboarding.noServer')}
           </p>
         )}
+        {activeProvider && !hasModels && (
+          <p role="alert" className="mb-4 text-center text-xs text-destructive">
+            {t('onboarding.noModels')}
+          </p>
+        )}
 
-        <Button className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
+        <Button disabled={!hasModels} className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
           <Check className="h-4 w-4 mr-2" />
           {t('onboarding.start')}
         </Button>

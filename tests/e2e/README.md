@@ -15,7 +15,6 @@ tests/e2e/
 │
 ├── main-page/              # 🔵 인증 불필요 (완전 병렬)
 ├── url-input/              # 🔵 인증 불필요 (완전 병렬)
-├── content-generation/     # 🔵 인증 불필요 (완전 병렬)
 ├── batch-generation/       # 🔵 인증 불필요 (완전 병렬)
 ├── accessibility/          # 🔵 인증 불필요 (완전 병렬)
 ├── responsive/             # 🔵 인증 불필요 (완전 병렬)

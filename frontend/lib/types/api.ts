@@ -166,15 +166,6 @@ export interface SharePageResponse {
   created_at: string;
 }
 
-// === 프로바이더 유효성 검사 ===
-
-export interface ProviderValidateResponse {
-  valid: boolean;
-  model_tested?: string;
-  latency_ms?: number;
-  error?: string;
-}
-
 // === 팩트체크 (F3-07) ===
 
 export interface FactClaim {
