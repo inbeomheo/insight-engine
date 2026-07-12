@@ -306,7 +306,7 @@ def test_example(self, mock_enabled):
 
 Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 실행 (Supabase 비활성화 상태).
 
-**테스트 그룹:** `no-auth-chromium`, `content-generation`, `batch-generation`, `authenticated-tests`, `error-handling`, `performance`
+**테스트 그룹:** `no-auth-chromium`, `batch-generation`, `authenticated-tests`, `error-handling`, `performance`
 
 **Fixtures (`fixtures/test-fixtures.ts`):**
 - `mainPage.goto()`: 페이지 이동 + 온보딩 모달 자동 닫기

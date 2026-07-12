@@ -61,7 +61,10 @@
   19차: 프론트 소비 0인 `/api/recommend-sources`와 전용 소스 추천 서비스·API 래퍼·타입·테스트·오래된 계획 문구 제거 완료.
   20차: 프론트 소비 0인 `/api/user/snippets*`와 전용 facade·Supabase CRUD 헬퍼·테스트·재도입 계획을 제거하고 legacy DB migration은 보존.
   21차: 프론트 소비 0인 `POST /api/providers/validate`와 전용 오류 헬퍼·프론트 래퍼·타입·테스트를 제거하고 활성 `GET /api/providers`는 보존.
+  22차: Next.js DOM에 없는 provider-list/provider-model E2E와 전용 계획, 빈 content-generation Playwright 프로젝트·스크립트·문서 참조를 제거.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
+- [ ] [사람][정리] 레거시 `tests/e2e/settings-modals/modals.spec.ts`와 `specs/03-settings-modals.plan.md` 삭제 승인 필요.
+  현재 Next.js DOM에 없는 `#onboarding-modal`, `#settings-modal`, `#provider-list`, `#custom-style-modal`만 검증하는 전체 고아 E2E이며 정책상 정확한 파일 삭제 확인 전 제거 금지.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
   2026-07-09 1차: 학습 포인트/복습 질문 스키마, 검색 색인 보강, 중복 경고 next_action 추가 완료.
@@ -145,6 +148,10 @@
 
 ## Done
 
+- [x] 2026-07-12 cleanup(e2e): 레거시 다중 프로바이더 E2E 체인 제거 (로컬 커밋, 푸시 보류).
+  현재 Next.js DOM에 없는 `#provider`/`#model` 기반 provider-list/provider-model spec과 전용 계획을 제거.
+  빈 content-generation Playwright 프로젝트·npm 스크립트·README·AGENTS 그룹 참조를 함께 정리하고 활성 30파일 150테스트 목록을 확인.
+  검증: 전용 selector·프로젝트 참조 grep 0, Playwright `--list` 150 tests, frontend 174 passed, tsc 통과. 독립 리뷰어 재스폰 금지 규칙에 따라 메인 diff 리뷰 이슈 0.
 - [x] 2026-07-12 refactor(settings): selectedProvider 잔여 상태 제거 (PR #125).
   Zustand 상태·setter·hydrate, localStorage 키·헬퍼, UI 3곳과 미사용 한영일 번역 키에서 프로바이더 선택 개념을 제거.
   `useProviders`는 첫 ChatMock 모델만 검증·복구하고 설정 모달·팝오버·온보딩은 모델 없음과 오래된 모델 값을 일관되게 처리.
