@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NoteListItem, NoteSearchResult } from '@/lib/api';
-import { SearchResultsList, shouldHandleFacetLinkClick } from './page';
+import { ActiveFacetBar, SearchResultsList, shouldHandleFacetLinkClick } from './page';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -35,6 +35,34 @@ async function renderSearchResults(
         results={results}
         notes={notes}
         onFacetSelect={onFacetSelect}
+      />
+    );
+  });
+  return container;
+}
+
+async function renderActiveFacetBar({
+  searchReturnQuery,
+  onReturnToSearch = vi.fn(),
+  onClear = vi.fn(),
+}: {
+  searchReturnQuery: string | null;
+  onReturnToSearch?: () => void;
+  onClear?: () => void;
+}) {
+  container = document.createElement('div');
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(
+      <ActiveFacetBar
+        facet={{ type: 'concept', value: 'RAG' }}
+        resultCount={1}
+        totalCount={4}
+        searchReturnQuery={searchReturnQuery}
+        searchReturnCount={2}
+        onReturnToSearch={onReturnToSearch}
+        onClear={onClear}
       />
     );
   });
@@ -171,5 +199,36 @@ describe('SearchResultsList', () => {
 
     expect(snippet?.textContent).toBe('검색 근거 요약');
     expect(snippet?.querySelector('mark')).toBeNull();
+  });
+});
+
+describe('ActiveFacetBar', () => {
+  it('returns to the preserved search session while keeping the clear action', async () => {
+    const onReturnToSearch = vi.fn();
+    const onClear = vi.fn();
+    const view = await renderActiveFacetBar({
+      searchReturnQuery: 'RAG 검색',
+      onReturnToSearch,
+      onClear,
+    });
+    const buttons = Array.from(view.querySelectorAll('button'));
+    const returnButton = buttons.find((button) => button.textContent?.includes('검색 결과로 돌아가기'));
+    const clearButton = buttons.find((button) => button.textContent?.includes('필터 해제'));
+
+    expect(view.textContent).toContain('개념: RAG');
+    expect(view.textContent).toContain('1/4개 노트');
+    expect(returnButton?.textContent).toContain('(2)');
+
+    await act(async () => { returnButton?.click(); });
+    await act(async () => { clearButton?.click(); });
+    expect(onReturnToSearch).toHaveBeenCalledOnce();
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
+  it('hides the return action without a preserved search session', async () => {
+    const view = await renderActiveFacetBar({ searchReturnQuery: null });
+
+    expect(view.textContent).not.toContain('검색 결과로 돌아가기');
+    expect(view.textContent).toContain('필터 해제');
   });
 });

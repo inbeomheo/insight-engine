@@ -113,6 +113,11 @@ export default function NotesPage() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteListItem[]>([]);
   const [searchResults, setSearchResults] = useState<NoteSearchResult[] | null>(null);
+  const [lastSearchQuery, setLastSearchQuery] = useState('');
+  const [searchReturnState, setSearchReturnState] = useState<{
+    query: string;
+    results: NoteSearchResult[];
+  } | null>(null);
   const [studyProgressByNote, setStudyProgressByNote] = useState<Record<string, NoteStudyProgress>>({});
   const [qnaStudyCards, setQnaStudyCards] = useState<ResultChatStudyCard[]>([]);
   const [reviewScheduleByNote, setReviewScheduleByNote] = useState<Record<string, NoteReviewSchedule | null>>({});
@@ -187,6 +192,8 @@ export default function NotesPage() {
     const q = term.trim();
     if (!q) {
       setSearchResults(null);
+      setLastSearchQuery('');
+      setSearchReturnState(null);
       setSearching(false);
       setError(null);
       return;
@@ -201,6 +208,8 @@ export default function NotesPage() {
       const res = await searchNotes(q);
       if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setSearchResults(res.notes);
+      setLastSearchQuery(q);
+      setSearchReturnState(null);
     } catch (err) {
       if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setError(err instanceof Error ? err.message : '검색에 실패했습니다.');
@@ -265,12 +274,14 @@ export default function NotesPage() {
     advanceNoteSearchRequestId(searchRequestIdRef);
     setQuery('');
     setSearchResults(null);
+    setLastSearchQuery('');
+    setSearchReturnState(null);
     setSearching(false);
     setError(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
-  const handleFacetSelect = useCallback((facet: NoteFacet) => {
+  const applyFacetSelect = useCallback((facet: NoteFacet) => {
     advanceNoteSearchRequestId(searchRequestIdRef);
     setSearchResults(null);
     setSearching(false);
@@ -280,16 +291,52 @@ export default function NotesPage() {
     router.replace(buildNoteFacetHref(facet), { scroll: false });
   }, [router]);
 
+  const handleFacetSelect = useCallback((facet: NoteFacet) => {
+    setQuery('');
+    setLastSearchQuery('');
+    setSearchReturnState(null);
+    applyFacetSelect(facet);
+  }, [applyFacetSelect]);
+
+  const handleSearchResultFacetSelect = useCallback((facet: NoteFacet) => {
+    if (searchResults) {
+      setSearchReturnState({ query: lastSearchQuery, results: searchResults });
+    }
+    setQuery('');
+    setLastSearchQuery('');
+    applyFacetSelect(facet);
+  }, [applyFacetSelect, lastSearchQuery, searchResults]);
+
   const handleFacetClear = useCallback(() => {
     advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery('');
+    setLastSearchQuery('');
+    setSearchReturnState(null);
     setSearching(false);
     setError(null);
     setActiveFacet(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
+  const handleReturnToSearch = useCallback(() => {
+    if (!searchReturnState) return;
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery(searchReturnState.query);
+    setLastSearchQuery(searchReturnState.query);
+    setSearchResults(searchReturnState.results);
+    setSearchReturnState(null);
+    setSearching(false);
+    setError(null);
+    setActiveFacet(null);
+    setActiveStudyStatus(null);
+    router.replace('/notes', { scroll: false });
+  }, [router, searchReturnState]);
+
   const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
     advanceNoteSearchRequestId(searchRequestIdRef);
+    setQuery('');
+    setLastSearchQuery('');
+    setSearchReturnState(null);
     setSearchResults(null);
     setSearching(false);
     setError(null);
@@ -505,7 +552,7 @@ export default function NotesPage() {
           <SearchResultsList
             results={searchResults}
             notes={notes}
-            onFacetSelect={handleFacetSelect}
+            onFacetSelect={handleSearchResultFacetSelect}
           />
         ) : (
           <>
@@ -522,6 +569,9 @@ export default function NotesPage() {
                 facet={activeFacet}
                 resultCount={visibleNotes.length}
                 totalCount={notes.length}
+                searchReturnQuery={searchReturnState?.query ?? null}
+                searchReturnCount={searchReturnState?.results.length ?? 0}
+                onReturnToSearch={handleReturnToSearch}
                 onClear={handleFacetClear}
               />
             )}
@@ -607,15 +657,21 @@ function StudyStatusFilter({
   );
 }
 
-function ActiveFacetBar({
+export function ActiveFacetBar({
   facet,
   resultCount,
   totalCount,
+  searchReturnQuery,
+  searchReturnCount,
+  onReturnToSearch,
   onClear,
 }: {
   facet: NoteFacet;
   resultCount: number;
   totalCount: number;
+  searchReturnQuery: string | null;
+  searchReturnCount: number;
+  onReturnToSearch: () => void;
   onClear: () => void;
 }) {
   return (
@@ -626,10 +682,18 @@ function ActiveFacetBar({
           {resultCount}/{totalCount}개 노트
         </span>
       </div>
-      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
-        <X className="h-3.5 w-3.5" />
-        필터 해제
-      </Button>
+      <div className="flex flex-wrap items-center gap-1">
+        {searchReturnQuery !== null && (
+          <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onReturnToSearch}>
+            <ArrowLeft className="h-3.5 w-3.5" />
+            검색 결과로 돌아가기 ({searchReturnCount})
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
+          <X className="h-3.5 w-3.5" />
+          필터 해제
+        </Button>
+      </div>
     </div>
   );
 }
