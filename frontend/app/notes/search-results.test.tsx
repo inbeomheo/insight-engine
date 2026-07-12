@@ -7,7 +7,7 @@ import {
   type NoteListItem,
   type NoteSearchResult,
 } from '@/lib/api';
-import NotesPage, { ActiveFacetBar, SearchResultsList, shouldHandleFacetLinkClick } from './page';
+import NotesPage, { ActiveFacetBar, NotesList, SearchResultsList, shouldHandleFacetLinkClick } from './page';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -50,6 +50,22 @@ async function renderSearchResults(
       <SearchResultsList
         results={results}
         notes={notes}
+        onFacetSelect={onFacetSelect}
+      />
+    );
+  });
+  return container;
+}
+
+async function renderNotesList(onFacetSelect = vi.fn()) {
+  container = document.createElement('div');
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(
+      <NotesList
+        notes={[note()]}
+        studyProgressByNote={{}}
         onFacetSelect={onFacetSelect}
       />
     );
@@ -150,6 +166,42 @@ afterEach(async () => {
   container = null;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+describe('NotesList', () => {
+  it('keeps document navigation separate and pivots through encoded concept links', async () => {
+    const onFacetSelect = vi.fn();
+    const view = await renderNotesList(onFacetSelect);
+    const documentLink = view.querySelector<HTMLAnchorElement>('[aria-label="검색 노트 문서 열기"]');
+    const ragLink = view.querySelector<HTMLAnchorElement>('[aria-label="RAG 개념으로 계속 탐색"]');
+    const vectorLink = view.querySelector<HTMLAnchorElement>('[aria-label="벡터 개념으로 계속 탐색"]');
+
+    expect(documentLink?.getAttribute('href')).toBe('/notes/note%2Fid');
+    expect(ragLink?.getAttribute('href')).toBe('/notes?concept=RAG');
+    expect(vectorLink?.getAttribute('href')).toBe('/notes?concept=%EB%B2%A1%ED%84%B0');
+    expect(view.querySelector('a a')).toBeNull();
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    await act(async () => { vectorLink!.dispatchEvent(click); });
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(onFacetSelect).toHaveBeenCalledWith({ type: 'concept', value: '벡터' });
+
+    const ctrlClick = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true,
+    });
+    const keepTestInPlace = (event: MouseEvent) => event.preventDefault();
+    document.addEventListener('click', keepTestInPlace);
+    try {
+      await act(async () => { vectorLink!.dispatchEvent(ctrlClick); });
+    } finally {
+      document.removeEventListener('click', keepTestInPlace);
+    }
+    expect(onFacetSelect).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('SearchResultsList', () => {
@@ -319,6 +371,17 @@ describe('NotesPage search return flow', () => {
 
     expect(input!.value).toBe('');
     expect(findSearchEvidence(view)).toBeNull();
+
+    const vectorPivot = view.querySelector<HTMLAnchorElement>('[aria-label="벡터 개념으로 계속 탐색"]');
+    await act(async () => {
+      vectorPivot!.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+      }));
+    });
+    expect(replaceMock).toHaveBeenLastCalledWith('/notes?concept=%EB%B2%A1%ED%84%B0', { scroll: false });
+
     const returnButton = findByAriaLabel<HTMLButtonElement>(
       view,
       'button',

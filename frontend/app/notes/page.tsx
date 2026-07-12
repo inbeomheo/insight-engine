@@ -579,6 +579,7 @@ export default function NotesPage() {
               notes={visibleNotes}
               studyProgressByNote={studyProgressByNote}
               emptyText={(activeFacet || activeStudyStatus) ? '선택한 필터에 맞는 노트가 없습니다.' : undefined}
+              onFacetSelect={applyFacetSelect}
             />
           </>
         )}
@@ -1713,14 +1714,16 @@ function WikiMap({
   );
 }
 
-function NotesList({
+export function NotesList({
   notes,
   studyProgressByNote,
   emptyText,
+  onFacetSelect,
 }: {
   notes: NoteListItem[];
   studyProgressByNote: Record<string, NoteStudyProgress>;
   emptyText?: string;
+  onFacetSelect: (facet: NoteFacet) => void;
 }) {
   if (notes.length === 0) {
     return (
@@ -1740,14 +1743,18 @@ function NotesList({
         const studyStatusLabel = getNoteStudyStatusLabel(studyStatus);
         return (
           <li key={note.id}>
-            <Link href={`/notes/${encodeURIComponent(note.id)}`}>
-              <Card className="h-full hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer py-4">
-                <CardContent className="px-4">
+            <Card className="relative h-full cursor-pointer py-4 transition-all hover:border-primary/40 hover:shadow-sm">
+              <Link
+                href={`/notes/${encodeURIComponent(note.id)}`}
+                className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`${note.title || '제목 없음'} 문서 열기`}
+              />
+              <CardContent className="pointer-events-none relative z-0 px-4">
                   <div className="flex items-start gap-2.5">
                     <SourceIcon type={note.source?.type ?? ''} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h2 className="truncate text-sm font-medium text-foreground">
+                        <h2 className="min-w-0 truncate text-sm font-medium text-foreground">
                           {note.title || '제목 없음'}
                         </h2>
                         <Badge variant={studyStatus === 'completed' ? 'default' : 'outline'} className="shrink-0 text-[10px]">
@@ -1772,10 +1779,22 @@ function NotesList({
                     {(note.key_concepts?.length ?? 0) > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {note.key_concepts?.slice(0, 5).map((concept) => (
-                          <Badge key={concept} variant="outline" className="text-[10px]">
-                            <Brain className="mr-1 h-3 w-3" />
-                            {concept}
-                          </Badge>
+                          <Link
+                            key={concept}
+                            href={buildNoteFacetHref({ type: 'concept', value: concept })}
+                            aria-label={`${concept} 개념으로 계속 탐색`}
+                            className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            onClick={(event) => {
+                              if (!shouldHandleFacetLinkClick(event)) return;
+                              event.preventDefault();
+                              onFacetSelect({ type: 'concept', value: concept });
+                            }}
+                          >
+                            <Badge variant="outline" className="text-[10px] transition-colors hover:bg-primary/10">
+                              <Brain className="mr-1 h-3 w-3" />
+                              {concept}
+                            </Badge>
+                          </Link>
                         ))}
                       </div>
                     )}
@@ -1797,8 +1816,7 @@ function NotesList({
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        </li>
+          </li>
         );
       })}
     </ul>
