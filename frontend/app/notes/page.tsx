@@ -1741,6 +1741,7 @@ export function NotesList({
       {notes.map((note) => {
         const studyStatus = getNoteStudyStatus(note, studyProgressByNote[note.id]);
         const studyStatusLabel = getNoteStudyStatusLabel(studyStatus);
+        const sourceLabel = getNoteSourceLabel(note.source?.type);
         return (
           <li key={note.id}>
             <Card className="relative h-full cursor-pointer py-4 transition-all hover:border-primary/40 hover:shadow-sm">
@@ -1765,10 +1766,36 @@ export function NotesList({
                       <span className="text-xs text-muted-foreground/70">
                         {formatDate(note.created_at)}
                       </span>
-                      {note.tags.slice(0, 4).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-[10px]">
-                          {tag}
+                      <Link
+                        href={buildNoteFacetHref({ type: 'source', value: sourceLabel })}
+                        aria-label={`${sourceLabel} 출처로 계속 탐색`}
+                        className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={(event) => {
+                          if (!shouldHandleFacetLinkClick(event)) return;
+                          event.preventDefault();
+                          onFacetSelect({ type: 'source', value: sourceLabel });
+                        }}
+                      >
+                        <Badge variant="secondary" className="text-[10px] transition-colors hover:bg-primary/10">
+                          {sourceLabel}
                         </Badge>
+                      </Link>
+                      {note.tags.slice(0, 4).map((tag) => (
+                        <Link
+                          key={tag}
+                          href={buildNoteFacetHref({ type: 'tag', value: tag })}
+                          aria-label={`${tag} 태그로 계속 탐색`}
+                          className="pointer-events-auto relative z-10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onClick={(event) => {
+                            if (!shouldHandleFacetLinkClick(event)) return;
+                            event.preventDefault();
+                            onFacetSelect({ type: 'tag', value: tag });
+                          }}
+                        >
+                          <Badge variant="secondary" className="text-[10px] transition-colors hover:bg-primary/10">
+                            {tag}
+                          </Badge>
+                        </Link>
                       ))}
                     </div>
                     {note.summary && (

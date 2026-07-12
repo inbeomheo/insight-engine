@@ -138,7 +138,7 @@ function note(id = 'note/id'): NoteListItem {
   return {
     id,
     title: '검색 노트',
-    tags: [],
+    tags: ['학습'],
     key_concepts: ['RAG', '벡터'],
     quote_count: 2,
     learning_point_count: 1,
@@ -175,10 +175,14 @@ describe('NotesList', () => {
     const documentLink = view.querySelector<HTMLAnchorElement>('[aria-label="검색 노트 문서 열기"]');
     const ragLink = view.querySelector<HTMLAnchorElement>('[aria-label="RAG 개념으로 계속 탐색"]');
     const vectorLink = view.querySelector<HTMLAnchorElement>('[aria-label="벡터 개념으로 계속 탐색"]');
+    const tagLink = view.querySelector<HTMLAnchorElement>('[aria-label="학습 태그로 계속 탐색"]');
+    const sourceLink = view.querySelector<HTMLAnchorElement>('[aria-label="직접 텍스트 출처로 계속 탐색"]');
 
     expect(documentLink?.getAttribute('href')).toBe('/notes/note%2Fid');
     expect(ragLink?.getAttribute('href')).toBe('/notes?concept=RAG');
     expect(vectorLink?.getAttribute('href')).toBe('/notes?concept=%EB%B2%A1%ED%84%B0');
+    expect(tagLink?.getAttribute('href')).toBe('/notes?tag=%ED%95%99%EC%8A%B5');
+    expect(sourceLink?.getAttribute('href')).toBe('/notes?source=%EC%A7%81%EC%A0%91+%ED%85%8D%EC%8A%A4%ED%8A%B8');
     expect(view.querySelector('a a')).toBeNull();
 
     const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
@@ -201,6 +205,11 @@ describe('NotesList', () => {
       document.removeEventListener('click', keepTestInPlace);
     }
     expect(onFacetSelect).toHaveBeenCalledTimes(1);
+
+    await act(async () => { tagLink!.click(); });
+    await act(async () => { sourceLink!.click(); });
+    expect(onFacetSelect).toHaveBeenNthCalledWith(2, { type: 'tag', value: '학습' });
+    expect(onFacetSelect).toHaveBeenNthCalledWith(3, { type: 'source', value: '직접 텍스트' });
   });
 });
 
@@ -381,6 +390,17 @@ describe('NotesPage search return flow', () => {
       }));
     });
     expect(replaceMock).toHaveBeenLastCalledWith('/notes?concept=%EB%B2%A1%ED%84%B0', { scroll: false });
+
+    const tagPivot = view.querySelector<HTMLAnchorElement>('[aria-label="학습 태그로 계속 탐색"]');
+    await act(async () => { tagPivot!.click(); });
+    expect(replaceMock).toHaveBeenLastCalledWith('/notes?tag=%ED%95%99%EC%8A%B5', { scroll: false });
+
+    const sourcePivot = view.querySelector<HTMLAnchorElement>('[aria-label="직접 텍스트 출처로 계속 탐색"]');
+    await act(async () => { sourcePivot!.click(); });
+    expect(replaceMock).toHaveBeenLastCalledWith(
+      '/notes?source=%EC%A7%81%EC%A0%91+%ED%85%8D%EC%8A%A4%ED%8A%B8',
+      { scroll: false },
+    );
 
     const returnButton = findByAriaLabel<HTMLButtonElement>(
       view,
