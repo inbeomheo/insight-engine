@@ -684,12 +684,21 @@ export function ActiveFacetBar({
       </div>
       <div className="flex flex-wrap items-center gap-1">
         {searchReturnQuery !== null && (
-          <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onReturnToSearch}>
-            <ArrowLeft className="h-3.5 w-3.5" />
-            검색 결과로 돌아가기 ({searchReturnCount})
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 max-w-full gap-1 text-xs"
+            aria-label={`“${searchReturnQuery}” 검색 결과 ${searchReturnCount}개로 돌아가기`}
+            title={`“${searchReturnQuery}” 검색 결과로 돌아가기`}
+            onClick={onReturnToSearch}
+          >
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="max-w-48 truncate">“{searchReturnQuery}” 검색 결과</span>
+            <span className="shrink-0">({searchReturnCount})</span>
           </Button>
         )}
-        <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" onClick={onClear}>
+        <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-xs" aria-label={`${getFacetLabel(facet)} 필터 해제`} onClick={onClear}>
           <X className="h-3.5 w-3.5" />
           필터 해제
         </Button>
@@ -1862,18 +1871,20 @@ export function SearchResultsList({
                   </Badge>
                 </div>
                 {result.snippet && (
-                  <p className="text-xs text-muted-foreground/80 mt-1.5 line-clamp-2">
-                    {snippetFragments.map((fragment, index) => fragment.highlighted ? (
-                      <mark
-                        key={index}
-                        className="rounded-sm bg-primary/15 px-0.5 text-foreground"
-                      >
-                        {fragment.text}
-                      </mark>
-                    ) : (
-                      <span key={index}>{fragment.text}</span>
-                    ))}
-                  </p>
+                  <div role="group" aria-label={`${result.title} 검색 근거`}>
+                    <p className="text-xs text-muted-foreground/80 mt-1.5 line-clamp-2">
+                      {snippetFragments.map((fragment, index) => fragment.highlighted ? (
+                        <mark
+                          key={index}
+                          className="rounded-sm bg-primary/15 px-0.5 text-foreground"
+                        >
+                          {fragment.text}
+                        </mark>
+                      ) : (
+                        <span key={index}>{fragment.text}</span>
+                      ))}
+                    </p>
+                  </div>
                 )}
                 {keyConcepts.length > 0 && (
                   <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="핵심 개념">

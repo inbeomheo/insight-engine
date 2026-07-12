@@ -95,6 +95,19 @@ async function renderActiveFacetBar({
   return container;
 }
 
+function findByAriaLabel<T extends Element>(
+  view: ParentNode,
+  selector: string,
+  pattern: RegExp,
+): T | null {
+  return Array.from(view.querySelectorAll<T>(selector))
+    .find((element) => pattern.test(element.getAttribute('aria-label') ?? '')) ?? null;
+}
+
+function findSearchEvidence(view: ParentNode): Element | null {
+  return findByAriaLabel(view, '[role="group"]', /검색 근거$/);
+}
+
 function result(id = 'note/id'): NoteSearchResult {
   return {
     id,
@@ -215,7 +228,7 @@ describe('SearchResultsList', () => {
 
   it('marks only the matched snippet phrase and preserves the full snippet text', async () => {
     const view = await renderSearchResults([result()], [note()]);
-    const snippet = view.querySelector('p.line-clamp-2');
+    const snippet = findSearchEvidence(view);
     const mark = snippet?.querySelector('mark');
 
     expect(snippet?.textContent).toBe('검색 근거 요약');
@@ -228,7 +241,7 @@ describe('SearchResultsList', () => {
   it('renders the original snippet without mark when the server returns no highlight range', async () => {
     const withoutHighlight = { ...result(), highlight_ranges: [] };
     const view = await renderSearchResults([withoutHighlight], [note()]);
-    const snippet = view.querySelector('p.line-clamp-2');
+    const snippet = findSearchEvidence(view);
 
     expect(snippet?.textContent).toBe('검색 근거 요약');
     expect(snippet?.querySelector('mark')).toBeNull();
@@ -244,12 +257,16 @@ describe('ActiveFacetBar', () => {
       onReturnToSearch,
       onClear,
     });
-    const buttons = Array.from(view.querySelectorAll('button'));
-    const returnButton = buttons.find((button) => button.textContent?.includes('검색 결과로 돌아가기'));
-    const clearButton = buttons.find((button) => button.textContent?.includes('필터 해제'));
+    const returnButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /RAG 검색.*검색 결과 2개로 돌아가기$/,
+    );
+    const clearButton = findByAriaLabel<HTMLButtonElement>(view, 'button', /필터 해제$/);
 
     expect(view.textContent).toContain('개념: RAG');
     expect(view.textContent).toContain('1/4개 노트');
+    expect(returnButton?.textContent).toContain('“RAG 검색” 검색 결과');
     expect(returnButton?.textContent).toContain('(2)');
 
     await act(async () => { returnButton?.click(); });
@@ -288,8 +305,8 @@ describe('NotesPage search return flow', () => {
     });
 
     expect(searchNotes).toHaveBeenCalledWith('RAG 검색');
-    expect(view.querySelector('p.line-clamp-2')?.textContent).toBe('검색 근거 요약');
-    expect(view.querySelector('p.line-clamp-2 mark')?.textContent).toBe('근거 요약');
+    expect(findSearchEvidence(view)?.textContent).toBe('검색 근거 요약');
+    expect(findSearchEvidence(view)?.querySelector('mark')?.textContent).toBe('근거 요약');
 
     const conceptLink = view.querySelector<HTMLAnchorElement>('[aria-label="RAG 개념으로 탐색"]');
     await act(async () => {
@@ -301,18 +318,21 @@ describe('NotesPage search return flow', () => {
     });
 
     expect(input!.value).toBe('');
-    expect(view.querySelector('p.line-clamp-2')).toBeNull();
-    const returnButton = Array.from(view.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('검색 결과로 돌아가기 (1)'));
-    expect(returnButton).toBeDefined();
+    expect(findSearchEvidence(view)).toBeNull();
+    const returnButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /RAG 검색.*검색 결과 1개로 돌아가기$/,
+    );
+    expect(returnButton).not.toBeNull();
 
     await act(async () => {
       returnButton!.click();
     });
 
     expect(input!.value).toBe('RAG 검색');
-    expect(view.querySelector('p.line-clamp-2')?.textContent).toBe('검색 근거 요약');
-    expect(view.querySelector('p.line-clamp-2 mark')?.textContent).toBe('근거 요약');
+    expect(findSearchEvidence(view)?.textContent).toBe('검색 근거 요약');
+    expect(findSearchEvidence(view)?.querySelector('mark')?.textContent).toBe('근거 요약');
     expect(replaceMock).toHaveBeenLastCalledWith('/notes', { scroll: false });
   });
 });
