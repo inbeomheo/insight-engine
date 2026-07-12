@@ -55,6 +55,7 @@
   17차: 프론트 소비 0인 `/api/memory`, `/api/auto-tags`, `/api/progressive-summary` 라우트와 전용 자동태깅·단계요약 서비스/테스트 제거 완료.
   18차: 프론트 소비 0인 `/api/generate-multi`, `/api/pipeline`, `/api/inline-edit`와 파이프라인 서비스·고아 UI·전용 테스트 제거 완료.
   19차: 프론트 소비 0인 `/api/recommend-sources`와 전용 소스 추천 서비스·API 래퍼·타입·테스트·오래된 계획 문구 제거 완료.
+  20차: 프론트 소비 0인 `/api/user/snippets*`와 전용 facade·Supabase CRUD 헬퍼·테스트·재도입 계획을 제거하고 legacy DB migration은 보존.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -124,6 +125,11 @@
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
+
+- [x] 2026-07-12 chore(dead-code): 사용자 스니펫 API 잔여 체인 제거 (PR #125).
+  프론트 소비가 없는 사용자 스니펫 CRUD 라우트·facade·Supabase 헬퍼·전용 테스트와 재도입 계획을 제거.
+  기존 ie_snippets migration·테이블·정책은 데이터 보존을 위해 유지하고 스타일 메모리·워크스페이스 활동 라우트는 그대로 보존.
+  검증: backend 3,875 passed / 1 skipped / 11 subtests, 대상 68 passed, frontend 159 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
 
 - [x] 2026-07-12 feat(notes): 검색 결과 개념 피벗 링크 추가 (PR #125).
   검색 결과의 핵심 개념 배지를 인코딩된 위키 필터 링크로 바꾸고, 일반 활성화는 기존 facet 상태·URL을 즉시 동기화.

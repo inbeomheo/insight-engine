@@ -3,6 +3,11 @@
 멀티에이전트 감사(에이전트 52개)로 소비자 없는 엔드포인트/모듈/의존성 354건을 발굴하고,
 각 후보를 적대적 검증(동적 import, url_for, 프론트엔드/확장/n8n/문서/배포설정/OpenAPI 전수 grep)했다.
 
+## 2026-07-12 갱신 — 사용자 스니펫 잔여 체인 제거
+
+- 프론트 소비 0으로 재검증된 `GET/POST /api/user/snippets`, `DELETE /api/user/snippets/<snippet_id>`와 전용 `snippet_facade`, Supabase CRUD 헬퍼, 전용 테스트를 제거.
+- `supabase/migrations/003_snippets.sql`과 기존 DB 테이블·정책은 적용 이력 및 데이터 보존을 위해 수정하지 않음.
+
 ## 2026-07-05 갱신 (dev-loop cycle 27b)
 
 - `routes/advanced_routes.py` 9건은 재검증 결과 이미 PR #81(Dep-2 batch 1, 2026-07-04)에서 라우트 자체가 제거되어 있었음. 이번 배치는 해당 라우트가 유일하게 호출하던 orphan 서비스 `services/finetune/`(data_collector, dataset_builder, reward_model) + 전용 테스트 3개를 제거.
@@ -38,7 +43,7 @@ payment/marketplace 그룹을 제외한 잔여 그룹을 파일 존재 여부 + 
 
 - **routes/auth/admin.py (6건)** — 파일 삭제.
 - **routes/auth/history_account.py (실제 7건 확인 — 목록 4건에 없던 `DELETE /api/user/history/<report_id>`, `POST .../favorite`, `PUT /api/user/history/<report_id>` 3건도 소비자 0 재확인)** — 파일 삭제.
-- **routes/auth/misc.py (8건 + 목록에 없던 `POST /api/sso/<workspace_id>/callback` 1건, sso_service 전체 orphan이라 함께 삭제)** — 해당 라우트만 제거, 스타일 메모리/스니펫/활동피드 라우트는 잔존(소비자 있음: `frontend/lib/api.ts`의 style-memory, `frontend/hooks/useSnippets.ts` 등, `frontend/components/workspace/ActivityFeed.tsx`).
+- **routes/auth/misc.py (8건 + 목록에 없던 `POST /api/sso/<workspace_id>/callback` 1건, sso_service 전체 orphan이라 함께 삭제)** — 해당 라우트만 제거. 스타일 메모리·활동피드는 유지하고, 이후 프론트 소비 0으로 재검증된 스니펫 라우트는 2026-07-12 dead-code 20차에서 제거.
 - **routes/auth/user_settings.py (6건)** — 파일 삭제.
 - **routes/auth_routes.py의 GET /api/auth/status, GET /api/auth/config (2건)** — 공유 라이브 파일이라 해당 2개 라우트만 제거, signup/login/oauth/refresh/me 등 기존 유지 판정 라우트는 그대로.
 - **routes/integrations/misc.py의 GET /api/openapi.json, GET /api/docs (2건)** — 앱 피드백(`/api/app-feedback`)/OAuth 2.0 공급자(`/oauth/*`) 라우트는 그대로 유지.

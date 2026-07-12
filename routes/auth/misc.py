@@ -1,4 +1,4 @@
-"""기타 사용자 영역 — 스타일 메모리, 스니펫, 활동 피드 라우트.
+"""기타 사용자 영역 — 스타일 메모리, 활동 피드 라우트.
 
 auth_routes.py에서 분리됨. namespace 경유 호출 패턴 유지.
 """
@@ -44,51 +44,6 @@ def reset_style_memory():
     from services.data.style_memory_service import reset_profile
     reset_profile(g.user_id)
     return _ar._success_response({'message': '스타일 메모리가 초기화되었습니다.'})
-
-
-# ── 스니펫 라이브러리 ────────────────────────────────────
-
-
-@auth_bp.route('/api/user/snippets', methods=['GET'])
-@require_auth
-def get_snippets():
-    """사용자 스니펫 목록을 반환합니다."""
-    snippets = _ar.get_user_snippets(g.user_id)
-    return jsonify({'snippets': snippets})
-
-
-@auth_bp.route('/api/user/snippets', methods=['POST'])
-@require_auth
-def create_snippet_route():
-    """새 스니펫을 생성합니다."""
-    data = _ar._get_json_data()
-    if not data.get('content'):
-        return _ar._error_response('스니펫 내용이 필요합니다.')
-    try:
-        result = _ar.create_snippet(g.user_id, data)
-        if isinstance(result, dict) and result.get('error'):
-            return _ar._safe_service_error_response(
-                result['error'],
-                '[서버 오류] 스니펫 저장에 실패했습니다.',
-                500
-            )
-        return jsonify(result), 201
-    except Exception as e:
-        return _ar._exception_error_response(
-            '스니펫 저장 오류',
-            e,
-            '[서버 오류] 스니펫 저장 중 문제가 발생했습니다.'
-        )
-
-
-@auth_bp.route('/api/user/snippets/<snippet_id>', methods=['DELETE'])
-@require_auth
-def delete_snippet_route(snippet_id):
-    """스니펫을 삭제합니다."""
-    success = _ar.delete_snippet(g.user_id, snippet_id)
-    if not success:
-        return _ar._error_response('삭제 실패', 500)
-    return jsonify({'ok': True})
 
 
 # ── 활동 피드 (F5-24) ────────────────────────────────────

@@ -12,9 +12,6 @@ from src.shared.infrastructure.supabase_client import get_supabase, is_supabase_
 # Phase 5-e: supabase_service 다중 import를 도메인별 facade로 분리.
 # 각 facade는 services/data/ 내부이므로 베이스라인에서 자연스럽게 제외.
 from services.data.usage_admin_facade import is_admin
-from services.data.snippet_facade import (
-    get_user_snippets, create_snippet, delete_snippet,
-)
 from services.data.workspace_service import workspace_service, content_approval_service
 
 auth_bp = Blueprint('auth', __name__)
