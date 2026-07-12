@@ -51,6 +51,7 @@ import {
   writeNoteReviewSchedule,
   type NoteReviewSchedule,
 } from '@/lib/note-review-schedule';
+import { recordNoteReviewCompletion } from '@/lib/note-review-history';
 import { getStyleLabel } from '@/lib/helpers';
 import { buildNoteFacetHref } from '@/lib/note-list';
 import type { Report } from '@/lib/types';
@@ -292,8 +293,11 @@ function NoteBody({ note, linkedReport }: { note: NoteDetail; linkedReport: Repo
 
   const scheduleReview = useCallback((intervalDays: number) => {
     const next = writeNoteReviewSchedule(note.id, intervalDays);
+    if (next) {
+      recordNoteReviewCompletion({ noteId: note.id, noteTitle, intervalDays });
+    }
     setReviewSchedule(next);
-  }, [note.id]);
+  }, [note.id, noteTitle]);
 
   const scrollToNextStudyTarget = useCallback(() => {
     if (!nextStudyTarget) return;
