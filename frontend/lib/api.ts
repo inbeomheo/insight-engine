@@ -14,7 +14,6 @@ import type {
   KnowledgeItem,
   VideoEvent,
   EventSummary,
-  ProviderValidateResponse,
   FactCheckResponse,
   PlagiarismResponse,
   ReadabilityResponse,
@@ -673,18 +672,6 @@ export async function extractEvents(req: ExtractEventsRequest): Promise<ExtractE
   return request('/api/extract-events', {
     method: 'POST',
     body: JSON.stringify(req),
-  });
-}
-
-// === 프로바이더 유효성 검사 (F18) ===
-
-export async function validateProvider(
-  providerId: string,
-  apiKey: string,
-): Promise<ProviderValidateResponse> {
-  return request('/api/providers/validate', {
-    method: 'POST',
-    body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
   });
 }
 

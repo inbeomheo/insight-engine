@@ -56,6 +56,7 @@
   18차: 프론트 소비 0인 `/api/generate-multi`, `/api/pipeline`, `/api/inline-edit`와 파이프라인 서비스·고아 UI·전용 테스트 제거 완료.
   19차: 프론트 소비 0인 `/api/recommend-sources`와 전용 소스 추천 서비스·API 래퍼·타입·테스트·오래된 계획 문구 제거 완료.
   20차: 프론트 소비 0인 `/api/user/snippets*`와 전용 facade·Supabase CRUD 헬퍼·테스트·재도입 계획을 제거하고 legacy DB migration은 보존.
+  21차: 프론트 소비 0인 `POST /api/providers/validate`와 전용 오류 헬퍼·프론트 래퍼·타입·테스트를 제거하고 활성 `GET /api/providers`는 보존.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -140,6 +141,10 @@
 
 ## Done
 
+- [x] 2026-07-12 cleanup(api): 미사용 프로바이더 검증 체인 제거 (PR #125).
+  프론트 소비 0인 `POST /api/providers/validate`와 ChatMock 검증 오류 헬퍼, 프론트 래퍼·응답 타입, 전용·통합 테스트 10건을 제거.
+  활성 `GET /api/providers`, `fetchProviders`, `ProvidersResponse`, ChatMock 모델 목록은 유지하고 제거 심볼 grep 0을 확인.
+  검증: backend 3,865 passed / 1 skipped / 11 subtests, frontend 163 passed, ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
 - [x] 2026-07-12 feat(notes): 전체 위키 탐색 경로와 임의 단계 복귀 추가 (PR #125).
   개념·태그·출처 facet 스택 전체와 현재 단계를 활성 필터 바에 표시하고 원하는 이전 단계로 바로 점프.
   동일 이름 단계는 순번이 포함된 접근성 이름으로 구분하고 모바일 터치 영역·긴 라벨 줄임표·중간 스택 절단·검색 복귀 보존을 테스트로 고정.

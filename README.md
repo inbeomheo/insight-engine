@@ -239,7 +239,6 @@ insight-engine/
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/providers` | GET | 사용 가능한 AI 목록 |
-| `/api/providers/validate` | POST | API 키 유효성 검증 |
 | `/api/knowledge/upload` | POST | RAG 문서 업로드 |
 | `/api/admin/dashboard` | GET | 운영 대시보드 |
 
