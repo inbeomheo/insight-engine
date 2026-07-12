@@ -51,6 +51,87 @@ export interface NoteSearchResultPresentation {
   };
 }
 
+export interface NoteSearchSnippetFragment {
+  text: string;
+  highlighted: boolean;
+}
+
+export interface NoteSearchRequestIdRef {
+  current: number;
+}
+
+export function advanceNoteSearchRequestId(requestIdRef: NoteSearchRequestIdRef): number {
+  requestIdRef.current += 1;
+  return requestIdRef.current;
+}
+
+export function isCurrentNoteSearchRequest(
+  requestIdRef: NoteSearchRequestIdRef,
+  requestId: number
+): boolean {
+  return requestIdRef.current === requestId;
+}
+
+function getCodePointBoundaries(text: string): number[] {
+  const boundaries = [0];
+  let offset = 0;
+  for (const codePoint of text) {
+    offset += codePoint.length;
+    boundaries.push(offset);
+  }
+  return boundaries;
+}
+
+function normalizeHighlightRanges(
+  ranges: unknown,
+  codePointCount: number
+): Array<[number, number]> {
+  if (!Array.isArray(ranges)) return [];
+  const normalized = ranges.flatMap((range): Array<[number, number]> => {
+    if (!Array.isArray(range) || range.length < 2) return [];
+    const [rawStart, rawEnd] = range;
+    if (!Number.isFinite(rawStart) || !Number.isFinite(rawEnd)) return [];
+    const start = Math.max(0, Math.min(codePointCount, Math.floor(rawStart)));
+    const end = Math.max(0, Math.min(codePointCount, Math.floor(rawEnd)));
+    return start < end ? [[start, end]] : [];
+  }).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+
+  const accepted: Array<[number, number]> = [];
+  for (const range of normalized) {
+    const previous = accepted.at(-1);
+    if (previous && range[0] < previous[1]) continue;
+    accepted.push(range);
+  }
+  return accepted;
+}
+
+export function getNoteSearchSnippetFragments(
+  text: string,
+  ranges: unknown
+): NoteSearchSnippetFragment[] {
+  const fallback = [{ text, highlighted: false }];
+  if (typeof text !== 'string') return fallback;
+
+  const boundaries = getCodePointBoundaries(text);
+  const normalizedRanges = normalizeHighlightRanges(ranges, boundaries.length - 1);
+  if (normalizedRanges.length === 0) return fallback;
+
+  const fragments: NoteSearchSnippetFragment[] = [];
+  let cursor = 0;
+  for (const [start, end] of normalizedRanges) {
+    const utf16Start = boundaries[start];
+    const utf16End = boundaries[end];
+    if (utf16Start > cursor) {
+      fragments.push({ text: text.slice(cursor, utf16Start), highlighted: false });
+    }
+    fragments.push({ text: text.slice(utf16Start, utf16End), highlighted: true });
+    cursor = utf16End;
+  }
+  if (cursor < text.length) fragments.push({ text: text.slice(cursor), highlighted: false });
+
+  return fragments.length > 0 ? fragments : fallback;
+}
+
 function normalizeNoteCount(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return 0;
   return Math.floor(value);

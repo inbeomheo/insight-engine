@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
 import {
+  advanceNoteSearchRequestId,
   filterNotesByFacet,
   filterNotesByStudyStatus,
   buildDailyStudyPlanMarkdown,
@@ -22,6 +23,7 @@ import {
   getKnowledgeGapConcepts,
   getNoteConceptClusters,
   getNoteReviewQueue,
+  getNoteSearchSnippetFragments,
   getNoteSearchResultPresentations,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
@@ -33,6 +35,7 @@ import {
   getNoteStudyStatusLabel,
   getRecentStudyResumeItems,
   getStudyStartCandidates,
+  isCurrentNoteSearchRequest,
   NOTE_STUDY_QUEUE_OPEN_STORAGE_KEY,
   NOTE_WIKI_EXPLORE_OPEN_STORAGE_KEY,
   parseNotePanelOpen,
@@ -121,6 +124,7 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchRequestIdRef = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -165,7 +169,10 @@ export default function NotesPage() {
       const facet = parseNoteFacetSearchParams(new URLSearchParams(window.location.search));
       setActiveFacet(facet);
       if (facet) {
+        advanceNoteSearchRequestId(searchRequestIdRef);
         setSearchResults(null);
+        setSearching(false);
+        setError(null);
         setActiveStudyStatus(null);
       }
     };
@@ -176,9 +183,12 @@ export default function NotesPage() {
   }, []);
 
   const runSearch = useCallback(async (term: string) => {
+    const requestId = advanceNoteSearchRequestId(searchRequestIdRef);
     const q = term.trim();
     if (!q) {
       setSearchResults(null);
+      setSearching(false);
+      setError(null);
       return;
     }
     setQuery(q);
@@ -189,11 +199,13 @@ export default function NotesPage() {
     setError(null);
     try {
       const res = await searchNotes(q);
+      if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setSearchResults(res.notes);
     } catch (err) {
+      if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
       setError(err instanceof Error ? err.message : '검색에 실패했습니다.');
     } finally {
-      setSearching(false);
+      if (isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) setSearching(false);
     }
   }, [router]);
 
@@ -250,25 +262,37 @@ export default function NotesPage() {
   }, [query, runSearch]);
 
   const handleClear = useCallback(() => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
     setQuery('');
     setSearchResults(null);
+    setSearching(false);
+    setError(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
   const handleFacetSelect = useCallback((facet: NoteFacet) => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
     setSearchResults(null);
+    setSearching(false);
+    setError(null);
     setActiveFacet(facet);
     setActiveStudyStatus(null);
     router.replace(buildNoteFacetHref(facet), { scroll: false });
   }, [router]);
 
   const handleFacetClear = useCallback(() => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setSearching(false);
+    setError(null);
     setActiveFacet(null);
     router.replace('/notes', { scroll: false });
   }, [router]);
 
   const handleStudyStatusSelect = useCallback((status: NoteStudyStatus) => {
+    advanceNoteSearchRequestId(searchRequestIdRef);
     setSearchResults(null);
+    setSearching(false);
+    setError(null);
     setActiveFacet(null);
     setActiveStudyStatus((current) => current === status ? null : status);
     router.replace('/notes', { scroll: false });
@@ -1736,6 +1760,7 @@ export function SearchResultsList({
         links,
       }) => {
         const title = result.title || '제목 없음';
+        const snippetFragments = getNoteSearchSnippetFragments(result.snippet, result.highlight_ranges);
 
         return (
           <li key={result.id}>
@@ -1757,7 +1782,16 @@ export function SearchResultsList({
                 </div>
                 {result.snippet && (
                   <p className="text-xs text-muted-foreground/80 mt-1.5 line-clamp-2">
-                    {result.snippet}
+                    {snippetFragments.map((fragment, index) => fragment.highlighted ? (
+                      <mark
+                        key={index}
+                        className="rounded-sm bg-primary/15 px-0.5 text-foreground"
+                      >
+                        {fragment.text}
+                      </mark>
+                    ) : (
+                      <span key={index}>{fragment.text}</span>
+                    ))}
                   </p>
                 )}
                 {keyConcepts.length > 0 && (

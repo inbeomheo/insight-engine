@@ -21,7 +21,10 @@ vi.mock('next/navigation', () => ({
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-async function renderSearchResults(results: NoteSearchResult[], notes: NoteListItem[]) {
+async function renderSearchResults(
+  results: NoteSearchResult[],
+  notes: NoteListItem[]
+) {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -37,6 +40,7 @@ function result(id = 'note/id'): NoteSearchResult {
     title: '검색 노트',
     score: 0.91,
     snippet: '검색 근거 요약',
+    highlight_ranges: [[3, 8]],
   };
 }
 
@@ -102,5 +106,26 @@ describe('SearchResultsList', () => {
     expect(view.querySelector('[aria-label="검색 노트 근거 보기"]')).toBeNull();
     expect(view.querySelector('[aria-label="검색 노트 복습 시작"]')).toBeNull();
     expect(view.querySelector('a a')).toBeNull();
+  });
+
+  it('marks only the matched snippet phrase and preserves the full snippet text', async () => {
+    const view = await renderSearchResults([result()], [note()]);
+    const snippet = view.querySelector('p.line-clamp-2');
+    const mark = snippet?.querySelector('mark');
+
+    expect(snippet?.textContent).toBe('검색 근거 요약');
+    expect(mark?.textContent).toBe('근거 요약');
+    expect(mark?.className).toContain('bg-primary/15');
+    expect(view.querySelector('a mark')).toBeNull();
+    expect(view.querySelector('a a')).toBeNull();
+  });
+
+  it('renders the original snippet without mark when the server returns no highlight range', async () => {
+    const withoutHighlight = { ...result(), highlight_ranges: [] };
+    const view = await renderSearchResults([withoutHighlight], [note()]);
+    const snippet = view.querySelector('p.line-clamp-2');
+
+    expect(snippet?.textContent).toBe('검색 근거 요약');
+    expect(snippet?.querySelector('mark')).toBeNull();
   });
 });

@@ -58,7 +58,7 @@ def test_search_notes_returns_mapped_results(mock_get_client):
     collection.count.return_value = 2
     collection.query.return_value = {
         "ids": [["note-1", "note-2"]],
-        "documents": [["요약 A", "요약 B"]],
+        "documents": [["AI 요약 A", "요약 B"]],
         "metadatas": [[{"title": "글 A"}, {"title": "글 B"}]],
         "distances": [[0.2, 0.8]],
     }
@@ -67,8 +67,8 @@ def test_search_notes_returns_mapped_results(mock_get_client):
 
     collection.query.assert_called_once_with(query_texts=["AI"], n_results=2)
     assert results == [
-        {"id": "note-1", "title": "글 A", "score": 0.8, "snippet": "요약 A"},
-        {"id": "note-2", "title": "글 B", "score": 0.2, "snippet": "요약 B"},
+        {"id": "note-1", "title": "글 A", "score": 0.8, "snippet": "AI 요약 A", "highlight_ranges": [[0, 2]]},
+        {"id": "note-2", "title": "글 B", "score": 0.2, "snippet": "요약 B", "highlight_ranges": []},
     ]
 
 
@@ -103,6 +103,7 @@ def test_get_related_notes_excludes_self_and_limits(mock_get_client):
     ], n_results=3)
     assert [item["id"] for item in results] == ["note-2", "note-3"]
     assert results[0]["title"] == "관련 글 B"
+    assert all(item["highlight_ranges"] == [] for item in results)
 
 
 @patch("services.content.note_index_service.get_chroma_client")
@@ -279,6 +280,65 @@ def test_snippet_returns_normalized_short_document_unchanged():
     assert note_index_service._snippet(text, "short") == "short text"
 
 
+def test_snippet_highlight_ranges_follow_python_phrase_token_and_case_matching():
+    cases = [
+        ("prefix Adaptive REVIEW suffix", "adaptive review", "Adaptive REVIEW"),
+        ("prefix specificlongtoken suffix", "missing specificlongtoken", "specificlongtoken"),
+        ("앞 İ 뒤", "i", "İ"),
+    ]
+
+    for text, query, expected in cases:
+        snippet, ranges = note_index_service._snippet_with_highlights(text, query)
+
+        assert len(ranges) == 1
+        start, end = ranges[0]
+        assert snippet[start:end] == expected
+        assert 0 <= start < end <= len(snippet)
+
+
+def test_snippet_highlight_ranges_are_empty_for_missing_numeric_and_related_queries():
+    text = "leading 2026 evidence"
+
+    assert note_index_service._snippet_with_highlights(text, "missing")[1] == []
+    assert note_index_service._snippet_with_highlights(text, "2026 !!!")[1] == []
+    assert note_index_service._snippet_with_highlights(text)[1] == []
+
+
+def test_long_match_highlight_range_only_covers_visible_body_and_excludes_ellipses():
+    for length in (179, 180):
+        token = "z" * length
+        text = ("leading context " * 30) + token + (" trailing context" * 30)
+
+        snippet, ranges = note_index_service._snippet_with_highlights(text, token)
+
+        assert len(snippet) == note_index_service.SNIPPET_MAX_CHARS
+        assert snippet.startswith(chr(0x2026))
+        assert snippet.endswith(chr(0x2026))
+        assert ranges == [[1, note_index_service.SNIPPET_MAX_CHARS - 1]]
+        start, end = ranges[0]
+        assert snippet[start:end] == token[:end - start]
+
+
+def test_boundary_long_match_range_excludes_single_ellipsis():
+    token = "z" * 179
+
+    start_snippet, start_ranges = note_index_service._snippet_with_highlights(
+        token + (" tail" * 20),
+        token,
+    )
+    end_snippet, end_ranges = note_index_service._snippet_with_highlights(
+        ("prefix " * 20) + token,
+        token,
+    )
+
+    assert start_ranges == [[0, 179]]
+    assert start_snippet[0:179] == token
+    assert start_snippet[179:] == chr(0x2026)
+    assert end_ranges == [[1, 180]]
+    assert end_snippet[0] == chr(0x2026)
+    assert end_snippet[1:180] == token
+
+
 @patch("services.content.note_index_service._map_results")
 @patch("services.content.note_index_service.get_chroma_client")
 def test_search_notes_passes_normalized_query_to_result_mapping(mock_get_client, mock_map_results):
@@ -322,6 +382,9 @@ def test_map_results_uses_query_context_for_search_snippet():
 
     assert "matching phrase" in mapped[0]["snippet"]
     assert mapped[0]["snippet"].startswith(chr(0x2026))
+    assert len(mapped[0]["highlight_ranges"]) == 1
+    start, end = mapped[0]["highlight_ranges"][0]
+    assert mapped[0]["snippet"][start:end] == "matching phrase"
 
 
 def test_map_results_tolerates_malformed_shapes_and_missing_values():
@@ -341,6 +404,7 @@ def test_map_results_tolerates_malformed_shapes_and_missing_values():
         "title": "",
         "score": 0.0,
         "snippet": "short text",
+        "highlight_ranges": [],
     }]
 
 

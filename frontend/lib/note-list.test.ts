@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { NoteListItem, NoteSearchResult } from './api';
 import {
+  advanceNoteSearchRequestId,
   buildDailyStudyPlanMarkdown,
   buildNoteFacetHref,
   buildWikiIndexMarkdown,
@@ -13,6 +14,7 @@ import {
   getNoteConceptClusters,
   getNoteRecallReinforcementPath,
   getNoteReviewQueue,
+  getNoteSearchSnippetFragments,
   getNoteSearchResultPresentations,
   getNoteStudyCardOrder,
   getNoteStudyQueueCount,
@@ -26,6 +28,7 @@ import {
   getRecentStudyResumeItems,
   getScheduledReviewItems,
   getStudyStartCandidates,
+  isCurrentNoteSearchRequest,
   parseNotePanelOpen,
   parseNoteFacetSearchParams,
   parseNoteStudyQueueOpen,
@@ -173,6 +176,61 @@ describe('note-list', () => {
       document: '/notes/invalid',
       chat: '/notes/invalid#chat',
     });
+  });
+
+  it('converts server code-point ranges around astral characters to safe UTF-16 slices', () => {
+    const text = 'A😀RAG뒤';
+    expect(getNoteSearchSnippetFragments(text, [[2, 5]])).toEqual([
+      { text: 'A😀', highlighted: false },
+      { text: 'RAG', highlighted: true },
+      { text: '뒤', highlighted: false },
+    ]);
+    expect(getNoteSearchSnippetFragments(text, [[1, 2]])).toEqual([
+      { text: 'A', highlighted: false },
+      { text: '😀', highlighted: true },
+      { text: 'RAG뒤', highlighted: false },
+    ]);
+  });
+
+  it('clamps and sorts ranges while ignoring malformed and overlapping entries', () => {
+    const text = 'abcdef';
+    const fragments = getNoteSearchSnippetFragments(text, [
+      [4, 99],
+      [1, 3],
+      [2, 5],
+      [-5, 1],
+      [3, 3],
+      ['bad', 2],
+      [Number.NaN, 2],
+    ]);
+
+    expect(fragments.filter((fragment) => fragment.highlighted).map((fragment) => fragment.text)).toEqual([
+      'a', 'bc', 'ef',
+    ]);
+    expect(fragments.map((fragment) => fragment.text).join('')).toBe(text);
+  });
+
+  it('supports long clamped ranges and returns one untouched fragment without valid ranges', () => {
+    const text = `앞😀${'가'.repeat(200)}뒤`;
+    const fragments = getNoteSearchSnippetFragments(text, [[2, 999]]);
+    expect(fragments.map((fragment) => fragment.text).join('')).toBe(text);
+    expect(fragments.find((fragment) => fragment.highlighted)?.text).toBe(`${'가'.repeat(200)}뒤`);
+    expect(getNoteSearchSnippetFragments(text, undefined)).toEqual([{ text, highlighted: false }]);
+    expect(getNoteSearchSnippetFragments(text, [[999, 1000]])).toEqual([{ text, highlighted: false }]);
+  });
+
+  it('advances and invalidates note search request ids monotonically', () => {
+    const requestIdRef = { current: 0 };
+    const requestA = advanceNoteSearchRequestId(requestIdRef);
+    const requestB = advanceNoteSearchRequestId(requestIdRef);
+
+    expect(requestA).toBe(1);
+    expect(requestB).toBe(2);
+    expect(isCurrentNoteSearchRequest(requestIdRef, requestA)).toBe(false);
+    expect(isCurrentNoteSearchRequest(requestIdRef, requestB)).toBe(true);
+
+    advanceNoteSearchRequestId(requestIdRef);
+    expect(isCurrentNoteSearchRequest(requestIdRef, requestB)).toBe(false);
   });
 
   it('labels common note source types', () => {

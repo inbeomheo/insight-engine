@@ -201,11 +201,13 @@ def _map_results(
         metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
         note_id = str(ids[idx]) if idx < len(ids) else ""
         distance = distances[idx] if idx < len(distances) else None
+        snippet, highlight_ranges = _snippet_with_highlights(document, query)
         mapped.append({
             "id": note_id,
             "title": str(metadata.get("title", "")),
             "score": _score_from_distance(distance),
-            "snippet": _snippet(document, query),
+            "snippet": snippet,
+            "highlight_ranges": highlight_ranges,
         })
     return mapped
 
@@ -274,9 +276,13 @@ def _leading_snippet(text: str) -> str:
     return text[: SNIPPET_MAX_CHARS - 1] + "…"
 
 
-def _context_snippet(text: str, start: int, end: int) -> str:
+def _context_snippet_details(
+    text: str,
+    start: int,
+    end: int,
+) -> tuple[str, int, int, int]:
     if len(text) <= SNIPPET_MAX_CHARS:
-        return text
+        return text, 0, len(text), 0
 
     reserve = int(start > 0) + int(end < len(text))
     available = max(1, SNIPPET_MAX_CHARS - reserve)
@@ -306,19 +312,70 @@ def _context_snippet(text: str, start: int, end: int) -> str:
         if boundary >= end:
             window_end = boundary
 
-    body = text[window_start:window_end].strip()
+    body_start = window_start
+    body_end = window_end
+    while body_start < body_end and text[body_start].isspace():
+        body_start += 1
+    while body_end > body_start and text[body_end - 1].isspace():
+        body_end -= 1
+    body = text[body_start:body_end]
     prefix = "…" if window_start > 0 else ""
     suffix = "…" if window_end < len(text) else ""
     snippet = prefix + body + suffix
-    return snippet[:SNIPPET_MAX_CHARS]
+    return snippet[:SNIPPET_MAX_CHARS], body_start, body_end, len(prefix)
+
+
+def _context_snippet(text: str, start: int, end: int) -> str:
+    snippet, _, _, _ = _context_snippet_details(text, start, end)
+    return snippet
+
+
+def _visible_highlight_range(
+    snippet: str,
+    body_start: int,
+    body_end: int,
+    prefix_length: int,
+    match_start: int,
+    match_end: int,
+) -> list[list[int]]:
+    visible_body_length = max(0, min(len(snippet) - prefix_length, body_end - body_start))
+    visible_body_end = body_start + visible_body_length
+    visible_start = max(match_start, body_start)
+    visible_end = min(match_end, visible_body_end)
+    if visible_start >= visible_end:
+        return []
+    return [[
+        prefix_length + visible_start - body_start,
+        prefix_length + visible_end - body_start,
+    ]]
+
+
+def _snippet_with_highlights(
+    text: Any,
+    query: Any = None,
+) -> tuple[str, list[list[int]]]:
+    normalized = _normalize_whitespace(text)
+    span = _find_query_span(normalized, query)
+    if len(normalized) <= SNIPPET_MAX_CHARS:
+        return normalized, [list(span)] if span is not None else []
+
+    if span is None:
+        return _leading_snippet(normalized), []
+
+    snippet, body_start, body_end, prefix_length = _context_snippet_details(
+        normalized,
+        *span,
+    )
+    ranges = _visible_highlight_range(
+        snippet,
+        body_start,
+        body_end,
+        prefix_length,
+        *span,
+    )
+    return snippet, ranges
 
 
 def _snippet(text: Any, query: Any = None) -> str:
-    normalized = _normalize_whitespace(text)
-    if len(normalized) <= SNIPPET_MAX_CHARS:
-        return normalized
-
-    span = _find_query_span(normalized, query)
-    if span is None:
-        return _leading_snippet(normalized)
-    return _context_snippet(normalized, *span)
+    snippet, _ = _snippet_with_highlights(text, query)
+    return snippet

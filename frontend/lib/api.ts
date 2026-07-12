@@ -916,6 +916,7 @@ export interface NoteSearchResult {
   title: string;
   score: number;
   snippet: string;
+  highlight_ranges?: Array<[number, number]>;
 }
 
 export interface DuplicateNoteItem {
