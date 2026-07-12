@@ -688,20 +688,6 @@ export async function validateProvider(
   });
 }
 
-export interface RecommendedSource {
-  url: string;
-  title: string;
-  source_type: string;
-  relevance_score: number;
-}
-
-export async function recommendSources(topic: string): Promise<{ sources: RecommendedSource[] }> {
-  return request('/api/recommend-sources', {
-    method: 'POST',
-    body: JSON.stringify({ topic }),
-  });
-}
-
 // === 피드백 (F3-06) ===
 
 export async function submitFeedback(

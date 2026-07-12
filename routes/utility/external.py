@@ -1,4 +1,4 @@
-"""외부 통신 라우트 — 웹훅 / 재생목록 / 소스 추천 / RSS.
+"""외부 통신 라우트 — 웹훅 / 재생목록 / RSS.
 
 utility_routes.py에서 분리됨. playlist 캐시는 utility_routes에서 가져와 공유.
 """
@@ -11,7 +11,7 @@ from routes.utility._state import _PLAYLIST_CACHE, _PLAYLIST_CACHE_TTL
 from services.core import content_service
 from src.contexts.identity.interface.auth_decorators import require_auth
 from services.platform.webhook_service import WebhookService
-from utils.responses import api_error, handle_error, sanitize_error_for_client
+from utils.responses import api_error, sanitize_error_for_client
 
 
 @blog_bp.route('/api/webhook/test', methods=['POST'])
@@ -83,26 +83,6 @@ def playlist_videos():
     except Exception as e:
         current_app.logger.error(f"Playlist videos failed: {e}")
         return api_error('영상 목록을 가져올 수 없습니다.', 500)
-
-
-@blog_bp.route('/api/recommend-sources', methods=['POST'])
-def api_recommend_sources():
-    """주제 기반 소스 추천"""
-    try:
-        data = request.get_json(silent=True) or {}
-        topic = data.get('topic', '').strip()
-        if not topic:
-            return api_error('주제를 입력해주세요.', 400)
-
-        from services.content.source_recommender_service import recommend_sources
-        sources = recommend_sources(topic)
-        return jsonify({'sources': sources})
-
-    except ValueError as e:
-        return handle_error(str(e))
-    except Exception as e:
-        current_app.logger.error(f"Source recommendation failed: {e}")
-        return api_error('소스 추천에 실패했습니다.', 500)
 
 
 @blog_bp.route('/feed.xml', methods=['GET'])

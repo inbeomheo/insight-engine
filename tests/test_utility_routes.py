@@ -309,28 +309,6 @@ class TestPlaylistRoutes(_BaseTestCase):
         self.assertEqual(data['total'], 1)
 
 
-# ── 소스 추천 ──────────────────────────────────────
-
-
-class TestRecommendSources(_BaseTestCase):
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    def test_recommend_sources_missing_topic(self, _):
-        resp = self.client.post('/api/recommend-sources', json={}, headers=_H)
-        self.assertEqual(resp.status_code, 400)
-
-    @patch('services.data.supabase_service.is_supabase_enabled', return_value=False)
-    @patch('services.content.source_recommender_service.recommend_sources')
-    def test_recommend_sources_success(self, mock_rec, _):
-        mock_rec.return_value = [{'url': 'https://example.com', 'relevance': 0.9}]
-        resp = self.client.post('/api/recommend-sources',
-                                json={'topic': 'AI 기술'},
-                                headers=_H)
-        self.assertEqual(resp.status_code, 200)
-        data = resp.get_json()
-        self.assertEqual(len(data['sources']), 1)
-
-
 # ── 피드백 ──────────────────────────────────────
 
 

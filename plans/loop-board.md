@@ -54,6 +54,7 @@
   16차: 프론트 소비 0인 `/api/generate-thumbnail`, `/api/agent/research`와 전용 이미지 생성·웹 리서치 에이전트 서비스/테스트 제거 완료.
   17차: 프론트 소비 0인 `/api/memory`, `/api/auto-tags`, `/api/progressive-summary` 라우트와 전용 자동태깅·단계요약 서비스/테스트 제거 완료.
   18차: 프론트 소비 0인 `/api/generate-multi`, `/api/pipeline`, `/api/inline-edit`와 파이프라인 서비스·고아 UI·전용 테스트 제거 완료.
+  19차: 프론트 소비 0인 `/api/recommend-sources`와 전용 소스 추천 서비스·API 래퍼·타입·테스트·오래된 계획 문구 제거 완료.
   완료 기준: 전체 pytest 0 fail + `cd frontend && npx.cmd tsc --noEmit` 통과 + 제거 엔드포인트 소비 grep 0.
 - [ ] [제품] 학습 고도화 — 입력 자료를 요약보다 "학습 가능한 노트"로 구조화.
   중복 소스 경고, 관련 노트, RAG 근거 트레이와 연결해 저장 전 미리보기/태그/핵심 개념을 강화.
@@ -119,6 +120,11 @@
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
+
+- [x] 2026-07-12 chore(dead-code): 소스 추천 잔여 체인 제거 (PR #125).
+  프론트 소비자가 사라진 POST /api/recommend-sources와 전용 서비스·API 래퍼·타입·테스트를 제거하고 TASKS/감사 문서의 오래된 활성 기능 표기도 정리.
+  webhook·재생목록·RSS 라우트와 외부 검색 의존성·DB는 유지했으며 관련 프로덕션 심볼과 경로 소비는 0건.
+  검증: backend 3,880 passed / 1 skipped / 11 subtests, frontend 152 passed, 전체 ESLint·tsc·build 통과, 독립 리뷰 BLOCKER/IMPORTANT/NIT 0.
 
 - [x] 2026-07-12 feat(notes): 검색어 문맥 근거 스니펫 추가 (PR #125).
   검색 결과의 선두 고정 스니펫을 전체 구문 우선·긴 토큰 폴백의 실제 일치 문맥으로 전환하고, 관련 노트 경로는 기존 선두 180자 계약을 유지.
