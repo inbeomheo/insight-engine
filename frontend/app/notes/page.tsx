@@ -311,18 +311,19 @@ export default function NotesPage() {
     applyFacetSelect(facet);
   }, [applyFacetSelect, lastSearchQuery, searchResults]);
 
-  const handleReturnToPreviousFacet = useCallback(() => {
-    const previousFacet = facetHistory.at(-1);
-    if (!previousFacet) return;
+  const handleReturnToFacet = useCallback((
+    targetFacet: NoteFacet,
+    nextHistory: NoteFacet[],
+  ) => {
     advanceNoteSearchRequestId(searchRequestIdRef);
-    setFacetHistory((history) => history.slice(0, -1));
+    setFacetHistory(nextHistory);
     setSearchResults(null);
     setSearching(false);
     setError(null);
-    setActiveFacet(previousFacet);
+    setActiveFacet(targetFacet);
     setActiveStudyStatus(null);
-    router.replace(buildNoteFacetHref(previousFacet), { scroll: false });
-  }, [facetHistory, router]);
+    router.replace(buildNoteFacetHref(targetFacet), { scroll: false });
+  }, [router]);
 
   const handleFacetClear = useCallback(() => {
     advanceNoteSearchRequestId(searchRequestIdRef);
@@ -589,10 +590,10 @@ export default function NotesPage() {
                 facet={activeFacet}
                 resultCount={visibleNotes.length}
                 totalCount={notes.length}
-                previousFacet={facetHistory.at(-1) ?? null}
+                facetHistory={facetHistory}
                 searchReturnQuery={searchReturnState?.query ?? null}
                 searchReturnCount={searchReturnState?.results.length ?? 0}
-                onReturnToPreviousFacet={handleReturnToPreviousFacet}
+                onReturnToFacet={handleReturnToFacet}
                 onReturnToSearch={handleReturnToSearch}
                 onClear={handleFacetClear}
               />
@@ -684,20 +685,20 @@ export function ActiveFacetBar({
   facet,
   resultCount,
   totalCount,
-  previousFacet,
+  facetHistory,
   searchReturnQuery,
   searchReturnCount,
-  onReturnToPreviousFacet,
+  onReturnToFacet,
   onReturnToSearch,
   onClear,
 }: {
   facet: NoteFacet;
   resultCount: number;
   totalCount: number;
-  previousFacet: NoteFacet | null;
+  facetHistory: NoteFacet[];
   searchReturnQuery: string | null;
   searchReturnCount: number;
-  onReturnToPreviousFacet: () => void;
+  onReturnToFacet: (targetFacet: NoteFacet, nextHistory: NoteFacet[]) => void;
   onReturnToSearch: () => void;
   onClear: () => void;
 }) {
@@ -710,19 +711,6 @@ export function ActiveFacetBar({
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-1">
-        {previousFacet !== null && (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1 text-xs"
-            aria-label={`${getFacetLabel(previousFacet)} 필터로 돌아가기`}
-            onClick={onReturnToPreviousFacet}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            이전: {getFacetLabel(previousFacet)}
-          </Button>
-        )}
         {searchReturnQuery !== null && (
           <Button
             type="button"
@@ -743,6 +731,27 @@ export function ActiveFacetBar({
           필터 해제
         </Button>
       </div>
+      {facetHistory.length > 0 && (
+        <nav className="order-last flex w-full flex-wrap items-center gap-1 border-t border-primary/10 pt-2 text-[11px]" aria-label="위키 탐색 경로">
+          <span className="mr-1 text-muted-foreground">탐색 경로</span>
+          {facetHistory.map((historyFacet, index) => (
+            <span key={`${historyFacet.type}:${historyFacet.value}:${index}`} className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                className="inline-flex min-h-9 max-w-full items-center rounded px-2.5 py-1.5 text-xs text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${getFacetLabel(historyFacet)} 탐색 ${index + 1}단계로 돌아가기`}
+                onClick={() => onReturnToFacet(historyFacet, facetHistory.slice(0, index))}
+              >
+                <span className="max-w-40 truncate">{getFacetLabel(historyFacet)}</span>
+              </button>
+              <span aria-hidden="true" className="text-muted-foreground/50">›</span>
+            </span>
+          ))}
+          <span aria-current="page" className="min-w-0 max-w-full truncate rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
+            {getFacetLabel(facet)}
+          </span>
+        </nav>
+      )}
     </div>
   );
 }

@@ -86,14 +86,14 @@ async function renderNotesPage() {
 
 async function renderActiveFacetBar({
   searchReturnQuery,
-  previousFacet = null,
-  onReturnToPreviousFacet = vi.fn(),
+  facetHistory = [],
+  onReturnToFacet = vi.fn(),
   onReturnToSearch = vi.fn(),
   onClear = vi.fn(),
 }: {
   searchReturnQuery: string | null;
-  previousFacet?: NoteFacet | null;
-  onReturnToPreviousFacet?: () => void;
+  facetHistory?: NoteFacet[];
+  onReturnToFacet?: (targetFacet: NoteFacet, nextHistory: NoteFacet[]) => void;
   onReturnToSearch?: () => void;
   onClear?: () => void;
 }) {
@@ -106,10 +106,10 @@ async function renderActiveFacetBar({
         facet={{ type: 'concept', value: 'RAG' }}
         resultCount={1}
         totalCount={4}
-        previousFacet={previousFacet}
+        facetHistory={facetHistory}
         searchReturnQuery={searchReturnQuery}
         searchReturnCount={2}
-        onReturnToPreviousFacet={onReturnToPreviousFacet}
+        onReturnToFacet={onReturnToFacet}
         onReturnToSearch={onReturnToSearch}
         onClear={onClear}
       />
@@ -318,13 +318,16 @@ describe('SearchResultsList', () => {
 
 describe('ActiveFacetBar', () => {
   it('returns to the preserved search session while keeping the clear action', async () => {
-    const onReturnToPreviousFacet = vi.fn();
+    const onReturnToFacet = vi.fn();
     const onReturnToSearch = vi.fn();
     const onClear = vi.fn();
     const view = await renderActiveFacetBar({
       searchReturnQuery: 'RAG 검색',
-      previousFacet: { type: 'tag', value: '학습' },
-      onReturnToPreviousFacet,
+      facetHistory: [
+        { type: 'concept', value: '벡터' },
+        { type: 'concept', value: '벡터' },
+      ],
+      onReturnToFacet,
       onReturnToSearch,
       onClear,
     });
@@ -333,10 +336,15 @@ describe('ActiveFacetBar', () => {
       'button',
       /RAG 검색.*검색 결과 2개로 돌아가기$/,
     );
-    const previousButton = findByAriaLabel<HTMLButtonElement>(
+    const conceptPathButton = findByAriaLabel<HTMLButtonElement>(
       view,
       'button',
-      /태그: 학습 필터로 돌아가기$/,
+      /개념: 벡터 탐색 1단계로 돌아가기$/,
+    );
+    const secondConceptPathButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /개념: 벡터 탐색 2단계로 돌아가기$/,
     );
     const clearButton = findByAriaLabel<HTMLButtonElement>(view, 'button', /필터 해제$/);
 
@@ -345,10 +353,22 @@ describe('ActiveFacetBar', () => {
     expect(returnButton?.textContent).toContain('“RAG 검색” 검색 결과');
     expect(returnButton?.textContent).toContain('(2)');
 
-    await act(async () => { previousButton?.click(); });
+    await act(async () => { conceptPathButton?.click(); });
+    await act(async () => { secondConceptPathButton?.click(); });
     await act(async () => { returnButton?.click(); });
     await act(async () => { clearButton?.click(); });
-    expect(onReturnToPreviousFacet).toHaveBeenCalledOnce();
+    expect(onReturnToFacet).toHaveBeenNthCalledWith(
+      1,
+      { type: 'concept', value: '벡터' },
+      [],
+    );
+    expect(onReturnToFacet).toHaveBeenNthCalledWith(
+      2,
+      { type: 'concept', value: '벡터' },
+      [{ type: 'concept', value: '벡터' }],
+    );
+    expect(conceptPathButton?.className).toContain('min-h-9');
+    expect(conceptPathButton?.querySelector('span')?.className).toContain('truncate');
     expect(onReturnToSearch).toHaveBeenCalledOnce();
     expect(onClear).toHaveBeenCalledOnce();
   });
@@ -419,14 +439,27 @@ describe('NotesPage search return flow', () => {
       { scroll: false },
     );
 
-    const previousButton = findByAriaLabel<HTMLButtonElement>(
+    const tagPathButton = findByAriaLabel<HTMLButtonElement>(
       view,
       'button',
-      /태그: 학습 필터로 돌아가기$/,
+      /태그: 학습 탐색 3단계로 돌아가기$/,
     );
-    expect(previousButton).not.toBeNull();
-    await act(async () => { previousButton!.click(); });
+    expect(tagPathButton).not.toBeNull();
+    await act(async () => { tagPathButton!.click(); });
     expect(replaceMock).toHaveBeenLastCalledWith('/notes?tag=%ED%95%99%EC%8A%B5', { scroll: false });
+    expect(view.querySelector('[aria-current="page"]')?.textContent).toBe('태그: 학습');
+    expect(findByAriaLabel(view, 'button', /개념: RAG 탐색 1단계로 돌아가기$/)).not.toBeNull();
+    expect(findByAriaLabel(view, 'button', /개념: 벡터 탐색 2단계로 돌아가기$/)).not.toBeNull();
+    expect(findByAriaLabel(view, 'button', /출처: 직접 텍스트.*돌아가기$/)).toBeNull();
+
+    const firstConceptPathButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /개념: RAG 탐색 1단계로 돌아가기$/,
+    );
+    await act(async () => { firstConceptPathButton!.click(); });
+    expect(replaceMock).toHaveBeenLastCalledWith('/notes?concept=RAG', { scroll: false });
+    expect(view.querySelector('[aria-label="위키 탐색 경로"]')).toBeNull();
 
     const returnButton = findByAriaLabel<HTMLButtonElement>(
       view,
