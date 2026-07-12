@@ -132,23 +132,35 @@ export default function Home() {
     const index = reports.findIndex((report) => report.id === reportId);
     if (index < 0) return;
 
-    handledReportParamRef.current = reportId;
-    const resultState = useResultStore.getState();
-    resultState.setSearchQuery('');
-    resultState.setStyleFilter('');
-    setVisibleCount(Math.max(INITIAL_RENDER_COUNT, index + 1));
-    setActiveReportId(reportId);
+    let scrollTimer: number | null = null;
+    let scrollFrame: number | null = null;
+    const revealFrame = window.requestAnimationFrame(() => {
+      handledReportParamRef.current = reportId;
+      const resultState = useResultStore.getState();
+      resultState.setSearchQuery('');
+      resultState.setStyleFilter('');
+      setVisibleCount(Math.max(INITIAL_RENDER_COUNT, index + 1));
+      setActiveReportId(reportId);
 
-    url.searchParams.delete('report');
-    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      url.searchParams.delete('report');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
 
-    setTimeout(() => {
-      requestAnimationFrame(() => {
-        const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(reportId) : reportId.replace(/"/g, '\\"');
-        const el = document.querySelector(`[data-report-id="${escapedId}"]`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    }, 80);
+      scrollTimer = window.setTimeout(() => {
+        scrollFrame = window.requestAnimationFrame(() => {
+          const escapedId = typeof CSS !== 'undefined' && CSS.escape
+            ? CSS.escape(reportId)
+            : reportId.replace(/"/g, '\\"');
+          const el = document.querySelector(`[data-report-id="${escapedId}"]`);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      }, 80);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(revealFrame);
+      if (scrollFrame !== null) window.cancelAnimationFrame(scrollFrame);
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
+    };
   }, [reports, setActiveReportId]);
 
   // 전체 페이지 드래그앤드롭
@@ -562,7 +574,6 @@ export default function Home() {
                   >
                     <ResultCard
                       report={r}
-                      searchQuery={searchQuery}
                       viewMode={viewMode}
                       onExpandToFull={handleExpandToFull}
                     />

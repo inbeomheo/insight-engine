@@ -36,10 +36,6 @@
   23차: 결과 카드/번역/E2E 기대값의 내보내기 노출을 HTML/Markdown 전용으로 정리.
   24차: 생성/스트리밍/에이전트/영상 Q&A 호출부의 Gemini/Zhipu/OpenRouter 전용 분기를 제거하고 ChatMock(OpenAI 호환) 단일 모델 경로로 단순화.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
-- [ ] [정리] 프론트 ESLint 기준선 5건 해소 — 2026-07-11 트리아지 발견.
-  오류 3건: `app/page.tsx` effect 내 동기 setState, `MobileAppShell.tsx` 내부 링크 `<a>`,
-  `useGenerate.test.tsx` 렌더 중 전역 변수 재할당. 경고 2건: `ResultCard.tsx` 미사용 인자·불필요 disable.
-  완료 기준: `cd frontend && npm.cmd run lint` 오류·경고 0 + vitest/tsc/build 통과.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
   착수 시 `plans/dead-code-audit-2026-06-10.md` 기준으로 프론트 소비자·테스트 소비자 grep 재검증.
@@ -111,6 +107,11 @@
   완료 기준: 프론트 타입 체크 통과 + 가능하면 컴포넌트 테스트 추가.
 
 ## Done
+
+- [x] 2026-07-11 chore(frontend): ESLint 기준선 0 달성.
+  딥링크 effect 상태 변경을 animation frame으로 예약·정리하고, 모바일 내부 링크를 Next Link로 전환.
+  ResultCard 미사용 prop·topics·억제 주석 제거, useGenerate 훅 테스트의 렌더 중 전역 재할당을 effect 캡처로 변경.
+  검증: 전체 ESLint 오류·경고 0, frontend 85 passed, tsc/build 통과.
 
 - [x] 2026-07-11 feat(learning): 복습 예정일·오늘 복습 큐 추가.
   노트 복습 완료 카드에서 내일·3일·7일 후 일정을 브라우저에 저장하고 일정 해제·재복습 시 정리.

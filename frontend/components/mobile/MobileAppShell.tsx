@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
@@ -663,14 +664,14 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
               {linkedNoteId ? '학습 노트 열기' : isSavingNote ? '노트 저장 중...' : '학습 노트로 저장'}
             </button>
           )}
-          <a
+          <Link
             href="/notes"
             className="flex w-full items-center justify-center gap-2 rounded-sm border border-border/70 bg-background px-4 py-3 text-sm font-black text-foreground transition-colors hover:bg-muted"
           >
             <BookOpen className="h-4 w-4" />
             지식위키 열기
             <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50" />
-          </a>
+          </Link>
           {report.url && (
             <button
               type="button"
