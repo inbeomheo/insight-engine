@@ -1,8 +1,13 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { NoteListItem, NoteSearchResult } from '@/lib/api';
-import { ActiveFacetBar, SearchResultsList, shouldHandleFacetLinkClick } from './page';
+import {
+  getNotes,
+  searchNotes,
+  type NoteListItem,
+  type NoteSearchResult,
+} from '@/lib/api';
+import NotesPage, { ActiveFacetBar, SearchResultsList, shouldHandleFacetLinkClick } from './page';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -14,9 +19,20 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+const replaceMock = vi.fn();
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: replaceMock }),
 }));
+
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    getNotes: vi.fn(),
+    searchNotes: vi.fn(),
+  };
+});
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -37,6 +53,16 @@ async function renderSearchResults(
         onFacetSelect={onFacetSelect}
       />
     );
+  });
+  return container;
+}
+
+async function renderNotesPage() {
+  container = document.createElement('div');
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => {
+    root!.render(<NotesPage />);
   });
   return container;
 }
@@ -95,6 +121,13 @@ function note(id = 'note/id'): NoteListItem {
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  window.history.replaceState({}, '', '/notes');
+  window.localStorage.clear();
+  replaceMock.mockReset();
+  vi.mocked(getNotes).mockReset();
+  vi.mocked(searchNotes).mockReset();
+  vi.mocked(getNotes).mockResolvedValue({ notes: [note()] });
+  vi.mocked(searchNotes).mockResolvedValue({ notes: [result()] });
 });
 
 afterEach(async () => {
@@ -230,5 +263,56 @@ describe('ActiveFacetBar', () => {
 
     expect(view.textContent).not.toContain('검색 결과로 돌아가기');
     expect(view.textContent).toContain('필터 해제');
+  });
+});
+
+describe('NotesPage search return flow', () => {
+  it('restores the submitted query, result snippet, highlight, and clean route after a concept pivot', async () => {
+    const view = await renderNotesPage();
+    const input = view.querySelector<HTMLInputElement>('input[placeholder^="노트 검색"]');
+    const form = input?.closest('form');
+
+    expect(input).not.toBeNull();
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      const setValue = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      setValue?.call(input, 'RAG 검색');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(searchNotes).toHaveBeenCalledWith('RAG 검색');
+    expect(view.querySelector('p.line-clamp-2')?.textContent).toBe('검색 근거 요약');
+    expect(view.querySelector('p.line-clamp-2 mark')?.textContent).toBe('근거 요약');
+
+    const conceptLink = view.querySelector<HTMLAnchorElement>('[aria-label="RAG 개념으로 탐색"]');
+    await act(async () => {
+      conceptLink!.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+      }));
+    });
+
+    expect(input!.value).toBe('');
+    expect(view.querySelector('p.line-clamp-2')).toBeNull();
+    const returnButton = Array.from(view.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('검색 결과로 돌아가기 (1)'));
+    expect(returnButton).toBeDefined();
+
+    await act(async () => {
+      returnButton!.click();
+    });
+
+    expect(input!.value).toBe('RAG 검색');
+    expect(view.querySelector('p.line-clamp-2')?.textContent).toBe('검색 근거 요약');
+    expect(view.querySelector('p.line-clamp-2 mark')?.textContent).toBe('근거 요약');
+    expect(replaceMock).toHaveBeenLastCalledWith('/notes', { scroll: false });
   });
 });
