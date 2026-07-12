@@ -502,7 +502,11 @@ export default function NotesPage() {
             ))}
           </div>
         ) : isSearchMode ? (
-          <SearchResultsList results={searchResults} notes={notes} />
+          <SearchResultsList
+            results={searchResults}
+            notes={notes}
+            onFacetSelect={handleFacetSelect}
+          />
         ) : (
           <>
             {notes.length > 0 && (
@@ -1728,12 +1732,25 @@ function NotesList({
   );
 }
 
+export function shouldHandleFacetLinkClick(event: Pick<
+  React.MouseEvent<HTMLAnchorElement>,
+  'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey'
+>): boolean {
+  return event.button === 0
+    && !event.metaKey
+    && !event.ctrlKey
+    && !event.shiftKey
+    && !event.altKey;
+}
+
 export function SearchResultsList({
   results,
   notes,
+  onFacetSelect,
 }: {
   results: NoteSearchResult[];
   notes: NoteListItem[];
+  onFacetSelect: (facet: NoteFacet) => void;
 }) {
   const presentations = getNoteSearchResultPresentations(results, notes);
   const actionLinkClass = 'inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
@@ -1801,9 +1818,21 @@ export function SearchResultsList({
                       핵심 개념
                     </span>
                     {keyConcepts.map((concept) => (
-                      <Badge key={concept} variant="secondary" className="text-[10px] font-normal">
-                        {concept}
-                      </Badge>
+                      <Link
+                        key={concept}
+                        href={buildNoteFacetHref({ type: 'concept', value: concept })}
+                        aria-label={concept + ' 개념으로 탐색'}
+                        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={(event) => {
+                          if (!shouldHandleFacetLinkClick(event)) return;
+                          event.preventDefault();
+                          onFacetSelect({ type: 'concept', value: concept });
+                        }}
+                      >
+                        <Badge variant="secondary" className="text-[10px] font-normal hover:bg-primary/15">
+                          {concept}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
                 )}
