@@ -155,3 +155,201 @@ def test_remove_note_deletes_id(mock_get_client):
     note_index_service.remove_note("note-1")
 
     collection.delete.assert_called_once_with(ids=["note-1"])
+
+
+def test_snippet_centers_late_exact_phrase_with_prefix_ellipsis():
+    text = "intro " + ("early context " * 30) + "target exact phrase" + (" trailing" * 20)
+    query = "target   exact" + chr(10) + "phrase"
+
+    snippet = note_index_service._snippet(text, query)
+
+    assert "target exact phrase" in snippet
+    assert snippet.startswith(chr(0x2026))
+    assert len(snippet) <= note_index_service.SNIPPET_MAX_CHARS
+
+
+def test_snippet_falls_back_to_longest_distinct_query_token():
+    text = "common " + ("early words " * 30) + "specificlongtoken nearby evidence" + (" tail" * 20)
+
+    snippet = note_index_service._snippet(text, "common missing specificlongtoken common")
+
+    assert "specificlongtoken" in snippet
+    assert "common" not in snippet
+
+
+def test_snippet_matches_exact_phrase_case_insensitively():
+    text = ("prefix " * 30) + "Adaptive REVIEW context" + (" suffix" * 20)
+
+    snippet = note_index_service._snippet(text, "adaptive review")
+
+    assert "Adaptive REVIEW" in snippet
+
+
+def test_snippet_matches_unicode_word_token():
+    term = "".join(chr(value) for value in (0xAC80, 0xC0C9, 0xC5B4))
+    evidence = "".join(chr(value) for value in (0xADFC, 0xAC70))
+    text = ("prefix " * 30) + term + " " + evidence + (" suffix" * 20)
+
+    snippet = note_index_service._snippet(text, term)
+
+    assert term + " " + evidence in snippet
+
+
+def test_snippet_uses_leading_fallback_for_missing_empty_and_numeric_queries():
+    text = "leading evidence " + ("content " * 60) + "late target"
+    expected = note_index_service._snippet(text)
+
+    assert note_index_service._snippet(text, "not present") == expected
+    assert note_index_service._snippet(text, "  " + chr(10) + chr(9) + " ") == expected
+    assert note_index_service._snippet(text, "123 !!!") == expected
+
+
+def test_leading_fallback_preserves_boundary_space_exactly():
+    text = ("A" * 178) + " " + "tail"
+
+    assert note_index_service._snippet(text, "missing") == ("A" * 178) + " " + chr(0x2026)
+
+
+def test_query_candidates_keep_casefold_expansions_when_regex_rules_differ():
+    sharp_s = chr(0x00DF)
+    text = ("prefix " * 30) + sharp_s + " evidence" + (" suffix" * 20)
+
+    snippet = note_index_service._snippet(text, sharp_s + " ss")
+
+    assert sharp_s + " evidence" in snippet
+    assert sharp_s in note_index_service._query_candidates(sharp_s + " ss")
+    assert "ss" in note_index_service._query_candidates(sharp_s + " ss")
+
+
+def test_long_query_tokens_still_select_matching_context():
+    for length in (178, 179, 180):
+        token = "z" * length
+        text = ("leading context " * 30) + token + (" trailing context" * 30)
+
+        snippet = note_index_service._snippet(text, token)
+
+        assert ("z" * 50) in snippet
+        assert "leading context" not in snippet
+        assert snippet.startswith(chr(0x2026))
+        assert snippet.endswith(chr(0x2026))
+        assert len(snippet) <= note_index_service.SNIPPET_MAX_CHARS
+
+
+def test_179_character_token_is_preserved_at_start_and_end():
+    token = "z" * 179
+    start_snippet = note_index_service._snippet(token + (" tail" * 20), token)
+    end_snippet = note_index_service._snippet(("prefix " * 20) + token, token)
+
+    assert start_snippet.startswith(token)
+    assert start_snippet.endswith(chr(0x2026))
+    assert end_snippet.startswith(chr(0x2026))
+    assert end_snippet.endswith(token)
+    assert len(start_snippet) == note_index_service.SNIPPET_MAX_CHARS
+    assert len(end_snippet) == note_index_service.SNIPPET_MAX_CHARS
+
+
+def test_snippet_marks_both_cut_edges_and_stays_within_limit():
+    text = ("left context " * 40) + "needle" + (" right context" * 40)
+
+    snippet = note_index_service._snippet(text, "needle")
+
+    assert snippet.startswith(chr(0x2026))
+    assert snippet.endswith(chr(0x2026))
+    assert "needle" in snippet
+    assert len(snippet) <= note_index_service.SNIPPET_MAX_CHARS
+
+
+def test_snippet_marks_only_the_cut_edge_at_document_boundaries():
+    front = "frontmatch " + ("right context " * 50)
+    end = ("left context " * 50) + "endmatch"
+
+    front_snippet = note_index_service._snippet(front, "frontmatch")
+    end_snippet = note_index_service._snippet(end, "endmatch")
+
+    assert front_snippet.startswith("frontmatch")
+    assert front_snippet.endswith(chr(0x2026))
+    assert end_snippet.startswith(chr(0x2026))
+    assert end_snippet.endswith("endmatch")
+    assert len(front_snippet) <= note_index_service.SNIPPET_MAX_CHARS
+    assert len(end_snippet) <= note_index_service.SNIPPET_MAX_CHARS
+
+
+def test_snippet_returns_normalized_short_document_unchanged():
+    text = "  short" + chr(10) + chr(9) + "text  "
+    assert note_index_service._snippet(text, "short") == "short text"
+
+
+@patch("services.content.note_index_service._map_results")
+@patch("services.content.note_index_service.get_chroma_client")
+def test_search_notes_passes_normalized_query_to_result_mapping(mock_get_client, mock_map_results):
+    collection, _ = _mock_collection(mock_get_client)
+    collection.count.return_value = 1
+    collection.query.return_value = {"documents": [["document"]]}
+    mock_map_results.return_value = []
+    query = "  target" + chr(10) + " phrase  "
+
+    note_index_service.search_notes(query)
+
+    collection.query.assert_called_once_with(query_texts=["target phrase"], n_results=1)
+    mock_map_results.assert_called_once_with(collection.query.return_value, query="target phrase")
+
+
+@patch("services.content.note_index_service._map_results")
+@patch("services.content.note_index_service.get_chroma_client")
+def test_get_related_notes_keeps_leading_snippet_mapping(mock_get_client, mock_map_results):
+    collection, _ = _mock_collection(mock_get_client)
+    collection.count.return_value = 1
+    collection.query.return_value = {"documents": [["document"]]}
+    mock_map_results.return_value = []
+
+    note_index_service.get_related_notes(_note())
+
+    mock_map_results.assert_called_once_with(collection.query.return_value)
+
+
+def test_map_results_uses_query_context_for_search_snippet():
+    document = ("prefix " * 30) + "matching phrase context" + (" suffix" * 20)
+
+    mapped = note_index_service._map_results(
+        {
+            "ids": [["note-1"]],
+            "documents": [[document]],
+            "metadatas": [[{"title": "Title"}]],
+            "distances": [[0.2]],
+        },
+        query="matching phrase",
+    )
+
+    assert "matching phrase" in mapped[0]["snippet"]
+    assert mapped[0]["snippet"].startswith(chr(0x2026))
+
+
+def test_map_results_tolerates_malformed_shapes_and_missing_values():
+    assert note_index_service._map_results(None) == []
+    assert note_index_service._map_results({"documents": "not a list"}) == []
+
+    document = "  short" + chr(10) + "text  "
+    mapped = note_index_service._map_results({
+        "ids": [[None]],
+        "documents": [[document]],
+        "metadatas": [["not metadata"]],
+        "distances": [["not distance"]],
+    })
+
+    assert mapped == [{
+        "id": "None",
+        "title": "",
+        "score": 0.0,
+        "snippet": "short text",
+    }]
+
+
+def test_map_results_clamps_and_rounds_scores():
+    mapped = note_index_service._map_results({
+        "ids": [["high", "low", "rounded"]],
+        "documents": [["A", "B", "C"]],
+        "metadatas": [[{}, {}, {}]],
+        "distances": [[-0.5, 2, 0.1236]],
+    })
+
+    assert [item["score"] for item in mapped] == [1.0, 0.0, 0.876]

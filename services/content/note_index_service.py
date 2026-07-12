@@ -14,6 +14,7 @@ MAX_SEARCH_LIMIT = 20
 DEFAULT_RELATED_LIMIT = 3
 MAX_RELATED_LIMIT = MAX_SEARCH_LIMIT - 1
 SNIPPET_MAX_CHARS = 180
+_QUERY_TOKEN_PATTERN = re.compile(r"[^\W_]+", re.UNICODE)
 
 logger = get_logger(__name__)
 
@@ -43,7 +44,7 @@ def remove_note(note_id: str) -> None:
 
 def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str, Any]]:
     """Search similar notes by ChromaDB text query."""
-    query = str(query or "").strip()
+    query = _normalize_whitespace(query)
     if not query:
         return []
 
@@ -54,7 +55,7 @@ def search_notes(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict[str
 
     n_results = min(_normalize_limit(limit), count)
     results = collection.query(query_texts=[query], n_results=n_results)
-    return _map_results(results)
+    return _map_results(results, query=query)
 
 
 def get_related_notes(
@@ -185,7 +186,11 @@ def _normalize_related_limit(limit: int) -> int:
     return max(1, min(value, MAX_RELATED_LIMIT))
 
 
-def _map_results(results: dict[str, Any]) -> list[dict[str, Any]]:
+def _map_results(
+    results: dict[str, Any] | None,
+    *,
+    query: Any = None,
+) -> list[dict[str, Any]]:
     ids = _first_result_list(results, "ids")
     documents = _first_result_list(results, "documents")
     metadatas = _first_result_list(results, "metadatas")
@@ -200,7 +205,7 @@ def _map_results(results: dict[str, Any]) -> list[dict[str, Any]]:
             "id": note_id,
             "title": str(metadata.get("title", "")),
             "score": _score_from_distance(distance),
-            "snippet": _snippet(document),
+            "snippet": _snippet(document, query),
         })
     return mapped
 
@@ -220,8 +225,100 @@ def _score_from_distance(distance: Any) -> float:
     return round(max(0.0, min(1.0, 1.0 - value)), 3)
 
 
-def _snippet(text: Any) -> str:
-    snippet = re.sub(r"\s+", " ", str(text or "")).strip()
-    if len(snippet) <= SNIPPET_MAX_CHARS:
-        return snippet
-    return snippet[: SNIPPET_MAX_CHARS - 1] + "…"
+def _normalize_whitespace(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _query_candidates(query: Any) -> list[str]:
+    normalized = _normalize_whitespace(query)
+    if not normalized or not any(char.isalpha() for char in normalized):
+        return []
+
+    candidates: list[str] = []
+
+    def add(candidate: str) -> None:
+        is_duplicate = any(
+            re.fullmatch(re.escape(existing), candidate, flags=re.IGNORECASE)
+            for existing in candidates
+        )
+        if (
+            not candidate
+            or is_duplicate
+            or not any(char.isalpha() for char in candidate)
+        ):
+            return
+        candidates.append(candidate)
+
+    add(normalized)
+    tokens = [
+        token
+        for token in _QUERY_TOKEN_PATTERN.findall(normalized)
+        if any(char.isalpha() for char in token)
+    ]
+    for token in sorted(tokens, key=lambda value: -len(value)):
+        add(token)
+    return candidates
+
+
+def _find_query_span(text: str, query: Any) -> tuple[int, int] | None:
+    for candidate in _query_candidates(query):
+        match = re.search(re.escape(candidate), text, flags=re.IGNORECASE)
+        if match:
+            return match.span()
+    return None
+
+
+def _leading_snippet(text: str) -> str:
+    if len(text) <= SNIPPET_MAX_CHARS:
+        return text
+    return text[: SNIPPET_MAX_CHARS - 1] + "…"
+
+
+def _context_snippet(text: str, start: int, end: int) -> str:
+    if len(text) <= SNIPPET_MAX_CHARS:
+        return text
+
+    reserve = int(start > 0) + int(end < len(text))
+    available = max(1, SNIPPET_MAX_CHARS - reserve)
+    match_length = end - start
+
+    if match_length >= available:
+        window_start = start
+        window_end = min(len(text), start + available)
+    else:
+        padding = available - match_length
+        window_start = max(0, start - padding // 2)
+        window_end = min(len(text), window_start + available)
+        window_start = max(0, window_end - available)
+        if start < window_start:
+            window_start = start
+            window_end = min(len(text), window_start + available)
+        if end > window_end:
+            window_end = end
+            window_start = max(0, window_end - available)
+
+    if window_start > 0:
+        boundary = text.find(" ", window_start, min(start, window_start + 24))
+        if boundary >= 0:
+            window_start = boundary + 1
+    if window_end < len(text):
+        boundary = text.rfind(" ", max(end, window_end - 24), window_end)
+        if boundary >= end:
+            window_end = boundary
+
+    body = text[window_start:window_end].strip()
+    prefix = "…" if window_start > 0 else ""
+    suffix = "…" if window_end < len(text) else ""
+    snippet = prefix + body + suffix
+    return snippet[:SNIPPET_MAX_CHARS]
+
+
+def _snippet(text: Any, query: Any = None) -> str:
+    normalized = _normalize_whitespace(text)
+    if len(normalized) <= SNIPPET_MAX_CHARS:
+        return normalized
+
+    span = _find_query_span(normalized, query)
+    if span is None:
+        return _leading_snippet(normalized)
+    return _context_snippet(normalized, *span)
