@@ -25,7 +25,6 @@ const mocks = vi.hoisted(() => ({
         price_output: number;
       }>;
     }>,
-    selectedProvider: '',
     selectedModel: '',
     setSelectedModel: vi.fn(),
   },
@@ -135,7 +134,6 @@ function setChatMockProvider() {
       ],
     },
   };
-  mocks.settings.selectedProvider = 'chatmock';
   mocks.settings.selectedModel = 'chatmock/gpt-5.4-mini';
 }
 
@@ -147,7 +145,6 @@ describe('단일 ChatMock 서비스 UI', () => {
   beforeEach(() => {
     mocks.ui.activeModal = 'onboarding';
     mocks.settings.providers = {};
-    mocks.settings.selectedProvider = '';
     mocks.settings.selectedModel = '';
     vi.clearAllMocks();
   });
@@ -205,10 +202,9 @@ describe('단일 ChatMock 서비스 UI', () => {
     expect(mocks.settings.setSelectedModel).toHaveBeenCalledWith('chatmock/gpt-5.4');
   });
 
-  it('저장된 프로바이더와 모델이 유효하지 않아도 첫 ChatMock 모델로 복구한다', async () => {
+  it('\uc800\uc7a5\ub41c \ubaa8\ub378\uc774 \uc720\ud6a8\ud558\uc9c0 \uc54a\uc544\ub3c4 \uccab ChatMock \ubaa8\ub378\ub85c \ubcf5\uad6c\ud55c\ub2e4', async () => {
     mocks.ui.activeModal = 'settings';
     setChatMockProvider();
-    mocks.settings.selectedProvider = 'removed-provider';
     mocks.settings.selectedModel = 'removed-model';
     const view = await render(<SettingsModal />);
 

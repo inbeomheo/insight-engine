@@ -12,12 +12,8 @@ import { setOnboardingDone } from '@/lib/storage';
 export default function OnboardingModal() {
   const { activeModal, setOnboardingOpen } = useUIStore();
   const onboardingOpen = activeModal === 'onboarding';
-  const { providers, selectedProvider } = useSettingsStore();
-  const providerIds = Object.keys(providers);
-  const activeProviderId = selectedProvider && providers[selectedProvider]
-    ? selectedProvider
-    : providerIds[0];
-  const activeProvider = activeProviderId ? providers[activeProviderId] : null;
+  const { providers } = useSettingsStore();
+  const activeProvider = Object.values(providers)[0] ?? null;
   const hasModels = Boolean(activeProvider?.models.length);
   const { t } = useTranslation();
 

@@ -40,16 +40,11 @@ export default function SettingsModal() {
   const settingsModalOpen = activeModal === 'settings';
   const {
     providers,
-    selectedProvider,
     selectedModel,
     setSelectedModel,
   } = useSettingsStore();
 
-  const providerIds = Object.keys(providers);
-  const activeProviderId = selectedProvider && providers[selectedProvider]
-    ? selectedProvider
-    : providerIds[0];
-  const activeProvider = activeProviderId ? providers[activeProviderId] : null;
+  const activeProvider = Object.values(providers)[0] ?? null;
   const currentModels = activeProvider?.models ?? [];
   const activeModelId = currentModels.some((model) => model.id === selectedModel)
     ? selectedModel

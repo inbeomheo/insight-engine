@@ -36,6 +36,7 @@
   23차: 결과 카드/번역/E2E 기대값의 내보내기 노출을 HTML/Markdown 전용으로 정리.
   24차: 생성/스트리밍/에이전트/영상 Q&A 호출부의 Gemini/Zhipu/OpenRouter 전용 분기를 제거하고 ChatMock(OpenAI 호환) 단일 모델 경로로 단순화.
   25차: 온보딩·설정의 프로바이더 선택을 제거하고 ChatMock 고정 서비스 안내·모델 선택·모델 없음 차단을 한영일 UI로 제공.
+  26차: `selectedProvider` 상태·setter·localStorage 키를 제거하고 첫 ChatMock 모델 동기화와 팝오버 fallback으로 단일 모델 경로를 완성.
   완료 기준: 프론트 타입 체크 통과 + 주요 진입점이 실제 페이지/동작으로 연결됨.
 - [ ] [정리] 데드 엔드포인트 잔여 코드 정리 — 사용자 2026-07-09 승인:
   "사람이 필요한곳 없으니까 알아서 진행". 데이터 삭제/DB 마이그레이션 없이 코드/테스트/문서만 제거.
@@ -144,6 +145,10 @@
 
 ## Done
 
+- [x] 2026-07-12 refactor(settings): selectedProvider 잔여 상태 제거 (PR #125).
+  Zustand 상태·setter·hydrate, localStorage 키·헬퍼, UI 3곳과 미사용 한영일 번역 키에서 프로바이더 선택 개념을 제거.
+  `useProviders`는 첫 ChatMock 모델만 검증·복구하고 설정 모달·팝오버·온보딩은 모델 없음과 오래된 모델 값을 일관되게 처리.
+  검증: 대상 11 passed, frontend 174 passed, 제거 심볼·스토리지·번역 키 grep 0, ESLint·tsc·build 통과. 독립 리뷰어 무응답 6분 종료 후 메인 diff 리뷰 이슈 0.
 - [x] 2026-07-12 feat(settings): 단일 ChatMock 서비스 UI 단순화 (PR #125).
   온보딩과 설정 모달의 중복 프로바이더 선택을 읽기 전용 ChatMock 서비스 안내로 교체하고 모델 선택만 유지.
   서비스·모델 없음 상태에서는 시작/빈 선택기를 차단하고 오래된 provider/model 저장값은 첫 ChatMock 모델로 복구하며 한영일 번역을 추가.

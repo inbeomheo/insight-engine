@@ -44,10 +44,6 @@ const reportsStorage = makeStorage<Report[]>(STORAGE_KEYS.REPORTS, []);
 export const loadReports = reportsStorage.load;
 export const saveReports = reportsStorage.save;
 
-const providerStorage = makeStorage<string>(STORAGE_KEYS.PROVIDER, '');
-export const loadSelectedProvider = providerStorage.load;
-export const saveSelectedProvider = (id: string) => providerStorage.save(id);
-
 const modelStorage = makeStorage<string>(STORAGE_KEYS.MODEL, '');
 export const loadSelectedModel = modelStorage.load;
 export const saveSelectedModel = (id: string) => modelStorage.save(id);

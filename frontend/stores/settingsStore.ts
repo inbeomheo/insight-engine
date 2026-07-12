@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import type { Modifiers, ProviderInfo, CustomStyle, GenerationMode, TranscriptLanguage } from '@/lib/types';
 import {
-  loadSelectedProvider,
-  saveSelectedProvider,
   loadSelectedModel,
   saveSelectedModel,
   loadCustomStyles,
@@ -14,10 +12,8 @@ import {
 interface SettingsState {
   // 프로바이더
   providers: Record<string, ProviderInfo>;
-  selectedProvider: string;
   selectedModel: string;
   setProviders: (p: Record<string, ProviderInfo>) => void;
-  setSelectedProvider: (id: string) => void;
   setSelectedModel: (id: string) => void;
 
   // 스타일
@@ -68,7 +64,6 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   providers: {},
-  selectedProvider: '',
   selectedModel: '',
   selectedStyle: 'summary',
   modifiers: { length: 'medium', writing_style: 'conversational', language: 'ko' },
@@ -83,11 +78,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   transcriptLanguage: null,
 
   setProviders: (p) => set({ providers: p }),
-
-  setSelectedProvider: (id) => {
-    saveSelectedProvider(id);
-    set({ selectedProvider: id });
-  },
 
   setSelectedModel: (id) => {
     saveSelectedModel(id);
@@ -134,7 +124,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   hydrate: () => {
     set({
-      selectedProvider: loadSelectedProvider(),
       selectedModel: loadSelectedModel(),
       customStyles: loadCustomStyles(),
       webhookUrl: loadWebhookUrl(),

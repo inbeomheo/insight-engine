@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { STYLE_OPTIONS, LENGTH_OPTIONS, WRITING_STYLE_OPTIONS, LANGUAGE_OPTIONS, TRANSCRIPT_LANGUAGE_OPTIONS } from '@/lib/constants';
 import {
   Select,
@@ -20,7 +21,6 @@ export default function SettingsPopover() {
   const { settingsPopoverOpen, setSettingsPopoverOpen } = useUIStore();
   const {
     providers,
-    selectedProvider,
     selectedModel,
     selectedStyle,
     modifiers,
@@ -36,6 +36,7 @@ export default function SettingsPopover() {
     setTranscriptLanguage,
   } = useSettingsStore();
 
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 감지
@@ -72,9 +73,12 @@ export default function SettingsPopover() {
 
   if (!settingsPopoverOpen) return null;
 
-  const selectedProviderInfo = selectedProvider ? providers[selectedProvider] : undefined;
-  const currentModels = selectedProviderInfo?.models || [];
-  const providerName = selectedProviderInfo?.name ?? 'ChatMock (OpenAI 호환)';
+  const activeProvider = Object.values(providers)[0];
+  const currentModels = activeProvider?.models ?? [];
+  const activeModelId = currentModels.some((model) => model.id === selectedModel)
+    ? selectedModel
+    : currentModels[0]?.id ?? '';
+  const providerName = activeProvider?.name ?? 'ChatMock';
 
   // 내장 + 커스텀 스타일
   const allStyles: StyleOption[] = [
@@ -95,26 +99,30 @@ export default function SettingsPopover() {
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">AI 모델</label>
         <div className="mb-2 rounded-sm border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          {providerName} 단일 서비스 사용 중
+          {providerName} · {t('settings.singleServiceActive')}
         </div>
-        <div className="flex gap-2">
-          <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="h-9 text-sm w-full">
-              <SelectValue placeholder="모델" />
-            </SelectTrigger>
-            <SelectContent>
-              {currentModels.map((m) => {
-                const size = formatModelSize(m.size_bytes);
-                return (
-                  <SelectItem key={m.id} value={m.id} className="text-sm">
-                    {m.name}
-                    {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
+        {currentModels.length === 0 ? (
+          <p role="alert" className="text-xs text-destructive">{t('settings.noModels')}</p>
+        ) : (
+          <div className="flex gap-2">
+            <Select value={activeModelId} onValueChange={setSelectedModel}>
+              <SelectTrigger className="h-9 text-sm w-full" aria-label={t('settings.modelSelectLabel')}>
+                <SelectValue placeholder={t('settings.selectModel')} />
+              </SelectTrigger>
+              <SelectContent>
+                {currentModels.map((m) => {
+                  const size = formatModelSize(m.size_bytes);
+                  return (
+                    <SelectItem key={m.id} value={m.id} className="text-sm">
+                      {m.name}
+                      {size && <span className="ml-2 text-xs text-muted-foreground">{size}</span>}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* 스타일 */}

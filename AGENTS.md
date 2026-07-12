@@ -11,11 +11,12 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - 데이터 삭제/교체/마이그레이션은 "경고 + 사용자 확인" 없이 금지
 - 서브에이전트 위임 시 `fork_thread` 또는 컨텍스트 상속을 사용하지 않는다. 반드시 컨텍스트 없는 상태(`fork_context: false`)로 시작하고, 필요한 파일·변경 범위·검증 기준만 전달한 뒤 완료 즉시 종료한다.
 - 서브에이전트 작업을 위해 사용자 작업 목록에 새 작업을 생성하지 않는다.
+- 컨텍스트 없는 서브에이전트가 6분 동안 결과나 파일 변경 없이 실행 중이면 즉시 종료하고 재스폰하지 않는다. 남은 작업은 메인 세션에서 직접 처리한다.
 - 현재 작업의 대화 컨텍스트가 200,000토큰에 도달하기 전에 `$handoff`로 인계 문서를 만들고, 전체 컨텍스트를 복제하지 않은 새 세션에서 이어서 실행한다.
 
 ## Project Overview
 
-**Insight Engine** - YouTube 영상 URL로 다양한 AI 모델(Gemini, DeepSeek, Zhipu GLM, Ollama)을 활용해 고품질 다국어(ko/en/ja) 콘텐츠를 자동 생성하는 Flask + Next.js 웹 앱. LiteLLM을 통해 다중 AI 프로바이더를 통합 지원. Gemini가 기본 프로바이더. RAG 지식 참조, 팀 워크스페이스 지원.
+**Insight Engine** - 영상·글·오디오·문서를 ChatMock(OpenAI 호환) 단일 AI 서비스로 학습 가능한 노트와 다국어(ko/en/ja) 콘텐츠로 구조화하는 Flask + Next.js 웹 앱. LiteLLM은 ChatMock 호출 어댑터로 사용하며, RAG 지식 참조와 지식위키·복습 흐름을 지원.
 
 ## Commands
 
@@ -247,16 +248,15 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 
 ### 지원 모델 (LiteLLM 형식)
 
-| 프로바이더 | 모델 ID | 특이사항 |
-|-----------|---------|---------|
-| Gemini (기본) | `gemini/gemini-3-flash-preview` | `reasoning_effort="minimal"` |
-| Gemini | `gemini/gemini-2.5-flash-lite-preview-09-2025` | reasoning_effort 미지원 |
-| DeepSeek | `deepseek/deepseek-chat`, `deepseek/deepseek-reasoner` | |
-| Zhipu AI | `zhipuai/GLM-4.7`, `zhipuai/GLM-4.5-Air` | OpenAI 호환 API 사용 |
-| Ollama (로컬) | `ollama_chat/llama3.2`, `ollama_chat/mistral`, `ollama_chat/gemma2` | API 키 불필요, OLLAMA_BASE_URL 설정 |
+| 서비스 | 모델 ID | 특이사항 |
+|--------|---------|---------|
+| ChatMock | `chatmock/gpt-5.4-mini` | 기본 모델 |
+| ChatMock | `chatmock/gpt-5.4` | OpenAI 호환 로컬 게이트웨이 |
+| ChatMock | `chatmock/gpt-5.5` | OpenAI 호환 로컬 게이트웨이 |
+| ChatMock | `chatmock/gpt-5.3-codex-spark` | OpenAI 호환 로컬 게이트웨이 |
 
-- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS`에 `price_input`, `price_output` 필수
-
+- 모델 추가 시 `config.py`의 `SUPPORTED_PROVIDERS['chatmock']['models']`에 `price_input`, `price_output`을 함께 정의한다.
+- 프로바이더 선택 상태를 다시 추가하지 않는다. UI는 ChatMock 서비스 안내와 모델 선택만 제공한다.
 ### 스타일 프롬프트 규칙 (`prompts/styles/`)
 
 모든 스타일 프롬프트에 공통 적용:
@@ -322,7 +322,7 @@ Playwright 기반. `playwright.config.ts`에서 webServer가 Flask 앱 자동 �
 
 `.env.example` → `.env` 복사. 상세 환경변수 설명은 `README.md` 참조.
 
-**필수**: AI Provider API 키 최소 하나 (`GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `ZHIPUAI_API_KEY` 등). API 키가 설정된 프로바이더만 UI에 표시.
+**필수**: `chatmock login` 후 `chatmock serve` 실행. `CHATMOCK_BASE_URL` 기본값은 `http://127.0.0.1:8000/v1`, `CHATMOCK_API_KEY`는 로컬 호환용 `dummy`를 사용한다.
 
 **선택**: `SUPADATA_API_KEY` (자막 마지막 폴백 - 유료), `YOUTUBE_API_KEY` (댓글), `SUPABASE_URL` + `SUPABASE_ANON_KEY` (클라우드 저장), `YT_HTTP_PROXY` / `YT_HTTPS_PROXY` (차단 우회), `SCHEDULER_ENABLED=false` (APScheduler 기동 끄기 — 테스트/스크립트용, 기본 true)
 

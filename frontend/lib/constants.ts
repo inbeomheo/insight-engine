@@ -36,7 +36,6 @@ export const TRANSCRIPT_LANGUAGE_OPTIONS = [
 
 export const STORAGE_KEYS = {
   REPORTS: 'insight-engine-reports',
-  PROVIDER: 'insight-engine-selected-provider',
   MODEL: 'insight-engine-selected-model',
   CUSTOM_STYLES: 'insight-engine-custom-styles',
   ONBOARDING_DONE: 'insight-engine-onboarding-done',
