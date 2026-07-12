@@ -7,6 +7,7 @@ import {
   type NoteListItem,
   type NoteSearchResult,
 } from '@/lib/api';
+import type { NoteFacet } from '@/lib/note-list';
 import NotesPage, { ActiveFacetBar, NotesList, SearchResultsList, shouldHandleFacetLinkClick } from './page';
 
 vi.mock('next/link', () => ({
@@ -85,10 +86,14 @@ async function renderNotesPage() {
 
 async function renderActiveFacetBar({
   searchReturnQuery,
+  previousFacet = null,
+  onReturnToPreviousFacet = vi.fn(),
   onReturnToSearch = vi.fn(),
   onClear = vi.fn(),
 }: {
   searchReturnQuery: string | null;
+  previousFacet?: NoteFacet | null;
+  onReturnToPreviousFacet?: () => void;
   onReturnToSearch?: () => void;
   onClear?: () => void;
 }) {
@@ -101,8 +106,10 @@ async function renderActiveFacetBar({
         facet={{ type: 'concept', value: 'RAG' }}
         resultCount={1}
         totalCount={4}
+        previousFacet={previousFacet}
         searchReturnQuery={searchReturnQuery}
         searchReturnCount={2}
+        onReturnToPreviousFacet={onReturnToPreviousFacet}
         onReturnToSearch={onReturnToSearch}
         onClear={onClear}
       />
@@ -311,10 +318,13 @@ describe('SearchResultsList', () => {
 
 describe('ActiveFacetBar', () => {
   it('returns to the preserved search session while keeping the clear action', async () => {
+    const onReturnToPreviousFacet = vi.fn();
     const onReturnToSearch = vi.fn();
     const onClear = vi.fn();
     const view = await renderActiveFacetBar({
       searchReturnQuery: 'RAG 검색',
+      previousFacet: { type: 'tag', value: '학습' },
+      onReturnToPreviousFacet,
       onReturnToSearch,
       onClear,
     });
@@ -323,6 +333,11 @@ describe('ActiveFacetBar', () => {
       'button',
       /RAG 검색.*검색 결과 2개로 돌아가기$/,
     );
+    const previousButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /태그: 학습 필터로 돌아가기$/,
+    );
     const clearButton = findByAriaLabel<HTMLButtonElement>(view, 'button', /필터 해제$/);
 
     expect(view.textContent).toContain('개념: RAG');
@@ -330,8 +345,10 @@ describe('ActiveFacetBar', () => {
     expect(returnButton?.textContent).toContain('“RAG 검색” 검색 결과');
     expect(returnButton?.textContent).toContain('(2)');
 
+    await act(async () => { previousButton?.click(); });
     await act(async () => { returnButton?.click(); });
     await act(async () => { clearButton?.click(); });
+    expect(onReturnToPreviousFacet).toHaveBeenCalledOnce();
     expect(onReturnToSearch).toHaveBeenCalledOnce();
     expect(onClear).toHaveBeenCalledOnce();
   });
@@ -401,6 +418,15 @@ describe('NotesPage search return flow', () => {
       '/notes?source=%EC%A7%81%EC%A0%91+%ED%85%8D%EC%8A%A4%ED%8A%B8',
       { scroll: false },
     );
+
+    const previousButton = findByAriaLabel<HTMLButtonElement>(
+      view,
+      'button',
+      /태그: 학습 필터로 돌아가기$/,
+    );
+    expect(previousButton).not.toBeNull();
+    await act(async () => { previousButton!.click(); });
+    expect(replaceMock).toHaveBeenLastCalledWith('/notes?tag=%ED%95%99%EC%8A%B5', { scroll: false });
 
     const returnButton = findByAriaLabel<HTMLButtonElement>(
       view,

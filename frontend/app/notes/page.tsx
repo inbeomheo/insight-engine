@@ -125,6 +125,7 @@ export default function NotesPage() {
   const [reviewNow, setReviewNow] = useState(() => new Date());
   const [query, setQuery] = useState('');
   const [activeFacet, setActiveFacet] = useState<NoteFacet | null>(null);
+  const [facetHistory, setFacetHistory] = useState<NoteFacet[]>([]);
   const [activeStudyStatus, setActiveStudyStatus] = useState<NoteStudyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -173,6 +174,7 @@ export default function NotesPage() {
     const syncFacetFromUrl = () => {
       const facet = parseNoteFacetSearchParams(new URLSearchParams(window.location.search));
       setActiveFacet(facet);
+      setFacetHistory([]);
       if (facet) {
         advanceNoteSearchRequestId(searchRequestIdRef);
         setSearchResults(null);
@@ -194,12 +196,14 @@ export default function NotesPage() {
       setSearchResults(null);
       setLastSearchQuery('');
       setSearchReturnState(null);
+      setFacetHistory([]);
       setSearching(false);
       setError(null);
       return;
     }
     setQuery(q);
     setActiveFacet(null);
+    setFacetHistory([]);
     setActiveStudyStatus(null);
     router.replace('/notes', { scroll: false });
     setSearching(true);
@@ -276,6 +280,7 @@ export default function NotesPage() {
     setSearchResults(null);
     setLastSearchQuery('');
     setSearchReturnState(null);
+    setFacetHistory([]);
     setSearching(false);
     setError(null);
     router.replace('/notes', { scroll: false });
@@ -283,20 +288,19 @@ export default function NotesPage() {
 
   const applyFacetSelect = useCallback((facet: NoteFacet) => {
     advanceNoteSearchRequestId(searchRequestIdRef);
+    if (
+      activeFacet
+      && (activeFacet.type !== facet.type || activeFacet.value !== facet.value)
+    ) {
+      setFacetHistory((history) => [...history, activeFacet]);
+    }
     setSearchResults(null);
     setSearching(false);
     setError(null);
     setActiveFacet(facet);
     setActiveStudyStatus(null);
     router.replace(buildNoteFacetHref(facet), { scroll: false });
-  }, [router]);
-
-  const handleFacetSelect = useCallback((facet: NoteFacet) => {
-    setQuery('');
-    setLastSearchQuery('');
-    setSearchReturnState(null);
-    applyFacetSelect(facet);
-  }, [applyFacetSelect]);
+  }, [activeFacet, router]);
 
   const handleSearchResultFacetSelect = useCallback((facet: NoteFacet) => {
     if (searchResults) {
@@ -307,11 +311,25 @@ export default function NotesPage() {
     applyFacetSelect(facet);
   }, [applyFacetSelect, lastSearchQuery, searchResults]);
 
+  const handleReturnToPreviousFacet = useCallback(() => {
+    const previousFacet = facetHistory.at(-1);
+    if (!previousFacet) return;
+    advanceNoteSearchRequestId(searchRequestIdRef);
+    setFacetHistory((history) => history.slice(0, -1));
+    setSearchResults(null);
+    setSearching(false);
+    setError(null);
+    setActiveFacet(previousFacet);
+    setActiveStudyStatus(null);
+    router.replace(buildNoteFacetHref(previousFacet), { scroll: false });
+  }, [facetHistory, router]);
+
   const handleFacetClear = useCallback(() => {
     advanceNoteSearchRequestId(searchRequestIdRef);
     setQuery('');
     setLastSearchQuery('');
     setSearchReturnState(null);
+    setFacetHistory([]);
     setSearching(false);
     setError(null);
     setActiveFacet(null);
@@ -325,6 +343,7 @@ export default function NotesPage() {
     setLastSearchQuery(searchReturnState.query);
     setSearchResults(searchReturnState.results);
     setSearchReturnState(null);
+    setFacetHistory([]);
     setSearching(false);
     setError(null);
     setActiveFacet(null);
@@ -337,6 +356,7 @@ export default function NotesPage() {
     setQuery('');
     setLastSearchQuery('');
     setSearchReturnState(null);
+    setFacetHistory([]);
     setSearchResults(null);
     setSearching(false);
     setError(null);
@@ -537,7 +557,7 @@ export default function NotesPage() {
             reviewHistoryEntries={linkedReviewHistory}
             recentReviewHistory={recentReviewHistory}
             studyCardOrder={studyCardOrder}
-            onFacetSelect={handleFacetSelect}
+            onFacetSelect={applyFacetSelect}
           />
         )}
 
@@ -569,8 +589,10 @@ export default function NotesPage() {
                 facet={activeFacet}
                 resultCount={visibleNotes.length}
                 totalCount={notes.length}
+                previousFacet={facetHistory.at(-1) ?? null}
                 searchReturnQuery={searchReturnState?.query ?? null}
                 searchReturnCount={searchReturnState?.results.length ?? 0}
+                onReturnToPreviousFacet={handleReturnToPreviousFacet}
                 onReturnToSearch={handleReturnToSearch}
                 onClear={handleFacetClear}
               />
@@ -662,16 +684,20 @@ export function ActiveFacetBar({
   facet,
   resultCount,
   totalCount,
+  previousFacet,
   searchReturnQuery,
   searchReturnCount,
+  onReturnToPreviousFacet,
   onReturnToSearch,
   onClear,
 }: {
   facet: NoteFacet;
   resultCount: number;
   totalCount: number;
+  previousFacet: NoteFacet | null;
   searchReturnQuery: string | null;
   searchReturnCount: number;
+  onReturnToPreviousFacet: () => void;
   onReturnToSearch: () => void;
   onClear: () => void;
 }) {
@@ -684,6 +710,19 @@ export function ActiveFacetBar({
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-1">
+        {previousFacet !== null && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1 text-xs"
+            aria-label={`${getFacetLabel(previousFacet)} 필터로 돌아가기`}
+            onClick={onReturnToPreviousFacet}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            이전: {getFacetLabel(previousFacet)}
+          </Button>
+        )}
         {searchReturnQuery !== null && (
           <Button
             type="button"
