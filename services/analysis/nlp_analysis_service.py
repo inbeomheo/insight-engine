@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # 분석에 사용할 기본 모델
 _ANALYSIS_MODEL_CHAIN = [
-    'chatmock/gpt-5.4-mini',
+    'chatmock/gpt-5.3-codex-spark',
 ]
 
 # NLP 분석 프롬프트 — 최소 토큰으로 정확한 JSON 반환 유도
@@ -88,6 +88,9 @@ def _call_llm_for_analysis(content: str, model: str) -> dict:
         dict: 분석 결과 (keywords, sentiment, topics)
     """
     from litellm import completion
+    from config import coerce_deployment_model
+
+    model = coerce_deployment_model(model)
 
     # 비용 절감: 최대 3000자만 분석
     truncated = content[:3000] if len(content) > 3000 else content
@@ -292,6 +295,9 @@ def analyze_sentiment_flow(content: str, model: str = None) -> dict:
 
     if model is None:
         model = _get_analysis_model()
+
+    from config import coerce_deployment_model
+    model = coerce_deployment_model(model)
 
     # 최대 3000자
     truncated = content[:3000]

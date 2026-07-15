@@ -141,7 +141,9 @@ def _build_prompt(content, style_prompt, modifiers, rag_context=None, segments=N
 
 def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, stream=False, detail_level=None):
     """LiteLLM completion 호출용 kwargs 빌드 (DRY)"""
-    from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS
+    from config import STYLE_TEMPERATURE, LENGTH_MAX_TOKENS, DETAIL_PRESETS, coerce_deployment_model
+
+    model = coerce_deployment_model(model)
 
     request_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', '300'))
     kwargs = {
@@ -172,6 +174,21 @@ def _build_completion_kwargs(model, prompt, style_id=None, modifiers=None, strea
         kwargs["drop_params"] = True
 
     return kwargs
+
+
+def call_litellm(messages, model=None, max_tokens=4000, temperature=0.7):
+    """ChatMock-backed 단일 모델을 사용하는 공용 LiteLLM 호출 경계."""
+    kwargs = _build_completion_kwargs(
+        model,
+        "",
+        style_id="summary",
+        modifiers={"length": "medium"},
+    )
+    kwargs["messages"] = messages
+    kwargs["max_tokens"] = max_tokens
+    if "temperature" in kwargs:
+        kwargs["temperature"] = temperature
+    return _get_completion()(**kwargs)
 
 
 def _call_completion_with_model_retry(model: str, completion_kwargs: Dict[str, Any]) -> Any:
@@ -442,7 +459,7 @@ def create_content_with_fallback(content: str, models: List[str], style_prompt: 
     raise Exception(f"[AI 오류] 모든 모델이 실패했습니다. ({error_detail})")
 
 
-def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.4-mini', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
+def create_full_blog_post(content: str, model_name: str = 'chatmock/gpt-5.3-codex-spark', style_prompt: Optional[str] = None, return_prompt: bool = False) -> Dict[str, Any]:
     """
     하위 호환성을 위한 래퍼 함수입니다.
     API 키는 환경변수에서 자동으로 로드됩니다.

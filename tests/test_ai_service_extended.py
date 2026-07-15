@@ -46,9 +46,9 @@ class TestBuildCompletionKwargs(unittest.TestCase):
     def test_basic_model(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('custom/local-model', 'test prompt')
-        self.assertEqual(kwargs['model'], 'custom/local-model')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
         self.assertIn('messages', kwargs)
-        self.assertIn('temperature', kwargs)
+        self.assertNotIn('temperature', kwargs)
         self.assertIn('max_tokens', kwargs)
 
     def test_chatmock_model(self):
@@ -65,7 +65,7 @@ class TestBuildCompletionKwargs(unittest.TestCase):
     def test_raw_gpt_model_uses_chatmock_base(self):
         from services.core.ai_service import _build_completion_kwargs
         kwargs = _build_completion_kwargs('gpt-5.4-mini', 'test')
-        self.assertEqual(kwargs['model'], 'openai/gpt-5.4-mini')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
         self.assertEqual(kwargs['api_base'], 'http://127.0.0.1:8000/v1')
         self.assertEqual(kwargs['api_key'], 'dummy')
 

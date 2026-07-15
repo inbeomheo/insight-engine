@@ -226,6 +226,8 @@ def _build_qa_messages(
 def _call_litellm(messages: List[Dict], model: str, video_id: str) -> Optional[str]:
     """LiteLLM으로 답변을 생성합니다. 실패 시 None 반환."""
     try:
+        from config import coerce_deployment_model
+        model = coerce_deployment_model(model)
         kwargs: Dict[str, Any] = {
             "model": model,
             "messages": messages,

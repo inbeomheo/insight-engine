@@ -40,7 +40,7 @@ from services.usage.usage_decorator import get_usage_for_response
 
 blog_bp = Blueprint('blog', __name__)
 
-DEFAULT_MODEL = 'chatmock/gpt-5.4-mini'
+DEFAULT_MODEL = 'chatmock/gpt-5.3-codex-spark'
 DEFAULT_STYLE = 'summary'
 MAX_BATCH_URLS = 10
 MAX_BATCH_WORKERS = 5

@@ -126,10 +126,12 @@ def answer_product_question(message: str, context: dict[str, Any] | None = None)
         return fallback
 
     try:
-        from config import AGENT_DEFAULT_MODEL
+        from config import AGENT_DEFAULT_MODEL, coerce_deployment_model
         from services.core.ai_service import _build_completion_kwargs
 
-        model = os.getenv("SUPPORT_ASSISTANT_MODEL", AGENT_DEFAULT_MODEL or "chatmock/gpt-5.3-codex-spark")
+        model = coerce_deployment_model(
+            os.getenv("SUPPORT_ASSISTANT_MODEL", AGENT_DEFAULT_MODEL)
+        )
         matched_item, confidence = _match_faq(message)
         prompt = _build_support_prompt(message, context, matched_item)
         kwargs = _build_completion_kwargs(

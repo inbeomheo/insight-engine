@@ -20,7 +20,7 @@ EVENT_TYPES = {
 }
 
 # 기본 모델 (설정 없을 때 사용)
-DEFAULT_MODEL = 'chatmock/gpt-5.4-mini'
+DEFAULT_MODEL = 'chatmock/gpt-5.3-codex-spark'
 
 
 def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
@@ -50,7 +50,8 @@ def extract_events(transcript: str, model: Optional[str] = None) -> List[Dict]:
 
     prompt = EVENT_EXTRACTION_PROMPT + truncated_transcript
 
-    used_model = model or DEFAULT_MODEL
+    from config import coerce_deployment_model
+    used_model = coerce_deployment_model(model or DEFAULT_MODEL)
 
     try:
         kwargs = _build_completion_kwargs(

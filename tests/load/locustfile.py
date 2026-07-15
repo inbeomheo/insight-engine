@@ -14,7 +14,7 @@ SAMPLE_URLS = [
 ]
 
 SAMPLE_STYLES = ['summary', 'qna', 'quiz', 'retention_cards']
-SAMPLE_MODELS = ['chatmock/gpt-5.4-mini']
+SAMPLE_MODELS = ['chatmock/gpt-5.3-codex-spark']
 
 
 class InsightEngineUser(HttpUser):

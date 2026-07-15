@@ -22,7 +22,7 @@ _GRADE_ORDER = {'D': 0, 'C': 1, 'B': 2, 'A': 3}
 
 # 기본 평가 모델
 _EVAL_MODEL_CANDIDATES = [
-    'chatmock/gpt-5.4-mini',
+    'chatmock/gpt-5.3-codex-spark',
 ]
 
 
@@ -136,7 +136,8 @@ def evaluate_quality(content: str, source_summary: str, model: Optional[str] = N
     from prompts.quality_eval import QUALITY_EVAL_PROMPT
     from litellm import completion
 
-    eval_model = model or _get_eval_model()
+    from config import coerce_deployment_model
+    eval_model = coerce_deployment_model(model or _get_eval_model())
     if not eval_model:
         raise Exception("품질 평가에 사용 가능한 AI 모델이 없습니다. API 키를 확인해주세요.")
 

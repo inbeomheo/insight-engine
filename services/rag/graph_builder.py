@@ -12,7 +12,7 @@ import litellm
 logger = logging.getLogger(__name__)
 
 # 기본 추출 모델 (ChatMock/OpenAI 호환)
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+_DEFAULT_MODEL = "chatmock/gpt-5.3-codex-spark"
 
 _ENTITY_RELATION_PROMPT = """다음 텍스트에서 주요 엔티티와 관계를 추출하세요.
 
@@ -45,12 +45,15 @@ def _call_llm(text: str, model: str) -> dict[str, Any]:
     prompt = _ENTITY_RELATION_PROMPT.format(text=truncated)
 
     try:
-        response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,   # 정밀 추출이므로 낮은 temperature
-            max_tokens=2000,
+        from services.core.ai_service import _build_completion_kwargs
+        kwargs = _build_completion_kwargs(
+            model,
+            prompt,
+            style_id="summary",
+            modifiers={"length": "short"},
         )
+        kwargs["max_tokens"] = 2000
+        response = litellm.completion(**kwargs)
         raw = response.choices[0].message.content.strip()
 
         # JSON 블록 추출 (```json ... ``` 형식 처리)

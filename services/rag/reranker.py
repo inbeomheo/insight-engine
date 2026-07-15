@@ -11,7 +11,7 @@ import litellm
 logger = logging.getLogger(__name__)
 
 # 리랭킹용 모델 (빠른 응답 우선)
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+_DEFAULT_MODEL = "chatmock/gpt-5.3-codex-spark"
 
 _RERANK_PROMPT = """다음 쿼리에 대해 각 문서 청크의 관련도 점수(0~10)를 평가하세요.
 
@@ -64,12 +64,15 @@ def rerank(query: str, chunks: list[dict], top_k: int = 5, model: str = _DEFAULT
     prompt = _RERANK_PROMPT.format(query=query, chunks_text=chunks_text)
 
     try:
-        response = litellm.completion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,   # 결정론적 평가
-            max_tokens=200,
+        from services.core.ai_service import _build_completion_kwargs
+        kwargs = _build_completion_kwargs(
+            model,
+            prompt,
+            style_id="summary",
+            modifiers={"length": "short"},
         )
+        kwargs["max_tokens"] = 200
+        response = litellm.completion(**kwargs)
         raw = response.choices[0].message.content.strip()
 
         # JSON 추출

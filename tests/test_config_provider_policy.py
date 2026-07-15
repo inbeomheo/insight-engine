@@ -21,6 +21,8 @@ class TestDeploymentProviderPolicy(unittest.TestCase):
                 "DEEPSEEK_API_KEY": "should-not-expose",
                 "OLLAMA_BASE_URL": "http://localhost:11434",
                 "ZHIPUAI_API_KEY": "should-not-expose",
+                "TRANSLATION_MODEL": "gemini/should-not-use",
+                "AGENT_DEFAULT_MODEL": "ollama/should-not-use",
             },
             clear=False,
         ):
@@ -37,6 +39,19 @@ class TestDeploymentProviderPolicy(unittest.TestCase):
         )
         self.assertEqual(config.FALLBACK_CHAIN, ["chatmock/gpt-5.3-codex-spark"])
         self.assertEqual(config.MAX_FALLBACK_ATTEMPTS, 1)
+        self.assertEqual(config.TRANSLATION_MODEL, "chatmock/gpt-5.3-codex-spark")
+
+    def test_all_model_inputs_are_coerced_to_deployment_model(self):
+        import config
+
+        self.assertEqual(
+            config.coerce_deployment_model("gemini/gemini-3.1-pro-preview"),
+            "chatmock/gpt-5.3-codex-spark",
+        )
+        self.assertEqual(
+            config.coerce_deployment_model("gpt-5.4-mini"),
+            "chatmock/gpt-5.3-codex-spark",
+        )
 
 
 if __name__ == "__main__":

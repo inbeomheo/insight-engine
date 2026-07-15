@@ -58,7 +58,7 @@ class BaseAgent(ABC):
             return AGENT_DEFAULT_MODEL
         except Exception:
             pass
-        return 'chatmock/gpt-5.4-mini'
+        return 'chatmock/gpt-5.3-codex-spark'
 
     def _call_ai(self, prompt: str, temperature: float = 0.7, max_tokens: int = 4000) -> str:
         """AI 모델을 호출하여 응답을 반환하는 헬퍼.
@@ -74,7 +74,8 @@ class BaseAgent(ABC):
         import os
         from litellm import completion
 
-        model = self.model or self._get_default_model()
+        from config import coerce_deployment_model
+        model = coerce_deployment_model(self.model or self._get_default_model())
 
         kwargs: dict[str, Any] = {
             'model': model,

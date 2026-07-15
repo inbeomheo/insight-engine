@@ -209,15 +209,16 @@ def _summarize_middle(
 
     try:
         from litellm import completion
+        from services.core.ai_service import _build_completion_kwargs
 
-        summary_model = model or "gemini/gemini-3.1-flash-lite-preview"
-        resp = completion(
-            model=summary_model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=MAX_SUMMARY_TOKENS,
-            temperature=0.3,
-            timeout=60,
+        kwargs = _build_completion_kwargs(
+            model,
+            prompt,
+            style_id="summary",
+            modifiers={"length": "short"},
         )
+        kwargs["max_tokens"] = MAX_SUMMARY_TOKENS
+        resp = completion(**kwargs)
         return resp.choices[0].message.content or "요약 생성 실패"
     except Exception as e:
         logger.error("컨텍스트 요약 실패: %s", e)

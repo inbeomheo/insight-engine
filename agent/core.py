@@ -124,7 +124,8 @@ class AIAgent:
         compression_threshold: float = 0.5,
     ):
         # 모델 설정
-        self.model = model or self._get_default_model()
+        from config import coerce_deployment_model
+        self.model = coerce_deployment_model(model or self._get_default_model())
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.user_id = user_id

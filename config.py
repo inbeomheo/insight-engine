@@ -26,6 +26,10 @@ from prompts import (
 
 YOUTUBE_API_KEY: str = os.getenv('YOUTUBE_API_KEY', '')
 
+# 이 배포에서 실제 호출을 허용하는 단일 모델. 요청 본문이나 환경변수로
+# 다른 모델을 넣어도 모든 LLM 호출 경계에서 이 값으로 정규화한다.
+DEPLOYMENT_MODEL: str = 'chatmock/gpt-5.3-codex-spark'
+
 PROVIDER_API_KEYS: Dict[str, str] = {
     # Deployment policy: expose only the ChatGPT/Codex-backed ChatMock sidecar.
     # It is branded as "OPEN AI" in the UI to avoid leaking the internal proxy
@@ -66,7 +70,7 @@ CRAG_QUALITY_THRESHOLD: float = float(os.environ.get('CRAG_QUALITY_THRESHOLD', '
 
 AGENT_MODE_ENABLED: bool = os.getenv('AGENT_MODE_ENABLED', 'false').lower() == 'true'
 AGENT_MAX_ITERATIONS: int = int(os.getenv('AGENT_MAX_ITERATIONS', '5'))
-AGENT_DEFAULT_MODEL: str = os.getenv('AGENT_DEFAULT_MODEL', 'chatmock/gpt-5.3-codex-spark')
+AGENT_DEFAULT_MODEL: str = DEPLOYMENT_MODEL
 
 # === Whisper (음성 인식 자막 폴백) ===
 
@@ -137,9 +141,7 @@ AI_CACHE_MAX_SIZE_MB = 512
 
 # === AI Model & Fallback ===
 
-FALLBACK_CHAIN = [
-    'chatmock/gpt-5.3-codex-spark',
-]
+FALLBACK_CHAIN = [DEPLOYMENT_MODEL]
 MAX_FALLBACK_ATTEMPTS = 1
 
 # === Style Tuning ===
@@ -184,7 +186,7 @@ SUPPORTED_PROVIDERS: Dict[str, Dict[str, Any]] = {
         'name': 'OPEN AI',
         'api_base': os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1'),
         'models': [
-            {'id': 'chatmock/gpt-5.3-codex-spark', 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
+            {'id': DEPLOYMENT_MODEL, 'name': 'GPT-5.3 Codex Spark', 'max_input_tokens': 128000, 'price_input': 0, 'price_output': 0},
         ]
     },
 }
@@ -225,6 +227,11 @@ def get_provider_from_model(model_id: str) -> str:
     if model_id.startswith('chatmock/') or model_id.startswith('gpt-'):
         return 'chatmock'
     return 'chatmock'  # 기본값 (ChatMock/OpenAI 호환)
+
+
+def coerce_deployment_model(model_id: str | None = None) -> str:
+    """모든 외부/내부 모델 입력을 배포 고정 모델로 정규화한다."""
+    return DEPLOYMENT_MODEL
 
 
 # === Styles & Modifiers ===
@@ -314,10 +321,7 @@ RUNWAY_API_KEY: str = os.getenv('RUNWAY_API_KEY', '')
 
 # 번역
 DEEPL_API_KEY: str = os.getenv('DEEPL_API_KEY', '')
-TRANSLATION_MODEL: str = os.getenv(
-    'TRANSLATION_MODEL',
-    'chatmock/gpt-5.4-mini'
-)
+TRANSLATION_MODEL: str = DEPLOYMENT_MODEL
 
 # 임베딩 모델 (RAG)
 EMBEDDING_MODEL: str = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
@@ -331,6 +335,7 @@ MODEL_ROUTER_DEFAULT_MODE: str = os.getenv('MODEL_ROUTER_DEFAULT_MODE', 'balance
 __all__ = [
     # API Keys
     'YOUTUBE_API_KEY',
+    'DEPLOYMENT_MODEL',
     'PROVIDER_API_KEYS',
     'ENABLED_PROVIDER_IDS',
     'SUPADATA_API_KEY',
@@ -366,6 +371,7 @@ __all__ = [
     'SUPPORTED_PROVIDERS',
     'get_available_providers',
     'get_provider_from_model',
+    'coerce_deployment_model',
     'get_model_max_tokens',
 
     # Styles (v3.0)

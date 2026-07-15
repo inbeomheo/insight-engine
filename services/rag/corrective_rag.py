@@ -19,7 +19,7 @@ import litellm
 logger = logging.getLogger(__name__)
 
 # 품질 평가 및 쿼리 재구성에 사용할 빠른 모델
-_DEFAULT_MODEL = "chatmock/gpt-5.4-mini"
+_DEFAULT_MODEL = "chatmock/gpt-5.3-codex-spark"
 
 # 품질 결정 임계값
 _SCORE_CORRECT_THRESHOLD = 0.7    # 이상이면 correct
@@ -111,12 +111,15 @@ def evaluate_retrieval_quality(
     chunk_scores = []
     feedback = ""
     try:
-        response = litellm.completion(
-            model=eval_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=300,
+        from services.core.ai_service import _build_completion_kwargs
+        kwargs = _build_completion_kwargs(
+            eval_model,
+            prompt,
+            style_id="summary",
+            modifiers={"length": "short"},
         )
+        kwargs["max_tokens"] = 300
+        response = litellm.completion(**kwargs)
         raw = response.choices[0].message.content.strip()
 
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -196,12 +199,15 @@ def reformulate_query(
     )
 
     try:
-        response = litellm.completion(
-            model=reformat_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=150,
+        from services.core.ai_service import _build_completion_kwargs
+        kwargs = _build_completion_kwargs(
+            reformat_model,
+            prompt,
+            style_id="summary",
+            modifiers={"length": "short"},
         )
+        kwargs["max_tokens"] = 150
+        response = litellm.completion(**kwargs)
         raw = response.choices[0].message.content.strip()
 
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)

@@ -73,7 +73,7 @@ class RepurposeService:
 
     DEFAULT_MODEL = os.getenv(
         'REPURPOSE_MODEL',
-        'chatmock/gpt-5.4-mini'
+        'chatmock/gpt-5.3-codex-spark'
     )
 
     def repurpose(
