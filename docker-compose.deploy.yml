@@ -33,6 +33,9 @@ services:
       - insight_app_data:/app/data
       - insight_app_cache:/app/cache
       - insight_app_logs:/app/logs
+      # Chroma의 기본 ONNX 임베딩 모델은 $HOME/.cache 아래에 내려받는다.
+      # 컨테이너 재생성 때 다시 다운로드하지 않도록 별도 보존한다.
+      - insight_model_cache:/app/.cache
     depends_on:
       redis:
         condition: service_healthy
@@ -143,3 +146,4 @@ volumes:
   insight_app_cache:
   insight_app_logs:
   insight_redis_data:
+  insight_model_cache:

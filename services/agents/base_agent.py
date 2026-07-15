@@ -86,7 +86,9 @@ class BaseAgent(ABC):
         }
 
         if model.startswith('chatmock/') or model.startswith('gpt-'):
-            kwargs['model'] = model.replace('chatmock/', '', 1)
+            # LiteLLM은 OpenAI 호환 사설 endpoint에도 provider 접두사가
+            # 필요하다. 접두사 없이 raw gpt-*를 넘기면 Provider NOT provided.
+            kwargs['model'] = f"openai/{model.replace('chatmock/', '', 1)}"
             kwargs['api_base'] = os.getenv('CHATMOCK_BASE_URL', 'http://127.0.0.1:8000/v1')
             kwargs['api_key'] = os.getenv('CHATMOCK_API_KEY', 'dummy') or 'dummy'
             kwargs['reasoning_effort'] = 'medium'

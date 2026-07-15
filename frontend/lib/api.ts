@@ -44,6 +44,9 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/playlist-videos': 30_000,
   '/api/chat': 60_000,
   '/api/support/chat': 30_000,
+  // 지식 노트 생성은 AI 구조화 + Chroma 임베딩을 포함한다. 첫 실행 시
+  // ONNX 임베딩 모델 준비까지 발생할 수 있으므로 백엔드 제한과 맞춘다.
+  '/api/notes': 300_000,
   '/api/video-deepdives/extract': 660_000,
   '/api/extract-document': 60_000,
   '/api/extract-audio': 600_000,

@@ -80,7 +80,7 @@ class TestBaseAgent(unittest.TestCase):
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'gpt-5.3-codex-spark')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
         self.assertEqual(kwargs['api_key'], 'dummy')
         self.assertIn('api_base', kwargs)
         self.assertEqual(kwargs['reasoning_effort'], 'medium')
@@ -97,7 +97,7 @@ class TestBaseAgent(unittest.TestCase):
         agent._call_ai('prompt')
 
         kwargs = mock_llm.call_args[1]
-        self.assertEqual(kwargs['model'], 'gpt-5.3-codex-spark')
+        self.assertEqual(kwargs['model'], 'openai/gpt-5.3-codex-spark')
         self.assertEqual(kwargs['api_key'], 'dummy')
         self.assertIn('api_base', kwargs)
 

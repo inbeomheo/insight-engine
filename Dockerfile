@@ -56,7 +56,7 @@ COPY --from=frontend-builder /app/frontend/.next ./frontend/.next
 COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
 
 # 데이터 디렉토리
-RUN mkdir -p /app/data/chroma_db /app/cache /app/logs
+RUN mkdir -p /app/data/chroma_db /app/cache /app/logs /app/.cache
 
 # 비루트 사용자
 RUN useradd -r -s /bin/false appuser \
