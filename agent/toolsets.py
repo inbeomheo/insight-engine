@@ -2,7 +2,7 @@
 Toolset 정의 — 도구 그룹핑 + 합성
 
 Hermes 패턴: includes로 재귀적 Toolset 합성 가능.
-20개 서비스 도메인 → 20개 Toolset + 역할별 합성 Toolset.
+서비스 도메인별 Toolset + 역할별 합성 Toolset.
 """
 from __future__ import annotations
 
@@ -111,13 +111,6 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
         "description": "DOCX, Markdown, EPUB, Google Docs 내보내기",
     },
 
-    # ── 연동 서비스 (8개 서비스) ──
-    "integrations": {
-        "tools": [],  # 동적 등록
-        "includes": [],
-        "description": "Slack, Discord, Telegram, Airtable, Google Sheets 연동",
-    },
-
     # ── MCP 플러그인 ──
     "mcp": {
         "tools": [
@@ -196,7 +189,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
     # Publisher 역할: 내보내기 + 연동 + MCP
     "role_publisher": {
         "tools": [],
-        "includes": ["export", "integrations", "mcp", "schedule", "agent_control"],
+        "includes": ["export", "mcp", "schedule", "agent_control"],
         "description": "콘텐츠 발행 역할",
     },
 
@@ -213,7 +206,7 @@ TOOLSETS: Dict[str, Dict[str, list]] = {
         "includes": [
             "collector", "analysis", "seo", "content", "core",
             "quality", "media", "transcript", "platform", "rag",
-            "export", "integrations", "mcp", "schedule",
+            "export", "mcp", "schedule",
             "agent_control", "analytics",
             "notebooklm",
         ],

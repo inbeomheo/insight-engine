@@ -20,6 +20,14 @@ function createMemoryStorage() {
   };
 }
 
+function localDate(year: number, monthIndex: number, day: number, hour = 12): Date {
+  return new Date(year, monthIndex, day, hour);
+}
+
+function localIso(year: number, monthIndex: number, day: number, hour = 12): string {
+  return localDate(year, monthIndex, day, hour).toISOString();
+}
+
 describe('note-review-history', () => {
   it('finds the latest valid interval for one note across legacy entries', () => {
     expect(getLatestNoteReviewIntervalDays([
@@ -88,18 +96,20 @@ describe('note-review-history', () => {
   });
 
   it('normalizes malformed entries and keeps the latest review per note and day', () => {
+    const earlier = localIso(2026, 6, 11, 9);
+    const latest = localIso(2026, 6, 11, 17);
     const history = normalizeNoteReviewHistory([
       null,
       { noteId: '', completedAt: 'bad', intervalDays: 0 },
-      { noteId: 'note-1', noteTitle: '', completedAt: '2026-07-11T01:00:00.000Z', intervalDays: 1 },
-      { noteId: 'note-1', noteTitle: '최신 제목', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 3 },
+      { noteId: 'note-1', noteTitle: '', completedAt: earlier, intervalDays: 1 },
+      { noteId: 'note-1', noteTitle: '최신 제목', completedAt: latest, intervalDays: 3 },
     ]);
 
     expect(history).toEqual([{
       id: 'note-1:2026-07-11',
       noteId: 'note-1',
       noteTitle: '최신 제목',
-      completedAt: '2026-07-11T08:00:00.000Z',
+      completedAt: latest,
       intervalDays: 3,
     }]);
   });
@@ -121,7 +131,7 @@ describe('note-review-history', () => {
     recordNoteReviewCompletion(
       { noteId: 'note-1', noteTitle: '첫 노트', intervalDays: 1 },
       storage,
-      new Date('2026-07-11T01:00:00.000Z')
+      localDate(2026, 6, 11, 9)
     );
     const updated = recordNoteReviewCompletion(
       {
@@ -133,7 +143,7 @@ describe('note-review-history', () => {
         scheduleScheduledAt: '2026-07-11T07:59:00.000Z',
       },
       storage,
-      new Date('2026-07-11T08:00:00.000Z')
+      localDate(2026, 6, 11, 17)
     );
 
     expect(updated).toHaveLength(1);
@@ -149,12 +159,12 @@ describe('note-review-history', () => {
 
   it('builds an oldest-to-today seven-day activity series', () => {
     const entries = normalizeNoteReviewHistory([
-      { noteId: 'a', noteTitle: 'A', completedAt: '2026-07-10T08:00:00.000Z', intervalDays: 1 },
-      { noteId: 'b', noteTitle: 'B', completedAt: '2026-07-10T09:00:00.000Z', intervalDays: 3 },
-      { noteId: 'c', noteTitle: 'C', completedAt: '2026-07-08T08:00:00.000Z', intervalDays: 7 },
+      { noteId: 'a', noteTitle: 'A', completedAt: localIso(2026, 6, 10, 8), intervalDays: 1 },
+      { noteId: 'b', noteTitle: 'B', completedAt: localIso(2026, 6, 10, 9), intervalDays: 3 },
+      { noteId: 'c', noteTitle: 'C', completedAt: localIso(2026, 6, 8, 8), intervalDays: 7 },
     ]);
 
-    const activity = getNoteReviewActivityDays(entries, new Date('2026-07-11T12:00:00.000Z'), 4);
+    const activity = getNoteReviewActivityDays(entries, localDate(2026, 6, 11), 4);
     expect(activity.map(({ dateKey, count, isToday }) => ({ dateKey, count, isToday }))).toEqual([
       { dateKey: '2026-07-08', count: 1, isToday: false },
       { dateKey: '2026-07-09', count: 0, isToday: false },
@@ -166,12 +176,12 @@ describe('note-review-history', () => {
 
   it('builds a weekly review history markdown report', () => {
     const entries = normalizeNoteReviewHistory([
-      { noteId: 'note 1', noteTitle: '  [RAG]\n노트  ', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 3 },
-      { noteId: 'note-2', noteTitle: '둘째 노트', completedAt: '2026-07-10T08:00:00.000Z', intervalDays: 7 },
+      { noteId: 'note 1', noteTitle: '  [RAG]\n노트  ', completedAt: localIso(2026, 6, 11), intervalDays: 3 },
+      { noteId: 'note-2', noteTitle: '둘째 노트', completedAt: localIso(2026, 6, 10), intervalDays: 7 },
     ]);
     const markdown = buildNoteReviewHistoryMarkdown(entries, {
       title: '  나의\n복습  ',
-      now: new Date('2026-07-11T12:00:00.000Z'),
+      now: localDate(2026, 6, 11),
     });
 
     expect(markdown).toContain('# 나의 복습');
@@ -179,24 +189,24 @@ describe('note-review-history', () => {
     expect(markdown).toContain('- 최근 7일 완료: 2회');
     expect(markdown).toContain('2026-07-11 (토): 1회');
     expect(markdown).toContain('[\\[RAG\\] 노트](/notes/note%201#study-progress)');
-    expect(buildNoteReviewHistoryMarkdown([], { now: new Date('2026-07-11T12:00:00.000Z') }))
+    expect(buildNoteReviewHistoryMarkdown([], { now: localDate(2026, 6, 11) }))
       .toContain('복습 기록이 없습니다.');
   });
 
   it('summarizes seven-day activity and a streak ending today or yesterday', () => {
     const entries = normalizeNoteReviewHistory([
-      { noteId: 'a', noteTitle: 'A', completedAt: '2026-07-11T08:00:00.000Z', intervalDays: 1 },
-      { noteId: 'b', noteTitle: 'B', completedAt: '2026-07-10T08:00:00.000Z', intervalDays: 3 },
-      { noteId: 'c', noteTitle: 'C', completedAt: '2026-07-10T09:00:00.000Z', intervalDays: 7 },
-      { noteId: 'd', noteTitle: 'D', completedAt: '2026-07-08T08:00:00.000Z', intervalDays: 1 },
-      { noteId: 'old', noteTitle: 'Old', completedAt: '2026-06-30T08:00:00.000Z', intervalDays: 1 },
+      { noteId: 'a', noteTitle: 'A', completedAt: localIso(2026, 6, 11), intervalDays: 1 },
+      { noteId: 'b', noteTitle: 'B', completedAt: localIso(2026, 6, 10, 8), intervalDays: 3 },
+      { noteId: 'c', noteTitle: 'C', completedAt: localIso(2026, 6, 10, 9), intervalDays: 7 },
+      { noteId: 'd', noteTitle: 'D', completedAt: localIso(2026, 6, 8), intervalDays: 1 },
+      { noteId: 'old', noteTitle: 'Old', completedAt: localIso(2026, 5, 30), intervalDays: 1 },
     ]);
 
-    expect(getNoteReviewHistorySummary(entries, new Date('2026-07-11T12:00:00.000Z'))).toEqual({
+    expect(getNoteReviewHistorySummary(entries, localDate(2026, 6, 11))).toEqual({
       totalCompletions: 4,
       activeDays: 3,
       currentStreak: 2,
     });
-    expect(getNoteReviewHistorySummary(entries, new Date('2026-07-12T12:00:00.000Z')).currentStreak).toBe(2);
+    expect(getNoteReviewHistorySummary(entries, localDate(2026, 6, 12)).currentStreak).toBe(2);
   });
 });

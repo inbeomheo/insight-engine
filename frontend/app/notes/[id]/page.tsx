@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
@@ -381,12 +382,12 @@ function NoteBody({
   const [studyProgress, setStudyProgress] = useState<NoteStudyProgress>(() =>
     normalizeNoteStudyProgress(null, studyCounts)
   );
-  const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const { copy: copyStudy, status: studyCopyStatus } = useClipboardCopy();
   const [reviewSchedule, setReviewSchedule] = useState<NoteReviewSchedule | null>(null);
   const [previousReviewIntervalDays, setPreviousReviewIntervalDays] = useState<number | null>(null);
   const [selectedReviewGrade, setSelectedReviewGrade] = useState<NoteReviewGrade | null>(null);
-  const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const { copy: copyNextTarget, status: nextStudyCopyStatus } = useClipboardCopy();
+  const { copy: copyQuotes, status: quoteCopyStatus } = useClipboardCopy();
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
@@ -573,37 +574,19 @@ function NoteBody({
   }, [nextStudyTarget]);
 
   const copyNextStudyTarget = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setNextStudyCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(buildNextNoteStudyTargetMarkdown({
+    await copyNextTarget(
+      buildNextNoteStudyTargetMarkdown({
         noteTitle,
         target: nextStudyTarget,
-      }));
-      setNextStudyCopyStatus('copied');
-    } catch {
-      setNextStudyCopyStatus('error');
-    }
-  }, [nextStudyTarget, noteTitle]);
+      }),
+    );
+  }, [copyNextTarget, nextStudyTarget, noteTitle]);
 
   const copyQuoteMarkdown = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setQuoteCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(
+    await copyQuotes(
         buildNoteQuoteMarkdown(note.quotes, `${noteTitle} 근거 인용`)
-      );
-      setQuoteCopyStatus('copied');
-    } catch {
-      setQuoteCopyStatus('error');
-    }
-  }, [note.quotes, noteTitle]);
+    );
+  }, [copyQuotes, note.quotes, noteTitle]);
 
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
@@ -616,11 +599,6 @@ function NoteBody({
   }, [reviewQuestions.length]);
 
   const copyStudyMarkdown = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setStudyCopyStatus('error');
-      return;
-    }
-
     const markdown = buildNoteStudyMarkdown({
       title: noteTitle,
       sourceUrl: sourceUrl ?? undefined,
@@ -629,31 +607,8 @@ function NoteBody({
       progress: studyProgress,
     });
 
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setStudyCopyStatus('copied');
-    } catch {
-      setStudyCopyStatus('error');
-    }
-  }, [learningPoints, noteTitle, reviewQuestions, sourceUrl, studyProgress]);
-
-  useEffect(() => {
-    if (studyCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setStudyCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [studyCopyStatus]);
-
-  useEffect(() => {
-    if (nextStudyCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setNextStudyCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [nextStudyCopyStatus]);
-
-  useEffect(() => {
-    if (quoteCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setQuoteCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [quoteCopyStatus]);
+    await copyStudy(markdown);
+  }, [copyStudy, learningPoints, noteTitle, reviewQuestions, sourceUrl, studyProgress]);
 
   useEffect(() => {
     if (recallFlow?.step !== 'retry') return;
@@ -1226,26 +1181,10 @@ function NoteBody({
 }
 
 function NoteWikiReadingPath({ title, items }: { title: string; items: NoteWikiReadingPathItem[] }) {
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const { copy, status: copyStatus } = useClipboardCopy();
   const copyReadingPath = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(buildNoteWikiReadingPathMarkdown(items, title));
-      setCopyStatus('copied');
-    } catch {
-      setCopyStatus('error');
-    }
-  }, [items, title]);
-
-  useEffect(() => {
-    if (copyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [copyStatus]);
+    await copy(buildNoteWikiReadingPathMarkdown(items, title));
+  }, [copy, items, title]);
 
   return (
     <Card id="wiki-reading-path" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">

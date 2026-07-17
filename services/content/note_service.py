@@ -27,6 +27,85 @@ _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
 logger = get_logger(__name__)
 
 
+def _is_non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _validate_source(source: Any, errors: list[str]) -> None:
+    if not isinstance(source, dict):
+        errors.append("source는 객체여야 합니다.")
+        return
+
+    source_type = source.get("type")
+    if source_type not in SOURCE_TYPES:
+        errors.append("source.type은 youtube, article 또는 text여야 합니다.")
+
+    url = source.get("url")
+    if source_type in URL_REQUIRED_SOURCE_TYPES and not _is_non_empty_string(url):
+        errors.append("source.url은 비어 있지 않은 문자열이어야 합니다.")
+    elif "url" in source and not isinstance(url, str):
+        errors.append("source.url은 문자열이어야 합니다.")
+
+    if not _is_non_empty_string(source.get("title")):
+        errors.append("source.title은 비어 있지 않은 문자열이어야 합니다.")
+
+
+def _validate_required_string_list(note: dict[str, Any], key: str, errors: list[str]) -> None:
+    value = note.get(key)
+    if not isinstance(value, list) or any(not _is_non_empty_string(item) for item in value):
+        errors.append(f"{key}는 비어 있지 않은 문자열 배열이어야 합니다.")
+
+
+def _validate_learning_points(value: Any, errors: list[str]) -> None:
+    if value and (
+        not isinstance(value, list)
+        or any(not _is_non_empty_string(item) for item in value)
+    ):
+        errors.append("learning_points는 문자열 배열이어야 합니다.")
+
+
+def _validate_review_questions(value: Any, errors: list[str]) -> None:
+    if not value:
+        return
+    if not isinstance(value, list):
+        errors.append("review_questions는 배열이어야 합니다.")
+        return
+
+    for item in value:
+        if not isinstance(item, dict):
+            errors.append("review_questions 항목은 객체여야 합니다.")
+            continue
+        if not _is_non_empty_string(item.get("question")):
+            errors.append("review_questions.question은 비어 있지 않은 문자열이어야 합니다.")
+        if not _is_non_empty_string(item.get("answer")):
+            errors.append("review_questions.answer는 비어 있지 않은 문자열이어야 합니다.")
+
+
+def _validate_quotes(value: Any, errors: list[str]) -> None:
+    if not isinstance(value, list):
+        errors.append("quotes는 배열이어야 합니다.")
+        return
+
+    for quote in value:
+        if not isinstance(quote, dict):
+            errors.append("quotes 항목은 객체여야 합니다.")
+            continue
+        if not _is_non_empty_string(quote.get("text")):
+            errors.append("quote.text는 비어 있지 않은 문자열이어야 합니다.")
+        if not isinstance(quote.get("ref"), str):
+            errors.append("quote.ref는 문자열이어야 합니다.")
+
+
+def _validate_created_at(value: Any, errors: list[str]) -> None:
+    if not _is_non_empty_string(value):
+        errors.append("created_at은 ISO8601 문자열이어야 합니다.")
+        return
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        errors.append("created_at은 ISO8601 형식이어야 합니다.")
+
+
 def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
     """Validate a note dict without external dependencies."""
     errors: list[str] = []
@@ -42,72 +121,23 @@ def validate_note(note: dict[str, Any]) -> tuple[bool, list[str]]:
     if not isinstance(note_id, str) or not note_id.strip() or not _ID_RE.fullmatch(note_id):
         errors.append("id는 안전한 문자열이어야 합니다.")
 
-    source = note.get("source")
-    if not isinstance(source, dict):
-        errors.append("source는 객체여야 합니다.")
-    else:
-        if source.get("type") not in SOURCE_TYPES:
-            errors.append("source.type은 youtube, article 또는 text여야 합니다.")
-        if source.get("type") in URL_REQUIRED_SOURCE_TYPES and (
-            not isinstance(source.get("url"), str) or not source.get("url", "").strip()
-        ):
-            errors.append("source.url은 비어 있지 않은 문자열이어야 합니다.")
-        elif "url" in source and not isinstance(source.get("url"), str):
-            errors.append("source.url은 문자열이어야 합니다.")
-        if not isinstance(source.get("title"), str) or not source.get("title", "").strip():
-            errors.append("source.title은 비어 있지 않은 문자열이어야 합니다.")
+    _validate_source(note.get("source"), errors)
 
     for key in ("key_concepts", "tags"):
-        value = note.get(key)
-        if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
-            errors.append(f"{key}는 비어 있지 않은 문자열 배열이어야 합니다.")
+        _validate_required_string_list(note, key, errors)
 
-    for key in ("learning_points",):
-        value = note.get(key, [])
-        if value and (not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value)):
-            errors.append(f"{key}는 문자열 배열이어야 합니다.")
+    _validate_learning_points(note.get("learning_points", []), errors)
+    _validate_review_questions(note.get("review_questions", []), errors)
 
-    review_questions = note.get("review_questions", [])
-    if review_questions:
-        if not isinstance(review_questions, list):
-            errors.append("review_questions는 배열이어야 합니다.")
-        else:
-            for item in review_questions:
-                if not isinstance(item, dict):
-                    errors.append("review_questions 항목은 객체여야 합니다.")
-                    continue
-                if not isinstance(item.get("question"), str) or not item.get("question", "").strip():
-                    errors.append("review_questions.question은 비어 있지 않은 문자열이어야 합니다.")
-                if not isinstance(item.get("answer"), str) or not item.get("answer", "").strip():
-                    errors.append("review_questions.answer는 비어 있지 않은 문자열이어야 합니다.")
-
-    if not isinstance(note.get("summary"), str) or not note.get("summary", "").strip():
+    if not _is_non_empty_string(note.get("summary")):
         errors.append("summary는 비어 있지 않은 문자열이어야 합니다.")
 
-    quotes = note.get("quotes")
-    if not isinstance(quotes, list):
-        errors.append("quotes는 배열이어야 합니다.")
-    else:
-        for quote in quotes:
-            if not isinstance(quote, dict):
-                errors.append("quotes 항목은 객체여야 합니다.")
-                continue
-            if not isinstance(quote.get("text"), str) or not quote.get("text", "").strip():
-                errors.append("quote.text는 비어 있지 않은 문자열이어야 합니다.")
-            if not isinstance(quote.get("ref"), str):
-                errors.append("quote.ref는 문자열이어야 합니다.")
+    _validate_quotes(note.get("quotes"), errors)
 
-    if not isinstance(note.get("language"), str) or not note.get("language", "").strip():
+    if not _is_non_empty_string(note.get("language")):
         errors.append("language는 비어 있지 않은 문자열이어야 합니다.")
 
-    created_at = note.get("created_at")
-    if not isinstance(created_at, str) or not created_at.strip():
-        errors.append("created_at은 ISO8601 문자열이어야 합니다.")
-    else:
-        try:
-            datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        except ValueError:
-            errors.append("created_at은 ISO8601 형식이어야 합니다.")
+    _validate_created_at(note.get("created_at"), errors)
 
     return len(errors) == 0, errors
 

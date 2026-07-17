@@ -1,4 +1,4 @@
-﻿"""내보내기 라우트 — HTML/Markdown 전용."""
+"""내보내기 라우트 — HTML/Markdown 전용."""
 import io
 import re as re_module
 

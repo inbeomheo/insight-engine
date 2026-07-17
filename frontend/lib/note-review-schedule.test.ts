@@ -93,10 +93,11 @@ describe('note-review-schedule', () => {
   });
 
   it('labels overdue, today, tomorrow, and upcoming schedules', () => {
-    const schedule = createNoteReviewSchedule(3, now)!;
-    expect(getNoteReviewScheduleStatus(schedule, new Date('2026-07-15T01:00:00.000Z')).label).toBe('1일 지남');
-    expect(getNoteReviewScheduleStatus(schedule, new Date('2026-07-14T01:00:00.000Z'))).toMatchObject({ state: 'due', label: '오늘 복습' });
-    expect(getNoteReviewScheduleStatus(schedule, new Date('2026-07-13T01:00:00.000Z'))).toMatchObject({ state: 'upcoming', label: '내일 복습' });
-    expect(getNoteReviewScheduleStatus(schedule, new Date('2026-07-12T01:00:00.000Z')).label).toBe('2일 후 복습');
+    const localNow = new Date(2026, 6, 11, 10);
+    const schedule = createNoteReviewSchedule(3, localNow)!;
+    expect(getNoteReviewScheduleStatus(schedule, new Date(2026, 6, 15, 10)).label).toBe('1일 지남');
+    expect(getNoteReviewScheduleStatus(schedule, new Date(2026, 6, 14, 10))).toMatchObject({ state: 'due', label: '오늘 복습' });
+    expect(getNoteReviewScheduleStatus(schedule, new Date(2026, 6, 13, 10))).toMatchObject({ state: 'upcoming', label: '내일 복습' });
+    expect(getNoteReviewScheduleStatus(schedule, new Date(2026, 6, 12, 10)).label).toBe('2일 후 복습');
   });
 });

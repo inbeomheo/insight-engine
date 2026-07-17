@@ -22,6 +22,12 @@ import type {
   JobResponse,
 } from './types';
 import { parseSSEStream } from './sse-parser';
+import {
+  requestBlob as requestBlobResponse,
+  requestJson,
+} from './http-client';
+
+export { isApiError, type ApiError } from './http-client';
 
 /** Flask 백엔드 직접 호출 (Next.js 프록시 우회) */
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -47,6 +53,8 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/video-deepdives/extract': 660_000,
   '/api/extract-document': 60_000,
   '/api/extract-audio': 600_000,
+  '/api/knowledge/upload': 120_000,
+  '/api/tts': 300_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -66,82 +74,17 @@ function supportHeaders(): HeadersInit {
   return { 'X-Support-Session-Id': getSupportSessionId() };
 }
 
-export type ApiError<T = unknown> = Error & {
-  status?: number;
-  body?: T;
-};
-
-export function isApiError<T = unknown>(err: unknown): err is ApiError<T> {
-  return err instanceof Error && ('status' in err || 'body' in err);
-}
-
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  // 외부 signal이 있으면 연동
-  if (init?.signal) {
-    init.signal.addEventListener('abort', () => controller.abort());
-  }
-
-  // FormData일 때는 Content-Type 헤더 생략 (브라우저가 boundary 자동 설정)
-  const isFormData = init?.body instanceof FormData;
-  const headers = isFormData ? undefined : { 'Content-Type': 'application/json' };
-
-  try {
-    const mergedHeaders = {
-      ...headers,
-      ...(init?.headers || {}),
-    };
-    const res = await fetch(`${BASE}${url}`, {
-      ...init,
-      headers: mergedHeaders,
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      const error = new Error(body.error || `HTTP ${res.status}`) as ApiError;
-      error.status = res.status;
-      error.body = body;
-      throw error;
-    }
-    return res.json();
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return requestJson(`${BASE}${url}`, init, {
+    timeoutMs: TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS,
+  });
 }
 
 /** Blob 응답 전용 (Markdown 파일 다운로드) */
 async function requestBlob(url: string, init?: RequestInit): Promise<Blob> {
-  const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(`${BASE}${url}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...init,
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
-    }
-    return res.blob();
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초).`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return requestBlobResponse(`${BASE}${url}`, init, {
+    timeoutMs: TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS,
+  });
 }
 
 // 프로바이더/모델 목록
@@ -470,16 +413,10 @@ export async function deleteWorkspace(
 export async function uploadKnowledge(file: File): Promise<KnowledgeItem> {
   const formData = new FormData();
   formData.append('file', file);
-
-  const res = await fetch(`${BASE}/api/knowledge/upload`, {
+  return request('/api/knowledge/upload', {
     method: 'POST',
     body: formData,
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
 export async function getKnowledgeList(): Promise<{ documents: KnowledgeItem[] }> {
@@ -642,16 +579,10 @@ export async function synthesizeTts(
   voice = 'alloy',
   speed = 1.0,
 ): Promise<Blob> {
-  const res = await fetch(`${BASE}/api/tts`, {
+  return requestBlob('/api/tts', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, voice, speed }),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `TTS 오류: HTTP ${res.status}`);
-  }
-  return res.blob();
 }
 
 // === 이벤트 추출 ===

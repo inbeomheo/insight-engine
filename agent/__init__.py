@@ -9,7 +9,7 @@ Hermes Agent 패턴 기반 에이전트 오케스트레이션 시스템.
     ├── __init__.py       # 패키지 초기화 + 공개 API
     ├── core.py           # AIAgent 코어 클래스 (while 루프 + LiteLLM)
     ├── registry.py       # ToolRegistry 싱글톤 (자동등록)
-    ├── toolsets.py        # Toolset 정의 (20개 도메인 + 역할별 합성)
+    ├── toolsets.py        # Toolset 정의 (서비스 도메인 + 역할별 합성)
     ├── memory.py          # SQLite 상태 + 동결 스냅샷 메모리
     ├── compressor.py      # 5단계 컨텍스트 압축
     ├── delegate.py        # 서브에이전트 위임 (부모→자식)
