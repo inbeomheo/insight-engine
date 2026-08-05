@@ -16,6 +16,7 @@ vi.mock('sonner', () => ({
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
+let execCommandDescriptor: PropertyDescriptor | undefined;
 
 async function renderPanel(props: Partial<ComponentProps<typeof ResultChatPanel>> = {}) {
   container = document.createElement('div');
@@ -57,10 +58,25 @@ async function submitQuestion(text: string) {
   });
 }
 
+function getStudyCardCopyButtons(): HTMLButtonElement[] {
+  return Array.from(document.querySelectorAll('button')).filter((button) =>
+    button.textContent?.includes('복습 카드 저장')
+  );
+}
+
+async function clickStudyCardCopy(button: HTMLButtonElement) {
+  await act(async () => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe('ResultChatPanel rag_sources', () => {
   beforeEach(() => {
     vi.mocked(askResultChat).mockReset();
     window.localStorage.clear();
+    execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -76,6 +92,14 @@ describe('ResultChatPanel rag_sources', () => {
     container?.remove();
     root = null;
     container = null;
+    if (execCommandDescriptor) {
+      Object.defineProperty(document, 'execCommand', execCommandDescriptor);
+    } else {
+      Reflect.deleteProperty(document, 'execCommand');
+    }
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('renders rag source tray and sends history without source payloads', async () => {
@@ -159,15 +183,10 @@ describe('ResultChatPanel rag_sources', () => {
     await openPanel();
     await submitQuestion('무엇을 복습할까?');
 
-    const copyButton = Array.from(document.querySelectorAll('button')).find((el) =>
-      el.textContent?.includes('복습 카드 저장')
-    );
+    const copyButton = getStudyCardCopyButtons()[0];
     if (!copyButton) throw new Error('study card copy button not found');
 
-    await act(async () => {
-      copyButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      await Promise.resolve();
-    });
+    await clickStudyCardCopy(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith([
       '# 근거 Q&A 복습 카드: 노트 제목',
@@ -190,5 +209,106 @@ describe('ResultChatPanel rag_sources', () => {
       sourceHref: '/notes/n1',
     });
     expect(document.body.textContent).toContain('복사+저장 완료');
+  });
+
+  it('shows a partial-success message when storage fails after the card is copied', async () => {
+    vi.mocked(askResultChat).mockResolvedValueOnce({ answer: '저장 실패 답변' });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage unavailable');
+    });
+
+    await renderPanel();
+    await openPanel();
+    await submitQuestion('저장 실패 질문');
+
+    const copyButton = getStudyCardCopyButtons()[0];
+    if (!copyButton) throw new Error('study card copy button not found');
+    await clickStudyCardCopy(copyButton);
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
+    expect(copyButton.parentElement?.textContent).toContain('복사 완료 · 저장 실패');
+    expect(copyButton.parentElement?.textContent).not.toContain('복사+저장 완료');
+  });
+
+  it('shows that saving succeeded even when copying fails', async () => {
+    vi.mocked(askResultChat).mockResolvedValueOnce({ answer: '복사 실패 답변' });
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error('permission denied'));
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(false),
+    });
+
+    await renderPanel();
+    await openPanel();
+    await submitQuestion('복사 실패 질문');
+
+    const copyButton = getStudyCardCopyButtons()[0];
+    if (!copyButton) throw new Error('study card copy button not found');
+    await clickStudyCardCopy(copyButton);
+
+    expect(copyButton.parentElement?.textContent).toContain('저장 완료 · 복사 실패');
+    expect(copyButton.parentElement?.textContent).not.toContain('복사 완료 · 저장 실패');
+    expect(copyButton.parentElement?.textContent).not.toContain('복사+저장 완료');
+  });
+
+  it('shows a failure state when study-card building fails', async () => {
+    vi.mocked(askResultChat).mockResolvedValueOnce({ answer: '카드 빌드 실패 답변' });
+
+    await renderPanel({ studyCardTitle: '\uD800' });
+    await openPanel();
+    await submitQuestion('카드 생성 실패 질문');
+
+    const copyButton = getStudyCardCopyButtons()[0];
+    if (!copyButton) throw new Error('study card copy button not found');
+    await clickStudyCardCopy(copyButton);
+
+    expect(copyButton.parentElement?.textContent).toContain('복사·저장 실패');
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('ie:result-chat-study-cards:v1')).toBeNull();
+  });
+
+  it('keeps only the latest concurrent feedback and clears it after two seconds', async () => {
+    vi.useFakeTimers();
+    vi.mocked(askResultChat)
+      .mockResolvedValueOnce({ answer: '첫 답변' })
+      .mockResolvedValueOnce({ answer: '둘째 답변' });
+
+    await renderPanel();
+    await openPanel();
+    await submitQuestion('첫 질문');
+    await submitQuestion('둘째 질문');
+
+    let resolveFirstCopy: () => void = () => undefined;
+    vi.mocked(navigator.clipboard.writeText)
+      .mockImplementationOnce(() => new Promise<void>((resolve) => {
+        resolveFirstCopy = resolve;
+      }))
+      .mockResolvedValueOnce(undefined);
+    vi.spyOn(Storage.prototype, 'setItem')
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw new Error('storage unavailable');
+      });
+
+    const [firstCopyButton, secondCopyButton] = getStudyCardCopyButtons();
+    if (!firstCopyButton || !secondCopyButton) throw new Error('study card copy buttons not found');
+
+    await clickStudyCardCopy(firstCopyButton);
+    await clickStudyCardCopy(secondCopyButton);
+    expect(secondCopyButton.parentElement?.textContent).not.toContain('복사 완료 · 저장 실패');
+
+    await act(async () => {
+      resolveFirstCopy();
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    });
+
+    expect(firstCopyButton.parentElement?.textContent).not.toContain('복사+저장 완료');
+    expect(secondCopyButton.parentElement?.textContent).toContain('복사 완료 · 저장 실패');
+
+    await act(async () => vi.advanceTimersByTime(1_999));
+    expect(secondCopyButton.parentElement?.textContent).toContain('복사 완료 · 저장 실패');
+
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(secondCopyButton.parentElement?.textContent).not.toContain('복사 완료 · 저장 실패');
   });
 });

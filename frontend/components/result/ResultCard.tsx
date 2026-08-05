@@ -30,6 +30,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
 import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
 import { NotebookLmSection } from './NotebookLmSection';
@@ -222,7 +223,6 @@ function TutorialVisualCueSection({
 interface PanelState {
   collapsed: boolean;
   hasExpanded: boolean;
-  copiedField: string | null;
   chatOpen: boolean;
   showTranscript: boolean;
   eventOpen: boolean;
@@ -235,7 +235,7 @@ type PanelAction =
   | { type: 'BATCH'; updates: Partial<PanelState> };
 
 const panelInitial: PanelState = {
-  collapsed: false, hasExpanded: true, copiedField: null,
+  collapsed: false, hasExpanded: true,
   chatOpen: false, showTranscript: false,
   eventOpen: false, eventLoading: false, extractedEvents: null, eventSummary: null,
 };
@@ -257,7 +257,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
-  const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
+  const { collapsed, hasExpanded, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
 
   // 간편 setter
   const setPanel = useCallback(<K extends keyof PanelState>(key: K, value: PanelState[K]) => {
@@ -272,6 +272,13 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const { t } = useTranslation();
+  const {
+    status: copyStatus,
+    activeKey: copyKey,
+    copyText: copyClipboardText,
+    copyItems: copyClipboardItems,
+  } = useClipboardCopy();
+  const copiedField = copyStatus === 'copied' ? copyKey : null;
   const noteSource = getKnowledgeNoteSource(report);
   const notePreview = useMemo(() => (noteSource ? getKnowledgeNotePreview(report) : null), [noteSource, report]);
   const linkedNoteId = report.knowledge_note_id;
@@ -291,49 +298,30 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
   async function copyText(text: string, field: string) {
-    await copyToClipboard(text);
-    setPanel('copiedField', field);
-    toast.success(t('result.copied'));
-    setTimeout(() => setPanel('copiedField', null), 2000);
-  }
-
-  async function copyToClipboard(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // 공유 링크는 서버 요청 후 복사하므로 브라우저가 사용자 제스처를 잃었다고
-      // 판단할 수 있다. 이때는 legacy textarea 복사로 한 번 더 시도한다.
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      textarea.style.top = '0';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      if (!ok) throw new Error('클립보드 복사 권한이 막혔습니다. 링크를 직접 선택해서 복사해주세요.');
-    }
+    const result = await copyClipboardText(text, field);
+    if (!result.isCurrent) return result;
+    if (result.copied) toast.success(t('result.copied'));
+    else toast.error(t('result.copyFailed'));
+    return result;
   }
 
   async function copyRich() {
-    try {
+    const result = await copyClipboardItems(() => {
       const html = report.html || report.content;
       const blob = new Blob([html], { type: 'text/html' });
       const textBlob = new Blob([report.content], { type: 'text/plain' });
-      await navigator.clipboard.write([
+      return [
         new ClipboardItem({
           'text/html': blob,
           'text/plain': textBlob,
         }),
-      ]);
-      setPanel('copiedField', 'rich');
+      ];
+    }, 'rich');
+
+    if (!result.isCurrent) return;
+    if (result.copied) {
       toast.success(t('result.richCopied'));
-      setTimeout(() => setPanel('copiedField', null), 2000);
-    } catch {
+    } else {
       await copyText(report.content, 'content');
     }
   }
@@ -356,25 +344,42 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
     if (isSharing) return;
     setIsSharing(true);
     try {
-      const existingUrl = report.share_url;
-      const shareUrl = existingUrl || (await createSharePage({
-        title: report.title,
-        content: report.content,
-        html: report.html,
-        url: report.url,
-        style: report.style,
-      })).share_url;
-      if (!existingUrl) updateReport(report.id, { share_url: shareUrl });
+      let shareUrl = report.share_url ?? '';
+      let shareError: unknown;
+      const result = await copyClipboardText(async () => {
+        try {
+          if (!shareUrl) {
+            shareUrl = (await createSharePage({
+              title: report.title,
+              content: report.content,
+              html: report.html,
+              url: report.url,
+              style: report.style,
+            })).share_url;
+            updateReport(report.id, { share_url: shareUrl });
+          }
+          return shareUrl;
+        } catch (error) {
+          shareError = error;
+          throw error;
+        }
+      }, 'share');
 
-      await copyToClipboard(shareUrl);
-      setPanel('copiedField', 'share');
+      if (shareError) {
+        const message = shareError instanceof Error
+          ? shareError.message
+          : '공유 링크 생성 실패';
+        toast.error(message);
+        return;
+      }
+      if (!result.isCurrent) return;
+      if (!result.copied) {
+        toast.error(t('result.copyFailed'));
+        return;
+      }
       toast.success(t('result.shareCopied'), {
         description: shareUrl,
       });
-      setTimeout(() => setPanel('copiedField', null), 2000);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '공유 링크 생성 실패';
-      toast.error(message);
     } finally {
       setIsSharing(false);
     }

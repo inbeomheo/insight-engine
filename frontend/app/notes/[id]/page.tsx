@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { getNote, type NoteDetail } from '@/lib/api';
 import ResultChatPanel from '@/components/result/ResultChatPanel';
 import { findReportLinkedToNote } from '@/lib/knowledge-note-source';
@@ -381,12 +382,12 @@ function NoteBody({
   const [studyProgress, setStudyProgress] = useState<NoteStudyProgress>(() =>
     normalizeNoteStudyProgress(null, studyCounts)
   );
-  const [studyCopyStatus, setStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const { status: studyCopyStatus, copyText: copyStudyText } = useClipboardCopy();
   const [reviewSchedule, setReviewSchedule] = useState<NoteReviewSchedule | null>(null);
   const [previousReviewIntervalDays, setPreviousReviewIntervalDays] = useState<number | null>(null);
   const [selectedReviewGrade, setSelectedReviewGrade] = useState<NoteReviewGrade | null>(null);
-  const [nextStudyCopyStatus, setNextStudyCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [quoteCopyStatus, setQuoteCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const { status: nextStudyCopyStatus, copyText: copyNextStudyText } = useClipboardCopy();
+  const { status: quoteCopyStatus, copyText: copyQuoteText } = useClipboardCopy();
   const [showCompletedStudyItems, setShowCompletedStudyItems] = useState(true);
   const [reviewAnswerVisible, setReviewAnswerVisible] = useState<boolean[]>(() =>
     normalizeReviewAnswerVisibility(null, reviewQuestions.length)
@@ -572,38 +573,18 @@ function NoteBody({
     });
   }, [nextStudyTarget]);
 
-  const copyNextStudyTarget = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setNextStudyCopyStatus('error');
-      return;
-    }
+  const copyNextStudyTarget = useCallback(
+    () => copyNextStudyText(() => buildNextNoteStudyTargetMarkdown({
+      noteTitle,
+      target: nextStudyTarget,
+    })),
+    [copyNextStudyText, nextStudyTarget, noteTitle],
+  );
 
-    try {
-      await navigator.clipboard.writeText(buildNextNoteStudyTargetMarkdown({
-        noteTitle,
-        target: nextStudyTarget,
-      }));
-      setNextStudyCopyStatus('copied');
-    } catch {
-      setNextStudyCopyStatus('error');
-    }
-  }, [nextStudyTarget, noteTitle]);
-
-  const copyQuoteMarkdown = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setQuoteCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(
-        buildNoteQuoteMarkdown(note.quotes, `${noteTitle} 근거 인용`)
-      );
-      setQuoteCopyStatus('copied');
-    } catch {
-      setQuoteCopyStatus('error');
-    }
-  }, [note.quotes, noteTitle]);
+  const copyQuoteMarkdown = useCallback(
+    () => copyQuoteText(() => buildNoteQuoteMarkdown(note.quotes, `${noteTitle} 근거 인용`)),
+    [copyQuoteText, note.quotes, noteTitle],
+  );
 
   const toggleReviewAnswer = useCallback((index: number) => {
     setReviewAnswerVisible((current) =>
@@ -615,45 +596,16 @@ function NoteBody({
     setReviewAnswerVisible(setAllReviewAnswersVisible(reviewQuestions.length, visible));
   }, [reviewQuestions.length]);
 
-  const copyStudyMarkdown = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setStudyCopyStatus('error');
-      return;
-    }
-
-    const markdown = buildNoteStudyMarkdown({
+  const copyStudyMarkdown = useCallback(
+    () => copyStudyText(() => buildNoteStudyMarkdown({
       title: noteTitle,
       sourceUrl: sourceUrl ?? undefined,
       learningPoints,
       reviewQuestions,
       progress: studyProgress,
-    });
-
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setStudyCopyStatus('copied');
-    } catch {
-      setStudyCopyStatus('error');
-    }
-  }, [learningPoints, noteTitle, reviewQuestions, sourceUrl, studyProgress]);
-
-  useEffect(() => {
-    if (studyCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setStudyCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [studyCopyStatus]);
-
-  useEffect(() => {
-    if (nextStudyCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setNextStudyCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [nextStudyCopyStatus]);
-
-  useEffect(() => {
-    if (quoteCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setQuoteCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [quoteCopyStatus]);
+    })),
+    [copyStudyText, learningPoints, noteTitle, reviewQuestions, sourceUrl, studyProgress],
+  );
 
   useEffect(() => {
     if (recallFlow?.step !== 'retry') return;
@@ -1226,27 +1178,11 @@ function NoteBody({
 }
 
 function NoteWikiReadingPath({ title, items }: { title: string; items: NoteWikiReadingPathItem[] }) {
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const copyReadingPath = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(buildNoteWikiReadingPathMarkdown(items, title));
-      setCopyStatus('copied');
-    } catch {
-      setCopyStatus('error');
-    }
-  }, [items, title]);
-
-  useEffect(() => {
-    if (copyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [copyStatus]);
-
+  const { status: copyStatus, copyText } = useClipboardCopy();
+  const copyReadingPath = useCallback(
+    () => copyText(() => buildNoteWikiReadingPathMarkdown(items, title)),
+    [copyText, items, title],
+  );
   return (
     <Card id="wiki-reading-path" className="scroll-mt-24 border-primary/20 bg-primary/5 py-4">
       <CardContent className="px-4">
