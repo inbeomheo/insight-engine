@@ -15,11 +15,16 @@ export const TEST_DATA = {
     'https://www.youtube.com/watch?v=JGwWNGJdvx8',
   ],
 
+  // 현재 검증 규칙(^https?:\/\/)상 무효한 입력들 — 스킴 없는 URL/비 http(s) 스킴
+  // (구 UI와 달리 웹페이지/RSS/arXiv/Podcast URL은 이제 전부 유효함)
   INVALID_URLS: [
     'not-a-url',
-    'https://google.com',
-    'https://vimeo.com/123456',
+    'youtube.com/watch?v=jNQXAC9IVRw', // http(s) 스킴 없음
+    'ftp://example.com/feed.xml', // http/https 아님
   ],
+
+  // 무효 URL 입력 시 표시되는 에러 메시지 패턴
+  INVALID_URL_ERROR: /유효한 URL이 아닙니다/,
 
   // 저비용 프리셋 (API 테스트용)
   CHEAP_PRESET: {
@@ -93,15 +98,15 @@ class UrlInputHelper {
     }
   }
 
-  /** 현재 URL 칩 개수 */
+  /** 현재 URL 칩 개수 (숨겨진 모바일 셸 중복 제외) */
   async getUrlChipCount(): Promise<number> {
     // Badge (칩) 컴포넌트 안의 X 버튼 개수로 판단
-    return this.page.locator('[aria-label$="제거"]').count();
+    return this.page.locator('[aria-label$="제거"]:visible').count();
   }
 
   /** 특정 URL 칩 삭제 (인덱스 기반) */
   async removeUrlByIndex(index: number) {
-    const removeButtons = this.page.locator('[aria-label$="제거"]');
+    const removeButtons = this.page.locator('[aria-label$="제거"]:visible');
     const count = await removeButtons.count();
     if (index < count) {
       await removeButtons.nth(index).click();
@@ -116,57 +121,74 @@ class UrlInputHelper {
 class ContentGeneratorHelper {
   constructor(private page: Page) {}
 
+  /** 설정 팝오버 (role=dialog, aria-label="생성 설정") */
+  private settingsPopover() {
+    return this.page.getByRole('dialog', { name: '생성 설정' });
+  }
+
   /** 설정 팝오버 열기 */
   async openSettings() {
     const settingsBtn = this.page.getByRole('button', { name: '생성 설정 열기' });
     await settingsBtn.click();
     // 팝오버 렌더링 대기
-    await this.page.getByText('AI 모델').waitFor({ state: 'visible', timeout: 3000 });
+    await this.settingsPopover().waitFor({ state: 'visible', timeout: 3000 });
   }
 
-  /** 설정 팝오버 닫기 (외부 클릭) */
+  /** 설정 팝오버 닫기 (ESC) */
   async closeSettings() {
-    await this.page.locator('body').click({ position: { x: 10, y: 10 } });
+    await this.page.keyboard.press('Escape');
     await this.page.waitForTimeout(200);
   }
 
   /** 저비용 프리셋 적용 (ChatMock Mini, 요약, 짧게) */
   async applyCheapPreset() {
     await this.openSettings();
+    const popover = this.settingsPopover();
 
-    // 모델 선택
-    const modelTrigger = this.page.locator('[role="combobox"]').first();
+    // 모델 선택 (ChatMock 단일 서비스)
+    const modelTrigger = popover.locator('[role="combobox"]').first();
     await modelTrigger.click();
-    const miniOption = this.page.getByRole('option', { name: /5\.4 Mini|Mini/i });
+    const options = this.page.getByRole('option');
+    await options.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    const miniOption = options.filter({ hasText: /Mini/i }).first();
     if (await miniOption.isVisible().catch(() => false)) {
       await miniOption.click();
     }
 
-    // 스타일: 요약
-    const summaryBtn = this.page.locator('button').filter({ hasText: '요약' });
-    await summaryBtn.first().click();
+    // Select 옵션이 포털에 렌더되어 옵션 클릭이 외부 클릭으로 인식됨 → 팝오버가 닫히면 재오픈
+    if (!(await popover.isVisible().catch(() => false))) {
+      await this.openSettings();
+    }
+
+    // 스타일: 요약 (팝오버 내부 aria-label 기준)
+    await popover.getByRole('button', { name: /^요약 스타일 선택/ }).click();
 
     // 길이: 짧게
-    const shortBtn = this.page.locator('button').filter({ hasText: '짧게' });
-    await shortBtn.click();
+    await popover.getByRole('button', { name: '짧게 길이 선택' }).click();
 
     await this.closeSettings();
   }
 
-  /** 분석 시작 버튼 클릭 (모드에 따라 다른 텍스트) */
+  /** 생성 CTA 버튼 클릭 (모드에 따라: 콘텐츠 생성/통합 생성/퓨전 분석 — 숨겨진 모바일 CTA 제외) */
   async clickGenerate() {
-    const btn = this.page.getByRole('button', { name: /분석 시작|각각 분석|합쳐서 분석|퓨전 분석/ });
+    const btn = this.page
+      .getByRole('button', { name: /콘텐츠 생성|통합 생성|퓨전 분석/ })
+      .filter({ visible: true })
+      .first();
     await btn.click();
   }
 
-  /** 특정 모드의 분석 버튼 클릭 */
+  /** 특정 모드의 생성 CTA 버튼 클릭 */
   async clickGenerateByMode(mode: 'individual' | 'combined' | 'fusion') {
     const patterns: Record<string, RegExp> = {
-      individual: /분석 시작|각각 분석/,
-      combined: /합쳐서 분석/,
+      individual: /콘텐츠 생성/,
+      combined: /통합 생성/,
       fusion: /퓨전 분석/,
     };
-    const btn = this.page.getByRole('button', { name: patterns[mode] });
+    const btn = this.page
+      .getByRole('button', { name: patterns[mode] })
+      .filter({ visible: true })
+      .first();
     await btn.click();
   }
 
@@ -183,20 +205,24 @@ class ContentGeneratorHelper {
     return this.page.locator('[data-report-id]').count();
   }
 
-  /** 로딩 중인지 확인 */
+  /** 로딩 중인지 확인 (LoadingSkeleton: aria-label="콘텐츠 생성 중") */
   async isLoading(): Promise<boolean> {
-    const loadingBtn = this.page.getByRole('button', { name: /생성 중/ });
-    return loadingBtn.isVisible().catch(() => false);
+    const skeleton = this.page.getByLabel('콘텐츠 생성 중').first();
+    return skeleton.isVisible().catch(() => false);
   }
 
-  /** 생성 모드 선택 (개별/합쳐서/퓨전) */
+  /** 생성 모드 선택 (개별/통합/퓨전 — 숨겨진 모바일 버튼 제외) */
   async selectMode(mode: 'individual' | 'combined' | 'fusion') {
     const labels: Record<string, string> = {
-      individual: '개별 분석',
-      combined: '합쳐서 분석',
-      fusion: '퓨전 분석',
+      individual: '개별',
+      combined: '통합',
+      fusion: '퓨전',
     };
-    await this.page.getByRole('button', { name: labels[mode] }).click();
+    await this.page
+      .getByRole('button', { name: labels[mode], exact: true })
+      .filter({ visible: true })
+      .first()
+      .click();
   }
 }
 
