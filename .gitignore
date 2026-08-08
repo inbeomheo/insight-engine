@@ -74,6 +74,11 @@ nul
 coverage.json
 htmlcov/
 
+# Playwright/E2E generated artifacts (reports may capture environment values)
+test-results/
+playwright-report/
+blob-report/
+
 # autoresearch 실험 결과
 autoresearch/prompt-tuning/scores/*_results.md
 
