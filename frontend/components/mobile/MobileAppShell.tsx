@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
@@ -491,6 +492,7 @@ function MobileDashboardView({ reports, onOpen }: { reports: Report[]; onOpen: (
 }
 
 function MobileDetailView({ report, onBack }: { report: Report; onBack: () => void }) {
+  const router = useRouter();
   const selectedModel = useSettingsStore((s) => s.selectedModel);
   const noteLanguage = useSettingsStore((s) => s.modifiers.language ?? 'ko');
   const updateReport = useResultStore((s) => s.updateReport);
@@ -505,7 +507,7 @@ function MobileDetailView({ report, onBack }: { report: Report; onBack: () => vo
   const linkedNoteId = linkedNote.id || report.knowledge_note_id;
 
   function openKnowledgeNote(noteId: string) {
-    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+    router.push(`/notes/${encodeURIComponent(noteId)}`);
   }
 
   function markKnowledgeNoteLinked(noteId: string, title?: string) {

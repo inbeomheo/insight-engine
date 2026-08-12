@@ -82,6 +82,18 @@ def read_job(job_id: str, owner_id: str) -> dict[str, Any] | None:
     return record
 
 
+def discard_job(job_id: str, input_path: str | os.PathLike[str] | None = None) -> None:
+    """큐 등록 전 실패한 작업의 상태 파일과 업로드를 함께 제거한다."""
+    paths = [_record_path(job_id)]
+    if input_path is not None:
+        paths.append(Path(input_path))
+    for path in paths:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            continue
+
+
 def create_job(*, owner_id: str, source_title: str, source_type: str, suffix: str) -> tuple[dict[str, Any], Path]:
     cleanup_expired_jobs()
     job_id = str(uuid.uuid4())

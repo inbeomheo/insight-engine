@@ -12,7 +12,7 @@ import pytest
 
 from app import create_app
 from services.transcript.media_normalizer import MediaValidationError, normalize_media
-from services.transcript.media_transcription_jobs import create_job, read_job, run_job
+from services.transcript.media_transcription_jobs import create_job, discard_job, read_job, run_job
 
 _H = {"Origin": "http://localhost:3000"}
 
@@ -86,6 +86,34 @@ def test_create_media_transcription_enqueues_valid_mp4(tmp_path):
     assert response.get_json()["poll_url"].endswith(record["job_id"])
 
 
+def test_create_media_transcription_discards_record_when_enqueue_fails(tmp_path):
+    client = _client()
+    mp4 = b"\x00\x00\x00\x18ftypisom" + (b"0" * 32)
+    record = {
+        "job_id": "ec16b9e0-bbb1-456a-bc4d-e4a8199e3982",
+        "status": "queued",
+    }
+    target = tmp_path / "job.mp4"
+
+    with (
+        _no_auth_patch(),
+        patch.dict(os.environ, {"WHISPER_ENABLED": "true"}),
+        patch("importlib.util.find_spec", return_value=object()),
+        patch("services.transcript.media_transcription_jobs.create_job", return_value=(record, target)),
+        patch("services.transcript.media_transcription_jobs.enqueue_job", side_effect=RuntimeError("redis down")),
+        patch("services.transcript.media_transcription_jobs.discard_job") as discard,
+    ):
+        response = client.post(
+            "/api/media-transcriptions",
+            data={"file": (BytesIO(mp4), "회의 영상.mp4", "video/mp4")},
+            content_type="multipart/form-data",
+            headers=_H,
+        )
+
+    assert response.status_code == 503
+    discard.assert_called_once_with(record["job_id"], target)
+
+
 def test_create_media_transcription_rejects_fake_video():
     client = _client()
     with (
@@ -113,6 +141,17 @@ def test_media_job_owner_is_enforced(tmp_path):
         )
         assert read_job(record["job_id"], "owner-a") is not None
         assert read_job(record["job_id"], "owner-b") is None
+
+
+def test_discard_job_removes_record_and_upload(tmp_path):
+    with patch("services.transcript.media_transcription_jobs.MEDIA_TRANSCRIPTION_DIR", str(tmp_path)):
+        record, upload = create_job(
+            owner_id="owner", source_title="회의", source_type="video", suffix=".mp4",
+        )
+        upload.write_bytes(b"media")
+        discard_job(record["job_id"], upload)
+        assert read_job(record["job_id"], "owner") is None
+        assert not upload.exists()
 
 
 def test_worker_normalizes_transcribes_and_cleans_files(tmp_path):

@@ -639,7 +639,7 @@ def create_media_transcription():
     import os
     from pathlib import Path
     from config import DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES, MEDIA_UPLOAD_MAX_BYTES
-    from services.transcript.media_transcription_jobs import create_job, enqueue_job
+    from services.transcript.media_transcription_jobs import create_job, discard_job, enqueue_job
 
     if os.getenv('WHISPER_ENABLED', 'false').lower() != 'true':
         return api_error('미디어 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
@@ -683,10 +683,7 @@ def create_media_transcription():
         uploaded_file.save(input_path)
         enqueue_job(record['job_id'], str(input_path))
     except Exception as exc:
-        try:
-            input_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        discard_job(record['job_id'], input_path)
         current_app.logger.error('미디어 작업 등록 실패: %s', type(exc).__name__)
         return api_error('미디어 전사 작업을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.', 503)
 

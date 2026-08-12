@@ -163,6 +163,7 @@ describe('단일 ChatMock 서비스 UI', () => {
     expect(view.querySelector('[aria-label="ChatMock 서비스 정보"]')?.textContent)
       .toContain('ChatMock (OpenAI 호환)');
     expect(view.textContent).toContain('단일 AI 서비스 · 2개 모델');
+    expect(view.querySelectorAll('h1')).toHaveLength(1);
     expect(view.querySelector('[aria-label*="프로바이더 선택"]')).toBeNull();
 
     const startButton = findButton(view, '시작');

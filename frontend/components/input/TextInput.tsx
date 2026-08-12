@@ -82,6 +82,7 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
       const isMedia = AUDIO_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension);
       if (isMedia) {
         const mediaResult = await extractMedia(file, controller.signal);
+        if (extractionAbortRef.current !== controller) return;
         onChange(mediaResult.text.slice(0, MAX_CHARS));
         setExtractedMedia({
           source_type: mediaResult.source_type,
@@ -96,7 +97,8 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
           setFileNotice(`${mediaResult.source_type === 'video' ? '영상' : '오디오'} 전사 완료 · 타임스탬프 ${mediaResult.transcript_segments.length.toLocaleString()}개`);
         }
       } else {
-        const documentResult = await extractDocument(file);
+        const documentResult = await extractDocument(file, controller.signal);
+        if (extractionAbortRef.current !== controller) return;
         onChange(documentResult.text.slice(0, MAX_CHARS));
         setExtractedMedia(undefined);
         if (documentResult.truncated) {
@@ -104,13 +106,17 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
         }
       }
     } catch (err) {
-      setExtractedMedia(undefined);
-      if (!(err instanceof DOMException && err.name === 'AbortError')) {
-        setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
+      if (extractionAbortRef.current === controller) {
+        setExtractedMedia(undefined);
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
+        }
       }
     } finally {
-      if (extractionAbortRef.current === controller) extractionAbortRef.current = null;
-      setIsExtractingFile(false);
+      if (extractionAbortRef.current === controller) {
+        extractionAbortRef.current = null;
+        setIsExtractingFile(false);
+      }
     }
   }, [onChange, value]);
 

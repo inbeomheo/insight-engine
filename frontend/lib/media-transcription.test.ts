@@ -50,4 +50,18 @@ describe('media transcription API polling', () => {
     await expect(extractMedia(new File(['video'], '무음.mp4')))
       .rejects.toThrow('오디오 트랙이 없습니다.');
   });
+
+  it('preserves an explicit caller abort and removes the linked listener', async () => {
+    const controller = new AbortController();
+    const removeSpy = vi.spyOn(controller.signal, 'removeEventListener');
+    vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    }));
+
+    const pending = extractMedia(new File(['video'], '회의.mp4'), controller.signal);
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+  });
 });

@@ -83,10 +83,14 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeoutMs = TIMEOUT_MS[url] ?? DEFAULT_TIMEOUT_MS;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = init?.signal;
+  const onExternalAbort = () => controller.abort();
 
-  // 외부 signal이 있으면 연동
-  if (init?.signal) {
-    init.signal.addEventListener('abort', () => controller.abort());
+  // 외부 signal이 있으면 연동하되, 요청 종료 후 listener를 제거한다.
+  if (externalSignal?.aborted) {
+    controller.abort();
+  } else {
+    externalSignal?.addEventListener('abort', onExternalAbort, { once: true });
   }
 
   // FormData일 때는 Content-Type 헤더 생략 (브라우저가 boundary 자동 설정)
@@ -113,11 +117,13 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     return res.json();
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
+      if (externalSignal?.aborted) throw err;
       throw new Error(`요청 시간이 초과되었습니다 (${Math.round(timeoutMs / 1000)}초). 네트워크 상태를 확인하거나 다시 시도해주세요.`);
     }
     throw err;
   } finally {
     clearTimeout(timer);
+    externalSignal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -167,12 +173,13 @@ export interface ExtractDocumentResponse {
   pages: number;
 }
 
-export async function extractDocument(file: File): Promise<ExtractDocumentResponse> {
+export async function extractDocument(file: File, signal?: AbortSignal): Promise<ExtractDocumentResponse> {
   const formData = new FormData();
   formData.append('file', file);
   return request('/api/extract-document', {
     method: 'POST',
     body: formData,
+    signal,
   });
 }
 

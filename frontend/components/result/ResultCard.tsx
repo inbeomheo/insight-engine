@@ -7,6 +7,7 @@ import {
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -250,6 +251,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
 }
 
 const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpandToFull }: ResultCardProps) {
+  const router = useRouter();
   const [panel, dispatch] = useReducer(panelReducer, panelInitial);
   const [isSharing, setIsSharing] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -381,7 +383,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   }
 
   function openKnowledgeNote(noteId: string) {
-    window.location.href = `/notes/${encodeURIComponent(noteId)}`;
+    router.push(`/notes/${encodeURIComponent(noteId)}`);
   }
 
   function markKnowledgeNoteLinked(noteId: string, title?: string) {

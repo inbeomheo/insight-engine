@@ -1,7 +1,7 @@
 'use client';
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+
 import { Button } from '@/components/ui/button';
 import { Sparkles, Check } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
@@ -25,20 +25,16 @@ export default function OnboardingModal() {
   return (
     <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
       <DialogContent className="max-w-sm p-8">
-        <VisuallyHidden>
-          <DialogTitle>{t('onboarding.title')}</DialogTitle>
-          <DialogDescription>{t('onboarding.description')}</DialogDescription>
-        </VisuallyHidden>
         <div className="text-center mb-8">
           <div className="w-18 h-18 mx-auto mb-5 gradient-primary rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50" style={{width: '72px', height: '72px'}}>
             <Sparkles className="h-8 w-8 text-white" />
           </div>
-          <h2 className="text-xl font-bold mb-2 text-foreground">{t('onboarding.title')}</h2>
-          <p className="text-sm text-muted-foreground/70 leading-relaxed">
+          <DialogTitle className="text-xl font-bold mb-2 text-foreground">{t('onboarding.title')}</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground/70 leading-relaxed">
             {t('onboarding.description').split('\n').map((line, i) => (
               <span key={i}>{line}{i === 0 && <br />}</span>
             ))}
-          </p>
+          </DialogDescription>
         </div>
 
         {activeProvider ? (
