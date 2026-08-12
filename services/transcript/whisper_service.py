@@ -64,62 +64,109 @@ def download_audio(video_url: str) -> str | None:
         return None
 
 
-def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | None = None) -> str | None:
-    """faster-whisper로 오디오를 텍스트로 변환합니다.
+def _load_whisper_model(model_size: str):
+    """기존 CUDA 감지/CPU 폴백 정책으로 Whisper 모델을 로드한다."""
+    from faster_whisper import WhisperModel
 
-    Args:
-        audio_path: 오디오 파일 경로
-        model_size: Whisper 모델 크기 (tiny, base, small, medium, large-v3, large-v3-turbo)
-
-    Returns:
-        인식된 텍스트. 실패 시 None.
-    """
+    device, compute_type = "cpu", "int8"
     try:
-        from faster_whisper import WhisperModel
+        import torch
+        if torch.cuda.is_available():
+            device, compute_type = "cuda", "float16"
+    except ImportError:
+        try:
+            import ctranslate2
+            if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
+                device, compute_type = "cuda", "float16"
+        except Exception:
+            pass
+
+    logger.info("Whisper 모델 로딩: %s (device=%s, compute=%s)", model_size, device, compute_type)
+    try:
+        return WhisperModel(model_size, device=device, compute_type=compute_type)
+    except Exception:
+        if device == "cpu":
+            raise
+        logger.warning("CUDA 초기화 실패, CPU로 폴백합니다")
+        return WhisperModel(model_size, device="cpu", compute_type="int8")
+
+
+def transcribe_audio_detailed(
+    audio_path: str,
+    model_size: str = 'base',
+    language: str | None = None,
+) -> dict | None:
+    """텍스트, 언어와 타임스탬프 세그먼트를 함께 반환합니다."""
+    try:
+        import faster_whisper  # noqa: F401
     except ImportError:
         logger.error("faster-whisper가 설치되어 있지 않습니다: pip install faster-whisper")
         return None
 
     try:
-        # GPU 가용 시 CUDA + float16, 아니면 CPU + int8
-        # PyTorch 없이도 CTranslate2가 직접 CUDA를 쓸 수 있으므로 양쪽 확인
-        device, compute_type = "cpu", "int8"
-        try:
-            import torch
-            if torch.cuda.is_available():
-                device, compute_type = "cuda", "float16"
-        except ImportError:
-            try:
-                import ctranslate2
-                if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
-                    device, compute_type = "cuda", "float16"
-            except Exception:
-                pass
+        model = _load_whisper_model(model_size)
+        segments, info = model.transcribe(
+            audio_path,
+            language=language,
+            beam_size=5,
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 900, "speech_pad_ms": 300},
+            no_speech_threshold=0.7,
+            compression_ratio_threshold=2.3,
+            log_prob_threshold=-1.0,
+            condition_on_previous_text=False,
+        )
+        timed_segments = []
+        for segment in segments:
+            text = segment.text.strip()
+            if text:
+                timed_segments.append({
+                    'start': round(float(segment.start), 3),
+                    'end': round(float(segment.end), 3),
+                    'text': text,
+                })
 
-        logger.info("Whisper 모델 로딩: %s (device=%s, compute=%s)", model_size, device, compute_type)
-        try:
-            model = WhisperModel(model_size, device=device, compute_type=compute_type)
-        except Exception:
-            if device != "cpu":
-                logger.warning("CUDA 초기화 실패, CPU로 폴백합니다")
-                device, compute_type = "cpu", "int8"
-                model = WhisperModel(model_size, device=device, compute_type=compute_type)
-            else:
-                raise
+        if not timed_segments:
+            logger.warning("Whisper 인식 결과가 비어 있습니다 (언어: %s)", info.language)
+            return None
+
+        text = " ".join(item['text'] for item in timed_segments)
+        logger.info(
+            "Whisper 변환 완료: 언어=%s, 확률=%.2f, 길이=%d자",
+            info.language, info.language_probability, len(text),
+        )
+        return {
+            'text': text,
+            'segments': timed_segments,
+            'language': info.language,
+            'language_probability': round(float(info.language_probability), 4),
+        }
+    except Exception as e:
+        logger.error("Whisper 변환 실패: %s", str(e))
+        return None
+
+
+def transcribe_audio(audio_path: str, model_size: str = 'base', language: str | None = None) -> str | None:
+    """기존 소비자를 위한 문자열 전사 API(호출 계약 보존)."""
+    try:
+        import faster_whisper  # noqa: F401
+    except ImportError:
+        logger.error("faster-whisper가 설치되어 있지 않습니다: pip install faster-whisper")
+        return None
+
+    try:
+        model = _load_whisper_model(model_size)
         segments, info = model.transcribe(audio_path, language=language, beam_size=5)
-
         texts = [segment.text.strip() for segment in segments if segment.text.strip()]
         if not texts:
             logger.warning("Whisper 인식 결과가 비어 있습니다 (언어: %s)", info.language)
             return None
-
         result = " ".join(texts)
         logger.info(
             "Whisper 변환 완료: 언어=%s, 확률=%.2f, 길이=%d자",
-            info.language, info.language_probability, len(result)
+            info.language, info.language_probability, len(result),
         )
         return result
-
     except Exception as e:
         logger.error("Whisper 변환 실패: %s", str(e))
         return None

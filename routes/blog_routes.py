@@ -16,6 +16,7 @@
 import concurrent.futures
 import html as html_lib
 import json
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -51,6 +52,8 @@ DOCUMENT_MAGIC_BYTES = {
     '.pptx': b'PK\x03\x04',
 }
 AUDIO_UPLOAD_EXTENSIONS = ('.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac')
+VIDEO_UPLOAD_EXTENSIONS = ('.mp4', '.mov', '.webm', '.mkv')
+MEDIA_UPLOAD_EXTENSIONS = AUDIO_UPLOAD_EXTENSIONS + VIDEO_UPLOAD_EXTENSIONS
 MAX_MERGED_URLS = 5
 
 # 에러 응답 헬퍼 (기존 호출 호환)
@@ -132,6 +135,23 @@ def _is_supported_audio_upload(uploaded_file, file_bytes: bytes) -> bool:
     return False
 
 
+def _get_media_extension(uploaded_file) -> str:
+    filename = (uploaded_file.filename or "").lower()
+    return next((ext for ext in MEDIA_UPLOAD_EXTENSIONS if filename.endswith(ext)), "")
+
+
+def _is_supported_media_upload(uploaded_file, file_bytes: bytes) -> bool:
+    """확장자와 컨테이너 시그니처를 함께 검증합니다."""
+    extension = _get_media_extension(uploaded_file)
+    if extension in AUDIO_UPLOAD_EXTENSIONS:
+        return _is_supported_audio_upload(uploaded_file, file_bytes)
+    if extension in {'.mp4', '.mov'}:
+        return b'ftyp' in file_bytes[:16]
+    if extension in {'.webm', '.mkv'}:
+        return file_bytes.startswith(b'\x1aE\xdf\xa3')
+    return False
+
+
 def _document_read_error_message(message: str) -> str:
     for label in ('PDF', 'DOCX', 'PPTX'):
         if message.startswith(f'{label} 파일을 읽을 수 없습니다'):
@@ -209,6 +229,36 @@ def _extract_client_id(req) -> str:
     return ''
 
 
+def _validate_transcript_segments(value) -> list:
+    """클라이언트에서 돌아온 전사 세그먼트를 제한된 스키마로 정규화합니다."""
+    if not isinstance(value, list):
+        return []
+    validated = []
+    for item in value[:10000]:
+        if not isinstance(item, dict):
+            continue
+        raw_start = item.get('start')
+        if not isinstance(raw_start, (int, float, str)):
+            continue
+        raw_end = item.get('end', raw_start)
+        if not isinstance(raw_end, (int, float, str)):
+            continue
+        try:
+            start = float(raw_start)
+            end = float(raw_end)
+        except (TypeError, ValueError):
+            continue
+        text = item.get('text')
+        if start < 0 or end < start or not isinstance(text, str) or not text.strip():
+            continue
+        validated.append({
+            'start': round(start, 3),
+            'end': round(end, 3),
+            'text': text.strip()[:2000],
+        })
+    return validated
+
+
 def _get_request_data(req):
     """JSON 또는 form 데이터에서 공통 파라미터를 추출하고 검증합니다.
     API 키는 서버 환경변수에서 관리되므로 요청에서 추출하지 않습니다.
@@ -265,6 +315,16 @@ def _get_request_data(req):
         # transcript_language 검증 (자막 추출 언어 지정 — None이면 기존 기본 동작)
         transcript_language, transcript_language_error = _validate_transcript_language(data.get('transcript_language'))
 
+        direct_source_type = raw_source_type if raw_source_type in {'text', 'audio', 'video'} else 'text'
+        source_title = data.get('source_title')
+        source_title = source_title.strip()[:200] if isinstance(source_title, str) and source_title.strip() else None
+        transcript_source = data.get('transcript_source')
+        transcript_source = transcript_source if transcript_source in {'direct_input', 'whisper'} else 'direct_input'
+        detected_language = data.get('detected_language')
+        if not isinstance(detected_language, str) or not re.match(r'^[a-zA-Z-]{2,12}$', detected_language):
+            detected_language = None
+        transcript_segments = _validate_transcript_segments(data.get('transcript_segments'))
+
         return {
             'url': data.get('url') if isinstance(data.get('url'), str) else None,
             'urls': urls,
@@ -282,6 +342,11 @@ def _get_request_data(req):
             'enable_citations': enable_citations,
             'transcript_language': transcript_language,
             'transcript_language_error': transcript_language_error,
+            'direct_source_type': direct_source_type,
+            'source_title': source_title,
+            'transcript_source': transcript_source,
+            'detected_language': detected_language,
+            'transcript_segments': transcript_segments,
         }
 
     # form 데이터에서 modifiers JSON 파싱 (파일 업로드 시 FormData로 전송)
@@ -316,6 +381,11 @@ def _get_request_data(req):
         'enable_citations': False,
         'transcript_language': transcript_language,
         'transcript_language_error': transcript_language_error,
+        'direct_source_type': 'text',
+        'source_title': None,
+        'transcript_source': 'direct_input',
+        'detected_language': None,
+        'transcript_segments': [],
     }
 
 
@@ -553,6 +623,101 @@ def extract_audio():
     finally:
         if audio_path and whisper_service:
             whisper_service._cleanup_file(audio_path)
+
+
+def _media_job_owner() -> str:
+    """인증 비활성 개발 모드에서도 작업 소유권 경계를 유지한다."""
+    return str(g.user_id or 'local-development')
+
+
+@blog_bp.route('/api/media-transcriptions', methods=['POST'])
+@limiter.limit("3/hour")
+@require_auth
+def create_media_transcription():
+    """업로드를 저장하고 Redis/RQ 전사 작업을 생성한다."""
+    import importlib.util
+    import os
+    from pathlib import Path
+    from config import DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES, MEDIA_UPLOAD_MAX_BYTES
+    from services.transcript.media_transcription_jobs import create_job, enqueue_job
+
+    if os.getenv('WHISPER_ENABLED', 'false').lower() != 'true':
+        return api_error('미디어 전사를 위해 서버에 WHISPER_ENABLED=true 설정이 필요합니다.', 400)
+    if importlib.util.find_spec('faster_whisper') is None:
+        return api_error('음성 인식 모듈이 서버에 설치되어 있지 않습니다. 관리자에게 문의해 주세요.', 500)
+    if (
+        request.content_length
+        and request.content_length > MEDIA_UPLOAD_MAX_BYTES + DOCUMENT_UPLOAD_REQUEST_OVERHEAD_BYTES
+    ):
+        return api_error(
+            f'미디어 파일 크기는 최대 {_format_byte_limit(MEDIA_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
+            400,
+        )
+
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or not uploaded_file.filename:
+        return api_error('영상 또는 오디오 파일을 업로드해 주세요.', 400)
+    upload_size = _get_upload_size(uploaded_file)
+    if upload_size is not None and upload_size > MEDIA_UPLOAD_MAX_BYTES:
+        return api_error(
+            f'미디어 파일 크기는 최대 {_format_byte_limit(MEDIA_UPLOAD_MAX_BYTES)}까지 업로드할 수 있습니다.',
+            400,
+        )
+    magic = _read_upload_magic(uploaded_file)
+    if not magic or not _is_supported_media_upload(uploaded_file, magic):
+        return api_error(
+            '지원하지 않는 파일입니다. MP4, MOV, WebM, MKV 영상 또는 MP3, WAV, M4A, OGG, FLAC, AAC 오디오를 업로드해 주세요.',
+            400,
+        )
+
+    suffix = _get_media_extension(uploaded_file)
+    source_type = 'video' if suffix in VIDEO_UPLOAD_EXTENSIONS else 'audio'
+    source_title = Path(uploaded_file.filename).stem.strip()[:200] or '로컬 미디어'
+    record, input_path = create_job(
+        owner_id=_media_job_owner(),
+        source_title=source_title,
+        source_type=source_type,
+        suffix=suffix,
+    )
+    try:
+        uploaded_file.save(input_path)
+        enqueue_job(record['job_id'], str(input_path))
+    except Exception as exc:
+        try:
+            input_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        current_app.logger.error('미디어 작업 등록 실패: %s', type(exc).__name__)
+        return api_error('미디어 전사 작업을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.', 503)
+
+    return jsonify({
+        'job_id': record['job_id'],
+        'status': 'queued',
+        'stage': 'uploaded',
+        'progress': 0,
+        'poll_url': f"/api/media-transcriptions/{record['job_id']}",
+    }), 202
+
+
+@blog_bp.route('/api/media-transcriptions/<job_id>', methods=['GET'])
+@limiter.limit("60/minute")
+@require_auth
+def get_media_transcription(job_id: str):
+    """현재 사용자가 소유한 미디어 전사 작업 상태를 반환한다."""
+    from services.transcript.media_transcription_jobs import read_job
+
+    record = read_job(job_id, _media_job_owner())
+    if not record:
+        return api_error('미디어 전사 작업을 찾을 수 없습니다.', 404)
+    response = {
+        key: record.get(key)
+        for key in (
+            'job_id', 'status', 'stage', 'progress', 'message', 'source_type',
+            'source_title', 'duration_seconds', 'result', 'error',
+        )
+        if record.get(key) is not None
+    }
+    return jsonify(response)
 
 
 @blog_bp.route('/generate', methods=['POST'])
@@ -1162,21 +1327,28 @@ def generate_stream():
         source_meta = None
 
         if is_direct_text:
-            source_type = 'text'
-            source_title = '직접 입력 텍스트'
+            source_type = params.get('direct_source_type') or 'text'
+            source_title = params.get('source_title') or {
+                'video': '로컬 영상', 'audio': '로컬 오디오', 'text': '직접 입력 텍스트',
+            }.get(source_type, '직접 입력 텍스트')
             comments = []
             raw_transcript = direct_content[:5000]
-            transcript_source = 'direct_input'
-            transcript_segments = []
+            transcript_source = params.get('transcript_source') or (
+                'whisper' if source_type in {'video', 'audio'} else 'direct_input'
+            )
+            transcript_segments = params.get('transcript_segments') or []
             youtube_title = ''
-            main_content = f"[사용자 입력 텍스트]\n{direct_content}"
+            content_label = '로컬 미디어 전사' if source_type in {'video', 'audio'} else '사용자 입력 텍스트'
+            main_content = f"[{content_label}]\n{direct_content}"
             truncated_content = content_service.truncate_text(main_content, max_tokens)
             source_meta = {
-                'source_type': 'text',
+                'source_type': source_type,
                 'chars': len(direct_content),
                 'quality_score': 1.0,
-                'is_auto': False,
+                'is_auto': source_type in {'video', 'audio'},
             }
+            if params.get('detected_language'):
+                source_meta['detected_language'] = params['detected_language']
         else:
             # 캐시 체크 — /generate와 동일한 키/force 의미론
             from services.core.cache_service import AICacheService
@@ -1383,7 +1555,7 @@ def generate_stream():
                                 'content': result.get('content', ''),
                                 'html': result.get('html', ''),
                                 'transcript': raw_transcript,
-                                'transcript_source': 'direct_input',
+                                'transcript_source': transcript_source,
                                 'usage': result.get('usage'),
                                 'elapsed_time': result_event['elapsed_time'],
                             })

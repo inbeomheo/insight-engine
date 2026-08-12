@@ -8,6 +8,7 @@ import { useResultStore } from '@/stores/resultStore';
 import { toast } from 'sonner';
 import type { Report, StreamEvent } from '@/lib/types';
 import { createReport, responseToReport } from '@/lib/report-factory';
+import type { ExtractedMediaMeta } from '@/components/input/TextInput';
 
 interface GenerateState {
   activeCount: number;
@@ -389,13 +390,18 @@ export function useGenerate() {
   );
 
   const generateFromText = useCallback(
-    async (text: string, useStreaming = false): Promise<boolean> => {
+    async (
+      text: string,
+      mediaOrStreaming?: ExtractedMediaMeta | boolean,
+      useStreaming = false,
+    ): Promise<boolean> => {
       if (!selectedModel) {
         setState((s) => ({ ...s, error: 'AI 모델을 선택해주세요.' }));
         return false;
       }
 
-      const streaming = useStreaming;
+      const streaming = typeof mediaOrStreaming === 'boolean' ? mediaOrStreaming : useStreaming;
+      const media = typeof mediaOrStreaming === 'object' ? mediaOrStreaming : undefined;
       setState((s) => ({ ...s, activeCount: s.activeCount + 1, isLoading: true, error: null }));
       const req = {
         url: '',
@@ -404,6 +410,7 @@ export function useGenerate() {
         modifiers,
         content: text,
         detail_level: detailLevel,
+        ...(media || {}),
       };
 
       try {

@@ -37,7 +37,15 @@ coverage.xml
 
 # Node (Tailwind 빌드용 - 빌드 결과물만 필요)
 node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/test-results/
 package-lock.json
+
+# 런타임 데이터/캐시
+data/
+cache/
+logs/
 
 # 문서/설정
 *.md

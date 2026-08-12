@@ -50,6 +50,7 @@ const TIMEOUT_MS: Record<string, number> = {
   '/api/video-deepdives/extract': 660_000,
   '/api/extract-document': 60_000,
   '/api/extract-audio': 600_000,
+  '/api/media-transcriptions': 120_000,
 };
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -187,6 +188,85 @@ export async function extractAudio(file: File): Promise<ExtractAudioResponse> {
     method: 'POST',
     body: formData,
   });
+}
+
+export interface ExtractMediaResponse {
+  text: string;
+  truncated: boolean;
+  source_type: 'audio' | 'video';
+  source_title: string;
+  transcript_source: 'whisper';
+  transcript_segments: Array<{ start: number; end: number; text: string }>;
+  detected_language?: string;
+  language_probability?: number;
+}
+
+export interface MediaTranscriptionResult {
+  text: string;
+  transcript_source: 'whisper';
+  transcript_segments: Array<{ start: number; end: number; text: string }>;
+  detected_language?: string;
+  language_probability?: number;
+  duration_seconds?: number;
+}
+
+export interface MediaTranscriptionJob {
+  job_id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  stage: string;
+  progress: number;
+  message?: string;
+  source_type?: 'audio' | 'video';
+  source_title?: string;
+  result?: MediaTranscriptionResult;
+  error?: { code: string; message: string; retryable: boolean };
+  poll_url?: string;
+}
+
+async function waitForMediaTranscription(
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<MediaTranscriptionJob> {
+  const deadline = Date.now() + 30 * 60_000;
+  while (Date.now() < deadline) {
+    if (signal?.aborted) throw new DOMException('작업이 취소되었습니다.', 'AbortError');
+    const job = await request<MediaTranscriptionJob>(`/api/media-transcriptions/${jobId}`, { signal });
+    if (job.status === 'succeeded') return job;
+    if (job.status === 'failed') throw new Error(job.error?.message || '미디어 전사에 실패했습니다.');
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        globalThis.clearTimeout(timer);
+        reject(new DOMException('작업이 취소되었습니다.', 'AbortError'));
+      };
+      const timer = globalThis.setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      }, 1500);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+  throw new Error('미디어 전사 시간이 제한을 초과했습니다.');
+}
+
+export async function extractMedia(file: File, signal?: AbortSignal): Promise<ExtractMediaResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const queued = await request<MediaTranscriptionJob>('/api/media-transcriptions', {
+    method: 'POST',
+    body: formData,
+    signal,
+  });
+  const completed = await waitForMediaTranscription(queued.job_id, signal);
+  if (!completed.result || !completed.source_type || !completed.source_title) {
+    throw new Error('미디어 전사 결과가 올바르지 않습니다.');
+  }
+  return {
+    ...completed.result,
+    text: completed.result.text.slice(0, 200_000),
+    source_type: completed.source_type,
+    source_title: completed.source_title,
+    truncated: completed.result.text.length > 200_000,
+  };
 }
 
 export async function getJob(jobId: string): Promise<JobResponse> {

@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import TextInput from '@/components/input/TextInput';
+import type { ExtractedMediaMeta } from '@/components/input/TextInput';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import { buildLocalDashboardStats } from '@/lib/dashboard-summary';
 import { cn } from '@/lib/utils';
@@ -48,7 +49,7 @@ interface MobileAppShellProps {
   onInputTabChange: (tab: SourceInputTab) => void;
   textValue: string;
   onTextChange: (text: string) => void;
-  onGenerateText: (text: string) => void;
+  onGenerateText: (text: string, media?: ExtractedMediaMeta) => void;
 }
 
 const TAB_META: Record<MobileTab, { label: string; icon: typeof PlusCircle }> = {

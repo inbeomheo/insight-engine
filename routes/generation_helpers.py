@@ -95,13 +95,24 @@ def _base_generation_response(result: dict, params: dict, start_time: float,
 
 
 def _handle_direct_text(params: dict, start_time: float):
-    """직접 텍스트 입력 모드: URL 없이 content만 전달된 경우."""
+    """직접 텍스트/로컬 미디어 전사 모드."""
     direct_content = params.get('content', '')
     validation_error = _validate_direct_text_content(direct_content)
     if validation_error:
         return api_error(validation_error, 400)
 
-    truncated_content = _truncate_for_model(params['model'], '사용자 입력 텍스트', direct_content)
+    source_type = params.get('direct_source_type') or 'text'
+    source_title = params.get('source_title') or {
+        'video': '로컬 영상', 'audio': '로컬 오디오', 'text': '직접 입력 텍스트',
+    }.get(source_type, '직접 입력 텍스트')
+    transcript_source = params.get('transcript_source') or (
+        'whisper' if source_type in {'video', 'audio'} else 'direct_input'
+    )
+    transcript_segments = params.get('transcript_segments') or []
+    detected_language = params.get('detected_language')
+    content_label = '로컬 미디어 전사' if source_type in {'video', 'audio'} else '사용자 입력 텍스트'
+
+    truncated_content = _truncate_for_model(params['model'], content_label, direct_content)
     result, used_prompt = _generate_from_source(params, truncated_content)
 
     result = _apply_output_format(result, params.get('output_format', 'html'), params.get('max_chars'))
@@ -112,12 +123,12 @@ def _handle_direct_text(params: dict, start_time: float):
         save_history(g.user_id, {
             'id': report_id,
             'url': '',
-            'title': result.get('title') or '직접 입력 텍스트',
+            'title': result.get('title') or source_title,
             'style': params['style'],
             'content': result.get('content', ''),
             'html': result.get('html', ''),
             'transcript': direct_content[:5000],
-            'transcript_source': 'direct_input',
+            'transcript_source': transcript_source,
             'usage': result.get('usage'),
             'elapsed_time': elapsed_time,
         })
@@ -126,15 +137,18 @@ def _handle_direct_text(params: dict, start_time: float):
     response['id'] = report_id
     response['prompt_length'] = len(used_prompt) if used_prompt else 0
     response['transcript'] = direct_content[:5000]
-    response['transcript_source'] = 'direct_input'
-    response['source_type'] = 'text'
-    response['source_title'] = '직접 입력 텍스트'
+    response['transcript_source'] = transcript_source
+    response['transcript_segments'] = transcript_segments
+    response['source_type'] = source_type
+    response['source_title'] = source_title
     response['source_meta'] = {
-        'source_type': 'text',
+        'source_type': source_type,
         'chars': len(direct_content),
         'quality_score': 1.0,
-        'is_auto': False,
+        'is_auto': source_type in {'video', 'audio'},
     }
+    if detected_language:
+        response['source_meta']['detected_language'] = detected_language
     return jsonify(response)
 
 

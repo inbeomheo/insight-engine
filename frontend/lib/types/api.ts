@@ -22,6 +22,12 @@ export interface GenerateRequest {
   enable_citations?: boolean;
   /** 자막 추출 언어 지정 (YouTube 다국어 자막 대상). null/undefined=자동 */
   transcript_language?: TranscriptLanguage;
+  /** 로컬 미디어 전사에서 보존할 출처/타임스탬프 메타데이터 */
+  source_type?: 'text' | 'audio' | 'video';
+  source_title?: string;
+  transcript_source?: 'direct_input' | 'whisper';
+  detected_language?: string;
+  transcript_segments?: Array<{ start: number; end?: number; text: string }>;
 }
 
 export interface GenerateResponse {
@@ -48,12 +54,13 @@ export interface GenerateResponse {
     chars?: number;
     quality_score?: number;
     is_auto?: boolean;
+    detected_language?: string;
   };
   transcript?: string;
   web_sources?: WebSource[];
   analysis?: NlpAnalysis;
   inserted_links?: InsertedLink[];
-  transcript_segments?: Array<{ start: number; text: string }>;
+  transcript_segments?: Array<{ start: number; end?: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
   source_receipts?: SourceReceipt[];
@@ -125,7 +132,7 @@ export interface StreamEvent {
   faq_schema?: FaqSchema;
   cta?: CtaData;
   web_sources?: WebSource[];
-  transcript_segments?: Array<{ start: number; text: string }>;
+  transcript_segments?: Array<{ start: number; end?: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   error?: string;
   message?: string;

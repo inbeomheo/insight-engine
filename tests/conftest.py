@@ -1,10 +1,22 @@
 """pytest conftest.py - 테스트 실행 시 프로젝트 루트를 PYTHONPATH에 추가"""
-import sys
+import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
+
+# extensions.limiter와 외부 통합은 모듈 import 시 환경을 읽는다. 테스트가
+# 개발/운영 .env에 의존하지 않도록 앱 import 전에 명시적으로 중립화한다.
+os.environ.setdefault('RATELIMIT_STORAGE_URI', 'memory://')
+os.environ.setdefault('RATE_LIMIT_ENABLED', 'false')
+os.environ['CHATMOCK_BASE_URL'] = 'http://127.0.0.1:8000/v1'
+for _external_env in (
+    'SUPPORT_GITHUB_TOKEN', 'GITHUB_TOKEN',
+    'SUPPORT_GITHUB_REPO', 'GITHUB_REPOSITORY',
+):
+    os.environ[_external_env] = ''
 
 # 프로젝트 루트 (tests 폴더의 부모)를 sys.path에 추가
 project_root = Path(__file__).parent.parent

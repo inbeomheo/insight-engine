@@ -88,8 +88,12 @@ def create_app(test_config=None):
     def _set_extract_upload_limit():
         if request.path == '/api/extract-document':
             upload_limit = int(config_module.DOCUMENT_UPLOAD_MAX_BYTES)
-        elif request.path == '/api/extract-audio':
-            upload_limit = int(config_module.AUDIO_UPLOAD_MAX_BYTES)
+        elif request.path in {'/api/extract-audio', '/api/media-transcriptions'}:
+            upload_limit = int(
+                config_module.MEDIA_UPLOAD_MAX_BYTES
+                if request.path == '/api/media-transcriptions'
+                else config_module.AUDIO_UPLOAD_MAX_BYTES
+            )
         else:
             return None
         limit = (

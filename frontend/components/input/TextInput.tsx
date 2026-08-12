@@ -1,17 +1,22 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { ArrowUp, FileText, Loader2, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import InputWrapper from '@/components/ui/InputWrapper';
-import { extractAudio, extractDocument } from '@/lib/api';
+import { extractDocument, extractMedia, type ExtractMediaResponse } from '@/lib/api';
 
 // 최소/최대 길이는 서버 config.DIRECT_TEXT_MIN_CHARS / DIRECT_TEXT_MAX_CHARS와 맞춘다.
 const MIN_CHARS = 50;
 const MAX_CHARS = 200000;
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.aac']);
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.webm', '.mkv']);
+
+export type ExtractedMediaMeta = Pick<ExtractMediaResponse,
+  'source_type' | 'source_title' | 'transcript_source' | 'transcript_segments' | 'detected_language'
+>;
 
 function getFileExtension(file: File): string {
   const dotIndex = file.name.lastIndexOf('.');
@@ -21,7 +26,7 @@ function getFileExtension(file: File): string {
 interface TextInputProps {
   value: string;
   onChange: (text: string) => void;
-  onGenerate: (text: string) => void;
+  onGenerate: (text: string, media?: ExtractedMediaMeta) => void;
   isLoading: boolean;
 }
 
@@ -30,7 +35,11 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
   const [isExtractingFile, setIsExtractingFile] = useState(false);
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [extractedMedia, setExtractedMedia] = useState<ExtractedMediaMeta | undefined>();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const extractionAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => extractionAbortRef.current?.abort(), []);
 
   const charCount = value.length;
   const isValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
@@ -38,12 +47,13 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
 
   const handleSubmit = useCallback(() => {
     if (!isValid || isLoading) return;
-    onGenerate(value.trim());
-  }, [value, isValid, isLoading, onGenerate]);
+    onGenerate(value.trim(), extractedMedia);
+  }, [value, isValid, isLoading, onGenerate, extractedMedia]);
 
   const handleTextChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setFileError(null);
     setFileNotice(null);
+    setExtractedMedia(undefined);
     onChange(e.target.value);
   }, [onChange]);
 
@@ -64,16 +74,42 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
     setIsExtractingFile(true);
     setFileError(null);
     setFileNotice(null);
+    extractionAbortRef.current?.abort();
+    const controller = new AbortController();
+    extractionAbortRef.current = controller;
     try {
-      const isAudio = AUDIO_EXTENSIONS.has(getFileExtension(file));
-      const result = isAudio ? await extractAudio(file) : await extractDocument(file);
-      onChange(result.text.slice(0, MAX_CHARS));
-      if (result.truncated) {
-        setFileNotice(`${isAudio ? '음성 전사' : '문서'} 내용이 최대 길이에 맞춰 일부 잘렸습니다.`);
+      const extension = getFileExtension(file);
+      const isMedia = AUDIO_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension);
+      if (isMedia) {
+        const mediaResult = await extractMedia(file, controller.signal);
+        onChange(mediaResult.text.slice(0, MAX_CHARS));
+        setExtractedMedia({
+          source_type: mediaResult.source_type,
+          source_title: mediaResult.source_title,
+          transcript_source: mediaResult.transcript_source,
+          transcript_segments: mediaResult.transcript_segments,
+          detected_language: mediaResult.detected_language,
+        });
+        if (mediaResult.truncated) {
+          setFileNotice('미디어 전사 내용이 최대 길이에 맞춰 일부 잘렸습니다.');
+        } else {
+          setFileNotice(`${mediaResult.source_type === 'video' ? '영상' : '오디오'} 전사 완료 · 타임스탬프 ${mediaResult.transcript_segments.length.toLocaleString()}개`);
+        }
+      } else {
+        const documentResult = await extractDocument(file);
+        onChange(documentResult.text.slice(0, MAX_CHARS));
+        setExtractedMedia(undefined);
+        if (documentResult.truncated) {
+          setFileNotice('문서 내용이 최대 길이에 맞춰 일부 잘렸습니다.');
+        }
       }
     } catch (err) {
-      setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
+      setExtractedMedia(undefined);
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        setFileError(err instanceof Error ? err.message : '파일을 불러오지 못했습니다.');
+      }
     } finally {
+      if (extractionAbortRef.current === controller) extractionAbortRef.current = null;
       setIsExtractingFile(false);
     }
   }, [onChange, value]);
@@ -113,7 +149,7 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.docx,.pptx,.mp3,.wav,.m4a,.ogg,.flac,.aac"
+              accept=".pdf,.docx,.pptx,.mp3,.wav,.m4a,.ogg,.flac,.aac,.mp4,.mov,.webm,.mkv"
               className="hidden"
               onChange={handleFileChange}
               disabled={isLoading || isExtractingFile}
@@ -132,7 +168,7 @@ export default function TextInput({ value, onChange, onGenerate, isLoading }: Te
               ) : (
                 <FileText className="h-3.5 w-3.5" />
               )}
-              파일 불러오기
+              문서·미디어
             </Button>
             <Button
               size="icon"

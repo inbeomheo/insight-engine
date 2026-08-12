@@ -21,9 +21,13 @@ services:
       HOME: /app
       PORT: "5001"
       REDIS_URL: redis://redis:6379/0
+      MEDIA_REDIS_URL: redis://media-redis:6379/0
       CHROMA_DB_PATH: /app/data/chroma_db
       AI_CACHE_DB: /app/cache/ai_cache.db
       JOB_STORE_DIR: /app/data/jobs
+      MEDIA_TRANSCRIPTION_DIR: /app/data/media-transcriptions
+      WHISPER_ENABLED: "true"
+      WHISPER_MODEL_SIZE: base
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     ports:
       - "127.0.0.1:5001:5001"
@@ -39,6 +43,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      media-redis:
+        condition: service_healthy
       chatmock:
         condition: service_started
     healthcheck:
@@ -47,6 +53,34 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  media-worker:
+    image: insight-engine:local
+    container_name: insight-media-worker
+    restart: unless-stopped
+    command:
+      - rq
+      - worker
+      - --url
+      - redis://media-redis:6379/0
+      - media-transcription
+    env_file:
+      - .env
+    environment:
+      HOME: /app
+      REDIS_URL: redis://redis:6379/0
+      MEDIA_REDIS_URL: redis://media-redis:6379/0
+      MEDIA_TRANSCRIPTION_DIR: /app/data/media-transcriptions
+      WHISPER_ENABLED: "true"
+      WHISPER_MODEL_SIZE: base
+    volumes:
+      - insight_app_data:/app/data
+      - insight_model_cache:/app/.cache
+    depends_on:
+      media-redis:
+        condition: service_healthy
+    mem_limit: 4g
+    cpus: 2.0
 
   frontend:
     image: insight-engine:local
@@ -141,9 +175,23 @@ services:
       timeout: 5s
       retries: 5
 
+  media-redis:
+    image: redis:7-alpine
+    container_name: insight-media-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy noeviction --appendonly yes
+    volumes:
+      - insight_media_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   insight_app_data:
   insight_app_cache:
   insight_app_logs:
   insight_redis_data:
+  insight_media_redis_data:
   insight_model_cache:

@@ -161,6 +161,7 @@ export interface Report {
     chars?: number;
     quality_score?: number;
     is_auto?: boolean;
+    detected_language?: string;
   };
   title: string;
   content: string;
@@ -191,7 +192,7 @@ export interface Report {
   web_sources?: WebSource[];
   inserted_links?: InsertedLink[];
   transcript?: string;
-  transcript_segments?: Array<{ start: number; text: string }>;
+  transcript_segments?: Array<{ start: number; end?: number; text: string }>;
   chapters?: Array<{ title: string; start: number; end: number; summary: string }>;
   citations?: Citation[];
   source_receipts?: SourceReceipt[];

@@ -40,6 +40,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isOnboardingDone } from '@/lib/storage';
 import { STYLE_OPTIONS } from '@/lib/constants';
 import type { GenerationMode, ViewMode } from '@/lib/types';
+import type { ExtractedMediaMeta } from '@/components/input/TextInput';
 
 export default function Home() {
   const hydrateSettings = useSettingsStore((s) => s.hydrate);
@@ -230,8 +231,8 @@ export default function Home() {
   }, [urls, generateBatchUrls, removeUrl]);
 
   // 직접 텍스트 입력 → 생성
-  const handleGenerateFromText = useCallback(async (text: string) => {
-    const ok = await generateFromText(text);
+  const handleGenerateFromText = useCallback(async (text: string, media?: ExtractedMediaMeta) => {
+    const ok = await generateFromText(text, media);
     if (ok) setPastedText('');
   }, [generateFromText]);
 
