@@ -17,13 +17,15 @@ export default function OnboardingModal() {
   const hasModels = Boolean(activeProvider?.models.length);
   const { t } = useTranslation();
 
-  function handleStart() {
+  // 어떤 경로로 닫히든(시작 버튼 / X / Esc / 오버레이) 완료로 기록한다.
+  // 기록을 남기지 않으면 AI 모델 목록을 못 불러오는 동안 매 방문마다 모달이 다시 떠 앱 전체가 잠긴다.
+  function dismiss() {
     setOnboardingDone();
     setOnboardingOpen(false);
   }
 
   return (
-    <Dialog open={onboardingOpen} onOpenChange={setOnboardingOpen}>
+    <Dialog open={onboardingOpen} onOpenChange={(open) => { if (!open) dismiss(); }}>
       <DialogContent className="max-w-sm p-8">
         <VisuallyHidden>
           <DialogTitle>{t('onboarding.title')}</DialogTitle>
@@ -66,7 +68,7 @@ export default function OnboardingModal() {
           </p>
         )}
 
-        <Button disabled={!hasModels} className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={handleStart}>
+        <Button className="w-full h-12 gradient-primary hover:opacity-90 transition-opacity rounded-xl text-base font-medium shadow-md shadow-indigo-200/30" onClick={dismiss}>
           <Check className="h-4 w-4 mr-2" />
           {t('onboarding.start')}
         </Button>

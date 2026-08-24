@@ -172,19 +172,30 @@ describe('단일 ChatMock 서비스 UI', () => {
     expect(mocks.ui.setOnboardingOpen).toHaveBeenCalledWith(false);
   });
 
-  it('온보딩에서 서비스가 없으면 시작을 막는다', async () => {
+  it('온보딩에서 서비스가 없으면 안내하되 시작을 막지 않는다', async () => {
     const view = await render(<OnboardingModal />);
     expect(view.textContent).toContain('AI 서버에 연결할 수 없습니다');
-    expect(findButton(view, '시작')?.disabled).toBe(true);
+
+    // 모델 목록을 못 불러와도 진입은 가능해야 한다.
+    // 막아버리면 setOnboardingDone()이 영영 호출되지 않아 매 방문마다 모달이 다시 뜬다.
+    const startButton = findButton(view, '시작');
+    expect(startButton?.disabled).toBe(false);
+    await act(async () => startButton?.click());
+    expect(mocks.setOnboardingDone).toHaveBeenCalledOnce();
+    expect(mocks.ui.setOnboardingOpen).toHaveBeenCalledWith(false);
   });
 
-  it('온보딩에서 모델이 없으면 안내하고 시작을 막는다', async () => {
+  it('온보딩에서 모델이 없으면 안내하되 시작을 막지 않는다', async () => {
     setChatMockProvider();
     mocks.settings.providers.chatmock.models = [];
     const view = await render(<OnboardingModal />);
 
     expect(view.textContent).toContain('사용 가능한 ChatMock 모델이 없습니다');
-    expect(findButton(view, '시작')?.disabled).toBe(true);
+
+    const startButton = findButton(view, '시작');
+    expect(startButton?.disabled).toBe(false);
+    await act(async () => startButton?.click());
+    expect(mocks.setOnboardingDone).toHaveBeenCalledOnce();
   });
 
   it('설정에서 서비스 정보와 단일 모델 선택 동작만 제공한다', async () => {
