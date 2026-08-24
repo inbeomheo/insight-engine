@@ -88,9 +88,10 @@ export default function VideoChatPanel({
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex flex-col w-full max-w-md bg-background border-l border-border shadow-2xl">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
+    // z-[60]: 모바일 하단 네비게이션(z-50)보다 위에 떠야 입력창/전송 버튼이 가려지지 않는다.
+    <div className="fixed inset-y-0 right-0 z-[60] flex flex-col w-full max-w-md bg-background border-l border-border shadow-2xl">
+      {/* 헤더 — 상단 safe-area(노치) 인셋 반영 */}
+      <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] border-b border-border bg-muted/40">
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="h-4 w-4 shrink-0 text-primary" />
           <div className="min-w-0">
@@ -103,7 +104,7 @@ export default function VideoChatPanel({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-11 w-11 shrink-0"
           onClick={onClose}
           aria-label="영상 채팅 패널 닫기"
         >
@@ -187,8 +188,8 @@ export default function VideoChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* 입력 영역 */}
-      <div className="px-4 py-3 border-t border-border bg-muted/20">
+      {/* 입력 영역 — 하단 safe-area(홈 인디케이터) 인셋 반영 */}
+      <div className="px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] border-t border-border bg-muted/20">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}

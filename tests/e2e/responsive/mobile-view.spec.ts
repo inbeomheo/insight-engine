@@ -13,6 +13,26 @@ test.describe('모바일 뷰 @parallel @no-auth @responsive', () => {
     await mainPage.goto();
   });
 
+  // 회귀 방지(#47): body가 `overflow-hidden h-screen`으로 잠겨 있으면
+  // 첫 화면 아래 콘텐츠(스타일 선택 · 생성 모드 · 생성 버튼)에 아예 도달할 수 없다.
+  test('첫 화면 아래 콘텐츠까지 세로 스크롤로 도달한다', async ({ page }) => {
+    const scrollable = await page.evaluate(() => {
+      const d = document.documentElement;
+      return d.scrollHeight > d.clientHeight;
+    });
+    expect(scrollable).toBeTruthy();
+
+    const generateButton = page.getByRole('button', { name: /콘텐츠 생성/ });
+    await expect(generateButton).toBeVisible();
+    await generateButton.scrollIntoViewIfNeeded();
+
+    const box = await generateButton.boundingBox();
+    expect(box).not.toBeNull();
+    // 하단 고정 nav에 가리지 않고 뷰포트 안에 완전히 들어와야 한다
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(667);
+  });
+
   test('모바일에서 레이아웃이 깨지지 않음', async ({ page }) => {
     // 가로 스크롤 확인
     const hasHorizontalScroll = await page.evaluate(() => {

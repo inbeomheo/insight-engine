@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, useDeferredValue } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Plus, Settings } from 'lucide-react';
+import { Sparkles, Youtube, Layers, Combine, Bot, AlertCircle, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Sidebar from '@/components/layout/Sidebar';
@@ -53,7 +53,6 @@ export default function Home() {
   const setOnboardingOpen = useUIStore((s) => s.setOnboardingOpen);
   const activeReportId = useUIStore((s) => s.activeReportId);
   const setActiveReportId = useUIStore((s) => s.setActiveReportId);
-  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const setSettingsModalOpen = useUIStore((s) => s.setSettingsModalOpen);
 
   const generationMode = useSettingsStore((s) => s.generationMode);
@@ -613,28 +612,9 @@ export default function Home() {
         </main>
       </div>
 
-      {/* 모바일 커맨드 네비게이션 */}
-      <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-full border border-border bg-card/95 p-1 shadow-[0_8px_30px_rgba(21,23,31,0.12)] xl:hidden"
-        aria-label="모바일 빠른 이동"
-      >
-        <button
-          type="button"
-          className="signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground text-[10px] font-semibold text-background transition-colors"
-          onClick={() => setSidebarOpen(false)}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          새 분석
-        </button>
-        <button
-          type="button"
-          className="signal-meta flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-[10px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          onClick={() => setSettingsModalOpen(true)}
-        >
-          <Settings className="h-3.5 w-3.5" />
-          설정
-        </button>
-      </nav>
+      {/* 모바일 전용 UI는 MobileAppShell(하단 nav 포함) 하나로 통일한다.
+          이 컨테이너는 `hidden … xl:flex`라서 xl 미만에서 렌더되지 않으므로,
+          여기에 `xl:hidden` 모바일 nav를 두면 어느 폭에서도 보이지 않는 죽은 UI가 된다. */}
 
       {/* 모달 */}
       <SettingsModal />

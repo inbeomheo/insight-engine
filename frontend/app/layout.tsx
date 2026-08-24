@@ -49,7 +49,10 @@ export default function RootLayout({
           />
         </noscript>
       </head>
-      <body className="overflow-hidden h-screen">
+      {/* 데스크톱(xl+)은 내부 ScrollArea가 스크롤을 담당하므로 body를 고정 높이로 잠근다.
+          그 미만(모바일/태블릿)은 문서 흐름 그대로 스크롤돼야 한다 — 잠그면 첫 화면 아래
+          콘텐츠(스타일 선택·생성 모드·생성 버튼·라이브러리 카드)가 잘려 접근이 불가능해진다. */}
+      <body className="min-h-dvh xl:h-screen xl:overflow-hidden">
         <Providers>{children}</Providers>
         {/* PWA Service Worker 등록 */}
         <script
