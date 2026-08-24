@@ -74,7 +74,7 @@ JSON 응답 {title, content, html, usage}
 |-------|------|-----|
 | 라우트 | `routes/blog_routes.py` | 콘텐츠 생성, 파이프라인(SSE), MCP 발행, 지식 업로드, Ollama 헬스체크 |
 | 라우트 | `routes/auth_routes.py` | 인증, API 키, 사용량, 관리자, 워크스페이스, 승인 플로우 API |
-| 라우트 | `routes/advanced_routes.py` | 멀티스타일, 퓨전, 마인드맵, 인라인 편집, QA |
+| 라우트 | `routes/advanced_routes.py` | 퓨전, 마인드맵 (실제 구현은 `routes/advanced/` 서브패키지) |
 | 라우트 | `routes/export_routes.py` | DOCX/MD/TXT/ZIP 내보내기 |
 | 라우트 | `routes/utility_routes.py` | 헬스체크, 프로바이더, 캐시, 스타일 추천, 프로바이더 검증 |
 | 서비스 | `services/core/ai_service.py` | LiteLLM 래퍼, 다국어 모디파이어, Ollama api_base, RAG 컨텍스트 주입 |
@@ -223,6 +223,8 @@ UI에 표시되는 15개 스타일: `blog_seo`, `summary`, `tutorial`, `qna`, `a
 **자막 소스 품질 메타**: `source_meta` (source_type, quality_score, is_auto) — 4단계 폴백별 품질 정보
 
 **3단 뷰 모드**: ViewModeSelector — Compact(100자 미리보기)/Full(기존)/Timeline(챕터 연동)
+
+**문서 직접 편집**: 결과 카드의 편집(연필) 버튼 → 제목/본문(마크다운)을 직접 수정 후 저장. 저장은 `resultStore.updateReport` → localStorage 경로를 사용하고, `report.html`은 `frontend/lib/markdown-to-html.ts`로 다시 렌더링해 내보내기/공유와 동기화한다. (AI 부분 재생성 `POST /api/inline-edit`는 dead-code 정리로 제거됨)
 
 **프로바이더 검증**: `POST /api/providers/validate` — API 키 소량 토큰 호출 유효성 테스트
 

@@ -81,7 +81,17 @@
     "factCheck": "ファクトチェック",
     "qaCheck": "品質チェック",
     "chapters": "チャプター",
-    "transcript": "字幕"
+    "transcript": "字幕",
+    "edit": "ドキュメント編集",
+    "editTitleLabel": "タイトル",
+    "editContentLabel": "本文 (Markdown)",
+    "editSave": "保存",
+    "editCancel": "キャンセル",
+    "editSaved": "編集内容を保存しました",
+    "editNoChange": "変更点がありません",
+    "editEmptyTitle": "タイトルを入力してください",
+    "editEmptyContent": "本文を入力してください",
+    "editHint": "Ctrl/⌘ + Enter で保存 · Esc でキャンセル"
   },
   "settings": {
     "title": "設定",

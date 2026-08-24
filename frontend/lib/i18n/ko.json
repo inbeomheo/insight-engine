@@ -81,7 +81,17 @@
     "factCheck": "팩트체크",
     "qaCheck": "품질 검사",
     "chapters": "챕터",
-    "transcript": "자막"
+    "transcript": "자막",
+    "edit": "문서 편집",
+    "editTitleLabel": "제목",
+    "editContentLabel": "본문 (마크다운)",
+    "editSave": "저장",
+    "editCancel": "취소",
+    "editSaved": "수정한 내용을 저장했습니다",
+    "editNoChange": "변경된 내용이 없습니다",
+    "editEmptyTitle": "제목을 입력해주세요",
+    "editEmptyContent": "본문을 입력해주세요",
+    "editHint": "Ctrl/⌘ + Enter 저장 · Esc 취소"
   },
   "settings": {
     "title": "설정",

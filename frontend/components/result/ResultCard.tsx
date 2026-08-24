@@ -3,7 +3,7 @@
 import { memo, useState, useMemo, useCallback, useReducer, useRef, useEffect } from 'react';
 import {
   Copy, Check, ChevronDown, ChevronUp, MoreHorizontal, Trash2,
-  FileText, Code, Brain, BookOpen, Share2,
+  FileText, Code, Brain, BookOpen, Share2, Pencil,
   Zap, Type, MessageSquare, ExternalLink, Layers, Mic, Bot, Headphones, ListChecks, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -32,6 +32,8 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { exportFormat, extractEvents, notebookLmGenerate, notebookLmStatus, notebookLmAuthCheck, createSharePage, createVideoDeepDiveFromResult, extractVideoDeepDiveScreenshots, apiUrl, createKnowledgeNote, isApiError, type NoteDuplicateWarning, type VideoDeepDiveSlide } from '@/lib/api';
 import { getKnowledgeNoteContent, getKnowledgeNotePreview, getKnowledgeNoteSource } from '@/lib/knowledge-note-source';
+import { hasReportChanges, normalizeReportDraft, validateReportDraft, type ReportDraft } from '@/lib/report-edit';
+import { markdownToHtml } from '@/lib/markdown-to-html';
 import { NotebookLmSection } from './NotebookLmSection';
 import type { VideoEvent, EventSummary } from '@/lib/types';
 
@@ -57,6 +59,9 @@ const ResultChatPanel = dynamic(() => import('./ResultChatPanel'), { ssr: false 
 
 // KaTeX 수식 렌더링 — 콘텐츠에 수식 패턴이 있을 때만 로드
 const MathMarkdown = dynamic(() => import('./MathMarkdown'), { ssr: false });
+
+// 문서 편집기 — 편집 버튼을 눌렀을 때만 필요하므로 dynamic import
+const ContentEditor = dynamic(() => import('./ContentEditor'), { ssr: false });
 
 /** DOMPurify 기반 HTML 새니타이징 (XSS 방지) */
 function sanitizeHtml(html: string): string {
@@ -257,6 +262,7 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   const [isExtractingScreenshots, setIsExtractingScreenshots] = useState(false);
   const [deepDiveUrl, setDeepDiveUrl] = useState<string | null>(null);
   const [deepDiveSlides, setDeepDiveSlides] = useState<VideoDeepDiveSlide[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
   const { collapsed, hasExpanded, copiedField, chatOpen, showTranscript, eventOpen, eventLoading, extractedEvents, eventSummary } = panel;
 
   // 간편 setter
@@ -287,6 +293,38 @@ const ResultCard = memo(function ResultCard({ report, viewMode = 'full', onExpan
   }, []);
 
   const charCount = report.content.length;
+
+  // --- 문서 편집 (제목 + 본문 마크다운) ---
+  // 저장은 resultStore.updateReport → localStorage 경로를 그대로 사용한다.
+  const startEditing = useCallback(() => {
+    dispatch({ type: 'BATCH', updates: { hasExpanded: true, collapsed: false } });
+    setIsEditing(true);
+  }, []);
+
+  const handleSaveEdit = useCallback(
+    async (draft: ReportDraft) => {
+      const error = validateReportDraft(draft);
+      if (error) {
+        toast.error(t(`result.${error === 'emptyTitle' ? 'editEmptyTitle' : 'editEmptyContent'}`));
+        return;
+      }
+      if (!hasReportChanges(report, draft)) {
+        setIsEditing(false);
+        toast.info(t('result.editNoChange'));
+        return;
+      }
+      const { title, content } = normalizeReportDraft(draft);
+      // html은 내보내기/공유가 소비하므로 편집 본문으로 다시 렌더링해 stale 상태를 막는다.
+      const html = await markdownToHtml(content);
+      updateReport(report.id, { title, content, html });
+      setIsEditing(false);
+      toast.success(t('result.editSaved'));
+    },
+    [report, updateReport, t],
+  );
+
+  const cancelEditing = useCallback(() => setIsEditing(false), []);
+
   const tokenMeta = `${(report.usage?.total_tokens ?? 0).toLocaleString()} TOKENS`;
   const timeMeta = `${(report.elapsed_time ?? 0).toFixed(1)}초`;
 
@@ -805,6 +843,21 @@ variant={report.share_url ? 'secondary' : 'outline'}
               </TooltipTrigger>
               <TooltipContent>{t('result.richCopy')}</TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isEditing ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8 rounded-sm"
+                  aria-label={t('result.edit')}
+                  aria-pressed={isEditing}
+                  onClick={() => (isEditing ? cancelEditing() : startEditing())}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('result.edit')}</TooltipContent>
+            </Tooltip>
             <Button
               variant="ghost"
               size="icon"
@@ -929,9 +982,17 @@ variant={report.share_url ? 'secondary' : 'outline'}
             </section>
           )}
 
-          {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
-          {viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
+          {/* 편집 모드: 뷰 모드/자막 패널 대신 편집기를 표시 */}
+          {isEditing ? (
+            <ContentEditor
+              initialTitle={report.title}
+              initialContent={report.content}
+              onSave={handleSaveEdit}
+              onCancel={cancelEditing}
+            />
+          ) : viewMode === 'timeline' && report.chapters && report.chapters.length > 0 ? (
             <>
+              {/* 타임라인 모드: 챕터 우선 표시 + 챕터별 콘텐츠 */}
               <ChapterTimeline chapters={report.chapters} videoUrl={report.url} />
               <div className="mt-5 space-y-4">
                 {report.chapters.map((ch, i) => (
@@ -1090,6 +1151,11 @@ variant={report.share_url ? 'secondary' : 'outline'}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={startEditing}>
+                <Pencil className="h-3.5 w-3.5 mr-2" />
+                {t('result.edit')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => copyText(report.title, 'title')}>
                 <Copy className="h-3.5 w-3.5 mr-2" />
                 {t('result.copyTitle')}

@@ -81,7 +81,17 @@
     "factCheck": "Fact check",
     "qaCheck": "Quality check",
     "chapters": "Chapters",
-    "transcript": "Transcript"
+    "transcript": "Transcript",
+    "edit": "Edit document",
+    "editTitleLabel": "Title",
+    "editContentLabel": "Body (Markdown)",
+    "editSave": "Save",
+    "editCancel": "Cancel",
+    "editSaved": "Your edits have been saved",
+    "editNoChange": "Nothing changed",
+    "editEmptyTitle": "Please enter a title",
+    "editEmptyContent": "Please enter the body text",
+    "editHint": "Ctrl/⌘ + Enter to save · Esc to cancel"
   },
   "settings": {
     "title": "Settings",
