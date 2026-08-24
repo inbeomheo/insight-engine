@@ -217,6 +217,9 @@ export default function NotesPage() {
       setSearchReturnState(null);
     } catch (err) {
       if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
+      setSearchResults(null);
+      setLastSearchQuery('');
+      setSearchReturnState(null);
       setError(err instanceof Error ? err.message : '검색에 실패했습니다.');
     } finally {
       if (isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) setSearching(false);
@@ -533,7 +536,7 @@ export default function NotesPage() {
         </form>
 
         {error && (
-          <p className="text-sm text-destructive mb-4">{error}</p>
+          <p role="alert" className="text-sm text-destructive mb-4">{error}</p>
         )}
 
         {!loading && !isSearchMode && notes.length > 0 && (

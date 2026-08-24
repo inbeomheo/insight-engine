@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Playwright는 127.0.0.1을 사용하므로 개발 번들과 HMR 요청을 명시적으로 허용한다.
+  allowedDevOrigins: ['127.0.0.1'],
   // Phase 6: 프로덕션 최적화
   compress: true,
   poweredByHeader: false,
