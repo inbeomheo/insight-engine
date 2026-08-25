@@ -3,7 +3,7 @@
 YouTube/문서/텍스트를 학습하고 LLMWiki형 지식 위키로 쌓는 AI 학습 엔진.
 ChatMock(OpenAI 호환) 기반 생성, 다국어(한/영/일) 지원, RAG 지식 참조, 팀 워크스페이스까지.
 
-Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · 4,300+ 테스트(pass)
+Flask + Next.js 풀스택 · LiteLLM · ChatMock 호환 · pytest 3,846개 + Playwright E2E
 
 ---
 
@@ -178,7 +178,7 @@ insight-engine/
 │   ├── stores/                    # Zustand 상태 관리
 │   └── lib/                       # API, 타입, 유틸
 │
-├── tests/                         # 271개 단위 테스트 + E2E
+├── tests/                         # pytest 3,846개 + E2E 33 spec
 │   ├── test_*.py                  # pytest 단위 테스트
 │   ├── e2e/                       # Playwright E2E
 │   └── load/                      # 부하 테스트
@@ -276,7 +276,7 @@ insight-engine/
 ## Testing
 
 ```bash
-# 단위 테스트 (271개)
+# 단위 테스트 (3,846개)
 python -m pytest tests/ -v
 
 # E2E 테스트 (Playwright)
@@ -333,7 +333,7 @@ gunicorn app:app -b 0.0.0.0:5001
 
 **Frontend:** Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · Zustand · TanStack Query · shadcn/ui · Radix UI
 
-**Testing:** pytest (271 tests) · Playwright E2E · MSW
+**Testing:** pytest (3,846 tests) · Playwright E2E (33 spec) · MSW
 
 ---
 
