@@ -1,44 +1,41 @@
 /**
- * 배치 (각각 분석) 테스트
+ * 배치 (개별 생성) 테스트
  *
- * - 2개 URL 각각 분석 → 결과 카드 2개 (API)
- * - URL 2개 추가 시 모드 선택기 표시 (UI)
+ * - 2개 URL 개별 생성 → 결과 카드 2개 (API — ChatMock 필요)
+ * - 생성 모드 선택기(개별/통합/퓨전) 상시 표시 + 모드 전환 시 CTA 교체 (UI)
  * - 최대 10개 URL 제한 (UI)
  * - URL 칩 삭제 동작 (UI)
  */
 import { test, expect, TEST_DATA } from '../fixtures/test-fixtures';
 
-test.describe('배치 처리 (각각 분석)', () => {
+test.describe('배치 처리 (개별 생성)', () => {
   test.describe.configure({ timeout: 300_000 });
 
   test.beforeEach(async ({ mainPage }) => {
     await mainPage.goto();
   });
 
-  test('2개 URL 각각 분석 → 결과 카드 2개', async ({
+  test('2개 URL 개별 생성 → 결과 카드 2개', async ({
     page,
     urlInput,
     contentGenerator,
   }) => {
-    // 설정: 저비용 프리셋
-    await contentGenerator.openSettings();
-    await page.locator('button').filter({ hasText: '요약' }).first().click();
-    await page.locator('button').filter({ hasText: '짧게' }).click();
-    await contentGenerator.closeSettings();
+    // 설정: 저비용 프리셋 (ChatMock Mini · 요약 · 짧게)
+    await contentGenerator.applyCheapPreset();
 
     // URL 2개 추가
     await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
     await urlInput.addUrl(TEST_DATA.VALID_URLS[1]);
 
-    // 개별 분석 모드 선택 (기본값이지만 명시)
-    const individualBtn = page.getByRole('button', { name: '개별 분석' });
-    if (await individualBtn.isVisible().catch(() => false)) {
-      await individualBtn.click();
-    }
+    // 개별 모드 선택 (기본값이지만 명시)
+    await contentGenerator.selectMode('individual');
 
-    // "2개 URL 각각 분석" 버튼 클릭
-    const generateBtn = page.getByRole('button', { name: /각각 분석/ });
-    await expect(generateBtn).toBeVisible();
+    // "콘텐츠 생성 ×2" CTA 클릭
+    const generateBtn = page
+      .getByRole('button', { name: /콘텐츠 생성/ })
+      .filter({ visible: true })
+      .first();
+    await expect(generateBtn).toBeEnabled();
     await generateBtn.click();
 
     // 결과 카드 2개 대기
@@ -51,20 +48,56 @@ test.describe('배치 처리 (각각 분석)', () => {
     expect(resultCount).toBeGreaterThanOrEqual(2);
   });
 
-  test('URL 2개 추가 시 모드 선택기 표시', async ({ page, urlInput }) => {
-    // URL 1개 → 모드 선택기 없음
+  test('생성 모드 선택기 상시 표시 + 모드 전환 시 CTA 교체', async ({
+    page,
+    urlInput,
+    contentGenerator,
+  }) => {
+    // 새 UI: 모드 버튼(개별/통합/퓨전)은 URL 개수와 무관하게 항상 표시
+    for (const label of ['개별', '통합', '퓨전']) {
+      const modeBtn = page
+        .getByRole('button', { name: label, exact: true })
+        .filter({ visible: true })
+        .first();
+      await expect(modeBtn).toBeVisible();
+    }
+
+    // 기본(개별) 모드: '콘텐츠 생성' CTA 표시, URL 0개면 비활성화
+    const individualCta = page
+      .getByRole('button', { name: /콘텐츠 생성/ })
+      .filter({ visible: true })
+      .first();
+    await expect(individualCta).toBeVisible();
+    await expect(individualCta).toBeDisabled();
+
+    // URL 1개 추가 → 개별 CTA 활성화
     await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
-    const modeSelector = page.getByRole('button', { name: '개별 분석' });
-    await expect(modeSelector).not.toBeVisible();
+    await expect(individualCta).toBeEnabled();
 
-    // URL 2개 → 모드 선택기 표시
+    // 통합 모드 전환 → CTA가 '통합 생성'으로 교체되고 '콘텐츠 생성' CTA는 사라짐
+    await contentGenerator.selectMode('combined');
+    const combinedCta = page
+      .getByRole('button', { name: /통합 생성/ })
+      .filter({ visible: true })
+      .first();
+    await expect(combinedCta).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /콘텐츠 생성/ }).filter({ visible: true }),
+    ).toHaveCount(0);
+
+    // 통합 모드는 URL 2개 이상 필요 → 1개면 비활성화, 2개면 활성화
+    await expect(combinedCta).toBeDisabled();
     await urlInput.addUrl(TEST_DATA.VALID_URLS[1]);
-    await expect(modeSelector).toBeVisible();
+    await expect(combinedCta).toBeEnabled();
 
-    // 3가지 모드 버튼 존재
-    await expect(page.getByRole('button', { name: '개별 분석' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '합쳐서 분석' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '퓨전 분석' })).toBeVisible();
+    // 퓨전 모드 전환 → CTA가 '퓨전 분석'으로 교체
+    await contentGenerator.selectMode('fusion');
+    const fusionCta = page
+      .getByRole('button', { name: /퓨전 분석/ })
+      .filter({ visible: true })
+      .first();
+    await expect(fusionCta).toBeVisible();
+    await expect(fusionCta).toBeEnabled();
   });
 
   test('최대 10개 URL 제한', async ({ page, urlInput }) => {

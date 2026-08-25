@@ -6,6 +6,9 @@ from pathlib import Path
 
 import pytest
 
+# 로컬 서버가 필요한 수동 브라우저 점검 스크립트는 단위 테스트 수집에서 제외한다.
+collect_ignore = ["web_feature_test.py"]
+
 # 프로젝트 루트 (tests 폴더의 부모)를 sys.path에 추가
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:

@@ -1,165 +1,144 @@
 /**
  * URL 입력 및 관리 테스트 (통합)
- * 
+ *
  * spec: specs/01-url-input-management.plan.md
  * seed: seed.spec.ts
- * 
+ *
+ * 학습엔진 UI 개편(2026-08) 기준으로 재작성:
+ * - URL 검증 규칙: http(s) 스킴만 필수 (frontend/hooks/useUrls.ts)
+ *   → YouTube 외 웹페이지/RSS/arXiv/Podcast URL도 전부 유효
+ * - URL은 칩(Badge)으로 표시: 소스 타입 배지 + videoId(또는 호스트명) + "<라벨> 제거" 버튼
+ * - 에러 메시지는 입력 바 하단에 3초간 표시 (InputWrapper)
+ *
  * 병렬 실행: ✅ (상태 공유 없음, 완전 독립적)
- * 인증 필요: ✅ (로그인 필요 시 스킵)
  */
 import { test, expect, TEST_DATA } from '../../fixtures/test-fixtures';
 
 test.describe('URL 입력 및 관리', () => {
-  test.beforeEach(async ({ mainPage, page }) => {
-    // 앱 접속
+  test.beforeEach(async ({ mainPage }) => {
+    // 앱 접속 (온보딩 모달 자동 닫기) + URL 입력 필드 준비 대기
     await mainPage.goto();
-
-    // 로그인 필요 여부 확인
-    const startBtn = page.locator('#run-analysis-btn');
-    const isDisabled = await startBtn.isDisabled().catch(() => false);
-    const title = await startBtn.getAttribute('title');
-
-    if (isDisabled && title?.includes('로그인')) {
-      test.skip(true, '로그인이 필요한 기능입니다');
-    }
+    await mainPage.waitForReady();
   });
 
   test.describe('Suite 1: URL 입력', () => {
     test('TC-1.1: 유효한 YouTube URL 입력', async ({ page, urlInput }) => {
-      // 1. 앱 접속 (beforeEach에서 완료)
-      
-      // 2. URL 입력 필드에 "https://www.youtube.com/watch?v=dQw4w9WgXcQ" 입력
-      // 3. Enter 키 누름
+      // 1. URL 입력 필드에 YouTube URL 입력 후 Enter
       const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
       await urlInput.addUrl(testUrl);
 
-      // Expected: URL 카드가 URL 목록에 추가됨
-      const count = await urlInput.getUrlCount();
-      expect(count).toBe(1);
+      // Expected: URL 칩이 목록에 추가됨
+      expect(await urlInput.getUrlChipCount()).toBe(1);
 
       // Expected: 입력 필드가 초기화됨
+      await expect(page.locator('#url-input')).toHaveValue('');
+
+      // Expected: 칩에 영상 정보(videoId) + 제거 버튼 표시
+      await expect(page.getByText('dQw4w9WgXcQ', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'dQw4w9WgXcQ 제거' })).toBeVisible();
+    });
+
+    test('TC-1.2: youtu.be 단축 URL 입력', async ({ page, urlInput }) => {
+      // 1. 단축 URL 입력 후 Enter
+      await urlInput.addUrl('https://youtu.be/dQw4w9WgXcQ');
+
+      // Expected: URL 칩이 정상 추가됨
+      expect(await urlInput.getUrlChipCount()).toBe(1);
+
+      // Expected: 단축 URL에서도 videoId가 추출되어 칩에 표시됨
+      await expect(page.getByText('dQw4w9WgXcQ', { exact: true })).toBeVisible();
+    });
+
+    test('TC-1.3: 잘못된 URL 입력 시 에러 표시', async ({ page, urlInput }) => {
       const input = page.locator('#url-input');
-      const inputValue = await input.inputValue();
-      expect(inputValue).toBe('');
 
-      // Expected: URL 카드에 영상 정보 표시
-      const urlCard = page.locator('#url-list-container .url-card').first();
-      await expect(urlCard).toBeVisible();
+      // 스킴 없는 URL / 비 http(s) 스킴 전부 거부되어야 함
+      for (const invalidUrl of TEST_DATA.INVALID_URLS) {
+        await urlInput.addUrl(invalidUrl);
+
+        // Expected: "유효한 URL이 아닙니다" 에러 메시지 표시
+        await expect(page.getByText(TEST_DATA.INVALID_URL_ERROR)).toBeVisible();
+
+        // Expected: 입력값은 지워지지 않고 유지됨 (수정 기회 제공)
+        await expect(input).toHaveValue(invalidUrl);
+
+        // Expected: URL 칩이 추가되지 않음
+        expect(await urlInput.getUrlChipCount()).toBe(0);
+      }
     });
 
-    test('TC-1.2: youtu.be 단축 URL 입력', async ({ urlInput }) => {
-      // 1. URL 입력 필드에 "https://youtu.be/dQw4w9WgXcQ" 입력
-      // 2. Enter 키 누름
-      const testUrl = 'https://youtu.be/dQw4w9WgXcQ';
-      await urlInput.addUrl(testUrl);
-
-      // Expected: URL 카드가 정상 추가됨
-      const count = await urlInput.getUrlCount();
-      expect(count).toBe(1);
-    });
-
-    test('TC-1.3: 잘못된 URL 입력', async ({ page, urlInput }) => {
-      // 1. URL 입력 필드에 "invalid-url" 입력
-      // 2. Enter 키 누름
-      await urlInput.addUrl('invalid-url');
-
-      // Expected: 에러 메시지 표시
-      const errorVisible = await page
-        .locator('.error, .alert, [role="alert"], .toast, .toast-error')
-        .isVisible()
-        .catch(() => false);
-
-      // Expected: URL이 목록에 추가되지 않음
-      const count = await urlInput.getUrlCount();
-      
-      // 에러가 표시되거나 URL이 추가되지 않아야 함
-      expect(count === 0 || errorVisible).toBeTruthy();
-    });
-
-    test('TC-1.4: 빈 입력', async ({ page, urlInput }) => {
-      // 1. URL 입력 필드가 비어있는 상태에서 Enter 키 누름
+    test('TC-1.4: 빈 입력에서 Enter 시 아무 동작 없음', async ({ page, urlInput, contentGenerator }) => {
+      // 1. URL 입력 필드가 비어있는 상태에서 Enter
       const input = page.locator('#url-input');
       await input.click();
-      await page.waitForTimeout(100);
       await input.press('Enter');
       await page.waitForTimeout(500);
 
-      // Expected: 아무 동작 없음 또는 안내 메시지
-      const count = await urlInput.getUrlCount();
-      expect(count).toBe(0);
+      // Expected: 칩 추가 없음, 에러 메시지 없음
+      expect(await urlInput.getUrlChipCount()).toBe(0);
+      await expect(page.getByText(TEST_DATA.INVALID_URL_ERROR)).toBeHidden();
 
-      // 안내 메시지가 있을 수 있음 (선택사항)
-      const message = await page
-        .locator('.info, .warning, [role="alert"], .toast')
-        .isVisible()
-        .catch(() => false);
+      // Expected: 생성도 시작되지 않음 (URL 0개이므로)
+      expect(await contentGenerator.isLoading()).toBe(false);
+    });
 
-      // 카운트가 0이거나 메시지가 표시되면 성공
-      expect(count === 0 || message).toBeTruthy();
+    test('TC-1.5: 일반 웹페이지 URL도 유효 (새 검증 규칙)', async ({ page, urlInput }) => {
+      // 학습엔진 개편으로 http(s) URL이면 소스 타입 무관하게 허용됨
+      await urlInput.addUrl('https://example.com/blog/post');
+
+      // Expected: 에러 없이 칩 추가 (호스트명 라벨 + 제거 버튼)
+      expect(await urlInput.getUrlChipCount()).toBe(1);
+      await expect(page.getByText('example.com', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'example.com 제거' })).toBeVisible();
+      await expect(page.getByText(TEST_DATA.INVALID_URL_ERROR)).toBeHidden();
     });
   });
 
-  test.describe('Suite 2: URL 카드 관리', () => {
-    test('TC-2.1: URL 삭제', async ({ urlInput }) => {
-      // 1. URL 추가 후 삭제 버튼 클릭
+  test.describe('Suite 2: URL 칩 관리', () => {
+    test('TC-2.1: URL 삭제', async ({ page, urlInput }) => {
+      // 1. URL 추가 후 칩의 제거 버튼 클릭
       await urlInput.addUrl(TEST_DATA.VALID_URLS[0]);
-      expect(await urlInput.getUrlCount()).toBe(1);
+      expect(await urlInput.getUrlChipCount()).toBe(1);
 
-      await urlInput.removeUrl(0);
+      await urlInput.removeUrlByIndex(0);
 
-      // Expected: URL 카드가 목록에서 제거됨
-      // Expected: 카운트 업데이트
-      const count = await urlInput.getUrlCount();
-      expect(count).toBe(0);
+      // Expected: 칩이 목록에서 제거되고 videoId 텍스트도 사라짐
+      expect(await urlInput.getUrlChipCount()).toBe(0);
+      await expect(page.getByText('jNQXAC9IVRw', { exact: true })).toBeHidden();
     });
 
     test('TC-2.2: 최대 10개 URL 제한', async ({ page, urlInput }) => {
-      // 1. 11개의 URL 추가 시도
-      
-      // 10개 URL 추가
+      // 1. 10개 URL 추가
       for (let i = 0; i < 10; i++) {
         await urlInput.addUrl(`https://www.youtube.com/watch?v=test${i}`);
       }
+      expect(await urlInput.getUrlChipCount()).toBe(10);
 
-      const countAfter10 = await urlInput.getUrlCount();
-      expect(countAfter10).toBeLessThanOrEqual(10);
-
-      // Expected: 10개 이후 추가 시 경고 메시지
-      // 11번째 URL 추가 시도
+      // 2. 11번째 URL 추가 시도
       await urlInput.addUrl('https://www.youtube.com/watch?v=test10');
 
-      // 경고 메시지 확인 (선택사항)
-      const warningVisible = await page
-        .locator('.warning, .alert, [role="alert"], .toast')
-        .isVisible()
-        .catch(() => false);
+      // Expected: 최대 개수 경고 메시지 표시
+      await expect(page.getByText('최대 10개까지 추가할 수 있습니다.')).toBeVisible();
 
-      // Expected: 11번째 URL 추가 거부
-      const finalCount = await urlInput.getUrlCount();
-      expect(finalCount).toBeLessThanOrEqual(10);
+      // Expected: 11번째 URL 추가 거부 (칩 10개 유지)
+      expect(await urlInput.getUrlChipCount()).toBe(10);
+      await expect(page.getByText('test10', { exact: true })).toBeHidden();
     });
 
     test('TC-2.3: 중복 URL 검증', async ({ page, urlInput }) => {
       // 1. 동일한 URL을 두 번 추가 시도
       const testUrl = TEST_DATA.VALID_URLS[0];
-      
+
       await urlInput.addUrl(testUrl);
-      expect(await urlInput.getUrlCount()).toBe(1);
+      expect(await urlInput.getUrlChipCount()).toBe(1);
 
-      // 같은 URL 다시 추가 시도
       await urlInput.addUrl(testUrl);
 
-      // Expected: 중복 경고 메시지
-      const warningVisible = await page
-        .locator('.warning, .alert, [role="alert"], .toast, .error')
-        .isVisible()
-        .catch(() => false);
+      // Expected: 중복 경고 메시지 표시
+      await expect(page.getByText('이미 추가된 URL입니다.')).toBeVisible();
 
-      // Expected: 두 번째 추가 거부
-      const count = await urlInput.getUrlCount();
-      
-      // 여전히 1개이거나 경고가 표시되어야 함
-      expect(count).toBe(1);
+      // Expected: 두 번째 추가 거부 (칩 1개 유지)
+      expect(await urlInput.getUrlChipCount()).toBe(1);
     });
   });
 });

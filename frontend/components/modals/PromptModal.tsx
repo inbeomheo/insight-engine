@@ -1,19 +1,29 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy, Code } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { toast } from 'sonner';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 
 export default function PromptModal() {
   const { activeModal, activePrompt, setPromptModalOpen } = useUIStore();
   const promptModalOpen = activeModal === 'prompt';
+  const { copyText, reset: resetCopy } = useClipboardCopy();
 
-  function handleCopy() {
-    navigator.clipboard.writeText(activePrompt);
-    toast.success('프롬프트 복사 완료');
+  useEffect(() => resetCopy(), [activePrompt, promptModalOpen, resetCopy]);
+
+  async function handleCopy() {
+    const result = await copyText(activePrompt);
+    if (!result.isCurrent) return;
+    if (result.copied) {
+      toast.success('프롬프트 복사 완료');
+    } else {
+      toast.error('프롬프트를 복사하지 못했습니다.');
+    }
   }
 
   return (

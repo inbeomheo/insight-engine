@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { Bot, CheckCircle2, Quote, Tag, Code, Copy, Check, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GeoMetadata, CtaData, JsonLdSchema } from '@/lib/types';
@@ -15,15 +16,17 @@ interface GeoSectionProps {
 
 export default function GeoSection({ geo, cta, json_ld_schemas }: GeoSectionProps) {
   const [jsonLdExpanded, setJsonLdExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { status: copyStatus, copyText } = useClipboardCopy();
 
   async function copyJsonLd() {
     if (!json_ld_schemas) return;
-    const text = JSON.stringify(json_ld_schemas, null, 2);
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success('JSON-LD 복사 완료');
-    setTimeout(() => setCopied(false), 2000);
+    const result = await copyText(() => JSON.stringify(json_ld_schemas, null, 2));
+    if (!result.isCurrent) return;
+    if (result.copied) {
+      toast.success('JSON-LD 복사 완료');
+    } else {
+      toast.error('JSON-LD 복사 실패');
+    }
   }
 
   return (
@@ -140,7 +143,7 @@ export default function GeoSection({ geo, cta, json_ld_schemas }: GeoSectionProp
                   className="h-5 px-1.5 text-[10px] gap-0.5"
                   onClick={copyJsonLd}
                 >
-                  {copied ? (
+                  {copyStatus === 'copied' ? (
                     <Check className="h-3 w-3 text-green-500" />
                   ) : (
                     <Copy className="h-3 w-3" />

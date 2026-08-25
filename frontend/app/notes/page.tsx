@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { getNotes, searchNotes, type NoteListItem, type NoteSearchResult } from '@/lib/api';
 import {
   advanceNoteSearchRequestId,
@@ -216,6 +217,9 @@ export default function NotesPage() {
       setSearchReturnState(null);
     } catch (err) {
       if (!isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) return;
+      setSearchResults(null);
+      setLastSearchQuery('');
+      setSearchReturnState(null);
       setError(err instanceof Error ? err.message : '검색에 실패했습니다.');
     } finally {
       if (isCurrentNoteSearchRequest(searchRequestIdRef, requestId)) setSearching(false);
@@ -532,7 +536,7 @@ export default function NotesPage() {
         </form>
 
         {error && (
-          <p className="text-sm text-destructive mb-4">{error}</p>
+          <p role="alert" className="text-sm text-destructive mb-4">{error}</p>
         )}
 
         {!loading && !isSearchMode && notes.length > 0 && (
@@ -805,14 +809,15 @@ function WikiMap({
 }) {
   const [studyQueueOpen, setStudyQueueOpen] = useState(true);
   const [wikiExploreOpen, setWikiExploreOpen] = useState(true);
-  const [studyPlanCopyStatus, setStudyPlanCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [wikiIndexCopyStatus, setWikiIndexCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [qnaCardsCopyStatus, setQnaCardsCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [reviewHistoryCopyStatus, setReviewHistoryCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
-  const [qnaCardCopyStatus, setQnaCardCopyStatus] = useState<{
-    id: string;
-    status: 'copied' | 'error';
-  } | null>(null);
+  const { status: studyPlanCopyStatus, copyText: copyStudyPlanText } = useClipboardCopy();
+  const { status: wikiIndexCopyStatus, copyText: copyWikiIndexText } = useClipboardCopy();
+  const { status: qnaCardsCopyStatus, copyText: copyQnaCardsText } = useClipboardCopy();
+  const { status: reviewHistoryCopyStatus, copyText: copyReviewHistoryText } = useClipboardCopy();
+  const {
+    status: qnaCardCopyStatus,
+    activeKey: qnaCardCopyId,
+    copyText: copyQnaCardText,
+  } = useClipboardCopy();
   useEffect(() => {
     try {
       // 브라우저 저장값은 hydration 이후에만 반영합니다.
@@ -867,106 +872,30 @@ function WikiMap({
     });
   }, []);
 
-  const copyDailyStudyPlan = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setStudyPlanCopyStatus('error');
-      return;
-    }
+  const copyDailyStudyPlan = useCallback(
+    () => copyStudyPlanText(() => buildDailyStudyPlanMarkdown(dailyStudyPlanItems)),
+    [copyStudyPlanText, dailyStudyPlanItems],
+  );
 
-    try {
-      await navigator.clipboard.writeText(buildDailyStudyPlanMarkdown(dailyStudyPlanItems));
-      setStudyPlanCopyStatus('copied');
-    } catch {
-      setStudyPlanCopyStatus('error');
-    }
-  }, [dailyStudyPlanItems]);
+  const copyWikiIndex = useCallback(
+    () => copyWikiIndexText(() => buildWikiIndexMarkdown(conceptClusters)),
+    [conceptClusters, copyWikiIndexText],
+  );
 
-  useEffect(() => {
-    if (studyPlanCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setStudyPlanCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [studyPlanCopyStatus]);
+  const copyReviewHistory = useCallback(
+    () => copyReviewHistoryText(() => buildNoteReviewHistoryMarkdown(reviewHistoryEntries)),
+    [copyReviewHistoryText, reviewHistoryEntries],
+  );
 
-  const copyWikiIndex = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setWikiIndexCopyStatus('error');
-      return;
-    }
+  const copyQnaStudyCards = useCallback(
+    () => copyQnaCardsText(() => buildResultChatStudyCardsMarkdown(qnaStudyCards)),
+    [copyQnaCardsText, qnaStudyCards],
+  );
 
-    try {
-      await navigator.clipboard.writeText(buildWikiIndexMarkdown(conceptClusters));
-      setWikiIndexCopyStatus('copied');
-    } catch {
-      setWikiIndexCopyStatus('error');
-    }
-  }, [conceptClusters]);
-
-  useEffect(() => {
-    if (wikiIndexCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setWikiIndexCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [wikiIndexCopyStatus]);
-
-  const copyReviewHistory = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setReviewHistoryCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(buildNoteReviewHistoryMarkdown(reviewHistoryEntries));
-      setReviewHistoryCopyStatus('copied');
-    } catch {
-      setReviewHistoryCopyStatus('error');
-    }
-  }, [reviewHistoryEntries]);
-
-  useEffect(() => {
-    if (reviewHistoryCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setReviewHistoryCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [reviewHistoryCopyStatus]);
-
-  const copyQnaStudyCards = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setQnaCardsCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(buildResultChatStudyCardsMarkdown(qnaStudyCards));
-      setQnaCardsCopyStatus('copied');
-    } catch {
-      setQnaCardsCopyStatus('error');
-    }
-  }, [qnaStudyCards]);
-
-  useEffect(() => {
-    if (qnaCardsCopyStatus === 'idle') return;
-    const timer = window.setTimeout(() => setQnaCardsCopyStatus('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [qnaCardsCopyStatus]);
-
-  const copyQnaStudyCard = useCallback(async (card: ResultChatStudyCard) => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setQnaCardCopyStatus({ id: card.id, status: 'error' });
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(card.markdown);
-      setQnaCardCopyStatus({ id: card.id, status: 'copied' });
-    } catch {
-      setQnaCardCopyStatus({ id: card.id, status: 'error' });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!qnaCardCopyStatus) return;
-    const timer = window.setTimeout(() => setQnaCardCopyStatus(null), 2000);
-    return () => window.clearTimeout(timer);
-  }, [qnaCardCopyStatus]);
-
+  const copyQnaStudyCard = useCallback(
+    (card: ResultChatStudyCard) => copyQnaCardText(card.markdown, card.id),
+    [copyQnaCardText],
+  );
   const studyQueueCounts = {
     'review-needed': reviewNeededNotes.length,
     'study-start': studyStartNotes.length,
@@ -1514,9 +1443,9 @@ function WikiMap({
                                       카드 복사
                                     </Button>
                                   </div>
-                                  {qnaCardCopyStatus?.id === card.id && (
-                                    <span className={`text-[10px] ${qnaCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'}`}>
-                                      {qnaCardCopyStatus.status === 'copied' ? '복사 완료' : '복사 실패'}
+                                  {qnaCardCopyId === card.id && (
+                                    <span className={`text-[10px] ${qnaCardCopyStatus === 'copied' ? 'text-primary' : 'text-destructive'}`}>
+                                      {qnaCardCopyStatus === 'copied' ? '복사 완료' : '복사 실패'}
                                     </span>
                                   )}
                                 </div>

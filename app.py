@@ -117,7 +117,8 @@ def create_app(test_config=None):
         start = getattr(request, '_start_time', None)
         if start is not None:
             elapsed_ms = (_time.perf_counter() - start) * 1000
-            response.headers['X-Response-Time'] = f'{elapsed_ms:.1f}ms'
+            reported_ms = max(elapsed_ms, 0.001)
+            response.headers['X-Response-Time'] = f'{reported_ms:.3f}ms'
             if elapsed_ms > 1000:  # 1초 이상은 warning
                 _perf_logger.warning('느린 응답: %s %s %.1fms', request.method, request.path, elapsed_ms)
         return response

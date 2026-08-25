@@ -16,11 +16,16 @@ test.describe('메인 페이지 로드 @parallel @no-auth', () => {
   });
 
   test('주요 UI 요소가 표시됨', async ({ page }) => {
+    // 메인 헤딩 (학습 엔진 UI)
+    await expect(page.getByRole('heading', { name: '어떤 자료를 콘텐츠로 만들까요?' })).toBeVisible();
+
     // URL 입력 필드
     await expect(page.locator('#url-input')).toBeVisible();
 
-    // 분석 실행 버튼
-    await expect(page.locator('#run-analysis-btn')).toBeVisible();
+    // 생성 CTA 버튼 (숨겨진 모바일 셸 중복 제외)
+    await expect(
+      page.getByRole('button', { name: /콘텐츠 생성/ }).filter({ visible: true }).first()
+    ).toBeVisible();
   });
 
   test('콘솔에 JavaScript 에러가 없음', async ({ page }) => {

@@ -19,13 +19,15 @@ test.describe('입력 엣지케이스', () => {
     await expect(badges).toHaveCount(0);
   });
 
-  test('특수 문자가 포함된 URL 처리', async ({ page }) => {
+  test('특수 문자가 포함된 URL 처리', async ({ page, urlInput }) => {
     const input = page.locator('#url-input');
     await input.fill('<script>alert(1)</script>');
     await input.press('Enter');
     await page.waitForTimeout(300);
 
-    await expect(page.getByText(/유효한 YouTube URL/)).toBeVisible();
+    // http(s) 스킴이 없으므로 거부되고 에러 메시지가 표시됨
+    await expect(page.getByText(TEST_DATA.INVALID_URL_ERROR)).toBeVisible();
+    expect(await urlInput.getUrlChipCount()).toBe(0);
   });
 
   test('중복 URL 입력 시 에러 메시지가 표시된다', async ({ page }) => {
@@ -45,13 +47,17 @@ test.describe('입력 엣지케이스', () => {
     await expect(page.getByText(/이미 추가된/)).toBeVisible();
   });
 
-  test('Vimeo URL 입력 시 거부된다', async ({ page }) => {
+  test('Vimeo 등 일반 웹페이지 URL은 Web 소스로 추가된다', async ({ page, urlInput }) => {
     const input = page.locator('#url-input');
     await input.fill('https://vimeo.com/123456789');
     await input.press('Enter');
     await page.waitForTimeout(300);
 
-    await expect(page.getByText(/유효한 YouTube URL/)).toBeVisible();
+    // 새 검증 규칙: http(s) URL은 전부 허용 — 에러 없이 Web 배지 칩으로 추가됨
+    await expect(page.getByText(TEST_DATA.INVALID_URL_ERROR)).not.toBeVisible();
+    expect(await urlInput.getUrlChipCount()).toBe(1);
+    await expect(page.getByText('vimeo.com', { exact: true })).toBeVisible();
+    await expect(page.getByText('Web', { exact: true })).toBeVisible();
   });
 });
 
@@ -60,7 +66,7 @@ test.describe('동시성', () => {
     await mainPage.goto();
   });
 
-  test('빠른 연속 URL 추가가 정상 처리된다', async ({ page }) => {
+  test('빠른 연속 URL 추가가 정상 처리된다', async ({ page, urlInput }) => {
     const input = page.locator('#url-input');
 
     // 3개 URL을 빠르게 연속 추가
@@ -72,10 +78,11 @@ test.describe('동시성', () => {
 
     await page.waitForTimeout(500);
 
-    // 3개 칩이 보여야 함
-    await expect(page.getByText('dQw4w9WgXcQ')).toBeVisible();
-    await expect(page.getByText('jNQXAC9IVRw')).toBeVisible();
-    await expect(page.getByText('9bZkp7q19f0')).toBeVisible();
+    // 3개 칩이 보여야 함 (모바일 셸의 전체 URL 텍스트와 충돌 방지를 위해 exact 매칭)
+    expect(await urlInput.getUrlChipCount()).toBe(3);
+    await expect(page.getByText('jNQXAC9IVRw', { exact: true })).toBeVisible();
+    await expect(page.getByText('dQw4w9WgXcQ', { exact: true })).toBeVisible();
+    await expect(page.getByText('9bZkp7q19f0', { exact: true })).toBeVisible();
   });
 
   test('페이지 새로고침 후 크래시 없이 로드된다', async ({ page }) => {
@@ -91,7 +98,9 @@ test.describe('동시성', () => {
 
     // 페이지가 정상 로드됨 (URL은 state이므로 초기화됨)
     await expect(page.locator('#url-input')).toBeVisible();
-    await expect(page.getByText(/YouTube 영상을 분석/)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: '어떤 자료를 콘텐츠로 만들까요?' })
+    ).toBeVisible();
   });
 });
 

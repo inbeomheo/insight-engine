@@ -27,6 +27,7 @@ import { MAX_LOCAL_REPORTS, useResultStore } from '@/stores/resultStore';
 import { buildLocalDashboardMarkdown, buildLocalDashboardStats, cleanMarkdownLine } from '@/lib/dashboard-summary';
 import { getStyleLabel } from '@/lib/helpers';
 import { apiUrl } from '@/lib/api';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import type { Report } from '@/lib/types';
 
 interface HealthStatus {
@@ -37,22 +38,6 @@ interface HealthStatus {
   error_count: number;
   error_rate: number;
   memory_usage_mb?: number | null;
-}
-
-async function writeClipboardText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-  }
 }
 
 export default function DashboardPage() {
@@ -208,7 +193,8 @@ function SystemHealthCard({
   checkedAt: Date | null;
   onRefresh: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const { status: copyStatus, copyText } = useClipboardCopy({ resetDelayMs: 1800 });
+  const copied = copyStatus === 'copied';
   const statusLabel = health?.status === 'healthy' ? '정상' : error ? '확인 필요' : isLoading ? '확인 중' : '-';
   const errorRatePct = health ? Math.round((health.error_rate ?? 0) * 1000) / 10 : 0;
   const checkedAtLabel = checkedAt
@@ -226,11 +212,13 @@ function SystemHealthCard({
       health_checked_at: checkedAt?.toISOString() ?? null,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     };
-    const text = JSON.stringify(payload, null, 2);
-    await writeClipboardText(text);
-    setCopied(true);
-    toast.success('진단 정보가 복사되었습니다.');
-    setTimeout(() => setCopied(false), 1800);
+    const result = await copyText(() => JSON.stringify(payload, null, 2));
+    if (!result.isCurrent) return;
+    if (result.copied) {
+      toast.success('진단 정보가 복사되었습니다.');
+    } else {
+      toast.error('진단 정보를 복사하지 못했습니다.');
+    }
   }
 
   return (
@@ -295,16 +283,20 @@ function SystemHealthCard({
 }
 
 function LocalDashboardSummary({ reports, pinnedIds }: { reports: Report[]; pinnedIds: Set<string> }) {
-  const [summaryCopied, setSummaryCopied] = useState(false);
+  const { status: summaryCopyStatus, copyText } = useClipboardCopy({ resetDelayMs: 1800 });
+  const summaryCopied = summaryCopyStatus === 'copied';
   const stats = useMemo(() => buildLocalDashboardStats(reports, pinnedIds, MAX_LOCAL_REPORTS), [pinnedIds, reports]);
 
   async function copyMarkdownSummary() {
-    const text = buildLocalDashboardMarkdown(stats, reports.length, MAX_LOCAL_REPORTS);
-
-    await writeClipboardText(text);
-    setSummaryCopied(true);
-    toast.success('작업 요약 Markdown이 복사되었습니다.');
-    setTimeout(() => setSummaryCopied(false), 1800);
+    const result = await copyText(() =>
+      buildLocalDashboardMarkdown(stats, reports.length, MAX_LOCAL_REPORTS),
+    );
+    if (!result.isCurrent) return;
+    if (result.copied) {
+      toast.success('작업 요약 Markdown이 복사되었습니다.');
+    } else {
+      toast.error('작업 요약 Markdown을 복사하지 못했습니다.');
+    }
   }
 
   return (

@@ -5,6 +5,7 @@ import { Bot, ChevronDown, ChevronUp, Copy, Loader2, Send, User } from 'lucide-r
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { askResultChat, type ResultChatMessage, type ResultChatSource } from '@/lib/api';
 import {
   buildResultChatStudyCard,
@@ -45,10 +46,12 @@ export default function ResultChatPanel({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [studyCardCopyStatus, setStudyCardCopyStatus] = useState<{
-    index: number;
-    status: 'copied' | 'error';
-  } | null>(null);
+  const {
+    status: studyCardCopyStatus,
+    activeKey: studyCardCopyKey,
+    copyText: copyStudyCardText,
+    reset: resetStudyCardCopy,
+  } = useClipboardCopy();
   const { requestContext, hasContext, isContextSliced } = useMemo(() => {
     const trimmed = context.trim();
     return {
@@ -62,8 +65,8 @@ export default function ResultChatPanel({
     setMessages([]);
     setInput('');
     setError(null);
-    setStudyCardCopyStatus(null);
-  }, [context]);
+    resetStudyCardCopy();
+  }, [context, resetStudyCardCopy]);
 
   const helperText = useMemo(() => {
     if (!hasContext) return '질문할 자막/본문이 없습니다.';
@@ -76,43 +79,42 @@ export default function ResultChatPanel({
   );
 
   const copyStudyCard = useCallback(async (message: ChatMessage, index: number) => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) {
-      setStudyCardCopyStatus({ index, status: 'error' });
-      return;
-    }
-
     const question = [...messages.slice(0, index)]
       .reverse()
       .find((item) => item.role === 'user')?.content;
 
+    const cardInput = {
+      title: studyCardTitle ?? title,
+      question,
+      answer: message.content,
+      sources: message.rag_sources,
+      sourceHref: studyCardSourceHref,
+    };
+    let card: ReturnType<typeof buildResultChatStudyCard>;
     try {
-      const cardInput = {
-        title: studyCardTitle ?? title,
-        question,
-        answer: message.content,
-        sources: message.rag_sources,
-        sourceHref: studyCardSourceHref,
-      };
-      let card = buildResultChatStudyCard(cardInput);
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          card = saveResultChatStudyCard(window.localStorage, cardInput);
-        }
-      } catch {
-        // Clipboard copy still works even when browser storage is unavailable.
-      }
-      await navigator.clipboard.writeText(card.markdown);
-      setStudyCardCopyStatus({ index, status: 'copied' });
-    } catch {
-      setStudyCardCopyStatus({ index, status: 'error' });
+      card = buildResultChatStudyCard(cardInput);
+    } catch (error) {
+      await copyStudyCardText(() => {
+        throw error;
+      }, `${index}:save-error`);
+      return;
     }
-  }, [messages, studyCardSourceHref, studyCardTitle, title]);
+    let saved = false;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        card = saveResultChatStudyCard(window.localStorage, cardInput);
+        saved = true;
+      }
+    } catch {
+      // 저장 실패와 무관하게 카드 텍스트 복사는 계속 시도한다.
+    }
 
-  useEffect(() => {
-    if (!studyCardCopyStatus) return;
-    const timer = window.setTimeout(() => setStudyCardCopyStatus(null), 2000);
-    return () => window.clearTimeout(timer);
-  }, [studyCardCopyStatus]);
+    const feedbackKey = `${index}:${saved ? 'saved' : 'save-error'}`;
+    await copyStudyCardText(card.markdown, feedbackKey);
+  }, [copyStudyCardText, messages, studyCardSourceHref, studyCardTitle, title]);
+
+  const studyCardCopyIndex = studyCardCopyKey?.split(':', 1)[0] ?? null;
+  const studyCardSaveFailed = studyCardCopyKey?.endsWith(':save-error') ?? false;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -251,11 +253,19 @@ export default function ResultChatPanel({
                     )}
                     {message.role === 'assistant' && (
                       <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5 border-t border-border/50 pt-2">
-                        {studyCardCopyStatus?.index === index && (
+                        {studyCardCopyIndex === String(index) && studyCardCopyStatus !== 'idle' && (
                           <span className={`text-[10px] ${
-                            studyCardCopyStatus.status === 'copied' ? 'text-primary' : 'text-destructive'
+                            studyCardCopyStatus === 'copied' && !studyCardSaveFailed
+                              ? 'text-primary'
+                              : 'text-destructive'
                           }`}>
-                            {studyCardCopyStatus.status === 'copied' ? '복사+저장 완료' : '복사 실패'}
+                            {studyCardCopyStatus === 'error'
+                              ? studyCardSaveFailed
+                                ? '복사·저장 실패'
+                                : '저장 완료 · 복사 실패'
+                              : studyCardSaveFailed
+                                ? '복사 완료 · 저장 실패'
+                                : '복사+저장 완료'}
                           </span>
                         )}
                         <button

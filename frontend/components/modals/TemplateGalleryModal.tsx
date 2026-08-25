@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { toast } from 'sonner';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import {
   getTemplates,
   createTemplate,
@@ -68,6 +69,7 @@ interface TemplateGalleryModalProps {
 
 export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalProps) {
   const { activeModal, setTemplateGalleryOpen } = useUIStore();
+  const { copyText: copyPromptText } = useClipboardCopy();
   const isOpen = activeModal === 'templateGallery';
 
   const [view, setView] = useState<ViewMode>('list');
@@ -171,20 +173,37 @@ export default function TemplateGalleryModal({ onApply }: TemplateGalleryModalPr
   }
 
   async function handleApply(t: PromptTemplate) {
-    try {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const result = await useTemplate(t.id);
-      if (onApply) {
+    if (onApply) {
+      try {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const result = await useTemplate(t.id);
         onApply(result.prompt_text);
         toast.success(`"${t.name}" 프롬프트가 적용되었습니다.`);
         setTemplateGalleryOpen(false);
-      } else {
-        await navigator.clipboard.writeText(result.prompt_text);
-        toast.success('프롬프트가 클립보드에 복사되었습니다.');
+      } catch {
+        toast.error('템플릿 적용에 실패했습니다.');
       }
-    } catch {
-      toast.error('템플릿 적용에 실패했습니다.');
+      return;
     }
+
+    let applyFailed = false;
+    const result = await copyPromptText(async () => {
+      try {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        return (await useTemplate(t.id)).prompt_text;
+      } catch (error) {
+        applyFailed = true;
+        throw error;
+      }
+    }, t.id);
+
+    if (!result.isCurrent) return;
+    if (applyFailed) {
+      toast.error('템플릿 적용에 실패했습니다.');
+      return;
+    }
+    if (result.copied) toast.success('프롬프트가 클립보드에 복사되었습니다.');
+    else toast.error('프롬프트를 클립보드에 복사하지 못했습니다.');
   }
 
   const perPage = 20;

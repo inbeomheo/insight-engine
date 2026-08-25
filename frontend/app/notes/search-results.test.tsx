@@ -382,6 +382,38 @@ describe('ActiveFacetBar', () => {
 });
 
 describe('NotesPage search return flow', () => {
+  it('removes stale results when a newer search fails', async () => {
+    const view = await renderNotesPage();
+    const input = view.querySelector<HTMLInputElement>('input[placeholder^="노트 검색"]')!;
+    const form = input.closest('form')!;
+    const setValue = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value',
+    )?.set;
+
+    await act(async () => {
+      setValue?.call(input, '첫 검색');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(findSearchEvidence(view)?.textContent).toBe('검색 근거 요약');
+
+    vi.mocked(searchNotes).mockRejectedValueOnce(new Error('검색 서버 오류'));
+    await act(async () => {
+      setValue?.call(input, '실패 검색');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(findSearchEvidence(view)).toBeNull();
+    expect(view.querySelector('[role="alert"]')?.textContent).toBe('검색 서버 오류');
+    expect(input.value).toBe('실패 검색');
+  });
+
   it('restores the submitted query, result snippet, highlight, and clean route after a concept pivot', async () => {
     const view = await renderNotesPage();
     const input = view.querySelector<HTMLInputElement>('input[placeholder^="노트 검색"]');

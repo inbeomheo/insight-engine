@@ -22,19 +22,18 @@ test.describe('결과 카드 상호작용', () => {
     const prose = card.locator('.prose');
     await expect(prose).toBeVisible();
 
-    // 접기 버튼 클릭 (ChevronUp 아이콘 버튼)
-    const collapseBtn = card.locator('button').filter({
-      has: page.locator('svg'),
-    }).last();
-    // 헤더 영역의 마지막 아이콘 버튼 (접기/펼치기)
-    const toggleBtn = card.locator('.flex.items-center.gap-1 button').last();
-    await toggleBtn.click();
+    // 접기 버튼 클릭 (aria-label '카드 접기' — 접힌 상태에선 '카드 펼치기'로 바뀜)
+    const collapseBtn = card.getByRole('button', { name: '카드 접기' });
+    await expect(collapseBtn).toHaveAttribute('aria-expanded', 'true');
+    await collapseBtn.click();
 
     // 본문 숨겨짐
     await expect(prose).not.toBeVisible();
 
     // 다시 클릭 → 본문 표시
-    await toggleBtn.click();
+    const expandBtn = card.getByRole('button', { name: '카드 펼치기' });
+    await expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
+    await expandBtn.click();
     await expect(prose).toBeVisible();
   });
 
@@ -48,20 +47,24 @@ test.describe('결과 카드 상호작용', () => {
     await expect(card).toBeVisible();
 
     // 더보기 (⋯) 버튼 클릭 — 푸터 영역에 있음
-    const moreBtn = card.locator('button').last();
+    const moreBtn = card.getByRole('button', { name: '더보기 메뉴' });
     await moreBtn.click();
 
-    // 메뉴 항목 확인
+    // 메뉴 항목 확인 (학습엔진 개편 후 구성)
     await expect(page.getByRole('menuitem', { name: '제목 복사' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: '전체 복사' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: '프롬프트 보기' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: '마인드맵' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '학습 노트로 저장' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '이벤트 추출' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '영상에 질문하기' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'HTML 내보내기' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: '마크다운 (.md)' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '삭제' })).toBeVisible();
+    // 제거된 항목: 마인드맵, DOCX/PDF, 공유(메뉴 → 헤더 버튼으로 이동)
+    await expect(page.getByRole('menuitem', { name: '마인드맵', exact: true })).toHaveCount(0);
     await expect(page.getByRole('menuitem', { name: 'DOCX 내보내기' })).toHaveCount(0);
     await expect(page.getByRole('menuitem', { name: 'PDF 인쇄' })).toHaveCount(0);
-    await expect(page.getByRole('menuitem', { name: '공유' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: '삭제' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: '공유', exact: true })).toHaveCount(0);
   });
 
   test('카드 삭제', async ({ page }) => {
@@ -85,19 +88,23 @@ test.describe('결과 카드 상호작용', () => {
   });
 
   test('스타일 라벨 표시', async ({ page }) => {
-    const report = makeMockReport({
-      id: 'style-label-test',
-      style: 'blog_seo',
-    });
-    await injectReports(page, [report]);
+    // 현행 스타일은 한국어 라벨, 목록에 없는 구 스타일 ID는 원문 폴백 표시
+    const quizReport = makeMockReport({ id: 'style-label-quiz', style: 'quiz' });
+    const legacyReport = makeMockReport({ id: 'style-label-legacy', style: 'blog_seo' });
+    await injectReports(page, [quizReport, legacyReport]);
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const card = page.locator('[data-report-id="style-label-test"]');
-    await expect(card).toBeVisible();
+    // 헤더 스타일 라벨 요소(span.signal-meta.text-primary)로 스코프 — 노트 미리보기 태그와 중복 방지
+    // 현행 스타일 'quiz' → 라벨 "퀴즈" 표시
+    const quizCard = page.locator('[data-report-id="style-label-quiz"]');
+    await expect(quizCard).toBeVisible();
+    await expect(quizCard.locator('span.signal-meta.text-primary')).toHaveText('퀴즈');
 
-    // 스타일 라벨 "Blog+SEO" 표시
-    await expect(card.getByText('Blog+SEO')).toBeVisible();
+    // 구 스타일 'blog_seo' → 원문 ID 폴백 표시
+    const legacyCard = page.locator('[data-report-id="style-label-legacy"]');
+    await expect(legacyCard).toBeVisible();
+    await expect(legacyCard.locator('span.signal-meta.text-primary')).toHaveText('blog_seo');
   });
 
   test('통합 뱃지 표시 (merged:true)', async ({ page }) => {

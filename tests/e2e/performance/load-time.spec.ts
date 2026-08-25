@@ -48,8 +48,9 @@ test.describe('페이지 로드 성능 @parallel @no-auth @performance', () => {
 
     const startTime = Date.now();
 
-    // 주요 요소 대기
-    await page.waitForSelector('input, button', { timeout: 2000 });
+    // 주요 요소 대기 — 'input, button' 첫 매치는 숨겨진 MobileAppShell 버튼이라
+    // 데스크톱에서 영원히 visible이 되지 않음 → 메인 URL 입력 필드 기준으로 대기
+    await page.locator('#url-input').waitFor({ state: 'visible', timeout: 2000 });
 
     const renderTime = Date.now() - startTime;
     console.log(`First Input Visible: ${renderTime}ms`);

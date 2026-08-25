@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { Copy, Check, Film, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useClipboardCopy } from '@/hooks/useClipboardCopy';
 import { toast } from 'sonner';
 import type { ShortsClip } from '@/lib/types';
 
@@ -11,13 +11,16 @@ interface ShortsClipListProps {
 }
 
 export default function ShortsClipList({ clips }: ShortsClipListProps) {
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const { status: copyStatus, activeKey, copyText } = useClipboardCopy();
 
   async function copyScript(script: string, idx: number) {
-    await navigator.clipboard.writeText(script);
-    setCopiedIdx(idx);
-    toast.success('스크립트 복사 완료');
-    setTimeout(() => setCopiedIdx(null), 2000);
+    const result = await copyText(script, String(idx));
+    if (!result.isCurrent) return;
+    if (result.copied) {
+      toast.success('스크립트 복사 완료');
+    } else {
+      toast.error('스크립트 복사 실패');
+    }
   }
 
   if (!clips || clips.length === 0) return null;
@@ -43,7 +46,7 @@ export default function ShortsClipList({ clips }: ShortsClipListProps) {
               className="h-7 w-7"
               onClick={() => copyScript(clip.script, idx)}
             >
-              {copiedIdx === idx ? (
+              {copyStatus === 'copied' && activeKey === String(idx) ? (
                 <Check className="h-3.5 w-3.5 text-green-500" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
